@@ -429,6 +429,32 @@ body.locked .app{visibility:hidden;pointer-events:none}
 .cal-pace b{color:var(--txt);font-weight:500}
 @media (max-width:760px){ .cal-resumen{grid-template-columns:repeat(2,1fr)} }
 
+/* ── cuentas (copiadora) ── */
+.acct-top{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+.acct-top .btn{margin-left:auto}
+.seg-scroll{max-width:100%;overflow-x:auto;scrollbar-width:none}
+.seg-scroll::-webkit-scrollbar{display:none}
+.seg button:focus-visible{outline-offset:-2px}
+.acct-chips{display:flex;flex-wrap:wrap;gap:8px}
+button.tag{cursor:pointer;background:transparent;display:inline-flex;align-items:center;gap:7px;
+  transition:border-color .15s,color .15s,opacity .15s}
+button.tag .dot{width:6px;height:6px;border-radius:50%;border:1px solid var(--line);flex:0 0 auto}
+button.tag .cap{color:var(--faint)}
+button.tag[aria-pressed="true"]{color:var(--txt);border-color:var(--accent-deep);background:var(--glass-2)}
+button.tag[aria-pressed="true"] .dot{background:var(--accent);border-color:var(--accent)}
+button.tag[aria-pressed="false"]{opacity:.45;border-style:dashed}
+button.tag.quemada{text-decoration:line-through;text-decoration-color:var(--down)}
+.acct-tbl{width:100%;margin-top:14px}
+.acct-tbl .al{font-weight:600}
+.acct-tbl .sub{font-family:var(--mono);font-size:9.5px;letter-spacing:.1em;color:var(--faint);text-transform:uppercase}
+.dd-bar{height:3px;border-radius:99px;background:var(--w07);margin-top:5px;overflow:hidden;min-width:56px}
+.dd-bar i{display:block;height:100%;border-radius:99px;background:var(--txt)}
+.dd-bar i.low{background:var(--down)}
+.sr-only{position:absolute;width:1px;height:1px;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);border:0}
+.acct-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+@media (max-width:640px){ .acct-top .btn{margin-left:0;order:3} .acct-row{grid-template-columns:1fr} }
+@media (pointer:coarse){ button.tag{min-height:38px;padding:0 12px} }
+
 /* ── Bootcamp · documentos ── */
 .bc-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
 .bc-card{
@@ -838,6 +864,26 @@ stop[stop-color="#9BC0DC"]{stop-color:var(--txt)}
 
       <!-- ════ MI MESA (desempeño del operador) ════ -->
       <section class="view" id="v-mesa">
+        <div class="panel" id="acctPanel" style="margin-bottom:14px">
+          <div class="p-head">
+            <h3>Cuentas</h3>
+            <span class="micro" id="acctSummary"></span>
+          </div>
+          <div class="p-body">
+            <div class="acct-top">
+              <div class="seg-scroll"><div class="seg" id="acctSeg" role="group" aria-label="Preajuste de cuentas">
+                <button type="button" data-p="all" class="on">Todas</button>
+                <button type="button" data-p="eval">Evals</button>
+                <button type="button" data-p="funded">Fondeadas</button>
+              </div></div>
+              <button class="btn sm" id="btnAcctMgr">Gestionar</button>
+            </div>
+            <p class="micro" id="acctChipsLbl" style="margin-bottom:8px">Cuentas en vista</p>
+            <div class="acct-chips" id="acctChips" role="group" aria-labelledby="acctChipsLbl"></div>
+            <div id="acctTable"></div>
+            <p class="sr-only" id="acctLive" role="status" aria-live="polite"></p>
+          </div>
+        </div>
         <div id="dashAlert"></div>
         <div class="grid g5" id="dashKpis"></div>
 
@@ -1078,6 +1124,19 @@ stop[stop-color="#9BC0DC"]{stop-color:var(--txt)}
 </div>
 
 <!-- ══════════ MODALES ══════════ -->
+<div class="overlay" id="ovAcct">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="acTitle" style="max-width:720px">
+    <h3 id="acTitle">Gestionar cuentas</h3>
+    <p class="sub">La copiadora replica una orden a varias cuentas. Cada cuenta lleva su propio balance y su propia línea de drawdown.</p>
+    <div id="acList"></div>
+    <div id="acFoot"></div>
+    <div class="m-foot">
+      <button class="btn" data-close>Cerrar</button>
+      <button class="btn primary" id="acAdd">+ Agregar cuenta</button>
+    </div>
+  </div>
+</div>
+
 <div class="overlay" id="ovTrade">
   <div class="modal" role="dialog" aria-modal="true" aria-labelledby="tmTitle">
     <h3 id="tmTitle">Registrar trade</h3>
@@ -1216,9 +1275,71 @@ stop[stop-color="#9BC0DC"]{stop-color:var(--txt)}
    NORTHPOINT TERMINAL · estado y utilidades
    ════════════════════════════════════════════════════════════ */
 const LS = 'northpoint_terminal_v3';
+/* pseudo-cuenta de los trades anteriores a las cuentas (no vive en S.accounts) */
+const SIN_CUENTA = '__none';
 const $  = s => document.querySelector(s);
 const $$ = s => [...document.querySelectorAll(s)];
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+/* ════════ Catálogo de fondeadoras ════════
+   Copiado literal de ~/claude/candado/data/firm-rules.js — leído de la fuente OFICIAL
+   (help.tradeify.co) el 18-jul-2026. Las reglas cambian: manda el contrato de la cuenta.
+   Lo que no esté aquí se muestra como "sin verificar", nunca con un número inventado. */
+const FIRM_CATALOG = {
+  "Tradeify": {
+    src: "help.tradeify.co", checked: "2026-07-18",
+    plans: {
+      "Growth Evaluation": {
+        phase:"eval", ddType:"eod", lockAtProfit:null,   // no congela en evaluación
+        consistency:0, minDays:1,
+        sizes:{ 50000:{target:3000, dailyLoss:1250, maxDD:2000},
+                100000:{target:6000, dailyLoss:2500, maxDD:3500},
+                150000:{target:9000, dailyLoss:3750, maxDD:5000} },
+        note:"Sin consistencia: se puede pasar en 1 día. El límite diario es blando (pausa el día, no truena). En evaluación el drawdown NO se congela."
+      },
+      "Growth Sim Funded": {
+        phase:"funded", ddType:"eod", lockAtProfit:100,
+        consistency:0.35, minDays:5,
+        sizes:{ 50000:{target:0, dailyLoss:1250, maxDD:2000},
+                100000:{target:0, dailyLoss:2500, maxDD:3500},
+                150000:{target:0, dailyLoss:3750, maxDD:5000} },
+        note:"Consistencia 35%. Payout con 5 días de ganancia > $150/$200/$250 y balance mínimo. El límite diario SUBE al llegar a 6% de ganancia. Drawdown se congela en inicio + $100."
+      },
+      "Select Evaluation": {
+        phase:"eval", ddType:"eod", lockAtProfit:null,
+        consistency:0.40, minDays:3,
+        sizes:{ 50000:{target:3000, dailyLoss:0, maxDD:2000},
+                100000:{target:6000, dailyLoss:0, maxDD:3000},
+                150000:{target:9000, dailyLoss:0, maxDD:4500} },
+        note:"SIN límite diario en evaluación. Consistencia 40% obliga a un mínimo de 3 días. Drawdown más apretado que Growth en 100k/150k."
+      },
+      "Select Flex (fondeada)": {
+        phase:"funded", ddType:"eod", lockAtProfit:100,
+        consistency:0, minDays:5,
+        sizes:{ 50000:{target:0, dailyLoss:0, maxDD:2000},
+                100000:{target:0, dailyLoss:0, maxDD:3000},
+                150000:{target:0, dailyLoss:0, maxDD:4500} },
+        note:"Sin límite diario y SIN consistencia. Payout con 5 días ganadores. OJO: los contratos NO empiezan al máximo — una cuenta de 100k arranca en 3 minis, no 8, y escala con la ganancia."
+      },
+      "Select Daily (fondeada)": {
+        phase:"funded", ddType:"eod", lockAtProfit:100,
+        consistency:0, minDays:0,
+        sizes:{ 50000:{target:0, dailyLoss:1000, maxDD:2000},
+                100000:{target:0, dailyLoss:1250, maxDD:2500},
+                150000:{target:0, dailyLoss:1750, maxDD:3500} },
+        note:"El drawdown más apretado de todo Tradeify en 100k/150k. Payout diario: 2× la ganancia desde el último, con tope. La elección entre Flex y Daily es PERMANENTE por cuenta."
+      },
+      "Lightning Funded": {
+        phase:"funded", ddType:"eod", lockAtProfit:100,
+        consistency:0.20, minDays:0,
+        sizes:{ 50000:{target:3000, dailyLoss:1250, maxDD:2000},
+                100000:{target:6000, dailyLoss:2500, maxDD:4000},
+                150000:{target:9000, dailyLoss:3000, maxDD:5250} },
+        note:"Fondeo directo, sin evaluación. La consistencia SUBE por payout: 20% → 25% → 30%. El 'objetivo' aquí desbloquea el payout, NO es lo que puedes retirar: en 150k llegas a $9,000 y retiras máximo $3,000. Sin resets: hay que recomprar."
+      }
+    }
+  }
+};
 
 const POINT_VALUE = { NQ:20, ES:50, YM:5, RTY:50, GC:100, CL:1000, MNQ:2, MES:5, MYM:0.5, M2K:5 };
 const MICROS = ['MNQ','MES','MYM','M2K'];
@@ -1278,27 +1399,141 @@ const GATES = [
 const userDe = u => USERS[u] || null;
 const rolDeUsuario = (u, rol) => !!(USERS[u] && USERS[u].roles.includes(rol));
 
+const SCHEMA = 4;
 const DEFAULTS = () => ({
-  profile: { nombre:'', rol:'NP-060', cuenta:250000, metaMes:30000 },
+  schema: SCHEMA,
+  profile: { nombre:'', rol:'NP-060', metaMes:30000 },   // el capital se deriva de las cuentas
   session: { user:null },
   tickets: [],           // {id,fecha,sym,dir,tesis,por,firmas:{k:{u,ts}},estado,motivo}
   trades: [],            // {id,date,time,sym,dir,qty,entry,exit,pnl,setupOk,notas}
   sessions: {},          // date -> {pre:[], setup:[], post:[]}
   study: { lessons:{} },
   positions: [],         // {id,nombre,fecha,capital,valor,notas}
-  prospects: []          // {id,nombre,capital,etapa}
+  prospects: [],         // {id,nombre,capital,etapa}
+  accounts: [],          // {id,alias,orden,firm,plan,size,start,desde,fase,estado}
+  ui: { acctSel: { mode:'all', ids:[] } }
 });
 
+/* Las 5 cuentas del plan. No se siembran solas: hay un botón en el gestor. */
+const SEED_CUENTAS = () => Array.from({length:5}, (_,i) => ({
+  id:'ac_'+(i+1), alias:'T'+(i+1), orden:i+1,
+  firm:'Tradeify', plan:'Select Evaluation', size:50000,
+  start:50000, desde:todayISO(), fase:'eval', estado:'activa'
+}));
+
+/* Parámetros por fase.
+   [CAT]  = catálogo verificado de la firma · [PLAN] = regla autoimpuesta de André.
+   El riesgo cuelga del drawdown máximo, NO del tamaño de la cuenta: el catálogo es
+   explícito en que el drawdown de una 100k no es el doble que el de una 50k. */
+const FASES = {
+  eval:   { t:'Evaluación', corto:'EVAL',
+            rDia: R => Math.round(0.50 * R.maxDD),                                  // 1,000 [PLAN]
+            oDia: R => Math.round(R.target / Math.max(1, R.minDays)),               // 1,000 [CAT]
+            tope: R => R.consistency ? Math.round(R.consistency * R.target) : null, // 1,200 [CAT]
+            hito: (R,a) => a.start + R.target },                                    // 53,000 [CAT]
+  buffer: { t:'Colchón', corto:'BUF',
+            rDia: R => Math.round(0.10 * R.maxDD),                                  // 200 [PLAN]
+            oDia: R => Math.round(0.20 * R.maxDD),                                  // 400 [PLAN]
+            tope: () => null,
+            hito: (R,a) => a.start + R.maxDD + (R.lockAtProfit||0) },               // 52,100 [CAT]
+  payout: { t:'Retiros', corto:'PAY',
+            rDia: R => Math.round(0.05 * R.maxDD),                                  // 100 [PLAN]
+            oDia: R => Math.round(0.10 * R.maxDD),                                  // 200 [PLAN]
+            tope: () => null,
+            hito: () => null },
+};
+
 let S = load();
+function migrar(s){
+  if((s.schema||0) >= SCHEMA) return s;      // idempotente: sin esto se re-migra en cada carga
+  s.accounts = s.accounts || [];
+  if(s.profile) delete s.profile.cuenta;      // el capital se deriva de las cuentas
+  s.ui = { ...(s.ui||{}), acctSel: { mode:'all', ids:[], ...((s.ui||{}).acctSel||{}) } };
+  (s.trades||[]).forEach(t => { if(!Array.isArray(t.accts) || !t.accts.length) t.accts = [SIN_CUENTA]; });
+  s.schema = SCHEMA;
+  return s;
+}
 function load(){
   try{
     const raw = localStorage.getItem(LS);
     if(!raw) return DEFAULTS();
     const d = DEFAULTS(), s = JSON.parse(raw);
-    return { ...d, ...s, profile:{...d.profile, ...s.profile}, study:{...d.study, ...s.study} };
+    const m = { ...d, ...s,
+      profile:{...d.profile, ...s.profile},
+      study:{...d.study, ...s.study},
+      ui:{...d.ui, ...(s.ui||{})} };
+    m.schema = s.schema || 0;   // el esquema real es el del guardado, no el de DEFAULTS
+    return migrar(m);
   }catch(e){ return DEFAULTS(); }
 }
 function save(){ localStorage.setItem(LS, JSON.stringify(S)); }
+
+/* ════════ Cuentas · selección y proyección ════════
+   Modelo TradeSyncer: se ejecuta UNA orden y la copiadora la replica a N cuentas.
+   Por eso un trade guarda la lista de cuentas donde cayó (t.accts) y t.pnl es
+   SIEMPRE el P&L de UNA cuenta. El P&L que se muestra se proyecta multiplicando
+   por cuántas de esas cuentas están en la vista.
+
+   Invariante: un trade es UNA decisión sin importar en cuántas cuentas se copió.
+   violations(), computeScore() y los contadores x/2 cuentan decisiones, nunca cuentas. */
+function cuentasVivas(){ return S.accounts.filter(a => a.estado !== 'quemada'); }
+function ordenar(xs){ return xs.slice().sort((a,b)=> (a.orden||0)-(b.orden||0)); }
+
+function acctsSel(){
+  const sel = (S.ui && S.ui.acctSel) || { mode:'all', ids:[] };
+  if(sel.mode === 'custom'){
+    const set = new Set(sel.ids);
+    const out = ordenar(S.accounts.filter(a => set.has(a.id)));
+    return out.length ? out : ordenar(cuentasVivas());   // ids muertos → nunca pantalla vacía
+  }
+  if(sel.mode === 'eval')   return ordenar(cuentasVivas().filter(a => a.fase === 'eval'));
+  if(sel.mode === 'funded') return ordenar(cuentasVivas().filter(a => a.fase !== 'eval'));
+  return ordenar(cuentasVivas());
+}
+function idsSel(){
+  const s = new Set(acctsSel().map(a=>a.id));
+  const sel = (S.ui && S.ui.acctSel) || {};
+  if(sel.mode !== 'custom' || (sel.ids||[]).includes(SIN_CUENTA)) s.add(SIN_CUENTA);
+  return s;
+}
+const nSel = (t, ids) => (t.accts||[]).reduce((n,id)=> n + (ids.has(id)?1:0), 0);
+/* Copia proyectada: pnl multiplicado por las cuentas en vista. pnl1 conserva el de una. */
+const proy = (t, n) => n === 1 ? t : { ...t, pnl:(t.pnl||0)*n, pnl1:t.pnl, nAcc:n };
+
+/* Reglas verificadas de la cuenta. null = plan fuera del catálogo → la UI muestra "—". */
+function reglasDe(a){
+  const F = FIRM_CATALOG[a.firm];
+  const p = F && F.plans && F.plans[a.plan];
+  const z = p && p.sizes && p.sizes[a.size];
+  return z ? { ...z, ddType:p.ddType, lockAtProfit:p.lockAtProfit,
+               consistency:p.consistency||0, minDays:p.minDays||0, note:p.note,
+               src:F.src, checked:F.checked } : null;
+}
+
+/* Balance, pico, línea de drawdown y colchón de una cuenta.
+   El piso se congela al llegar a start + lockAtProfit ($50,100 en Tradeify 50k). */
+function saludDe(a){
+  const R = reglasDe(a);
+  const porDia = {};
+  S.trades.forEach(t => {
+    if(t.date >= a.desde && (t.accts||[]).includes(a.id))
+      porDia[t.date] = (porDia[t.date]||0) + (t.pnl||0);
+  });
+  const dias = Object.keys(porDia).sort();
+  let bal = a.start, pico = a.start;
+  dias.forEach(d => { bal += porDia[d]; pico = Math.max(pico, bal); });
+  const hoy = todayISO();
+  const base = { balance:bal, pico, dias:dias.length, hoy:porDia[hoy]||0, reglas:R };
+  if(!R) return { ...base, linea:null, fija:false, colchon:null, maxDD:null, hito:null };
+  let linea = pico - R.maxDD, fija = false;
+  if(R.lockAtProfit != null && linea >= a.start + R.lockAtProfit){
+    linea = a.start + R.lockAtProfit; fija = true;
+  }
+  const F = FASES[a.fase] || FASES.eval;
+  return { ...base, linea, fija, colchon: bal - linea, maxDD:R.maxDD,
+           hito: F.hito(R, a), rDia: F.rDia(R), oDia: F.oDia(R), tope: F.tope(R) };
+}
+const capitalVista = () => acctsSel().filter(a=>a.estado==='activa').reduce((x,a)=>x+(a.size||0),0);
 const uid = () => Math.random().toString(36).slice(2,9) + Date.now().toString(36).slice(-4);
 
 const fmt$ = (n, sign=false) => {
@@ -1318,9 +1553,22 @@ function toast(msg){
 /* ════════ Reglas del handbook: ventana, metas, violaciones ════════ */
 const VENTANA = { open: 7*60, orb1: 7*60+30, orb2: 7*60+45, close: 8*60+30 };
 
+/* La meta sale de las cuentas en vista: Σ del objetivo diario de cada una según su fase.
+   Sin cuentas dadas de alta se conserva el comportamiento anterior (meta declarada / 20). */
 function metas(){
-  const m = S.profile.metaMes || 30000;
-  return { dia: m/20, semana: m/4, quincena: m/2, mes: m, anio: m*12 };
+  const declarada = S.profile.metaMes || 30000;
+  const vivas = acctsSel().filter(a => a.estado === 'activa');
+  const conReglas = vivas.filter(a => reglasDe(a));
+  if(!conReglas.length){
+    return { dia:declarada/20, semana:declarada/4, quincena:declarada/2, mes:declarada,
+             anio:declarada*12, declarada, derivada:false, nCuentas:0, capital:0 };
+  }
+  const dia = conReglas.reduce((x,a)=>{
+    const R = reglasDe(a), F = FASES[a.fase] || FASES.eval;
+    return x + F.oDia(R);
+  }, 0);
+  return { dia, semana:dia*5, quincena:dia*10, mes:dia*20, anio:dia*240,
+           declarada, derivada:true, nCuentas:conReglas.length, capital:capitalVista() };
 }
 
 function sessionState(now = new Date()){
@@ -1354,10 +1602,12 @@ function violations(trade, dayTrades){
   return v;
 }
 
-function tradesByDay(){
+function tradesByDay(ids = idsSel()){
   const map = {};
-  [...S.trades].sort((a,b)=> (a.date+a.time).localeCompare(b.date+b.time)).forEach(t=>{
-    (map[t.date] = map[t.date] || []).push(t);
+  /* el desempate por id importa: de este orden depende el índice que usa violations() */
+  [...S.trades].sort((a,b)=> (a.date+a.time+a.id).localeCompare(b.date+b.time+b.id)).forEach(t=>{
+    const n = nSel(t, ids); if(!n) return;
+    (map[t.date] = map[t.date] || []).push(proy(t, n));
   });
   return map;
 }
@@ -1400,7 +1650,7 @@ function computeScore(){
 }
 
 /* rangos de P&L */
-function pnlRanges(){
+function pnlRanges(ids = idsSel()){
   const now = new Date(); const iso = todayISO();
   const y = now.getFullYear(), m = now.getMonth();
   const day = now.getDate();
@@ -1410,7 +1660,8 @@ function pnlRanges(){
   const inMonth = t => { const [ty,tm] = t.date.split('-').map(Number); return ty===y && tm===m+1; };
   const r = { dia:0, semana:0, quincena:0, mes:0, anio:0 };
   S.trades.forEach(t=>{
-    const p = t.pnl||0;
+    const n = nSel(t, ids); if(!n) return;
+    const p = (t.pnl||0) * n;
     if(t.date === iso) r.dia += p;
     if(t.date >= swISO && t.date <= iso) r.semana += p;
     if(inMonth(t) && +t.date.split('-')[2] >= quinStart) r.quincena += p;
@@ -1464,8 +1715,11 @@ setInterval(tickClock, 1000); tickClock();
 
 /* ════════ DASHBOARD ════════ */
 /* ════════ DASHBOARD DE LA FIRMA ════════ */
+const idsTodas = () => new Set([...S.accounts.map(a=>a.id), SIN_CUENTA]);
 function renderFirma(){
-  const R = pnlRanges(), M = metas();
+  /* la vista de la firma se le reporta a Pablo y a Mateo: muestra el fondo completo,
+     no la selección de cuentas de quien esté viendo */
+  const R = pnlRanges(idsTodas()), M = metas();
   const ps = S.positions;
   const aum = ps.reduce((a,p)=>a+(p.valor ?? p.capital ?? 0), 0);
   const capSusc = ps.reduce((a,p)=>a+(p.capital||0), 0);
@@ -1549,7 +1803,211 @@ function renderFirma(){
   $$('#v-dashboard [data-goto]').forEach(b=> b.onclick = ()=> location.hash = b.dataset.goto);
 }
 
+/* ════════ Cuentas · interfaz ════════ */
+function faseTag(a){
+  const F = FASES[a.fase] || FASES.eval;
+  return `<span class="tag">${F.corto}</span>`;
+}
+
+function renderAcctChips(){
+  const cont = $('#acctChips');
+  if(!S.accounts.length){ cont.innerHTML = ''; return; }
+  const sel = new Set(acctsSel().map(a=>a.id));
+  const huerf = S.trades.some(t => (t.accts||[]).includes(SIN_CUENTA));
+  let html = ordenar(S.accounts).map(a=>{
+    const on = sel.has(a.id), h = saludDe(a), F = FASES[a.fase] || FASES.eval;
+    const tip = `${a.alias} · ${a.firm} ${a.plan} · ${F.t}` +
+      (h.colchon!=null ? ` · colchón ${fmt$(h.colchon)}` : ' · plan sin verificar');
+    return `<button type="button" class="tag${a.estado==='quemada'?' quemada':''}" data-a="${a.id}"
+      aria-pressed="${on}" title="${esc(tip)}"><span class="dot"></span><span class="nm">${esc(a.alias)}</span><span class="cap">${F.corto}</span></button>`;
+  }).join('');
+  if(huerf){
+    const on = idsSel().has(SIN_CUENTA);
+    html += `<button type="button" class="tag" data-a="${SIN_CUENTA}" aria-pressed="${on}"
+      title="Trades registrados antes de dar de alta las cuentas"><span class="dot"></span><span class="nm">Sin asignar</span></button>`;
+  }
+  cont.innerHTML = html;
+  $$('#acctChips button').forEach(b => b.onclick = ()=> toggleAcct(b.dataset.a));
+}
+
+function toggleAcct(id){
+  const actuales = new Set(acctsSel().map(a=>a.id));
+  if(idsSel().has(SIN_CUENTA) && S.trades.some(t=>(t.accts||[]).includes(SIN_CUENTA))) actuales.add(SIN_CUENTA);
+  if(actuales.has(id)){
+    if(actuales.size <= 1){ toast('Debe quedar al menos una cuenta en vista'); return; }
+    actuales.delete(id);
+  } else actuales.add(id);
+  S.ui.acctSel = { mode:'custom', ids:[...actuales] };
+  save(); renderDashboard();
+  if(location.hash.slice(1) === 'journal') renderJournal();
+}
+
+function renderAcctTable(){
+  const sel = acctsSel();
+  const cont = $('#acctTable');
+  if(!sel.length){ cont.innerHTML = ''; return; }
+  const filas = sel.map(a => ({ a, h: saludDe(a) }))
+    .sort((x,y) => (x.h.colchon ?? Infinity) - (y.h.colchon ?? Infinity));   // la más cerca del corte, arriba
+  cont.innerHTML = `<div style="overflow-x:auto"><table class="acct-tbl"><thead><tr>
+      <th>Cuenta</th><th>Fase</th><th class="r">Balance</th><th class="r">P&L hoy</th>
+      <th class="r">Línea DD</th><th class="r">Colchón</th><th></th>
+    </tr></thead><tbody>` +
+    filas.map(({a,h})=>{
+      const F = FASES[a.fase] || FASES.eval;
+      const pctColchon = h.maxDD ? Math.max(0, Math.min(100, h.colchon/h.maxDD*100)) : 0;
+      const bajo = h.maxDD && h.colchon < h.maxDD*0.35;
+      return `<tr>
+        <td><span class="al">${esc(a.alias)}</span><div class="sub">${esc(a.firm)} · ${esc(a.plan.replace(' (fondeada)',''))}</div></td>
+        <td>${faseTag(a)}${h.hito?`<div class="sub">hito ${fmt$(h.hito)}</div>`:''}</td>
+        <td class="r mono">${fmt$(h.balance)}</td>
+        <td class="r mono ${h.hoy>0?'up':h.hoy<0?'down':''}">${h.hoy?fmt$(h.hoy,true):'—'}</td>
+        <td class="r mono" style="color:var(--dim)">${h.linea==null?'—':fmt$(h.linea)}${h.fija?' <span class="tag ok">FIJA</span>':''}</td>
+        <td class="r">${h.colchon==null
+          ? '<span class="tag wr">SIN VERIFICAR</span>'
+          : `<span class="mono ${bajo?'down':''}">${fmt$(h.colchon)}</span>
+             <div class="dd-bar"><i class="${bajo?'low':''}" style="width:${pctColchon}%"></i></div>`}</td>
+        <td class="r"><button class="btn-icon" title="Ver sólo ${esc(a.alias)}" onclick="soloAcct('${a.id}')">◑</button></td>
+      </tr>`;
+    }).join('') + '</tbody></table></div>';
+}
+window.soloAcct = id => { S.ui.acctSel = { mode:'custom', ids:[id] }; save(); renderDashboard();
+  if(location.hash.slice(1)==='journal') renderJournal(); };
+
+function renderAcctPanel(){
+  const panel = $('#acctPanel');
+  if(!S.accounts.length){
+    $('#acctSummary').textContent = 'SIN CUENTAS DADAS DE ALTA';
+    $('#acctChipsLbl').hidden = true;
+    $('#acctChips').innerHTML = '';
+    $('#acctTable').innerHTML = `<div class="empty" style="padding:22px 10px">
+      <b>Todavía no hay cuentas</b>
+      <p>La mesa opera 5 cuentas de 50k con una copiadora: una orden cae en todas. Da de alta las cuentas para ver el balance y el colchón de cada una.</p>
+      <button class="btn primary sm" id="acSeedBtn">Dar de alta las 5 cuentas del plan</button>
+    </div>`;
+    const b = $('#acSeedBtn'); if(b) b.onclick = sembrarCuentas;
+    return;
+  }
+  $('#acctChipsLbl').hidden = false;
+  const sel = acctsSel(), viva = cuentasVivas();
+  const mixta = new Set(sel.map(a=>a.fase)).size > 1;
+  $('#acctSummary').innerHTML = `${sel.length} DE ${viva.length} · ${fmt$(capitalVista())}` +
+    (mixta ? ' <span class="tag wr">FASES MIXTAS</span>' : '');
+  const modo = (S.ui.acctSel||{}).mode || 'all';
+  $$('#acctSeg button').forEach(b => b.classList.toggle('on', b.dataset.p === modo));
+  renderAcctChips();
+  renderAcctTable();
+  const min = sel.map(a=>saludDe(a)).filter(h=>h.colchon!=null).sort((x,y)=>x.colchon-y.colchon)[0];
+  $('#acctLive').textContent = `${sel.length} de ${viva.length} cuentas, ${capitalVista()} dólares` +
+    (min ? `, colchón mínimo ${Math.round(min.colchon)} dólares` : '');
+}
+
+function sembrarCuentas(){
+  S.accounts = SEED_CUENTAS();
+  S.ui.acctSel = { mode:'all', ids:[] };
+  save(); renderDashboard(); renderAcctMgr();
+  toast('5 cuentas dadas de alta');
+}
+
+/* ── gestor ── */
+function renderAcctMgr(){
+  const planes = Object.keys(FIRM_CATALOG.Tradeify.plans);
+  const huerf = S.trades.filter(t => (t.accts||[]).includes(SIN_CUENTA)).length;
+  $('#acList').innerHTML = S.accounts.length ? ordenar(S.accounts).map(a=>{
+    const R = reglasDe(a), h = saludDe(a);
+    const tallas = R ? Object.keys((FIRM_CATALOG[a.firm].plans[a.plan]||{}).sizes||{}) : [String(a.size)];
+    return `<div class="panel" style="margin-bottom:10px"><div class="p-body">
+      <div class="acct-row">
+        <div><label>Alias</label><input data-f="alias" data-id="${a.id}" value="${esc(a.alias)}"></div>
+        <div><label>Plan</label><select data-f="plan" data-id="${a.id}">
+          ${planes.map(p=>`<option${p===a.plan?' selected':''}>${esc(p)}</option>`).join('')}
+        </select></div>
+      </div>
+      <div class="acct-row" style="margin-top:10px">
+        <div><label>Tamaño</label><select data-f="size" data-id="${a.id}">
+          ${tallas.map(t=>`<option value="${t}"${+t===a.size?' selected':''}>${fmt$(+t)}</option>`).join('')}
+        </select></div>
+        <div><label>Fase</label><select data-f="fase" data-id="${a.id}">
+          ${Object.keys(FASES).map(f=>`<option value="${f}"${f===a.fase?' selected':''}>${FASES[f].t}</option>`).join('')}
+        </select></div>
+      </div>
+      <div class="acct-row" style="margin-top:10px">
+        <div><label>Estado</label><select data-f="estado" data-id="${a.id}">
+          ${['activa','pausada','quemada'].map(e=>`<option${e===a.estado?' selected':''}>${e}</option>`).join('')}
+        </select></div>
+        <div><label>Balance de arranque</label><input type="number" data-f="start" data-id="${a.id}" value="${a.start}" step="100"></div>
+      </div>
+      <div class="micro" style="margin-top:10px;color:var(--dim)">
+        ${R ? `Balance ${fmt$(h.balance)} · línea DD ${fmt$(h.linea)}${h.fija?' (fija)':''} · colchón ${fmt$(h.colchon)}
+               · límite diario de la firma ${R.dailyLoss ? fmt$(R.dailyLoss) : 'sin límite'}
+               · desde ${fmtFecha(a.desde)}`
+            : '<span class="tag wr">PLAN NO VERIFICADO</span> no se calcula drawdown ni colchón'}
+      </div>
+      <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
+        <button class="btn sm" onclick="reiniciarCuenta('${a.id}')">Reiniciar balance</button>
+        <button class="btn sm danger" onclick="borrarCuenta('${a.id}')">Eliminar</button>
+      </div>
+    </div></div>`;
+  }).join('') : '<div class="empty" style="padding:18px"><b>Sin cuentas</b><p>Da de alta las 5 del plan o agrega una por una.</p></div>';
+
+  $('#acFoot').innerHTML = (!S.accounts.length
+      ? '<button class="btn primary" id="acSeed2">Dar de alta las 5 cuentas del plan</button>'
+      : '') +
+    (huerf ? `<div class="cal-pace" style="margin-top:12px">Hay <b>${huerf}</b> trade${huerf>1?'s':''} registrado${huerf>1?'s':''} antes de las cuentas.
+       <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">
+       ${ordenar(S.accounts).map(a=>`<button class="btn sm" onclick="asignarHuerfanos('${a.id}')">Asignar a ${esc(a.alias)}</button>`).join('')}
+       ${S.accounts.length>1?`<button class="btn sm primary" onclick="asignarHuerfanos('*')">Asignar a todas</button>`:''}
+       </div></div>` : '');
+  const b2 = $('#acSeed2'); if(b2) b2.onclick = sembrarCuentas;
+
+  $$('#acList [data-f]').forEach(el => el.onchange = ()=>{
+    const a = S.accounts.find(x=>x.id===el.dataset.id); if(!a) return;
+    const f = el.dataset.f;
+    a[f] = (f==='size'||f==='start') ? (parseFloat(el.value)||0) : el.value.trim();
+    if(f==='alias' && !a.alias) a.alias = 'T'+a.orden;
+    save(); renderAcctMgr(); renderDashboard();
+  });
+}
+window.reiniciarCuenta = id => {
+  const a = S.accounts.find(x=>x.id===id); if(!a) return;
+  a.start = a.size; a.desde = todayISO();
+  save(); renderAcctMgr(); renderDashboard(); toast('Balance reiniciado desde hoy');
+};
+window.borrarCuenta = id => {
+  const a = S.accounts.find(x=>x.id===id); if(!a) return;
+  if(!confirm(`¿Eliminar la cuenta ${a.alias}? Los trades conservan su registro.`)) return;
+  S.accounts = S.accounts.filter(x=>x.id!==id);
+  S.trades.forEach(t=>{
+    t.accts = (t.accts||[]).filter(x=>x!==id);
+    if(!t.accts.length) t.accts = [SIN_CUENTA];
+  });
+  S.ui.acctSel = { mode:'all', ids:[] };
+  save(); renderAcctMgr(); renderDashboard(); toast('Cuenta eliminada');
+};
+window.asignarHuerfanos = destino => {
+  const ids = destino === '*' ? ordenar(S.accounts).map(a=>a.id) : [destino];
+  let n = 0;
+  S.trades.forEach(t=>{ if((t.accts||[]).includes(SIN_CUENTA)){ t.accts = [...ids]; n++; } });
+  save(); renderAcctMgr(); renderDashboard();
+  toast(n + ' trade' + (n>1?'s':'') + ' asignado' + (n>1?'s':''));
+};
+
+$('#btnAcctMgr').addEventListener('click', ()=>{ renderAcctMgr(); openOv('ovAcct'); });
+$('#acAdd').addEventListener('click', ()=>{
+  const n = S.accounts.length + 1;
+  S.accounts.push({ id:'ac_'+uid(), alias:'T'+n, orden:n, firm:'Tradeify',
+    plan:'Select Evaluation', size:50000, start:50000, desde:todayISO(),
+    fase:'eval', estado:'activa' });
+  save(); renderAcctMgr(); renderDashboard();
+});
+$('#acctSeg').addEventListener('click', e=>{
+  const b = e.target.closest('button'); if(!b) return;
+  S.ui.acctSel = { mode:b.dataset.p, ids:[] };
+  save(); renderDashboard();
+  if(location.hash.slice(1)==='journal') renderJournal();
+});
+
 function renderDashboard(){
+  renderAcctPanel();
   const M = metas(), R = pnlRanges();
   const kpis = [
     ['P&L HOY', R.dia, M.dia],
@@ -1626,7 +2084,7 @@ function renderDashboard(){
     : '';
 
   /* stats */
-  const st = computeStats(S.trades);
+  const st = computeStats(Object.values(tradesByDay()).flat());
   $('#statRange').textContent = st.n + ' trades registrados';
   $('#dashStats').innerHTML = st.n === 0
     ? `<div class="empty" style="padding:26px 10px"><b>Sin operaciones aún</b><p>La estadística de la mesa aparece con el primer trade documentado en el journal.</p></div>`
@@ -1636,7 +2094,7 @@ function renderDashboard(){
            ['Ganancia promedio', fmt$(st.avgW)],
            ['Pérdida promedio', isNaN(st.avgL)?'—':fmt$(-st.avgL)],
            ['P&L total', fmt$(st.pnl,true)],
-           ['Cuenta', fmt$((S.profile.cuenta||0)+st.pnl)]
+           ['Capital en vista', capitalVista() ? fmt$(capitalVista()) : '—']
           ].map(([l,v])=>`<div style="padding:10px 12px;border:1px solid var(--line-soft);border-radius:10px">
             <div class="micro" style="font-size:9px">${l}</div>
             <div class="mono" style="font-size:17px;margin-top:3px">${v}</div>
@@ -1785,7 +2243,11 @@ function buildReport(){
   if(!dayTr.length) lines.push('Sin operaciones. El checklist no dio setup válido — el mejor trade del día fue no operar.');
   lines.push('────────────────────────────');
   lines.push('Avance vs meta · Día: ' + fmt$(R.dia,true) + ' / ' + fmt$(M.dia) + ' · Mes: ' + fmt$(R.mes,true) + ' / ' + fmt$(M.mes));
-  lines.push('Cuenta: ' + fmt$((S.profile.cuenta||0) + st.pnl));
+  acctsSel().forEach(a=>{
+    const h = saludDe(a), F = FASES[a.fase] || FASES.eval;
+    lines.push('  ' + a.alias + ' · ' + F.corto + ' · ' + fmt$(h.balance) +
+      (h.colchon==null ? ' · colchón sin verificar' : ' · colchón ' + fmt$(h.colchon)));
+  });
   const sc = computeScore();
   if(sc) lines.push('Northpoint Score: ' + sc.total + ' / 1000 · ' + sc.grade);
   return lines.join('\n');
@@ -2771,8 +3233,7 @@ function doLogin(){
   S.session = { user:u };
   S.profile.nombre = usr.nombre;
   S.profile.rol = usr.roles.join(' + ');
-  S.profile.cuenta = 250000;
-  S.profile.metaMes = 30000;
+  if(!S.profile.metaMes) S.profile.metaMes = 30000;
   save();
   $('#lgErr').textContent = '';
   $('#lgPass').value = '';
@@ -3025,7 +3486,9 @@ async function cloudPull(){
     const rows = await r.json();
     if(rows && rows[0] && rows[0].data){
       const mySession = S.session;
-      S = { ...DEFAULTS(), ...rows[0].data, session: mySession };
+      const nube = { ...DEFAULTS(), ...rows[0].data, session: mySession };
+      nube.schema = rows[0].data.schema || 0;
+      S = migrar(nube);
       localStorage.setItem(LS, JSON.stringify(S));
       cloudTs = Date.now();
       renderAll();
