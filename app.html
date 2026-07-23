@@ -1138,6 +1138,7 @@ stop[stop-color="#9BC0DC"]{stop-color:var(--txt)}
     <button class="btn-icon" id="langBtn" title="Español / English" style="font-family:var(--mono);font-size:10px;letter-spacing:.1em">EN</button>
         <button class="btn-icon" id="themeBtn" title="Cambiar tema" aria-label="Cambiar tema">◐</button>
         <span class="top-date" id="topDate"></span>
+        <span class="micro" id="cloudPillTop" style="color:var(--faint)" title="Estado de la mesa compartida"></span>
         <span class="sess-pill" id="sessPill"><span class="dot"></span><span id="sessTxt">—</span></span>
         <span class="top-clock" id="topClock">--:--:--</span>
       </div>
@@ -1621,7 +1622,6 @@ stop[stop-color="#9BC0DC"]{stop-color:var(--txt)}
       <button class="btn sm" id="btnBackup" data-i18n="cf.respaldo">Descargar respaldo</button>
       <button class="btn sm" id="btnRestore" data-i18n="cf.restaurar">Restaurar respaldo</button>
       <input type="file" id="fileRestore" accept="application/json" hidden>
-      <button class="btn sm" id="btnDemo">Cargar demo (sintético)</button>
       <button class="btn sm danger" id="btnWipe">Borrar todo</button>
     </div>
     <div class="m-foot">
@@ -5247,38 +5247,22 @@ $('#btnBackup').addEventListener('click', ()=>{
   toast('Respaldo descargado');
 });
 $('#btnWipe').addEventListener('click', ()=>{
-  if(!confirm('Esto borra TODO el Terminal en este equipo: trades, sesiones, estudio y posiciones. ¿Seguro?')) return;
-  if(!confirm('Última confirmación. ¿Borrar todo?')) return;
-  localStorage.removeItem(LS); S = DEFAULTS(); save();
-  closeOv(); renderAll(); toast('Terminal en cero');
-});
-
-/* demo sintético — claramente etiquetado */
-$('#btnDemo').addEventListener('click', ()=>{
-  if(!confirm('Carga datos DEMO 100% SINTÉTICOS (no son fills reales) para ver el Terminal lleno. ¿Continuar?')) return;
-  const d = DEFAULTS();
-  d.session = S.session;
-  d.profile = { ...S.profile };
-  const now = new Date();
-  const syms = ['NQ','NQ','NQ','ES'];
-  let n = 0;
-  for(let i=19;i>=0 && n<14;i--){
-    const dt = new Date(now); dt.setDate(now.getDate()-i);
-    if(dt.getDay()===0||dt.getDay()===6) continue;
-    const iso = dt.toISOString().slice(0,10);
-    const win = (n*7+3)%10 > 4;
-    const pnl = win ? 900+((n*137)%900) : -(400+((n*211)%500));
-    d.trades.push({ id:uid(), date:iso, time:'07:'+String(32+(n%9)*3).padStart(2,'0'), sym:syms[n%4], dir:n%3?'L':'S', qty:1+(n%2), entry:null, exit:null, pnl, setupOk:(n%5)!==4, notas:'[DEMO sintético]', accts:['ac_1','ac_2','ac_3','ac_4','ac_5'] });
-    d.sessions[iso] = { pre:[true,true,true,true,true,(n%3)!==0], setup:[true,true,true,(n%5)!==4], post:[true,true,(n%4)!==0] };
-    n++;
-  }
-  d.positions = [
-    { id:uid(), nombre:'[DEMO] Familia A · LP-001', capital:250000, valor:271000, fecha:'2026-01-02', notas:'Demo sintético — no es una cuenta real.' },
-    { id:uid(), nombre:'[DEMO] Cliente B · LP-002', capital:50000, valor:53400, fecha:'2026-03-01', notas:'Demo sintético.' },
-  ];
-  d.prospects = [ { id:uid(), nombre:'[DEMO] Prospecto C', capital:1000000, etapa:3 } ];
-  S = d; save(); closeOv(); renderAll();
-  toast('Demo sintético cargado — nada de esto es real');
+  /* Antes hacía save(), que empuja a la nube: borraba la mesa de LOS CUATRO
+     mientras el aviso decía "en este equipo". Ahora limpia sólo este equipo y,
+     si hay sesión, vuelve a bajar la mesa compartida. */
+  const compartida = cloudOn() && cloudTok;
+  const aviso = compartida
+    ? 'Esto borra la copia de ESTE equipo. La mesa compartida no se toca: al volver a sincronizar se baja otra vez. ¿Seguro?'
+    : 'Esto borra TODO el Terminal en este equipo: trades, sesiones, estudio y posiciones. ¿Seguro?';
+  if(!confirm(aviso)) return;
+  if(!confirm('Última confirmación. ¿Borrar este equipo?')) return;
+  localStorage.removeItem(LS);
+  S = DEFAULTS();
+  S.session = { user: S.session && S.session.user };
+  localStorage.setItem(LS, JSON.stringify(S));   // sin save(): no se empuja el vacío
+  closeOv(); renderAll();
+  if(compartida){ cloudPull(); toast('Equipo en cero — bajando la mesa compartida'); }
+  else toast('Terminal en cero');
 });
 
 /* ════════ Overlays genéricos ════════ */
@@ -5497,7 +5481,12 @@ function cloudLogout(){
 }
 
 function cloudPaint(){
-  const p = $('#cloudPill');
+  /* Se pinta en dos lugares: el de Aprobaciones y el de la barra superior, que
+     acompaña a todas las vistas. Sin el de arriba nadie sabía, estando en Journal,
+     si sus trades estaban llegando a los demás o se quedaban en su equipo. */
+  [$('#cloudPill'), $('#cloudPillTop')].forEach(p => p && pintaPill(p));
+}
+function pintaPill(p){
   if(!p) return;
   if(!cloudOn()){
     p.textContent = tr('nu.noConectada');

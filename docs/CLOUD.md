@@ -1,7 +1,11 @@
-# NORTHPOINT · Nube compartida (la misma mesa para Pablo, Mateo y André)
+# NORTHPOINT · Nube compartida (la misma mesa para los cuatro socios)
 
-**Estado: conectada.** El backend ya está montado y la app ya apunta a él.
-Falta un solo paso, que tiene que hacer André — está abajo en "Lo único que falta".
+**Estado: conectada.** El backend está montado y la app apunta a él.
+
+> **Para ponerla en marcha, la guía corta es [PONER-EN-MARCHA.md](PONER-EN-MARCHA.md).**
+> Este documento es el detalle técnico de cómo está resuelta la sincronización.
+> Desde el 23 de julio de 2026 la mesa son **cuatro**: se sumó Gregorio (`goyo.np`),
+> que también tiene que estar en la política de acceso.
 
 ---
 
