@@ -982,26 +982,12 @@ stop[stop-color="#9BC0DC"]{stop-color:var(--txt)}
 
       <!-- ════ ESTUDIO ════ -->
       <section class="view" id="v-estudio">
-        <div class="grid g3">
+        <div class="grid g2">
           <div class="panel kpi"><div class="k-l">Progreso del bootcamp</div><div class="k-v" id="stPct">0%</div><div class="bar"><i id="stBar" style="width:0%"></i></div></div>
           <div class="panel kpi"><div class="k-l">Lecciones completadas</div><div class="k-v" id="stDone">0</div><div class="k-s" id="stTotal"></div></div>
-          <div class="panel kpi"><div class="k-l">Revisiones semanales</div><div class="k-v" id="stRev">0</div><div class="k-s">El error documentado es el activo más valioso</div></div>
         </div>
         <div class="mt2" id="mods"></div>
         <div class="mt2" id="lessonView" hidden></div>
-
-        <div class="panel mt2" id="revBlock">
-          <div class="p-head"><h3>Revisión semanal de proceso</h3><span class="micro">P-06 · Mejora continua</span></div>
-          <div class="p-body">
-            <div class="f-row">
-              <div><label>Qué salió mal esta semana</label><textarea id="rvMal" rows="3" placeholder="Proceso, no personas."></textarea></div>
-              <div><label>Qué salió bien</label><textarea id="rvBien" rows="3" placeholder="Qué repetir."></textarea></div>
-            </div>
-            <div class="f-full"><label>Ajuste al proceso para la próxima semana</label><input id="rvFix" placeholder="Un solo ajuste, concreto y medible."></div>
-            <button class="btn primary" id="btnRev">Guardar revisión</button>
-            <div class="mt" id="revList"></div>
-          </div>
-        </div>
       </section>
 
       <!-- ════ REGLAS ════ -->
@@ -1298,7 +1284,7 @@ const DEFAULTS = () => ({
   tickets: [],           // {id,fecha,sym,dir,tesis,por,firmas:{k:{u,ts}},estado,motivo}
   trades: [],            // {id,date,time,sym,dir,qty,entry,exit,pnl,setupOk,notas}
   sessions: {},          // date -> {pre:[], setup:[], post:[]}
-  study: { lessons:{}, reviews:[] },
+  study: { lessons:{} },
   positions: [],         // {id,nombre,fecha,capital,valor,notas}
   prospects: []          // {id,nombre,capital,etapa}
 });
@@ -2466,12 +2452,10 @@ function renderEstudio(){
   $('#stBar').style.width = pct + '%';
   $('#stDone').textContent = done;
   $('#stTotal').textContent = 'de ' + total + ' módulos';
-  $('#stRev').textContent = S.study.reviews.length;
 
   if(docAbierto){ renderDoc(); return; }
   $('#lessonView').hidden = true;
   $('#mods').hidden = false;
-  $('#revBlock').hidden = false;
 
   $('#mods').innerHTML = '<div class="bc-grid">' + DOCS.map(m=>{
     const on = !!S.study.lessons[m.id];
@@ -2487,13 +2471,6 @@ function renderEstudio(){
   }).join('') + '</div>';
 
   $$('#mods [data-doc]').forEach(b=> b.onclick = ()=>{ docAbierto = b.dataset.doc; renderEstudio(); $('#content').scrollTop = 0; });
-
-  $('#revList').innerHTML = [...S.study.reviews].reverse().slice(0,6).map(r=>`
-    <div class="lesson"><div class="lx">
-      <b>${fmtFecha(r.date)}</b>
-      <p><span class="down">Mal:</span> ${esc(r.mal)||'—'} · <span class="up">Bien:</span> ${esc(r.bien)||'—'}</p>
-      ${r.fix?`<p><span class="warn">Ajuste:</span> ${esc(r.fix)}</p>`:''}
-    </div></div>`).join('');
 }
 
 function renderDoc(){
@@ -2504,7 +2481,6 @@ function renderDoc(){
   const prev = DOCS[idx-1], next = DOCS[idx+1];
 
   $('#mods').hidden = true;
-  $('#revBlock').hidden = true;
   $('#lessonView').hidden = false;
   $('#lessonView').innerHTML = `
     <button class="btn" id="docBack" style="margin-bottom:18px">← Todos los módulos</button>
@@ -2535,14 +2511,6 @@ function renderDoc(){
   };
   $$('#lessonView [data-doc]').forEach(b=> b.onclick = ()=>{ docAbierto = b.dataset.doc; renderEstudio(); $('#content').scrollTop = 0; });
 }
-
-$('#btnRev').addEventListener('click', ()=>{
-  const mal = $('#rvMal').value.trim(), bien = $('#rvBien').value.trim(), fix = $('#rvFix').value.trim();
-  if(!mal && !bien && !fix){ toast('La revisión está vacía'); return; }
-  S.study.reviews.push({ date: todayISO(), mal, bien, fix });
-  $('#rvMal').value = $('#rvBien').value = $('#rvFix').value = '';
-  save(); renderEstudio(); toast('Revisión semanal guardada');
-});
 
 /* ════════ REGLAS ════════ */
 function renderReglas(){
