@@ -1515,6 +1515,10 @@ stop[stop-color="#9BC0DC"]{stop-color:var(--txt)}
       <div><label>Salida</label><input type="number" id="tOut" step="0.25" placeholder="0.00"></div>
       <div><label>P&L USD <span style="color:var(--faint)">(auto)</span></label><input type="number" id="tPnl" step="1" placeholder="auto"></div>
     </div>
+    <div class="f-full">
+      <label id="tAcctLbl" data-i18n="tr.cuentas">Cuentas donde cayó la orden</label>
+      <div class="acct-chips" id="tAccts" role="group" aria-labelledby="tAcctLbl"></div>
+    </div>
     <div class="f-full"><label>Análisis / lección</label><textarea id="tNotas" rows="2" placeholder="Qué vio la mesa, qué se ejecutó, qué se aprende."></textarea></div>
     <div class="m-foot">
       <button class="btn" data-close>Cancelar</button>
@@ -1551,6 +1555,8 @@ stop[stop-color="#9BC0DC"]{stop-color:var(--txt)}
     <p class="sub" style="margin:4px 0 14px">Capital y metas vienen por default del plan Northpoint: cuenta base $250,000 · mes $30,000 → quincena $15,000 · semana $7,500 · día $1,500.</p>
     <div style="display:flex;gap:10px;flex-wrap:wrap">
       <button class="btn sm" id="btnBackup">Descargar respaldo</button>
+      <button class="btn sm" id="btnRestore">Restaurar respaldo</button>
+      <input type="file" id="fileRestore" accept="application/json" hidden>
       <button class="btn sm" id="btnDemo">Cargar demo (sintético)</button>
       <button class="btn sm danger" id="btnWipe">Borrar todo</button>
     </div>
@@ -1994,6 +2000,11 @@ const FASES = {
 
 let S = load();
 function migrar(s){
+  /* Esto va ANTES del corte por esquema: un trade sin cuentas es invisible para todo
+     el aparato, así que se normaliza venga de donde venga. */
+  (s.trades||[]).forEach(t => {
+    if(!Array.isArray(t.accts) || !t.accts.length) t.accts = [SIN_CUENTA];
+  });
   if((s.schema||0) >= SCHEMA) return s;      // idempotente: sin esto se re-migra en cada carga
   s.accounts = s.accounts || [];
   if(s.profile) delete s.profile.cuenta;      // el capital se deriva de las cuentas
@@ -2015,7 +2026,33 @@ function load(){
     return migrar(m);
   }catch(e){ return DEFAULTS(); }
 }
-function save(){ localStorage.setItem(LS, JSON.stringify(S)); }
+/* Cada pestaña tenía su copia de S y el último save() ganaba, borrando lo de la otra.
+   Ahora cada guardado lleva revisión: si en disco hay una más nueva, se recarga antes
+   de escribir, y un aviso de 'storage' repinta cuando otra pestaña guarda. */
+function save(){
+  try{
+    const raw = localStorage.getItem(LS);
+    if(raw){
+      const disco = JSON.parse(raw);
+      if((disco.rev || 0) > (S.rev || 0)){
+        S = migrar({ ...DEFAULTS(), ...disco, session: S.session });
+        try{ renderAll(); }catch(e){}
+        toast('Se recargaron cambios de otra pestaña');
+      }
+    }
+  }catch(e){}
+  S.rev = (S.rev || 0) + 1;
+  localStorage.setItem(LS, JSON.stringify(S));
+}
+addEventListener('storage', e => {
+  if(e.key !== LS || !e.newValue) return;
+  try{
+    const disco = JSON.parse(e.newValue);
+    if((disco.rev || 0) <= (S.rev || 0)) return;
+    S = migrar({ ...DEFAULTS(), ...disco, session: S.session });
+    renderAll();
+  }catch(err){}
+});
 
 /* ════════ Cuentas · selección y proyección ════════
    Modelo TradeSyncer: se ejecuta UNA orden y la copiadora la replica a N cuentas.
@@ -2607,7 +2644,7 @@ function renderPicker(host){
   if(!host) return;
   const abierto = host.querySelector('.acct-pop') && !host.querySelector('.acct-pop').hidden;
   const sel = new Set(acctsSel().map(a=>a.id));
-  const huerf = S.trades.some(t => (t.accts||[]).includes(SIN_CUENTA));
+  const huerf = S.trades.some(t => !Array.isArray(t.accts) || t.accts.includes(SIN_CUENTA));
   const modo = (S.ui.acctSel||{}).mode || 'all';
   const tic = '<svg viewBox="0 0 24 24"><path d="M4 12.5 9.5 18 20 6.5"/></svg>';
 
@@ -2792,7 +2829,7 @@ function sembrarCuentas(){
 /* ── gestor ── */
 function renderAcctMgr(){
   const planes = Object.keys(FIRM_CATALOG.Tradeify.plans);
-  const huerf = S.trades.filter(t => (t.accts||[]).includes(SIN_CUENTA)).length;
+  const huerf = S.trades.filter(t => !Array.isArray(t.accts) || t.accts.includes(SIN_CUENTA)).length;
   $('#acList').innerHTML = S.accounts.length ? ordenar(S.accounts).map(a=>{
     const R = reglasDe(a), h = saludDe(a);
     const tallas = R ? Object.keys((FIRM_CATALOG[a.firm].plans[a.plan]||{}).sizes||{}) : [String(a.size)];
@@ -2817,6 +2854,14 @@ function renderAcctMgr(){
         </select></div>
         <div><label>Balance de arranque</label><input type="number" data-f="start" data-id="${a.id}" value="${a.start}" step="100"></div>
       </div>
+      ${(a.fase !== 'eval' && R && R.lockAtProfit == null)
+        ? `<div class="cal-pace" style="margin-top:10px;border-left-color:var(--warn)">
+             <b>La fase y el plan no coinciden.</b> Está en ${esc((FASES[a.fase]||FASES.eval).t)}
+             pero el plan sigue siendo de evaluación, así que el piso nunca se congela y el colchón
+             que ves está mal. Cambia el plan al fondeado.
+             <div style="margin-top:8px"><button class="btn sm primary" onclick="corregirPlan('${a.id}')">Usar el plan fondeado</button></div>
+           </div>`
+        : ''}
       <div class="micro" style="margin-top:10px;color:var(--dim)">
         ${R ? `Balance ${fmt$(h.balance)} · línea DD ${fmt$(h.linea)}${h.fija?' (fija)':''} · colchón ${fmt$(h.colchon)}
                · límite diario de la firma ${R.dailyLoss ? fmt$(R.dailyLoss) : 'sin límite'}
@@ -2848,6 +2893,14 @@ function renderAcctMgr(){
     save(); renderAcctMgr(); renderDashboard();
   });
 }
+window.corregirPlan = id => {
+  const a = S.accounts.find(x=>x.id===id); if(!a) return;
+  const Rf = reglasFondeadas(a);
+  if(!Rf || !Rf.plan){ toast('No hay plan fondeado para ese tamaño'); return; }
+  a.plan = Rf.plan;
+  save(); renderAcctMgr(); renderDashboard();
+  toast('Plan actualizado a ' + Rf.plan);
+};
 window.reiniciarCuenta = id => {
   const a = S.accounts.find(x=>x.id===id); if(!a) return;
   a.start = a.size; a.desde = todayISO();
@@ -2867,7 +2920,7 @@ window.borrarCuenta = id => {
 window.asignarHuerfanos = destino => {
   const ids = destino === '*' ? ordenar(S.accounts).map(a=>a.id) : [destino];
   let n = 0;
-  S.trades.forEach(t=>{ if((t.accts||[]).includes(SIN_CUENTA)){ t.accts = [...ids]; n++; } });
+  S.trades.forEach(t=>{ if(!Array.isArray(t.accts) || t.accts.includes(SIN_CUENTA)){ t.accts = [...ids]; n++; } });
   save(); renderAcctMgr(); renderDashboard();
   toast(n + ' trade' + (n>1?'s':'') + ' asignado' + (n>1?'s':''));
 };
@@ -3256,22 +3309,36 @@ function planDeFase(a, fase, filtro){
   if(!F) return null;
   for(const nombre of Object.keys(F.plans)){
     const p = F.plans[nombre];
-    if(p.phase === fase && p.sizes[a.size] && (!filtro || filtro(p)))
+    if(p.phase === fase && p.sizes[a.size] && (!filtro || filtro(p, nombre)))
       return { ...p.sizes[a.size], lockAtProfit:p.lockAtProfit, consistency:p.consistency||0,
                minDays:p.minDays||0, plan:nombre };
   }
   return null;
 }
-/* fondeado que congela el piso (el que fija el hito de 52,100) */
-const reglasFondeadas = a => planDeFase(a, 'funded', p => p.lockAtProfit != null);
-/* evaluación con objetivo (el que fija el hito de 53,000), aunque la cuenta ya pasó */
-const reglasEval = a => planDeFase(a, 'eval', p => p.sizes[a.size].target > 0);
+/* Buscar sólo por fase devolvía el PRIMER plan del catálogo, no el de la cuenta:
+   con una Select Daily citaba las reglas de Growth. Se prefiere el plan que la
+   cuenta ya tiene y, si no aplica, el de su misma familia. */
+const familia = a => String(a.plan || '').split(' ')[0];
+const reglasFondeadas = a => {
+  const R = reglasDe(a);
+  if(R && R.lockAtProfit != null) return { ...R, plan:a.plan };
+  const fam = familia(a);
+  return planDeFase(a, 'funded', (p,n) => p.lockAtProfit != null && n.startsWith(fam))
+      || planDeFase(a, 'funded', p => p.lockAtProfit != null);
+};
+const reglasEval = a => {
+  const R = reglasDe(a);
+  if(R && R.target > 0) return { ...R, plan:a.plan };
+  const fam = familia(a);
+  return planDeFase(a, 'eval', (p,n) => p.sizes[a.size].target > 0 && n.startsWith(fam))
+      || planDeFase(a, 'eval', p => p.sizes[a.size].target > 0);
+};
 
 const PASOS = [
   { t:'Evaluación', sub: (R,Rf,a) => { const Re = reglasEval(a);
       return Re ? 'a ' + fmt$(a.size + Re.target) : ''; } },
   { t:'Colchón',    sub: (R,Rf,a) => 'reinicia a ' + fmt$(a.size) },
-  { t:'Retiros',    sub: (R,Rf,a) => Rf ? 'desde ' + fmt$(a.size + Rf.maxDD + Rf.lockAtProfit) : '' },
+  { t:'Retiros',    sub: (R,Rf,a) => Rf ? tr('pr.desde') + ' ' + fmt$(a.start + Rf.maxDD + Rf.lockAtProfit) : '' },
 ];
 
 function renderProceso(){
@@ -3356,6 +3423,7 @@ function renderProceso(){
 }
 
 function renderJournal(){
+  const diasTodos = tradesByDay(idsTodas());   // para violaciones: el día completo
   renderPicker($('#pickJournal'));
   renderProceso();
   renderCal();
@@ -3397,7 +3465,9 @@ function renderJournal(){
       <td class="r mono ${dp>0?'up':dp<0?'down':''}" style="font-size:12px">${fmt$(dp,true)}</td>
       <td colspan="3"></td></tr>`;
     dt.forEach(t=>{
-      const v = violations(t, dt);
+      /* La disciplina no depende de qué cuentas estés viendo: se evalúa sobre el día
+         completo, con todas las cuentas. */
+      const v = violations(t, (diasTodos[d] || dt));
       html += `<tr>
         <td class="mono" style="color:var(--faint);font-size:11px">${t.date.slice(8)}/${t.date.slice(5,7)}</td>
         <td class="mono">${t.time||'—'}</td>
@@ -3441,8 +3511,37 @@ function openTrade(id){
   $('#tOut').value = t.exit ?? '';
   $('#tPnl').value = t.pnl ?? '';
   $('#tNotas').value = t.notas || '';
+  renderTradeAccts(Array.isArray(t.accts) ? t.accts : acctsSel().map(a=>a.id));
   openOv('ovTrade');
 }
+/* La orden se replica a varias cuentas (copiadora). Sin al menos una, el trade
+   quedaría invisible para el journal, el score y los balances: por eso se exige. */
+let tradeAccts = [];
+function renderTradeAccts(pre){
+  const cont = $('#tAccts');
+  tradeAccts = (pre || []).filter(id => id === SIN_CUENTA || S.accounts.some(a=>a.id===id));
+  if(!S.accounts.length){
+    if(!tradeAccts.length) tradeAccts = [SIN_CUENTA];
+    cont.innerHTML = `<p class="micro" style="color:var(--faint)">Sin cuentas dadas de alta: el trade se guarda sin asignar.</p>`;
+    return;
+  }
+  if(!tradeAccts.length) tradeAccts = cuentasVivas().map(a=>a.id);
+  cont.innerHTML = ordenar(S.accounts).map(a=>{
+    const on = tradeAccts.includes(a.id);
+    const F = FASES[a.fase] || FASES.eval;
+    return `<button type="button" class="tag" data-a="${a.id}" aria-pressed="${on}">
+      <span class="dot"></span><span class="nm">${esc(a.alias)}</span><span class="cap">${F.corto}</span></button>`;
+  }).join('') +
+  `<button type="button" class="btn sm" id="tAcctsAll" style="margin-left:4px">Todas</button>`;
+  $$('#tAccts button[data-a]').forEach(b => b.onclick = ()=>{
+    const id = b.dataset.a;
+    tradeAccts = tradeAccts.includes(id) ? tradeAccts.filter(x=>x!==id) : [...tradeAccts, id];
+    renderTradeAccts(tradeAccts);
+  });
+  const all = $('#tAcctsAll');
+  if(all) all.onclick = ()=> renderTradeAccts(cuentasVivas().map(a=>a.id));
+}
+
 window.openTrade = openTrade;
 window.delTrade = id => {
   if(!confirm('¿Eliminar este trade del journal?')) return;
@@ -3473,7 +3572,11 @@ $('#tSave').addEventListener('click', ()=>{
     pnl,
     setupOk: $('#tSetup').value==='1',
     notas: $('#tNotas').value.trim(),
+    accts: tradeAccts.length ? [...tradeAccts] : [SIN_CUENTA],
   };
+  if(S.accounts.length && !tradeAccts.length){
+    toast('Elige al menos una cuenta'); return;
+  }
   if(editingTrade) Object.assign(editingTrade, data);
   else S.trades.push({ id: uid(), ...data });
   save(); closeOv();
@@ -4427,6 +4530,31 @@ function applyProfile(){
   $('#uAvatar').textContent = u ? n.trim().split(/\s+/).map(w=>w[0]).slice(0,2).join('').toUpperCase() : '—';
 }
 
+/* El respaldo servía de poco sin forma de volver a meterlo. */
+$('#btnRestore').addEventListener('click', ()=> $('#fileRestore').click());
+$('#fileRestore').addEventListener('change', e => {
+  const f = e.target.files && e.target.files[0];
+  if(!f) return;
+  const lector = new FileReader();
+  lector.onload = () => {
+    let d;
+    try{ d = JSON.parse(lector.result); }
+    catch(err){ toast('Ese archivo no es un respaldo válido'); return; }
+    if(!d || typeof d !== 'object' || !Array.isArray(d.trades)){
+      toast('El respaldo no trae trades: no se tocó nada'); return;
+    }
+    const n = d.trades.length, c = (d.accounts||[]).length;
+    if(!confirm(`Restaurar ${n} trade${n===1?'':'s'} y ${c} cuenta${c===1?'':'s'}.\n\nEsto reemplaza todo lo que hay ahora. ¿Seguir?`)) return;
+    S = migrar({ ...DEFAULTS(), ...d, session: S.session });
+    S.rev = (S.rev || 0) + 1;
+    localStorage.setItem(LS, JSON.stringify(S));
+    renderAll();
+    toast('Respaldo restaurado');
+  };
+  lector.readAsText(f);
+  e.target.value = '';
+});
+
 $('#btnBackup').addEventListener('click', ()=>{
   const blob = new Blob([JSON.stringify(S,null,2)], {type:'application/json'});
   const a = document.createElement('a');
@@ -4455,7 +4583,7 @@ $('#btnDemo').addEventListener('click', ()=>{
     const iso = dt.toISOString().slice(0,10);
     const win = (n*7+3)%10 > 4;
     const pnl = win ? 900+((n*137)%900) : -(400+((n*211)%500));
-    d.trades.push({ id:uid(), date:iso, time:'07:'+String(32+(n%9)*3).padStart(2,'0'), sym:syms[n%4], dir:n%3?'L':'S', qty:1+(n%2), entry:null, exit:null, pnl, setupOk:(n%5)!==4, notas:'[DEMO sintético]' });
+    d.trades.push({ id:uid(), date:iso, time:'07:'+String(32+(n%9)*3).padStart(2,'0'), sym:syms[n%4], dir:n%3?'L':'S', qty:1+(n%2), entry:null, exit:null, pnl, setupOk:(n%5)!==4, notas:'[DEMO sintético]', accts:['ac_1','ac_2','ac_3','ac_4','ac_5'] });
     d.sessions[iso] = { pre:[true,true,true,true,true,(n%3)!==0], setup:[true,true,true,(n%5)!==4], post:[true,true,(n%4)!==0] };
     n++;
   }
