@@ -15,7 +15,7 @@ Si una fuente falla, se conserva lo que ya había en el archivo para no dejar
 el Inicio en blanco, y se marca en 'fallas'.
 """
 import json, re, sys, time, urllib.request, urllib.error
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from email.utils import parsedate_to_datetime
 from html import unescape
 from pathlib import Path
@@ -58,9 +58,28 @@ def baja(url, timeout=25, intentos=4):
         espera *= 2
 
 
+def huso_mesa():
+    """Horas a las que opera la mesa. Vive en data/avisos.json para no repetirlo."""
+    try:
+        cfg = json.loads((RAIZ / 'data' / 'avisos.json').read_text())
+        return int(cfg.get('utc_offset', -6))
+    except Exception:
+        return -6
+
+
 def calendario():
-    """Sólo eventos de impacto alto (los rojos) de la semana en curso."""
+    """Sólo eventos de impacto alto (los rojos) de la semana en curso.
+
+    OJO CON LA HORA. La fuente entrega el evento en hora de Nueva York
+    ('2026-07-23T08:15:00-04:00'). Antes se guardaba ese '08:15' pelón y el terminal
+    lo mostraba como si fuera hora de la mesa: dos horas de diferencia justo en la
+    regla que dice que no se opera si un evento rojo cae en la ventana. Ahora 'hora'
+    y 'dia' van SIEMPRE en hora de la mesa —que es lo que la gente lee— y la de
+    Nueva York queda aparte como referencia, porque casi todo el material de trading
+    habla en ET.
+    """
     crudo = json.loads(baja('https://nfs.faireconomy.media/ff_calendar_thisweek.json'))
+    tz = timezone(timedelta(hours=huso_mesa()))
     out = []
     for e in crudo:
         if e.get('impact') != 'High':
@@ -68,11 +87,15 @@ def calendario():
         fecha = e.get('date') or ''
         try:
             d = datetime.fromisoformat(fecha)
-            dia, hora = d.strftime('%Y-%m-%d'), d.strftime('%H:%M')
+            if d.tzinfo is None:                       # sin huso: se toma como ET
+                d = d.replace(tzinfo=timezone(timedelta(hours=-4)))
+            local = d.astimezone(tz)
+            dia, hora, hora_ny = (local.strftime('%Y-%m-%d'), local.strftime('%H:%M'),
+                                  d.strftime('%H:%M'))
         except ValueError:
-            dia, hora = fecha[:10], ''
+            dia, hora, hora_ny = fecha[:10], '', ''
         out.append({
-            'dia': dia, 'hora': hora,
+            'dia': dia, 'hora': hora, 'hora_ny': hora_ny, 'iso': fecha,
             'titulo': (e.get('title') or '').strip(),
             'pais': e.get('country') or '',
             'previsto': (e.get('forecast') or '').strip(),

@@ -51,12 +51,29 @@ límite, el registro se borra y queda armado otra vez.
 
 ---
 
+## El primer correo del día: overnight
+
+A las **6:20**, antes que nada, le llega a cada socio **su propio correo** (no una copia
+compartida) con lo que pasó mientras la mesa dormía:
+
+- **Gráficas** del overnight de NQ y ES, con máximo, mínimo y cierre previo marcados.
+- Cuánto se movió cada instrumento: NQ, ES, YM, RTY, oro, petróleo, dólar y el VIX.
+- El **rango del overnight** de cada uno y dónde quedó el precio dentro de él — esos
+  extremos son la liquidez que el rompimiento va a buscar.
+- Los eventos rojos del día y los titulares de la noche.
+
+Todo va también en texto, así que quien tenga las imágenes bloqueadas no se pierde nada.
+Este correo **no depende de Supabase**: sale aunque la nube esté caída.
+
+---
+
 ## De qué avisa por reloj
 
 Lunes a viernes, hora de la mesa (Morelia):
 
 | Hora | Asunto | Qué trae además |
 |---|---|---|
+| 6:20 | `Overnight · 23 jul` | Gráficas y niveles de la noche (arriba) |
 | 6:50 | `La ventana abre a las 7:00` | Tesis firmadas sin ejecutar, tesis esperando firma, meta y riesgo del día |
 | 7:20 | `El rango de apertura es a las 7:30` | La regla del rompimiento y el máximo de dos trades |
 | 8:35 | `Cerró la ventana` | Los trades del día con su P&L y si se cumplió la meta |
@@ -157,8 +174,22 @@ Todo en `data/avisos.json`, sin tocar código:
 
 La mesa opera en hora de Morelia, que es UTC-6 todo el año porque México ya no cambia
 horario. Eso vive en **dos lugares que tienen que coincidir**: `utc_offset` en
-`data/avisos.json` y los cron de `.github/workflows/recordatorios.yml`, que van en UTC
-(hora local + 6). Si se cambia uno sin el otro, los recordatorios salen a deshoras.
+`data/avisos.json` y los cron de `recordatorios.yml` y `overnight.yml`, que van en UTC
+(hora local + 6). Si se cambia uno sin el otro, los avisos salen a deshoras.
+
+`utc_offset` también es lo que usa `scripts/mercado.py` para traducir el calendario
+económico, así que un cambio ahí arregla las tres cosas de un solo lugar.
+
+### La hora del calendario económico
+
+La fuente entrega cada evento en **hora de Nueva York**. Antes se guardaba ese número
+pelón y el terminal lo mostraba como si fuera hora de la mesa: dos horas de diferencia
+justo en la regla que dice que no se opera si un evento rojo cae en la ventana. Un ECB
+a las 8:15 ET son las 6:15 aquí — *antes* de abrir, no adentro.
+
+Ahora `hora` y `dia` van siempre en hora de la mesa, que es lo que la gente lee, y la de
+Nueva York queda al lado como referencia (`hora_ny`) porque casi todo el material de
+trading habla en ET. El terminal muestra las dos y lo dice en el encabezado.
 
 ## Si no llegan
 

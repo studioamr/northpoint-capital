@@ -394,6 +394,60 @@ def recordatorio(cfg, clave, forzar):
 
 # ──────────────────────────── envío ────────────────────────────
 
+PIE = ('— — —\nAbrir la mesa: {t}#aprobaciones\n'
+       'Este aviso lo manda el terminal solo. No hace falta contestarlo.')
+
+
+def _smtp():
+    ctx = ssl.create_default_context()
+    s = smtplib.SMTP_SSL('smtp.gmail.com', 465, context=ctx)
+    s.login(os.environ['GMAIL_USER'], os.environ['GMAIL_APP_PASSWORD'])
+    return s
+
+
+def mandar_uno(cfg, destino, asunto, cuerpo, imagenes=None, smtp=None):
+    """Un correo a una sola persona, con imágenes incrustadas si las hay.
+
+    Va como texto y como HTML: quien tenga imágenes bloqueadas sigue leyendo todo,
+    porque los niveles del overnight también van escritos en el texto.
+    """
+    usuario = os.environ['GMAIL_USER']
+    m = EmailMessage()
+    m['From'] = f'Northpoint <{usuario}>'
+    m['To'] = destino
+    m['Subject'] = f'[Northpoint] {asunto}'
+    plano = f'{cuerpo}\n\n' + PIE.format(t=TERMINAL)
+    m.set_content(plano)
+
+    if imagenes:
+        from html import escape
+        cids = []
+        for i, (nombre, _) in enumerate(imagenes):
+            cids.append(f'img{i}@northpoint')
+        figs = ''.join(
+            f'<img src="cid:{c}" alt="{escape(n)}" '
+            f'style="width:100%;max-width:660px;display:block;margin:14px 0">'
+            for c, (n, _) in zip(cids, imagenes))
+        m.add_alternative(
+            '<div style="background:#05070C;color:#E9EDF2;padding:22px;'
+            'font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:13px">'
+            f'{figs}'
+            f'<pre style="white-space:pre-wrap;margin:0;font:inherit;color:#E9EDF2">'
+            f'{escape(plano)}</pre></div>', subtype='html')
+        html = m.get_payload()[-1]
+        html.make_related()
+        for c, (nombre, datos) in zip(cids, imagenes):
+            html.add_related(datos, 'image', 'png', cid=f'<{c}>', filename=nombre)
+
+    propio = smtp is None
+    s = smtp or _smtp()
+    try:
+        s.send_message(m)
+    finally:
+        if propio:
+            s.quit()
+
+
 def mandar(cfg, avisos):
     usuario = os.environ['GMAIL_USER']
     clave = os.environ['GMAIL_APP_PASSWORD']
