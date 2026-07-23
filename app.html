@@ -5389,7 +5389,29 @@ function fusionarEstado(local, remoto){
   return f;
 }
 /* lo que NO viaja: es de cada socio, no de la mesa */
-const soloMio = e => { const c = {...e}; delete c.session; delete c.profile; delete c.ui; delete c.rev; return c; };
+const soloMio = e => { const c = {...e}; delete c.session; delete c.profile; delete c.ui;
+                       delete c.rev; delete c.claves; delete c.resumen; return c; };
+
+/* Resumen derivado que viaja junto al estado para que el vigilante de correos
+   (scripts/avisos.py) no tenga que recalcular la lógica en Python. Aquí vive la
+   única fuente de verdad; allá sólo se lee. */
+function resumenMesa(){
+  const dias = tradesByDay(idsTodas());
+  const violados = [];
+  Object.keys(dias).forEach(d => dias[d].forEach(t => {
+    const v = violations(t, dias[d]);
+    if(v.length) violados.push({ id:t.id, sym:t.sym, date:t.date, time:t.time,
+                                 violaciones: v.map(x => tr('vio.'+x)) });
+  }));
+  return {
+    cuentas_salud: S.accounts.map(a => {
+      const h = saludDe(a);
+      return { alias:a.alias, fase:a.fase, balance:h.balance, colchon:h.colchon };
+    }),
+    trades_violados: violados,
+    ts: new Date().toISOString(),
+  };
+}
 
 async function cloudPull(){
   if(!cloudOn() || !cloudTok || cloudBusy) return;
@@ -5416,12 +5438,14 @@ async function cloudPush(reintento){
   cloudBusy = true;
   try{
     if(cloudTok.exp && Date.now() > cloudTok.exp - 60000) await cloudRefresh();
+    S.resumen = resumenMesa();          // se recalcula justo antes de subir
     const esperada = S.revNube || 0;
     /* concurrencia optimista: sólo escribe si nadie tocó la fila desde mi última lectura */
     const r = await fetch(CLOUD.url + `/rest/v1/northpoint_estado?id=eq.1&rev=eq.${esperada}`, {
       method:'PATCH',
       headers:{ ...cloudHead(), 'Prefer':'return=representation' },
-      body: JSON.stringify({ data: soloMio(S), rev: esperada + 1, updated_at: new Date().toISOString() }),
+      body: JSON.stringify({ data: { ...soloMio(S), resumen: S.resumen },
+                             rev: esperada + 1, updated_at: new Date().toISOString() }),
     });
     if(r.status === 401){ cloudBusy = false; if(await cloudRefresh()) return cloudPush(reintento); throw new Error(401); }
     if(!r.ok) throw new Error(r.status);
