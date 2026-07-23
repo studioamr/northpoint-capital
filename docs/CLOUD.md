@@ -85,11 +85,11 @@ Ve a **Authentication → Users** del proyecto `spotter-ai` y elige uno de los d
 
 **Camino A — Add user (lo más rápido).** Marca *Auto Confirm User* y crea:
 
-| Correo | Quién |
-|---|---|
-| `pablo@northpoint.mx` | Pablo — CIO + Portfolio Manager |
-| `mateo@northpoint.mx` | Mateo — CRO + Research |
-| `andre@northpoint.mx` | André — Quant + COO |
+| Usuario en el terminal | Correo (identificador en Supabase) | Quién |
+|---|---|---|
+| `pablo.np` | `pablo@northpoint.mx` | Pablo — CIO + Portfolio Manager |
+| `mateo.np` | `mateo@northpoint.mx` | Mateo — CRO + Research |
+| `andre.np` | `andre@northpoint.mx` | André — Quant + COO |
 
 Pon una contraseña temporal y que cada quien la cambie al entrar.
 

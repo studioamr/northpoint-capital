@@ -58,13 +58,13 @@ ROLES = {
 }
 
 SOCIOS = [
-    {'usuario': 'pablo', 'nombre': 'Pablo', 'correo': 'pablo@northpoint.mx',
+    {'usuario': 'pablo.np', 'nombre': 'Pablo', 'correo': 'pablo@northpoint.mx',
      'roles': ['NP-001', 'NP-010'], 'firma': 'cio',
      'frase': 'Tú decides qué se opera y firmas al final. Nadie ejecuta sin tu firma.'},
-    {'usuario': 'mateo', 'nombre': 'Mateo', 'correo': 'mateo@northpoint.mx',
+    {'usuario': 'mateo.np', 'nombre': 'Mateo', 'correo': 'mateo@northpoint.mx',
      'roles': ['NP-020', 'NP-030'], 'firma': 'riesgo',
      'frase': 'Tú eres el freno. Tienes autoridad para detener la mesa sin pedir permiso.'},
-    {'usuario': 'andre', 'nombre': 'André', 'correo': 'andre@northpoint.mx',
+    {'usuario': 'andre.np', 'nombre': 'André', 'correo': 'andre@northpoint.mx',
      'roles': ['NP-040', 'NP-050'], 'firma': 'quant',
      'frase': 'Tú mides. Si un número no cierra, se dice aunque incomode.'},
 ]
