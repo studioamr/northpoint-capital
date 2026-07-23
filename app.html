@@ -1808,6 +1808,10 @@ const I18N = {
   'sn.proyeccion': { es:'Proyección Snowball', en:'Snowball projection' },
   'sn.interes': { es:'Interés compuesto anual', en:'Annual compound interest' },
 
+  'lg.noNube':  { es:'Esa clave no coincide con la de la nube. Revísala en Supabase (Authentication → Users).',
+                  en:'That password does not match the one in the cloud. Check it in Supabase (Authentication → Users).' },
+  'lg.sinRed':  { es:'Sin conexión con la nube. Revisa tu internet e inténtalo otra vez.',
+                  en:'No connection to the cloud. Check your internet and try again.' },
   'lg.malas':     { es:'Credenciales incorrectas. El acceso es solo para socios.',
                     en:'Wrong credentials. Access is for partners only.' },
   'lg.entrando':  { es:'Entrando…',                  en:'Signing in…' },
@@ -5036,7 +5040,14 @@ async function doLogin(){
       }
     }catch(err){
       if(!(await claveLocalOk(u, p))){
-        $('#lgErr').textContent = tr('lg.malas');
+        /* «Credenciales incorrectas» a secas no dice nada: puede ser que la nube
+           rechazó la clave, que no hay internet, o que el usuario ni existe allá.
+           Cada caso se arregla distinto, así que se distinguen. */
+        const m = String((err && err.message) || '');
+        $('#lgErr').textContent =
+          /Invalid login|invalid_credentials|credenciales/i.test(m) ? tr('lg.noNube') :
+          /Failed to fetch|NetworkError|network/i.test(m)           ? tr('lg.sinRed')  :
+          tr('lg.malas');
         $('#lgPass').value = '';
         return;
       }
