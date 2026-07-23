@@ -48,28 +48,31 @@ los PDF que les vas a mandar. Si escribes otra, esa persona va a entrar igual pe
 En el mismo proyecto → **SQL Editor** → **New query** → pega esto completo y dale **Run**:
 
 ```sql
-drop policy if exists "solo socios northpoint" on public.northpoint_estado;
+drop policy if exists "socios leen" on northpoint_estado;
+drop policy if exists "socios escriben" on northpoint_estado;
 
-create policy "solo socios northpoint"
-on public.northpoint_estado
-for all
-to authenticated
-using (
-  auth.jwt() ->> 'email' in (
-    'pablo@northpoint.mx','mateo@northpoint.mx',
-    'andre@northpoint.mx','goyo@northpoint.mx'
-  )
-)
-with check (
-  auth.jwt() ->> 'email' in (
-    'pablo@northpoint.mx','mateo@northpoint.mx',
-    'andre@northpoint.mx','goyo@northpoint.mx'
-  )
-);
+create policy "socios leen" on northpoint_estado
+for select to authenticated
+using (auth.jwt() ->> 'email' in (
+  'pablo@northpoint.mx','mateo@northpoint.mx',
+  'andre@northpoint.mx','goyo@northpoint.mx'));
+
+create policy "socios escriben" on northpoint_estado
+for update to authenticated
+using (auth.jwt() ->> 'email' in (
+  'pablo@northpoint.mx','mateo@northpoint.mx',
+  'andre@northpoint.mx','goyo@northpoint.mx'))
+with check (auth.jwt() ->> 'email' in (
+  'pablo@northpoint.mx','mateo@northpoint.mx',
+  'andre@northpoint.mx','goyo@northpoint.mx'));
 ```
 
-Esa lista existe porque el proyecto `spotter-ai` lo comparte SPOTTER, que tiene como diez
-usuarios registrados. Sin esa lista, cualquiera de ellos podría leer la mesa.
+> Las políticas reales se llaman **`socios leen`** (SELECT) y **`socios escriben`**
+> (UPDATE) — son dos, no una. Antes aquí decía `solo socios northpoint`, que no existe:
+> ese SQL habría creado una tercera política suelta en vez de corregir las dos buenas.
+
+Esa lista existe porque el proyecto `spotter-ai` lo comparte SPOTTER, que tiene diez
+usuarios registrados. Sin ella, cualquiera de ellos podría leer la mesa.
 
 ---
 

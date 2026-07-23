@@ -54,29 +54,28 @@ Goyo es nuevo, así que hay que agregarlo.
 En Supabase → **SQL Editor** → pega y ejecuta:
 
 ```sql
-drop policy if exists "solo socios northpoint" on public.northpoint_estado;
+drop policy if exists "socios leen" on northpoint_estado;
+drop policy if exists "socios escriben" on northpoint_estado;
 
-create policy "solo socios northpoint"
-on public.northpoint_estado
-for all
-to authenticated
-using (
-  auth.jwt() ->> 'email' in (
-    'pablo@northpoint.mx',
-    'mateo@northpoint.mx',
-    'andre@northpoint.mx',
-    'goyo@northpoint.mx'
-  )
-)
-with check (
-  auth.jwt() ->> 'email' in (
-    'pablo@northpoint.mx',
-    'mateo@northpoint.mx',
-    'andre@northpoint.mx',
-    'goyo@northpoint.mx'
-  )
-);
+create policy "socios leen" on northpoint_estado
+for select to authenticated
+using (auth.jwt() ->> 'email' in (
+  'pablo@northpoint.mx','mateo@northpoint.mx',
+  'andre@northpoint.mx','goyo@northpoint.mx'));
+
+create policy "socios escriben" on northpoint_estado
+for update to authenticated
+using (auth.jwt() ->> 'email' in (
+  'pablo@northpoint.mx','mateo@northpoint.mx',
+  'andre@northpoint.mx','goyo@northpoint.mx'))
+with check (auth.jwt() ->> 'email' in (
+  'pablo@northpoint.mx','mateo@northpoint.mx',
+  'andre@northpoint.mx','goyo@northpoint.mx'));
 ```
+
+> Las políticas reales se llaman **`socios leen`** (SELECT) y **`socios escriben`**
+> (UPDATE) — son dos, no una. Antes aquí decía `solo socios northpoint`, que no existe:
+> ese SQL habría creado una tercera política suelta en vez de corregir las dos buenas.
 
 Esa lista existe porque el proyecto `spotter-ai` es **compartido con SPOTTER**, que tiene
 alrededor de diez usuarios registrados. Si la política dijera nada más «cualquiera con
