@@ -305,6 +305,8 @@ tbody tr:hover{background:var(--w02)}
 .chk b{font-size:13px;font-weight:600;display:block;line-height:1.3}
 .chk span{font-size:12px;color:var(--dim);display:block;margin-top:2px;line-height:1.45}
 .chk.done b{color:var(--dim);text-decoration:line-through;text-decoration-color:var(--w25)}
+.chk-quien{display:block;font-family:var(--mono);font-size:9px;letter-spacing:.12em;
+  color:var(--up);text-transform:uppercase;margin-top:3px}
 .chk .t{margin-left:auto;font-family:var(--mono);font-size:10px;color:var(--faint);flex:0 0 auto}
 
 /* veredicto de setup */
@@ -1357,7 +1359,7 @@ stop[stop-color="#9BC0DC"]{stop-color:var(--txt)}
         </div>
         <div style="display:flex;align-items:center;gap:12px;margin:16px 0 12px;flex-wrap:wrap">
           <span class="micro" data-i18n="ap.tesis">Tesis de la mesa</span>
-          <span class="micro" id="cloudPill" style="color:var(--faint)">NUBE · NO CONECTADA — ESTADO LOCAL</span>
+          <span class="micro" id="cloudPill" style="color:var(--faint)">NUBE · …</span>
           <button class="btn primary sm" id="btnTix" style="margin-left:auto" data-i18n="ap.nueva">+ Nueva tesis</button>
         </div>
         <div id="tixList"></div>
@@ -1748,6 +1750,8 @@ const I18N = {
   'lg.malas':     { es:'Credenciales incorrectas. El acceso es solo para socios.',
                     en:'Wrong credentials. Access is for partners only.' },
   'lg.entrando':  { es:'Entrando…',                  en:'Signing in…' },
+  'lg.soloLocal': { es:'Entraste en local: la nube no aceptó esa clave. Usa la de Supabase para ver la mesa compartida.',
+                    en:'Signed in locally: the cloud rejected that key. Use your Supabase password to see the shared desk.' },
   'lg.bienvenido':{ es:'Bienvenido',                 en:'Welcome' },
 
   /* pendientes */
@@ -3462,21 +3466,43 @@ const POST_ITEMS_ = () => traduce(POST_RAW);
 /* compatibilidad: el resto del código las usa como arreglos */
 const PRE_ITEMS = PRE_RAW, SETUP_ITEMS = SETUP_RAW, POST_ITEMS = POST_RAW;
 
+/* Cada casilla guarda {u,ts} en vez de un booleano: en una mesa de tres hace falta
+   saber QUIÉN confirmó cada punto, no sólo que alguien lo hizo. Los `true` viejos se
+   convierten a un registro sin autor para no perder historial. */
+function normalizaChk(arr, n){
+  const out = [];
+  for(let i = 0; i < n; i++){
+    const v = arr && arr[i];
+    if(v === true) out.push({ u:null, ts:null });
+    else if(v && typeof v === 'object') out.push(v);
+    else out.push(null);
+  }
+  return out;
+}
 function getSession(iso){
   const s = S.sessions[iso] = S.sessions[iso] || {};
-  s.pre   = s.pre   || PRE_ITEMS.map(()=>false);
-  s.setup = s.setup || SETUP_ITEMS.map(()=>false);
-  s.post  = s.post  || POST_ITEMS.map(()=>false);
+  s.pre   = normalizaChk(s.pre,   PRE_RAW.length);
+  s.setup = normalizaChk(s.setup, SETUP_RAW.length);
+  s.post  = normalizaChk(s.post,  POST_RAW.length);
   return s;
 }
+const quienConfirmo = v => {
+  if(!v) return '';
+  const nombre = v.u && USERS[v.u] ? USERS[v.u].nombre : (v.u || '');
+  if(!nombre && !v.ts) return '';
+  return (nombre || '—') + (v.ts ? ' · ' + v.ts : '');
+};
 
 function chkHTML(items, arr, key){
-  return items.map((it,i)=>`
-    <button class="chk ${arr[i]?'done':''}" data-k="${key}" data-i="${i}">
+  return items.map((it,i)=>{
+    const firma = quienConfirmo(arr[i]);
+    return `<button class="chk ${arr[i]?'done':''}" data-k="${key}" data-i="${i}">
       <span class="box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M4 12l5 5L20 7"/></svg></span>
-      <span style="flex:1;min-width:0"><b>${it[0]}</b><span>${it[1]}</span></span>
+      <span style="flex:1;min-width:0"><b>${esc(it[0])}</b><span>${esc(it[1])}</span>
+        ${firma?`<span class="chk-quien">✓ ${esc(firma)}</span>`:''}</span>
       ${it[2]?`<span class="t">${it[2]}</span>`:''}
-    </button>`).join('');
+    </button>`;
+  }).join('');
 }
 
 function renderSesion(){
@@ -3508,7 +3534,10 @@ function renderSesion(){
   $$('#v-sesion .chk').forEach(b=>{
     b.onclick = () => {
       const s = getSession(todayISO());
-      s[b.dataset.k][+b.dataset.i] = !s[b.dataset.k][+b.dataset.i];
+      const k = b.dataset.k, i = +b.dataset.i;
+      s[k][i] = s[k][i] ? null
+        : { u: (S.session && S.session.user) || null,
+            ts: new Date().toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit',hour12:false}) };
       save(); renderSesion(); updateBadges();
     };
   });
@@ -4879,14 +4908,20 @@ async function doLogin(){
     return;
   }
   if(cloudOn()){
-    /* Con nube configurada manda Supabase: la contraseña la valida el servidor
-       y sin sesión válida la política RLS no deja ni leer la mesa. */
+    /* Con nube configurada manda Supabase: la contraseña la valida el servidor y sin
+       sesión válida la política RLS no deja ni leer la mesa. Pero si la nube no acepta
+       —clave vieja, sin internet, servicio caído— NO se deja al socio fuera del
+       terminal: entra en local con su clave de siempre y el indicador lo dice. */
     $('#lgErr').textContent = tr('lg.entrando');
-    try{ await cloudLogin(usr.correo || (u + '@northpoint.local'), p); }
-    catch(err){
-      $('#lgErr').textContent = tr('lg.malas') + ' (' + (err.message||'') + ')';
-      $('#lgPass').value = '';
-      return;
+    try{
+      await cloudLogin(usr.correo || (u + '@northpoint.local'), p);
+    }catch(err){
+      if(usr.pass !== p){
+        $('#lgErr').textContent = tr('lg.malas');
+        $('#lgPass').value = '';
+        return;
+      }
+      setTimeout(()=> toast(tr('lg.soloLocal')), 900);
     }
   } else if(usr.pass !== p){
     $('#lgErr').textContent = tr('lg.malas');
@@ -4902,6 +4937,7 @@ async function doLogin(){
   $('#lgPass').value = '';
   unlockUI();
   renderAll();
+  cloudPaint();
   if(cloudOn() && cloudTok){ cloudPull(); }
   toast(tr('lg.bienvenido') + ', ' + usr.nombre + '.');
 }
@@ -5238,7 +5274,19 @@ function fusionarEstado(local, remoto){
   ['trades','tickets','accounts','positions','prospects'].forEach(k => {
     f[k] = fusionarListas(local[k], remoto[k]);
   });
-  f.sessions = { ...(remoto.sessions||{}), ...(local.sessions||{}) };
+  /* El checklist del día lo llenan entre los tres: si dos marcan casillas distintas,
+     se combinan una por una en vez de que gane el último que guardó. */
+  f.sessions = { ...(remoto.sessions||{}) };
+  Object.keys(local.sessions || {}).forEach(dia => {
+    const mio = local.sessions[dia] || {}, suyo = (remoto.sessions||{})[dia] || {};
+    const combinada = {};
+    ['pre','setup','post'].forEach(k => {
+      const a = mio[k] || [], b = suyo[k] || [];
+      const n = Math.max(a.length, b.length);
+      combinada[k] = Array.from({length:n}, (_,i) => a[i] || b[i] || null);
+    });
+    f.sessions[dia] = { ...suyo, ...mio, ...combinada };
+  });
   f.study    = { ...(remoto.study||{}), ...(local.study||{}),
                  lessons:{ ...((remoto.study||{}).lessons||{}), ...((local.study||{}).lessons||{}) },
                  tjr:{ ...((remoto.study||{}).tjr||{}), ...((local.study||{}).tjr||{}) } };
