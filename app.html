@@ -429,20 +429,6 @@ body.locked .app{visibility:hidden;pointer-events:none}
 .cal-pace b{color:var(--txt);font-weight:500}
 @media (max-width:760px){ .cal-resumen{grid-template-columns:repeat(2,1fr)} }
 
-/* ── ritmo del mes (journal) ── */
-.pace-bar{position:relative;height:8px;border-radius:99px;background:var(--w07);margin:22px 0 8px}
-.pace-bar i{position:absolute;left:0;top:0;bottom:0;border-radius:99px;background:var(--txt);transition:width .6s cubic-bezier(.645,.045,.355,1)}
-.pace-mark{position:absolute;top:-7px;bottom:-7px;width:2px;background:var(--faint);border-radius:2px}
-.pace-mark::after{
-  content:attr(data-l);position:absolute;bottom:-16px;left:50%;transform:translateX(-50%);
-  font-family:var(--mono);font-size:8.5px;letter-spacing:.14em;color:var(--faint);white-space:nowrap;
-}
-.pace-mark.end::after{left:auto;right:0;transform:none}
-.pace-mark.start::after{left:0;transform:none}
-.pace-legend{display:flex;justify-content:space-between;font-family:var(--mono);font-size:9px;letter-spacing:.14em;color:var(--faint);margin-top:32px}
-#ritmoPanel .p-head{flex-wrap:wrap}
-@media (max-width:520px){ #ritmoPanel .p-head .micro{margin-left:0;flex-basis:100%} }
-
 /* ── Bootcamp · documentos ── */
 .bc-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
 .bc-card{
@@ -946,19 +932,6 @@ stop[stop-color="#9BC0DC"]{stop-color:var(--txt)}
           </div>
         </div>
         <div class="grid g4" id="jKpis"></div>
-
-        <div class="panel mt" id="ritmoPanel">
-          <div class="p-head">
-            <h3>Ritmo del mes</h3>
-            <span class="micro" id="ritmoSub"></span>
-          </div>
-          <div class="p-body">
-            <div class="cal-resumen" id="ritmoStats"></div>
-            <div class="pace-bar"><i id="ritmoFill"></i><span class="pace-mark" id="ritmoMark" data-l="AL CORRIENTE"></span></div>
-            <div class="pace-legend"><span>INICIO DE MES</span><span id="ritmoMeta"></span></div>
-            <div class="cal-pace" id="ritmoTxt"></div>
-          </div>
-        </div>
 
         <div class="panel mt">
           <div class="p-body" style="padding:6px 6px;overflow-x:auto">
@@ -1936,83 +1909,7 @@ $('#calPrev').addEventListener('click', ()=> calShift(-1));
 $('#calNext').addEventListener('click', ()=> calShift(1));
 $('#calHoy').addEventListener('click', ()=>{ calMes = todayISO().slice(0,7); renderCal(); });
 
-/* ════════ Ritmo del mes ════════
-   La mesa sólo opera lunes a viernes: sábado y domingo no cuentan como día hábil
-   ni para lo transcurrido ni para lo que queda por delante. */
-function ritmoMes(){
-  const M = metas();
-  const hoy = todayISO();
-  const ym = hoy.slice(0,7);
-  const habiles = calMatrix(ym).filter(d => d && esHabil(d));
-  const total = habiles.length;
-  const corridos = habiles.filter(d => d <= hoy).length;
-  const restantes = habiles.filter(d => d >= hoy).length;
-  const byDay = tradesByDay();
-  const logrado = Object.keys(byDay).filter(d => d.startsWith(ym))
-    .flatMap(d => byDay[d]).reduce((a,t) => a + (t.pnl||0), 0);
-  const esperado = total ? M.mes * (corridos/total) : 0;
-  return {
-    ym, meta:M.mes, metaDia:M.dia, logrado,
-    falta: M.mes - logrado,
-    total, corridos, restantes,
-    porDia: restantes > 0 ? (M.mes - logrado)/restantes : (M.mes - logrado),
-    esperado, delta: logrado - esperado,
-    pct: M.mes > 0 ? logrado/M.mes*100 : 0,
-    pctEsperado: total ? corridos/total*100 : 0,
-  };
-}
-
-function renderRitmo(){
-  const r = ritmoMes();
-  const cumplida = r.falta <= 0;
-  const [y,m] = r.ym.split('-');
-  const MESES = ['ENERO','FEBRERO','MARZO','ABRIL','MAYO','JUNIO','JULIO','AGOSTO','SEPTIEMBRE','OCTUBRE','NOVIEMBRE','DICIEMBRE'];
-  $('#ritmoSub').textContent = `${MESES[+m-1]} ${y} · DÍA HÁBIL ${r.corridos} DE ${r.total}`;
-  $('#ritmoMeta').textContent = 'META ' + fmt$(r.meta);
-
-  $('#ritmoStats').innerHTML = [
-    ['FALTA PARA LA META', cumplida ? '$0' : fmt$(r.falta),
-      cumplida ? 'meta cumplida' : 'de ' + fmt$(r.meta), cumplida ? 'up' : ''],
-    ['POR DÍA HÁBIL', cumplida ? '—' : (r.restantes ? fmt$(r.porDia) : '—'),
-      r.restantes ? `para cerrar en ${r.restantes} ${r.restantes===1?'día':'días'}` : 'sin días hábiles por delante', ''],
-    ['DÍAS HÁBILES RESTANTES', r.restantes,
-      'lunes a viernes · sáb y dom cerrado', ''],
-    ['LOGRADO', fmt$(r.logrado, true), fmtPct(r.pct) + ' de la meta',
-      r.logrado > 0 ? 'up' : r.logrado < 0 ? 'down' : ''],
-  ].map(([l,v,s,c])=>`<div class="cal-r"><div class="r-l">${l}</div><div class="r-v ${c}">${v}</div><div class="r-s">${s}</div></div>`).join('');
-
-  const pctFill = Math.max(0, Math.min(100, r.pct));
-  const pctMark = Math.max(0, Math.min(100, r.pctEsperado));
-  $('#ritmoFill').style.width = pctFill + '%';
-  const mk = $('#ritmoMark');
-  mk.style.left = pctMark + '%';
-  mk.classList.toggle('end', pctMark > 82);
-  mk.classList.toggle('start', pctMark < 12);
-
-  const tol = Math.max(1, r.metaDia * 0.5);
-  let veredicto;
-  if(Math.abs(r.delta) <= tol){
-    veredicto = `Vas <b>al corriente</b>: a este punto del mes el plan pide ${fmt$(r.esperado)} y llevas ${fmt$(r.logrado, true)}.`;
-  } else if(r.delta > 0){
-    veredicto = `Vas <b>adelantado ${fmt$(r.delta)}</b>: a este punto el plan pide ${fmt$(r.esperado)} y llevas ${fmt$(r.logrado, true)}.`;
-  } else {
-    veredicto = `Vas <b>atrasado ${fmt$(-r.delta)}</b>: a este punto el plan pide ${fmt$(r.esperado)} y llevas ${fmt$(r.logrado, true)}.`;
-  }
-
-  let plan;
-  if(cumplida){
-    plan = `<b>Meta del mes cumplida.</b> El plan ya no pide más: pide no devolverlo.`;
-  } else if(r.restantes === 0){
-    plan = `El mes no tiene días hábiles por delante. Cerró ${fmt$(r.falta)} debajo de la meta.`;
-  } else {
-    const dias = Math.ceil(r.falta / r.metaDia);
-    plan = `Faltan <b>${fmt$(r.falta)}</b> con <b>${r.restantes}</b> ${r.restantes===1?'día hábil':'días hábiles'} por delante: <b>${fmt$(r.porDia)}</b> por día, o <b>${dias}</b> ${dias===1?'día':'días'} al objetivo diario de ${fmt$(r.metaDia)}.`;
-  }
-  $('#ritmoTxt').innerHTML = plan + ' ' + veredicto;
-}
-
 function renderJournal(){
-  renderRitmo();
   renderCal();
   const byDay = tradesByDay();
   const now = new Date(); const ym = now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
