@@ -35,10 +35,19 @@ el vigilante guarda lo que ya avisó en `data/avisos-visto.json`.
 
 ## Lo que falta hacer (todo lo hace André)
 
-### 1 · Poner los correos reales
+### 1 · Los correos ~~faltan~~ ya están puestos ✓
 
-En `data/avisos.json`, cambiar los tres `CAMBIAR@gmail.com` por las direcciones de verdad.
-Mientras digan CAMBIAR, el vigilante corre pero no manda nada.
+En `data/avisos.json` quedaron los tres:
+
+| Socio | Correo |
+|---|---|
+| Pablo | `pabloochoa8aM@outlook.com` |
+| Mateo | `mateomacouzet2@gmail.com` |
+| André | `andremacouzetruiz@gmail.com` |
+
+El de Pablo es Outlook y no hay problema: **los destinatarios pueden ser de cualquier
+proveedor**. El único que tiene que ser Gmail es el remitente, porque el envío va por
+el SMTP de Google.
 
 ### 2 · Crear una contraseña de aplicación de Google
 
@@ -70,7 +79,7 @@ Cuatro, con estos nombres exactos:
 |---|---|
 | `SUPABASE_URL` | `https://eskpyntqmioiwvaczpcl.supabase.co` |
 | `SUPABASE_SERVICE_KEY` | la `sb_secret_…` del paso 3 |
-| `GMAIL_USER` | la cuenta desde la que salen los correos |
+| `GMAIL_USER` | `andremacouzetruiz@gmail.com` (de ahí salen los avisos) |
 | `GMAIL_APP_PASSWORD` | las 16 letras del paso 2 |
 
 O con la terminal, que pide cada valor sin dejarlo en el historial:
