@@ -70,11 +70,31 @@ def leer_json(p, default=None):
         return default if default is not None else {}
 
 
+def pista_de_llave(bruta):
+    """Describe la llave SIN revelarla, para poder diagnosticar un 401.
+
+    Con sólo el prefijo y el largo se sabe si pegaron la llave equivocada, la
+    pública en vez de la secreta, o algo que ni llave es.
+    """
+    k = bruta.strip()
+    for pref in ('sb_secret_', 'sb_publishable_', 'eyJ'):
+        if k.startswith(pref):
+            que = {'sb_secret_': 'la secreta, que es la correcta',
+                   'sb_publishable_': 'la PÚBLICA — hace falta la secreta',
+                   'eyJ': 'una llave vieja tipo JWT'}[pref]
+            sobra = ' · traía espacios o saltos de línea' if k != bruta else ''
+            return f'empieza con "{pref}" ({que}), {len(k)} caracteres{sobra}'
+    return (f'no parece llave de Supabase: {len(k)} caracteres y no empieza con '
+            f'sb_secret_, sb_publishable_ ni eyJ')
+
+
 def leer_mesa(obligatoria=True):
     """Baja el estado compartido. Si obligatoria=False, un fallo no tumba el aviso."""
     try:
-        url = os.environ['SUPABASE_URL'].rstrip('/')
-        key = os.environ['SUPABASE_SERVICE_KEY']
+        # .strip() a propósito: un salto de línea invisible al pegar el secreto
+        # rompe el encabezado y Supabase responde 401 sin más explicación.
+        url = os.environ['SUPABASE_URL'].strip().rstrip('/')
+        key = os.environ['SUPABASE_SERVICE_KEY'].strip()
         req = urllib.request.Request(
             f'{url}/rest/v1/northpoint_estado?id=eq.1&select=data,rev',
             headers={'apikey': key, 'Authorization': f'Bearer {key}'})
@@ -84,8 +104,14 @@ def leer_mesa(obligatoria=True):
             raise RuntimeError('la mesa está vacía en la nube')
         return filas[0].get('data') or {}, filas[0].get('rev', 0)
     except Exception as e:
+        detalle = ''
+        if '401' in str(e) or '403' in str(e):
+            detalle = ('\n  La llave que está en el secreto SUPABASE_SERVICE_KEY '
+                       + pista_de_llave(os.environ.get('SUPABASE_SERVICE_KEY', ''))
+                       + '.\n  La correcta se saca en spotter-ai → Settings → '
+                         'API Keys → Secret keys.')
         if obligatoria:
-            raise SystemExit(f'No se pudo leer la mesa: {e}')
+            raise SystemExit(f'No se pudo leer la mesa: {e}{detalle}')
         print(f'  ! sin datos de la mesa ({e}); el recordatorio va sin contexto',
               file=sys.stderr)
         return {}, None
@@ -427,7 +453,8 @@ def anotacion(tipo, asunto, destinos, detalle=''):
 def _smtp():
     ctx = ssl.create_default_context()
     s = smtplib.SMTP_SSL('smtp.gmail.com', 465, context=ctx)
-    s.login(os.environ['GMAIL_USER'], os.environ['GMAIL_APP_PASSWORD'])
+    s.login(os.environ['GMAIL_USER'].strip(),
+            os.environ['GMAIL_APP_PASSWORD'].strip())
     return s
 
 
@@ -489,8 +516,8 @@ def tipo_de(asunto):
 
 
 def mandar(cfg, avisos):
-    usuario = os.environ['GMAIL_USER']
-    clave = os.environ['GMAIL_APP_PASSWORD']
+    usuario = os.environ['GMAIL_USER'].strip()
+    clave = os.environ['GMAIL_APP_PASSWORD'].strip()
     destinos = [s['correo'] for s in cfg['socios']
                 if s.get('correo') and 'CAMBIAR' not in s['correo']]
     if not destinos:
