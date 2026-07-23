@@ -278,11 +278,12 @@ def documento(s):
     <div class="fr"><span>Terminal</span><b>{TERMINAL}</b></div>
     <div class="fr"><span>Usuario</span><b>{html.escape(s['usuario'])}</b></div>
     <div class="fr"><span>Correo de la mesa</span><b>{html.escape(s['correo'])}</b></div>
-    <div class="fr"><span>Contraseña</span><b>te la entrega André en persona</b></div>
+    <div class="fr"><span>Contraseña la primera vez</span><b>1234</b></div>
   </div>
-  <div class="aviso"><b>Tu contraseña no está impresa aquí a propósito.</b> Un documento que se
-  reenvía no es lugar para una credencial. Cámbiala la primera vez que entres y no la compartas
-  por escrito con nadie, ni siquiera con los otros socios.</div>
+  <div class="aviso"><b>Cámbiala la primera vez que entres.</b> Entra con 1234 y ve a
+  Configuración → Cambiar contraseña. Mientras sigas con la de fábrica, el terminal te lo
+  recuerda con una advertencia arriba: cualquiera que conozca tu usuario puede entrar.
+  Y no la compartas por escrito con nadie, ni siquiera con los otros socios.</div>
   <p style="margin-top:4mm">Entrando con tu correo ves <b>la misma mesa</b> que los otros dos:
   las mismas tesis, las mismas firmas, el mismo journal. Si el indicador de la vista Aprobaciones
   dice <span class="mono">NUBE · SINCRONIZADA</span>, estás viendo lo mismo que ellos. Si dice

@@ -1556,7 +1556,19 @@ stop[stop-color="#9BC0DC"]{stop-color:var(--txt)}
     <p class="sub">Cargos y deberes asignados por la firma. La identidad la define tu acceso.</p>
     <div id="sIdent"></div>
     <p class="sub" style="margin:4px 0 14px">Capital y metas vienen por default del plan Northpoint: cuenta base $250,000 · mes $30,000 → quincena $15,000 · semana $7,500 · día $1,500.</p>
-    <div style="display:flex;gap:10px;flex-wrap:wrap">
+    <div id="claveAviso"></div>
+    <div class="f-full" style="margin-top:6px">
+      <label data-i18n="cl.titulo">Cambiar contraseña</label>
+      <div class="f-row3">
+        <input type="password" id="clAct" autocomplete="current-password" placeholder="Actual">
+        <input type="password" id="clNue" autocomplete="new-password" placeholder="Nueva">
+        <input type="password" id="clRep" autocomplete="new-password" placeholder="Repetir">
+      </div>
+      <p class="micro" id="clMsg" style="min-height:14px;margin:2px 0 8px"></p>
+      <button class="btn sm primary" id="btnClave" data-i18n="cl.guardar">Guardar contraseña</button>
+    </div>
+
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:14px">
       <button class="btn sm" id="btnBackup" data-i18n="cf.respaldo">Descargar respaldo</button>
       <button class="btn sm" id="btnRestore" data-i18n="cf.restaurar">Restaurar respaldo</button>
       <input type="file" id="fileRestore" accept="application/json" hidden>
@@ -1623,8 +1635,8 @@ stop[stop-color="#9BC0DC"]{stop-color:var(--txt)}
       </div>
     </div>
     <p class="sub" style="margin-bottom:16px" data-i18n="c.acceso">Acceso restringido a socios de la firma.</p>
-    <div class="f-full"><label data-i18n="c.usuario">Usuario</label><input id="lgUser" autocomplete="username" placeholder="pablo.np" autocapitalize="none"></div>
-    <div class="f-full"><label data-i18n="c.clave">Clave</label><input id="lgPass" type="password" autocomplete="current-password" placeholder="••••••••"></div>
+    <div class="f-full"><label data-i18n="c.usuario">Usuario</label><input id="lgUser" autocomplete="off" placeholder="" autocapitalize="none" spellcheck="false"></div>
+    <div class="f-full"><label data-i18n="c.clave">Clave</label><input id="lgPass" type="password" autocomplete="off" placeholder=""></div>
     <div id="lgErr" class="login-err"></div>
     <button class="btn primary" id="lgGo" style="width:100%;margin-top:6px" data-i18n="c.entrar">Entrar a la mesa</button>
     <p class="micro" style="margin-top:18px;text-align:center;font-size:9px;letter-spacing:.2em">CONFIDENCIAL · NORTHPOINT.IO</p>
@@ -1753,6 +1765,21 @@ const I18N = {
   'lg.soloLocal': { es:'Entraste en local: la nube no aceptó esa clave. Usa la de Supabase para ver la mesa compartida.',
                     en:'Signed in locally: the cloud rejected that key. Use your Supabase password to see the shared desk.' },
   'lg.bienvenido':{ es:'Bienvenido',                 en:'Welcome' },
+
+  'cl.titulo':     { es:'Cambiar contraseña',        en:'Change password' },
+  'cl.guardar':    { es:'Guardar contraseña',        en:'Save password' },
+  'cl.malActual':  { es:'La contraseña actual no es correcta.', en:'Current password is not right.' },
+  'cl.corta':      { es:'La nueva debe tener al menos 4 caracteres.', en:'The new one needs at least 4 characters.' },
+  'cl.noCoincide': { es:'Las dos nuevas no coinciden.', en:'The two new ones do not match.' },
+  'cl.esDefault':  { es:'Esa es la clave de fábrica: elige otra.', en:'That is the factory key: pick another.' },
+  'cl.listaAmbas': { es:'Listo. Cambiada aquí y en la nube.', en:'Done. Changed here and in the cloud.' },
+  'cl.listaLocal': { es:'Cambiada en este equipo. Sin sesión de nube, la de la mesa compartida sigue igual.',
+                     en:'Changed on this machine. Without a cloud session, the shared desk password is unchanged.' },
+  'cl.cambiala':   { es:'Estás usando la contraseña de fábrica. Cámbiala en Configuración.',
+                     en:'You are using the factory password. Change it in Settings.' },
+  'cl.avisoT':     { es:'⚠ Contraseña de fábrica.',  en:'⚠ Factory password.' },
+  'cl.avisoD':     { es:'Sigues con 1234. Cualquiera que conozca tu usuario puede entrar: cámbiala aquí abajo.',
+                     en:'You are still on 1234. Anyone who knows your username can get in: change it below.' },
 
   /* pendientes */
   'me.curvaVacia': { es:"Con dos o más días operados, aquí se dibuja el P&L acumulado de la mesa.", en:"With two or more days traded, the running P&L is drawn here." },
@@ -2152,10 +2179,28 @@ const ROLES = {
    separar perfiles, no para proteger nada). Con nube configurada manda `correo`:
    la contraseña la valida Supabase y nunca vive aquí. */
 const USERS = {
-  'pablo.np': { pass:'NP-KEY-01', nombre:'Pablo', roles:['NP-001','NP-010'], correo:'pablo@northpoint.mx' },
-  'mateo.np': { pass:'NP-KEY-02', nombre:'Mateo', roles:['NP-020','NP-030'], correo:'mateo@northpoint.mx' },
-  'andre.np': { pass:'NP-KEY-03', nombre:'André', roles:['NP-040','NP-050'], correo:'andre@northpoint.mx' },
+  'pablo.np': { nombre:'Pablo', roles:['NP-001','NP-010'], correo:'pablo@northpoint.mx' },
+  'mateo.np': { nombre:'Mateo', roles:['NP-020','NP-030'], correo:'mateo@northpoint.mx' },
+  'andre.np': { nombre:'André', roles:['NP-040','NP-050'], correo:'andre@northpoint.mx' },
 };
+/* Todos entran con 1234 la primera vez y la cambian en Configuración.
+   La clave local se guarda como hash SHA-256 en el equipo de cada quien: no impide
+   nada a quien tenga acceso al navegador, pero evita que quede escrita en claro.
+   La contraseña que de verdad protege la mesa es la de Supabase; el cambio desde
+   Configuración actualiza LAS DOS cuando hay sesión de nube. */
+const CLAVE_DEFAULT = '1234';
+
+async function hashClave(txt){
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(txt));
+  return [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2,'0')).join('');
+}
+async function claveLocalOk(usuario, clave){
+  const guardada = (S.claves || {})[usuario];
+  if(!guardada) return clave === CLAVE_DEFAULT;
+  return (await hashClave(clave)) === guardada;
+}
+const usaDefault = u => !((S.claves || {})[u]);
+
 /* puertas de aprobación de un trade → rol que firma */
 const GATES = [
   { k:'research', t:'Research & validación', rol:'NP-030' },
@@ -2179,6 +2224,7 @@ const DEFAULTS = () => ({
   prospects: [],         // {id,nombre,capital,etapa}
   accounts: [],          // {id,alias,orden,firm,plan,size,start,desde,fase,estado}
   seqTrade: 0,
+  claves: {},          // usuario -> hash SHA-256 de su clave local
   ui: { acctSel: { mode:'all', ids:[] } }
 });
 
@@ -2223,6 +2269,7 @@ function migrar(s){
   });
   if((s.schema||0) >= SCHEMA) return s;      // idempotente: sin esto se re-migra en cada carga
   s.accounts = s.accounts || [];
+  s.claves = s.claves || {};
   if(typeof s.seqTrade !== 'number') s.seqTrade = (s.trades||[]).length;
   if(s.profile) delete s.profile.cuenta;      // el capital se deriva de las cuentas
   s.ui = { ...(s.ui||{}), acctSel: { mode:'all', ids:[], ...((s.ui||{}).acctSel||{}) } };
@@ -4916,14 +4963,14 @@ async function doLogin(){
     try{
       await cloudLogin(usr.correo || (u + '@northpoint.local'), p);
     }catch(err){
-      if(usr.pass !== p){
+      if(!(await claveLocalOk(u, p))){
         $('#lgErr').textContent = tr('lg.malas');
         $('#lgPass').value = '';
         return;
       }
       setTimeout(()=> toast(tr('lg.soloLocal')), 900);
     }
-  } else if(usr.pass !== p){
+  } else if(!(await claveLocalOk(u, p))){
     $('#lgErr').textContent = tr('lg.malas');
     $('#lgPass').value = '';
     return;
@@ -4939,6 +4986,7 @@ async function doLogin(){
   renderAll();
   cloudPaint();
   if(cloudOn() && cloudTok){ cloudPull(); }
+  if(usaDefault(u)) setTimeout(()=> toast(tr('cl.cambiala')), 1600);
   toast(tr('lg.bienvenido') + ', ' + usr.nombre + '.');
 }
 $('#btnLogout').addEventListener('click', ()=>{
@@ -4960,6 +5008,8 @@ $('#btnSettings').addEventListener('click', ()=>{
       <div class="duties-h micro">${rk} · ${esc(ROLES[rk].t)}</div>
       <ul>${ROLES[rk].d.map(x=>`<li>${esc(x)}</li>`).join('')}</ul>
     </div>`).join('');
+  renderAvisoClave();
+  $('#clMsg').textContent = '';
   openOv('ovSet');
 });
 function applyProfile(){
@@ -4994,6 +5044,46 @@ $('#fileRestore').addEventListener('change', e => {
   lector.readAsText(f);
   e.target.value = '';
 });
+
+/* El cambio va a los dos lados: la clave local del equipo y, si hay sesión de nube,
+   la de Supabase — que es la que de verdad abre la mesa compartida. */
+$('#btnClave').addEventListener('click', async ()=>{
+  const u = S.session && S.session.user;      // el usuario, no el objeto del socio
+  if(!u) return;
+  const act = $('#clAct').value, nue = $('#clNue').value, rep2 = $('#clRep').value;
+  const msg = t => { $('#clMsg').textContent = t; $('#clMsg').style.color = 'var(--down)'; };
+  if(!(await claveLocalOk(u, act))) return msg(tr('cl.malActual'));
+  if(nue.length < 4)  return msg(tr('cl.corta'));
+  if(nue !== rep2)    return msg(tr('cl.noCoincide'));
+  if(nue === CLAVE_DEFAULT) return msg(tr('cl.esDefault'));
+
+  S.claves = S.claves || {};
+  S.claves[u] = await hashClave(nue);
+
+  let enNube = false;
+  if(cloudOn() && cloudTok){
+    try{
+      const r = await fetch(CLOUD.url + '/auth/v1/user', {
+        method:'PUT', headers: cloudHead(), body: JSON.stringify({ password: nue }),
+      });
+      if(!r.ok) throw new Error(r.status);
+      enNube = true;
+    }catch(e){ /* la local ya cambió; se avisa abajo */ }
+  }
+  save();
+  $('#clAct').value = $('#clNue').value = $('#clRep').value = '';
+  $('#clMsg').style.color = 'var(--up)';
+  $('#clMsg').textContent = enNube ? tr('cl.listaAmbas') : tr('cl.listaLocal');
+  renderAvisoClave();
+});
+
+function renderAvisoClave(){
+  const c = $('#claveAviso'); if(!c) return;
+  const u = S.session && S.session.user;
+  c.innerHTML = (u && usaDefault(u))
+    ? `<div class="g-banner stop" style="margin:0 0 14px"><b>${tr('cl.avisoT')}</b> <span>${tr('cl.avisoD')}</span></div>`
+    : '';
+}
 
 $('#btnBackup').addEventListener('click', ()=>{
   const blob = new Blob([JSON.stringify(S,null,2)], {type:'application/json'});
