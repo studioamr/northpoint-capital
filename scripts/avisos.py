@@ -49,6 +49,8 @@ RAIZ = Path(__file__).resolve().parent.parent
 CFG = RAIZ / 'data' / 'avisos.json'
 VISTO = RAIZ / 'data' / 'avisos-visto.json'
 RELOJ = RAIZ / 'data' / 'avisos-reloj.json'
+BITACORA = RAIZ / 'data' / 'bitacora.json'
+BITACORA_TOPE = 400        # se conserva lo reciente; el archivo no puede crecer sin fin
 TERMINAL = 'https://studioamr.github.io/northpoint-capital/app.html'
 
 GATES = [('research', 'Research'), ('riesgo', 'Riesgo'),
@@ -398,6 +400,30 @@ PIE = ('— — —\nAbrir la mesa: {t}#aprobaciones\n'
        'Este aviso lo manda el terminal solo. No hace falta contestarlo.')
 
 
+def registrar(entradas):
+    """Deja constancia de lo que se mandó, para que el terminal lo pueda mostrar.
+
+    Es un archivo en el repositorio y no la nube a propósito: el aviso sale desde
+    GitHub Actions, que no tiene sesión de socio y por tanto no puede escribir en
+    Supabase sin la llave secreta viajando de más. Aquí basta con que quede escrito.
+    """
+    if not entradas:
+        return
+    libro = leer_json(BITACORA, [])
+    if not isinstance(libro, list):
+        libro = []
+    libro = entradas + libro                    # lo nuevo primero
+    BITACORA.write_text(json.dumps(libro[:BITACORA_TOPE],
+                                   ensure_ascii=False, indent=1) + '\n')
+
+
+def anotacion(tipo, asunto, destinos, detalle=''):
+    return {'ts': datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ'),
+            'tipo': tipo, 'asunto': asunto,
+            'para': [d.split('@')[0] for d in destinos],   # sin la dirección completa
+            'detalle': (detalle or '')[:300]}
+
+
 def _smtp():
     ctx = ssl.create_default_context()
     s = smtplib.SMTP_SSL('smtp.gmail.com', 465, context=ctx)
@@ -446,6 +472,20 @@ def mandar_uno(cfg, destino, asunto, cuerpo, imagenes=None, smtp=None):
     finally:
         if propio:
             s.quit()
+    registrar([anotacion('overnight' if 'Overnight' in asunto else 'aviso',
+                         asunto, [destino], cuerpo.split('\n')[0])])
+
+
+def tipo_de(asunto):
+    """Clasifica el aviso para que el terminal lo pueda pintar distinto."""
+    a = asunto.lower()
+    if a.startswith('trade ·'):        return 'trade'
+    if 'violación' in a:               return 'violacion'
+    if 'colchón' in a:                 return 'riesgo'
+    if 'lista para ejecutar' in a:     return 'aprobada'
+    if 'tesis' in a or 'firma' in a:   return 'tesis'
+    if 'fase' in a or 'objetivo' in a: return 'cuenta'
+    return 'recordatorio'
 
 
 def mandar(cfg, avisos):
@@ -457,6 +497,7 @@ def mandar(cfg, avisos):
         print('  ! los correos de data/avisos.json siguen sin configurar', file=sys.stderr)
         return 0
 
+    libro = []
     ctx = ssl.create_default_context()
     with smtplib.SMTP_SSL('smtp.gmail.com', 465, context=ctx) as smtp:
         smtp.login(usuario, clave)
@@ -470,7 +511,10 @@ def mandar(cfg, avisos):
                 f'— — —\nAbrir la mesa: {TERMINAL}#aprobaciones\n'
                 f'Este aviso lo manda el terminal solo. No hace falta contestarlo.')
             smtp.send_message(m)
+            libro.append(anotacion(tipo_de(asunto), asunto, destinos,
+                                   cuerpo.split('\n')[0]))
             print(f'  → {asunto}')
+    registrar(libro)
     return len(avisos)
 
 
