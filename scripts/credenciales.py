@@ -20,6 +20,7 @@ from pathlib import Path
 
 RAIZ = Path(__file__).resolve().parent.parent
 SALIDA = RAIZ / 'credenciales'
+PUBLICO = RAIZ / 'docs'          # el del candidato SÍ va al repositorio: no lleva claves
 CHROME = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'
 
 LANDING = 'https://studioamr.github.io/northpoint-capital/'
@@ -238,6 +239,91 @@ una cuenta se acerca a su límite.</p>
 </body></html>"""
 
 
+def candidato():
+    """El documento que baja quien se registra en la landing.
+
+    Éste sí es público y va en el repositorio: no lleva ninguna credencial. Lo que
+    dice tiene que ser cierto — nadie llega a una llamada creyendo otra cosa.
+    """
+    hoy = date.today()
+    fecha = f'{hoy.day} de {MESES[hoy.month - 1]} de {hoy.year}'
+    return f"""<!doctype html>
+<html lang="es"><head><meta charset="utf-8"><title>Northpoint · Posiciones</title>
+{ESTILOS}</head><body>
+
+<div class="marca">NORTHPOINT CAPITAL MANAGEMENT</div>
+
+<h1>Antes de la llamada.</h1>
+<p class="sub">Lo que hacemos y qué esperamos de ti. {fecha}.</p>
+
+<p>Gracias por registrarte. Este documento existe para que llegues a la llamada
+sabiendo dónde te estás metiendo — y para que, si no es para ti, lo descubras aquí
+en veinte minutos de lectura y no en tres meses.</p>
+
+<h2>QUÉ ES NORTHPOINT</h2>
+<p>Una mesa de futuros pequeña con un protocolo cerrado. Se opera una sola ventana al
+día, de 7:00 a 8:30 de la mañana, de lunes a viernes. Máximo dos operaciones por
+sesión. Fuera de esa franja la mesa está cerrada.</p>
+<p>No es una señal que copias ni una comunidad de Discord. Es un proceso: se propone
+una tesis por escrito, la firman cuatro puertas distintas —Research, Riesgo, Quant y
+CIO— y sólo con las cuatro se ejecuta. Cada operación queda registrada con su
+resultado y su análisis, salga bien o mal.</p>
+
+<h2>CÓMO SE ENTRA</h2>
+<ol>
+  <li><b>La llamada.</b> Veinte minutos. Nos cuentas qué haces hoy y te decimos con
+      honestidad si esto encaja contigo. A veces la respuesta es no, y es mejor
+      decirla de una vez.</li>
+  <li><b>El bootcamp.</b> Un mes de formación: futuros, estructura de mercado,
+      liquidez, el rango de apertura, gestión de riesgo y psicología. Con material
+      propio y avance medido.</li>
+  <li><b>Simulado.</b> Operas el protocolo completo en simulado hasta que la conducta
+      sea consistente. <b>Nadie toca capital real el primer día</b>, ni el primer mes.</li>
+  <li><b>Cuenta.</b> Si el proceso se sostiene, se pasa a evaluación con una cuenta de
+      fondeo. Ahí empieza lo de verdad.</li>
+</ol>
+
+<h2>QUÉ ESPERAMOS DE TI</h2>
+<ol>
+  <li><b>Noventa minutos al día, todos los días hábiles.</b> No es un pasatiempo de
+      ratos libres. Si no puedes estar a las 7:00 de la mañana de lunes a viernes,
+      esto no va a funcionar.</li>
+  <li><b>Que escribas lo que hiciste, sobre todo cuando sale mal.</b> El journal no es
+      trámite: es la materia prima con la que se corrige. Las violaciones de
+      disciplina se marcan solas y no se borran.</li>
+  <li><b>Que aceptes que otro te firme o te frene.</b> El Riesgo puede detener la mesa
+      sin pedirte permiso. Si eso te molesta de entrada, mejor no.</li>
+  <li><b>Paciencia con el resultado.</b> Un día perdedor operado dentro del protocolo
+      es un día profesional. Un día ganador que rompió las reglas es un pasivo.</li>
+</ol>
+
+<h2>QUÉ NO ES</h2>
+<p>No es un empleo con sueldo fijo ni una promesa de rendimiento. No vendemos un curso
+ni cobramos por entrar. No hay garantía de que llegues a operar capital: eso depende de
+que el proceso se sostenga, y no todo el mundo lo sostiene.</p>
+<p>Operar futuros implica riesgo real de pérdida. Cualquiera que te prometa lo
+contrario te está mintiendo.</p>
+
+<h2>QUÉ SIGUE</h2>
+<p>Agenda la llamada desde la página donde bajaste este documento. Llega habiendo
+leído esto: la conversación va a ser sobre lo que acabas de leer, no sobre tu
+currículum.</p>
+
+<div class="pie">NORTHPOINT CAPITAL MANAGEMENT · DOCUMENTO INFORMATIVO · NO CONSTITUYE OFERTA</div>
+</body></html>"""
+
+
+def a_pdf(html_txt, destino):
+    tmp = destino.parent / ('_' + destino.stem + '.html')
+    tmp.write_text(html_txt, encoding='utf-8')
+    subprocess.run(
+        [CHROME, '--headless', '--disable-gpu', '--no-pdf-header-footer',
+         f'--print-to-pdf={destino}', tmp.as_uri()],
+        check=True, capture_output=True)
+    tmp.unlink()
+    print(f'  → {destino}  ({destino.stat().st_size // 1024} KB)')
+
+
 def main():
     if not Path(CHROME).exists():
         print(f'No encuentro Chrome en {CHROME}', file=sys.stderr)
@@ -246,19 +332,15 @@ def main():
     (SALIDA / '.gitignore').write_text(
         '# Estas hojas llevan contraseñas y el repositorio es publico.\n*\n')
 
+    print('Hojas de los socios (con contraseñas, fuera del repositorio):')
     for s in SOCIOS:
-        htm = SALIDA / f'_{s["usuario"]}.html'
-        pdf = SALIDA / f'Northpoint-{s["nombre"]}.pdf'
-        htm.write_text(hoja(s), encoding='utf-8')
-        subprocess.run(
-            [CHROME, '--headless', '--disable-gpu', '--no-pdf-header-footer',
-             f'--print-to-pdf={pdf}', htm.as_uri()],
-            check=True, capture_output=True)
-        htm.unlink()
-        print(f'  → {pdf}  ({pdf.stat().st_size // 1024} KB)')
+        a_pdf(hoja(s), SALIDA / f'Northpoint-{s["nombre"]}.pdf')
 
-    print(f'\n{len(SOCIOS)} hojas en {SALIDA}')
-    print('Esa carpeta NO se sube al repositorio: lleva contraseñas.')
+    print('\nDocumento del candidato (público, sí va al repositorio):')
+    PUBLICO.mkdir(exist_ok=True)
+    a_pdf(candidato(), PUBLICO / 'Northpoint-Posiciones.pdf')
+
+    print(f'\n{SALIDA} NO se sube: lleva contraseñas.')
     return 0
 
 
