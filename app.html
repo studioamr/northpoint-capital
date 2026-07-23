@@ -4020,6 +4020,7 @@ $('#tSave').addEventListener('click', ()=>{
     notas: $('#tNotas').value.trim(),
     accts: tradeAccts.length ? [...tradeAccts] : [SIN_CUENTA],
     seq: (editingTrade && editingTrade.seq) || ++S.seqTrade,
+    por: (editingTrade && editingTrade.por) || (S.session && S.session.user) || null,
   };
   if(S.accounts.length && !tradeAccts.length){
     toast('Elige al menos una cuenta'); return;
@@ -5397,18 +5398,39 @@ const soloMio = e => { const c = {...e}; delete c.session; delete c.profile; del
    única fuente de verdad; allá sólo se lee. */
 function resumenMesa(){
   const dias = tradesByDay(idsTodas());
-  const violados = [];
+  const violados = [], recientes = [];
+  /* Sólo viajan los últimos 45 días: es de sobra para avisar de lo que acaba de
+     pasar y evita que el estado en la nube crezca sin techo. */
+  const corte = new Date(Date.now() - 45*864e5).toISOString().slice(0,10);
   Object.keys(dias).forEach(d => dias[d].forEach(t => {
-    const v = violations(t, dias[d]);
+    const v = violations(t, dias[d]).map(x => tr('vio.'+x));
     if(v.length) violados.push({ id:t.id, sym:t.sym, date:t.date, time:t.time,
-                                 violaciones: v.map(x => tr('vio.'+x)) });
+                                 violaciones: v });
+    if(d >= corte) recientes.push({
+      id:t.id, date:t.date, time:t.time, sym:t.sym, dir:t.dir, qty:t.qty,
+      entry:t.entry ?? null, exit:t.exit ?? null,
+      pnl1: t.pnl1 != null ? t.pnl1 : t.pnl,   // por cuenta
+      pnl: t.pnl,                              // ya multiplicado por las cuentas
+      nAcc: t.nAcc || 1, setupOk: !!t.setupOk, por: t.por || null,
+      notas: t.notas || '', violaciones: v,
+    });
   }));
   return {
     cuentas_salud: S.accounts.map(a => {
       const h = saludDe(a);
-      return { alias:a.alias, fase:a.fase, balance:h.balance, colchon:h.colchon };
+      return { alias:a.alias, fase:a.fase, balance:h.balance, colchon:h.colchon,
+               hito:h.hito, rDia:h.rDia, oDia:h.oDia };
     }),
     trades_violados: violados,
+    trades_recientes: recientes,
+    /* lo que el vigilante necesita para armar el recordatorio de cierre sin
+       recalcular reglas: meta y riesgo del día sumando las cuentas vivas */
+    dia: (() => {
+      const vivas = S.accounts.filter(a => saludDe(a).reglas);
+      return { meta: vivas.reduce((s,a) => s + (saludDe(a).oDia||0), 0),
+               riesgo: vivas.reduce((s,a) => s + (saludDe(a).rDia||0), 0),
+               cuentas: vivas.length };
+    })(),
     ts: new Date().toISOString(),
   };
 }

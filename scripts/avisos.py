@@ -1,20 +1,32 @@
 #!/usr/bin/env python3
 """
-Vigila la mesa y avisa por correo a los socios cuando algo pide su atención.
+Avisa por correo a los socios. Dos trabajos en un solo archivo:
 
-Corre en GitHub Actions (.github/workflows/avisos.yml) cada 5 minutos. El navegador
-no puede mandar correo desde un sitio estático, así que el aviso sale de aquí.
+  python3 scripts/avisos.py                  vigila la mesa y avisa de lo que cambió
+  python3 scripts/avisos.py --recordatorio X  manda el aviso de reloj X
 
-Qué avisa:
+El navegador no puede mandar correo desde un sitio estático, así que esto corre en
+GitHub Actions (.github/workflows/avisos.yml y recordatorios.yml).
+
+Qué avisa cuando algo cambia en la mesa:
   · una tesis nueva esperando firmas
   · cada firma que se agrega, y a quién le toca la siguiente
   · una tesis que ya juntó las cuatro y está lista para ejecutarse
   · una tesis rechazada
-  · un trade registrado con violación de disciplina
+  · cada trade registrado, con el acumulado del día
+  · un trade con violación de disciplina
   · una cuenta cuyo colchón se acercó al corte
+  · una cuenta que cambió de fase o llegó a su objetivo
 
-Compara el estado actual contra data/avisos-visto.json, que el propio trabajo
-actualiza y commitea. Así nunca manda dos veces el mismo aviso.
+Qué avisa por reloj (lunes a viernes, hora de Morelia):
+  · 6:50  la ventana abre a las 7:00
+  · 7:20  el rango de apertura es a las 7:30
+  · 8:35  cerró la ventana, hay que documentar
+  · 9:00  los días 1 y 16, corte de quincena
+
+Los avisos de cambio se comparan contra data/avisos-visto.json y los de reloj contra
+data/avisos-reloj.json; los dos archivos los actualiza y commitea el propio trabajo,
+así que nada se manda dos veces.
 
 Secretos que necesita (en GitHub → Settings → Secrets and variables → Actions):
   SUPABASE_URL           https://xxxx.supabase.co
@@ -22,36 +34,63 @@ Secretos que necesita (en GitHub → Settings → Secrets and variables → Acti
   GMAIL_USER             la cuenta desde la que sale el correo
   GMAIL_APP_PASSWORD     contraseña de aplicación de Google, no la del correo
 """
+import argparse
 import json
 import os
 import smtplib
 import ssl
 import sys
 import urllib.request
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from email.message import EmailMessage
 from pathlib import Path
 
 RAIZ = Path(__file__).resolve().parent.parent
 CFG = RAIZ / 'data' / 'avisos.json'
 VISTO = RAIZ / 'data' / 'avisos-visto.json'
+RELOJ = RAIZ / 'data' / 'avisos-reloj.json'
 TERMINAL = 'https://studioamr.github.io/northpoint-capital/app.html'
 
 GATES = [('research', 'Research'), ('riesgo', 'Riesgo'),
          ('quant', 'Quant'), ('cio', 'CIO')]
+FASES = {'eval': 'Evaluación', 'buffer': 'Colchón', 'payout': 'Retiros'}
+DIAS = ['lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo']
 
 
-def leer_mesa():
-    url = os.environ['SUPABASE_URL'].rstrip('/')
-    key = os.environ['SUPABASE_SERVICE_KEY']
-    req = urllib.request.Request(
-        f'{url}/rest/v1/northpoint_estado?id=eq.1&select=data,rev',
-        headers={'apikey': key, 'Authorization': f'Bearer {key}'})
-    with urllib.request.urlopen(req, timeout=25) as r:
-        filas = json.loads(r.read().decode())
-    if not filas:
-        raise SystemExit('La mesa está vacía en la nube.')
-    return filas[0].get('data') or {}, filas[0].get('rev', 0)
+# ─────────────────────────── utilidades ───────────────────────────
+
+def leer_json(p, default=None):
+    if not p.exists():
+        return default if default is not None else {}
+    try:
+        return json.loads(p.read_text())
+    except Exception:
+        return default if default is not None else {}
+
+
+def leer_mesa(obligatoria=True):
+    """Baja el estado compartido. Si obligatoria=False, un fallo no tumba el aviso."""
+    try:
+        url = os.environ['SUPABASE_URL'].rstrip('/')
+        key = os.environ['SUPABASE_SERVICE_KEY']
+        req = urllib.request.Request(
+            f'{url}/rest/v1/northpoint_estado?id=eq.1&select=data,rev',
+            headers={'apikey': key, 'Authorization': f'Bearer {key}'})
+        with urllib.request.urlopen(req, timeout=25) as r:
+            filas = json.loads(r.read().decode())
+        if not filas:
+            raise RuntimeError('la mesa está vacía en la nube')
+        return filas[0].get('data') or {}, filas[0].get('rev', 0)
+    except Exception as e:
+        if obligatoria:
+            raise SystemExit(f'No se pudo leer la mesa: {e}')
+        print(f'  ! sin datos de la mesa ({e}); el recordatorio va sin contexto',
+              file=sys.stderr)
+        return {}, None
+
+
+def ahora_local(cfg):
+    return datetime.now(timezone.utc) + timedelta(hours=cfg.get('utc_offset', -6))
 
 
 def nombre_de(cfg, usuario):
@@ -66,10 +105,35 @@ def faltantes(t):
     return [etiqueta for clave, etiqueta in GATES if clave not in firmas]
 
 
+def dinero(n):
+    if n is None:
+        return '—'
+    return ('-$' if n < 0 else '$') + f'{abs(n):,.0f}'
+
+
+def resumen_del_dia(mesa, fecha):
+    """Cuántos trades y cuánto P&L lleva la mesa en esa fecha."""
+    trades = [t for t in ((mesa.get('resumen') or {}).get('trades_recientes') or [])
+              if t.get('date') == fecha]
+    return trades, sum(t.get('pnl') or 0 for t in trades)
+
+
+# ─────────────────── avisos por cambio en la mesa ───────────────────
+
 def novedades(cfg, mesa, visto):
-    """Compara y devuelve [(asunto, cuerpo)] de lo que cambió."""
+    """Compara la mesa contra lo ya avisado.
+
+    Devuelve ([(asunto, cuerpo)], memoria) donde 'memoria' es lo que hay que
+    recordar para la próxima corrida y no se puede derivar del estado actual.
+    """
     av = cfg.get('avisar', {})
+    res = mesa.get('resumen') or {}
     salida = []
+    memoria = {'colchon_avisado': visto.get('colchon_avisado') or {}}
+    # Los avisos de trade y de cuenta se agregaron después. Si el archivo de control
+    # viene de la versión anterior no trae su historial, y avisar de todo lo que ya
+    # existía sería un correo por cada trade viejo. Esta corrida sólo los fotografía.
+    estrena = visto.get('v', 1) < 2
 
     tesis = {t['id']: t for t in (mesa.get('tickets') or []) if t.get('id')}
     antes = visto.get('tickets', {})
@@ -115,10 +179,50 @@ def novedades(cfg, mesa, visto):
                 f'Tesis rechazada · {sym} {lado}',
                 f'Motivo: {t.get("motivo") or "(sin motivo escrito)"}'))
 
-    # trades con violación
+    # ── trades registrados ──
+    recientes = res.get('trades_recientes') or []
+    ya = set(visto.get('trades_vistos') or [])
+    if av.get('trade_nuevo') and recientes and not estrena:
+        # se agrupan por día para poder decir el acumulado con el trade ya incluido
+        por_dia = {}
+        for tr in recientes:
+            por_dia.setdefault(tr.get('date'), []).append(tr)
+        for tr in recientes:
+            if tr.get('id') in ya:
+                continue
+            lado = 'LONG' if tr.get('dir') == 'L' else 'SHORT'
+            n = tr.get('nAcc') or 1
+            dia = por_dia.get(tr.get('date')) or []
+            acum = sum(x.get('pnl') or 0 for x in dia)
+            meta = (res.get('dia') or {}).get('meta')
+            linea = [f'{nombre_de(cfg, tr.get("por"))} registró un trade.', '']
+            linea.append(f'  {tr.get("sym")} {lado} · {tr.get("qty")} contratos '
+                         f'· {tr.get("time")}')
+            if tr.get('entry') is not None or tr.get('exit') is not None:
+                linea.append(f'  entrada {tr.get("entry")} → salida {tr.get("exit")}')
+            linea.append(f'  {dinero(tr.get("pnl1"))} por cuenta × {n} '
+                         f'= {dinero(tr.get("pnl"))}')
+            linea.append(f'  setup válido: {"sí" if tr.get("setupOk") else "NO"}')
+            if tr.get('notas'):
+                linea.append(f'  notas: {tr["notas"]}')
+            linea += ['', f'Van {len(dia)} trade(s) el {tr.get("date")}, '
+                          f'acumulado {dinero(acum)}.']
+            if meta:
+                falta_meta = meta - acum
+                linea.append(f'Meta del día {dinero(meta)} · '
+                             + (f'faltan {dinero(falta_meta)}.' if falta_meta > 0
+                                else 'ya se cumplió.'))
+            if tr.get('violaciones'):
+                linea += ['', f'⚠ Este trade rompió: {", ".join(tr["violaciones"])}.']
+            if len(dia) >= 2:
+                linea.append('Son dos trades: la sesión se cierra aquí.')
+            salida.append((f'Trade · {tr.get("sym")} {lado} {dinero(tr.get("pnl"))}',
+                           '\n'.join(linea)))
+
+    # ── trades con violación (aviso aparte, para que no se pierda entre los normales) ──
     if av.get('trade_con_violacion'):
         vistos = set(visto.get('trades_avisados') or [])
-        for tr in ((mesa.get('resumen') or {}).get('trades_violados') or []):
+        for tr in (res.get('trades_violados') or []):
             vs = tr.get('violaciones') or []
             if vs and tr.get('id') not in vistos:
                 salida.append((
@@ -126,20 +230,169 @@ def novedades(cfg, mesa, visto):
                     f'El trade de {tr.get("date")} {tr.get("time")} en '
                     f'{tr.get("sym")} quedó marcado: {", ".join(vs)}.'))
 
-    # colchón bajo
+    # ── cuentas ──
+    salud = res.get('cuentas_salud') or []
+    prev_cuentas = visto.get('cuentas', {})
+
     if av.get('colchon_bajo'):
         limite = cfg.get('colchon_minimo', 700)
-        avisadas = set(visto.get('cuentas_avisadas') or [])
-        for c in ((mesa.get('resumen') or {}).get('cuentas_salud') or []):
-            if c.get('colchon') is not None and c['colchon'] <= limite \
-                    and c.get('alias') not in avisadas:
-                salida.append((
-                    f'Colchón bajo · {c.get("alias")}',
-                    f'La cuenta {c.get("alias")} quedó a {c["colchon"]} dólares del '
-                    f'corte. El CRO tiene autoridad para detener la mesa.'))
+        paso = cfg.get('colchon_paso', 150)
+        # Avisar una sola vez y callar no sirve: un colchón que va de 600 a 200 es
+        # justo cuando hay que enterarse. Se guarda con cuánto se avisó la última vez
+        # y se vuelve a avisar cada vez que baja otro 'paso'. Si se recupera por
+        # encima del límite, el registro se borra y queda armado de nuevo.
+        antes_col = visto.get('colchon_avisado') or {}
+        memoria['colchon_avisado'] = nuevo_col = dict(antes_col)
+        for c in salud:
+            alias, col = c.get('alias'), c.get('colchon')
+            if col is None or col > limite:
+                nuevo_col.pop(alias, None)      # se recuperó: queda armado de nuevo
+                continue
+            previo = antes_col.get(alias)
+            if previo is not None and col > previo - paso:
+                continue                        # bajó poco: se conserva el aviso previo
+            nuevo_col[alias] = col
+            salida.append((
+                f'Colchón bajo · {alias}',
+                (f'La cuenta {alias} quedó a {dinero(col)} del corte'
+                 + (f' (antes iban {dinero(previo)})' if previo is not None else '')
+                 + '.\n\n'
+                 f'Balance {dinero(c.get("balance"))}. '
+                 f'El CRO tiene autoridad para detener la mesa.')))
 
-    return salida
+    for c in (salud if not estrena else []):
+        alias = c.get('alias')
+        p = prev_cuentas.get(alias)
+        if not p:
+            continue
+        if av.get('cuenta_cambio_fase') and c.get('fase') != p.get('fase'):
+            salida.append((
+                f'Cambio de fase · {alias}',
+                f'{alias} pasó de {FASES.get(p.get("fase"), p.get("fase"))} a '
+                f'{FASES.get(c.get("fase"), c.get("fase"))}.\n\n'
+                f'Balance {dinero(c.get("balance"))}. '
+                f'Riesgo diario nuevo {dinero(c.get("rDia"))}, '
+                f'objetivo {dinero(c.get("oDia"))}.'))
+        if av.get('objetivo_alcanzado') and c.get('hito') is not None \
+                and c.get('balance') is not None \
+                and c['balance'] >= c['hito'] > (p.get('balance') or 0):
+            salida.append((
+                f'Objetivo alcanzado · {alias}',
+                f'{alias} llegó a {dinero(c["balance"])}, arriba del objetivo de '
+                f'{dinero(c["hito"])}. Toca revisar días mínimos y consistencia '
+                f'antes de pedir nada.'))
 
+    return salida, memoria
+
+
+def foto(cfg, mesa, rev, memoria):
+    res = mesa.get('resumen') or {}
+    return {
+        'v': 2,
+        'rev': rev,
+        'ts': datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ'),
+        'tickets': {t['id']: {'firmas': t.get('firmas') or {}, 'estado': t.get('estado')}
+                    for t in (mesa.get('tickets') or []) if t.get('id')},
+        'trades_vistos': [t['id'] for t in (res.get('trades_recientes') or [])
+                          if t.get('id')],
+        'trades_avisados': [t['id'] for t in (res.get('trades_violados') or [])
+                            if t.get('id')],
+        'cuentas': {c.get('alias'): {'fase': c.get('fase'), 'balance': c.get('balance')}
+                    for c in (res.get('cuentas_salud') or []) if c.get('alias')},
+        # con cuánto colchón se avisó cada cuenta, para no repetir ni quedarse callado
+        'colchon_avisado': memoria.get('colchon_avisado') or {},
+    }
+
+
+# ────────────────────────── avisos por reloj ──────────────────────────
+
+def recordatorio(cfg, clave, forzar):
+    """Devuelve [(asunto, cuerpo)] o [] si hoy no toca."""
+    r = (cfg.get('recordatorios') or {}).get(clave)
+    if not r:
+        raise SystemExit(f'No existe el recordatorio "{clave}" en data/avisos.json')
+    if not r.get('activo', True):
+        print(f'recordatorio "{clave}" apagado en la configuración')
+        return []
+
+    hoy = ahora_local(cfg)
+    fecha = hoy.strftime('%Y-%m-%d')
+
+    if not forzar:
+        if hoy.weekday() > 4:
+            print(f'hoy es {DIAS[hoy.weekday()]}: la mesa está cerrada')
+            return []
+        dias_mes = r.get('dias_del_mes')
+        if dias_mes and hoy.day not in dias_mes:
+            print(f'"{clave}" sólo va los días {dias_mes} del mes; hoy es {hoy.day}')
+            return []
+        # GitHub a veces dispara un cron dos veces: una llave por día lo corta
+        ya = leer_json(RELOJ)
+        if ya.get(clave) == fecha:
+            print(f'"{clave}" ya se mandó hoy ({fecha})')
+            return []
+
+    cuerpo = list(r.get('cuerpo') or [])
+
+    # contexto en vivo: sólo si la mesa se pudo leer
+    mesa, _ = leer_mesa(obligatoria=False)
+    res = mesa.get('resumen') or {}
+
+    if clave == 'pre':
+        pendientes = [t for t in (mesa.get('tickets') or [])
+                      if t.get('estado') not in ('rechazada', 'ejecutada')]
+        sin_firmar = [t for t in pendientes if faltantes(t)]
+        listas = [t for t in pendientes if not faltantes(t)]
+        if listas:
+            cuerpo += ['', 'Firmadas y sin ejecutar:']
+            cuerpo += [f'  · {t.get("sym")} '
+                       f'{"LONG" if t.get("dir") == "L" else "SHORT"}' for t in listas]
+        if sin_firmar:
+            cuerpo += ['', 'Esperando firmas:']
+            cuerpo += [f'  · {t.get("sym")} '
+                       f'{"LONG" if t.get("dir") == "L" else "SHORT"} '
+                       f'— faltan {", ".join(faltantes(t))}' for t in sin_firmar]
+        d = res.get('dia') or {}
+        if d.get('cuentas'):
+            cuerpo += ['', f'Hoy operan {d["cuentas"]} cuentas · '
+                           f'meta {dinero(d.get("meta"))} · '
+                           f'riesgo máximo {dinero(d.get("riesgo"))}.']
+
+    if clave == 'cierre':
+        trades, pnl = resumen_del_dia(mesa, fecha)
+        d = res.get('dia') or {}
+        if trades:
+            cuerpo += ['', f'Hoy: {len(trades)} trade(s), {dinero(pnl)}.']
+            for t in trades:
+                lado = 'LONG' if t.get('dir') == 'L' else 'SHORT'
+                marca = '  ⚠' if t.get('violaciones') else '  ·'
+                cuerpo.append(f'{marca} {t.get("time")} {t.get("sym")} {lado} '
+                              f'{dinero(t.get("pnl"))}')
+            if d.get('meta'):
+                cuerpo.append('')
+                cuerpo.append(f'Meta {dinero(d["meta"])} · '
+                              + ('cumplida.' if pnl >= d['meta']
+                                 else f'faltaron {dinero(d["meta"] - pnl)}.'))
+        else:
+            cuerpo += ['', 'No hay trades registrados hoy. Si se operó, hay que '
+                           'meterlos al journal; si no se operó, un día sin setup '
+                           'también es un día bien trabajado.']
+
+    if clave == 'quincena':
+        salud = res.get('cuentas_salud') or []
+        if salud:
+            cuerpo += ['', 'Estado de las cuentas:']
+            for c in salud:
+                cuerpo.append(f'  · {c.get("alias")} — {dinero(c.get("balance"))} '
+                              f'· fase {FASES.get(c.get("fase"), c.get("fase"))} '
+                              f'· a {dinero(c.get("colchon"))} del corte')
+
+    hora = r.get('hora', '')
+    pie = f'{DIAS[hoy.weekday()].capitalize()} {fecha} · {hora} hora de la mesa'
+    return [(r.get('asunto', clave), '\n'.join(cuerpo) + f'\n\n{pie}')]
+
+
+# ──────────────────────────── envío ────────────────────────────
 
 def mandar(cfg, avisos):
     usuario = os.environ['GMAIL_USER']
@@ -168,7 +421,14 @@ def mandar(cfg, avisos):
 
 
 def main():
-    cfg = json.loads(CFG.read_text())
+    ap = argparse.ArgumentParser(description=__doc__)
+    ap.add_argument('--recordatorio', metavar='CLAVE',
+                    help='manda un aviso de reloj (pre, orb, cierre, quincena)')
+    ap.add_argument('--forzar', action='store_true',
+                    help='con --recordatorio: manda aunque hoy no toque o ya se haya mandado')
+    args = ap.parse_args()
+
+    cfg = leer_json(CFG)
     if not cfg.get('activo'):
         print('avisos desactivados en data/avisos.json')
         return 0
@@ -180,16 +440,21 @@ def main():
         print('Faltan secretos: ' + ', '.join(faltan), file=sys.stderr)
         return 1
 
+    if args.recordatorio:
+        avisos = recordatorio(cfg, args.recordatorio, args.forzar)
+        n = mandar(cfg, avisos) if avisos else 0
+        if avisos and not args.forzar:
+            reloj = leer_json(RELOJ)
+            reloj[args.recordatorio] = ahora_local(cfg).strftime('%Y-%m-%d')
+            RELOJ.write_text(json.dumps(reloj, ensure_ascii=False, indent=1) + '\n')
+        print(f'{n} recordatorio(s)')
+        return 0
+
     mesa, rev = leer_mesa()
-    visto = {}
-    if VISTO.exists():
-        try:
-            visto = json.loads(VISTO.read_text())
-        except Exception:
-            visto = {}
+    visto = leer_json(VISTO)
 
     primera = not visto
-    avisos = [] if primera else novedades(cfg, mesa, visto)
+    avisos, memoria = ([], {}) if primera else novedades(cfg, mesa, visto)
     if primera:
         print('primera corrida: se toma foto sin avisar de lo que ya existía')
 
@@ -197,16 +462,8 @@ def main():
     if not avisos:
         print('sin novedades')
 
-    VISTO.write_text(json.dumps({
-        'rev': rev,
-        'ts': datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ'),
-        'tickets': {t['id']: {'firmas': t.get('firmas') or {}, 'estado': t.get('estado')}
-                    for t in (mesa.get('tickets') or []) if t.get('id')},
-        'trades_avisados': [t['id'] for t in ((mesa.get('resumen') or {}).get('trades_violados') or []) if t.get('id')],
-        'cuentas_avisadas': [c.get('alias') for c in ((mesa.get('resumen') or {}).get('cuentas_salud') or [])
-                             if c.get('colchon') is not None
-                             and c['colchon'] <= cfg.get('colchon_minimo', 700)],
-    }, ensure_ascii=False, indent=1))
+    VISTO.write_text(json.dumps(foto(cfg, mesa, rev, memoria),
+                                ensure_ascii=False, indent=1) + '\n')
     print(f'{n} aviso(s) · rev {rev}')
     return 0
 

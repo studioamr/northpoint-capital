@@ -1,7 +1,11 @@
 # Avisos por correo a los socios
 
-Cuando alguien abre una tesis, firma, o queda algo esperando, les llega un correo a los
-tres. Ya está todo escrito y probado; falta que André conecte cuatro datos.
+Dos cosas distintas mandan correo a los tres socios:
+
+- **el vigilante**, que revisa la mesa cada 5 minutos y avisa de lo que cambió;
+- **los recordatorios**, que salen por reloj de lunes a viernes.
+
+Ya está todo escrito y probado; falta que André conecte tres datos.
 
 ---
 
@@ -12,12 +16,13 @@ haría falta meter la contraseña del correo en el código, que es público. As�
 sale desde GitHub Actions, que sí corre en un servidor y guarda secretos de verdad.
 
 El costo de hacerlo así es que **no es instantáneo**: el vigilante revisa cada 5 minutos,
-que es el intervalo más corto que permite GitHub. Para «hay una tesis esperando tu firma»
+que es el intervalo más corto que permite GitHub, y los cron pueden retrasarse unos
+minutos más cuando el servicio anda cargado. Para «hay una tesis esperando tu firma»
 alcanza de sobra.
 
 ---
 
-## De qué avisa
+## De qué avisa cuando algo cambia
 
 | Evento | Ejemplo del asunto |
 |---|---|
@@ -25,11 +30,43 @@ alcanza de sobra.
 | Alguien firmó | `[Northpoint] Firma en NQ LONG` |
 | Las cuatro firmas completas | `[Northpoint] LISTA PARA EJECUTAR · NQ LONG` |
 | Tesis rechazada | `[Northpoint] Tesis rechazada · NQ LONG` |
+| **Se registró un trade** | `[Northpoint] Trade · MNQ SHORT $600` |
 | Trade con violación de disciplina | `[Northpoint] Violación · MNQ 2026-07-23` |
 | Colchón de una cuenta cerca del corte | `[Northpoint] Colchón bajo · T4` |
+| **Una cuenta cambió de fase** | `[Northpoint] Cambio de fase · T1` |
+| **Una cuenta llegó a su objetivo** | `[Northpoint] Objetivo alcanzado · T1` |
 
-El correo dice qué pasó, qué falta y a quién le toca. Cada aviso se manda **una sola vez**:
-el vigilante guarda lo que ya avisó en `data/avisos-visto.json`.
+El correo del trade trae todo: quién lo metió, instrumento, contratos, entrada y salida,
+el P&L por cuenta y multiplicado por el copiador, si el setup era válido, cuánto lleva
+la mesa ese día y cuánto falta para la meta. Si fue el segundo del día, lo dice: la
+sesión se cierra ahí.
+
+Cada aviso se manda **una sola vez**: el vigilante guarda lo que ya avisó en
+`data/avisos-visto.json`.
+
+La excepción es el colchón. Avisar una vez y callarse mientras la cuenta se hunde sería
+inútil, así que se guarda con cuánto se avisó y vuelve a avisar cada que empeora otros
+`colchon_paso` dólares (150 por defecto). Si el colchón se recupera por encima del
+límite, el registro se borra y queda armado otra vez.
+
+---
+
+## De qué avisa por reloj
+
+Lunes a viernes, hora de la mesa (Morelia):
+
+| Hora | Asunto | Qué trae además |
+|---|---|---|
+| 6:50 | `La ventana abre a las 7:00` | Tesis firmadas sin ejecutar, tesis esperando firma, meta y riesgo del día |
+| 7:20 | `El rango de apertura es a las 7:30` | La regla del rompimiento y el máximo de dos trades |
+| 8:35 | `Cerró la ventana` | Los trades del día con su P&L y si se cumplió la meta |
+| 9:00 los días 1 y 16 | `Corte quincenal` | Balance, fase y colchón de cada cuenta |
+
+El de la apertura sale 6:50 y no 6:55 **a propósito**: GitHub retrasa los cron varios
+minutos cuando hay carga, y más vale que llegue diez minutos antes a que llegue tarde.
+Por la misma razón no hay que tomar la hora del correo como cronómetro.
+
+El texto de cada uno se edita en `data/avisos.json` sin tocar código.
 
 ---
 
@@ -93,19 +130,35 @@ gh secret set GMAIL_APP_PASSWORD --repo studioamr/northpoint-capital
 
 ### 5 · Probarlo
 
-En la pestaña **Actions → Avisos a los socios → Run workflow**. La primera corrida sólo
-toma una foto de lo que ya existe y no manda nada — es a propósito, para no inundar a
-nadie con la mesa entera. A partir de la segunda avisa sólo lo nuevo.
+En **Actions → Avisos a los socios → Run workflow**. La primera corrida sólo toma una
+foto de lo que ya existe y no manda nada — es a propósito, para no inundar a nadie con
+la mesa entera. A partir de la segunda avisa sólo lo nuevo.
+
+Lo mismo aplica al estrenar los avisos de trade: la primera corrida después de esta
+actualización los fotografía en silencio en vez de mandar un correo por cada trade viejo.
+
+Para probar un recordatorio sin esperar a mañana: **Actions → Recordatorios de la mesa →
+Run workflow**, se elige cuál y se marca «forzar».
 
 ---
 
 ## Ajustes
 
-En `data/avisos.json`:
+Todo en `data/avisos.json`, sin tocar código:
 
-- `activo: false` apaga todos los avisos sin desconectar nada.
-- Cada evento se puede apagar por separado en `avisar`.
-- `colchon_minimo` es a partir de qué distancia del corte se avisa (por defecto 700 dólares).
+- `activo: false` apaga **todo** sin desconectar nada.
+- Cada evento se apaga por separado en `avisar`.
+- Cada recordatorio se apaga con su propio `activo`, y su texto se edita en `cuerpo`.
+- `colchon_minimo` (700) es a partir de qué distancia del corte se avisa;
+  `colchon_paso` (150) es cuánto tiene que empeorar para volver a avisar.
+- `dias_del_mes` del recordatorio de quincena decide en qué días sale (hoy 1 y 16).
+
+### Si el equipo cambia de huso horario
+
+La mesa opera en hora de Morelia, que es UTC-6 todo el año porque México ya no cambia
+horario. Eso vive en **dos lugares que tienen que coincidir**: `utc_offset` en
+`data/avisos.json` y los cron de `.github/workflows/recordatorios.yml`, que van en UTC
+(hora local + 6). Si se cambia uno sin el otro, los recordatorios salen a deshoras.
 
 ## Si no llegan
 
@@ -114,12 +167,17 @@ En `data/avisos.json`:
 | El trabajo falla con "Faltan secretos" | Alguno de los cuatro no se guardó o tiene otro nombre |
 | Falla en el login de Gmail | Se usó la contraseña normal en vez de la de aplicación |
 | Corre pero dice "sin novedades" siempre | Nadie ha tocado la mesa, o la nube no está sincronizando |
-| Dice que los correos siguen sin configurar | Falta el paso 1 |
+| El recordatorio dice "ya se mandó hoy" | GitHub disparó el cron dos veces; el segundo se descarta solo |
+| Los recordatorios llegan tarde | Retraso de GitHub; no hay forma de garantizar el minuto exacto |
+| Llegan los de reloj pero no los de la mesa | El vigilante es otro trabajo: revisar Actions → Avisos a los socios |
 
 ## Lo que este sistema no hace
 
-- **No es instantáneo.** Hay hasta 5 minutos de retraso.
+- **No es instantáneo.** Hay hasta 5 minutos de retraso en los avisos de la mesa, y los
+  recordatorios pueden salir unos minutos después de su hora.
 - **Le avisa a los tres de todo.** No filtra por rol; si quieres que a Mateo sólo le
   lleguen las de riesgo, se puede hacer, pero hoy no está.
-- **No hay calendario.** Los recordatorios de la ventana de 7:00 o de los payouts
-  quincenales serían otro trabajo aparte.
+- **No sabe de días festivos.** Los recordatorios salen los cinco días hábiles aunque
+  el mercado esté cerrado.
+- **Sólo ve lo que llegó a la nube.** Si un socio registra trades sin sincronizar, el
+  vigilante no se entera hasta que suban.

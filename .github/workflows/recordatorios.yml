@@ -1,0 +1,95 @@
+name: Recordatorios de la mesa
+
+# Avisos por reloj, de lunes a viernes. Los cron de GitHub van en UTC y la mesa opera
+# en hora de Morelia (UTC-6 todo el año, México ya no cambia horario), así que cada
+# hora local lleva +6.
+#
+#   12:50 UTC = 6:50 —  abre la ventana en unos minutos
+#   13:20 UTC = 7:20 —  el rango de apertura empieza
+#   14:35 UTC = 8:35 —  cerró la ventana, hay que documentar
+#   15:00 UTC = 9:00 —  corte de quincena (el script filtra: sólo días 1 y 16)
+#
+# El de la apertura va a las 6:50 y no a las 6:55 a propósito: GitHub retrasa los cron
+# varios minutos cuando hay carga, y más vale que llegue temprano a que llegue tarde.
+#
+# Si el equipo cambia de huso hay que tocar DOS lugares: estos cron y 'utc_offset'
+# en data/avisos.json.
+
+on:
+  schedule:
+    - cron: '50 12 * * 1-5'
+    - cron: '20 13 * * 1-5'
+    - cron: '35 14 * * 1-5'
+    - cron: '0 15 * * 1-5'
+  workflow_dispatch:
+    inputs:
+      cual:
+        description: 'Cuál recordatorio mandar'
+        required: true
+        default: pre
+        type: choice
+        options: [pre, orb, cierre, quincena]
+      forzar:
+        description: 'Mandarlo aunque hoy no toque o ya se haya mandado (para probar)'
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: write
+
+concurrency:
+  group: avisos                 # el mismo grupo que el vigilante: no se pisan al commitear
+  cancel-in-progress: false
+
+jobs:
+  recordar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Decidir cuál toca
+        id: cual
+        env:
+          PROGRAMADO: ${{ github.event.schedule }}
+          MANUAL: ${{ inputs.cual }}
+        run: |
+          case "$PROGRAMADO" in
+            '50 12 * * 1-5') CLAVE=pre ;;
+            '20 13 * * 1-5') CLAVE=orb ;;
+            '35 14 * * 1-5') CLAVE=cierre ;;
+            '0 15 * * 1-5')  CLAVE=quincena ;;
+            *)               CLAVE="$MANUAL" ;;
+          esac
+          if [ -z "$CLAVE" ]; then
+            echo "No se pudo determinar el recordatorio (schedule='$PROGRAMADO')" >&2
+            exit 1
+          fi
+          echo "clave=$CLAVE" >> "$GITHUB_OUTPUT"
+          echo "Toca: $CLAVE"
+
+      - name: Mandar el recordatorio
+        env:
+          SUPABASE_URL:         ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          GMAIL_USER:           ${{ secrets.GMAIL_USER }}
+          GMAIL_APP_PASSWORD:   ${{ secrets.GMAIL_APP_PASSWORD }}
+        run: |
+          python3 scripts/avisos.py --recordatorio "${{ steps.cual.outputs.clave }}" \
+            ${{ inputs.forzar == true && '--forzar' || '' }}
+
+      - name: Guardar lo ya mandado
+        run: |
+          if git diff --quiet -- data/avisos-reloj.json; then
+            echo "sin cambios"
+            exit 0
+          fi
+          git config user.name  "northpoint-bot"
+          git config user.email "actions@github.com"
+          git add data/avisos-reloj.json
+          git commit -m "recordatorio ${{ steps.cual.outputs.clave }} $(date -u +'%Y-%m-%d %H:%M UTC')"
+          git push
