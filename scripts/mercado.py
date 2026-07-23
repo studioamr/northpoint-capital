@@ -212,6 +212,49 @@ def videos():
     return out
 
 
+def directos():
+    """Transmisiones que están AL AIRE en este momento.
+
+    Devuelve lista vacía si no hay ninguna: la tarjeta sólo aparece estando en vivo.
+
+    · YouTube: se lee /live y se exige videoDetails.isLive. No basta con que la URL
+      resuelva: un directo *programado* también responde ahí, pero trae isUpcoming.
+    · Kick: su Cloudflare bloquea cualquier petición que no venga de un navegador
+      (403 en la API y en la página), así que no se puede verificar desde aquí y
+      NO se publica. Mejor ausente que mintiendo que está en vivo.
+    """
+    cfg = json.loads((RAIZ / 'data' / 'canales.json').read_text())
+    out = []
+    for d in cfg.get('directos', []):
+        plat = d.get('plataforma')
+        if plat == 'youtube':
+            cid = d.get('canalId')
+            if not cid:
+                continue
+            try:
+                html = baja(f'https://www.youtube.com/channel/{cid}/live', timeout=30)
+                m = re.search(r'var ytInitialPlayerResponse = (\{.*?\});', html, re.S)
+                if not m:
+                    continue
+                vd = json.loads(m.group(1)).get('videoDetails', {})
+            except Exception as err:
+                print(f"  ! directo {d.get('nombre')}: {err}", file=sys.stderr)
+                continue
+            if not vd.get('isLive') or vd.get('isUpcoming'):
+                print(f"  · {d.get('nombre')}: no está en vivo", file=sys.stderr)
+                continue
+            vid = vd.get('videoId')
+            out.append({
+                'plataforma': 'youtube', 'nombre': d.get('nombre'),
+                'titulo': (vd.get('title') or 'Transmisión en vivo').strip(),
+                'url': f'https://www.youtube.com/watch?v={vid}',
+                'thumb': f'https://i.ytimg.com/vi/{vid}/hqdefault.jpg',
+            })
+        elif plat == 'kick':
+            print(f"  · {d.get('nombre')} (Kick): no verificable desde servidor", file=sys.stderr)
+    return out
+
+
 def main():
     previo = {}
     if SALIDA.exists():
@@ -221,11 +264,13 @@ def main():
             previo = {}
 
     datos, fallas = {}, []
+    VACIO_OK = {'directos'}          # que nadie esté en vivo es un resultado válido
     for clave, fn in (('calendario', calendario), ('precios', precios),
-                      ('noticias', noticias), ('videos', videos)):
+                      ('noticias', noticias), ('videos', videos),
+                      ('directos', directos)):
         try:
             v = fn()
-            if not v:
+            if not v and clave not in VACIO_OK:
                 raise ValueError('sin resultados')
             datos[clave] = v
             print(f'  {clave}: {len(v)}')
@@ -234,14 +279,12 @@ def main():
             datos[clave] = previo.get(clave, [])       # se conserva lo anterior
             print(f'  ! {clave} falló ({err}); se conservan {len(datos[clave])} previos', file=sys.stderr)
 
-    cfg = json.loads((RAIZ / 'data' / 'canales.json').read_text())
-    datos['directos'] = cfg.get('directos', [])
     datos['ts'] = datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
     datos['fallas'] = fallas
     SALIDA.parent.mkdir(parents=True, exist_ok=True)
     SALIDA.write_text(json.dumps(datos, ensure_ascii=False, indent=1))
     print(f'→ {SALIDA} ({SALIDA.stat().st_size} bytes)')
-    return 1 if len(fallas) == 4 else 0
+    return 1 if len(fallas) >= 4 else 0
 
 
 if __name__ == '__main__':

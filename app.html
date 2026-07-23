@@ -548,6 +548,52 @@ body.locked .app{visibility:hidden;pointer-events:none}
 .vid-live i{width:6px;height:6px;border-radius:50%;background:var(--down);display:inline-block}
 @media (max-width:640px){ .vid-rail .vid-card{flex-basis:82vw;max-width:82vw} }
 
+/* ── proceso por fases ── */
+.pr-toggle{display:block;width:100%;text-align:left;cursor:pointer;border-radius:10px;
+  padding:2px 4px 0;transition:background .15s}
+.pr-toggle:hover{background:var(--glass)}
+.pr-toggle:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.pr-pasos{display:flex;align-items:flex-start;gap:0;margin:6px 0 10px}
+.pr-mas{display:flex;align-items:center;justify-content:center;gap:6px;padding:4px 0 6px;
+  font-family:var(--mono);font-size:9px;letter-spacing:.16em;text-transform:uppercase;color:var(--faint)}
+.pr-mas .car{transition:transform .2s}
+.pr-toggle[aria-expanded="true"] .pr-mas .car{transform:rotate(180deg)}
+#prDetalle[hidden]{display:none}
+#prDetalle{animation:vin .2s ease both}
+.pr-paso{flex:1;position:relative;text-align:center;padding-top:22px}
+.pr-paso::before{
+  content:'';position:absolute;top:5px;left:50%;width:11px;height:11px;margin-left:-5.5px;
+  border-radius:50%;border:1.5px solid var(--line);background:var(--bg);z-index:2;
+}
+.pr-paso::after{content:'';position:absolute;top:10px;left:50%;right:-50%;height:1.5px;background:var(--line-soft);z-index:1}
+.pr-paso:last-child::after{display:none}
+.pr-paso.hecho::before{background:var(--txt);border-color:var(--txt)}
+.pr-paso.hecho::after{background:var(--txt)}
+.pr-paso.activa::before{border-color:var(--txt);box-shadow:0 0 0 3px var(--glass-2)}
+.pr-paso b{display:block;font-family:var(--mono);font-size:9.5px;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint)}
+.pr-paso.activa b,.pr-paso.hecho b{color:var(--txt)}
+.pr-paso span{display:block;font-family:var(--mono);font-size:10px;color:var(--faint);margin-top:3px}
+.pr-fila{display:flex;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid var(--line-soft)}
+.pr-fila:last-child{border-bottom:0}
+.pr-fila .al{font-weight:600;font-size:13px;min-width:34px}
+.pr-fila .via{flex:1;min-width:90px}
+.pr-track{height:6px;border-radius:99px;background:var(--w07);overflow:hidden}
+.pr-track i{display:block;height:100%;border-radius:99px;background:var(--txt);
+  transition:width .6s cubic-bezier(.645,.045,.355,1)}
+.pr-track i.listo{background:var(--up)}
+.pr-fila .cifras{font-family:var(--mono);font-size:10px;color:var(--faint);margin-top:5px;
+  display:flex;justify-content:space-between;gap:10px}
+.pr-fila .falta{font-family:var(--mono);font-size:12px;text-align:right;min-width:96px}
+.pr-nota{font-size:12px;color:var(--dim);line-height:1.6;margin-top:14px;padding-top:12px;
+  border-top:1px solid var(--line-soft)}
+.pr-nota b{color:var(--txt);font-weight:500}
+@media (max-width:640px){
+  .pr-paso span{font-size:9px}
+  .pr-fila{flex-wrap:wrap}
+  .pr-fila .falta{min-width:0;margin-left:auto}
+}
+
 /* ── cuentas (copiadora) ── */
 .acct-top{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px}
 .acct-top .btn{margin-left:auto}
@@ -1166,6 +1212,20 @@ stop[stop-color="#9BC0DC"]{stop-color:var(--txt)}
             <button class="btn primary" id="btnTrade">+ Registrar trade</button>
           </div>
         </div>
+        <div class="panel" id="prPanel" style="margin-bottom:14px">
+          <div class="p-head"><h3>Proceso</h3><span class="micro" id="prSub"></span></div>
+          <div class="p-body">
+            <button type="button" class="pr-toggle" id="prToggle" aria-expanded="false" aria-controls="prDetalle">
+              <div class="pr-pasos" id="prPasos"></div>
+              <div class="pr-mas"><span id="prMasTxt">Ver detalle</span><span class="car">▼</span></div>
+            </button>
+            <div id="prDetalle" hidden>
+              <div id="prFilas"></div>
+              <p class="pr-nota" id="prNota"></p>
+            </div>
+          </div>
+        </div>
+
         <div class="grid g4" id="jKpis"></div>
 
         <div class="panel mt">
@@ -2003,10 +2063,13 @@ function renderFirma(){
    Al hacer clic se abre en YouTube: nada se reproduce dentro del terminal. */
 function piezasVid(){
   const m = MERCADO || {};
+  /* Sólo llegan aquí las transmisiones verificadas al aire: el recolector no
+     publica un directo que no pueda confirmar. Si la lista viene vacía, no hay
+     tarjetas de vivo y ya. */
   const directos = (m.directos || []).map(d => ({
-    tipo:'vivo', canal:d.nombre, titulo:'Transmisión en vivo',
-    rot: d.plataforma === 'kick' ? 'Directo · Kick' : 'Directo · YouTube',
-    url:d.url, thumb:null,
+    tipo:'vivo', canal:d.nombre, titulo:d.titulo || 'Transmisión en vivo',
+    rot: d.plataforma === 'kick' ? 'En vivo · Kick' : 'En vivo · YouTube',
+    url:d.url, thumb:d.thumb || null,
   }));
   const ultimos = (m.videos || []).map(v => ({
     tipo:'video', canal:v.canal, titulo:v.titulo || 'Sin título',
@@ -2862,8 +2925,120 @@ $('#calPrev').addEventListener('click', ()=> calShift(-1));
 $('#calNext').addEventListener('click', ()=> calShift(1));
 $('#calHoy').addEventListener('click', ()=>{ calMes = todayISO().slice(0,7); renderCal(); });
 
+/* ════════ Proceso: evaluación → colchón → retiros ════════
+   Al aprobar la evaluación en 53,000 la cuenta se REINICIA a 50,000 y arranca la
+   construcción del colchón con sus propias reglas de riesgo. La zona de retiros
+   empieza en 52,100, que es un drawdown completo por encima del piso congelado
+   de 50,100 — de ahí sale ese número, no es arbitrario. */
+/* Las fases 2 y 3 se viven ya con el plan FONDEADO, que es el que congela el piso:
+   leer sus umbrales del plan de evaluación daría 52,000 en vez de 52,100. */
+function planDeFase(a, fase, filtro){
+  const F = FIRM_CATALOG[a.firm];
+  if(!F) return null;
+  for(const nombre of Object.keys(F.plans)){
+    const p = F.plans[nombre];
+    if(p.phase === fase && p.sizes[a.size] && (!filtro || filtro(p)))
+      return { ...p.sizes[a.size], lockAtProfit:p.lockAtProfit, consistency:p.consistency||0,
+               minDays:p.minDays||0, plan:nombre };
+  }
+  return null;
+}
+/* fondeado que congela el piso (el que fija el hito de 52,100) */
+const reglasFondeadas = a => planDeFase(a, 'funded', p => p.lockAtProfit != null);
+/* evaluación con objetivo (el que fija el hito de 53,000), aunque la cuenta ya pasó */
+const reglasEval = a => planDeFase(a, 'eval', p => p.sizes[a.size].target > 0);
+
+const PASOS = [
+  { t:'Evaluación', sub: (R,Rf,a) => { const Re = reglasEval(a);
+      return Re ? 'a ' + fmt$(a.size + Re.target) : ''; } },
+  { t:'Colchón',    sub: (R,Rf,a) => 'reinicia a ' + fmt$(a.size) },
+  { t:'Retiros',    sub: (R,Rf,a) => Rf ? 'desde ' + fmt$(a.size + Rf.maxDD + Rf.lockAtProfit) : '' },
+];
+
+function renderProceso(){
+  const panel = $('#prPanel'); if(!panel) return;
+  const sel = acctsSel().filter(a => reglasDe(a));
+  if(!sel.length){
+    panel.hidden = true;
+    return;
+  }
+  panel.hidden = false;
+
+  const orden = ['eval','buffer','payout'];
+  const fases = [...new Set(sel.map(a => a.fase))];
+  const mixta = fases.length > 1;
+  /* con varias cuentas manda la más atrasada: el equipo avanza al paso del más lento */
+  const idxActual = Math.min(...sel.map(a => Math.max(0, orden.indexOf(a.fase))));
+  const R0 = reglasDe(sel[0]), Rf0 = reglasFondeadas(sel[0]);
+
+  const abierto = !!(S.ui && S.ui.prAbierto);
+  $('#prDetalle').hidden = !abierto;
+  $('#prToggle').setAttribute('aria-expanded', String(abierto));
+  $('#prMasTxt').textContent = abierto ? 'Ocultar detalle' : 'Ver detalle';
+  $('#prToggle').onclick = ()=>{
+    S.ui.prAbierto = !S.ui.prAbierto; save(); renderProceso();
+  };
+
+  $('#prSub').innerHTML = mixta
+    ? '<span class="tag wr">FASES MIXTAS</span>'
+    : (FASES[sel[0].fase] || FASES.eval).t.toUpperCase();
+
+  $('#prPasos').innerHTML = PASOS.map((p,i)=>{
+    const cls = i < idxActual ? 'hecho' : i === idxActual ? 'activa' : '';
+    return `<div class="pr-paso ${cls}"><b>${esc(p.t)}</b><span>${esc(p.sub(R0, Rf0, sel[0]))}</span></div>`;
+  }).join('');
+
+  $('#prFilas').innerHTML = sel.map(a=>{
+    const h = saludDe(a), F = FASES[a.fase] || FASES.eval;
+    const meta = h.hito;
+    if(meta == null){
+      /* zona de retiros: ya no hay hito que perseguir, lo que importa es el colchón */
+      const pct = h.maxDD ? Math.max(0, Math.min(100, h.colchon / h.maxDD * 100)) : 0;
+      return `<div class="pr-fila">
+        <span class="al">${esc(a.alias)}</span>
+        <div class="via">
+          <div class="pr-track"><i class="listo" style="width:${pct}%"></i></div>
+          <div class="cifras"><span>EN ZONA DE RETIROS</span><span>colchón ${fmt$(h.colchon)} de ${fmt$(h.maxDD)}</span></div>
+        </div>
+        <b class="falta up">${fmt$(h.balance)}</b>
+      </div>`;
+    }
+    const avance = meta > a.start ? (h.balance - a.start) / (meta - a.start) : 0;
+    const pct = Math.max(0, Math.min(100, avance * 100));
+    const falta = meta - h.balance;
+    const listo = falta <= 0;
+    return `<div class="pr-fila">
+      <span class="al">${esc(a.alias)}</span>
+      <div class="via">
+        <div class="pr-track"><i class="${listo?'listo':''}" style="width:${pct}%"></i></div>
+        <div class="cifras"><span>${fmt$(a.start)}</span><span>${F.t.toUpperCase()} · ${fmtPct(pct)}</span><span>${fmt$(meta)}</span></div>
+      </div>
+      <b class="falta ${listo?'up':''}">${listo ? 'HITO ALCANZADO' : 'faltan ' + fmt$(falta)}</b>
+    </div>`;
+  }).join('');
+
+  const F = FASES[sel[0].fase] || FASES.eval;
+  const rD = F.rDia(R0), oD = F.oDia(R0), tope = F.tope(R0);
+  const reglas = [
+    'riesgo máximo <b>' + fmt$(rD) + '</b> por día',
+    'objetivo <b>' + fmt$(oD) + '</b> por día',
+    tope ? 'ningún día por encima de <b>' + fmt$(tope) + '</b> (consistencia ' + Math.round(R0.consistency*100) + '%)' : null,
+    R0.dailyLoss ? 'la firma corta en <b>' + fmt$(R0.dailyLoss) + '</b> de pérdida diaria'
+                 : 'la firma <b>no pone límite diario</b>: el freno es tuyo',
+  ].filter(Boolean);
+
+  const sig = { eval:'Al tocar el objetivo la cuenta se reinicia a ' + fmt$(sel[0].size) + ' y empieza el colchón.',
+                buffer:'Al llegar al hito entras a zona de retiros y el riesgo baja a la mitad.',
+                payout:'Cada 15 días se reparte el retiro. El piso ya está congelado.' }[sel[0].fase];
+
+  $('#prNota').innerHTML = mixta
+    ? 'Las cuentas en vista están en fases distintas: cada barra corre contra el hito de la suya.'
+    : 'Reglas de esta fase: ' + reglas.join(' · ') + '. ' + sig;
+}
+
 function renderJournal(){
   renderPicker($('#pickJournal'));
+  renderProceso();
   renderCal();
   const byDay = tradesByDay();
   const now = new Date(); const ym = now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
