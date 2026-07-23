@@ -1201,6 +1201,7 @@ stop[stop-color="#9BC0DC"]{stop-color:var(--txt)}
               <button class="btn sm" id="btnAcctDet" aria-expanded="false" aria-controls="acctTable">Ver detalle</button>
               <button class="btn sm" id="btnAcctMgr" data-i18n="ac.gestionar">Gestionar</button>
             </div>
+            <div id="acctAlarmas"></div>
             <div id="acctTable" hidden></div>
             <p class="sr-only" id="acctLive" role="status" aria-live="polite"></p>
           </div>
@@ -1715,6 +1716,7 @@ const I18N = {
   'ac.pnlHoy':         { es:'P&L hoy',               en:'P&L today' },
   'ac.linea':          { es:'Línea DD',              en:'DD line' },
   'ac.colchon':        { es:'Colchón',               en:'Cushion' },
+  'ac.consist':        { es:'Consistencia',          en:'Consistency' },
   'ac.fija':           { es:'Fija',                  en:'Locked' },
   'ac.sinVerificar':   { es:'Sin verificar',         en:'Unverified' },
   'ac.todoFondo':      { es:'Todo el fondo',         en:'Whole fund' },
@@ -1966,6 +1968,7 @@ const DEFAULTS = () => ({
   positions: [],         // {id,nombre,fecha,capital,valor,notas}
   prospects: [],         // {id,nombre,capital,etapa}
   accounts: [],          // {id,alias,orden,firm,plan,size,start,desde,fase,estado}
+  seqTrade: 0,
   ui: { acctSel: { mode:'all', ids:[] } }
 });
 
@@ -1984,7 +1987,10 @@ const FASES = {
   eval:   { get t(){ return tr('fase.eval'); }, corto:'EVAL',
             rDia: R => Math.round(0.50 * R.maxDD),                                  // 1,000 [PLAN]
             oDia: R => Math.round(R.target / Math.max(1, R.minDays)),               // 1,000 [CAT]
-            tope: R => R.consistency ? Math.round(R.consistency * R.target) : null, // 1,200 [CAT]
+            /* El tope real es un % del ACUMULADO, no del objetivo: contra los 1,200
+               fijos un día de 1,150 pasaba en verde con 56% de concentración. */
+            tope: (R, acum) => R.consistency
+              ? Math.round(R.consistency * Math.max(acum || 0, R.target)) : null, // [CAT]
             hito: (R,a) => a.start + R.target },                                    // 53,000 [CAT]
   buffer: { get t(){ return tr('fase.buffer'); }, corto:'BUF',
             rDia: R => Math.round(0.10 * R.maxDD),                                  // 200 [PLAN]
@@ -2007,6 +2013,7 @@ function migrar(s){
   });
   if((s.schema||0) >= SCHEMA) return s;      // idempotente: sin esto se re-migra en cada carga
   s.accounts = s.accounts || [];
+  if(typeof s.seqTrade !== 'number') s.seqTrade = (s.trades||[]).length;
   if(s.profile) delete s.profile.cuenta;      // el capital se deriva de las cuentas
   s.ui = { ...(s.ui||{}), acctSel: { mode:'all', ids:[], ...((s.ui||{}).acctSel||{}) } };
   (s.trades||[]).forEach(t => { if(!Array.isArray(t.accts) || !t.accts.length) t.accts = [SIN_CUENTA]; });
@@ -2120,6 +2127,24 @@ function saludDe(a){
            hito: F.hito(R, a), rDia: F.rDia(R), oDia: F.oDia(R), tope: F.tope(R) };
 }
 const capitalVista = () => acctsSel().filter(a=>a.estado==='activa').reduce((x,a)=>x+(a.size||0),0);
+
+/* Consistencia: la fondeadora exige que ningún día concentre más de cierto % de lo
+   ganado en la fase. Se mide contra el ACUMULADO vivo, que es como la revisan ellos. */
+function consistenciaDe(a){
+  const R = reglasDe(a);
+  if(!R || !R.consistency) return null;
+  const porDia = {};
+  S.trades.forEach(t => {
+    if(t.date >= a.desde && (t.accts||[]).includes(a.id))
+      porDia[t.date] = (porDia[t.date]||0) + (t.pnl||0);
+  });
+  const dias = Object.values(porDia);
+  const acum = dias.reduce((x,v)=>x+v, 0);
+  const mejor = dias.reduce((x,v)=> Math.max(x, v), 0);
+  if(acum <= 0 || !mejor) return { ratio:0, mejor, acum, tope:R.consistency, diasOk:dias.length >= (R.minDays||0), minDays:R.minDays||0, dias:dias.length };
+  return { ratio: mejor/acum, mejor, acum, tope:R.consistency,
+           diasOk: dias.length >= (R.minDays||0), minDays:R.minDays||0, dias:dias.length };
+}
 const uid = () => Math.random().toString(36).slice(2,9) + Date.now().toString(36).slice(-4);
 
 const fmt$ = (n, sign=false) => {
@@ -2161,8 +2186,15 @@ function metas(){
     const R = reglasDe(a), F = FASES[a.fase] || FASES.eval;
     return x + F.oDia(R);
   }, 0);
-  return { dia, semana:dia*5, quincena:dia*10, mes:dia*20, anio:dia*240,
-           declarada, derivada:true, nCuentas:conReglas.length, capital:capitalVista() };
+  /* Techo real de la fase: más allá del hito la cuenta reinicia o entra a retiros,
+     así que pedir dia×20 llegaba a 100,000 cuando el máximo alcanzable era 15,000. */
+  const techo = conReglas.reduce((x,a)=>{
+    const h = saludDe(a);
+    return x + (h.hito != null ? Math.max(0, h.hito - h.balance) : (FASES[a.fase]||FASES.eval).oDia(reglasDe(a)) * 20);
+  }, 0);
+  const cap = v => techo > 0 ? Math.min(v, techo) : v;
+  return { dia, semana:cap(dia*5), quincena:cap(dia*10), mes:cap(dia*20), anio:dia*240,
+           techo, declarada, derivada:true, nCuentas:conReglas.length, capital:capitalVista() };
 }
 
 function sessionState(now = new Date()){
@@ -2177,8 +2209,39 @@ function sessionState(now = new Date()){
 }
 
 /* violaciones por trade, dentro de su día (trades ordenados por hora) */
+/* Pérdida del día en UNA cuenta (el pnl guardado es por cuenta). */
+function perdidaDia(dayTrades){
+  return dayTrades.reduce((a,t)=> a + (t.pnl1 != null ? t.pnl1 : (t.pnl||0)), 0);
+}
+/* Límites que aplican al día: el propio de la fase y el duro de la fondeadora.
+   Se toma el más estricto de las cuentas donde cayó la orden. */
+function limitesDia(trade){
+  const ids = new Set(trade.accts || []);
+  let rDia = null, dailyLoss = null;
+  S.accounts.forEach(a => {
+    if(!ids.has(a.id)) return;
+    const R = reglasDe(a); if(!R) return;
+    const F = FASES[a.fase] || FASES.eval;
+    const r = F.rDia(R);
+    if(r && (rDia == null || r < rDia)) rDia = r;
+    if(R.dailyLoss && (dailyLoss == null || R.dailyLoss < dailyLoss)) dailyLoss = R.dailyLoss;
+  });
+  return { rDia, dailyLoss };
+}
+
 function violations(trade, dayTrades){
   const v = [];
+  /* Un día que mata la cuenta salía "limpio" porque nadie comparaba el P&L
+     contra los límites. Se marca en el último trade del día para no repetirlo. */
+  const ultimo = dayTrades[dayTrades.length-1];
+  if(ultimo && ultimo.id === trade.id){
+    const perdida = perdidaDia(dayTrades);
+    if(perdida < 0){
+      const L = limitesDia(trade);
+      if(L.dailyLoss && -perdida >= L.dailyLoss) v.push('LÍMITE DE LA FIRMA');
+      else if(L.rDia && -perdida > L.rDia)       v.push('RIESGO DIARIO EXCEDIDO');
+    }
+  }
   const idx = dayTrades.findIndex(t => t.id === trade.id);
   if(MICROS.includes(trade.sym)) v.push('MINIS');
   if(trade.time){
@@ -2199,7 +2262,15 @@ function violations(trade, dayTrades){
 function tradesByDay(ids = idsSel()){
   const map = {};
   /* el desempate por id importa: de este orden depende el índice que usa violations() */
-  [...S.trades].sort((a,b)=> (a.date+a.time+a.id).localeCompare(b.date+b.time+b.id)).forEach(t=>{
+  /* Con dos trades a la misma hora el orden decidía violaciones, y lo desempataba
+     un id aleatorio. Ahora manda 'seq' (orden real de captura) y, para lo viejo,
+     la posición original en S.trades. */
+  const pos = new Map(S.trades.map((t,i)=>[t.id,i]));
+  [...S.trades].sort((a,b)=>
+      (a.date+a.time).localeCompare(b.date+b.time)
+      || ((a.seq||0) - (b.seq||0))
+      || (pos.get(a.id) - pos.get(b.id))
+  ).forEach(t=>{
     const n = nSel(t, ids); if(!n) return;
     (map[t.date] = map[t.date] || []).push(proy(t, n));
   });
@@ -2221,11 +2292,21 @@ function computeStats(list){
 }
 
 /* Northpoint Score 0–1000 sobre los últimos 30 trades */
+const SCORE_MIN = 10;      // debajo de esto no hay muestra para calificar a nadie
 function computeScore(){
   const byDay = tradesByDay();
-  const all = Object.values(byDay).flat();
-  const last = all.slice(-30);
+  const hoy = todayISO(), mes = hoy.slice(0,7);
+  /* Ventana por CALENDARIO (mes en curso), no por conteo: con 2 trades diarios,
+     "últimos 30" era mes y medio y los días sucios se salían solos de la ventana. */
+  const delMes = Object.keys(byDay).filter(d => d.startsWith(mes) && d <= hoy).sort();
+  let last = delMes.flatMap(d => byDay[d]);
+  if(last.length < SCORE_MIN){
+    /* si el mes aún no da muestra, se completa con lo anterior para no inventar */
+    const previos = Object.keys(byDay).filter(d => d < mes).sort().flatMap(d => byDay[d]);
+    last = [...previos, ...last].slice(-30);
+  }
   if(last.length === 0) return null;
+  if(last.length < SCORE_MIN) return { total:null, dims:[], grade:'MUESTRA INSUFICIENTE', n:last.length, min:SCORE_MIN };
   const vioOf = t => violations(t, byDay[t.date]);
   const risk = last.filter(t => { const v = vioOf(t); return !v.includes('MINIS') && !v.includes('FUERA DE VENTANA') && !v.includes('3ER TRADE'); }).length / last.length;
   const emo  = last.filter(t => { const v = vioOf(t); return !v.includes('REVENGE') && !v.includes('OPERÓ TRAS GANAR'); }).length / last.length;
@@ -2238,9 +2319,15 @@ function computeScore(){
     { k:'Decision Quality', v: dec },
     { k:'Consistency',     v: cons },
   ];
-  const total = Math.round(dims.reduce((a,d)=>a+d.v*250,0));
+  let total = Math.round(dims.reduce((a,d)=>a+d.v*250,0));
+  /* Una violación de riesgo no se promedia: tapa el grado. Antes, cuatro banderas
+     en el mes costaban 46 puntos sobre 1000 y el score seguía diciendo INSTITUCIONAL. */
+  const graves = new Set(last.flatMap(t => vioOf(t))
+    .filter(x => x==='MINIS' || x==='FUERA DE VENTANA' || x==='LÍMITE DE LA FIRMA' || x==='RIESGO DIARIO EXCEDIDO'));
+  const tope = graves.size ? 690 : 1000;
+  if(total > tope) total = tope;
   const grade = total>=850?'INSTITUCIONAL': total>=700?'PROFESIONAL': total>=500?'EN DESARROLLO':'EN RIESGO';
-  return { total, dims, grade, n:last.length };
+  return { total, dims, grade, n:last.length, graves:[...graves] };
 }
 
 /* rangos de P&L */
@@ -2251,16 +2338,19 @@ function pnlRanges(ids = idsSel()){
   const startWeek = new Date(now); startWeek.setDate(day - ((now.getDay()+6)%7)); // lunes
   const swISO = startWeek.getFullYear()+'-'+String(startWeek.getMonth()+1).padStart(2,'0')+'-'+String(startWeek.getDate()).padStart(2,'0');
   const quinStart = day <= 15 ? 1 : 16;
-  const inMonth = t => { const [ty,tm] = t.date.split('-').map(Number); return ty===y && tm===m+1; };
+  /* El mes y la quincena no recortaban el futuro: una fecha mal tecleada inflaba
+     el mes en silencio. Ahora todos los rangos cortan en la fecha de referencia. */
+  const inMonth = t => { const [ty,tm] = t.date.split('-').map(Number); return ty===y && tm===m+1 && t.date <= iso; };
   const r = { dia:0, semana:0, quincena:0, mes:0, anio:0 };
   S.trades.forEach(t=>{
     const n = nSel(t, ids); if(!n) return;
     const p = (t.pnl||0) * n;
     if(t.date === iso) r.dia += p;
     if(t.date >= swISO && t.date <= iso) r.semana += p;
-    if(inMonth(t) && +t.date.split('-')[2] >= quinStart) r.quincena += p;
+    const dd = +t.date.split('-')[2];
+    if(inMonth(t) && dd >= quinStart && (quinStart === 1 ? dd <= 15 : true)) r.quincena += p;
     if(inMonth(t)) r.mes += p;
-    if(+t.date.split('-')[0] === y) r.anio += p;
+    if(+t.date.split('-')[0] === y && t.date <= iso) r.anio += p;
   });
   return r;
 }
@@ -2340,7 +2430,7 @@ function renderFirma(){
     </div>`).join('');
 
   /* departamento 01 */
-  const allTr = S.trades;
+  const allTr = Object.values(tradesByDay(idsTodas())).flat();
   const wins = allTr.filter(t=>(t.pnl||0)>0).length;
   const wr = allTr.length ? Math.round(wins/allTr.length*100) : 0;
   const st = sessionState();
@@ -2764,7 +2854,7 @@ function renderAcctTable(){
     .sort((x,y) => (x.h.colchon ?? Infinity) - (y.h.colchon ?? Infinity));   // la más cerca del corte, arriba
   cont.innerHTML = `<div style="overflow-x:auto"><table class="acct-tbl"><thead><tr>
       <th>${tr('ac.cuenta')}</th><th>${tr('ac.fase')}</th><th class="r">${tr('ac.balance')}</th><th class="r">${tr('ac.pnlHoy')}</th>
-      <th class="r">${tr('ac.linea')}</th><th class="r">${tr('ac.colchon')}</th><th></th>
+      <th class="r">${tr('ac.linea')}</th><th class="r">${tr('ac.colchon')}</th><th class="r">${tr('ac.consist')}</th><th></th>
     </tr></thead><tbody>` +
     filas.map(({a,h})=>{
       const F = FASES[a.fase] || FASES.eval;
@@ -2780,6 +2870,14 @@ function renderAcctTable(){
           ? `<span class="tag wr">${tr('ac.sinVerificar').toUpperCase()}</span>`
           : `<span class="mono ${bajo?'down':''}">${fmt$(h.colchon)}</span>
              <div class="dd-bar"><i class="${bajo?'low':''}" style="width:${pctColchon}%"></i></div>`}</td>
+        <td class="r">${(()=>{
+          const c = consistenciaDe(a);
+          if(!c) return '<span style="color:var(--faint)">—</span>';
+          const pct = Math.round(c.ratio*100), lim = Math.round(c.tope*100);
+          const mal = c.ratio > c.tope, cerca = !mal && c.ratio > c.tope*0.85;
+          return `<span class="mono ${mal?'down':cerca?'warn':''}">${pct}%</span>
+            <div class="sub">tope ${lim}%${c.minDays?` · ${c.dias}/${c.minDays} d`:''}</div>`;
+        })()}</td>
         <td class="r"><button class="btn-icon" title="Ver sólo ${esc(a.alias)}" onclick="soloAcct('${a.id}')">◑</button></td>
       </tr>`;
     }).join('') + '</tbody></table></div>';
@@ -2814,6 +2912,15 @@ function renderAcctPanel(){
   bt.textContent = abierto ? tr('ac.ocultar') : tr('ac.ver');
   bt.onclick = ()=>{ S.ui.acctDet = !S.ui.acctDet; save(); renderAcctPanel(); };
   if(abierto) renderAcctTable();
+  const alarmas = [];
+  sel.forEach(a => {
+    const h = saludDe(a), c = consistenciaDe(a);
+    if(h.colchon != null && h.colchon <= 0) alarmas.push(`${a.alias}: colchón agotado`);
+    if(c && c.ratio > c.tope) alarmas.push(`${a.alias}: consistencia ${Math.round(c.ratio*100)}% sobre el tope de ${Math.round(c.tope*100)}%`);
+  });
+  const cajaAl = $('#acctAlarmas');
+  if(cajaAl) cajaAl.innerHTML = alarmas.length
+    ? `<div class="g-banner stop" style="margin:12px 0 0"><b>⚠ Atención:</b> <span>${alarmas.join(' · ')}.</span></div>` : '';
   const min = sel.map(a=>saludDe(a)).filter(h=>h.colchon!=null).sort((x,y)=>x.colchon-y.colchon)[0];
   $('#acctLive').textContent = `${sel.length} de ${viva.length} cuentas, ${capitalVista()} dólares` +
     (min ? `, colchón mínimo ${Math.round(min.colchon)} dólares` : '');
@@ -2903,8 +3010,17 @@ window.corregirPlan = id => {
 };
 window.reiniciarCuenta = id => {
   const a = S.accounts.find(x=>x.id===id); if(!a) return;
-  a.start = a.size; a.desde = todayISO();
-  save(); renderAcctMgr(); renderDashboard(); toast('Balance reiniciado desde hoy');
+  /* El filtro de saldo es t.date >= desde, así que los trades de HOY —los que
+     hicieron tocar el objetivo— se volvían a sumar sobre el nuevo arranque.
+     Se descuentan para que la cuenta empiece exactamente en su tamaño. */
+  const hoy = todayISO();
+  const hoyPnl = S.trades
+    .filter(t => t.date === hoy && (t.accts||[]).includes(a.id))
+    .reduce((x,t) => x + (t.pnl||0), 0);
+  a.start = a.size - hoyPnl;
+  a.desde = hoy;
+  save(); renderAcctMgr(); renderDashboard();
+  toast(hoyPnl ? `Reiniciada en ${fmt$(a.size)} (se descontó el día del pase)` : 'Balance reiniciado desde hoy');
 };
 window.borrarCuenta = id => {
   const a = S.accounts.find(x=>x.id===id); if(!a) return;
@@ -2943,6 +3059,9 @@ function renderDashboard(){
     ['MES', R.mes, M.mes],
     ['AÑO', R.anio, M.anio],
   ];
+  /* El P&L del mes NO es dinero que quedó: al pasar la evaluación la cuenta reinicia
+     y esa ganancia desaparece. El saldo vivo es lo que de verdad hay sobre el arranque. */
+  const vivo = acctsSel().reduce((x,a)=> x + (saludDe(a).balance - (a.start||0)), 0);
   $('#dashKpis').innerHTML = kpis.map(([l,v,goal])=>{
     const pct = goal>0 ? Math.max(0, Math.min(100, v/goal*100)) : 0;
     return `<div class="panel kpi">
@@ -2951,19 +3070,29 @@ function renderDashboard(){
       <div class="k-s">meta ${fmt$(goal)}</div>
       <div class="bar"><i class="${v>=goal?'full':(v<0?'neg':'')}" style="width:${v<0?100:pct}%"></i></div>
     </div>`;
-  }).join('');
+  }).join('') + (S.accounts.length ? `<div class="panel kpi">
+      <div class="k-l">SALDO VIVO</div>
+      <div class="k-v ${vivo>0?'up':vivo<0?'down':''}">${fmt$(vivo,true)}</div>
+      <div class="k-s">sobre el arranque de las cuentas</div>
+    </div>` : '');
 
   /* score */
   const sc = computeScore();
-  if(!sc){
+  if(!sc || sc.total == null){
+    /* Antes bastaba UN trade para dar 1000 INSTITUCIONAL. Con menos de la muestra
+       mínima no se califica: se dice cuántos faltan. */
+    const faltan = sc ? Math.max(0, (sc.min || 10) - sc.n) : null;
     $('#scoreBox').innerHTML = `<div class="empty" style="padding:26px 10px">
-      <b>Score en construcción</b>
-      <p>El motor conductual Northpoint necesita tus primeros trades registrados para medir Risk Discipline, Emotion Control, Decision Quality y Consistency.</p>
+      <b>${sc ? 'Muestra insuficiente' : 'Score en construcción'}</b>
+      <p>${sc
+        ? `Con ${sc.n} ${sc.n===1?'operación':'operaciones'} no se puede calificar disciplina. Faltan <b>${faltan}</b> para empezar a medir.`
+        : 'El motor conductual Northpoint necesita tus primeros trades registrados para medir Risk Discipline, Emotion Control, Decision Quality y Consistency.'}</p>
       <button class="btn sm" onclick="location.hash='journal'">Ir al journal</button>
     </div>`;
   } else {
     const r = 58, C = 2*Math.PI*r, off = C*(1 - sc.total/1000);
     $('#scoreBox').innerHTML = `<div class="score-wrap">
+      ${sc.graves && sc.graves.length ? `<div class="g-banner stop" style="margin:0 0 14px"><b>⚠ Grado topado:</b> <span>${sc.graves.join(' · ')}. Una violación de riesgo no se promedia.</span></div>` : ''}
       <div class="score-ring">
         <svg width="132" height="132" viewBox="0 0 132 132">
           <circle cx="66" cy="66" r="${r}" fill="none" stroke="rgba(255,255,255,.07)" stroke-width="6"/>
@@ -3035,7 +3164,13 @@ function gestionState(dayTr){
   if(dayTr.length === 1 && first.pnl > 0) return { cls:'win', msg:'<b>Trade 1 ganado → día terminado.</b> Se cierra la plataforma. Nada más que demostrar hoy.' };
   if(dayTr.length === 1 && first.pnl < 0) return { cls:'risk', msg:'<b>Trade 1 perdido → un solo intento más.</b> ÚNICAMENTE con un setup válido nuevo y completo. Nunca revenge.' };
   if(dayTr.length === 1) return { cls:'', msg:'Trade 1 en libro. Queda 1 bala como máximo.' };
-  if(dayTr.length >= 2) return { cls: dayTr.length>2?'stop':'win', msg: dayTr.length>2 ? '<b>Límite excedido.</b> El máximo es 2 operaciones por sesión, sin excepciones.' : '<b>2 trades — sesión completa.</b> Se cierra la plataforma y se documenta.' };
+  if(dayTr.length >= 2){
+    if(dayTr.length > 2) return { cls:'stop', msg:'<b>Límite excedido.</b> El máximo es 2 operaciones por sesión, sin excepciones.' };
+    /* Antes felicitaba por "sesión completa" un día que la tabla marcaba en rojo. */
+    const vs = [...new Set(dayTr.flatMap(t => violations(t, dayTr)))];
+    if(vs.length) return { cls:'stop', msg:`<b>2 trades, pero el día no está limpio:</b> ${vs.join(' · ')}.` };
+    return { cls:'win', msg:'<b>2 trades — sesión completa.</b> Se cierra la plataforma y se documenta.' };
+  }
 }
 
 function drawEquity(){
@@ -3273,7 +3408,10 @@ function renderCal(){
   /* ritmo: qué te falta y a qué paso, solo para el mes en curso */
   const mesActual = calMes === hoyISO.slice(0,7);
   if(!mesActual){
-    $('#calPace').innerHTML = `Mes cerrado. ${delMes.length ? `Cerró en <b>${fmt$(pnlMes,true)}</b> sobre una meta de ${fmt$(M.mes)}.` : 'Sin operaciones registradas en este mes.'}`;
+    const futuro = calMes > hoyISO.slice(0,7);
+    $('#calPace').innerHTML = futuro
+      ? 'Mes por venir. Todavía no hay nada que reportar.'
+      : `Mes cerrado. ${delMes.length ? `Cerró en <b>${fmt$(pnlMes,true)}</b> sobre una meta de ${fmt$(M.mes)}.` : 'Sin operaciones registradas en este mes.'}`;
   } else {
     const restantes = calMatrix(calMes).filter(x => x && esHabil(x) && x >= hoyISO).length;
     const falta = M.mes - pnlMes;
@@ -3351,8 +3489,10 @@ function renderProceso(){
   panel.hidden = false;
 
   const orden = ['eval','buffer','payout'];
-  const fases = [...new Set(sel.map(a => a.fase))];
-  const mixta = fases.length > 1;
+  /* No basta con la fase: dos cuentas de tamaños o planes distintos tienen cifras
+     distintas, y el panel presentaba las de la PRIMERA como si fueran de todas. */
+  const clave = a => a.fase + '|' + a.plan + '|' + a.size;
+  const mixta = new Set(sel.map(clave)).size > 1;
   /* con varias cuentas manda la más atrasada: el equipo avanza al paso del más lento */
   const idxActual = Math.min(...sel.map(a => Math.max(0, orden.indexOf(a.fase))));
   const R0 = reglasDe(sel[0]), Rf0 = reglasFondeadas(sel[0]);
@@ -3404,7 +3544,8 @@ function renderProceso(){
   }).join('');
 
   const F = FASES[sel[0].fase] || FASES.eval;
-  const rD = F.rDia(R0), oD = F.oDia(R0), tope = F.tope(R0);
+  const cons0 = consistenciaDe(sel[0]);
+  const rD = F.rDia(R0), oD = F.oDia(R0), tope = F.tope(R0, cons0 && cons0.acum);
   const reglas = [
     'riesgo máximo <b>' + fmt$(rD) + '</b> por día',
     'objetivo <b>' + fmt$(oD) + '</b> por día',
@@ -3573,6 +3714,7 @@ $('#tSave').addEventListener('click', ()=>{
     setupOk: $('#tSetup').value==='1',
     notas: $('#tNotas').value.trim(),
     accts: tradeAccts.length ? [...tradeAccts] : [SIN_CUENTA],
+    seq: (editingTrade && editingTrade.seq) || ++S.seqTrade,
   };
   if(S.accounts.length && !tradeAccts.length){
     toast('Elige al menos una cuenta'); return;
