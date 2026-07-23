@@ -839,6 +839,24 @@ button.tag.quemada{text-decoration:line-through;text-decoration-color:var(--down
   background:var(--glass-2);color:var(--txt);cursor:pointer;
 }
 .gate button:disabled{opacity:.35;cursor:default}
+/* La puerta que te toca a ti: antes el botón activo y el deshabilitado sólo se
+   diferenciaban por opacidad y nadie notaba que le tocaba firmar. */
+.gate.mio{border-color:var(--accent);background:rgba(155,192,220,.07)}
+.gate.mio .g-t{color:var(--accent)}
+.gate button:not(:disabled){
+  background:var(--btn-pri-bg);border-color:var(--btn-pri-bg);color:var(--btn-pri-txt);
+}
+.gate button:not(:disabled):hover{background:var(--btn-pri-hov)}
+.tix.mio{border-color:var(--accent);box-shadow:0 0 0 1px var(--w12)}
+.tix-tuyo{
+  font-family:var(--mono);font-size:9.5px;letter-spacing:.16em;
+  padding:4px 10px;border-radius:99px;font-weight:600;
+  background:var(--btn-pri-bg);color:var(--btn-pri-txt);
+}
+.rail a.item .bdg.urge{
+  background:var(--btn-pri-bg);color:var(--btn-pri-txt);
+  border-radius:99px;padding:1px 7px;font-weight:600;
+}
 .tix-foot{display:flex;gap:10px;margin-top:12px;flex-wrap:wrap}
 @media (max-width:760px){ .gates{grid-template-columns:repeat(2,1fr)} }
 
@@ -1978,6 +1996,8 @@ const I18N = {
   'ap.como': { es:'Cómo entra un trade a la mesa', en:'How a trade reaches the desk' },
   'ap.tesis': { es:'Tesis de la mesa', en:'Desk theses' },
   'ap.nueva': { es:'+ Nueva tesis', en:'+ New thesis' },
+  'ap.tuTurno':   { es:'TE TOCA FIRMAR',   en:'YOUR SIGNATURE' },
+  'ap.esperando': { es:'esperando tu firma', en:'waiting on you' },
   're.nn': { es:'No negociables', en:'Non-negotiable' },
   're.gestion': { es:'Gestión de la sesión', en:'Session management' },
   're.formato': { es:'Formato de ejecución', en:'Execution format' },
@@ -2256,16 +2276,11 @@ const ROLES = {
     'Opera únicamente la ventana 7:00–8:30, máximo dos trades por sesión.',
     'Registra cada operación con screenshot, setup, resultado y análisis.',
     'Envía el reporte del día al equipo y responde por su Score conductual.']},
-  'NP-070': { t:'Chief Investment Analyst', d:[
-    'Análisis profundo de las oportunidades antes de que lleguen a la mesa.',
-    'Evalúa tesis de largo plazo con marco fundamental y cuantitativo.',
-    'Produce reportes de convicción con horizonte y catalizadores definidos.',
-    'Coordina con el CIO la asignación estratégica del portafolio.']},
-  'NP-080': { t:'Research y Estrategia de Largo Plazo', d:[
-    'Investigación macro y sectorial con horizonte de meses a años.',
-    'Diseña y documenta las estrategias de largo plazo de la casa.',
+  'NP-070': { t:'Chief Strategy Officer', d:[
+    'Define la estrategia de largo plazo de la casa, con horizonte de meses a años.',
+    'Investigación macro y sectorial que sostiene esa estrategia.',
     'Da seguimiento a las tesis vivas y alerta cambios estructurales.',
-    'Traduce el research en mandatos accionables para la mesa.']},
+    'Traduce la visión de largo plazo en mandatos accionables para la mesa.']},
 };
 
 /* ── Equipo NORTHPOINT · credenciales y cargos ── */
@@ -2276,7 +2291,7 @@ const USERS = {
   'pablo.np': { nombre:'Pablo', roles:['NP-001','NP-010'], correo:'pablo@northpoint.mx' },
   'mateo.np': { nombre:'Mateo', roles:['NP-020','NP-030'], correo:'mateo@northpoint.mx' },
   'andre.np': { nombre:'André', roles:['NP-040','NP-050'], correo:'andre@northpoint.mx' },
-  'goyo.np':  { nombre:'Gregorio', roles:['NP-070','NP-080'], correo:'goyo@northpoint.mx' },
+  'goyo.np':  { nombre:'Gregorio', roles:['NP-070'], correo:'goyo@northpoint.mx' },
 };
 /* Todos entran con 1234 la primera vez y la cambian en Configuración.
    La clave local se guarda como hash SHA-256 en el equipo de cada quien: no impide
@@ -5430,8 +5445,15 @@ function updateBadges(){
   const total = DOCS.length;
   const done = DOCS.filter(m=>S.study.lessons[m.id]).length;
   $('#bdgStudy').textContent = done && done<total ? done+'/'+total : '';
-  const abiertas = S.tickets.filter(t=>t.estado==='abierta').length;
-  $('#bdgTix').textContent = abiertas || '';
+  /* Antes contaba TODAS las tesis abiertas, aunque ninguna necesitara a quien está
+     viendo. Si alguna espera TU firma, ese número manda y se pinta con acento. */
+  const yo = S.session.user;
+  const abiertas = S.tickets.filter(t=>t.estado==='abierta');
+  const mias = abiertas.filter(t=>
+    GATES.some(g => !t.firmas[g.k] && rolDeUsuario(yo, g.rol))).length;
+  const bt = $('#bdgTix');
+  bt.textContent = mias || abiertas.length || '';
+  bt.classList.toggle('urge', mias > 0);
 }
 
 /* ════════ MESA DE APROBACIONES (colaborativa) ════════ */
@@ -5444,15 +5466,22 @@ function tixEstado(t){
 }
 function renderTix(){
   const me = S.session.user;
-  const list = [...S.tickets].reverse();
+  /* Una tesis "me toca" si está abierta y alguna puerta de mi cargo sigue sin firmar. */
+  const meToca = t => t.estado === 'abierta' &&
+                      GATES.some(g => !t.firmas[g.k] && rolDeUsuario(me, g.rol));
+  /* Las que esperan mi firma van hasta arriba: antes se perdían entre las demás. */
+  const list = [...S.tickets].reverse()
+                 .sort((a,b) => (meToca(b)?1:0) - (meToca(a)?1:0));
   $('#tixList').innerHTML = list.length ? list.map(t=>{
     const [est, cls] = tixEstado(t);
     const full = GATES.every(g=>t.firmas[g.k]);
-    return `<div class="tix">
+    const mio = meToca(t);
+    return `<div class="tix${mio?' mio':''}">
       <div class="tix-head">
         <b>${esc(t.sym)} · ${t.dir==='L'?'LONG':'SHORT'}</b>
         <span class="micro">${fmtFecha(t.fecha)} · propuesta por ${esc(USERS[t.por] ? USERS[t.por].nombre : t.por)}</span>
         <span class="tix-est ${cls}" style="margin-left:auto">${est}</span>
+        ${mio ? `<span class="tix-tuyo">${tr('ap.tuTurno')}</span>` : ''}
       </div>
       <p class="tix-tesis">${esc(t.tesis)}</p>
       ${t.estado==='rechazada' && t.motivo ? `<p class="tix-tesis" style="color:var(--down)">Motivo del CIO: ${esc(t.motivo)}</p>` : ''}
@@ -5461,7 +5490,7 @@ function renderTix(){
           const f = t.firmas[g.k];
           const puede = !f && t.estado==='abierta' && rolDeUsuario(me, g.rol);
           const dueño = Object.keys(USERS).find(u=>rolDeUsuario(u, g.rol));
-          return `<div class="gate ${f?'done':''}">
+          return `<div class="gate ${f?'done':''}${puede?' mio':''}">
             <span class="g-t">${g.t}</span>
             <span class="g-s">${g.rol} · ${f ? '✓ '+esc(USERS[f.u].nombre)+' · '+f.ts : (USERS[dueño]?USERS[dueño].nombre:'')}</span>
             ${f ? '' : `<button data-sign="${t.id}:${g.k}" ${puede?'':'disabled'}>${puede?'Firmar':'Pendiente'}</button>`}

@@ -62,16 +62,11 @@ DEBERES = {
    'Coordina prime brokerage, custodios y administradores del fondo.',
    'Supervisa client relations e investor relations.',
    'Implementa protocolos operativos y auditorías internas.']),
- 'NP-070': ('Chief Investment Analyst', [
-   'Análisis profundo de las oportunidades antes de que lleguen a la mesa.',
-   'Evalúa tesis de largo plazo con marco fundamental y cuantitativo.',
-   'Produce reportes de convicción con horizonte y catalizadores definidos.',
-   'Coordina con el CIO la asignación estratégica del portafolio.']),
- 'NP-080': ('Research y Estrategia de Largo Plazo', [
-   'Investigación macro y sectorial con horizonte de meses a años.',
-   'Diseña y documenta las estrategias de largo plazo de la casa.',
+ 'NP-070': ('Chief Strategy Officer', [
+   'Define la estrategia de largo plazo de la casa, con horizonte de meses a años.',
+   'Investigación macro y sectorial que sostiene esa estrategia.',
    'Da seguimiento a las tesis vivas y alerta cambios estructurales.',
-   'Traduce el research en mandatos accionables para la mesa.']),
+   'Traduce la visión de largo plazo en mandatos accionables para la mesa.']),
 }
 
 SOCIOS = [
@@ -94,8 +89,7 @@ SOCIOS = [
      'firma': ['<b>Quant</b> — que los números y el setup cuadran con lo medido.'],
      'ejecuta': False},
     {'usuario': 'goyo.np', 'nombre': 'Gregorio', 'clave': 'northpointgoyo',
-     'cargos': [('NP-070', 'Chief Investment Analyst'),
-                ('NP-080', 'Research y Estrategia de Largo Plazo')],
+     'cargos': [('NP-070', 'Chief Strategy Officer')],
      'puerta': 'Construyes la convicción de largo plazo con la que trabaja la mesa.',
      # No firma ninguna de las cuatro puertas: su trabajo es aguas arriba, no per-trade.
      'firma': [],
