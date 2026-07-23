@@ -345,6 +345,25 @@ tbody tr:hover{background:var(--w02)}
   overflow-y:auto;padding:6vh 18px 60px;
 }
 .overlay.on{display:flex}
+/* ── recorrido de bienvenida (sólo la primera vez de cada socio) ── */
+.tour{
+  position:fixed;z-index:81;left:50%;bottom:26px;transform:translateX(-50%);
+  width:min(520px,calc(100vw - 32px));
+  background:var(--modal-bg);border:1px solid var(--line);border-radius:14px;
+  padding:18px 20px 16px;box-shadow:0 18px 50px rgba(0,0,0,.5);
+  display:none;animation:vin .24s ease both;
+}
+.tour.on{display:block}
+body.tour-on #toast{bottom:calc(40px + var(--tour-h,190px))}
+.tour-n{font-size:9.5px;letter-spacing:.14em;color:var(--faint);margin-bottom:7px}
+.tour h4{font-size:15px;font-weight:600;margin-bottom:6px;color:var(--txt)}
+.tour p{font-size:12.5px;line-height:1.62;color:var(--dim);margin-bottom:14px}
+.tour-f{display:flex;align-items:center;gap:8px}
+.tour-p{flex:1;display:flex;gap:4px}
+.tour-p i{height:2px;flex:1;background:var(--w08);border-radius:2px}
+.tour-p i.hecho{background:var(--ac)}
+.rail a.tour-luz{outline:1px solid var(--ac);outline-offset:-1px;border-radius:8px}
+@media(max-width:640px){ .tour{bottom:12px;padding:15px 16px 13px} }
 .modal{
   width:100%;max-width:560px;
   background:var(--modal-bg);
@@ -1530,6 +1549,18 @@ stop[stop-color="#9BC0DC"]{stop-color:var(--txt)}
   </div>
 </div>
 
+<div class="tour" id="tour" role="dialog" aria-modal="false" aria-labelledby="tourT">
+  <div class="tour-n mono" id="tourN"></div>
+  <h4 id="tourT"></h4>
+  <p id="tourP"></p>
+  <div class="tour-f">
+    <div class="tour-p" id="tourBar"></div>
+    <button class="btn" id="tourSkip" data-i18n="tour.saltar">Saltar</button>
+    <button class="btn" id="tourPrev" data-i18n="tour.atras">Atrás</button>
+    <button class="btn primary" id="tourNext" data-i18n="tour.sig">Siguiente</button>
+  </div>
+</div>
+
 <div class="overlay" id="ovPos">
   <div class="modal" role="dialog" aria-modal="true" aria-labelledby="pmTitle">
     <h3 id="pmTitle">Nueva posición Snowball</h3>
@@ -1765,6 +1796,12 @@ const I18N = {
   'lg.soloLocal': { es:'Entraste en local: la nube no aceptó esa clave. Usa la de Supabase para ver la mesa compartida.',
                     en:'Signed in locally: the cloud rejected that key. Use your Supabase password to see the shared desk.' },
   'lg.bienvenido':{ es:'Bienvenido',                 en:'Welcome' },
+  'tour.saltar':  { es:'Saltar',    en:'Skip' },
+  'tour.atras':   { es:'Atrás',     en:'Back' },
+  'tour.sig':     { es:'Siguiente', en:'Next' },
+  'tour.fin':     { es:'Entendido', en:'Got it' },
+  'tour.paso':    { es:'PASO',      en:'STEP' },
+  'tour.de':      { es:'DE',        en:'OF' },
 
   'cl.titulo':     { es:'Cambiar contraseña',        en:'Change password' },
   'cl.guardar':    { es:'Guardar contraseña',        en:'Save password' },
@@ -2216,6 +2253,7 @@ const DEFAULTS = () => ({
   schema: SCHEMA,
   profile: { nombre:'', rol:'NP-060', metaMes:30000 },   // el capital se deriva de las cuentas
   session: { user:null },
+  bienvenida: {},        // usuario -> true, para que el recorrido salga una sola vez
   tickets: [],           // {id,fecha,sym,dir,tesis,por,firmas:{k:{u,ts}},estado,motivo}
   trades: [],            // {id,date,time,sym,dir,qty,entry,exit,pnl,setupOk,notas}
   sessions: {},          // date -> {pre:[], setup:[], post:[]}
@@ -4963,6 +5001,13 @@ async function doLogin(){
     $('#lgErr').textContent = tr('lg.entrando');
     try{
       await cloudLogin(usr.correo || (u + '@northpoint.local'), p);
+      /* La clave que sirve con la nube queda guardada como respaldo local. Sin esto,
+         quien entra con su clave de Supabase se queda FUERA el día que la nube falle:
+         el respaldo sólo conocía el 1234 provisional. */
+      if(!(S.claves || {})[u]){
+        S.claves = S.claves || {};
+        S.claves[u] = await hashClave(p);
+      }
     }catch(err){
       if(!(await claveLocalOk(u, p))){
         $('#lgErr').textContent = tr('lg.malas');
@@ -4987,13 +5032,96 @@ async function doLogin(){
   renderAll();
   cloudPaint();
   if(cloudOn() && cloudTok){ cloudPull(); }
-  if(usaDefault(u)) setTimeout(()=> toast(tr('cl.cambiala')), 1600);
   toast(tr('lg.bienvenido') + ', ' + usr.nombre + '.');
+  if(!(S.bienvenida || {})[u]) setTimeout(tourAbre, 700);
+  else if(usaDefault(u)) setTimeout(()=> toast(tr('cl.cambiala')), 1600);
 }
 $('#btnLogout').addEventListener('click', ()=>{
   cloudLogout();
   S.session = { user:null };
   save(); closeOv(); lockUI();
+});
+
+/* ════════ RECORRIDO DE BIENVENIDA ════════ */
+/* Sale una sola vez por socio, la primera vez que entra. Va moviendo el terminal
+   de verdad mientras explica: se aprende viendo la pantalla, no leyendo encima. */
+const TOUR = [
+  { vista:null, t:['Bienvenido a Northpoint','Welcome to Northpoint'], p:[
+    'Este es el terminal de la mesa. Todo lo nuestro vive aquí: el mercado, tus números, el protocolo del día y las tesis que firmamos entre los tres. Te lo enseño en un minuto.',
+    'This is the desk terminal. Everything lives here: the market, your numbers, the daily protocol and the theses the three of us sign. One minute and you know your way around.'] },
+  { vista:'home', t:['Inicio','Home'], p:[
+    'Lo que se movió: el calendario económico con los eventos que mueven el precio, las cotizaciones y los videos del día. Las horas del calendario son de la mesa, con la de Nueva York al lado.',
+    'What moved: the economic calendar with the events that move price, quotes and the day’s videos. Calendar times are desk time, with New York alongside.'] },
+  { vista:'mesa', t:['Mi mesa','My desk'], p:[
+    'Tus números y sólo los tuyos: P&L del día, la semana, la quincena y el mes contra la meta, tu Score de conducta y la curva de capital. Arriba puedes elegir qué cuentas mirar.',
+    'Your numbers and only yours: P&L for the day, week, fortnight and month against target, your behaviour Score and the equity curve. Up top you pick which accounts to look at.'] },
+  { vista:'sesion', t:['La sesión','The session'], p:[
+    'El protocolo del día. Pre-market a las 7:00, el rango de apertura se forma de 7:30 a 7:45 y todo queda cerrado antes de las 8:30. Fuera de esa ventana no se opera: es la franja donde el sistema tiene ventaja medida.',
+    'The daily protocol. Pre-market at 7:00, the opening range forms 7:30–7:45 and everything is closed before 8:30. Outside that window nobody trades — it is the slice where the system has measured edge.'] },
+  { vista:'journal', t:['Journal','Journal'], p:[
+    'Cada trade se registra aquí, marcando en qué cuentas se replicó. Las violaciones de disciplina se marcan solas y no se pueden borrar: un día perdedor bien operado es un día profesional, uno ganador que rompió las reglas es un pasivo.',
+    'Every trade goes here, tagged with the accounts it copied to. Discipline breaches are flagged automatically and cannot be deleted: a losing day traded by the book is a professional day; a winning day that broke the rules is a liability.'] },
+  { vista:'aprobaciones', t:['Mesa de aprobaciones','Approvals'], p:[
+    'Ningún trade entra por gusto. Una tesis junta cuatro firmas —Research, Riesgo, Quant y CIO— y sólo entonces se ejecuta. Cuando te toque firmar te va a llegar un correo.',
+    'No trade goes in on a hunch. A thesis collects four signatures — Research, Risk, Quant and CIO — and only then is it executed. You get an email when it is your turn to sign.'] },
+  { vista:'estudio', t:['Bootcamp','Bootcamp'], p:[
+    'Siete módulos con los diagramas de la casa: futuros, estructura, liquidez, el rango de apertura, confirmaciones, riesgo y psicología. Se marca lo estudiado conforme avanzas.',
+    'Seven modules with the house diagrams: futures, structure, liquidity, the opening range, confirmations, risk and psychology. Mark them off as you go.'] },
+  { vista:null, t:['Dos cosas y te dejo','Two things and I’m done'], clave:true, p:[
+    'De aquí en adelante el correo te llega solo: el resumen del overnight a las 6:20, un aviso antes de que abra la ventana, y uno cada vez que alguien firma una tesis o registra un trade.',
+    'From now on the email comes to you: the overnight recap at 6:20, a heads-up before the window opens, and one every time somebody signs a thesis or logs a trade.'] },
+];
+let tourI = 0;
+
+function tourPinta(){
+  const paso = TOUR[tourI];
+  const en = idi() === 'en';
+  $('#tourN').textContent = `${tr('tour.paso')} ${tourI+1} ${tr('tour.de')} ${TOUR.length}`;
+  $('#tourT').textContent = loc(paso.t);
+  let txt = loc(paso.p);
+  /* Sólo se le dice que cambie la clave a quien de verdad trae la provisional. */
+  if(paso.clave && usaDefault(S.session && S.session.user)){
+    txt = (en ? 'You are on the temporary key: change it in Settings, top right. ' :
+                'Traes la clave provisional: cámbiala en Ajustes, arriba a la derecha. ') + txt;
+  }
+  $('#tourP').textContent = txt;
+  $('#tourBar').innerHTML = TOUR.map((_,i)=>`<i class="${i<=tourI?'hecho':''}"></i>`).join('');
+  $('#tourPrev').style.visibility = tourI ? 'visible' : 'hidden';
+  $('#tourNext').textContent = tourI === TOUR.length-1 ? tr('tour.fin') : tr('tour.sig');
+  /* el toast se recorre hacia arriba para no encimarse */
+  requestAnimationFrame(()=> document.documentElement.style.setProperty(
+    '--tour-h', $('#tour').offsetHeight + 'px'));
+  document.querySelectorAll('.rail a.tour-luz').forEach(a=> a.classList.remove('tour-luz'));
+  if(paso.vista){
+    location.hash = paso.vista;
+    const a = document.querySelector(`.rail a[data-view="${paso.vista}"]`);
+    if(a){ a.classList.add('tour-luz'); a.scrollIntoView({block:'nearest'}); }
+  }
+}
+function tourCierra(){
+  $('#tour').classList.remove('on');
+  document.body.classList.remove('tour-on');
+  document.querySelectorAll('.rail a.tour-luz').forEach(a=> a.classList.remove('tour-luz'));
+  const u = S.session && S.session.user;
+  if(u){ S.bienvenida = S.bienvenida || {}; S.bienvenida[u] = true; save(); }
+}
+function tourAbre(){
+  tourI = 0;
+  $('#tour').classList.add('on');
+  document.body.classList.add('tour-on');
+  tourPinta();
+}
+$('#tourNext').addEventListener('click', ()=>{
+  if(tourI === TOUR.length-1) return tourCierra();
+  tourI++; tourPinta();
+});
+$('#tourPrev').addEventListener('click', ()=>{ if(tourI){ tourI--; tourPinta(); } });
+$('#tourSkip').addEventListener('click', tourCierra);
+document.addEventListener('keydown', e=>{
+  if(!$('#tour').classList.contains('on')) return;
+  if(e.key === 'Escape') tourCierra();
+  if(e.key === 'ArrowRight') $('#tourNext').click();
+  if(e.key === 'ArrowLeft')  $('#tourPrev').click();
 });
 
 /* ════════ AJUSTES / PERFIL ════════ */
