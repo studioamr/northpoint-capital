@@ -976,6 +976,28 @@ body{padding-bottom:56px}
 .explore .arr{font-size:16px;color:var(--accent);animation:expl 2.2s ease-in-out infinite}
 @keyframes expl{0%,100%{transform:translateY(0);opacity:.9}50%{transform:translateY(7px);opacity:.5}}
 @media (prefers-reduced-motion:reduce){ .explore .arr{animation:none} }
+
+/* ============================================================
+   MODO DOCUMENTO · cada sección vive detrás de su botón del índice
+   ============================================================ */
+#filosofia,#estructura,#conducta,#tecnologia,#snowball{display:none}
+#filosofia.doc-active,#estructura.doc-active,#conducta.doc-active,
+#tecnologia.doc-active,#snowball.doc-active{display:block;border-top:none;padding-top:130px}
+body.doc-open .hero,
+body.doc-open .ticker,
+body.doc-open #indice{display:none}
+.docback{
+  display:none;
+  position:fixed;top:76px;left:clamp(20px,4vw,48px);z-index:90;
+  font-family:var(--mono);font-size:11px;letter-spacing:.16em;text-transform:uppercase;
+  color:var(--dim);border:1px solid var(--line);padding:9px 16px;
+  background:rgba(5,7,12,.7);
+  backdrop-filter:blur(16px);
+  -webkit-backdrop-filter:blur(16px);
+  transition:color .2s,border-color .2s;
+}
+.docback:hover{color:var(--txt);border-color:var(--accent-deep)}
+body.doc-open .docback{display:inline-block}
 </style>
 </head>
 <body>
@@ -1035,6 +1057,8 @@ body{padding-bottom:56px}
 <div class="ticker" aria-hidden="true">
   <div class="ticker-track"><span>MESA DE FUTUROS <em>·</em> VENTANA 7:00–8:30 <em>·</em> ORB 7:30–7:45 <em>·</em> MÁX 2 TRADES <em>·</em> SCORE CONDUCTUAL 0–1000 <em>·</em> SNOWBALL INVESTMENTS <em>·</em> OBJETIVO 12–28% ANUAL <em>·</em> REEQUILIBRIO TRIMESTRAL <em>·</em> EVIDENCIA, NO NARRATIVA <em>·</em> </span><span>MESA DE FUTUROS <em>·</em> VENTANA 7:00–8:30 <em>·</em> ORB 7:30–7:45 <em>·</em> MÁX 2 TRADES <em>·</em> SCORE CONDUCTUAL 0–1000 <em>·</em> SNOWBALL INVESTMENTS <em>·</em> OBJETIVO 12–28% ANUAL <em>·</em> REEQUILIBRIO TRIMESTRAL <em>·</em> EVIDENCIA, NO NARRATIVA <em>·</em> </span></div>
 </div>
+
+<a class="docback" href="#">← Volver al índice</a>
 
 <!-- ============================ ÍNDICE ============================ -->
 <section id="indice" style="padding-top:80px">
@@ -1650,14 +1674,17 @@ body{padding-bottom:56px}
 
   /* ---------- Smooth scroll para anchors (respeta reduced-motion) ---------- */
   var scrollBehavior = window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth';
+  var DOC_SECS = ['filosofia','estructura','conducta','tecnologia','snowball'];
   document.querySelectorAll('a[href^="#"]').forEach(function(a){
     a.addEventListener('click', function(e){
       var href = a.getAttribute('href');
       if (href === '#') {
         e.preventDefault();
+        if (location.hash) location.hash = '';
         window.scrollTo({ top: 0, behavior: scrollBehavior });
         return;
       }
+      if (DOC_SECS.indexOf(href.slice(1)) !== -1) return; /* el router de documentos toma el control */
       var target = document.querySelector(href);
       if (target) {
         e.preventDefault();
@@ -1666,6 +1693,41 @@ body{padding-bottom:56px}
       }
     });
   });
+
+  /* ---------- Router de documentos: el índice ES la navegación ---------- */
+  var DECK_MAP = {
+    filosofia: '// FILOSOFÍA /0.1',
+    estructura: '// ESTRUCTURA /0.2',
+    conducta: '// CONDUCTA /0.3',
+    tecnologia: '// TECNOLOGÍA /0.4',
+    snowball: '// SNOWBALL /0.5'
+  };
+  function routeDoc(){
+    var h = location.hash.slice(1);
+    var open = DOC_SECS.indexOf(h) !== -1;
+    document.body.classList.toggle('doc-open', open);
+    DOC_SECS.forEach(function(id){
+      var el = document.getElementById(id);
+      if (el) el.classList.toggle('doc-active', open && id === h);
+    });
+    var deckSecEl = document.getElementById('deckSec');
+    if (open) {
+      window.scrollTo(0, 0);
+      var sec = document.getElementById(h);
+      sec.querySelectorAll('.rv').forEach(function(el){ el.classList.add('on'); });
+      if (h === 'snowball') {
+        var pc = document.querySelector('.proj-card');
+        if (pc) pc.classList.add('on');
+        var ln = document.getElementById('sc-line');
+        if (ln && ln.classList.contains('draw')) setTimeout(function(){ ln.style.strokeDashoffset = 0; }, 250);
+      }
+      if (deckSecEl && DECK_MAP[h]) deckSecEl.textContent = DECK_MAP[h];
+    } else {
+      if (deckSecEl) deckSecEl.textContent = '// ÍNDICE /0.0';
+    }
+  }
+  window.addEventListener('hashchange', routeDoc);
+  routeDoc();
 
 
 
