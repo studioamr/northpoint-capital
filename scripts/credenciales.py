@@ -62,6 +62,16 @@ DEBERES = {
    'Coordina prime brokerage, custodios y administradores del fondo.',
    'Supervisa client relations e investor relations.',
    'Implementa protocolos operativos y auditorías internas.']),
+ 'NP-070': ('Chief Investment Analyst', [
+   'Análisis profundo de las oportunidades antes de que lleguen a la mesa.',
+   'Evalúa tesis de largo plazo con marco fundamental y cuantitativo.',
+   'Produce reportes de convicción con horizonte y catalizadores definidos.',
+   'Coordina con el CIO la asignación estratégica del portafolio.']),
+ 'NP-080': ('Research y Estrategia de Largo Plazo', [
+   'Investigación macro y sectorial con horizonte de meses a años.',
+   'Diseña y documenta las estrategias de largo plazo de la casa.',
+   'Da seguimiento a las tesis vivas y alerta cambios estructurales.',
+   'Traduce el research en mandatos accionables para la mesa.']),
 }
 
 SOCIOS = [
@@ -82,6 +92,13 @@ SOCIOS = [
      'cargos': [('NP-040', 'Quant'), ('NP-050', 'Chief Operating Officer')],
      'puerta': 'Firmas que los números cuadran y sostienes la operación.',
      'firma': ['<b>Quant</b> — que los números y el setup cuadran con lo medido.'],
+     'ejecuta': False},
+    {'usuario': 'goyo.np', 'nombre': 'Gregorio', 'clave': 'northpointgoyo',
+     'cargos': [('NP-070', 'Chief Investment Analyst'),
+                ('NP-080', 'Research y Estrategia de Largo Plazo')],
+     'puerta': 'Construyes la convicción de largo plazo con la que trabaja la mesa.',
+     # No firma ninguna de las cuatro puertas: su trabajo es aguas arriba, no per-trade.
+     'firma': [],
      'ejecuta': False},
 ]
 
@@ -151,12 +168,46 @@ def hoja(s):
         + '</ul></div>'
         for c, _ in s['cargos'])
 
-    firmas = ''.join(f'<li>{f}</li>' for f in s['firma'])
-    ejecuta = ('<p>Y como PM, cuando una tesis junta las cuatro, <b>tú la ejecutas</b> '
-               'y la registras en el journal. Nadie más toca el botón.</p>'
-               if s.get('ejecuta') else
-               '<p>Sin tu firma la tesis no avanza. Si algo no te cuadra, no firmes: '
-               'ése es exactamente el punto de que seamos cuatro puertas.</p>')
+    # Quien firma una de las cuatro puertas y quien trabaja aguas arriba (Goyo) reciben
+    # secciones distintas: no tendría sentido hablarle de "tu firma" a quien no firma.
+    if s['firma']:
+        intro = ('Somos un equipo chico y cada tesis pasa por <b>cuatro firmas</b> antes '
+                 f'de tocar el mercado. {html.escape(s["puerta"])} Nada entra sin las '
+                 'cuatro — así es como una corazonada no se vuelve una posición.')
+        firmas = ''.join(f'<li>{f}</li>' for f in s['firma'])
+        ejecuta = ('<p>Y como PM, cuando una tesis junta las cuatro, <b>tú la ejecutas</b> '
+                   'y la registras en el journal. Nadie más toca el botón.</p>'
+                   if s.get('ejecuta') else
+                   '<p>Sin tu firma la tesis no avanza. Si algo no te cuadra, no firmes: '
+                   'ése es exactamente el punto de que seamos cuatro puertas.</p>')
+        bloque_firma = f"""<h2>TU FIRMA</h2>
+<p>Ninguna posición entra al mercado por gusto. Una tesis se propone en el terminal y
+recorre <b>cuatro puertas</b> —Research, Riesgo, Quant y CIO— cada una firmada por quien
+responde por ella. Con las cuatro, queda aprobada. Sin una sola, no existe.</p>
+<p>Las puertas que firmas tú:</p>
+<ul>{firmas}</ul>
+{ejecuta}
+<div class="nota"><b>Se firma antes de la sesión, no durante.</b> Una tesis que llega a
+medio mercado ya viene contaminada por el precio. Lo que se opera de 7:00 a 8:30 se
+decidió antes de que abriera.</div>"""
+        cierre_correo = ('<p>Cuando te toque firmar, te va a llegar un correo. No hay '
+                         'excusa de «no me enteré».</p>')
+    else:
+        intro = (f'{html.escape(s["puerta"])} No te sientas en ninguna de las cuatro '
+                 'puertas de firma, y es a propósito: tu trabajo va <b>aguas arriba</b>. '
+                 'Construyes la visión de largo plazo que la mesa convierte en tesis, y '
+                 'sin esa materia no hay nada que firmar.')
+        bloque_firma = """<h2>TU LUGAR EN LA MESA</h2>
+<p>Cada tesis que llega al mercado pasa por cuatro firmas —Research, Riesgo, Quant y CIO—.
+Tú no te sientas en ninguna de esas puertas, y es a propósito: tu trabajo es <b>antes</b>.</p>
+<p>Mientras la mesa opera la ventana de cada mañana, tú miras el horizonte de meses y años:
+qué se está formando en el macro, qué estrategias de largo plazo tienen sentido, qué tesis
+vale la pena construir. Lo que produces es la dirección dentro de la cual la mesa opera — la
+convicción que después alguien más firma y ejecuta.</p>
+<div class="nota"><b>Tu ritmo no es el de la ventana.</b> Los que operan viven en los
+noventa minutos de la mañana; tú vives en el trimestre. Las dos cosas se necesitan.</div>"""
+        cierre_correo = ('<p>Aunque tú no firmes, te llega todo: así sabes qué está '
+                         'operando la mesa y en qué dirección, sin tener que preguntar.</p>')
 
     return f"""<!doctype html>
 <html lang="es"><head><meta charset="utf-8"><title>Northpoint · {nombre}</title>
@@ -167,9 +218,7 @@ def hoja(s):
 <h1>Bienvenido, {nombre}.</h1>
 <p class="sub">Tus accesos a la mesa. {fecha}.</p>
 
-<p>Somos tres y cada quien firma una puerta distinta. {html.escape(s['puerta'])}
-Nada entra al mercado sin las cuatro firmas — así es como una corazonada no se vuelve
-una posición.</p>
+<p>{intro}</p>
 
 <h2>TU CARGO</h2>
 {cargos}
@@ -187,16 +236,7 @@ derecha. Esta hoja trae tu contraseña escrita: no la reenvíes.</div>
 <h2>LO QUE TE TOCA</h2>
 {deberes}
 
-<h2>TU FIRMA</h2>
-<p>Ninguna posición entra al mercado por gusto. Una tesis se propone en el terminal y
-recorre <b>cuatro puertas</b> —Research, Riesgo, Quant y CIO— cada una firmada por quien
-responde por ella. Con las cuatro, queda aprobada. Sin una sola, no existe.</p>
-<p>Las puertas que firmas tú:</p>
-<ul>{firmas}</ul>
-{ejecuta}
-<div class="nota"><b>Se firma antes de la sesión, no durante.</b> Una tesis que llega a
-medio mercado ya viene contaminada por el precio. Lo que se opera de 7:00 a 8:30 se
-decidió antes de que abriera.</div>
+{bloque_firma}
 
 <h2>LO QUE TE VA A LLEGAR AL CORREO</h2>
 <p>El terminal avisa solo. No hay que estar entrando a ver si pasó algo:</p>
@@ -211,7 +251,7 @@ decidió antes de que abriera.</div>
 que se agrega y a quién le toca la siguiente, una tesis <b>lista para ejecutar</b>,
 <b>cada trade</b> que alguien registra con su resultado, y las alertas de riesgo cuando
 una cuenta se acerca a su límite.</p>
-<p>Cuando te toque firmar, te va a llegar un correo. No hay excusa de «no me enteré».</p>
+{cierre_correo}
 
 <h2>CÓMO EMPEZAR</h2>
 <ol>
