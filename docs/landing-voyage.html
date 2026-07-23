@@ -1,0 +1,1584 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NORTHPOINT — Behavioral Intelligence</title>
+<meta name="description" content="Inteligencia conductual aplicada a los mercados financieros. Donde otros ven ruido, nosotros vemos patrón.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   NORTHPOINT — La Travesía del Marinero · Dark Liquid Glass
+   ============================================================ */
+:root{
+  --bg:#05070C;
+  --bg-2:#090D15;
+  --glass:rgba(255,255,255,.045);
+  --glass-2:rgba(255,255,255,.075);
+  --line:rgba(255,255,255,.09);
+  --line-soft:rgba(255,255,255,.05);
+  --txt:#E9EDF2;
+  --dim:#8A94A6;
+  --faint:#596374;
+  --accent:#9BC0DC;
+  --accent-deep:#5E8CAD;
+  --up:#57C79B;
+  --down:#DE6A5F;
+  --warn:#D9A441;
+  --sans:'Inter',-apple-system,system-ui,sans-serif;
+  --mono:'IBM Plex Mono',ui-monospace,monospace;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-padding-top:84px}
+body{
+  background:var(--bg);
+  color:var(--txt);
+  font-family:var(--sans);
+  font-size:15px;
+  line-height:1.65;
+  overflow-x:hidden;
+}
+::selection{background:rgba(155,192,220,.25)}
+a{color:var(--accent);text-decoration:none}
+a:hover{color:#c4dcee}
+:focus-visible{outline:1px solid var(--accent-deep);outline-offset:3px}
+
+/* ═══ Escena ═══ */
+#sea{position:fixed;inset:0;z-index:0;pointer-events:none;display:block}
+.bgfall{position:fixed;inset:0;z-index:0;pointer-events:none;display:none;
+  background:
+    radial-gradient(1000px 500px at 62% 26%, rgba(155,192,220,.10), transparent 60%),
+    linear-gradient(180deg,#02040F 0%,#05070C 46%,#0B1A28 78%,#04060B 100%);}
+body.no-webgl .bgfall{display:block}
+body.no-webgl #sea{display:none}
+
+.svgdefs{position:absolute;width:0;height:0;overflow:hidden}
+
+/* ═══ Nav ═══ */
+.nav{
+  position:fixed;top:0;left:0;right:0;z-index:40;height:64px;
+  display:flex;align-items:center;gap:28px;padding:0 clamp(18px,3.4vw,44px);
+  background:rgba(6,9,15,.42);
+  -webkit-backdrop-filter:blur(18px) saturate(150%);
+  backdrop-filter:blur(18px) saturate(150%);
+  border-bottom:1px solid var(--line-soft);
+}
+.brand{display:flex;align-items:center;gap:11px;color:var(--txt)}
+.brand svg{width:22px;height:22px;stroke:var(--accent);opacity:.9}
+.brand-txt{display:flex;flex-direction:column;line-height:1.15}
+.brand-name{font-weight:600;letter-spacing:.08em;font-size:14px}
+.brand-sub{font-family:var(--mono);font-size:8.5px;letter-spacing:.3em;color:var(--dim);font-weight:400}
+.nav-links{display:flex;gap:24px;margin-left:auto}
+.nav-links a{font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--dim);font-weight:500;transition:color .2s}
+.nav-links a:hover{color:var(--txt)}
+.nav-cta{
+  margin-left:26px;font-family:var(--mono);font-size:12px;letter-spacing:.1em;
+  color:var(--txt);padding:9px 18px;border:1px solid var(--line);border-radius:9px;
+  background:var(--glass);transition:background .2s,border-color .2s;white-space:nowrap;
+}
+.nav-cta:hover{background:var(--glass-2);border-color:var(--accent-deep);color:var(--txt)}
+
+/* ═══ Tipos comunes ═══ */
+.micro{font-family:var(--mono);font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--dim);font-weight:500}
+.mono{font-family:var(--mono)}
+
+/* ═══ Hero ═══ */
+.hero{position:relative;z-index:2;min-height:100svh;display:flex;flex-direction:column;justify-content:center;padding:120px clamp(20px,5vw,64px) 60px}
+.hero-inner{max-width:1180px;margin:0 auto;width:100%}
+.hero .micro{margin-bottom:26px}
+.hero h1{font-size:clamp(46px,8.4vw,104px);font-weight:600;letter-spacing:-.03em;line-height:.96}
+.hero-bi{display:block;font-size:clamp(15px,2vw,24px);letter-spacing:.42em;font-weight:500;color:var(--accent);margin-top:14px}
+.hero-quote{margin-top:46px;font-size:clamp(19px,2.4vw,25px);font-weight:400;color:var(--txt);max-width:640px;line-height:1.45}
+.hero-sub{margin-top:16px;color:var(--dim);max-width:560px}
+.hero-ctas{display:flex;gap:16px;margin-top:44px;flex-wrap:wrap;align-items:center}
+.btn{
+  display:inline-block;padding:14px 26px;border-radius:11px;font-size:13.5px;font-weight:500;
+  letter-spacing:.04em;border:1px solid var(--line);color:var(--txt);
+  background:var(--glass);
+  -webkit-backdrop-filter:blur(14px) saturate(150%);
+  backdrop-filter:blur(14px) saturate(150%);
+  box-shadow:inset 0 1px 1px rgba(255,255,255,.14), inset 0 -1px 1px rgba(255,255,255,.04);
+  transition:background .2s,border-color .2s,transform .2s;
+}
+.btn:hover{background:var(--glass-2);border-color:var(--accent-deep);color:var(--txt);transform:translateY(-2px)}
+.btn-ghost{border:none;background:none;box-shadow:none;-webkit-backdrop-filter:none;backdrop-filter:none;color:var(--accent);padding:14px 4px}
+.btn-ghost:hover{transform:none;background:none;color:#c4dcee}
+.hero-foot{position:absolute;left:0;right:0;bottom:26px;display:flex;justify-content:center}
+.scrollcue{display:flex;flex-direction:column;align-items:center;gap:10px;color:var(--dim)}
+.scrollcue .micro{letter-spacing:.3em}
+.scrollcue i{display:block;width:1px;height:46px;background:linear-gradient(180deg,var(--accent),transparent);animation:cue 2.4s ease-in-out infinite}
+@keyframes cue{0%{transform:scaleY(.2);transform-origin:top}45%{transform:scaleY(1);transform-origin:top}55%{transform:scaleY(1);transform-origin:bottom}100%{transform:scaleY(.15);transform-origin:bottom}}
+
+/* ═══ Etapas ═══ */
+.stage{position:relative;z-index:2;padding:26vh clamp(20px,5vw,64px) 20vh}
+.stage-inner{display:flex;flex-direction:column;gap:18px;max-width:680px}
+.stage[data-side="l"] .stage-inner{margin-right:auto;margin-left:max(0px,4vw)}
+.stage[data-side="r"] .stage-inner{margin-left:auto;margin-right:max(0px,4vw)}
+.stage[data-side="c"] .stage-inner{margin:0 auto;max-width:1060px}
+.stage-head{display:flex;flex-direction:column;gap:10px;margin-bottom:10px}
+.stage-num{font-family:var(--mono);font-size:12px;color:var(--accent);letter-spacing:.2em}
+.stage-kicker{font-family:var(--mono);font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--dim);font-weight:500}
+.stage-title{font-size:clamp(30px,4.4vw,46px);font-weight:600;letter-spacing:-.02em;line-height:1.06}
+.stage-bridge{color:var(--dim);font-size:16.5px;max-width:560px;line-height:1.6}
+.stage-quote{
+  font-size:clamp(17px,2vw,21px);color:var(--txt);border-left:2px solid var(--accent-deep);
+  padding:6px 0 6px 20px;margin:16px 0;font-weight:400;max-width:620px;
+}
+
+/* ═══ Liquid glass ═══ */
+.panel{
+  position:relative;border-radius:16px;padding:26px 26px;
+  background:linear-gradient(180deg, rgba(10,15,24,.66), rgba(7,11,18,.58));
+  border:1px solid var(--line);
+  -webkit-backdrop-filter:blur(16px) saturate(155%) brightness(1.04);
+  backdrop-filter:blur(16px) saturate(155%) brightness(1.04) url(#liquid);
+  box-shadow:
+    0 14px 44px rgba(0,0,0,.35),
+    inset 0 1px 1px rgba(255,255,255,.16),
+    inset 0 -1px 1px rgba(255,255,255,.045),
+    inset 1px 0 1px rgba(255,255,255,.05),
+    inset -1px 0 1px rgba(255,255,255,.05);
+  overflow:hidden;
+}
+.panel::after{
+  content:'';position:absolute;inset:0;border-radius:inherit;pointer-events:none;
+  background:linear-gradient(135deg, rgba(255,255,255,.10), rgba(255,255,255,.02) 30%, transparent 58%);
+  mix-blend-mode:screen;
+}
+.panel>.micro{display:block;margin-bottom:14px}
+.panel h3{font-size:16.5px;font-weight:600;margin-bottom:8px}
+.panel>p{color:var(--dim);margin-bottom:14px}
+.panel .card-sub{margin:6px 0 12px}
+.panel--amber{border-left:2px solid var(--warn)}
+.panel--amber .rows strong{color:#E8D7B0;font-weight:500;font-size:13.5px}
+.panel-note{margin-top:16px;padding-top:14px;border-top:1px solid var(--line-soft);font-size:13.5px;color:var(--dim)}
+
+/* cards */
+.cards{display:grid;gap:14px}
+.cols-3{grid-template-columns:repeat(3,1fr)}
+.cols-2{grid-template-columns:repeat(2,1fr)}
+.stage[data-side="l"] .cols-3,.stage[data-side="r"] .cols-3{grid-template-columns:repeat(2,1fr)}
+.card{
+  border-radius:14px;padding:20px;background:var(--glass);
+  border:1px solid var(--line-soft);
+  box-shadow:inset 0 1px 1px rgba(255,255,255,.10);
+  transition:background .25s;
+}
+.card:hover{background:var(--glass-2)}
+.card-code{font-family:var(--mono);font-size:11.5px;color:var(--accent);letter-spacing:.14em;display:block;margin-bottom:9px}
+.card-title{font-size:15px;font-weight:600;margin-bottom:6px}
+.card-sub{font-family:var(--mono);font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--faint);display:block;margin-bottom:8px}
+.card-body{color:var(--dim);font-size:13.8px;line-height:1.6}
+
+/* pasos */
+.steps{list-style:none;display:flex;flex-direction:column;gap:2px}
+.steps li{display:flex;gap:18px;padding:15px 4px;border-bottom:1px solid var(--line-soft)}
+.steps li:last-child{border-bottom:none}
+.step-num{font-family:var(--mono);font-size:12.5px;color:var(--accent);padding-top:2px;min-width:26px}
+.step-body strong{display:block;font-size:14.5px;font-weight:600;margin-bottom:3px}
+.step-body p{color:var(--dim);font-size:13.5px}
+
+/* filas finas */
+.rows{list-style:none;display:flex;flex-direction:column}
+.rows li{display:flex;flex-direction:column;gap:2px;padding:13px 4px;border-bottom:1px solid var(--line-soft)}
+.rows li:last-child{border-bottom:none}
+.rows strong{font-size:14px;font-weight:600}
+.rows span{color:var(--dim);font-size:13.5px}
+
+/* dims del score */
+.dims{display:flex;flex-direction:column;gap:13px;margin-top:14px}
+.dim{display:grid;grid-template-columns:1fr auto;row-gap:7px}
+.dim-name{font-size:13.5px;font-weight:500}
+.dim-val{font-family:var(--mono);font-size:12.5px;color:var(--dim)}
+.dim-bar{grid-column:1/-1;height:3px;background:rgba(255,255,255,.07);border-radius:2px;overflow:hidden}
+.dim-bar i{display:block;height:100%;background:linear-gradient(90deg,var(--accent-deep),var(--accent));border-radius:2px}
+
+/* tiers snowball */
+.tiers{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;align-items:stretch}
+.tier{
+  border-radius:16px;padding:26px 22px;display:flex;flex-direction:column;gap:14px;
+  background:linear-gradient(180deg, rgba(10,15,24,.5), rgba(7,11,18,.44));
+  border:1px solid var(--line-soft);
+  -webkit-backdrop-filter:blur(14px) saturate(150%);
+  backdrop-filter:blur(14px) saturate(150%);
+  box-shadow:inset 0 1px 1px rgba(255,255,255,.10);
+}
+.tier--core{background:linear-gradient(180deg, rgba(16,24,36,.6), rgba(10,16,26,.5));border-color:rgba(94,140,173,.45);transform:translateY(-6px)}
+.tier-badge{font-family:var(--mono);font-size:9.5px;letter-spacing:.24em;color:var(--accent);border:1px solid rgba(155,192,220,.35);padding:4px 9px;border-radius:99px;align-self:flex-start}
+.tier-name{font-size:17px;font-weight:600}
+.tier-price{font-family:var(--mono);font-weight:300;font-size:24px;letter-spacing:-.01em}
+.tier-feats{list-style:none;display:flex;flex-direction:column;gap:8px}
+.tier-feats li{color:var(--dim);font-size:13.2px;padding-left:16px;position:relative}
+.tier-feats li::before{content:'—';position:absolute;left:0;color:var(--accent-deep)}
+
+/* chart */
+.chart{width:100%;min-height:240px}
+.chart svg{display:block;width:100%;height:auto}
+
+.legal{font-size:12px;color:var(--faint);line-height:1.7;border-top:1px solid var(--line-soft);padding-top:18px}
+
+/* ═══ Footer ═══ */
+.foot{position:relative;z-index:2;padding:16vh clamp(20px,5vw,64px) 60px}
+.foot-inner{max-width:1180px;margin:0 auto;display:flex;flex-direction:column;gap:34px}
+.foot-top{display:flex;justify-content:space-between;align-items:flex-end;gap:30px;flex-wrap:wrap}
+.foot .brand svg{width:26px;height:26px}
+.foot-contact{display:flex;flex-direction:column;gap:5px;font-family:var(--mono);font-size:13px;color:var(--dim)}
+.foot-legal{border-top:1px solid var(--line-soft);padding-top:22px;display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;color:var(--faint);font-size:12px}
+
+/* ═══ HUD travesía ═══ */
+.hud{position:fixed;right:26px;top:50%;transform:translateY(-50%);z-index:30}
+.hud-line{position:relative;width:1px;height:240px;background:rgba(255,255,255,.10)}
+.hud-fill{position:absolute;top:0;left:0;width:1px;height:0%;background:var(--accent)}
+.hud-star{position:absolute;left:50%;top:0%;transform:translate(-50%,-50%);width:11px;height:11px}
+.hud-star svg{display:block;width:100%;height:100%;stroke:var(--accent);fill:rgba(155,192,220,.2)}
+.hud-dot{position:absolute;left:50%;width:5px;height:5px;border-radius:50%;background:rgba(255,255,255,.22);transform:translate(-50%,-50%);cursor:pointer;transition:background .2s}
+.hud-dot:hover{background:var(--accent)}
+.hud-tag{
+  position:absolute;right:14px;top:50%;transform:translateY(-50%);
+  font-family:var(--mono);font-size:9.5px;letter-spacing:.2em;color:var(--dim);
+  white-space:nowrap;opacity:0;transition:opacity .2s;pointer-events:none;
+}
+.hud-dot:hover .hud-tag{opacity:1}
+
+/* ═══ Reveal ═══ */
+.rv{opacity:0;transform:translateY(18px);transition:opacity .75s cubic-bezier(.2,.6,.2,1),transform .75s cubic-bezier(.2,.6,.2,1)}
+.rv.in{opacity:1;transform:none}
+
+/* ═══ Responsive ═══ */
+@media (max-width:1080px){
+  .cols-3,.stage[data-side] .cols-3{grid-template-columns:repeat(2,1fr)}
+  .tiers{grid-template-columns:1fr;max-width:520px}
+  .tier--core{transform:none}
+}
+@media (max-width:900px){
+  .nav-links{display:none}
+  .hud{display:none}
+  .stage{padding:16vh 20px 12vh}
+  .stage[data-side="l"] .stage-inner,.stage[data-side="r"] .stage-inner{margin:0 auto}
+}
+@media (max-width:640px){
+  .cols-2,.cols-3,.stage[data-side] .cols-3{grid-template-columns:1fr}
+  .hero-ctas .btn{width:100%;text-align:center}
+  .foot-top{flex-direction:column;align-items:flex-start}
+}
+@media (prefers-reduced-motion:reduce){
+  .rv{opacity:1;transform:none;transition:none}
+  .scrollcue i{animation:none}
+}
+</style>
+</head>
+<body>
+
+<!-- Filtro liquid glass (refracción — Chromium; Safari/Firefox ignoran url() y aplican blur+saturate) -->
+<svg class="svgdefs" aria-hidden="true">
+  <filter id="liquid" x="-5%" y="-5%" width="110%" height="110%">
+    <feTurbulence type="fractalNoise" baseFrequency="0.011 0.011" numOctaves="2" seed="7" result="noise"/>
+    <feGaussianBlur in="noise" stdDeviation="2" result="soft"/>
+    <feDisplacementMap in="SourceGraphic" in2="soft" scale="14" xChannelSelector="R" yChannelSelector="G"/>
+  </filter>
+</svg>
+
+<div class="bgfall" aria-hidden="true"></div>
+<canvas id="sea" aria-hidden="true"></canvas>
+
+<nav class="nav" aria-label="Principal">
+  <a class="brand" href="#top" aria-label="Northpoint">
+    <svg viewBox="0 0 24 24" fill="none" stroke-width="1.3">
+      <circle cx="12" cy="12" r="3.2"/>
+      <path d="M12 1v6M12 17v6M1 12h6M17 12h6"/>
+    </svg>
+    <span class="brand-txt">
+      <span class="brand-name">NORTHPOINT</span>
+      <span class="brand-sub">BEHAVIORAL INTELLIGENCE</span>
+    </span>
+  </a>
+  <div class="nav-links">
+    <a href="#zarpe">Filosofía</a>
+    <a href="#tripulacion">Estructura</a>
+    <a href="#tormenta">Conducta</a>
+    <a href="#estrella">Tecnología</a>
+    <a href="#puerto">Snowball</a>
+  </div>
+  <a class="nav-cta" href="app.html">Trader Terminal →</a>
+</nav>
+
+<header class="hero" id="top">
+  <div class="hero-inner">
+    <p class="micro rv">HEDGE FUND OPERATIONS · INTERNAL DOCUMENT · v1.0 · 2025</p>
+    <h1 class="rv">NORTHPOINT
+      <span class="hero-bi">BEHAVIORAL INTELLIGENCE</span>
+    </h1>
+    <p class="hero-quote rv">«The market doesn't defeat traders.<br>Their behavior does.»</p>
+    <p class="hero-sub rv">Inteligencia conductual aplicada a los mercados financieros. Donde otros ven ruido, nosotros vemos patrón.</p>
+    <div class="hero-ctas rv">
+      <a class="btn" href="mailto:investors@northpoint.io">Solicitar acceso inversor</a>
+      <a class="btn btn-ghost" href="app.html">Entrar al Terminal →</a>
+    </div>
+  </div>
+  <div class="hero-foot">
+    <div class="scrollcue"><span class="micro">Zarpar</span><i></i></div>
+  </div>
+</header>
+
+<main id="voyage">
+
+<!-- ============ E1 · EL ZARPE — Filosofía (cap 01) ============ -->
+<section class="stage" id="zarpe" data-side="r">
+  <div class="stage-inner">
+    <header class="stage-head">
+      <span class="stage-num">E1</span>
+      <span class="stage-kicker">CAPÍTULO 01 — FILOSOFÍA</span>
+      <h2 class="stage-title">El zarpe</h2>
+      <p class="stage-bridge">Todo marinero zarpa buscando retornos. Pocos entienden que el enemigo viaja a bordo.</p>
+    </header>
+
+    <div class="panel panel--wide">
+      <p>Northpoint no es un fondo de inversión tradicional. Es una institución construida sobre inteligencia conductual aplicada a los mercados financieros. Cada decisión, cada protocolo, cada contratación refleja esta filosofía.</p>
+      <div class="cards cols-2">
+        <article class="card">
+          <span class="card-code">MISIÓN</span>
+          <p class="card-body">Generar retornos superiores ajustados al riesgo mediante el análisis sistemático del comportamiento humano en los mercados. Donde otros ven ruido, nosotros vemos patrón.</p>
+        </article>
+        <article class="card">
+          <span class="card-code">VISIÓN</span>
+          <p class="card-body">Ser la firma de gestión de activos más precisa del mundo, no la más grande. El tamaño se administra. La precisión se construye.</p>
+        </article>
+      </div>
+    </div>
+
+    <div class="panel panel--wide">
+      <span class="card-sub">Pilares fundacionales</span>
+      <div class="cards cols-3">
+        <article class="card">
+          <span class="card-code">P — 01</span>
+          <h3 class="card-title">Precisión sobre volumen</h3>
+          <p class="card-body">Preferimos diez decisiones correctas que cien decisiones mediocres. La actividad no es rendimiento. La disciplina es rendimiento.</p>
+        </article>
+        <article class="card">
+          <span class="card-code">P — 02</span>
+          <h3 class="card-title">Disciplina conductual</h3>
+          <p class="card-body">El mercado no derrota traders. Su propio comportamiento lo hace. Cada miembro del equipo entiende y gestiona sus sesgos cognitivos.</p>
+        </article>
+        <article class="card">
+          <span class="card-code">P — 03</span>
+          <h3 class="card-title">Evidencia empírica</h3>
+          <p class="card-body">Ninguna tesis de inversión se aprueba sin evidencia cuantificable. Las narrativas se descartan. Los datos se analizan.</p>
+        </article>
+        <article class="card">
+          <span class="card-code">P — 04</span>
+          <h3 class="card-title">Control del riesgo primero</h3>
+          <p class="card-body">La preservación del capital es la primera regla. El crecimiento es consecuencia de no perder. No al revés.</p>
+        </article>
+        <article class="card">
+          <span class="card-code">P — 05</span>
+          <h3 class="card-title">Institucionalidad silenciosa</h3>
+          <p class="card-body">La voz de Northpoint es precisa y segura. No vendemos esperanza. No prometemos resultados. Documentamos evidencia.</p>
+        </article>
+        <article class="card">
+          <span class="card-code">P — 06</span>
+          <h3 class="card-title">Mejora continua de procesos</h3>
+          <p class="card-body">Cada semana revisamos qué salió mal, no solo qué salió bien. El error bien documentado es el activo más valioso del equipo.</p>
+        </article>
+      </div>
+    </div>
+
+    <div class="panel">
+      <span class="card-sub">Lo que Northpoint no es</span>
+      <ul class="rows">
+        <li><strong>No somos un fondo de trading de alta frecuencia</strong><span>La velocidad no es nuestra ventaja. La inteligencia aplicada sí.</span></li>
+        <li><strong>No somos una firma de asesoría financiera masiva</strong><span>Seleccionamos clientes. Los clientes no solo nos seleccionan.</span></li>
+        <li><strong>No prometemos rendimientos garantizados</strong><span>Quien promete rendimientos garantizados miente o no entiende los mercados.</span></li>
+        <li><strong>No operamos con intuición</strong><span>Cada decisión de inversión tiene un proceso documentado y auditable.</span></li>
+      </ul>
+    </div>
+
+    <blockquote class="stage-quote">«La reputación no se declara. Se construye con datos.»</blockquote>
+  </div>
+</section>
+
+<!-- ============ E2 · LA TRIPULACIÓN — Estructura (cap 02) ============ -->
+<section class="stage" id="tripulacion" data-side="l">
+  <div class="stage-inner">
+    <header class="stage-head">
+      <span class="stage-num">E2</span>
+      <span class="stage-kicker">CAPÍTULO 02 — ESTRUCTURA</span>
+      <h2 class="stage-title">La tripulación</h2>
+      <p class="stage-bridge">Nadie cruza un océano solo. Cada puesto a bordo existe por una razón.</p>
+    </header>
+
+    <div class="panel panel--wide">
+      <p>Northpoint opera con una estructura plana y horizontal. Cada rol tiene autoridad clara y rendición de cuentas directa. No hay jerarquías decorativas.</p>
+      <div class="cards cols-3">
+        <article class="card">
+          <span class="card-code">NP-001</span>
+          <h3 class="card-title">Chief Investment Officer</h3>
+          <span class="card-sub">Reports to · Investment Committee &amp; LPs</span>
+          <p class="card-body">Responsable final de todas las decisiones de inversión del fondo. Define la estrategia macroeconómica y los mandatos de cada estrategia. Aprueba o rechaza toda tesis de inversión antes de ejecución.</p>
+        </article>
+        <article class="card">
+          <span class="card-code">NP-010</span>
+          <h3 class="card-title">Portfolio Manager</h3>
+          <span class="card-sub">Reports to · CIO</span>
+          <p class="card-body">Gestión activa de portafolios dentro de los mandatos aprobados. Construcción y monitoreo de posiciones largas y cortas. Cada decisión de posición se documenta con tesis escrita.</p>
+        </article>
+        <article class="card">
+          <span class="card-code">NP-020</span>
+          <h3 class="card-title">Chief Risk Officer</h3>
+          <span class="card-sub">Reports to · CIO</span>
+          <p class="card-body">Monitoreo en tiempo real del drawdown máximo permitido por estrategia. Autoridad para detener operaciones mediante alertas de riesgo. Define y actualiza el Risk Management Framework.</p>
+        </article>
+        <article class="card">
+          <span class="card-code">NP-030</span>
+          <h3 class="card-title">Research Analyst</h3>
+          <span class="card-sub">Reports to · Portfolio Manager</span>
+          <p class="card-body">Investigación fundamental y cuantitativa de activos y sectores. Producción de memos de inversión con evidencia documentada. Monitoreo de earnings, macro data y eventos catalizadores.</p>
+        </article>
+        <article class="card">
+          <span class="card-code">NP-040</span>
+          <h3 class="card-title">Quantitative Analyst</h3>
+          <span class="card-sub">Reports to · CIO</span>
+          <p class="card-body">Desarrollo y backtesting de modelos cuantitativos de inversión. Análisis estadístico de patrones conductuales en datos de mercado. Construcción del Northpoint Score y de los pipelines de información.</p>
+        </article>
+        <article class="card">
+          <span class="card-code">NP-050</span>
+          <h3 class="card-title">Chief Operating Officer</h3>
+          <span class="card-sub">Reports to · CIO</span>
+          <p class="card-body">Gestión de operaciones diarias, compliance y relaciones con brokers. Coordinación con prime brokerage, custodios y administradores del fondo. Protocolos operativos y auditorías internas.</p>
+        </article>
+      </div>
+    </div>
+
+    <div class="panel">
+      <span class="card-sub">Proceso de toma de decisiones</span>
+      <ol class="steps">
+        <li>
+          <span class="step-num">01</span>
+          <div class="step-body">
+            <strong>Generación de idea</strong>
+            <p>Cualquier miembro del equipo puede proponer una tesis. Se documenta con hipótesis, datos de soporte y nivel de convicción.</p>
+          </div>
+        </li>
+        <li>
+          <span class="step-num">02</span>
+          <div class="step-body">
+            <strong>Research &amp; validación</strong>
+            <p>El Research Analyst asignado conduce due diligence independiente. Mínimo 72 horas de análisis antes de presentación formal.</p>
+          </div>
+        </li>
+        <li>
+          <span class="step-num">03</span>
+          <div class="step-body">
+            <strong>Revisión de riesgo</strong>
+            <p>El CRO evalúa el impacto en el portafolio: correlaciones, drawdown proyectado y sizing máximo permitido según mandato.</p>
+          </div>
+        </li>
+        <li>
+          <span class="step-num">04</span>
+          <div class="step-body">
+            <strong>Aprobación CIO</strong>
+            <p>El CIO aprueba, rechaza o pide revisión adicional. Las decisiones se registran con justificación escrita, sin excepciones.</p>
+          </div>
+        </li>
+        <li>
+          <span class="step-num">05</span>
+          <div class="step-body">
+            <strong>Ejecución documentada</strong>
+            <p>El Portfolio Manager ejecuta y documenta hora, precio, tamaño y condiciones de mercado al momento de la operación.</p>
+          </div>
+        </li>
+      </ol>
+    </div>
+
+    <div class="panel panel--wide">
+      <span class="card-sub">Vehículos de inversión</span>
+      <div class="cards cols-3">
+        <article class="card">
+          <span class="card-sub">Long/Short Equity</span>
+          <h3 class="card-title">Northpoint Alpha Fund</h3>
+          <p class="card-body">Estrategia principal · Mínimo $250,000 USD</p>
+        </article>
+        <article class="card">
+          <span class="card-sub">Global Macro</span>
+          <h3 class="card-title">Northpoint Macro</h3>
+          <p class="card-body">Estrategia secundaria · Mínimo $500,000 USD</p>
+        </article>
+        <article class="card">
+          <span class="card-sub">Quantitative / Systematic</span>
+          <h3 class="card-title">Northpoint Quant</h3>
+          <p class="card-body">Estrategia emergente · Mínimo $1,000,000 USD</p>
+        </article>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ E3 · LA TORMENTA — Código de Conducta (cap 04) ============ -->
+<section class="stage" id="tormenta" data-side="r">
+  <div class="stage-inner">
+    <header class="stage-head">
+      <span class="stage-num">E3</span>
+      <span class="stage-kicker">CAPÍTULO 04 — CONDUCTA</span>
+      <h2 class="stage-title">La tormenta</h2>
+      <p class="stage-bridge">El mar no hunde barcos. La conducta del que lo navega, sí.</p>
+    </header>
+
+    <div class="panel panel--wide">
+      <p>El estándar de comportamiento en Northpoint es el de una institución financiera de primer nivel. No toleramos atajos éticos, comportamientos que dañen la reputación del fondo, ni conductas que violen la confianza de nuestros inversores.</p>
+      <span class="card-sub">Valores no negociables</span>
+      <div class="cards cols-2">
+        <article class="card">
+          <span class="card-code">01</span>
+          <h3 class="card-title">Integridad</h3>
+          <p class="card-body">Hacemos lo correcto incluso cuando nadie mira. La integridad no se demuestra en los buenos momentos. Se demuestra bajo presión.</p>
+        </article>
+        <article class="card">
+          <span class="card-code">02</span>
+          <h3 class="card-title">Transparencia</h3>
+          <p class="card-body">Con nuestros inversores, con nuestro equipo, y con nosotros mismos sobre las limitaciones de nuestro proceso.</p>
+        </article>
+        <article class="card">
+          <span class="card-code">03</span>
+          <h3 class="card-title">Responsabilidad</h3>
+          <p class="card-body">Cuando algo sale mal, no buscamos culpables externos. Analizamos el proceso, identificamos la falla, y la corregimos.</p>
+        </article>
+        <article class="card">
+          <span class="card-code">04</span>
+          <h3 class="card-title">Excelencia sin arrogancia</h3>
+          <p class="card-body">Buscamos la excelencia en todo lo que hacemos. Pero sabemos que los mercados siempre pueden sorprendernos. La humildad es parte del proceso.</p>
+        </article>
+      </div>
+    </div>
+
+    <div class="panel">
+      <span class="card-sub">Estándares de comportamiento profesional</span>
+      <ul class="rows">
+        <li><strong>Puntualidad y preparación</strong><span>Llegar preparado a cada reunión es una muestra de respeto al tiempo de los demás. La improvisación no tiene lugar aquí.</span></li>
+        <li><strong>Comunicación precisa</strong><span>Si no sabes algo, dilo. Si tienes dudas, exprésalas. La falsa certeza es más peligrosa que la duda honesta.</span></li>
+        <li><strong>Feedback directo y constructivo</strong><span>El feedback se da directo y en privado. Se discute el proceso, nunca la persona.</span></li>
+        <li><strong>Gestión del ego</strong><span>Ningún trade es «tuyo». Ninguna pérdida es «de ellos». Las decisiones y sus consecuencias son del equipo.</span></li>
+        <li><strong>Discreción absoluta</strong><span>Conversaciones, posiciones, clientes, estrategias, discusiones internas — todo es confidencial. Siempre.</span></li>
+        <li><strong>Desarrollo continuo</strong><span>Los mercados evolucionan. Quien no evoluciona, se queda atrás.</span></li>
+      </ul>
+    </div>
+
+    <div class="panel panel--amber">
+      <span class="card-sub">Por la borda · Sin apelación</span>
+      <h3 class="card-title">Terminación inmediata</h3>
+      <p>Las siguientes conductas resultan en terminación inmediata, sin proceso de advertencia previa:</p>
+      <ul class="rows">
+        <li><strong>Operar con información privilegiada</strong><span>Insider trading</span></li>
+        <li><strong>Compartir posiciones o estrategias del fondo externamente</strong></li>
+        <li><strong>Falsificar registros, reportes o documentación interna</strong></li>
+        <li><strong>Operaciones personales en conflicto de interés no declarado</strong></li>
+        <li><strong>Violación del protocolo de MNPI</strong><span>Sin reporte inmediato</span></li>
+        <li><strong>Hostigamiento, discriminación o conducta abusiva hacia el equipo</strong></li>
+        <li><strong>Fraude, robo o malversación de activos del fondo o de clientes</strong></li>
+        <li><strong>Incumplimiento reiterado y documentado de las reglas de riesgo</strong></li>
+      </ul>
+    </div>
+
+    <blockquote class="stage-quote">«Al unirte a Northpoint, aceptas estos estándares sin reservas. No son aspiracionales. Son el piso mínimo.»</blockquote>
+  </div>
+</section>
+
+<!-- ============ E4 · LA ESTRELLA — Tecnología & Score (cap 05) ============ -->
+<section class="stage" id="estrella" data-side="l">
+  <div class="stage-inner">
+    <header class="stage-head">
+      <span class="stage-num">E4</span>
+      <span class="stage-kicker">CAPÍTULO 05 — TECNOLOGÍA</span>
+      <h2 class="stage-title">La estrella</h2>
+      <p class="stage-bridge">En la noche más cerrada, el marinero no sigue su instinto. Sigue la estrella.</p>
+    </header>
+
+    <div class="panel panel--wide">
+      <span class="card-sub">Northpoint Score — Sistema propietario · 0–1000</span>
+      <p>El Northpoint Score es nuestro sistema propietario de evaluación conductual aplicado a trading (Behavioral Intelligence Engine). Analiza cuatro dimensiones del comportamiento del trader para producir un score compuesto de 0 a 1000 — la estrella tiene cuatro puntas.</p>
+      <div class="dims">
+        <div class="dim">
+          <span class="dim-name">Risk Discipline</span>
+          <span class="dim-val">232 / 250</span>
+          <span class="dim-bar"><i style="width:92.8%"></i></span>
+        </div>
+        <div class="dim">
+          <span class="dim-name">Emotion Control</span>
+          <span class="dim-val">218 / 250</span>
+          <span class="dim-bar"><i style="width:87.2%"></i></span>
+        </div>
+        <div class="dim">
+          <span class="dim-name">Decision Quality</span>
+          <span class="dim-val">226 / 250</span>
+          <span class="dim-bar"><i style="width:90.4%"></i></span>
+        </div>
+        <div class="dim">
+          <span class="dim-name">Consistency</span>
+          <span class="dim-val">215 / 250</span>
+          <span class="dim-bar"><i style="width:86%"></i></span>
+        </div>
+      </div>
+      <p class="panel-note">Los traders del fondo operan con su Score en vivo dentro del Terminal. <a href="app.html">Ver el Terminal →</a></p>
+    </div>
+
+    <div class="panel panel--wide">
+      <span class="card-sub">Stack tecnológico institucional</span>
+      <p>Northpoint opera sobre infraestructura institucional. Cada herramienta fue seleccionada por criterios de precisión, seguridad y velocidad. El stack tecnológico no es negociable.</p>
+      <div class="cards cols-3">
+        <article class="card">
+          <h3 class="card-title">Datos de Mercado</h3>
+          <p class="card-body">Bloomberg Terminal · Reuters Eikon · FactSet</p>
+        </article>
+        <article class="card">
+          <h3 class="card-title">Ejecución &amp; Brokerage</h3>
+          <p class="card-body">Prime Brokerage Goldman Sachs / Morgan Stanley · Interactive Brokers (FIX API) · FlexTrade OMS/EMS</p>
+        </article>
+        <article class="card">
+          <h3 class="card-title">Research &amp; Analytics</h3>
+          <p class="card-body">Python / R + Jupyter · SEC EDGAR / EDGAR Online · Northpoint Quant Platform</p>
+        </article>
+        <article class="card">
+          <h3 class="card-title">Gestión de Portafolio</h3>
+          <p class="card-body">Advent Portfolio Exchange (APX) · Risk Metrics / MSCI RiskManager · Northpoint Risk Dashboard</p>
+        </article>
+        <article class="card">
+          <h3 class="card-title">Operaciones &amp; Compliance</h3>
+          <p class="card-body">SS&amp;C Geneva · ComplySci · DocuSign + SharePoint</p>
+        </article>
+        <article class="card">
+          <h3 class="card-title">Comunicación &amp; Seguridad</h3>
+          <p class="card-body">Microsoft Teams (cifrado E2E) · ProtonMail · 1Password Teams</p>
+        </article>
+      </div>
+    </div>
+
+    <div class="panel">
+      <span class="card-sub">Protocolos de seguridad digital</span>
+      <ul class="rows">
+        <li><strong>Autenticación de dos factores (2FA hardware)</strong><span>Obligatoria en todos los sistemas.</span></li>
+        <li><strong>VPN corporativa</strong><span>Requerida para cualquier acceso remoto a sistemas internos.</span></li>
+        <li><strong>Dispositivos personales</strong><span>Prohibidos para acceso a sistemas del fondo.</span></li>
+        <li><strong>Pantallas bloqueadas</strong><span>Automáticamente a los 2 minutos de inactividad.</span></li>
+        <li><strong>Redes WiFi públicas</strong><span>Prohibido usarlas para trabajo relacionado con el fondo.</span></li>
+        <li><strong>Backup encriptado</strong><span>Diario, de todos los sistemas críticos, en múltiples ubicaciones.</span></li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ============ E5 · EL PUERTO — Plan Snowball (cap 06) + legal ============ -->
+<section class="stage" id="puerto" data-side="c">
+  <div class="stage-inner">
+    <header class="stage-head">
+      <span class="stage-num">E5</span>
+      <span class="stage-kicker">CAPÍTULO 06 — SNOWBALL</span>
+      <h2 class="stage-title">El puerto</h2>
+      <p class="stage-bridge">La travesía no termina al llegar. El capital, como la nieve, crece rodando.</p>
+    </header>
+
+    <div class="panel panel--wide">
+      <p>El Plan Snowball es nuestro programa de inversión de largo plazo para clientes calificados. Basado en el principio del interés compuesto aplicado con disciplina conductual, el capital crece como una bola de nieve: lentamente al principio, de forma exponencial con el tiempo.</p>
+      <span class="card-sub">El principio Snowball</span>
+      <div class="cards cols-3">
+        <article class="card">
+          <h3 class="card-title">Reinversión total</h3>
+          <p class="card-body">Los retornos no se distribuyen. Se reinvierten en el portafolio para maximizar el efecto del interés compuesto.</p>
+        </article>
+        <article class="card">
+          <h3 class="card-title">Horizonte mínimo 3 años</h3>
+          <p class="card-body">El plan requiere un horizonte de inversión mínimo de 3 años. Los inversores con liquidez de corto plazo no son candidatos.</p>
+        </article>
+        <article class="card">
+          <h3 class="card-title">Reequilibrio trimestral</h3>
+          <p class="card-body">El portafolio se reequilibra trimestralmente según las condiciones de mercado y el perfil de riesgo acordado con el inversor.</p>
+        </article>
+      </div>
+    </div>
+
+    <div class="tiers">
+      <article class="tier">
+        <h3 class="tier-name">Snowball Seed</h3>
+        <div class="tier-price">$50,000 USD</div>
+        <ul class="tier-feats">
+          <li>Retorno objetivo 12–18% anual</li>
+          <li>Acceso a Alpha Fund</li>
+          <li>Reportes trimestrales</li>
+          <li>1 reunión anual</li>
+          <li>Periodo de bloqueo 12 meses</li>
+        </ul>
+      </article>
+      <article class="tier tier--core">
+        <span class="tier-badge">RECOMENDADO</span>
+        <h3 class="tier-name">Snowball Core</h3>
+        <div class="tier-price">$250,000 USD</div>
+        <ul class="tier-feats">
+          <li>Retorno objetivo 15–22% anual</li>
+          <li>Acceso a Alpha + Macro Fund</li>
+          <li>Reportes mensuales</li>
+          <li>2 reuniones anuales con el CIO</li>
+          <li>Perfil de riesgo personalizado</li>
+          <li>Periodo de bloqueo 6 meses</li>
+        </ul>
+      </article>
+      <article class="tier">
+        <h3 class="tier-name">Snowball Summit</h3>
+        <div class="tier-price">$1,000,000 USD</div>
+        <ul class="tier-feats">
+          <li>Retorno objetivo 18–28% anual</li>
+          <li>Acceso completo a los 3 fondos</li>
+          <li>Reporting semanal en tiempo real</li>
+          <li>Acceso directo al CIO trimestral</li>
+          <li>Mandato personalizado</li>
+          <li>Co-inversión en oportunidades especiales</li>
+        </ul>
+      </article>
+    </div>
+
+    <div class="panel panel--wide">
+      <span class="card-sub">Proyección Snowball — Ejemplo referencial</span>
+      <div class="chart" id="snowballChart"></div>
+      <p class="panel-note">Capital inicial $250,000 USD, retorno objetivo 19% anual (Snowball Core), sin aportes adicionales. El interés compuesto transforma el capital con tiempo y disciplina.</p>
+    </div>
+
+    <div class="panel">
+      <span class="card-sub">Proceso de onboarding — Cliente Snowball</span>
+      <ol class="steps">
+        <li>
+          <span class="step-num">01</span>
+          <div class="step-body">
+            <strong>Calificación de inversor</strong>
+            <p>Verificación de calificación como inversor acreditado según regulación aplicable. Este paso es obligatorio y no negociable.</p>
+          </div>
+        </li>
+        <li>
+          <span class="step-num">02</span>
+          <div class="step-body">
+            <strong>Reunión de perfilamiento</strong>
+            <p>Sesión de 60 minutos con Investor Relations para definir objetivos, tolerancia al riesgo y horizonte de inversión.</p>
+          </div>
+        </li>
+        <li>
+          <span class="step-num">03</span>
+          <div class="step-body">
+            <strong>Propuesta formal de inversión</strong>
+            <p>Northpoint elabora una propuesta con estructura de portafolio recomendada, proyecciones conservadoras y términos del acuerdo.</p>
+          </div>
+        </li>
+        <li>
+          <span class="step-num">04</span>
+          <div class="step-body">
+            <strong>Due diligence mutuo</strong>
+            <p>El inversor recibe acceso al Data Room de Northpoint: track record auditado, documentos legales del fondo y estructura operativa.</p>
+          </div>
+        </li>
+        <li>
+          <span class="step-num">05</span>
+          <div class="step-body">
+            <strong>Suscripción y transferencia</strong>
+            <p>Firma de documentos de suscripción, apertura de cuenta en custodio y transferencia de capital al vehículo correspondiente.</p>
+          </div>
+        </li>
+        <li>
+          <span class="step-num">06</span>
+          <div class="step-body">
+            <strong>Onboarding y primer reporte</strong>
+            <p>Acceso al portal de inversores, comunicación periódica establecida y entrega del primer reporte de posición inicial.</p>
+          </div>
+        </li>
+      </ol>
+    </div>
+
+    <p class="legal">Los retornos objetivo indicados son proyecciones basadas en el historial de performance de las estrategias de Northpoint y no constituyen una garantía de rendimiento futuro. Las inversiones en fondos de cobertura implican riesgos significativos incluyendo la posible pérdida del capital invertido. Este documento es de carácter informativo y no constituye oferta de valores. Northpoint Behavioral Intelligence no está registrado como asesor de inversiones en todas las jurisdicciones. Los inversores deben consultar con asesores legales y fiscales antes de tomar decisiones de inversión.</p>
+  </div>
+</section>
+
+</main>
+
+<footer class="foot" id="fin">
+  <div class="foot-inner">
+    <div class="foot-top">
+      <a class="brand" href="#top" aria-label="Northpoint">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="1.3">
+          <circle cx="12" cy="12" r="3.2"/>
+          <path d="M12 1v6M12 17v6M1 12h6M17 12h6"/>
+        </svg>
+        <span class="brand-txt">
+          <span class="brand-name">NORTHPOINT</span>
+          <span class="brand-sub">BEHAVIORAL INTELLIGENCE</span>
+        </span>
+      </a>
+      <div class="foot-contact">
+        <span>northpoint.io</span>
+        <a href="mailto:investors@northpoint.io">investors@northpoint.io</a>
+        <a href="app.html">Terminal de traders →</a>
+      </div>
+    </div>
+    <div class="foot-legal">
+      <span>© 2025 Northpoint Behavioral Intelligence. Todos los derechos reservados.</span>
+      <span>Documento confidencial. Distribución restringida a personal autorizado.</span>
+    </div>
+  </div>
+</footer>
+
+<aside class="hud" aria-hidden="true">
+  <div class="hud-line">
+    <div class="hud-fill"></div>
+    <div class="hud-star"><svg viewBox="0 0 12 12" stroke-width="1"><circle cx="6" cy="6" r="2.1"/><path d="M6 .5v3M6 8.5v3M.5 6h3M8.5 6h3"/></svg></div>
+  </div>
+</aside>
+
+<script type="importmap">
+{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js"}}
+</script>
+<script type="module">
+import * as THREE from 'three';
+
+/* ══════════════════ DOM (corre siempre) ══════════════════ */
+const $ = s => document.querySelector(s);
+const $$ = s => [...document.querySelectorAll(s)];
+const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const isMobile = matchMedia('(max-width: 900px)').matches;
+
+/* reveal */
+(function initReveal(){
+  const targets = [...$$('.rv')];
+  $$('.stage-inner').forEach(inner => targets.push(...inner.children));
+  $$('.cards .card, .tiers .tier').forEach(el => targets.push(el));
+  targets.forEach(el => el.classList.add('rv'));
+  if (reduced || !('IntersectionObserver' in window)){
+    targets.forEach(el => el.classList.add('in'));
+    return;
+  }
+  const io = new IntersectionObserver(es => {
+    es.forEach(e => { if (e.isIntersecting){ e.target.classList.add('in'); io.unobserve(e.target); } });
+  }, {threshold: 0.12, rootMargin: '0px 0px -6% 0px'});
+  targets.forEach(el => io.observe(el));
+})();
+
+/* anchors con reduced-motion respetado */
+$$('a[href^="#"]').forEach(a => a.addEventListener('click', e => {
+  const el = $(a.getAttribute('href'));
+  if (!el) return;
+  e.preventDefault();
+  el.scrollIntoView({behavior: reduced ? 'auto' : 'smooth'});
+}));
+
+/* curva snowball — labels calculados desde la fórmula (consistencia interna) */
+(function drawSnowball(){
+  const host = $('#snowballChart');
+  if (!host) return;
+  const W = 640, H = 270, padL = 8, padR = 76, padT = 30, padB = 34;
+  const years = 20, base = 250000, rate = 0.19;
+  const val = t => base * Math.pow(1 + rate, t);
+  const max = val(years);
+  const X = t => padL + (t / years) * (W - padL - padR);
+  const Y = v => H - padB - (v / max) * (H - padT - padB);
+  let d = '';
+  for (let t = 0; t <= years; t += 0.25){
+    d += (t === 0 ? 'M' : 'L') + `${X(t).toFixed(1)},${Y(val(t)).toFixed(1)}`;
+  }
+  const area = d + `L${X(years).toFixed(1)},${H - padB}L${X(0).toFixed(1)},${H - padB}Z`;
+  const fmt = v => v >= 1e6 ? '≈$' + (v/1e6).toFixed(2) + 'M' : '≈$' + Math.round(v/1000) + 'K';
+  let dots = '', aria = 'Proyección Snowball: $250,000 al 19% anual';
+  [5, 10, 15, 20].forEach(t => {
+    const v = val(t), x = X(t), y = Y(v);
+    const anchor = t === 20 ? 'end' : 'middle';
+    const tx = t === 20 ? x + 54 : x;
+    aria += ` — Año ${t} ${fmt(v)}`;
+    dots += `<circle cx="${x}" cy="${y}" r="3" fill="#05070C" stroke="#9BC0DC" stroke-width="1.2"/>
+      <text x="${tx}" y="${y - 22}" text-anchor="${anchor}" fill="#8A94A6" font-size="9.5" letter-spacing="1.5" font-family="IBM Plex Mono,monospace">AÑO ${t}</text>
+      <text x="${tx}" y="${y - 10}" text-anchor="${anchor}" fill="#E9EDF2" font-size="11" font-family="IBM Plex Mono,monospace">${fmt(v)}</text>`;
+  });
+  host.setAttribute('aria-label', aria);
+  host.innerHTML = `<svg viewBox="0 0 ${W} ${H}" role="img">
+    <defs><linearGradient id="sg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#9BC0DC" stop-opacity=".14"/>
+      <stop offset="1" stop-color="#9BC0DC" stop-opacity="0"/>
+    </linearGradient></defs>
+    <line x1="${padL}" y1="${H-padB}" x2="${W-8}" y2="${H-padB}" stroke="rgba(255,255,255,.08)"/>
+    <path d="${area}" fill="url(#sg)"/>
+    <path d="${d}" fill="none" stroke="#9BC0DC" stroke-width="1.6"/>
+    ${dots}
+    <text x="${padL}" y="${H-10}" fill="#596374" font-size="9.5" letter-spacing="1.5" font-family="IBM Plex Mono,monospace">CAPITAL INICIAL $250,000 · 19% ANUAL · SIN APORTES ADICIONALES</text>
+  </svg>`;
+})();
+
+/* ══════════════════ Escena ══════════════════ */
+let renderer = null;
+try {
+  renderer = new THREE.WebGLRenderer({canvas: $('#sea'), antialias: true, alpha: false});
+} catch(e){
+  document.body.classList.add('no-webgl');
+}
+
+if (renderer){
+
+const DPR = Math.min(devicePixelRatio || 1, isMobile ? 1.5 : 2);
+renderer.setPixelRatio(DPR);
+renderer.setSize(innerWidth, innerHeight);
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.06;
+
+const scene = new THREE.Scene();
+const FOG_BASE = new THREE.Color(0x0A1826);
+scene.fog = new THREE.FogExp2(FOG_BASE.getHex(), 0.0046);
+scene.background = new THREE.Color(0x02040F);
+
+const camera = new THREE.PerspectiveCamera(58, innerWidth/innerHeight, 0.1, 2600);
+camera.position.set(0, 3.4, 20);
+
+/* ---------- luces ---------- */
+const hemi = new THREE.HemisphereLight(0x22344A, 0x04060A, 0.6);
+scene.add(hemi);
+const starDirV = new THREE.Vector3(0.16, 0.5, -1).normalize();
+const moonLight = new THREE.DirectionalLight(0x8FB4D8, 0.75);
+moonLight.position.copy(starDirV).multiplyScalar(120);
+scene.add(moonLight);
+const flashLight = new THREE.DirectionalLight(0xBFD4FF, 0);
+flashLight.position.set(-40, 60, -80);
+scene.add(flashLight);
+
+/* ---------- cielo ---------- */
+const skyUniforms = {
+  uTop:    {value: new THREE.Color(0x02040F)},
+  uBottom: {value: new THREE.Color(0x0E2233)},
+  uFlash:  {value: 0}
+};
+const sky = new THREE.Mesh(
+  new THREE.SphereGeometry(1800, 32, 16),
+  new THREE.ShaderMaterial({
+    side: THREE.BackSide, depthWrite: false, fog: false,
+    uniforms: skyUniforms,
+    vertexShader: `
+      varying vec3 vW;
+      void main(){ vW = (modelMatrix * vec4(position,1.0)).xyz;
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }`,
+    fragmentShader: `
+      uniform vec3 uTop; uniform vec3 uBottom; uniform float uFlash;
+      varying vec3 vW;
+      void main(){
+        float h = normalize(vW + vec3(0.0, 60.0, 0.0)).y;
+        vec3 col = mix(uBottom, uTop, pow(max(h, 0.0), 0.52));
+        col += vec3(0.55, 0.62, 0.78) * uFlash * (1.0 - clamp(h*2.2, 0.0, 1.0));
+        gl_FragColor = vec4(col, 1.0);
+      }`
+  })
+);
+sky.renderOrder = 0;
+scene.add(sky);
+
+/* ---------- estrellas ---------- */
+const STAR_N = isMobile ? 1400 : 2600;
+const starMat = new THREE.ShaderMaterial({
+  transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, fog: false,
+  uniforms: {uTime: {value: 0}, uOp: {value: 1}},
+  vertexShader: `
+    attribute float aSize; attribute float aPhase;
+    uniform float uTime; varying float vTw;
+    void main(){
+      vTw = 0.72 + 0.28 * sin(uTime*1.4 + aPhase);
+      vec4 mv = modelViewMatrix * vec4(position, 1.0);
+      gl_PointSize = aSize * (420.0 / -mv.z);
+      gl_Position = projectionMatrix * mv;
+    }`,
+  fragmentShader: `
+    varying float vTw; uniform float uOp;
+    void main(){
+      float d = distance(gl_PointCoord, vec2(0.5));
+      float a = smoothstep(0.5, 0.18, d) * vTw * uOp;
+      gl_FragColor = vec4(vec3(0.82, 0.88, 0.97), a);
+    }`
+});
+{
+  const pos = new Float32Array(STAR_N*3), size = new Float32Array(STAR_N), phase = new Float32Array(STAR_N);
+  const R = 1500;
+  for (let i = 0; i < STAR_N; i++){
+    const th = Math.random()*Math.PI*2;
+    const ph = Math.acos(2*Math.random()-1);
+    let y = Math.abs(R*Math.cos(ph));
+    y = 40 + y*0.94;
+    const rXZ = Math.sqrt(Math.max(R*R - y*y, 1));
+    pos[i*3]   = Math.cos(th)*rXZ;
+    pos[i*3+1] = y;
+    pos[i*3+2] = Math.sin(th)*rXZ;
+    size[i] = Math.random() < 0.04 ? 2.6 + Math.random()*1.6 : 0.7 + Math.random()*1.6;
+    phase[i] = Math.random()*Math.PI*2;
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  g.setAttribute('aSize', new THREE.BufferAttribute(size, 1));
+  g.setAttribute('aPhase', new THREE.BufferAttribute(phase, 1));
+  const stars = new THREE.Points(g, starMat);
+  stars.renderOrder = 1;
+  scene.add(stars);
+}
+
+/* ---------- texturas canvas ---------- */
+function canvasTex(w, h, draw){
+  const c = document.createElement('canvas'); c.width = w; c.height = h;
+  draw(c.getContext('2d'), w, h);
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  return t;
+}
+const starTex = canvasTex(256, 256, (x, w, h) => {
+  const cx = w/2, cy = h/2;
+  const g = x.createRadialGradient(cx, cy, 0, cx, cy, 118);
+  g.addColorStop(0, 'rgba(235,244,255,1)');
+  g.addColorStop(0.12, 'rgba(210,228,248,.85)');
+  g.addColorStop(0.38, 'rgba(155,192,220,.16)');
+  g.addColorStop(1, 'rgba(155,192,220,0)');
+  x.fillStyle = g; x.fillRect(0, 0, w, h);
+  x.globalCompositeOperation = 'lighter';
+  const ray = (len, wdt) => {
+    const rg = x.createLinearGradient(cx, cy-len, cx, cy+len);
+    rg.addColorStop(0, 'rgba(220,235,250,0)');
+    rg.addColorStop(0.5, 'rgba(230,240,252,.9)');
+    rg.addColorStop(1, 'rgba(220,235,250,0)');
+    x.fillStyle = rg;
+    x.fillRect(cx - wdt/2, cy - len, wdt, len*2);
+  };
+  ray(120, 2.2);
+  x.save(); x.translate(cx, cy); x.rotate(Math.PI/2); x.translate(-cx, -cy);
+  ray(74, 2.0);
+  x.restore();
+});
+const glowTex = canvasTex(128, 128, (x, w, h) => {
+  const g = x.createRadialGradient(w/2, h/2, 0, w/2, h/2, w/2);
+  g.addColorStop(0, 'rgba(255,196,120,.95)');
+  g.addColorStop(0.35, 'rgba(255,170,90,.28)');
+  g.addColorStop(1, 'rgba(255,170,90,0)');
+  x.fillStyle = g; x.fillRect(0, 0, w, h);
+});
+const cloudTex = canvasTex(512, 256, (x, w, h) => {
+  const blob = (bx, by, r, a) => {
+    const g = x.createRadialGradient(bx, by, 0, bx, by, r);
+    g.addColorStop(0, `rgba(148,168,196,${a})`);
+    g.addColorStop(0.6, `rgba(120,140,170,${a*0.45})`);
+    g.addColorStop(1, 'rgba(110,130,160,0)');
+    x.fillStyle = g;
+    x.beginPath(); x.arc(bx, by, r, 0, Math.PI*2); x.fill();
+  };
+  blob(180, 150, 130, .5); blob(300, 120, 150, .42); blob(400, 165, 110, .5); blob(120, 120, 90, .34);
+});
+
+/* ---------- estrella polar ---------- */
+const polar = new THREE.Sprite(new THREE.SpriteMaterial({
+  map: starTex, transparent: true, depthWrite: false,
+  blending: THREE.AdditiveBlending, fog: false
+}));
+polar.position.copy(starDirV).multiplyScalar(1350);
+polar.scale.setScalar(150);
+polar.renderOrder = 3;
+scene.add(polar);
+
+/* ---------- nubes ---------- */
+const clouds = [];
+{
+  const N = isMobile ? 4 : 7;
+  for (let i = 0; i < N; i++){
+    const s = new THREE.Sprite(new THREE.SpriteMaterial({
+      map: cloudTex, transparent: true, depthWrite: false, fog: false,
+      opacity: 0, color: 0x9FB4CE
+    }));
+    const ang = (i / N) * Math.PI * 1.7 - Math.PI * 0.85;
+    const R = 620 + Math.random()*260;
+    s.position.set(Math.sin(ang)*R, 120 + Math.random()*150, -Math.cos(ang)*R*0.9 - 120);
+    s.scale.set(560 + Math.random()*320, 190 + Math.random()*90, 1);
+    s.userData = {base: 0.5 + Math.random()*0.5, drift: (Math.random()*2-1)*1.4};
+    clouds.push(s); scene.add(s);
+  }
+}
+
+/* ---------- océano Gerstner ---------- */
+const WAVES = [
+  {dir: new THREE.Vector2(1, 0).normalize(),       steep: 0.34, len: 30},
+  {dir: new THREE.Vector2(0.86, 0.5).normalize(),  steep: 0.26, len: 15.5},
+  {dir: new THREE.Vector2(0.45, 0.89).normalize(), steep: 0.18, len: 7.2},
+];
+const waveVec = w => new THREE.Vector4(w.dir.x, w.dir.y, w.steep, w.len);
+const oceanUniforms = {
+  uTime: {value: 0}, uAmp: {value: 0.5},
+  uWA: {value: waveVec(WAVES[0])}, uWB: {value: waveVec(WAVES[1])}, uWC: {value: waveVec(WAVES[2])},
+  uDeep: {value: new THREE.Color(0x020617)},
+  uSurf: {value: new THREE.Color(0x0B2545)},
+  uHorizon: {value: new THREE.Color(0x11293D)},
+  uStarDir: {value: starDirV.clone()},
+  uStarCol: {value: new THREE.Color(0xBFD8EE)},
+  uStarInt: {value: 1.0},
+  uFogColor: {value: FOG_BASE.clone()},
+  uFogDen: {value: 0.0046},
+};
+{
+  const SEG = isMobile ? 110 : 190;
+  const geo = new THREE.PlaneGeometry(1500, 1500, SEG, SEG);
+  geo.rotateX(-Math.PI/2);
+  const mat = new THREE.ShaderMaterial({
+    uniforms: oceanUniforms, fog: false,
+    vertexShader: `
+      uniform float uTime; uniform float uAmp;
+      uniform vec4 uWA; uniform vec4 uWB; uniform vec4 uWC;
+      varying float vElev; varying vec3 vN; varying vec3 vW;
+      vec3 gerstner(vec4 w, vec3 p, inout vec3 tang, inout vec3 bin){
+        float k = 6.2831853 / w.w;
+        float c = sqrt(9.8 / k);
+        vec2 d = normalize(w.xy);
+        float f = k * (dot(d, p.xz) - c * uTime);
+        float steep = w.z * uAmp;
+        float a = steep / k;
+        float sf = sin(f); float cf = cos(f);
+        tang += vec3(-d.x*d.x*steep*sf, d.x*steep*cf, -d.x*d.y*steep*sf);
+        bin  += vec3(-d.x*d.y*steep*sf, d.y*steep*cf, -d.y*d.y*steep*sf);
+        return vec3(d.x*a*cf, a*sf, d.y*a*cf);
+      }
+      void main(){
+        vec3 tang = vec3(1.0, 0.0, 0.0);
+        vec3 bin  = vec3(0.0, 0.0, 1.0);
+        vec3 disp = gerstner(uWA, position, tang, bin)
+                  + gerstner(uWB, position, tang, bin)
+                  + gerstner(uWC, position, tang, bin);
+        vec3 p = position + disp;
+        vN = normalize(cross(bin, tang));
+        vElev = disp.y;
+        vW = p;
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(p, 1.0);
+      }`,
+    fragmentShader: `
+      uniform vec3 uDeep; uniform vec3 uSurf; uniform vec3 uHorizon;
+      uniform vec3 uStarDir; uniform vec3 uStarCol; uniform float uStarInt;
+      uniform vec3 uFogColor; uniform float uFogDen; uniform float uTime;
+      varying float vElev; varying vec3 vN; varying vec3 vW;
+      void main(){
+        vec3 V = normalize(cameraPosition - vW);
+        vec3 N = normalize(vN);
+        float dist = length(cameraPosition - vW);
+        float micro = 1.0 / (1.0 + dist*0.02);
+        N.x += micro * (0.04*sin(vW.x*7.0 + uTime*1.7) + 0.03*sin(vW.z*11.0 - uTime*1.2));
+        N.z += micro * 0.04*sin((vW.x+vW.z)*6.0 + uTime*1.05);
+        N = normalize(N);
+        float fres = pow(1.0 - max(dot(V, N), 0.0), 3.0);
+        vec3 col = mix(uDeep, uSurf, clamp(vElev*0.85 + 0.42, 0.0, 1.0));
+        col = mix(col, uHorizon, fres*0.72);
+        vec3 Ns = normalize(vec3(N.x*0.5, N.y, N.z));
+        vec3 H = normalize(normalize(uStarDir) + V);
+        float spec = pow(max(dot(Ns, H), 0.0), 320.0);
+        col += uStarCol * spec * uStarInt * 0.95;
+        float crest = smoothstep(0.5, 1.15, vElev);
+        col += vec3(0.30, 0.38, 0.47) * crest * 0.14;
+        float f = 1.0 - exp(-uFogDen*uFogDen*dist*dist);
+        col = mix(col, uFogColor, clamp(f, 0.0, 1.0));
+        gl_FragColor = vec4(col, 1.0);
+      }`
+  });
+  const ocean = new THREE.Mesh(geo, mat);
+  ocean.matrixAutoUpdate = false;
+  ocean.renderOrder = 2;
+  scene.add(ocean);
+}
+
+/* espejo CPU exacto del desplazamiento vertical Gerstner (mismo reloj) */
+function waveY(x, z, t){
+  let y = 0;
+  for (let i = 0; i < WAVES.length; i++){
+    const w = WAVES[i];
+    const k = (Math.PI*2) / w.len;
+    const c = Math.sqrt(9.8 / k);
+    const f = k * (w.dir.x*x + w.dir.y*z - c*t);
+    y += ((w.steep * oceanUniforms.uAmp.value) / k) * Math.sin(f);
+  }
+  return y;
+}
+
+/* ---------- velero ---------- */
+const boat = new THREE.Group();
+let sails = [], lanternLight;
+{
+  const wood = new THREE.MeshStandardMaterial({color: 0x2A2320, flatShading: true, roughness: 0.82, metalness: 0.05});
+  const woodLight = new THREE.MeshStandardMaterial({color: 0x3A3028, flatShading: true, roughness: 0.85});
+  const sailMat = new THREE.MeshStandardMaterial({color: 0xE8E2D4, flatShading: true, roughness: 0.9, side: THREE.DoubleSide});
+  const brass = new THREE.MeshStandardMaterial({color: 0x6B5A3A, flatShading: true, roughness: 0.5, metalness: 0.45});
+
+  /* casco esculpido — eje longitudinal Z, proa en -Z */
+  const hullGeo = new THREE.BoxGeometry(1.5, 1.05, 4.6, 2, 2, 8);
+  {
+    const p = hullGeo.getAttribute('position');
+    for (let i = 0; i < p.count; i++){
+      const x = p.getX(i), y = p.getY(i), z = p.getZ(i);
+      const t = Math.abs(z) / 2.3;
+      let w = Math.cos(Math.min(t, 1) * Math.PI * 0.5) * 0.78 + 0.22;
+      if (z < -1.75) w *= 0.34;
+      if (z >  1.9)  w *= 0.8;
+      let nx = x * w;
+      if (y < 0) nx *= 0.5;
+      p.setX(i, nx);
+      if (y > 0.3) p.setY(i, y + 0.24 * t * t);
+    }
+    p.needsUpdate = true;
+    hullGeo.computeVertexNormals();
+  }
+  const hull = new THREE.Mesh(hullGeo, wood);
+  hull.position.y = 0.28;
+  boat.add(hull);
+
+  /* cubierta */
+  const deck = new THREE.Mesh(new THREE.BoxGeometry(0.98, 0.07, 3.7, 1, 1, 6), woodLight);
+  {
+    const p = deck.geometry.getAttribute('position');
+    for (let i = 0; i < p.count; i++){
+      const z = p.getZ(i), t = Math.abs(z) / 1.85;
+      let w = Math.cos(Math.min(t, 1) * Math.PI * 0.5) * 0.8 + 0.2;
+      if (z < -1.45) w *= 0.35;
+      p.setX(i, p.getX(i) * w);
+    }
+    p.needsUpdate = true;
+    deck.geometry.computeVertexNormals();
+  }
+  deck.position.y = 0.86;
+  boat.add(deck);
+
+  /* quilla y timón */
+  const keel = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.55, 2.0), wood);
+  keel.position.set(0, -0.42, 0.1);
+  boat.add(keel);
+  const rudder = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.5, 0.4), wood);
+  rudder.position.set(0, -0.3, 2.28);
+  boat.add(rudder);
+
+  /* mástil + botavara */
+  const mast = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.055, 3.75, 6), woodLight);
+  mast.position.set(0, 2.7, -0.25);
+  boat.add(mast);
+  const boom = new THREE.Mesh(new THREE.CylinderGeometry(0.028, 0.028, 2.15, 6), woodLight);
+  boom.rotation.x = Math.PI/2;
+  boom.position.set(0, 1.16, 0.85);
+  boat.add(boom);
+
+  /* vela mayor con panza (plano YZ curvado en X) */
+  const mainGeo = new THREE.PlaneGeometry(2.0, 3.2, 10, 13);
+  mainGeo.rotateY(Math.PI/2);
+  const main = new THREE.Mesh(mainGeo, sailMat);
+  main.position.set(0, 2.85, 0.83);
+  main.userData = {base: mainGeo.getAttribute('position').array.slice()};
+  boat.add(main);
+
+  /* foque */
+  const jibShape = new THREE.Shape();
+  jibShape.moveTo(0, 0);
+  jibShape.quadraticCurveTo(0.62, 1.15, 0.42, 2.55);
+  jibShape.lineTo(0, 2.75);
+  jibShape.lineTo(0, 0);
+  const jibGeo = new THREE.ShapeGeometry(jibShape, 8);
+  jibGeo.rotateY(Math.PI/2);
+  const jib = new THREE.Mesh(jibGeo, sailMat);
+  jib.position.set(0, 1.15, -2.15);
+  jib.rotation.y = 0.06;
+  jib.userData = {base: jibGeo.getAttribute('position').array.slice()};
+  boat.add(jib);
+
+  /* farol de popa */
+  const lantPts = [
+    new THREE.Vector2(0.001, 0), new THREE.Vector2(0.055, 0.008),
+    new THREE.Vector2(0.075, 0.05), new THREE.Vector2(0.062, 0.115),
+    new THREE.Vector2(0.04, 0.15), new THREE.Vector2(0.052, 0.17),
+    new THREE.Vector2(0.02, 0.185)
+  ];
+  const lantern = new THREE.Mesh(new THREE.LatheGeometry(lantPts, 8), brass);
+  lantern.position.set(0, 1.06, 2.05);
+  boat.add(lantern);
+  const flame = new THREE.Mesh(new THREE.SphereGeometry(0.035, 8, 6),
+    new THREE.MeshBasicMaterial({color: 0xFFC584}));
+  flame.position.set(0, 1.15, 2.05);
+  boat.add(flame);
+  lanternLight = new THREE.PointLight(0xFFA050, 2.4, 11, 2);
+  lanternLight.position.set(0, 1.2, 2.0);
+  boat.add(lanternLight);
+  const lantGlow = new THREE.Sprite(new THREE.SpriteMaterial({
+    map: glowTex, transparent: true, depthWrite: false,
+    blending: THREE.AdditiveBlending, fog: false, opacity: 0.75
+  }));
+  lantGlow.position.set(0, 1.15, 2.05);
+  lantGlow.scale.setScalar(0.85);
+  boat.add(lantGlow);
+
+  sails = [main, jib];
+  scene.add(boat);
+}
+
+/* ---------- faro ---------- */
+const lighthouse = new THREE.Group();
+let lhLight, lhBeam, lhLampMat;
+{
+  const rockMat = new THREE.MeshStandardMaterial({color: 0x101318, flatShading: true, roughness: 0.95, transparent: true, opacity: 0});
+  const towerMat = new THREE.MeshStandardMaterial({color: 0x1B222C, flatShading: true, roughness: 0.85, transparent: true, opacity: 0});
+  var lhMats = [rockMat, towerMat];
+  const rock = new THREE.Mesh(new THREE.IcosahedronGeometry(16, 1), rockMat);
+  rock.scale.set(1.5, 0.5, 1.2);
+  rock.position.y = -3;
+  lighthouse.add(rock);
+  const tower = new THREE.Mesh(new THREE.CylinderGeometry(2.6, 4.2, 34, 10), towerMat);
+  tower.position.y = 20;
+  lighthouse.add(tower);
+  const cap = new THREE.Mesh(new THREE.ConeGeometry(3.4, 5, 10), towerMat);
+  cap.position.y = 41.5;
+  lighthouse.add(cap);
+  lhLampMat = new THREE.MeshBasicMaterial({color: 0xFFC97A, transparent: true, opacity: 0});
+  const lamp = new THREE.Mesh(new THREE.CylinderGeometry(2.0, 2.0, 3.4, 10), lhLampMat);
+  lamp.position.y = 37.5;
+  lighthouse.add(lamp);
+  lhLight = new THREE.PointLight(0xFFC97A, 0, 260, 1.6);
+  lhLight.position.y = 37.5;
+  lighthouse.add(lhLight);
+  lhBeam = new THREE.Mesh(
+    new THREE.ConeGeometry(9, 90, 18, 1, true),
+    new THREE.MeshBasicMaterial({color: 0xFFC97A, transparent: true, opacity: 0,
+      blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide})
+  );
+  lhBeam.geometry.rotateZ(Math.PI/2);
+  lhBeam.geometry.translate(45, 0, 0);
+  lhBeam.position.y = 37.5;
+  lighthouse.add(lhBeam);
+  lighthouse.position.set(-55, 0, -420);
+  scene.add(lighthouse);
+}
+
+/* ---------- capítulos ---------- */
+const CH = (cam, look, amp, cloud, star, fogD, lh, bot) => ({
+  cam: new THREE.Vector3(...cam), look: new THREE.Vector3(...look),
+  amp, cloud, star, fogD, lh, bot: new THREE.Color(bot)
+});
+/* cam, look, oleaje, nubes, estrella, fog, faro, horizonte */
+const chapters = [
+  {el: null,           p: CH([0, 3.4, 20],      [0, 16, -120],   0.42, 0.14, 1.25, 0.0043, 0, 0x0E2233)},
+  {el: '#zarpe',       p: CH([7.6, 2.6, 9.5],   [0, 1.1, 0],     0.5,  0.18, 1.0,  0.0046, 0, 0x0E2233)},
+  {el: '#tripulacion', p: CH([-8.4, 3.6, -3.5], [0, 1.0, 0],     0.62, 0.26, 0.85, 0.005,  0, 0x0D1E2E)},
+  {el: '#tormenta',    p: CH([0, 3.1, 8.4],     [0, 1.2, -3],    1.55, 0.95, 0.12, 0.0085, 0, 0x0A1520)},
+  {el: '#estrella',    p: CH([0, 1.9, 11.5],    [2, 17, -130],   0.8,  0.1,  2.3,  0.0038, 0, 0x0F2436)},
+  {el: '#puerto',      p: CH([11.5, 4.6, 5],    [-16, 8, -110],  0.5,  0.16, 1.1,  0.0036, 1, 0x14283A)},
+  {el: '#fin',         p: CH([13, 5.2, 9],      [-20, 10, -140], 0.36, 0.12, 1.2,  0.0034, 1, 0x16293B)},
+];
+let anchors = [];
+function measureAnchors(){
+  const docH = document.documentElement.scrollHeight - innerHeight;
+  anchors = chapters.map((c, i) => {
+    if (i === 0) return 0;
+    if (!c.el) return 1;
+    const el = $(c.el);
+    if (!el) return 1;
+    const r = el.getBoundingClientRect();
+    const mid = r.top + scrollY + r.height*0.42 - innerHeight*0.5;
+    return Math.min(Math.max(mid / docH, 0), 1);
+  });
+  anchors[chapters.length-1] = 1;
+  for (let i = 1; i < anchors.length; i++){
+    if (anchors[i] <= anchors[i-1]) anchors[i] = anchors[i-1] + 0.001;
+  }
+  layoutHud();
+}
+
+/* estado interpolado (pre-alocado) */
+const cur = {
+  cam: new THREE.Vector3(), look: new THREE.Vector3(),
+  amp: 0.5, cloud: 0.2, star: 1, fogD: 0.0046, lh: 0, bot: new THREE.Color()
+};
+function evalChapters(t){
+  let i = 0;
+  while (i < anchors.length-2 && t > anchors[i+1]) i++;
+  const a = chapters[i].p, b = chapters[i+1].p;
+  const span = anchors[i+1] - anchors[i];
+  let u = span > 0 ? (t - anchors[i]) / span : 0;
+  u = Math.min(Math.max(u, 0), 1);
+  u = u*u*(3-2*u);
+  cur.cam.lerpVectors(a.cam, b.cam, u);
+  cur.look.lerpVectors(a.look, b.look, u);
+  cur.amp = a.amp + (b.amp - a.amp)*u;
+  cur.cloud = a.cloud + (b.cloud - a.cloud)*u;
+  cur.star = a.star + (b.star - a.star)*u;
+  cur.fogD = a.fogD + (b.fogD - a.fogD)*u;
+  cur.lh = a.lh + (b.lh - a.lh)*u;
+  cur.bot.lerpColors(a.bot, b.bot, u);
+}
+
+/* ---------- HUD ---------- */
+const hudFill = $('.hud-fill'), hudStar = $('.hud-star'), hudLine = $('.hud-line');
+if (hudLine){
+  chapters.forEach((c, i) => {
+    if (i === 0 || !c.el || c.el === '#fin') return;
+    const d = document.createElement('div');
+    d.className = 'hud-dot';
+    d.dataset.target = c.el;
+    d.addEventListener('click', () => {
+      const el = $(c.el);
+      if (el) el.scrollIntoView({behavior: reduced ? 'auto' : 'smooth'});
+    });
+    const tag = document.createElement('span');
+    tag.className = 'hud-tag';
+    tag.textContent = 'E' + i;
+    d.appendChild(tag);
+    hudLine.appendChild(d);
+  });
+}
+function layoutHud(){
+  if (!hudLine) return;
+  hudLine.querySelectorAll('.hud-dot').forEach((d, k) => {
+    d.style.top = ((anchors[k+1] || 0)*100) + '%';
+  });
+}
+
+/* ---------- loop ---------- */
+let targetT = 0, curT = 0, elapsed = 0, flashV = 0, nextFlash = 4;
+const clock = new THREE.Clock();
+const smoothLook = new THREE.Vector3(0, 16, -120);
+const _look = new THREE.Vector3();
+const eul = {pitch: 0, roll: 0};
+
+function frame(){
+  const dt = Math.min(clock.getDelta(), 0.05);
+  elapsed += dt;
+  const docH = document.documentElement.scrollHeight - innerHeight;
+  targetT = docH > 0 ? Math.min(Math.max(scrollY / docH, 0), 1) : 0;
+  curT += (targetT - curT) * (1 - Math.exp(-5*dt));
+  evalChapters(curT);
+
+  /* mar + atmósfera */
+  oceanUniforms.uTime.value = elapsed;
+  oceanUniforms.uAmp.value += (cur.amp - oceanUniforms.uAmp.value) * (1 - Math.exp(-2.5*dt));
+  oceanUniforms.uStarInt.value = cur.star;
+  oceanUniforms.uFogDen.value = cur.fogD;
+  scene.fog.density = cur.fogD;
+  skyUniforms.uBottom.value.copy(cur.bot);
+  oceanUniforms.uHorizon.value.copy(cur.bot).multiplyScalar(1.15);
+  oceanUniforms.uFogColor.value.copy(cur.bot).multiplyScalar(0.82);
+  scene.fog.color.copy(oceanUniforms.uFogColor.value);
+
+  /* bote: 4 puntos, mismo reloj que el shader */
+  const t = elapsed;
+  const hC = waveY(0, 0, t);
+  const hBow = waveY(0, -1.9, t), hSt = waveY(0, 1.9, t);
+  const hPort = waveY(-0.65, 0, t), hStar2 = waveY(0.65, 0, t);
+  boat.position.y = hC - 0.1;
+  const k = 1 - Math.exp(-4*dt);
+  eul.pitch += (Math.atan2(hSt - hBow, 3.8) - eul.pitch) * k;
+  eul.roll  += (Math.atan2(hPort - hStar2, 1.3) - eul.roll) * k;
+  boat.rotation.set(eul.pitch, 0, eul.roll * 0.85);
+
+  /* velas: panza + flameo (cada 2 frames) */
+  if ((frame.n = (frame.n || 0) + 1) % 2 === 0){
+    for (const s of sails){
+      const p = s.geometry.getAttribute('position');
+      const base = s.userData.base;
+      for (let i = 0; i < p.count; i++){
+        const by = base[i*3+1], bz = base[i*3+2];
+        const v = Math.min(Math.max((by + 1.6) / 3.2, 0), 1);
+        const uz = Math.min(Math.max((bz + 1) / 2, 0), 1);
+        p.setX(i, base[i*3]
+          + Math.sin(uz*Math.PI)*Math.sin(v*Math.PI)*0.34
+          + Math.sin(elapsed*2.6 + by*2.0)*0.022*(1 - Math.abs(bz)/2));
+      }
+      p.needsUpdate = true;
+    }
+  }
+
+  /* estrella polar */
+  const pulse = 1 + 0.05*Math.sin(elapsed*0.9);
+  polar.scale.setScalar(150 * pulse * (0.45 + 0.4*cur.star));
+  polar.material.opacity = Math.min(cur.star, 1);
+  starMat.uniforms.uTime.value = elapsed;
+  starMat.uniforms.uOp.value = Math.min(0.35 + cur.star*0.6, 1);
+  moonLight.intensity = 0.45 + cur.star*0.35;
+
+  /* nubes */
+  for (const c of clouds){
+    c.material.opacity = c.userData.base * cur.cloud * 0.32;
+    c.position.x += c.userData.drift * dt;
+    if (c.position.x > 950) c.position.x = -950;
+    if (c.position.x < -950) c.position.x = 950;
+  }
+
+  /* relámpagos */
+  const stormW = Math.min(Math.max((cur.cloud - 0.55) / 0.4, 0), 1);
+  if (stormW > 0.5){
+    nextFlash -= dt;
+    if (nextFlash <= 0){
+      flashV = 0.85 + Math.random()*0.4;
+      nextFlash = 2.5 + Math.random()*4.5;
+    }
+  }
+  flashV = Math.max(0, flashV - dt*3.2);
+  skyUniforms.uFlash.value = flashV * stormW * 0.5;
+  flashLight.intensity = flashV * stormW * 1.6;
+
+  /* farol + faro */
+  lanternLight.intensity = 2.0 + 0.35*Math.sin(elapsed*7) + 0.12*Math.sin(elapsed*13);
+  lighthouse.visible = cur.lh > 0.02;
+  lhMats[0].opacity = lhMats[1].opacity = cur.lh;
+  lhLight.intensity = cur.lh * 60;
+  lhLampMat.opacity = cur.lh;
+  lhBeam.material.opacity = cur.lh * 0.055;
+  lhBeam.rotation.y = elapsed * 0.42;
+
+  /* cámara */
+  camera.position.copy(cur.cam);
+  camera.position.y += hC * 0.12;
+  _look.copy(cur.look);
+  _look.y += boat.position.y * 0.25;
+  smoothLook.lerp(_look, 1 - Math.exp(-4*dt));
+  camera.lookAt(smoothLook);
+
+  /* HUD */
+  if (hudFill){
+    hudFill.style.height = (curT*100).toFixed(2) + '%';
+    hudStar.style.top = (curT*100).toFixed(2) + '%';
+  }
+
+  renderer.render(scene, camera);
+  if (!reduced) queueFrame();
+}
+let rafPending = false;
+function queueFrame(){
+  if (rafPending) return;
+  rafPending = true;
+  requestAnimationFrame(() => { rafPending = false; frame(); });
+}
+
+function onResize(){
+  camera.aspect = innerWidth/innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+  measureAnchors();
+}
+addEventListener('resize', onResize);
+
+function boot(){
+  measureAnchors();
+  clock.getDelta();
+  if (reduced){
+    curT = 0;
+    evalChapters(0);
+    frame();
+  } else {
+    queueFrame();
+  }
+}
+if (document.readyState === 'complete') boot();
+else addEventListener('load', boot);
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(measureAnchors);
+
+/* debug/QA: asentar la travesía al scroll actual y renderizar un frame */
+window.__voy = {
+  anchors: () => anchors.slice(),
+  t: () => curT,
+  jump(){
+    const docH = document.documentElement.scrollHeight - innerHeight;
+    curT = targetT = docH > 0 ? Math.min(Math.max(scrollY / docH, 0), 1) : 0;
+    evalChapters(curT);
+    oceanUniforms.uAmp.value = cur.amp;
+    smoothLook.copy(cur.look);
+    frame();
+    return curT;
+  }
+};
+
+} /* fin renderer */
+</script>
+</body>
+</html>

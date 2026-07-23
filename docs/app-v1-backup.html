@@ -1,0 +1,2277 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NORTHPOINT TERMINAL</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#05070C;
+  --bg-2:#090D15;
+  --glass:rgba(255,255,255,.045);
+  --glass-2:rgba(255,255,255,.075);
+  --line:rgba(255,255,255,.09);
+  --line-soft:rgba(255,255,255,.05);
+  --txt:#E9EDF2;
+  --dim:#8A94A6;
+  --faint:#596374;
+  --accent:#9BC0DC;
+  --accent-deep:#5E8CAD;
+  --up:#57C79B;
+  --down:#DE6A5F;
+  --warn:#D9A441;
+  --sans:'Inter',-apple-system,system-ui,sans-serif;
+  --mono:'IBM Plex Mono',ui-monospace,monospace;
+  color-scheme:dark;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+[hidden]{display:none !important}
+html,body{height:100%}
+body{
+  background:var(--bg);
+  color:var(--txt);
+  font:400 15px/1.65 var(--sans);
+  -webkit-font-smoothing:antialiased;
+}
+::selection{background:rgba(155,192,220,.22)}
+:focus-visible{outline:1px solid var(--accent-deep);outline-offset:2px}
+a{color:var(--accent);text-decoration:none}
+button{font-family:var(--sans)}
+
+/* fondo */
+.bg-grad{
+  position:fixed;inset:0;pointer-events:none;z-index:0;
+  background:
+    radial-gradient(900px 600px at 80% -10%, rgba(155,192,220,.07), transparent),
+    radial-gradient(700px 500px at 20% 110%, rgba(155,192,220,.04), transparent);
+}
+.noise{
+  position:fixed;inset:0;pointer-events:none;z-index:1;opacity:.025;
+  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/></filter><rect width='160' height='160' filter='url(%23n)'/></svg>");
+}
+
+/* utilidades */
+.mono{font-family:var(--mono)}
+.micro{
+  font-family:var(--sans);font-size:11px;font-weight:500;
+  text-transform:uppercase;letter-spacing:.18em;color:var(--dim);
+}
+.up{color:var(--up)}
+.down{color:var(--down)}
+.warn{color:var(--warn)}
+.dim{color:var(--dim)}
+.faint{color:var(--faint)}
+
+.card{
+  background:var(--glass);
+  border:1px solid var(--line);
+  border-radius:14px;
+  backdrop-filter:blur(22px) saturate(140%);
+  -webkit-backdrop-filter:blur(22px) saturate(140%);
+  padding:22px;
+  transition:background .2s;
+}
+
+/* botones */
+.btn{
+  display:inline-flex;align-items:center;gap:8px;
+  padding:9px 16px;border-radius:9px;
+  border:1px solid var(--line);background:var(--glass);
+  color:var(--txt);font-size:11.5px;font-weight:500;
+  letter-spacing:.1em;text-transform:uppercase;cursor:pointer;
+  transition:background .2s,border-color .2s;white-space:nowrap;
+}
+.btn:hover{background:var(--glass-2)}
+.btn.primary{border-color:var(--accent-deep);color:var(--accent)}
+.btn.danger{border-color:rgba(222,106,95,.4);color:var(--down)}
+.btn:disabled{opacity:.35;cursor:not-allowed}
+
+/* formularios */
+input[type=text],input[type=number],input[type=date],input[type=time],input[type=url],select,textarea{
+  width:100%;background:rgba(255,255,255,.03);
+  border:1px solid var(--line);border-radius:9px;
+  color:var(--txt);font:400 13.5px var(--mono);
+  padding:9px 12px;outline:none;transition:border-color .2s;
+}
+input:focus,select:focus,textarea:focus{border-color:var(--accent-deep)}
+input::placeholder,textarea::placeholder{color:var(--faint)}
+textarea{resize:vertical;min-height:44px}
+input[type=checkbox],input[type=radio]{accent-color:var(--accent-deep);width:14px;height:14px}
+label.micro{display:block;margin-bottom:7px}
+
+/* onboarding */
+#onboard{
+  position:fixed;inset:0;z-index:100;
+  display:flex;align-items:center;justify-content:center;
+  background:var(--bg);padding:24px;
+}
+#onboard .bg-grad{z-index:-1}
+.ob-card{width:100%;max-width:420px;padding:36px 34px;position:relative;z-index:2}
+.ob-logo{display:flex;align-items:center;gap:12px;margin-bottom:6px}
+.ob-logo svg{width:26px;height:26px;color:var(--accent)}
+.ob-word{font-weight:600;letter-spacing:.08em;font-size:17px}
+.ob-sub{margin-bottom:30px}
+.ob-card .field{margin-bottom:18px}
+.ob-card .btn{width:100%;justify-content:center;margin-top:6px;padding:12px}
+.ob-foot{margin-top:26px;text-align:center;font-size:10px;letter-spacing:.2em;color:var(--faint)}
+.form-msg{font-size:12.5px;min-height:20px;margin-bottom:6px}
+.form-msg.down{color:var(--down)}
+.form-msg.up{color:var(--up)}
+.form-msg.warn{color:var(--warn)}
+
+/* shell */
+.sidebar{
+  position:fixed;left:0;top:0;bottom:0;width:220px;z-index:50;
+  background:var(--glass);
+  border-right:1px solid var(--line-soft);
+  backdrop-filter:blur(22px) saturate(140%);
+  -webkit-backdrop-filter:blur(22px) saturate(140%);
+  display:flex;flex-direction:column;
+  padding:24px 14px 18px;
+}
+.side-logo{display:flex;align-items:center;gap:10px;padding:0 10px;margin-bottom:34px}
+.side-logo svg{width:24px;height:24px;color:var(--accent);flex:none}
+.side-logo .w1{font-weight:600;letter-spacing:.08em;font-size:14.5px;line-height:1.2}
+.side-logo .w2{font-size:8.5px;letter-spacing:.22em;color:var(--dim);font-weight:500}
+.nav{display:flex;flex-direction:column;gap:4px;flex:1}
+.nav-sec{
+  font-family:var(--mono);font-size:8.5px;letter-spacing:.24em;text-transform:uppercase;
+  color:var(--faint);padding:14px 12px 6px;font-weight:500;
+}
+.nav .nav-sec:first-child{padding-top:2px}
+.nav-item{
+  display:flex;align-items:center;gap:11px;
+  padding:10px 12px;border-radius:9px;border:1px solid transparent;
+  color:var(--dim);font-size:11.5px;font-weight:500;letter-spacing:.14em;
+  transition:background .2s,color .2s;
+}
+.nav-item:hover{background:var(--glass-2);color:var(--txt)}
+.nav-item.active{background:var(--glass-2);color:var(--txt);border-color:var(--line-soft)}
+.nav-item svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:1.4;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.side-foot{padding:14px 10px 0;border-top:1px solid var(--line-soft)}
+.side-nombre{font-size:13px;font-weight:500;letter-spacing:.02em}
+.side-cuenta{font-size:13px;font-weight:300;color:var(--accent);cursor:pointer;margin:2px 0 10px}
+.side-cuenta:hover{color:var(--txt)}
+.side-foot .micro{font-size:9px;letter-spacing:.2em;color:var(--faint)}
+
+/* ── departamentos / snowball ── */
+.dept-note{
+  font-size:9.5px;letter-spacing:.22em;color:var(--faint);text-transform:uppercase;
+  margin:0 0 16px;padding:9px 13px;border:1px solid var(--line-soft);border-radius:8px;
+  background:var(--glass);
+}
+.sw-dos{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px}
+.sw-motor{border:1px solid var(--line-soft);border-radius:10px;padding:16px;background:var(--glass)}
+.sw-motor-inv{border-color:rgba(94,140,173,.45);background:var(--glass-2)}
+.sw-motor-t{font-weight:600;font-size:14.5px;margin-bottom:6px}
+.sw-motor-d{font-size:13px;line-height:1.6}
+.sw-veh{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:12px}
+.sw-veh-item{border:1px solid var(--line-soft);border-radius:10px;padding:14px;background:var(--glass)}
+.sw-veh-t{font-weight:600;font-size:15px;margin:5px 0 3px}
+.sw-veh-d{font-size:11.5px;color:var(--dim)}
+.sw-tabla td:last-child{color:var(--dim);font-size:12px}
+.sw-core td:first-child{color:var(--accent)}
+.sw-calc{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:12px 0 4px}
+.sw-calc label.micro{display:block;margin-bottom:6px}
+.sw-chart{margin-top:14px}
+.sw-chart svg{display:block;width:100%;height:auto}
+.sw-hitos{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:14px 0 10px}
+.sw-hito{border:1px solid var(--line-soft);border-radius:9px;padding:10px 12px;background:var(--glass)}
+.sw-hito .h-a{font-size:9.5px;letter-spacing:.18em;color:var(--faint);font-family:var(--mono)}
+.sw-hito .h-v{font-family:var(--mono);font-weight:300;font-size:17px;margin-top:3px}
+@media (max-width:760px){
+  .sw-dos,.sw-veh,.sw-calc{grid-template-columns:1fr}
+  .sw-hitos{grid-template-columns:repeat(2,1fr)}
+}
+
+.main{margin-left:220px;min-height:100vh;position:relative;z-index:2}
+.topbar{
+  position:sticky;top:0;z-index:40;height:64px;
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0 28px;
+  background:rgba(5,7,12,.72);
+  backdrop-filter:blur(24px) saturate(140%);
+  -webkit-backdrop-filter:blur(24px) saturate(140%);
+  border-bottom:1px solid var(--line-soft);
+}
+.tb-left{display:flex;align-items:baseline;gap:16px}
+.tb-title{font-weight:600;letter-spacing:.14em;font-size:13px}
+.tb-date{font-size:12px;font-weight:300;color:var(--dim)}
+.tb-right{display:flex;align-items:center;gap:14px}
+.tb-clock{font-size:15px;font-weight:300;letter-spacing:.05em}
+.badge{
+  display:inline-flex;align-items:center;gap:7px;
+  padding:5px 12px;border:1px solid var(--line);border-radius:999px;
+  font:500 9.5px var(--mono);letter-spacing:.14em;text-transform:uppercase;
+}
+.badge .dot{width:5px;height:5px;border-radius:50%;background:currentColor;flex:none}
+.badge.b-dim{color:var(--dim)}
+.badge.b-up{color:var(--up);border-color:rgba(87,199,155,.35)}
+.badge.b-warn{color:var(--warn);border-color:rgba(217,164,65,.35)}
+
+.view{display:none;padding:28px 28px 90px;max-width:1180px}
+.view.active{display:block}
+
+/* dashboard */
+.grid-4{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+.stat{padding:18px 20px}
+.stat-num{font:300 32px/1.15 var(--mono);margin-top:8px}
+.stat-num2{font:300 24px/1.2 var(--mono);margin-top:8px}
+.m-sub{font-size:11px;margin-top:4px}
+.dash-mid{display:grid;grid-template-columns:1.25fr 1fr;gap:16px;margin:16px 0}
+.score-flex{display:flex;align-items:center;gap:34px;margin-top:22px}
+.ring-wrap{position:relative;width:150px;height:150px;flex:none}
+.ring{width:150px;height:150px;display:block}
+.ring-center{
+  position:absolute;inset:0;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;gap:2px;
+}
+.ring-center .score-n{font:300 34px/1 var(--mono)}
+.ring-center .micro{font-size:9px;letter-spacing:.16em;color:var(--faint)}
+.dims{flex:1;display:flex;flex-direction:column;gap:14px;min-width:0}
+.dim-top{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px}
+.dim-val{font-size:12px;font-weight:300;color:var(--txt)}
+.bar{height:4px;background:var(--line-soft);border-radius:2px;overflow:hidden}
+.bar i{display:block;height:100%;width:0;background:var(--accent);border-radius:2px;transition:width .4s ease}
+.score-hint{margin-top:18px;font-size:13px}
+.obj-row{display:flex;flex-direction:column;gap:6px;padding:12px 0;border-bottom:1px solid var(--line-soft)}
+.obj-row:last-child{border-bottom:none}
+.obj-top{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+.obj-lbl{font-size:12px;font-weight:500;letter-spacing:.08em;text-transform:uppercase;color:var(--dim)}
+.obj-num{font:300 12px var(--mono);color:var(--txt);white-space:nowrap}
+.obj-num .ok{color:var(--up)}
+.obj-nota{font-size:11px;margin-top:12px}
+.eq-card{margin-bottom:16px}
+.eq-chart{margin-top:16px;min-height:180px}
+.eq-chart svg{display:block;width:100%;height:auto}
+.eq-empty{
+  min-height:160px;display:flex;align-items:center;justify-content:center;
+  color:var(--faint);font-size:13px;border:1px dashed var(--line);border-radius:10px;
+}
+
+/* sesion */
+.ses-block{margin-bottom:16px}
+.ses-head{display:flex;justify-content:space-between;align-items:baseline;gap:14px;margin-bottom:16px}
+.ses-head .mono{font-weight:300;font-size:13px;color:var(--accent)}
+.chk-row{
+  display:flex;gap:14px;align-items:flex-start;
+  padding:13px 14px;border:1px solid var(--line);border-radius:11px;
+  cursor:pointer;margin-bottom:8px;transition:background .2s,border-color .2s;
+}
+.chk-row:hover{background:var(--glass-2)}
+.chk-row .chk-n{font:400 11px var(--mono);color:var(--faint);padding-top:3px;width:20px;flex:none}
+.chk-box{
+  width:16px;height:16px;flex:none;margin-top:4px;
+  border:1px solid var(--line);border-radius:4px;position:relative;
+  transition:border-color .2s,background .2s;
+}
+.chk-row.on .chk-box,.setup-row.on .chk-box{border-color:var(--up);background:rgba(87,199,155,.12)}
+.chk-row.on .chk-box::after,.setup-row.on .chk-box::after{
+  content:'';position:absolute;left:4.5px;top:1.5px;width:4px;height:8px;
+  border:solid var(--up);border-width:0 1.5px 1.5px 0;transform:rotate(45deg);
+}
+.chk-t{font-size:14px;font-weight:500;color:var(--txt)}
+.chk-d{font-size:12.5px}
+.chk-row.on .chk-t{color:var(--dim);text-decoration:line-through;text-decoration-color:var(--faint)}
+.ok-line{margin-top:12px;font-size:13px;font-weight:500}
+.setup-row{
+  display:flex;gap:14px;align-items:flex-start;
+  padding:15px 16px;border:1px solid var(--line);border-radius:11px;
+  cursor:pointer;margin-bottom:8px;transition:background .2s,border-color .2s;
+}
+.setup-row:hover{background:var(--glass-2)}
+.setup-row.on{border-color:rgba(87,199,155,.35);background:rgba(87,199,155,.05)}
+.setup-row .chk-n{font:400 12px var(--mono);color:var(--accent);padding-top:2px;width:20px;flex:none}
+.verdict{
+  margin-top:14px;padding:13px 16px;border-radius:10px;
+  border:1px solid var(--line);font-size:13.5px;font-weight:500;letter-spacing:.02em;
+}
+.verdict.v-up{color:var(--up);border-color:rgba(87,199,155,.4);background:rgba(87,199,155,.05)}
+.banner{padding:16px 18px;border-radius:11px;border:1px solid var(--line)}
+.banner .b-title{font-weight:600;font-size:13.5px;letter-spacing:.06em;text-transform:uppercase}
+.banner .b-msg{font-size:13px;color:var(--dim);margin-top:4px}
+.banner.v-up{border-color:rgba(87,199,155,.4);background:rgba(87,199,155,.05)}
+.banner.v-up .b-title{color:var(--up)}
+.banner.v-warn{border-color:rgba(217,164,65,.4);background:rgba(217,164,65,.05)}
+.banner.v-warn .b-title{color:var(--warn)}
+.banner.v-down{border-color:rgba(222,106,95,.4);background:rgba(222,106,95,.05)}
+.banner.v-down .b-title{color:var(--down)}
+.banner.v-dim .b-title{color:var(--txt)}
+.qr-line{display:flex;align-items:center;gap:14px;margin-top:14px;flex-wrap:wrap}
+.qr-nota{font-size:12.5px}
+.pm-row{
+  display:flex;gap:14px;align-items:center;
+  padding:13px 0;border-bottom:1px solid var(--line-soft);
+}
+.pm-row:last-child{border-bottom:none}
+.pm-row>div{flex:1;min-width:0}
+.pm-n{font:400 11px var(--mono);color:var(--faint);width:22px;flex:none}
+.rep-pre{
+  margin-top:16px;padding:18px;border:1px solid var(--line);border-radius:10px;
+  background:rgba(0,0,0,.25);font:400 12.5px/1.8 var(--mono);
+  color:var(--txt);white-space:pre-wrap;word-break:break-word;
+}
+.rep-actions{display:flex;align-items:center;gap:14px;margin-top:12px;flex-wrap:wrap}
+.rep-msg{font-size:12.5px}
+
+/* journal */
+.j-form{margin-bottom:18px}
+.j-ses-nota{font-size:12px;font-weight:500}
+.f-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:16px}
+.f-grid2{display:grid;grid-template-columns:1.5fr 1fr;gap:14px;margin-bottom:16px}
+.dir-toggle{display:flex;border:1px solid var(--line);border-radius:9px;overflow:hidden}
+.dir-btn{
+  flex:1;padding:9px 0;background:transparent;border:none;cursor:pointer;
+  font:500 11.5px var(--sans);letter-spacing:.1em;color:var(--dim);
+  transition:background .2s,color .2s;
+}
+.dir-btn.sel{background:rgba(155,192,220,.1);color:var(--accent)}
+.f-setup{margin-bottom:16px}
+.f-checks{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.f-chk{
+  display:flex;gap:10px;align-items:flex-start;
+  padding:10px 12px;border:1px solid var(--line);border-radius:9px;
+  font-size:13px;color:var(--dim);cursor:pointer;transition:background .2s;
+}
+.f-chk:hover{background:var(--glass-2)}
+.f-chk input{margin-top:3px;flex:none}
+.f-emo{margin-bottom:16px}
+.chips{display:flex;gap:8px;flex-wrap:wrap}
+.chip-opt{
+  padding:7px 14px;border-radius:999px;border:1px solid var(--line);
+  background:transparent;color:var(--dim);
+  font:500 10.5px var(--sans);letter-spacing:.12em;cursor:pointer;
+  transition:border-color .2s,color .2s,background .2s;
+}
+.chip-opt:hover{background:var(--glass-2)}
+.chip-opt.sel{border-color:var(--accent-deep);color:var(--accent);background:rgba(155,192,220,.08)}
+.chip-opt.sel[data-emo="FOMO"],.chip-opt.sel[data-emo="REVENGE"]{
+  border-color:rgba(222,106,95,.5);color:var(--down);background:rgba(222,106,95,.07);
+}
+.f-foot{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap}
+.f-foot .form-msg{margin:0;flex:1;min-width:200px}
+.j-toolbar{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:14px}
+.filtros{display:flex;gap:6px;flex-wrap:wrap}
+.filtro{
+  padding:6px 13px;border-radius:999px;border:1px solid var(--line);
+  background:transparent;color:var(--dim);
+  font:500 10.5px var(--sans);letter-spacing:.1em;cursor:pointer;
+  transition:border-color .2s,color .2s;
+}
+.filtro.sel{border-color:var(--accent-deep);color:var(--accent)}
+.j-resumen{font-size:12px;font-weight:300;color:var(--dim)}
+.j-resumen b{color:var(--txt);font-weight:400}
+.t-row{
+  background:var(--glass);border:1px solid var(--line);border-radius:12px;
+  padding:14px 16px;margin-bottom:8px;transition:background .2s;
+}
+.t-row:hover{background:var(--glass-2)}
+.t-top{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.t-fecha{font-size:12px;font-weight:300;color:var(--dim)}
+.t-inst{font-size:13px;font-weight:500;color:var(--txt)}
+.chip-dir{
+  display:inline-flex;align-items:center;justify-content:center;
+  width:22px;height:22px;border-radius:6px;border:1px solid var(--line);
+  font:500 10.5px var(--mono);
+}
+.chip-dir.L{color:var(--up);border-color:rgba(87,199,155,.35)}
+.chip-dir.S{color:var(--down);border-color:rgba(222,106,95,.35)}
+.t-res{font-size:14px;font-weight:400}
+.t-r{font-size:12px;font-weight:300;color:var(--dim)}
+.t-flags{display:flex;gap:6px;flex-wrap:wrap;flex:1}
+.flag{
+  display:inline-block;padding:2.5px 8px;border-radius:5px;
+  font:500 9px var(--mono);letter-spacing:.1em;border:1px solid;white-space:nowrap;
+}
+.flag.f-warn{color:var(--warn);border-color:rgba(217,164,65,.35)}
+.flag.f-down{color:var(--down);border-color:rgba(222,106,95,.35)}
+.flag.f-dim{color:var(--dim);border-color:var(--line)}
+.t-del{
+  background:none;border:1px solid transparent;border-radius:7px;
+  color:var(--faint);font-size:15px;line-height:1;padding:4px 8px;cursor:pointer;
+  transition:color .2s,border-color .2s;
+}
+.t-del:hover{color:var(--down);border-color:rgba(222,106,95,.35)}
+.t-nota{
+  margin-top:8px;font-size:13px;color:var(--dim);cursor:pointer;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+.t-row.exp .t-nota{white-space:normal}
+.t-shot{font-size:11.5px;margin-top:4px}
+.j-empty{
+  padding:44px 20px;text-align:center;color:var(--faint);font-size:13.5px;
+  border:1px dashed var(--line);border-radius:12px;
+}
+
+/* programa */
+.prog-lead{margin-bottom:16px;line-height:1.9;max-width:640px}
+.prog-head{margin-bottom:18px}
+.prog-row{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px}
+.prog-row .mono{font-weight:300;font-size:13px;color:var(--accent)}
+.prog-head .bar{margin-bottom:16px}
+.mod{
+  background:var(--glass);border:1px solid var(--line);border-radius:14px;
+  margin-bottom:12px;overflow:hidden;
+  backdrop-filter:blur(22px) saturate(140%);
+  -webkit-backdrop-filter:blur(22px) saturate(140%);
+}
+.mod-head{
+  display:flex;align-items:center;gap:16px;padding:18px 20px;cursor:pointer;
+  transition:background .2s;user-select:none;
+}
+.mod-head:hover{background:var(--glass-2)}
+.mod-code{font:400 12px var(--mono);color:var(--accent);flex:none}
+.mod-tit{font-size:14.5px;font-weight:600;letter-spacing:.04em;flex:1}
+.mod-prog{font:300 11.5px var(--mono);color:var(--dim);white-space:nowrap}
+.mod-caret{color:var(--faint);font-size:11px;transition:transform .2s}
+.mod.open .mod-caret{transform:rotate(180deg)}
+.mod-body{display:none;padding:0 20px 20px;border-top:1px solid var(--line-soft)}
+.mod.open .mod-body{display:block}
+.lesson{padding:20px 0;border-bottom:1px solid var(--line-soft)}
+.lesson-h{display:flex;justify-content:space-between;align-items:center;gap:14px;margin-bottom:10px;flex-wrap:wrap}
+.lesson-t{font-size:14px;font-weight:600}
+.lesson.done .lesson-t{color:var(--dim)}
+.lesson p{color:var(--dim);font-size:13.5px;margin-bottom:10px;max-width:760px}
+.lesson p:last-of-type{margin-bottom:0}
+.btn.b-done{border-color:rgba(87,199,155,.4);color:var(--up)}
+.quiz{padding:20px 0 4px}
+.quiz-t{font-size:12px;margin-bottom:14px}
+.q-item{margin-bottom:16px}
+.q-q{font-size:13.5px;font-weight:500;margin-bottom:8px}
+.q-opt{
+  display:flex;gap:10px;align-items:flex-start;
+  padding:9px 12px;border:1px solid var(--line);border-radius:9px;
+  cursor:pointer;margin-bottom:6px;color:var(--dim);font-size:13px;
+  transition:background .2s,border-color .2s;
+}
+.q-opt:hover{background:var(--glass-2)}
+.q-opt input{margin-top:3px;flex:none}
+.q-opt.correct{border-color:rgba(87,199,155,.5);color:var(--up)}
+.q-opt.wrong{border-color:rgba(222,106,95,.5);color:var(--down)}
+.quiz-foot{display:flex;align-items:center;gap:14px;margin-top:6px;flex-wrap:wrap}
+.quiz-res{font:400 12.5px var(--mono)}
+.proto-card{margin-top:20px;border-color:rgba(155,192,220,.35)}
+.proto-card blockquote{
+  margin-top:14px;font-size:15.5px;line-height:1.8;color:var(--txt);
+  border-left:2px solid var(--accent-deep);padding-left:18px;max-width:720px;
+}
+
+/* reglas */
+.rg-sec{margin-bottom:16px}
+.rg-tabla{width:100%;border-collapse:collapse;margin-top:14px}
+.rg-tabla td{
+  padding:11px 4px;border-bottom:1px solid var(--line-soft);
+  font:300 13px var(--mono);color:var(--dim);
+}
+.rg-tabla td:first-child{color:var(--txt);font-family:var(--sans);font-weight:500;font-size:13px}
+.rg-tabla td:last-child{text-align:right;color:var(--accent)}
+.rg-tabla tr:last-child td{border-bottom:none}
+.rg-item{display:flex;gap:16px;padding:13px 0;border-bottom:1px solid var(--line-soft)}
+.rg-item:last-child{border-bottom:none}
+.rg-item .pm-n{padding-top:3px}
+.rg-item-t{font-size:14px;font-weight:500}
+.rg-item-d{font-size:13px;color:var(--dim)}
+.rg-warn-card{border-color:rgba(217,164,65,.4)}
+.rg-quote{
+  border-color:rgba(155,192,220,.3);
+}
+.rg-quote blockquote{
+  font-size:16px;line-height:1.85;color:var(--txt);max-width:760px;
+  border-left:2px solid var(--accent-deep);padding-left:20px;margin-top:14px;
+}
+.rg-term li{
+  list-style:none;padding:10px 0 10px 26px;position:relative;
+  border-bottom:1px solid var(--line-soft);font-size:13.5px;color:var(--dim);
+}
+.rg-term li::before{
+  content:'—';position:absolute;left:0;color:var(--down);font-family:var(--mono);
+}
+.rg-term li:last-child{border-bottom:none}
+.rg-alerta{font-size:12px;margin-top:14px}
+
+/* responsive */
+@media(max-width:1024px){
+  .f-grid{grid-template-columns:repeat(2,1fr)}
+  .dash-mid{grid-template-columns:1fr}
+}
+@media(max-width:900px){
+  .sidebar{
+    top:auto;bottom:0;left:0;right:0;width:auto;height:62px;
+    flex-direction:row;align-items:center;padding:0 6px;
+    border-right:none;border-top:1px solid var(--line-soft);
+    background:rgba(5,7,12,.88);
+  }
+  .side-logo,.side-foot{display:none}
+  .nav{flex-direction:row;flex:1;justify-content:space-around;gap:0}
+  .nav-sec{display:none}
+  .nav-item{flex-direction:column;gap:4px;font-size:9px;letter-spacing:.08em;padding:7px 6px;border:none}
+  .nav-item.active{background:transparent;color:var(--accent)}
+  .main{margin-left:0}
+  .view{padding:22px 18px 110px}
+  .topbar{padding:0 18px}
+  .tb-date{display:none}
+  .grid-4{grid-template-columns:repeat(2,1fr)}
+  .f-checks{grid-template-columns:1fr}
+  .f-grid2{grid-template-columns:1fr}
+  .score-flex{flex-direction:column;align-items:flex-start;gap:24px}
+}
+@media(max-width:640px){
+  .grid-4{grid-template-columns:1fr}
+  .f-grid{grid-template-columns:1fr}
+  .pm-row{flex-wrap:wrap}
+  .tb-clock{font-size:13px}
+  .badge{padding:4px 8px;font-size:8.5px}
+}
+</style>
+</head>
+<body>
+<div class="bg-grad"></div>
+<div class="noise"></div>
+
+<!-- ═══════════ ONBOARDING ═══════════ -->
+<div id="onboard" hidden>
+  <div class="ob-card card">
+    <div class="ob-logo">
+      <svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round">
+        <circle cx="16" cy="16" r="5"/>
+        <line x1="16" y1="1" x2="16" y2="9"/><line x1="16" y1="23" x2="16" y2="31"/>
+        <line x1="1" y1="16" x2="9" y2="16"/><line x1="23" y1="16" x2="31" y2="16"/>
+      </svg>
+      <span class="ob-word">NORTHPOINT TERMINAL</span>
+    </div>
+    <div class="ob-sub micro">Behavioral Intelligence</div>
+    <div class="field">
+      <label class="micro" for="obNombre">Nombre del trader</label>
+      <input id="obNombre" type="text" placeholder="Nombre y apellido" autocomplete="off">
+    </div>
+    <div class="field">
+      <label class="micro" for="obCuenta">Tamaño de cuenta (USD)</label>
+      <input id="obCuenta" type="number" value="25000" min="1000" step="500">
+    </div>
+    <div id="obMsg" class="form-msg down"></div>
+    <button id="btnAlta" class="btn primary">Iniciar operación</button>
+    <div class="ob-foot">CONFIDENCIAL · NORTHPOINT.IO</div>
+  </div>
+</div>
+
+<!-- ═══════════ SHELL ═══════════ -->
+<div id="shell" hidden>
+<aside class="sidebar">
+  <div class="side-logo">
+    <svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round">
+      <circle cx="16" cy="16" r="5"/>
+      <line x1="16" y1="1" x2="16" y2="9"/><line x1="16" y1="23" x2="16" y2="31"/>
+      <line x1="1" y1="16" x2="9" y2="16"/><line x1="23" y1="16" x2="31" y2="16"/>
+    </svg>
+    <div>
+      <div class="w1">NORTHPOINT</div>
+      <div class="w2">TERMINAL</div>
+    </div>
+  </div>
+  <nav class="nav">
+    <div class="nav-sec">Trading · Mesa de futuros</div>
+    <a class="nav-item active" href="#dashboard" data-v="dashboard">
+      <svg viewBox="0 0 24 24"><rect x="3.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="3.5" y="13.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="13.5" width="7" height="7" rx="1.5"/></svg>
+      <span>DASHBOARD</span>
+    </a>
+    <a class="nav-item" href="#sesion" data-v="sesion">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="7.5"/><line x1="12" y1="1.5" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="22.5"/><line x1="1.5" y1="12" x2="6" y2="12"/><line x1="18" y1="12" x2="22.5" y2="12"/></svg>
+      <span>SESIÓN</span>
+    </a>
+    <a class="nav-item" href="#journal" data-v="journal">
+      <svg viewBox="0 0 24 24"><path d="M5 3.5h11.5a2 2 0 0 1 2 2v15h-13a2 2 0 0 1-2-2v-13a2 2 0 0 1 2-2z"/><line x1="8" y1="8.5" x2="15" y2="8.5"/><line x1="8" y1="12.5" x2="15" y2="12.5"/><line x1="8" y1="16.5" x2="12.5" y2="16.5"/></svg>
+      <span>JOURNAL</span>
+    </a>
+    <a class="nav-item" href="#programa" data-v="programa">
+      <svg viewBox="0 0 24 24"><path d="M12 3.5l9 4.5-9 4.5-9-4.5z"/><path d="M3 12.5l9 4.5 9-4.5"/><path d="M3 17l9 4.5 9-4.5"/></svg>
+      <span>PROGRAMA</span>
+    </a>
+    <a class="nav-item" href="#reglas" data-v="reglas">
+      <svg viewBox="0 0 24 24"><path d="M12 2.5l8 3.5v5.5c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6z"/><path d="M8.5 12l2.5 2.5 4.5-5"/></svg>
+      <span>REGLAS</span>
+    </a>
+    <div class="nav-sec">Investments</div>
+    <a class="nav-item" href="#snowball" data-v="snowball">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="8.5" stroke-dasharray="2.4 3.4"/><line x1="12" y1="1.5" x2="12" y2="5"/><line x1="12" y1="19" x2="12" y2="22.5"/><line x1="1.5" y1="12" x2="5" y2="12"/><line x1="19" y1="12" x2="22.5" y2="12"/></svg>
+      <span>SNOWBALL</span>
+    </a>
+  </nav>
+  <div class="side-foot">
+    <div id="sideNombre" class="side-nombre">—</div>
+    <div id="sideCuenta" class="mono side-cuenta" title="Clic para editar el tamaño de cuenta">—</div>
+    <div class="micro">CONFIDENCIAL · v1.0</div>
+  </div>
+</aside>
+
+<main class="main">
+<header class="topbar">
+  <div class="tb-left">
+    <span id="viewTitle" class="tb-title">DASHBOARD</span>
+    <span id="todayDate" class="mono tb-date"></span>
+  </div>
+  <div class="tb-right">
+    <span id="clock" class="mono tb-clock">--:--:--</span>
+    <span id="windowBadge" class="badge b-dim"><i class="dot"></i><span id="windowTxt">—</span></span>
+  </div>
+</header>
+
+<!-- ═══════════ VISTA 1 · DASHBOARD ═══════════ -->
+<section id="view-dashboard" class="view active">
+  <div class="grid-4">
+    <div class="card stat">
+      <div class="micro">P&amp;L acumulado</div>
+      <div id="stPnl" class="stat-num">—</div>
+    </div>
+    <div class="card stat">
+      <div class="micro">Win rate</div>
+      <div id="stWin" class="stat-num">—</div>
+    </div>
+    <div class="card stat">
+      <div class="micro">Trades totales</div>
+      <div id="stTrades" class="stat-num">0</div>
+    </div>
+    <div class="card stat">
+      <div class="micro">Racha documentada</div>
+      <div id="stRacha" class="stat-num">0</div>
+    </div>
+  </div>
+
+  <div class="dash-mid">
+    <div class="card">
+      <div class="micro">Northpoint Score · Behavioral Intelligence Engine</div>
+      <div class="score-flex">
+        <div class="ring-wrap">
+          <svg class="ring" viewBox="0 0 120 120">
+            <circle cx="60" cy="60" r="52" fill="none" stroke="rgba(255,255,255,.06)" stroke-width="3"/>
+            <circle id="scoreRingFg" cx="60" cy="60" r="52" fill="none" stroke="var(--accent)" stroke-width="3"
+              stroke-linecap="round" stroke-dasharray="326.73" stroke-dashoffset="326.73"
+              transform="rotate(-90 60 60)" style="transition:stroke-dashoffset .5s ease"/>
+          </svg>
+          <div class="ring-center">
+            <div id="scoreNum" class="score-n mono">—</div>
+            <div class="micro">/ 1000</div>
+          </div>
+        </div>
+        <div class="dims">
+          <div class="dim">
+            <div class="dim-top"><span class="micro">Risk Discipline</span><span id="dimRiskVal" class="mono dim-val">—</span></div>
+            <div class="bar"><i id="dimRiskBar"></i></div>
+          </div>
+          <div class="dim">
+            <div class="dim-top"><span class="micro">Emotion Control</span><span id="dimEmoVal" class="mono dim-val">—</span></div>
+            <div class="bar"><i id="dimEmoBar"></i></div>
+          </div>
+          <div class="dim">
+            <div class="dim-top"><span class="micro">Decision Quality</span><span id="dimDecVal" class="mono dim-val">—</span></div>
+            <div class="bar"><i id="dimDecBar"></i></div>
+          </div>
+          <div class="dim">
+            <div class="dim-top"><span class="micro">Consistency</span><span id="dimConVal" class="mono dim-val">—</span></div>
+            <div class="bar"><i id="dimConBar"></i></div>
+          </div>
+        </div>
+      </div>
+      <div id="scoreHint" class="score-hint dim" hidden>Opera y documenta para generar tu Score. Se calcula a partir de 3 trades registrados.</div>
+    </div>
+
+    <div class="card">
+      <div class="micro">Objetivos · Visión cap. 03</div>
+      <div id="objetivosRows"></div>
+      <div class="obj-nota faint">Escalado a tu cuenta — día 0.6% · semana 3% · quincena 6% · mes 12% · año 144%.</div>
+    </div>
+  </div>
+
+  <div class="card eq-card">
+    <div class="micro">Curva de equity · P&amp;L acumulado — últimos 30 días con datos</div>
+    <div id="equityChart" class="eq-chart"></div>
+  </div>
+
+  <div class="grid-4">
+    <div class="card stat">
+      <div class="micro">Max drawdown</div>
+      <div id="mDD" class="stat-num2">—</div>
+      <div id="mDDsub" class="m-sub dim"></div>
+    </div>
+    <div class="card stat">
+      <div class="micro">Consistencia</div>
+      <div id="mCons" class="stat-num2">—</div>
+      <div id="mConsNote" class="m-sub warn" hidden>Un solo día domina tu curva.</div>
+      <div id="mConsSub" class="m-sub dim">mejor día / P&amp;L total</div>
+    </div>
+    <div class="card stat">
+      <div class="micro">Profit factor</div>
+      <div id="mPF" class="stat-num2">—</div>
+      <div class="m-sub dim">ganancias / pérdidas</div>
+    </div>
+    <div class="card stat">
+      <div class="micro">R promedio</div>
+      <div id="mR" class="stat-num2">—</div>
+      <div class="m-sub dim">múltiplo de riesgo</div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════ VISTA 2 · SESIÓN ═══════════ -->
+<section id="view-sesion" class="view">
+  <div class="dept-note mono">MESA DE TRADING — EL PROCESO DIARIO PARA TOMAR UNA POSICIÓN · FUTUROS · 7:00–8:30 AM</div>
+  <div class="card ses-block">
+    <div class="ses-head">
+      <span class="micro">Pre-market · 7:00</span>
+      <span id="pmProgress" class="mono">0/6</span>
+    </div>
+    <div id="premarketList">
+      <div class="chk-row" data-i="0">
+        <span class="chk-n">01</span><div class="chk-box"></div>
+        <div><div class="chk-t">Tradingview abierto</div><div class="chk-d dim">Apertura de plataforma y revisión inicial de gráficos.</div></div>
+      </div>
+      <div class="chk-row" data-i="1">
+        <span class="chk-n">02</span><div class="chk-box"></div>
+        <div><div class="chk-t">Calendario económico y fundamental</div><div class="chk-d dim">Revisión de eventos macro del día que puedan impactar la sesión.</div></div>
+      </div>
+      <div class="chk-row" data-i="2">
+        <span class="chk-n">03</span><div class="chk-box"></div>
+        <div><div class="chk-t">Análisis overnight — liquidez Asia/Londres</div><div class="chk-d dim">Identificar liquidez tomada en sesión asiática y de Londres.</div></div>
+      </div>
+      <div class="chk-row" data-i="3">
+        <span class="chk-n">04</span><div class="chk-box"></div>
+        <div><div class="chk-t">Estado de cuenta</div><div class="chk-d dim">Revisar cuenta, situación actual y objetivos del día.</div></div>
+      </div>
+      <div class="chk-row" data-i="4">
+        <span class="chk-n">05</span><div class="chk-box"></div>
+        <div><div class="chk-t">Proyecciones daily bias (NY open)</div><div class="chk-d dim">Definir bias direccional para la apertura de Nueva York.</div></div>
+      </div>
+      <div class="chk-row" data-i="5">
+        <span class="chk-n">06</span><div class="chk-box"></div>
+        <div><div class="chk-t">Esperar open y ORB (7:30–7:45)</div><div class="chk-d dim">Esperar la apertura y el Opening Range Breakout confirmado.</div></div>
+      </div>
+    </div>
+    <div id="pmDone" class="ok-line up" hidden>Protocolo pre-market completo.</div>
+  </div>
+
+  <div class="card ses-block">
+    <div class="ses-head">
+      <span class="micro">Setup válido — se cumplen todas · si falta una, no hay trade</span>
+      <span id="setupCount" class="mono">0/4</span>
+    </div>
+    <div id="setupRows">
+      <div class="setup-row" data-k="targets">
+        <span class="chk-n">A</span><div class="chk-box"></div>
+        <div><div class="chk-t">Targets overnight sin tomar</div><div class="chk-d dim">Asia o Londres H/L, PDH/PDL sin haber sido tomados aún.</div></div>
+      </div>
+      <div class="setup-row" data-k="liquidez">
+        <span class="chk-n">B</span><div class="chk-box"></div>
+        <div><div class="chk-t">El break apunta hacia liquidez clara</div><div class="chk-d dim">La dirección del break debe apuntar hacia liquidez clara e inequívoca.</div></div>
+      </div>
+      <div class="setup-row" data-k="estructura">
+        <span class="chk-n">C</span><div class="chk-box"></div>
+        <div><div class="chk-t">BOS / FVG de 5m · EMA 14/50 a favor</div><div class="chk-d dim">Break of structure y fair value gap de 5 minutos; EMA 14/50 y estructura a favor de la dirección.</div></div>
+      </div>
+      <div class="setup-row" data-k="entrada">
+        <span class="chk-n">D</span><div class="chk-box"></div>
+        <div><div class="chk-t">Entrada tantito antes o en el break</div><div class="chk-d dim">Entrar justo antes o en el break. No FOMO.</div></div>
+      </div>
+    </div>
+    <div id="setupVerdict" class="verdict dim">SIN SETUP. El mejor trade del día es no operar.</div>
+  </div>
+
+  <div class="card ses-block">
+    <div class="ses-head">
+      <span class="micro">Estado de la sesión · gestión cap. 03</span>
+      <span id="sesTradesHoy" class="mono">0/2</span>
+    </div>
+    <div id="sesionEstado"></div>
+    <div class="qr-line">
+      <button id="btnQuickReg" class="btn primary">Registrar trade</button>
+      <span id="qrNota" class="qr-nota dim"></span>
+    </div>
+  </div>
+
+  <div class="card ses-block">
+    <div class="ses-head"><span class="micro">Post-market</span></div>
+    <div>
+      <div class="pm-row">
+        <span class="pm-n">01</span>
+        <div><div class="chk-t">Registrar los trades</div><div class="chk-d dim">Screenshot, setup, resultado y análisis de cada operación.</div></div>
+        <a class="btn" href="#journal">Ir al journal</a>
+      </div>
+      <div class="pm-row">
+        <span class="pm-n">02</span>
+        <div><div class="chk-t">Verificar dashboard</div><div class="chk-d dim">Consistencia %, drawdown y progreso acumulado.</div></div>
+        <a class="btn" href="#dashboard">Ver dashboard</a>
+      </div>
+      <div class="pm-row">
+        <span class="pm-n">03</span>
+        <div><div class="chk-t">Reporte al equipo</div><div class="chk-d dim">Resultado del día + estado de la cuenta.</div></div>
+        <button id="btnReporte" class="btn primary">Generar reporte del día</button>
+      </div>
+    </div>
+    <div id="reporteBox" hidden>
+      <pre id="reporteTexto" class="rep-pre"></pre>
+      <div class="rep-actions">
+        <button id="btnCopiarReporte" class="btn primary">Copiar</button>
+        <span id="reporteMsg" class="rep-msg up"></span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════ VISTA 3 · JOURNAL ═══════════ -->
+<section id="view-journal" class="view">
+  <div class="dept-note mono">MESA DE TRADING — EVIDENCIA DE EJECUCIÓN · CADA POSICIÓN SE DOCUMENTA</div>
+  <div class="card j-form">
+    <div class="ses-head">
+      <span class="micro">Registro de operación</span>
+      <span id="jSesionNota" class="j-ses-nota warn"></span>
+    </div>
+    <div class="f-grid">
+      <div>
+        <label class="micro" for="fFecha">Fecha</label>
+        <input id="fFecha" type="date">
+      </div>
+      <div>
+        <label class="micro" for="fHora">Hora</label>
+        <input id="fHora" type="time">
+      </div>
+      <div>
+        <label class="micro" for="fInstrumento">Instrumento</label>
+        <select id="fInstrumento">
+          <option value="NQ">NQ — Nasdaq 100</option>
+          <option value="ES">ES — S&amp;P 500</option>
+          <option value="YM">YM — Dow Jones</option>
+          <option value="RTY">RTY — Russell 2000</option>
+          <option value="GC">GC — Oro</option>
+          <option value="CL">CL — Crudo WTI</option>
+          <option value="OTRO">Otro…</option>
+        </select>
+      </div>
+      <div id="otroWrap" hidden>
+        <label class="micro" for="fInstrumentoOtro">Especifica el símbolo</label>
+        <input id="fInstrumentoOtro" type="text" placeholder="Símbolo" autocomplete="off">
+      </div>
+      <div>
+        <label class="micro">Dirección</label>
+        <div class="dir-toggle">
+          <button id="fDirLong" class="dir-btn sel" type="button">LONG</button>
+          <button id="fDirShort" class="dir-btn" type="button">SHORT</button>
+        </div>
+      </div>
+      <div>
+        <label class="micro" for="fResultado">Resultado (USD ±)</label>
+        <input id="fResultado" type="number" step="1" placeholder="+450 / -300">
+      </div>
+      <div>
+        <label class="micro" for="fR">Múltiplo R</label>
+        <input id="fR" type="number" step="0.1" placeholder="1.5">
+      </div>
+    </div>
+    <div class="f-setup">
+      <label class="micro">Checklist de setup — 4/4 o no hay trade</label>
+      <div class="f-checks">
+        <label class="f-chk"><input id="fSetA" type="checkbox"><span>A · Targets overnight sin tomar (Asia/Londres H/L, PDH/PDL)</span></label>
+        <label class="f-chk"><input id="fSetB" type="checkbox"><span>B · El break apunta hacia liquidez clara</span></label>
+        <label class="f-chk"><input id="fSetC" type="checkbox"><span>C · BOS / FVG de 5m · EMA 14/50 a favor</span></label>
+        <label class="f-chk"><input id="fSetD" type="checkbox"><span>D · Entrada tantito antes o en el break — no FOMO</span></label>
+      </div>
+    </div>
+    <div class="f-emo">
+      <label class="micro">Emoción dominante</label>
+      <div id="emoChips" class="chips">
+        <button type="button" class="chip-opt" data-emo="CALMA">CALMA</button>
+        <button type="button" class="chip-opt" data-emo="DUDA">DUDA</button>
+        <button type="button" class="chip-opt" data-emo="ANSIEDAD">ANSIEDAD</button>
+        <button type="button" class="chip-opt" data-emo="FOMO">FOMO</button>
+        <button type="button" class="chip-opt" data-emo="REVENGE">REVENGE</button>
+      </div>
+    </div>
+    <div class="f-grid2">
+      <div>
+        <label class="micro" for="fNota">Nota</label>
+        <textarea id="fNota" rows="2" placeholder="Contexto, ejecución, lección del trade."></textarea>
+      </div>
+      <div>
+        <label class="micro" for="fShot">Screenshot (URL, opcional)</label>
+        <input id="fShot" type="url" placeholder="https://…">
+      </div>
+    </div>
+    <div class="f-foot">
+      <div id="formMsg" class="form-msg"></div>
+      <button id="btnGuardar" class="btn primary">Guardar trade</button>
+    </div>
+  </div>
+
+  <div class="j-toolbar">
+    <div id="jFiltros" class="filtros">
+      <button class="filtro sel" data-f="todos">Todos</button>
+      <button class="filtro" data-f="mes">Este mes</button>
+      <button class="filtro" data-f="win">Ganadores</button>
+      <button class="filtro" data-f="loss">Perdedores</button>
+      <button class="filtro" data-f="viol">Con violación</button>
+    </div>
+    <div id="jResumen" class="j-resumen mono"></div>
+  </div>
+  <div id="jTabla"></div>
+</section>
+
+<!-- ═══════════ VISTA 4 · PROGRAMA ═══════════ -->
+<section id="view-programa" class="view">
+  <div class="micro prog-lead">Desarrollo continuo — los mercados evolucionan. Quien no evoluciona, se queda atrás.</div>
+  <div class="card prog-head">
+    <div class="prog-row"><span class="micro">Lecciones estudiadas</span><span id="progGlobalLabel" class="mono">0/21</span></div>
+    <div class="bar"><i id="progGlobalBar"></i></div>
+    <div class="prog-row" style="margin-top:14px"><span class="micro">Score de quizzes</span><span id="quizGlobalLabel" class="mono">0/18</span></div>
+    <div class="bar"><i id="quizGlobalBar"></i></div>
+  </div>
+  <div id="modulos"></div>
+  <div id="protoCard" class="card proto-card" hidden>
+    <div class="micro">Protocolo internalizado</div>
+    <blockquote>"Ninguna regla de Northpoint tiene 'excepción creativa'. Cuando una regla parece inconveniente en un momento dado, probablemente es exactamente cuando más se necesita. La disciplina no se aplica cuando es cómodo. Se aplica siempre."</blockquote>
+  </div>
+</section>
+
+<!-- ═══════════ VISTA 5 · REGLAS ═══════════ -->
+<section id="view-reglas" class="view">
+  <div class="dept-note mono">MESA DE TRADING — CAPÍTULO 03 DEL HANDBOOK · REFERENCIA DIARIA</div>
+  <div class="card rg-sec">
+    <div class="micro">Visión · formato de ejecución</div>
+    <table class="rg-tabla">
+      <tr><td>Diario</td><td>0.6%</td><td>$1,500</td></tr>
+      <tr><td>Semanal</td><td>3%</td><td>$7,500</td></tr>
+      <tr><td>Quincenal</td><td>6%</td><td>$15,000</td></tr>
+      <tr><td>Mensual</td><td>12%</td><td>$30,000</td></tr>
+      <tr><td>Anual</td><td>144%</td><td>$360,000</td></tr>
+    </table>
+    <div class="rg-alerta faint">Cifras de referencia sobre cuenta de $250,000. Tu dashboard las escala automáticamente a tu cuenta.</div>
+  </div>
+
+  <div class="card rg-sec">
+    <div class="micro">Pre-market · 7:00</div>
+    <div>
+      <div class="rg-item"><span class="pm-n">01</span><div><div class="rg-item-t">Tradingview (7:00 am)</div><div class="rg-item-d">Apertura de plataforma y revisión inicial de gráficos.</div></div></div>
+      <div class="rg-item"><span class="pm-n">02</span><div><div class="rg-item-t">Calendario económico y fundamental</div><div class="rg-item-d">Revisión de eventos macro del día que puedan impactar la sesión.</div></div></div>
+      <div class="rg-item"><span class="pm-n">03</span><div><div class="rg-item-t">Análisis overnight (liq. Asia/Londres)</div><div class="rg-item-d">Identificar liquidez tomada en sesión asiática y de Londres.</div></div></div>
+      <div class="rg-item"><span class="pm-n">04</span><div><div class="rg-item-t">Estado de cuenta (situación y objetivos)</div><div class="rg-item-d">Revisar cuenta, situación actual y objetivos del día.</div></div></div>
+      <div class="rg-item"><span class="pm-n">05</span><div><div class="rg-item-t">Proyecciones daily bias (NY open)</div><div class="rg-item-d">Definir bias direccional para la apertura de Nueva York.</div></div></div>
+      <div class="rg-item"><span class="pm-n">06</span><div><div class="rg-item-t">Esperar open y ORB (7:30–7:45 am)</div><div class="rg-item-d">Esperar la apertura y el Opening Range Breakout confirmado.</div></div></div>
+    </div>
+  </div>
+
+  <div class="card rg-sec">
+    <div class="micro">Market · setup válido</div>
+    <div class="rg-alerta warn" style="margin:10px 0 4px">Se cumplen TODAS. Si falta una, NO HAY TRADE.</div>
+    <div>
+      <div class="rg-item"><span class="pm-n">A</span><div><div class="rg-item-t">Targets overnight sin tomar</div><div class="rg-item-d">Asia o Londres H/L, PDH/PDL sin haber sido tomados aún.</div></div></div>
+      <div class="rg-item"><span class="pm-n">B</span><div><div class="rg-item-t">El break apunta hacia liquidez clara</div><div class="rg-item-d">La dirección del break debe apuntar hacia liquidez clara e inequívoca.</div></div></div>
+      <div class="rg-item"><span class="pm-n">C</span><div><div class="rg-item-t">BOS / FVG de 5m · EMA 14/50</div><div class="rg-item-d">Break of structure y fair value gap de 5 minutos; EMA 14/50 y estructura a favor de la dirección.</div></div></div>
+      <div class="rg-item"><span class="pm-n">D</span><div><div class="rg-item-t">Entrar tantito antes o en el break</div><div class="rg-item-d">Entrar justo antes o en el break. No FOMO.</div></div></div>
+    </div>
+  </div>
+
+  <div class="card rg-sec">
+    <div class="micro">Gestión</div>
+    <div>
+      <div class="rg-item"><span class="pm-n">01</span><div><div class="rg-item-t">2 trades máximo, estricto</div><div class="rg-item-d">Máximo dos operaciones por sesión. Sin excepciones.</div></div></div>
+      <div class="rg-item"><span class="pm-n">02</span><div><div class="rg-item-t">Se gana el trade 1 → se cierra la plataforma</div><div class="rg-item-d">Día terminado. Al cerrar el primer trade en ganancia, se cierra la plataforma.</div></div></div>
+      <div class="rg-item"><span class="pm-n">03</span><div><div class="rg-item-t">Se pierde el trade 1 → un solo intento más</div><div class="rg-item-d">ÚNICAMENTE si aparece un setup válido nuevo completo. Nunca revenge.</div></div></div>
+    </div>
+  </div>
+
+  <div class="card rg-sec">
+    <div class="micro">Post-market</div>
+    <div>
+      <div class="rg-item"><span class="pm-n">01</span><div><div class="rg-item-t">Registrar los trades</div><div class="rg-item-d">Screenshot, setup, resultado y análisis de cada operación.</div></div></div>
+      <div class="rg-item"><span class="pm-n">02</span><div><div class="rg-item-t">Verificar dashboard</div><div class="rg-item-d">Consistencia %, drawdown y progreso acumulado.</div></div></div>
+      <div class="rg-item"><span class="pm-n">03</span><div><div class="rg-item-t">Reporte al equipo</div><div class="rg-item-d">Resultado del día + estado de cada cuenta.</div></div></div>
+    </div>
+  </div>
+
+  <div class="card rg-sec rg-warn-card">
+    <div class="micro warn">No negociables</div>
+    <div>
+      <div class="rg-item"><span class="pm-n">01</span><div><div class="rg-item-t">Nunca minis</div><div class="rg-item-d">Operación en minis está prohibida. Sin excepciones.</div></div></div>
+      <div class="rg-item"><span class="pm-n">02</span><div><div class="rg-item-t">Solo se opera la ventana 7:00–8:30 am</div><div class="rg-item-d">Lunes a viernes. Fuera de esta ventana no se opera.</div></div></div>
+      <div class="rg-item"><span class="pm-n">03</span><div><div class="rg-item-t">Nada queda abierto después de las 8:30 am</div><div class="rg-item-d">Toda posición debe estar cerrada antes de las 8:30 am.</div></div></div>
+      <div class="rg-item"><span class="pm-n">04</span><div><div class="rg-item-t">Si el checklist no da setup válido</div><div class="rg-item-d">El mejor trade del día es no operar.</div></div></div>
+    </div>
+  </div>
+
+  <div class="card rg-sec rg-quote">
+    <div class="micro">Principio rector</div>
+    <blockquote>"Ninguna regla de Northpoint tiene 'excepción creativa'. Cuando una regla parece inconveniente en un momento dado, probablemente es exactamente cuando más se necesita. La disciplina no se aplica cuando es cómodo. Se aplica siempre."</blockquote>
+  </div>
+
+  <div class="card rg-sec">
+    <div class="micro down">Conductas de terminación inmediata · cap. 04</div>
+    <ul class="rg-term" style="margin-top:8px">
+      <li>Operar con información privilegiada (insider trading).</li>
+      <li>Compartir posiciones o estrategias del fondo externamente.</li>
+      <li>Falsificar registros, reportes o documentación interna.</li>
+      <li>Realizar operaciones personales en conflicto de interés no declarado.</li>
+      <li>Violación del protocolo de MNPI sin reporte inmediato.</li>
+      <li>Hostigamiento, discriminación o conducta abusiva hacia el equipo.</li>
+      <li>Fraude, robo o malversación de activos del fondo o de clientes.</li>
+      <li>Incumplimiento reiterado y documentado de las reglas de riesgo.</li>
+    </ul>
+    <div class="rg-alerta faint">"Al unirte a Northpoint, aceptas estos estándares sin reservas. No son aspiracionales. Son el piso mínimo de operación dentro de esta institución."</div>
+  </div>
+
+  <div class="rg-alerta faint" style="text-align:center;letter-spacing:.18em;text-transform:uppercase;font-size:10px">Confidencial · Northpoint.io</div>
+</section>
+
+<!-- ═══════════ VISTA 6 · SNOWBALL · INVESTMENTS ═══════════ -->
+<section id="view-snowball" class="view">
+  <div class="dept-note mono">DEPARTAMENTO DE INVERSIONES — SNOWBALL · CAPITAL DE LARGO PLAZO · HORIZONTE MÍNIMO 3 AÑOS</div>
+
+  <div class="card rg-sec">
+    <div class="micro">Los dos motores del fondo</div>
+    <div class="sw-dos">
+      <div class="sw-motor">
+        <div class="sw-motor-t">Mesa de Trading</div>
+        <div class="sw-motor-d dim">Futuros, diario. Una ventana de 90 minutos, un protocolo, máximo dos posiciones. El proceso diario para tomar una posición vive en <a href="#sesion">Sesión</a> y su evidencia en <a href="#journal">Journal</a>.</div>
+      </div>
+      <div class="sw-motor sw-motor-inv">
+        <div class="sw-motor-t">Snowball Investments</div>
+        <div class="sw-motor-d dim">Gestión de capital de clientes calificados con interés compuesto y disciplina conductual. Decisiones por comité, horizonte de años, reinversión total. Este es su tablero.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card rg-sec">
+    <div class="micro">Proceso de toma de decisiones de inversión · cap. 02</div>
+    <div class="rg-alerta faint" style="margin:8px 0 4px">Así aprueba el fondo una tesis de inversión. Nada entra al portafolio sin pasar las cinco puertas — a diferencia de la mesa, aquí el reloj se mide en días, no en minutos.</div>
+    <div>
+      <div class="rg-item"><span class="pm-n">01</span><div><div class="rg-item-t">Generación de idea</div><div class="rg-item-d">Cualquier miembro del equipo puede proponer una tesis. Se documenta con hipótesis, datos de soporte y nivel de convicción.</div></div></div>
+      <div class="rg-item"><span class="pm-n">02</span><div><div class="rg-item-t">Research &amp; validación</div><div class="rg-item-d">El Research Analyst asignado conduce due diligence independiente. Mínimo 72 horas de análisis antes de presentación formal.</div></div></div>
+      <div class="rg-item"><span class="pm-n">03</span><div><div class="rg-item-t">Revisión de riesgo</div><div class="rg-item-d">El CRO evalúa el impacto en el portafolio: correlaciones, drawdown proyectado y sizing máximo permitido según mandato.</div></div></div>
+      <div class="rg-item"><span class="pm-n">04</span><div><div class="rg-item-t">Aprobación CIO</div><div class="rg-item-d">El CIO aprueba, rechaza o pide revisión adicional. Las decisiones se registran con justificación escrita, sin excepciones.</div></div></div>
+      <div class="rg-item"><span class="pm-n">05</span><div><div class="rg-item-t">Ejecución documentada</div><div class="rg-item-d">El Portfolio Manager ejecuta y documenta hora, precio, tamaño y condiciones de mercado al momento de la operación.</div></div></div>
+    </div>
+  </div>
+
+  <div class="card rg-sec">
+    <div class="micro">Vehículos de inversión</div>
+    <div class="sw-veh">
+      <div class="sw-veh-item">
+        <div class="micro" style="font-size:9.5px">Long/Short Equity</div>
+        <div class="sw-veh-t">Alpha Fund</div>
+        <div class="sw-veh-d mono">Principal · mín. $250,000</div>
+      </div>
+      <div class="sw-veh-item">
+        <div class="micro" style="font-size:9.5px">Global Macro</div>
+        <div class="sw-veh-t">Macro</div>
+        <div class="sw-veh-d mono">Secundaria · mín. $500,000</div>
+      </div>
+      <div class="sw-veh-item">
+        <div class="micro" style="font-size:9.5px">Quantitative / Systematic</div>
+        <div class="sw-veh-t">Quant</div>
+        <div class="sw-veh-d mono">Emergente · mín. $1,000,000</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card rg-sec">
+    <div class="micro">Niveles de participación</div>
+    <table class="rg-tabla sw-tabla">
+      <tr><td>Snowball Seed</td><td class="mono">$50,000</td><td>12–18% obj. · bloqueo 12 meses · reportes trimestrales</td></tr>
+      <tr class="sw-core"><td>Snowball Core · recomendado</td><td class="mono">$250,000</td><td>15–22% obj. · bloqueo 6 meses · reportes mensuales · 2 reuniones con CIO</td></tr>
+      <tr><td>Snowball Summit</td><td class="mono">$1,000,000</td><td>18–28% obj. · reporting semanal · acceso directo al CIO · co-inversión</td></tr>
+    </table>
+  </div>
+
+  <div class="card rg-sec">
+    <div class="ses-head">
+      <span class="micro">Calculadora Snowball · interés compuesto</span>
+      <span id="swMeta" class="mono" style="font-size:11px;color:var(--dim)"></span>
+    </div>
+    <div class="sw-calc">
+      <div>
+        <label class="micro" for="swCapital">Capital inicial (USD)</label>
+        <input type="number" id="swCapital" value="250000" min="1000" step="1000">
+      </div>
+      <div>
+        <label class="micro" for="swTasa">Retorno anual objetivo</label>
+        <select id="swTasa">
+          <option value="0.12">12% — Seed conservador</option>
+          <option value="0.15">15% — Core piso</option>
+          <option value="0.19" selected>19% — Core objetivo</option>
+          <option value="0.22">22% — Core techo</option>
+          <option value="0.28">28% — Summit techo</option>
+        </select>
+      </div>
+    </div>
+    <div id="swChart" class="sw-chart"></div>
+    <div id="swTabla" class="sw-hitos"></div>
+    <div class="rg-alerta faint">Proyección referencial con reinversión total y sin aportes adicionales. No constituye garantía de rendimiento futuro.</div>
+  </div>
+
+  <div class="card rg-sec">
+    <div class="micro">Onboarding · cliente Snowball</div>
+    <div>
+      <div class="rg-item"><span class="pm-n">01</span><div><div class="rg-item-t">Calificación de inversor</div><div class="rg-item-d">Verificación como inversor acreditado según regulación aplicable. Obligatorio y no negociable.</div></div></div>
+      <div class="rg-item"><span class="pm-n">02</span><div><div class="rg-item-t">Reunión de perfilamiento</div><div class="rg-item-d">Sesión de 60 minutos con Investor Relations: objetivos, tolerancia al riesgo y horizonte.</div></div></div>
+      <div class="rg-item"><span class="pm-n">03</span><div><div class="rg-item-t">Propuesta formal</div><div class="rg-item-d">Estructura de portafolio recomendada, proyecciones conservadoras y términos del acuerdo.</div></div></div>
+      <div class="rg-item"><span class="pm-n">04</span><div><div class="rg-item-t">Due diligence mutuo</div><div class="rg-item-d">Acceso al Data Room: track record auditado, documentos legales y estructura operativa.</div></div></div>
+      <div class="rg-item"><span class="pm-n">05</span><div><div class="rg-item-t">Suscripción y transferencia</div><div class="rg-item-d">Firma de documentos, apertura de cuenta en custodio y transferencia al vehículo.</div></div></div>
+      <div class="rg-item"><span class="pm-n">06</span><div><div class="rg-item-t">Onboarding y primer reporte</div><div class="rg-item-d">Acceso al portal de inversores y entrega del primer reporte de posición inicial.</div></div></div>
+    </div>
+  </div>
+</section>
+
+</main>
+</div>
+
+<script>
+/* ═══════════ NORTHPOINT TERMINAL · núcleo ═══════════ */
+'use strict';
+
+var KEY = 'np_terminal_v1';
+
+function cargar(){
+  var s = {};
+  try { s = JSON.parse(localStorage.getItem(KEY)) || {}; } catch(e){ s = {}; }
+  var st = {
+    trader: s.trader || null,
+    trades: Array.isArray(s.trades) ? s.trades : [],
+    checklists: s.checklists || {},
+    reportes: s.reportes || {},
+    estudio: s.estudio || {}
+  };
+  st.estudio.lecciones = st.estudio.lecciones || {};
+  st.estudio.quizzes = st.estudio.quizzes || {};
+  return st;
+}
+var state = cargar();
+function save(){ localStorage.setItem(KEY, JSON.stringify(state)); }
+
+/* ── helpers ── */
+function $(id){ return document.getElementById(id); }
+function p2(n){ return String(n).padStart(2,'0'); }
+function hoy(){ var d=new Date(); return d.getFullYear()+'-'+p2(d.getMonth()+1)+'-'+p2(d.getDate()); }
+function ahoraHM(){ var d=new Date(); return p2(d.getHours())+':'+p2(d.getMinutes()); }
+function fstr(d){ return d.getFullYear()+'-'+p2(d.getMonth()+1)+'-'+p2(d.getDate()); }
+var USD = new Intl.NumberFormat('en-US',{style:'currency',currency:'USD',maximumFractionDigits:0});
+function usd(v){ return USD.format(Math.round(v)); }
+function usdSigno(v){ return (v>0?'+':'')+USD.format(Math.round(v)); }
+function esc(s){
+  return String(s==null?'':s)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+function minutos(hhmm){
+  if(!hhmm) return -1;
+  var p = hhmm.split(':');
+  return (parseInt(p[0],10)||0)*60 + (parseInt(p[1],10)||0);
+}
+function enVentana(hhmm){ var m = minutos(hhmm); return m>=420 && m<=510; }
+/* día de la semana desde 'YYYY-MM-DD' con componentes LOCALES (new Date(str) parsea UTC) */
+function esFinDeSemana(fecha){
+  var p = String(fecha||'').split('-');
+  if(p.length!==3) return false;
+  var dw = new Date(+p[0], +p[1]-1, +p[2]).getDay();
+  return dw===0 || dw===6;
+}
+function fueraDeVentana(t){ return !enVentana(t.hora) || esFinDeSemana(t.fecha); }
+function esMicro(inst){ return /^M/i.test(String(inst||'').trim()); }
+function setupCompleto(t){
+  var s = t.setup || {};
+  return !!(s.targets && s.liquidez && s.estructura && s.entrada);
+}
+function nSetup(t){
+  var s = t.setup || {};
+  return (s.targets?1:0)+(s.liquidez?1:0)+(s.estructura?1:0)+(s.entrada?1:0);
+}
+function tradesDe(fecha){
+  return state.trades
+    .filter(function(t){ return t.fecha===fecha; })
+    .sort(function(a,b){ return a.hora<b.hora ? -1 : (a.hora>b.hora ? 1 : 0); });
+}
+function porDia(){
+  var m = {};
+  state.trades.forEach(function(t){ (m[t.fecha]=m[t.fecha]||[]).push(t); });
+  Object.keys(m).forEach(function(f){
+    m[f].sort(function(a,b){ return a.hora<b.hora ? -1 : (a.hora>b.hora ? 1 : 0); });
+  });
+  return m;
+}
+function checklistCompleto(fecha){
+  var c = state.checklists[fecha];
+  return !!(c && c.length===6 && c.every(function(x){ return !!x; }));
+}
+function clamp250(v){ return Math.max(0, Math.min(250, v)); }
+
+/* racha de días documentados (salta fines de semana) */
+function racha(){
+  var dias = {};
+  state.trades.forEach(function(t){ dias[t.fecha]=true; });
+  var d = new Date();
+  if(!dias[fstr(d)]) d.setDate(d.getDate()-1);   // hoy aún puede estar pendiente
+  var n = 0;
+  for(var i=0;i<730;i++){
+    var dow = d.getDay();
+    if(dow===0 || dow===6){ d.setDate(d.getDate()-1); continue; }
+    if(dias[fstr(d)]){ n++; d.setDate(d.getDate()-1); }
+    else break;
+  }
+  return n;
+}
+
+/* ── NORTHPOINT SCORE (funciones puras sobre state) ── */
+function score(st){
+  st = st || state;
+  var ts = st.trades;
+  if(ts.length < 3){
+    return { ready:false, total:0, dims:{risk:0,emo:0,dec:0,con:0} };
+  }
+  var dias = {};
+  ts.forEach(function(t){ (dias[t.fecha]=dias[t.fecha]||[]).push(t); });
+  Object.keys(dias).forEach(function(f){
+    dias[f].sort(function(a,b){ return a.hora<b.hora ? -1 : 1; });
+  });
+
+  /* Risk Discipline */
+  var risk = 250;
+  Object.keys(dias).forEach(function(f){ if(dias[f].length>2) risk -= 40; });
+  ts.forEach(function(t){
+    if(fueraDeVentana(t)) risk -= 30;
+    if(esMicro(t.instrumento)) risk -= 60;
+  });
+  /* trade #2 tras un trade #1 GANADOR: violación de cierre (win → se cierra la plataforma) */
+  Object.keys(dias).forEach(function(f){
+    var a = dias[f];
+    if(a.length>=2 && a[0].resultado>0) risk -= 40;
+  });
+  risk = clamp250(risk);
+
+  /* Emotion Control */
+  var malas = ts.filter(function(t){ return t.emocion==='FOMO' || t.emocion==='REVENGE'; }).length;
+  var emo = 250 * (1 - malas/ts.length);
+  Object.keys(dias).forEach(function(f){
+    var a = dias[f];
+    if(a.length>=2 && a[0].resultado<0 && !setupCompleto(a[1])) emo -= 30;
+  });
+  emo = clamp250(Math.round(emo));
+
+  /* Decision Quality */
+  var completos = ts.filter(setupCompleto).length;
+  var sinNota = ts.filter(function(t){ return !(t.nota && String(t.nota).trim()); }).length;
+  var dec = clamp250(Math.round(250*(completos/ts.length) - 10*sinNota));
+
+  /* Consistency */
+  var fechas = Object.keys(dias);
+  var nd = fechas.length;
+  var conCheck = fechas.filter(function(f){
+    var c = st.checklists[f];
+    return !!(c && c.length===6 && c.every(function(x){ return !!x; }));
+  }).length;
+  var conRep = fechas.filter(function(f){ return !!st.reportes[f]; }).length;
+  var con = clamp250(Math.round(100*(conCheck/nd) + 100*(conRep/nd) + 50*Math.min(1, racha()/10)));
+
+  return { ready:true, total:risk+emo+dec+con, dims:{risk:risk, emo:emo, dec:dec, con:con} };
+}
+
+/* ── P&L por periodo ── */
+function pnlEntre(ini, fin){
+  return state.trades
+    .filter(function(t){ return t.fecha>=ini && t.fecha<=fin; })
+    .reduce(function(s,t){ return s+t.resultado; }, 0);
+}
+function periodoPnl(tipo){
+  var d = new Date(), y=d.getFullYear(), m=d.getMonth(), dd=d.getDate();
+  function f(yy,mm,ddd){ return yy+'-'+p2(mm+1)+'-'+p2(ddd); }
+  var ini, fin, last;
+  if(tipo==='dia'){ ini=fin=f(y,m,dd); }
+  else if(tipo==='sem'){
+    var dow=(d.getDay()+6)%7;
+    var a=new Date(y,m,dd-dow), b=new Date(y,m,dd-dow+6);
+    ini=fstr(a); fin=fstr(b);
+  }
+  else if(tipo==='qui'){
+    if(dd<=15){ ini=f(y,m,1); fin=f(y,m,15); }
+    else { last=new Date(y,m+1,0).getDate(); ini=f(y,m,16); fin=f(y,m,last); }
+  }
+  else if(tipo==='mes'){ last=new Date(y,m+1,0).getDate(); ini=f(y,m,1); fin=f(y,m,last); }
+  else { ini=f(y,0,1); fin=f(y,11,31); }
+  return pnlEntre(ini, fin);
+}
+
+/* ═══════════ DASHBOARD ═══════════ */
+var RING_C = 326.73;
+
+function renderDashboard(){
+  var ts = state.trades;
+  var pnl = ts.reduce(function(s,t){ return s+t.resultado; }, 0);
+  var wins = ts.filter(function(t){ return t.resultado>0; }).length;
+
+  var elPnl = $('stPnl');
+  elPnl.textContent = ts.length ? usdSigno(pnl) : '—';
+  elPnl.className = 'stat-num ' + (pnl>0?'up':(pnl<0?'down':''));
+  $('stWin').textContent = ts.length ? Math.round(100*wins/ts.length)+'%' : '—';
+  $('stTrades').textContent = ts.length;
+  var rk = racha();
+  $('stRacha').textContent = rk + (rk===1?' día':' días');
+
+  /* score */
+  var sc = score();
+  var ring = $('scoreRingFg');
+  if(!sc.ready){
+    $('scoreNum').textContent = '—';
+    $('scoreHint').hidden = false;
+    ring.style.strokeDashoffset = RING_C;
+    setDim('Risk', 0, false); setDim('Emo', 0, false);
+    setDim('Dec', 0, false); setDim('Con', 0, false);
+  } else {
+    $('scoreNum').textContent = sc.total;
+    $('scoreHint').hidden = true;
+    ring.style.strokeDashoffset = RING_C * (1 - sc.total/1000);
+    setDim('Risk', sc.dims.risk, true); setDim('Emo', sc.dims.emo, true);
+    setDim('Dec', sc.dims.dec, true); setDim('Con', sc.dims.con, true);
+  }
+
+  renderObjetivos();
+  renderEquity();
+  renderRiesgo();
+}
+function setDim(suf, v, ready){
+  $('dim'+suf+'Val').textContent = ready ? (v+' / 250') : '—';
+  $('dim'+suf+'Bar').style.width = ready ? (v/250*100)+'%' : '0%';
+}
+
+function renderObjetivos(){
+  var cuenta = state.trader ? state.trader.cuenta : 25000;
+  var defs = [
+    { lbl:'Diario',    tipo:'dia', pct:0.006 },
+    { lbl:'Semanal',   tipo:'sem', pct:0.03  },
+    { lbl:'Quincenal', tipo:'qui', pct:0.06  },
+    { lbl:'Mensual',   tipo:'mes', pct:0.12  },
+    { lbl:'Anual',     tipo:'ano', pct:1.44  }
+  ];
+  var html = defs.map(function(o){
+    var obj = cuenta * o.pct;
+    var act = periodoPnl(o.tipo);
+    var frac = obj>0 ? act/obj : 0;
+    var w = Math.max(0, Math.min(100, frac*100));
+    var logrado = act >= obj;
+    var actTxt = usdSigno(act);
+    var actCls = act>0 ? 'up' : (act<0 ? 'down' : '');
+    return '<div class="obj-row">'
+      + '<div class="obj-top">'
+      +   '<span class="obj-lbl">'+o.lbl+'</span>'
+      +   '<span class="obj-num"><span class="'+actCls+'">'+actTxt+'</span>'
+      +   ' <span class="dim">/ '+usd(obj)+'</span>'
+      +   (logrado ? ' <span class="ok">✓</span>' : '')
+      +   '</span>'
+      + '</div>'
+      + '<div class="bar"><i style="width:'+w.toFixed(1)+'%"></i></div>'
+      + '</div>';
+  }).join('');
+  $('objetivosRows').innerHTML = html;
+}
+
+function renderEquity(){
+  var box = $('equityChart');
+  var mapa = {};
+  state.trades.forEach(function(t){ mapa[t.fecha] = (mapa[t.fecha]||0) + t.resultado; });
+  var fechas = Object.keys(mapa).sort();
+  if(!fechas.length){
+    box.innerHTML = '<div class="eq-empty">Sin operaciones registradas. La curva se construye con tu journal.</div>';
+    return;
+  }
+  var ult = fechas.slice(-30);
+  var base = 0;
+  fechas.forEach(function(f){ if(f < ult[0]) base += mapa[f]; });
+  var pts = [], cum = base;
+  ult.forEach(function(f){ cum += mapa[f]; pts.push({f:f, v:cum}); });
+  var serie = [{f:'inicio', v:base}].concat(pts);
+
+  var W=680, H=210, PL=14, PR=14, PT=14, PB=22;
+  var min = Math.min.apply(null, serie.map(function(p){return p.v;}));
+  var max = Math.max.apply(null, serie.map(function(p){return p.v;}));
+  if(min===max){ min-=1; max+=1; }
+  var span = max-min;
+  min -= span*0.08; max += span*0.08; span = max-min;
+  function X(i){ return PL + (W-PL-PR) * (serie.length===1 ? 0 : i/(serie.length-1)); }
+  function Y(v){ return PT + (H-PT-PB) * (1 - (v-min)/span); }
+
+  var linea = serie.map(function(p,i){ return (i===0?'M':'L') + X(i).toFixed(1)+' '+Y(p.v).toFixed(1); }).join(' ');
+  var area = linea + ' L'+X(serie.length-1).toFixed(1)+' '+(H-PB)+' L'+X(0).toFixed(1)+' '+(H-PB)+' Z';
+  var y0 = (base>=min && base<=max) ? Y(base) : null;
+
+  var svg = '<svg viewBox="0 0 '+W+' '+H+'" preserveAspectRatio="xMidYMid meet">';
+  if(y0!==null){
+    svg += '<line x1="'+PL+'" y1="'+y0.toFixed(1)+'" x2="'+(W-PR)+'" y2="'+y0.toFixed(1)+'" stroke="rgba(255,255,255,.07)" stroke-width="1" stroke-dasharray="3 4"/>';
+  }
+  svg += '<path d="'+area+'" fill="rgba(155,192,220,.08)" stroke="none"/>';
+  svg += '<path d="'+linea+'" fill="none" stroke="var(--accent)" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/>';
+  pts.forEach(function(p,i){
+    svg += '<circle cx="'+X(i+1).toFixed(1)+'" cy="'+Y(p.v).toFixed(1)+'" r="2.6" fill="var(--bg)" stroke="var(--accent)" stroke-width="1.2">'
+        +  '<title>'+esc(p.f)+' · '+esc(usdSigno(p.v))+' acumulado</title></circle>';
+  });
+  svg += '</svg>';
+  box.innerHTML = svg;
+}
+
+function renderRiesgo(){
+  var ts = state.trades;
+  var cuenta = state.trader ? state.trader.cuenta : 25000;
+  if(!ts.length){
+    $('mDD').textContent='—'; $('mDDsub').textContent='';
+    $('mCons').textContent='—'; $('mConsNote').hidden=true;
+    $('mPF').textContent='—'; $('mR').textContent='—';
+    return;
+  }
+  /* equity diaria para drawdown */
+  var mapa = {};
+  ts.forEach(function(t){ mapa[t.fecha]=(mapa[t.fecha]||0)+t.resultado; });
+  var fechas = Object.keys(mapa).sort();
+  var cum=0, pico=0, dd=0, ddPct=0;
+  fechas.forEach(function(f){
+    cum += mapa[f];
+    if(cum > pico) pico = cum;
+    var caida = pico - cum;
+    if(caida > dd){
+      dd = caida;
+      var eqPico = cuenta + pico;
+      ddPct = eqPico>0 ? caida/eqPico*100 : 0;
+    }
+  });
+  $('mDD').textContent = dd>0 ? '-'+usd(dd) : '$0';
+  $('mDD').className = 'stat-num2 ' + (dd>0?'down':'');
+  $('mDDsub').textContent = dd>0 ? ddPct.toFixed(1)+'% desde el pico' : 'sin drawdown';
+
+  /* consistencia: mejor día / P&L total */
+  var pnl = ts.reduce(function(s,t){ return s+t.resultado; },0);
+  var mejor = Math.max.apply(null, fechas.map(function(f){ return mapa[f]; }));
+  if(pnl>0 && mejor>0){
+    var cons = mejor/pnl*100;
+    $('mCons').textContent = Math.min(999, Math.round(cons))+'%';
+    $('mCons').className = 'stat-num2 ' + (cons>30?'warn':'');
+    $('mConsNote').hidden = !(cons>30);
+  } else {
+    $('mCons').textContent='—'; $('mCons').className='stat-num2'; $('mConsNote').hidden=true;
+  }
+
+  /* profit factor */
+  var g = ts.filter(function(t){return t.resultado>0;}).reduce(function(s,t){return s+t.resultado;},0);
+  var p = Math.abs(ts.filter(function(t){return t.resultado<0;}).reduce(function(s,t){return s+t.resultado;},0));
+  $('mPF').textContent = p===0 ? (g>0?'∞':'—') : (g/p).toFixed(2);
+  $('mPF').className = 'stat-num2 ' + (p>0 ? (g/p>=1?'up':'down') : '');
+
+  /* R promedio */
+  var rs = ts.filter(function(t){ return typeof t.r==='number' && !isNaN(t.r); });
+  $('mR').textContent = rs.length
+    ? (rs.reduce(function(s,t){return s+t.r;},0)/rs.length).toFixed(2)+'R'
+    : '—';
+}
+
+/* ═══════════ SESIÓN ═══════════ */
+var sesionSetup = { targets:false, liquidez:false, estructura:false, entrada:false };
+
+function estadoSesion(tsHoy){
+  if(tsHoy.length===0){
+    return { v:'v-dim', titulo:'Sin operaciones',
+      msg:'Máximo 2 trades, estricto. Espera el ORB (7:30–7:45) y exige el setup completo.', cerrada:false };
+  }
+  if(tsHoy.length===1){
+    if(tsHoy[0].resultado>0){
+      return { v:'v-up', titulo:'Se ganó el trade 1 → se cierra la plataforma',
+        msg:'Día terminado. Al cerrar el primer trade en ganancia, se cierra la plataforma. Pasa al post-market.', cerrada:true };
+    }
+    return { v:'v-warn', titulo:'Trade 1 perdido → un solo intento más',
+      msg:'ÚNICAMENTE si aparece un setup válido nuevo completo (4/4). Nunca revenge.', cerrada:false };
+  }
+  return { v:'v-down', titulo:'Límite de sesión alcanzado (2/2)',
+    msg:'Plataforma cerrada hasta mañana. Registra, verifica el dashboard y envía el reporte.', cerrada:true };
+}
+
+function renderSesion(){
+  var h = hoy();
+  var cl = state.checklists[h] || [false,false,false,false,false,false];
+
+  document.querySelectorAll('#premarketList .chk-row').forEach(function(row){
+    var i = parseInt(row.dataset.i,10);
+    row.classList.toggle('on', !!cl[i]);
+  });
+  var done = cl.filter(function(x){return !!x;}).length;
+  $('pmProgress').textContent = done+'/6';
+  $('pmDone').hidden = done!==6;
+
+  document.querySelectorAll('#setupRows .setup-row').forEach(function(row){
+    row.classList.toggle('on', !!sesionSetup[row.dataset.k]);
+  });
+  var nOk = Object.keys(sesionSetup).filter(function(k){return sesionSetup[k];}).length;
+  $('setupCount').textContent = nOk+'/4';
+  var ver = $('setupVerdict');
+  if(nOk===4){
+    ver.textContent = 'SETUP VÁLIDO — ejecuta el plan.';
+    ver.className = 'verdict v-up';
+  } else {
+    ver.textContent = 'SIN SETUP. El mejor trade del día es no operar.';
+    ver.className = 'verdict dim';
+  }
+
+  var tsHoy = tradesDe(h);
+  var est = estadoSesion(tsHoy);
+  $('sesTradesHoy').textContent = Math.min(tsHoy.length,9)+'/2';
+  $('sesionEstado').innerHTML =
+    '<div class="banner '+est.v+'">'
+    + '<div class="b-title">'+esc(est.titulo)+'</div>'
+    + '<div class="b-msg">'+esc(est.msg)+'</div>'
+    + '</div>';
+  var btn = $('btnQuickReg');
+  btn.disabled = est.cerrada;
+  $('qrNota').textContent = est.cerrada
+    ? 'Registro desactivado: la sesión de hoy está cerrada por regla.'
+    : '';
+
+  /* post-market: estado del reporte */
+  $('btnReporte').textContent = state.reportes[h]
+    ? 'Reporte enviado hoy — volver a generar'
+    : 'Generar reporte del día';
+}
+
+function generarReporte(){
+  var h = hoy();
+  var tsHoy = tradesDe(h);
+  var cuenta = state.trader.cuenta;
+  var W = tsHoy.filter(function(t){return t.resultado>0;}).length;
+  var L = tsHoy.length - W;
+  var pnl = tsHoy.reduce(function(s,t){return s+t.resultado;},0);
+  var okVent = tsHoy.every(function(t){ return !fueraDeVentana(t); });
+  var okMax = tsHoy.length<=2;
+  /* cumplimiento vacuo: un día sin trades es el protocolo cumplido, no una falta */
+  var okSetup = tsHoy.length===0 || tsHoy.every(setupCompleto);
+  var mesPnl = periodoPnl('mes');
+  var objMes = cuenta*0.12;
+  var pctMes = objMes>0 ? (mesPnl/objMes*100) : 0;
+  function marca(ok){ return ok ? '✓' : '✗'; }
+
+  var texto =
+    'NORTHPOINT · REPORTE DIARIO — '+h+'\n'
+  + 'Trader: '+state.trader.nombre+' · Cuenta: '+usd(cuenta)+'\n'
+  + 'Trades: '+tsHoy.length+' ('+W+'W/'+L+'L) · P&L día: '+usdSigno(pnl)
+  +   ' ('+(cuenta>0?(pnl/cuenta*100).toFixed(2):'0.00')+'%)\n'
+  + 'Cumplimiento: '+marca(okVent)+' ventana · '+marca(okMax)+' máx 2 trades · '+marca(okSetup)+' setup completo\n'
+  + (tsHoy.length===0 ? 'Sin operaciones — el mejor trade del día fue no operar.\n' : '')
+  + 'Progreso mensual: '+usdSigno(mesPnl)+' / '+usd(objMes)+' ('+pctMes.toFixed(1)+'%)';
+
+  $('reporteTexto').textContent = texto;
+  $('reporteBox').hidden = false;
+  $('reporteMsg').textContent = '';
+  return texto;
+}
+
+function copiarReporte(){
+  var texto = $('reporteTexto').textContent;
+  function listo(){
+    state.reportes[hoy()] = true;
+    save();
+    $('reporteMsg').textContent = 'Reporte copiado — pégalo en el canal del equipo.';
+    renderSesion();
+  }
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(texto).then(listo, function(){ copiarFallback(texto); listo(); });
+  } else {
+    copiarFallback(texto); listo();
+  }
+}
+function copiarFallback(texto){
+  var ta = document.createElement('textarea');
+  ta.value = texto;
+  ta.style.position='fixed'; ta.style.opacity='0';
+  document.body.appendChild(ta);
+  ta.select();
+  try { document.execCommand('copy'); } catch(e){}
+  document.body.removeChild(ta);
+}
+
+/* ═══════════ JOURNAL ═══════════ */
+var dirSel = 'LONG';
+var emoSel = null;
+var filtroActivo = 'todos';
+
+function setFormMsg(txt, cls){
+  var el = $('formMsg');
+  el.textContent = txt || '';
+  el.className = 'form-msg ' + (cls||'');
+}
+
+function flagsDe(t){
+  var out = [];
+  if(esMicro(t.instrumento)) out.push('<span class="flag f-down">MINI PROHIBIDO</span>');
+  if(t.violacion2max) out.push('<span class="flag f-down">VIOLACIÓN 2-MAX</span>');
+  if(t.violacionCierre) out.push('<span class="flag f-down">VIOLACIÓN CIERRE</span>');
+  if(fueraDeVentana(t)) out.push('<span class="flag f-warn">FUERA DE VENTANA</span>');
+  if(!setupCompleto(t)) out.push('<span class="flag f-dim">SETUP '+nSetup(t)+'/4</span>');
+  if(t.emocion==='FOMO' || t.emocion==='REVENGE') out.push('<span class="flag f-down">'+esc(t.emocion)+'</span>');
+  return out.join('');
+}
+
+function tieneViolacion(t){
+  return !!t.violacion2max || !!t.violacionCierre || fueraDeVentana(t) || esMicro(t.instrumento);
+}
+
+function filtrar(ts){
+  var h = hoy();
+  switch(filtroActivo){
+    case 'mes':  return ts.filter(function(t){ return t.fecha.slice(0,7)===h.slice(0,7); });
+    case 'win':  return ts.filter(function(t){ return t.resultado>0; });
+    case 'loss': return ts.filter(function(t){ return t.resultado<0; });
+    case 'viol': return ts.filter(tieneViolacion);
+    default:     return ts.slice();
+  }
+}
+
+function renderJournal(){
+  if(!$('fFecha').value) $('fFecha').value = hoy();
+  if(!$('fHora').value) $('fHora').value = ahoraHM();
+
+  /* nota de sesión cerrada */
+  var est = estadoSesion(tradesDe(hoy()));
+  $('jSesionNota').textContent = est.cerrada ? 'Sesión de hoy cerrada por regla ('+ (est.v==='v-up' ? 'trade 1 ganado' : '2/2') +').' : '';
+
+  /* filtros */
+  document.querySelectorAll('#jFiltros .filtro').forEach(function(b){
+    b.classList.toggle('sel', b.dataset.f===filtroActivo);
+  });
+
+  var lista = filtrar(state.trades).sort(function(a,b){
+    var ka = a.fecha+' '+a.hora, kb = b.fecha+' '+b.hora;
+    return ka<kb ? 1 : (ka>kb ? -1 : 0);
+  });
+
+  /* resumen del periodo */
+  if(lista.length){
+    var pnl = lista.reduce(function(s,t){return s+t.resultado;},0);
+    var wins = lista.filter(function(t){return t.resultado>0;}).length;
+    var g = lista.filter(function(t){return t.resultado>0;}).reduce(function(s,t){return s+t.resultado;},0);
+    var p = Math.abs(lista.filter(function(t){return t.resultado<0;}).reduce(function(s,t){return s+t.resultado;},0));
+    var pf = p===0 ? (g>0?'∞':'—') : (g/p).toFixed(2);
+    $('jResumen').innerHTML =
+      'P&amp;L <b class="'+(pnl>0?'up':(pnl<0?'down':''))+'">'+esc(usdSigno(pnl))+'</b>'
+      + ' · WR <b>'+Math.round(100*wins/lista.length)+'%</b>'
+      + ' · PF <b>'+pf+'</b>'
+      + ' · '+lista.length+' trades';
+  } else {
+    $('jResumen').textContent = 'Sin trades en este filtro.';
+  }
+
+  /* tabla */
+  if(!lista.length){
+    $('jTabla').innerHTML = '<div class="j-empty">Sin operaciones registradas. Cada trade documentado alimenta tu Score.</div>';
+    return;
+  }
+  $('jTabla').innerHTML = lista.map(function(t){
+    var rTxt = (typeof t.r==='number' && !isNaN(t.r)) ? t.r.toFixed(1)+'R' : '';
+    return '<div class="t-row" data-id="'+esc(t.id)+'">'
+      + '<div class="t-top">'
+      +   '<span class="t-fecha mono">'+esc(t.fecha)+' · '+esc(t.hora)+'</span>'
+      +   '<span class="t-inst mono">'+esc(t.instrumento)+'</span>'
+      +   '<span class="chip-dir '+(t.direccion==='LONG'?'L':'S')+'">'+(t.direccion==='LONG'?'L':'S')+'</span>'
+      +   '<span class="t-res mono '+(t.resultado>0?'up':(t.resultado<0?'down':'dim'))+'">'+esc(usdSigno(t.resultado))+'</span>'
+      +   (rTxt ? '<span class="t-r mono">'+rTxt+'</span>' : '')
+      +   '<span class="t-flags">'+flagsDe(t)+'</span>'
+      +   '<button class="t-del" data-del="'+esc(t.id)+'" title="Eliminar trade">×</button>'
+      + '</div>'
+      + (t.nota ? '<div class="t-nota" title="Clic para expandir">'+esc(t.nota)+'</div>' : '')
+      + (t.screenshot ? '<div class="t-shot"><a href="'+esc(t.screenshot)+'" target="_blank" rel="noopener">Screenshot ↗</a></div>' : '')
+      + '</div>';
+  }).join('');
+}
+
+function guardarTrade(){
+  setFormMsg('');
+  var fecha = $('fFecha').value || hoy();
+  var hora = $('fHora').value || ahoraHM();
+
+  var inst = $('fInstrumento').value;
+  if(inst==='OTRO') inst = String($('fInstrumentoOtro').value||'').trim().toUpperCase();
+  if(!inst){ setFormMsg('Indica el instrumento.','down'); return; }
+  if(esMicro(inst)){
+    setFormMsg('NUNCA MINIS. Operación en minis está prohibida. Sin excepciones.','down');
+    return;
+  }
+
+  var resultado = parseFloat($('fResultado').value);
+  if(isNaN(resultado)){ setFormMsg('Indica el resultado en USD (positivo o negativo).','down'); return; }
+  var r = parseFloat($('fR').value);
+
+  var setup = {
+    targets: $('fSetA').checked,
+    liquidez: $('fSetB').checked,
+    estructura: $('fSetC').checked,
+    entrada: $('fSetD').checked
+  };
+  var nOk = (setup.targets?1:0)+(setup.liquidez?1:0)+(setup.estructura?1:0)+(setup.entrada?1:0);
+
+  if(!emoSel){ setFormMsg('Selecciona la emoción dominante del trade.','down'); return; }
+
+  if(!enVentana(hora) || esFinDeSemana(fecha)){
+    if(!confirm('Estás registrando un trade fuera de la ventana permitida (7:00–8:30, lunes a viernes). Quedará marcado FUERA DE VENTANA y descuenta tu Score. ¿Continuar?')) return;
+  }
+
+  var nDia = state.trades.filter(function(t){ return t.fecha===fecha; }).length;
+  var violacion2max = false;
+  if(nDia>=2){
+    if(!confirm('REGLA: 2 trades máximo, estricto. Este sería el trade #'+(nDia+1)+' del día y quedará marcado como VIOLACIÓN 2-MAX. La plataforma registra la verdad. ¿Registrar de todos modos?')) return;
+    violacion2max = true;
+  }
+
+  /* regla madre: se gana el trade 1 → se cierra la plataforma */
+  var violacionCierre = false;
+  var tsDia = tradesDe(fecha);
+  if(tsDia.length===1 && tsDia[0].resultado>0){
+    if(!confirm('REGLA: Se ganó el trade 1 → SE CIERRA LA PLATAFORMA. Día terminado. Este trade quedará marcado como VIOLACIÓN CIERRE y descuenta tu Score. ¿Registrar de todos modos?')) return;
+    violacionCierre = true;
+  }
+
+  if(nOk<4){
+    if(!confirm('Guardando trade SIN setup válido ('+nOk+'/4). ¿Continuar?')) return;
+  }
+
+  state.trades.push({
+    id: Date.now()+'-'+Math.floor(Math.random()*10000),
+    fecha: fecha,
+    hora: hora,
+    instrumento: inst,
+    direccion: dirSel,
+    resultado: resultado,
+    r: isNaN(r) ? null : r,
+    setup: setup,
+    emocion: emoSel,
+    nota: String($('fNota').value||'').trim(),
+    screenshot: String($('fShot').value||'').trim(),
+    violacion2max: violacion2max,
+    violacionCierre: violacionCierre
+  });
+  save();
+
+  /* limpiar campos volátiles */
+  $('fResultado').value=''; $('fR').value=''; $('fNota').value=''; $('fShot').value='';
+  $('fSetA').checked=false; $('fSetB').checked=false; $('fSetC').checked=false; $('fSetD').checked=false;
+  emoSel = null;
+  document.querySelectorAll('#emoChips .chip-opt').forEach(function(b){ b.classList.remove('sel'); });
+
+  setFormMsg('Trade registrado.','up');
+  renderJournal();
+  renderSesion();
+  renderDashboard();
+}
+
+/* ═══════════ PROGRAMA · datos ═══════════ */
+var PROGRAMA = [
+{ id:'M01', titulo:'FILOSOFÍA NORTHPOINT', lecciones:[
+  { id:'M01L1', t:'Behavioral intelligence: el mercado no te derrota, tu conducta sí', p:[
+    'La premisa fundacional de Northpoint es incómoda: el mercado no derrota traders; su propio comportamiento lo hace. El precio no sabe que existes. No conspira contra ti, no busca tu stop, no castiga tu cuenta. Lo que sí destruye cuentas, sesión tras sesión, es el patrón conductual del operador: entrar sin plan, mover el stop, duplicar tras una pérdida, operar por aburrimiento.',
+    'Behavioral intelligence significa tratar tu propia conducta como el activo principal a gestionar. Donde otros ven ruido, nosotros vemos patrón — y el primer patrón que se analiza es el tuyo. Por eso esta plataforma mide ventana, número de trades, calidad de setup y emoción registrada: son las variables que tú controlas al cien por ciento, a diferencia del resultado de cualquier trade individual.',
+    'La consecuencia práctica es que el éxito se define por cumplimiento, no por P&L diario. Un día perdedor operado dentro del protocolo es un día profesional. Un día ganador que violó las reglas es un pasivo: entrenó al cerebro a repetir una conducta que, en muestra larga, quiebra cuentas. El Northpoint Score existe para que esa diferencia sea visible en números.'
+  ]},
+  { id:'M01L2', t:'Los seis pilares aplicados al trader', p:[
+    'Precisión sobre volumen: preferimos diez decisiones correctas que cien mediocres. En tu operación esto es literal — máximo dos trades por sesión. La actividad no es rendimiento; la disciplina es rendimiento. Cada trade extra que no tomas con setup incompleto es alfa conductual.',
+    'Disciplina conductual y evidencia empírica van juntas: cada miembro del equipo entiende y gestiona sus sesgos, y ninguna tesis se aprueba sin evidencia cuantificable. Tu journal es tu evidencia. Las narrativas ("sentía que iba a subir") se descartan; los datos (hora, setup 4/4, R, emoción) se analizan.',
+    'Control del riesgo primero: la preservación del capital es la primera regla y el crecimiento es consecuencia de no perder, no al revés. De ahí el intento único tras una pérdida y el cierre obligatorio tras la victoria. Institucionalidad silenciosa y mejora continua cierran el círculo: no vendemos esperanza, documentamos evidencia, y cada semana revisamos qué salió mal — porque el error bien documentado es el activo más valioso del equipo.'
+  ]},
+  { id:'M01L3', t:'Lo que Northpoint no es — y por qué te protege', p:[
+    'Northpoint no es un fondo de alta frecuencia: la velocidad no es nuestra ventaja, la inteligencia aplicada sí. Para ti significa que nunca compites por milisegundos; compites por calidad de decisión en una ventana de noventa minutos. No hay prisa que justifique una entrada sin confirmación.',
+    'No prometemos rendimientos garantizados — quien lo hace miente o no entiende los mercados. Esta honestidad te protege de ti mismo: si el objetivo diario de 0.6% no llega hoy, no se persigue. La visión anual se construye con promedios, no con días heroicos. Un trader que necesita que HOY sea verde ya está operando desde la necesidad, no desde el proceso.',
+    'No operamos con intuición: cada decisión tiene un proceso documentado y auditable. El checklist de setup no es burocracia — es la diferencia entre una operación institucional y una apuesta. Cuando registras un trade con su setup, hora y emoción, conviertes una experiencia efímera en un dato auditable que mejora al equipo completo.'
+  ]},
+], quiz:[
+  { q:'Según la filosofía Northpoint, ¿qué derrota al trader?', o:['La manipulación de los market makers','Su propio comportamiento','La volatilidad de la apertura'], c:1 },
+  { q:'¿Qué prefiere Northpoint?', o:['Cien decisiones mediocres','Operar solo cuando hay noticias','Diez decisiones correctas'], c:2 },
+  { q:'¿Qué se hace con las narrativas sin datos?', o:['Se descartan; solo se analiza evidencia','Se documentan como tesis válidas','Se operan con tamaño reducido'], c:0 },
+]},
+
+{ id:'M02', titulo:'ESTRUCTURA DE LA SESIÓN', lecciones:[
+  { id:'M02L1', t:'El pre-market de 7:00 paso a paso', p:[
+    'A las 7:00 abre la plataforma, no el impulso. El primer paso es Tradingview con revisión inicial de gráficos: dónde cerró ayer, qué dejó la sesión overnight, qué niveles están intactos. Este barrido inicial toma minutos y evita el error más caro del principiante: formarse una opinión DESPUÉS de ver un movimiento fuerte.',
+    'Siguen el calendario económico y el análisis overnight. Un CPI, un FOMC o unas nóminas a las 8:30 cambian por completo la lectura del ORB; operar sin saber que hay dato macro es operar con los ojos vendados. Después, el estado de cuenta: situación actual y objetivo del día. Saber exactamente cuánto representa 0.6% de tu cuenta convierte el objetivo en un número concreto, no en una ambición difusa.',
+    'El protocolo cierra con las proyecciones de daily bias para la apertura de Nueva York y con la espera del ORB de 7:30–7:45. Nota el verbo: esperar. El pre-market termina en pausa deliberada. Si a las 7:29 no completaste los seis pasos, no estás listo para operar — y la plataforma te lo va a decir.'
+  ]},
+  { id:'M02L2', t:'Calendario económico y liquidez overnight', p:[
+    'La sesión asiática y la de Londres dejan un mapa: máximos y mínimos (Asia H/L, Londres H/L) que funcionan como imanes de liquidez. Junto con el máximo y mínimo del día anterior (PDH/PDL), son los targets naturales del día. La pregunta central del análisis overnight es simple: ¿cuáles de estos niveles ya fueron tomados y cuáles siguen intactos?',
+    'Un nivel intacto es combustible direccional: encima de cada máximo hay stops de cortos y buy stops de rompimiento; debajo de cada mínimo, lo inverso. El precio institucional se mueve de liquidez en liquidez. Si Londres ya barrió el PDL y revirtió, la probabilidad de que Nueva York busque el lado contrario aumenta — esa es la lectura que alimenta tu bias.',
+    'El calendario económico se revisa con la misma lógica: los datos de alto impacto crean o destruyen liquidez a horas exactas. La regla práctica de Northpoint es conocer la hora de cada publicación relevante antes del open. No se trata de predecir el dato, sino de saber cuándo el mercado puede invalidar tu estructura en segundos.'
+  ]},
+  { id:'M02L3', t:'Daily bias y la apertura de Nueva York', p:[
+    'El daily bias es una hipótesis direccional, no una promesa. Se construye con lo anterior: estructura del diario y del horario, liquidez tomada y pendiente overnight, y contexto macro del día. El formato correcto es condicional: "mientras el precio respete X, busco Y hacia Z". Si la condición se rompe, el bias muere sin discusión.',
+    'La apertura de Nueva York concentra el volumen real del día. Los primeros minutos son ruido de ejecución: órdenes acumuladas, rebalanceos, stops del overnight. Por eso Northpoint no opera el segundo uno del open — espera el rango de apertura de 7:30 a 7:45 y su rompimiento confirmado.',
+    'El bias nunca sustituye al setup: te dice hacia dónde MIRAR, no cuándo ENTRAR. Un bias alcista sin las cuatro condiciones del checklist es exactamente cero trades. La disciplina de mantener esa separación — hipótesis arriba, gatillo abajo — es lo que distingue un proceso institucional de una corazonada con gráficos.'
+  ]},
+], quiz:[
+  { q:'¿A qué hora inicia el protocolo pre-market?', o:['7:30 am, con el open','7:00 am','8:30 am, tras los datos macro'], c:1 },
+  { q:'¿Qué se identifica en el análisis overnight?', o:['La liquidez tomada en Asia y Londres','El volumen del cierre anterior','Las noticias corporativas del día'], c:0 },
+  { q:'¿Qué se espera entre 7:30 y 7:45?', o:['La publicación del calendario económico','El cierre de Londres','El open y el ORB confirmado'], c:2 },
+]},
+
+{ id:'M03', titulo:'EL SETUP', lecciones:[
+  { id:'M03L1', t:'ORB 7:30–7:45: la apertura y el rango', p:[
+    'El Opening Range Breakout parte de una observación estadística: los primeros quince minutos de la sesión de Nueva York definen un rango donde el mercado subasta y absorbe las órdenes acumuladas. Ese rango — máximo y mínimo entre 7:30 y 7:45 — se convierte en el marco de referencia del día.',
+    'Durante la formación del rango no se opera. Se observa: dónde se acumula volumen, si el precio ataca primero arriba o abajo, cómo reacciona en los niveles overnight. Un rango estrecho sugiere compresión y un rompimiento con energía; un rango amplio que ya barrió liquidez en ambos lados exige mucha más evidencia para confiar en el break.',
+    'A las 7:45 el marco está definido y comienza la caza: un rompimiento del rango, EN LA DIRECCIÓN correcta y CON las confirmaciones del checklist, es el único trade que Northpoint reconoce. El ORB sin las otras tres condiciones no es un setup — es solo una línea rota.'
+  ]},
+  { id:'M03L2', t:'Liquidez: hacia dónde apunta el break', p:[
+    'Un rompimiento sin destino es una trampa con buena prensa. La condición B del checklist exige que el break apunte hacia liquidez clara e inequívoca: un Asia o Londres H/L intacto, un PDH/PDL sin tomar. Ese nivel pendiente es el imán que da recorrido al movimiento — y tu target lógico.',
+    'La condición A es el espejo de la B: los targets overnight deben estar SIN tomar. Si el nivel hacia el que apunta tu break ya fue barrido en pre-market, el imán ya no existe; el combustible se quemó sin ti. Operar hacia liquidez ya tomada es comprar el boleto de un tren que ya salió.',
+    'La palabra operativa es "inequívoca". Si necesitas argumentarte a ti mismo hacia dónde apunta el break, no apunta a ningún lado. La liquidez clara se ve en tres segundos en el gráfico; todo lo demás es sesgo de confirmación disfrazado de análisis. En la duda, la respuesta institucional es siempre la misma: no hay trade.'
+  ]},
+  { id:'M03L3', t:'BOS y FVG de 5 minutos', p:[
+    'El Break of Structure es la evidencia de que el orden de flujos cambió: el precio deja de respetar la secuencia previa de máximos y mínimos y imprime una ruptura estructural en la dirección del movimiento. Un BOS de 5 minutos alineado con tu break convierte una línea rota en un cambio de carácter medible.',
+    'El Fair Value Gap es la huella del desequilibrio: una vela de expansión tan agresiva que deja un hueco entre la mecha de la vela anterior y la posterior. Ese hueco marca dónde el precio se movió sin negociación — y es la zona natural de retorno donde una entrada tiene sentido de riesgo, con el stop protegido por la propia estructura.',
+    'Juntos, BOS y FVG responden las dos preguntas de la condición C: ¿el movimiento tiene intención real (BOS)? ¿y existe una zona definida donde entrar sin perseguir (FVG)? Sin BOS, el break puede ser una barrida más. Sin FVG, la única entrada disponible es el impulso — es decir, FOMO con otro nombre.'
+  ]},
+  { id:'M03L4', t:'EMA 14/50, estructura y la entrada sin FOMO', p:[
+    'Las medias móviles exponenciales de 14 y 50 periodos son el filtro de contexto: cuando la 14 está sobre la 50 y ambas apuntan en la dirección del break, el flujo de corto plazo empuja a tu favor. No son un gatillo — son un veto. Break alcista con EMAs cayendo en contra es una condición C incompleta, y el checklist no negocia.',
+    'La condición D define el CÓMO: entrar tantito antes o en el break. Es decir, la orden se planea cuando el precio se aproxima al nivel, no cuando ya escapó. Entrar tres velas después "para confirmar" es pagar peor precio con peor stop: exactamente la definición operativa de FOMO.',
+    'Si el break se fue sin ti, se fue. Perseguir convierte un setup A+ en una entrada C- con el mismo riesgo y la mitad del recorrido. El mercado abre mañana a las 7:00 otra vez; tu ventaja no es atrapar cada movimiento, es que cada movimiento que atrapas cumple 4/4. Esa asimetría, repetida cientos de sesiones, es la firma.'
+  ]},
+], quiz:[
+  { q:'¿Cuántas condiciones del setup deben cumplirse para operar?', o:['3 de 4 si el bias es fuerte','Todas: 4/4, si falta una no hay trade','2 de 4 con volumen alto'], c:1 },
+  { q:'¿Hacia dónde debe apuntar el break?', o:['Hacia liquidez clara e inequívoca sin tomar','Hacia la EMA 50','Hacia el precio de apertura'], c:0 },
+  { q:'¿Cuál es la entrada correcta según la condición D?', o:['Tres velas después del break, ya confirmado','En el retroceso a la EMA 14','Tantito antes o en el break — nunca persiguiendo'], c:2 },
+]},
+
+{ id:'M04', titulo:'GESTIÓN Y RIESGO', lecciones:[
+  { id:'M04L1', t:'2 trades máximo: por qué existe la regla', p:[
+    'Dos trades por sesión no es una preferencia de estilo: es un límite de exposición conductual. Los datos del trading retail son consistentes — la calidad de decisión se degrada con cada operación adicional del día. El tercer trade rara vez nace de un setup; nace de la frustración del segundo o de la euforia del primero.',
+    'El límite también resuelve un problema matemático. Con la ventana de 7:00 a 8:30 y un solo ORB por día, sencillamente no existen más de dos oportunidades A+ en noventa minutos. Si crees que viste tres, al menos una era ruido con buena iluminación. La regla te ahorra la tarea imposible de distinguirla en tiempo real.',
+    'Precisión sobre volumen, aplicado: la actividad no es rendimiento. Un mes de 20 sesiones con disciplina son máximo 40 trades — suficiente muestra para el edge, suficientemente poca para que cada una reciba atención completa. La plataforma cuenta tus trades del día y te lo recuerda porque el contador honesto es la mitad de la batalla.'
+  ]},
+  { id:'M04L2', t:'Ganaste el trade 1: cierras', p:[
+    'Se gana el trade 1 → se cierra la plataforma. Día terminado. La regla suena conservadora hasta que entiendes qué protege: el estado mental posterior a una victoria. Tras ganar, el cerebro sube su tolerancia al riesgo, baja su exigencia de evidencia y busca repetir la dopamina. El segundo trade post-victoria es, estadísticamente, el peor trade del día.',
+    'La cuenta también lo agradece en la curva: asegurar el 0.6% diario promedio y parar produce una equity de pendiente estable, que es exactamente lo que evalúa la métrica de consistencia. Devolver ganancias en el trade dos convierte días verdes en días planos y días planos en rojos — el drenaje silencioso que mata cuentas fondeadas.',
+    'Cerrar la plataforma es un acto físico, no metafórico: se cierra el ejecutor, se pasa al post-market, se registra, se reporta. La sensación de "estoy dejando dinero en la mesa" es el costo de un sistema que te tendrá operando dentro de un año. El mercado es infinito; tu capital y tu disciplina no.'
+  ]},
+  { id:'M04L3', t:'Perdiste el trade 1: un solo intento', p:[
+    'Se pierde el trade 1 → un solo intento más, ÚNICAMENTE si aparece un setup válido nuevo completo. Cada palabra pesa. "Uno": no dos, no "el bueno". "Nuevo": no la re-entrada del mismo trade que te sacó. "Completo": 4/4 en el checklist, sin descuentos por estar en drawdown del día.',
+    'Nunca revenge. El trading de venganza es el sesgo más caro del retail: tras una pérdida, el cerebro no busca una oportunidad — busca un desquite, y lo busca YA. Por eso el segundo intento tras pérdida exige el checklist completo: es un filtro diseñado para que la emoción no pueda pasar disfrazada de análisis. La plataforma detecta ese patrón (segundo trade tras pérdida sin setup) y lo castiga en tu Score.',
+    'Si el segundo intento también pierde, la sesión terminó en -2 intentos controlados, no en espiral. Dos pérdidas de 1R con riesgo definido son un rasguño estadístico dentro de un mes de 20 sesiones. Una espiral de revenge de cuatro trades es una semana de trabajo destruida en veinte minutos. La regla existe porque la diferencia entre ambas cosas se decide en un solo momento: el de parar.'
+  ]},
+  { id:'M04L4', t:'Los no negociables', p:[
+    'Nunca minis. La prohibición no es por el instrumento sino por lo que habilita: los micros invitan a "probar suerte" con tamaño pequeño, a promediar en contra, a operar fuera del plan porque "casi no arriesgo". El tamaño no convierte una mala decisión en buena — la multiplica por menos, pero la repite más. En Northpoint, si el trade no merece el contrato completo, no merece existir.',
+    'Solo se opera la ventana 7:00–8:30, lunes a viernes, y nada queda abierto después de las 8:30. La ventana concentra tu edge (el ORB de NY) y limita tu exposición al resto del día, donde no tienes ventaja documentada. Una posición abierta después de 8:30 es una posición sin protocolo: nadie definió su gestión, su target ni su invalidación en el plan del día.',
+    'Y el cuarto no negociable, el que más cuentas salva: si el checklist no da setup válido, el mejor trade del día es no operar. Un día sin trades con protocolo cumplido suma a tu Score y a tu carrera. Estas cuatro reglas no tienen excepción creativa — cuando una parece inconveniente, es exactamente cuando más se necesita.'
+  ]},
+], quiz:[
+  { q:'Ganaste el trade 1. ¿Qué sigue?', o:['Buscar el segundo con medio tamaño','Se cierra la plataforma. Día terminado','Subir el riesgo: el día es verde'], c:1 },
+  { q:'Perdiste el trade 1. ¿Cuántos intentos quedan y bajo qué condición?', o:['Uno, únicamente con setup válido nuevo completo','Dos, si el bias sigue intacto','Los necesarios para recuperar el día'], c:0 },
+  { q:'¿Cuál es la regla sobre los minis?', o:['Solo para probar estrategias nuevas','Permitidos con máximo 5 contratos','Nunca minis. Prohibido, sin excepciones'], c:2 },
+]},
+
+{ id:'M05', titulo:'PSICOLOGÍA CONDUCTUAL', lecciones:[
+  { id:'M05L1', t:'Sesgos cognitivos del trader', p:[
+    'El cerebro que opera es el mismo que evolucionó para huir de depredadores, no para gestionar riesgo probabilístico. La aversión a la pérdida hace que un -$300 duela el doble de lo que alegra un +$300 — por eso cortas ganadores temprano y dejas correr perdedores. El checklist y el R fijo existen para decidir ANTES de que ese circuito se active.',
+    'El sesgo de confirmación te hace ver solo la evidencia que apoya tu bias: entraste largo y de pronto todas las velas "confirman". El de retrospectiva te convence de que "lo sabías" después de cada movimiento, inflando una confianza que ningún dato respalda. Ambos se combaten igual: hipótesis escrita antes del open, checklist binario en la entrada, journal honesto al cierre.',
+    'El sesgo de lo reciente es el más peligroso en racha: tres días ganadores y el cerebro concluye que el riesgo bajó, cuando la probabilidad de cada trade nuevo es la misma de siempre. Las reglas de Northpoint son deliberadamente inmunes a las rachas — dos trades máximo en tu mejor semana y en tu peor. La estructura no celebra ni se deprime; por eso funciona.'
+  ]},
+  { id:'M05L2', t:'FOMO y revenge: anatomía', p:[
+    'El FOMO — miedo a quedarse fuera — se dispara cuando el precio se mueve SIN ti. La sensación es de pérdida real, aunque no arriesgaste nada: el cerebro contabiliza la ganancia no capturada como dinero robado. El síntoma operativo es inconfundible: entrada tardía, lejos del nivel, con stop amplio "para que aguante", persiguiendo una vela que ya se fue.',
+    'El revenge se dispara con la pérdida: la amígdala registra el -1R como una agresión y exige restitución inmediata. El trade de venganza tiene firma reconocible — llega minutos después del stop, sin checklist, frecuentemente en dirección contraria ("ahora me lo devuelves") y con tamaño mayor. Es la conducta que más cuentas fondeadas ha quemado en la historia del retail.',
+    'Ambos se registran en esta plataforma como emociones etiquetadas (FOMO, REVENGE) porque nombrarlos es la mitad del antídoto. Si al registrar el trade tienes que elegir el chip REVENGE, esa fricción de honestidad queda en tu journal y golpea tu Emotion Control. No para castigarte: para que el patrón sea visible antes de que sea caro.'
+  ]},
+  { id:'M05L3', t:'Gestión del ego: ningún trade es tuyo', p:[
+    'En los mercados, el ego es el enemigo número uno. Ningún trade es "tuyo": es una ejecución del sistema Northpoint que te tocó operar. Ninguna pérdida es "de ellos": es un costo estadístico del proceso. Las decisiones y sus consecuencias son del equipo — esta despersonalización no es retórica corporativa, es tecnología psicológica.',
+    'Cuando el trade es "tuyo", defenderlo se vuelve defender tu identidad: mueves el stop porque cerrarlo sería admitir que TÚ estabas mal. Cuando el trade es del sistema, cerrarlo en la invalidación es simplemente el sistema operando. La misma acción, costo emocional opuesto. El trader que se despersonaliza ejecuta mejor porque no está en juego su autoestima en cada tick.',
+    'El ego también infla las victorias: "le gané al mercado" es la frase previa a la sobreoperación. No le ganaste al mercado; ejecutaste un edge con disciplina y la varianza cayó de tu lado. La humildad es parte del proceso — los mercados siempre pueden sorprendernos, y el trader que lo olvida recibe la lección con intereses.'
+  ]},
+  { id:'M05L4', t:'La disciplina cuando es incómoda', p:[
+    'Cualquiera cumple las reglas cuando coinciden con sus ganas. La disciplina solo se mide en el momento exacto en que la regla estorba: el setup 3/4 "casi perfecto" a las 8:25, el tercer trade "seguro" tras dos pérdidas, la posición ganadora que "merece" quedarse abierta después de 8:30. Ahí — y solo ahí — se decide tu carrera.',
+    'El principio rector lo dice sin anestesia: cuando una regla parece inconveniente en un momento dado, probablemente es exactamente cuando más se necesita. La inconveniencia ES la señal. Las reglas se escribieron en frío, con datos, precisamente porque en caliente tu juicio está secuestrado por la emoción del momento.',
+    'La disciplina incómoda tiene un precio visible (el trade que no tomaste y funcionó) y un beneficio invisible (las veinte espirales que nunca ocurrieron). El cerebro contabiliza el precio y jamás ve el beneficio — por eso la disciplina se siente cara y es barata. El journal corrige esa contabilidad: documenta también los días en que no operar fue la decisión correcta. La disciplina no se aplica cuando es cómodo. Se aplica siempre.'
+  ]},
+], quiz:[
+  { q:'¿Qué es el revenge trading?', o:['Recomprar un instrumento que te sacó por stop','Operar para desquitarse de una pérdida, sin setup','Operar contra el bias institucional'], c:1 },
+  { q:'Según el código, ¿de quién son las decisiones y sus consecuencias?', o:['Del equipo; ningún trade es "tuyo"','Del trader que ejecutó','Del CIO que aprobó la estrategia'], c:0 },
+  { q:'¿Cuándo se aplica la disciplina?', o:['Cuando el mercado está difícil','En cuentas de evaluación solamente','Siempre; sobre todo cuando es incómoda'], c:2 },
+]},
+
+{ id:'M06', titulo:'POST-MARKET Y MEJORA CONTINUA', lecciones:[
+  { id:'M06L1', t:'El journal como activo: el error documentado', p:[
+    'Cada semana revisamos qué salió mal, no solo qué salió bien — el error bien documentado es el activo más valioso del equipo. Un trade perdedor sin registrar es una pérdida seca; el mismo trade con screenshot, checklist, emoción y nota es materia prima de mejora. La diferencia entre ambos es el journal.',
+    'El registro se hace el mismo día, en el post-market, con la memoria fresca. Qué se documenta: la hora exacta (¿ventana?), el setup real al momento de entrar (¿4/4 o te contaste un cuento?), el resultado en USD y en R, la emoción dominante y una nota con la lección. La honestidad del registro importa más que su elegancia — la plataforma marca las violaciones en lugar de esconderlas porque los datos maquillados no mejoran a nadie.',
+    'Con veinte o treinta trades registrados, los patrones emergen solos: pierdes más los días sin checklist pre-market, tu FOMO se concentra los lunes, tus mejores trades son los primeros de la sesión. Ninguna de esas verdades es visible en la memoria; todas son obvias en los datos. Documentar es la única forma de conocer al trader que realmente eres, no al que crees ser.'
+  ]},
+  { id:'M06L2', t:'Leer tu dashboard: consistencia, drawdown, Score', p:[
+    'El dashboard responde tres preguntas. La primera: ¿de qué calidad es mi curva? El max drawdown mide la peor caída desde un pico de equity — el número que un gestor de riesgo mira antes que el retorno. Una curva que sube 10% con caídas de 2% vale más que una que sube 20% con caídas de 15%.',
+    'La segunda: ¿mi resultado es proceso o suerte? La métrica de consistencia (mejor día / P&L total) lo delata: si un solo día aporta más del 30% de tu ganancia, un solo día domina tu curva — y las firmas de fondeo rechazan exactamente eso. El profit factor y el R promedio completan la lectura: cuánto ganas por cada dólar perdido y si tus ganadores pagan tus perdedores con margen.',
+    'La tercera: ¿cómo me estoy comportando? Eso es el Northpoint Score: Risk Discipline (¿respetas ventana, límite y instrumentos?), Emotion Control (¿cuánto FOMO y revenge hay en tu muestra?), Decision Quality (¿operas con setup completo y documentas?) y Consistency (¿cumples el protocolo a diario?). El P&L mide el pasado; el Score predice el futuro — porque mide lo único que se repite: tu conducta.'
+  ]},
+  { id:'M06L3', t:'El reporte al equipo y la revisión semanal', p:[
+    'El día no termina al cerrar la posición: termina al enviar el reporte. Resultado del día y estado de la cuenta, en formato estándar, al canal del equipo. El reporte convierte tu sesión privada en rendición de cuentas pública — y la rendición de cuentas es el multiplicador de disciplina más barato que existe: es más difícil violar una regla que tendrás que reportar con tu nombre.',
+    'El formato importa porque es comparable: trades, W/L, P&L del día y su porcentaje, cumplimiento de las tres reglas madre (ventana, máximo dos, setup completo) y progreso mensual contra objetivo. Veinte reportes idénticos en estructura permiten ver tendencias de equipo; veinte relatos libres, no. Transparencia con el equipo y con nosotros mismos sobre las limitaciones del proceso.',
+    'La revisión semanal cierra el ciclo de mejora continua: se leen los cinco reportes, se revisa el journal completo, se responde qué salió mal y qué patrón se repite. De ahí sale UNA corrección concreta para la semana siguiente — no cinco propósitos, una corrección medible. Mejora continua de procesos: así compone el conocimiento, exactamente igual que el capital.'
+  ]},
+], quiz:[
+  { q:'¿Cuál es "el activo más valioso del equipo"?', o:['El error bien documentado','El track record auditado','La estrategia con mejor profit factor'], c:0 },
+  { q:'Tu mejor día aporta 45% del P&L total. ¿Qué indica?', o:['Excelente: hubo un día de expansión','Un solo día domina tu curva; falta consistencia','Nada: solo importa el total'], c:1 },
+  { q:'¿Qué incluye el reporte diario al equipo?', o:['Solo el P&L si fue positivo','Las posiciones abiertas del fondo','Resultado del día y estado de la cuenta'], c:2 },
+]}
+];
+
+/* ═══════════ PROGRAMA · render ═══════════ */
+var TOTAL_LECCIONES = PROGRAMA.reduce(function(s,m){ return s+m.lecciones.length; }, 0);
+var TOTAL_QUIZ = PROGRAMA.length*3;
+var modAbierto = null;
+
+function renderPrograma(){
+  var est = state.estudio;
+  var hechas = 0;
+  PROGRAMA.forEach(function(m){
+    m.lecciones.forEach(function(l){ if(est.lecciones[l.id]) hechas++; });
+  });
+  var quizSum = PROGRAMA.reduce(function(s,m){
+    return s + (typeof est.quizzes[m.id]==='number' ? est.quizzes[m.id] : 0);
+  }, 0);
+
+  $('progGlobalLabel').textContent = hechas+'/'+TOTAL_LECCIONES;
+  $('progGlobalBar').style.width = (hechas/TOTAL_LECCIONES*100)+'%';
+  $('quizGlobalLabel').textContent = quizSum+'/'+TOTAL_QUIZ;
+  $('quizGlobalBar').style.width = (quizSum/TOTAL_QUIZ*100)+'%';
+
+  $('modulos').innerHTML = PROGRAMA.map(function(m){
+    var mHechas = m.lecciones.filter(function(l){ return est.lecciones[l.id]; }).length;
+    var qScore = est.quizzes[m.id];
+    var qTxt = (typeof qScore==='number') ? qScore+'/3' : '—';
+    var abierto = modAbierto===m.id;
+    var body = '';
+    if(abierto){
+      body = m.lecciones.map(function(l){
+        var done = !!est.lecciones[l.id];
+        return '<div class="lesson'+(done?' done':'')+'">'
+          + '<div class="lesson-h">'
+          +   '<span class="lesson-t">'+esc(l.t)+'</span>'
+          +   '<button class="btn'+(done?' b-done':'')+'" data-leccion="'+esc(l.id)+'">'
+          +     (done?'Estudiada ✓':'Marcar como estudiada')+'</button>'
+          + '</div>'
+          + l.p.map(function(px){ return '<p>'+esc(px)+'</p>'; }).join('')
+          + '</div>';
+      }).join('');
+      body += '<div class="quiz">'
+        + '<div class="quiz-t micro">Quiz · 3 preguntas — mejor score: '+qTxt+'</div>'
+        + m.quiz.map(function(q,qi){
+            return '<div class="q-item">'
+              + '<div class="q-q">'+(qi+1)+'. '+esc(q.q)+'</div>'
+              + q.o.map(function(op,oi){
+                  return '<label class="q-opt" data-mod="'+m.id+'" data-q="'+qi+'" data-o="'+oi+'">'
+                    + '<input type="radio" name="q-'+m.id+'-'+qi+'" value="'+oi+'">'
+                    + '<span>'+esc(op)+'</span></label>';
+                }).join('')
+              + '</div>';
+          }).join('')
+        + '<div class="quiz-foot">'
+        +   '<button class="btn primary" data-quiz="'+m.id+'">Calificar quiz</button>'
+        +   '<span class="quiz-res" id="quizRes-'+m.id+'"></span>'
+        + '</div>'
+        + '</div>';
+    }
+    return '<div class="mod'+(abierto?' open':'')+'" data-mod="'+m.id+'">'
+      + '<div class="mod-head" data-toggle="'+m.id+'">'
+      +   '<span class="mod-code">'+m.id+'</span>'
+      +   '<span class="mod-tit">'+esc(m.titulo)+'</span>'
+      +   '<span class="mod-prog">'+mHechas+'/'+m.lecciones.length+' · quiz '+qTxt+'</span>'
+      +   '<span class="mod-caret">▾</span>'
+      + '</div>'
+      + '<div class="mod-body">'+body+'</div>'
+      + '</div>';
+  }).join('');
+
+  /* protocolo internalizado */
+  var todoEstudiado = hechas===TOTAL_LECCIONES;
+  var quizzesOk = PROGRAMA.every(function(m){
+    return typeof est.quizzes[m.id]==='number' && est.quizzes[m.id]>=2;
+  });
+  $('protoCard').hidden = !(todoEstudiado && quizzesOk);
+}
+
+function calificarQuiz(modId){
+  var m = PROGRAMA.find(function(x){ return x.id===modId; });
+  if(!m) return;
+  var correctas = 0, sinResponder = 0;
+  m.quiz.forEach(function(q,qi){
+    var sel = document.querySelector('input[name="q-'+modId+'-'+qi+'"]:checked');
+    if(!sel){ sinResponder++; return; }
+    if(parseInt(sel.value,10)===q.c) correctas++;
+  });
+  if(sinResponder>0){
+    $('quizRes-'+modId).textContent = 'Responde las 3 preguntas.';
+    $('quizRes-'+modId).className = 'quiz-res warn';
+    return;
+  }
+  /* marcar visualmente */
+  m.quiz.forEach(function(q,qi){
+    document.querySelectorAll('.q-opt[data-mod="'+modId+'"][data-q="'+qi+'"]').forEach(function(lab){
+      var oi = parseInt(lab.dataset.o,10);
+      lab.classList.remove('correct','wrong');
+      var sel = lab.querySelector('input').checked;
+      if(oi===q.c) lab.classList.add('correct');
+      else if(sel) lab.classList.add('wrong');
+    });
+  });
+  var mejor = Math.max(correctas, state.estudio.quizzes[modId]||0);
+  state.estudio.quizzes[modId] = mejor;
+  save();
+  var res = $('quizRes-'+modId);
+  res.textContent = 'Calificación: '+correctas+'/3'+(mejor>correctas?' · mejor: '+mejor+'/3':'');
+  res.className = 'quiz-res '+(correctas===3?'up':(correctas>=2?'warn':'down'));
+  /* actualizar encabezados sin colapsar el acordeón */
+  var est = state.estudio;
+  var mHechas = m.lecciones.filter(function(l){ return est.lecciones[l.id]; }).length;
+  var head = document.querySelector('.mod[data-mod="'+modId+'"] .mod-prog');
+  if(head) head.textContent = mHechas+'/'+m.lecciones.length+' · quiz '+mejor+'/3';
+  var hechas=0, quizSum=0;
+  PROGRAMA.forEach(function(mm){
+    mm.lecciones.forEach(function(l){ if(est.lecciones[l.id]) hechas++; });
+    quizSum += (typeof est.quizzes[mm.id]==='number' ? est.quizzes[mm.id] : 0);
+  });
+  $('quizGlobalLabel').textContent = quizSum+'/'+TOTAL_QUIZ;
+  $('quizGlobalBar').style.width = (quizSum/TOTAL_QUIZ*100)+'%';
+  var quizzesOk = PROGRAMA.every(function(mm){
+    return typeof est.quizzes[mm.id]==='number' && est.quizzes[mm.id]>=2;
+  });
+  $('protoCard').hidden = !(hechas===TOTAL_LECCIONES && quizzesOk);
+}
+
+/* ═══════════ SNOWBALL · INVESTMENTS ═══════════ */
+function renderSnowball(){ swDraw(); }
+function swDraw(){
+  var cap = parseFloat($('swCapital').value);
+  if(isNaN(cap) || cap<=0) cap = 250000;
+  var rate = parseFloat($('swTasa').value) || 0.19;
+  $('swMeta').textContent = usd(cap)+' · '+Math.round(rate*100)+'% anual · 20 años';
+  var YEARS=20, W=640, H=240, padL=8, padR=10, padT=16, padB=26;
+  function val(t){ return cap*Math.pow(1+rate,t); }
+  var max = val(YEARS);
+  function X(t){ return padL+(t/YEARS)*(W-padL-padR); }
+  function Y(v){ return H-padB-(v/max)*(H-padT-padB); }
+  var d='';
+  for(var t=0;t<=YEARS;t+=0.25){ d += (t===0?'M':'L')+X(t).toFixed(1)+','+Y(val(t)).toFixed(1); }
+  var area = d+'L'+X(YEARS).toFixed(1)+','+(H-padB)+'L'+X(0).toFixed(1)+','+(H-padB)+'Z';
+  function fmt(v){ return v>=1e6 ? '$'+(v/1e6).toFixed(2)+'M' : '$'+Math.round(v/1000)+'K'; }
+  $('swChart').innerHTML = '<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Proyección compuesta a 20 años">'
+    + '<defs><linearGradient id="swg" x1="0" y1="0" x2="0" y2="1">'
+    + '<stop offset="0" stop-color="#9BC0DC" stop-opacity=".14"/><stop offset="1" stop-color="#9BC0DC" stop-opacity="0"/>'
+    + '</linearGradient></defs>'
+    + '<line x1="'+padL+'" y1="'+(H-padB)+'" x2="'+(W-padR)+'" y2="'+(H-padB)+'" stroke="rgba(255,255,255,.08)"/>'
+    + '<path d="'+area+'" fill="url(#swg)"/>'
+    + '<path d="'+d+'" fill="none" stroke="#9BC0DC" stroke-width="1.6"/>'
+    + '</svg>';
+  $('swTabla').innerHTML = [5,10,15,20].map(function(t){
+    return '<div class="sw-hito"><div class="h-a">AÑO '+t+'</div><div class="h-v">'+fmt(val(t))+'</div></div>';
+  }).join('');
+}
+
+/* ═══════════ SHELL · reloj, routing, onboarding ═══════════ */
+function tick(){
+  var d = new Date();
+  $('clock').textContent = p2(d.getHours())+':'+p2(d.getMinutes())+':'+p2(d.getSeconds());
+  var m = d.getHours()*60 + d.getMinutes();
+  var badge = $('windowBadge'), txt = $('windowTxt');
+  var dow = d.getDay();
+  if(dow===0 || dow===6){ badge.className='badge b-warn'; txt.textContent='FIN DE SEMANA — NO SE OPERA'; }
+  else if(m < 420){ badge.className='badge b-dim'; txt.textContent='PRE-MARKET'; }
+  else if(m <= 510){ badge.className='badge b-up'; txt.textContent='VENTANA ABIERTA'; }
+  else { badge.className='badge b-warn'; txt.textContent='FUERA DE VENTANA — NO SE OPERA'; }
+}
+
+var VISTAS = { dashboard:'DASHBOARD', sesion:'SESIÓN', journal:'JOURNAL', programa:'PROGRAMA', reglas:'REGLAS', snowball:'SNOWBALL · INVESTMENTS' };
+
+function route(){
+  var h = (location.hash||'').replace('#','');
+  if(!VISTAS[h]) h = 'dashboard';
+  document.querySelectorAll('.view').forEach(function(v){
+    v.classList.toggle('active', v.id==='view-'+h);
+  });
+  document.querySelectorAll('.nav-item').forEach(function(a){
+    a.classList.toggle('active', a.dataset.v===h);
+  });
+  $('viewTitle').textContent = VISTAS[h];
+  if(h==='dashboard') renderDashboard();
+  else if(h==='sesion') renderSesion();
+  else if(h==='journal') renderJournal();
+  else if(h==='programa') renderPrograma();
+  else if(h==='snowball') renderSnowball();
+  window.scrollTo(0,0);
+}
+
+function pintarTrader(){
+  if(!state.trader) return;
+  $('sideNombre').textContent = state.trader.nombre;
+  $('sideCuenta').textContent = usd(state.trader.cuenta);
+}
+
+function initOnboard(){
+  var tiene = !!state.trader;
+  $('onboard').hidden = tiene;
+  $('shell').hidden = !tiene;
+  if(tiene) pintarTrader();
+}
+
+/* ═══════════ EVENTOS ═══════════ */
+function bind(){
+  /* onboarding */
+  $('btnAlta').addEventListener('click', function(){
+    var n = String($('obNombre').value||'').trim();
+    var c = parseFloat($('obCuenta').value);
+    if(!n){ $('obMsg').textContent='Escribe tu nombre para abrir el terminal.'; return; }
+    if(isNaN(c) || c<=0) c = 25000;
+    state.trader = { nombre:n, cuenta:Math.round(c), creado:hoy() };
+    save();
+    initOnboard();
+    route();
+  });
+  $('obNombre').addEventListener('keydown', function(e){ if(e.key==='Enter') $('btnAlta').click(); });
+  $('obCuenta').addEventListener('keydown', function(e){ if(e.key==='Enter') $('btnAlta').click(); });
+
+  /* cuenta editable */
+  $('sideCuenta').addEventListener('click', function(){
+    var v = prompt('Tamaño de cuenta (USD):', state.trader ? state.trader.cuenta : 25000);
+    if(v===null) return;
+    var c = parseFloat(String(v).replace(/[^0-9.]/g,''));
+    if(isNaN(c) || c<=0) return;
+    state.trader.cuenta = Math.round(c);
+    save();
+    pintarTrader();
+    renderDashboard();
+  });
+
+  /* sesión: pre-market */
+  $('premarketList').addEventListener('click', function(e){
+    var row = e.target.closest('.chk-row');
+    if(!row) return;
+    var h = hoy();
+    var cl = state.checklists[h] || [false,false,false,false,false,false];
+    var i = parseInt(row.dataset.i,10);
+    cl[i] = !cl[i];
+    state.checklists[h] = cl;
+    save();
+    renderSesion();
+  });
+
+  /* sesión: setup toggles */
+  $('setupRows').addEventListener('click', function(e){
+    var row = e.target.closest('.setup-row');
+    if(!row) return;
+    var k = row.dataset.k;
+    sesionSetup[k] = !sesionSetup[k];
+    /* precargar el checklist del formulario de registro */
+    $('fSetA').checked = sesionSetup.targets;
+    $('fSetB').checked = sesionSetup.liquidez;
+    $('fSetC').checked = sesionSetup.estructura;
+    $('fSetD').checked = sesionSetup.entrada;
+    renderSesion();
+  });
+
+  $('btnQuickReg').addEventListener('click', function(){ location.hash = '#journal'; });
+  $('btnReporte').addEventListener('click', generarReporte);
+  $('btnCopiarReporte').addEventListener('click', copiarReporte);
+
+  /* journal: form */
+  $('fInstrumento').addEventListener('change', function(){
+    $('otroWrap').hidden = this.value!=='OTRO';
+  });
+  $('fDirLong').addEventListener('click', function(){
+    dirSel='LONG';
+    $('fDirLong').classList.add('sel'); $('fDirShort').classList.remove('sel');
+  });
+  $('fDirShort').addEventListener('click', function(){
+    dirSel='SHORT';
+    $('fDirShort').classList.add('sel'); $('fDirLong').classList.remove('sel');
+  });
+  $('emoChips').addEventListener('click', function(e){
+    var b = e.target.closest('.chip-opt');
+    if(!b) return;
+    emoSel = b.dataset.emo;
+    document.querySelectorAll('#emoChips .chip-opt').forEach(function(x){
+      x.classList.toggle('sel', x===b);
+    });
+  });
+  $('btnGuardar').addEventListener('click', guardarTrade);
+
+  /* journal: filtros y tabla */
+  $('jFiltros').addEventListener('click', function(e){
+    var b = e.target.closest('.filtro');
+    if(!b) return;
+    filtroActivo = b.dataset.f;
+    renderJournal();
+  });
+  $('jTabla').addEventListener('click', function(e){
+    var del = e.target.closest('[data-del]');
+    if(del){
+      if(!confirm('¿Eliminar este trade del registro? El journal es tu evidencia.')) return;
+      var id = del.dataset.del;
+      state.trades = state.trades.filter(function(t){ return t.id!==id; });
+      save();
+      renderJournal();
+      renderSesion();
+      renderDashboard();
+      return;
+    }
+    var nota = e.target.closest('.t-nota');
+    if(nota){ nota.closest('.t-row').classList.toggle('exp'); }
+  });
+
+  /* programa */
+  $('modulos').addEventListener('click', function(e){
+    var head = e.target.closest('[data-toggle]');
+    if(head){
+      var id = head.dataset.toggle;
+      modAbierto = (modAbierto===id) ? null : id;
+      renderPrograma();
+      return;
+    }
+    var lec = e.target.closest('[data-leccion]');
+    if(lec){
+      var lid = lec.dataset.leccion;
+      var done = !state.estudio.lecciones[lid];
+      if(done) state.estudio.lecciones[lid] = true;
+      else delete state.estudio.lecciones[lid];
+      save();
+      /* actualizar en sitio — NO renderPrograma(): reconstruir borraría los radios de un quiz a medio responder */
+      lec.textContent = done ? 'Estudiada ✓' : 'Marcar como estudiada';
+      lec.classList.toggle('b-done', done);
+      var lesson = lec.closest('.lesson');
+      if(lesson) lesson.classList.toggle('done', done);
+      var modEl = lec.closest('.mod');
+      var mod = PROGRAMA.find(function(x){ return x.id===(modEl && modEl.dataset.mod); });
+      if(mod){
+        var estE = state.estudio;
+        var mHechas = mod.lecciones.filter(function(l){ return estE.lecciones[l.id]; }).length;
+        var qS = estE.quizzes[mod.id];
+        var prog = modEl.querySelector('.mod-prog');
+        if(prog) prog.textContent = mHechas+'/'+mod.lecciones.length+' · quiz '+((typeof qS==='number') ? qS+'/3' : '—');
+        var hechasG = 0;
+        PROGRAMA.forEach(function(mm){ mm.lecciones.forEach(function(l){ if(estE.lecciones[l.id]) hechasG++; }); });
+        $('progGlobalLabel').textContent = hechasG+'/'+TOTAL_LECCIONES;
+        $('progGlobalBar').style.width = (hechasG/TOTAL_LECCIONES*100)+'%';
+        var quizzesOk = PROGRAMA.every(function(mm){
+          return typeof estE.quizzes[mm.id]==='number' && estE.quizzes[mm.id]>=2;
+        });
+        $('protoCard').hidden = !(hechasG===TOTAL_LECCIONES && quizzesOk);
+      }
+      return;
+    }
+    var qz = e.target.closest('[data-quiz]');
+    if(qz){ calificarQuiz(qz.dataset.quiz); }
+  });
+
+  /* snowball: calculadora */
+  $('swCapital').addEventListener('input', swDraw);
+  $('swTasa').addEventListener('change', swDraw);
+
+  window.addEventListener('hashchange', route);
+}
+
+/* ═══════════ INIT ═══════════ */
+$('todayDate').textContent = hoy();
+bind();
+tick();
+setInterval(tick, 1000);
+initOnboard();
+route();
+
+/* debug */
+window.__np = { state: state, save: save, score: score };
+</script>
+</body>
+</html>

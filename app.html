@@ -1,0 +1,3000 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NORTHPOINT TERMINAL</title>
+<meta name="description" content="Terminal interno de Northpoint Capital Management. Mesa de futuros y Snowball Investments.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   NORTHPOINT TERMINAL · Dark Liquid Glass
+   Mismo sistema que la landing: un acento polar, mono para datos.
+   ============================================================ */
+:root{
+  --bg:#05070C;
+  --bg-2:#090D15;
+  --glass:rgba(255,255,255,.045);
+  --glass-2:rgba(255,255,255,.075);
+  --line:rgba(255,255,255,.09);
+  --line-soft:rgba(255,255,255,.05);
+  --txt:#E9EDF2;
+  --dim:#8A94A6;
+  --faint:#7A8698;
+  --accent:#9BC0DC;
+  --accent-deep:#5E8CAD;
+  --up:#57C79B;
+  --down:#DE6A5F;
+  --warn:#D9A441;
+  --sans:'Inter',-apple-system,system-ui,sans-serif;
+  --mono:'IBM Plex Mono',ui-monospace,monospace;
+  color-scheme:dark;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{
+  background:var(--bg);
+  color:var(--txt);
+  font-family:var(--sans);
+  font-size:14px;
+  line-height:1.55;
+  overflow:hidden;
+}
+::selection{background:rgba(155,192,220,.25)}
+a{color:var(--accent);text-decoration:none}
+button{font-family:inherit;color:inherit;background:none;border:none;cursor:pointer}
+input,select,textarea{
+  min-width:0;font-family:var(--mono);font-size:13px;color:var(--txt);
+  background:rgba(255,255,255,.04);border:1px solid var(--line);
+  border-radius:8px;padding:9px 11px;width:100%;
+}
+input:focus,select:focus,textarea:focus{outline:1px solid var(--accent-deep);outline-offset:1px}
+input[type=checkbox]{width:auto}
+b{font-weight:600}
+label{font-family:var(--mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--dim);display:block;margin-bottom:6px}
+:focus-visible{outline:1px solid var(--accent-deep);outline-offset:2px}
+.micro{font-family:var(--mono);font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--dim);font-weight:500}
+.mono{font-family:var(--mono)}
+.up{color:var(--up)}
+.down{color:var(--down)}
+.warn{color:var(--warn)}
+
+/* ═══ Shell ═══ */
+.app{display:flex;height:100vh;height:100svh}
+
+/* fondo con glow polar sutil */
+.app::before{
+  content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
+  background:
+    radial-gradient(900px 600px at 78% -10%, rgba(120,165,200,.07), transparent 62%),
+    radial-gradient(1100px 700px at -10% 110%, rgba(94,140,173,.05), transparent 60%);
+}
+
+/* ═══ Rail (sidebar) ═══ */
+.rail{
+  position:relative;z-index:5;
+  width:236px;flex:0 0 236px;height:100%;
+  display:flex;flex-direction:column;
+  background:rgba(8,12,20,.66);
+  -webkit-backdrop-filter:blur(22px) saturate(150%);
+  backdrop-filter:blur(22px) saturate(150%);
+  border-right:1px solid var(--line-soft);
+  padding:22px 14px 14px;
+}
+.rail-brand{display:flex;align-items:center;gap:10px;padding:0 8px 20px}
+.rail-brand svg{width:20px;height:20px;stroke:var(--accent);flex:0 0 auto}
+.rail-brand b{font-size:13px;font-weight:600;letter-spacing:.09em}
+.rail-brand span{display:block;font-family:var(--mono);font-size:9px;letter-spacing:.28em;color:var(--dim)}
+.rail-group{margin-top:14px}
+.rail-group .micro{padding:0 10px 8px;font-size:9.5px;color:var(--faint)}
+.rail a.item{
+  display:flex;align-items:center;gap:11px;
+  padding:9px 10px;border-radius:9px;color:var(--dim);
+  font-size:13px;font-weight:500;letter-spacing:.02em;
+  border:1px solid transparent;
+  transition:background .15s,color .15s,border-color .15s;
+}
+.rail a.item:hover{color:var(--txt);background:rgba(255,255,255,.03)}
+.rail a.item.on{
+  color:var(--txt);background:var(--glass);
+  border-color:var(--line-soft);
+}
+.rail a.item svg{width:15px;height:15px;stroke:currentColor;opacity:.85;flex:0 0 auto}
+.rail a.item .bdg{
+  margin-left:auto;font-family:var(--mono);font-size:10px;color:var(--accent);
+}
+.rail-foot{margin-top:auto;border-top:1px solid var(--line-soft);padding-top:12px}
+.rail-user{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:9px;width:100%;text-align:left;transition:background .15s}
+.rail-user:hover{background:rgba(255,255,255,.03)}
+.avatar{
+  width:28px;height:28px;border-radius:50%;flex:0 0 auto;
+  display:flex;align-items:center;justify-content:center;
+  background:linear-gradient(160deg, rgba(155,192,220,.22), rgba(94,140,173,.10));
+  border:1px solid var(--line);
+  font-family:var(--mono);font-size:11px;color:var(--accent);
+}
+.rail-user b{font-size:12.5px;font-weight:600;display:block;line-height:1.2}
+.rail-user span{font-family:var(--mono);font-size:9px;letter-spacing:.14em;color:var(--faint)}
+.rail-exit{display:block;padding:8px 10px;font-family:var(--mono);font-size:10px;letter-spacing:.16em;color:var(--faint)}
+.rail-exit:hover{color:var(--dim)}
+
+/* ═══ Main ═══ */
+.main{position:relative;z-index:1;flex:1;min-width:0;display:flex;flex-direction:column}
+.topbar{
+  flex:0 0 auto;height:60px;
+  display:flex;align-items:center;gap:18px;
+  padding:0 26px;border-bottom:1px solid var(--line-soft);
+  background:rgba(6,9,15,.45);
+  -webkit-backdrop-filter:blur(18px) saturate(140%);
+  backdrop-filter:blur(18px) saturate(140%);
+}
+.topbar h1{font-size:15px;font-weight:600;letter-spacing:.02em}
+.topbar .crumb{font-family:var(--mono);font-size:9.5px;letter-spacing:.22em;color:var(--faint);text-transform:uppercase;display:block}
+.top-right{margin-left:auto;display:flex;align-items:center;gap:14px}
+.top-date{font-family:var(--mono);font-size:11px;color:var(--dim);letter-spacing:.06em}
+.sess-pill{
+  display:inline-flex;align-items:center;gap:8px;
+  font-family:var(--mono);font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;
+  padding:7px 13px;border-radius:99px;
+  background:var(--glass);border:1px solid var(--line);color:var(--dim);
+  white-space:nowrap;
+}
+.sess-pill .dot{width:6px;height:6px;border-radius:50%;background:var(--faint);flex:0 0 auto}
+.sess-pill.live{color:var(--txt);border-color:rgba(87,199,155,.35)}
+.sess-pill.live .dot{background:var(--up);animation:pulse 2.2s ease-in-out infinite}
+.sess-pill.orb{color:var(--txt);border-color:rgba(155,192,220,.4)}
+.sess-pill.orb .dot{background:var(--accent);animation:pulse 1.4s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+.top-clock{font-family:var(--mono);font-size:13px;color:var(--txt);letter-spacing:.08em;min-width:78px;text-align:right}
+
+/* ═══ Views ═══ */
+.content{flex:1;overflow-y:auto;padding:28px 26px 60px;scrollbar-width:thin;scrollbar-color:rgba(255,255,255,.12) transparent}
+.content::-webkit-scrollbar{width:8px}
+.content::-webkit-scrollbar-thumb{background:rgba(255,255,255,.09);border-radius:99px}
+.view{display:none;max-width:1180px;margin:0 auto;animation:vin .28s ease both}
+.view.on{display:block}
+@keyframes vin{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+/* ═══ Panels & grids ═══ */
+.panel{
+  background:linear-gradient(180deg, rgba(12,18,28,.62), rgba(8,12,20,.5));
+  border:1px solid var(--line-soft);
+  border-radius:14px;
+  -webkit-backdrop-filter:blur(14px) saturate(140%);
+  backdrop-filter:blur(14px) saturate(140%);
+  position:relative;
+}
+.panel::before{
+  content:'';position:absolute;inset:0 0 auto 0;height:1px;border-radius:14px 14px 0 0;
+  background:linear-gradient(90deg, transparent, rgba(255,255,255,.10), transparent);
+  pointer-events:none;
+}
+.p-head{display:flex;align-items:baseline;gap:12px;padding:16px 18px 0}
+.p-head h3{font-size:13.5px;font-weight:600;letter-spacing:.02em}
+.p-head .micro{margin-left:auto;font-size:9.5px}
+.p-body{padding:14px 18px 18px}
+.grid{display:grid;gap:14px}
+.g2{grid-template-columns:1fr 1fr}
+.g3{grid-template-columns:repeat(3,1fr)}
+.g4{grid-template-columns:repeat(4,1fr)}
+.g5{grid-template-columns:repeat(5,1fr)}
+.mt{margin-top:14px}
+.mt2{margin-top:22px}
+
+/* KPI tiles */
+.kpi{padding:15px 16px 13px}
+.kpi .k-l{font-family:var(--mono);font-size:9.5px;letter-spacing:.18em;text-transform:uppercase;color:var(--faint)}
+.kpi .k-v{font-family:var(--mono);font-size:22px;font-weight:300;letter-spacing:-.01em;margin-top:6px;line-height:1.1}
+.kpi .k-s{font-family:var(--mono);font-size:10.5px;color:var(--dim);margin-top:5px}
+.bar{height:3px;border-radius:99px;background:rgba(255,255,255,.07);margin-top:10px;overflow:hidden}
+.bar i{display:block;height:100%;border-radius:99px;background:var(--accent-deep);transition:width .5s ease}
+.bar i.full{background:var(--up)}
+.bar i.neg{background:var(--down)}
+
+/* botones */
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:8px;
+  font-size:12.5px;font-weight:500;letter-spacing:.03em;
+  padding:9px 16px;border-radius:9px;white-space:nowrap;
+  border:1px solid var(--line);background:var(--glass);color:var(--txt);
+  transition:background .15s,border-color .15s,transform .15s;
+}
+.btn:hover{background:var(--glass-2);border-color:var(--accent-deep)}
+.btn.primary{background:#E9EDF2;color:#0A0E15;border-color:#E9EDF2;font-weight:600}
+.btn.primary:hover{background:#fff;transform:translateY(-1px)}
+.btn.danger:hover{border-color:var(--down);color:var(--down)}
+.btn.sm{padding:6px 11px;font-size:11.5px;border-radius:7px}
+.btn-icon{padding:6px 8px;border-radius:7px;color:var(--faint)}
+.btn-icon:hover{color:var(--txt)}
+
+/* tablas */
+table{width:100%;border-collapse:collapse}
+th{
+  font-family:var(--mono);font-size:9.5px;letter-spacing:.16em;text-transform:uppercase;
+  color:var(--faint);font-weight:500;text-align:left;
+  padding:10px 12px;border-bottom:1px solid var(--line-soft);
+}
+td{
+  padding:11px 12px;border-bottom:1px solid var(--line-soft);
+  font-size:13px;vertical-align:middle;
+}
+td.mono,th.r,td.r{font-family:var(--mono);font-size:12.5px}
+th.r,td.r{text-align:right}
+tr:last-child td{border-bottom:none}
+tbody tr{transition:background .12s}
+tbody tr:hover{background:rgba(255,255,255,.02)}
+
+/* tags */
+.tag{
+  display:inline-flex;align-items:center;gap:5px;
+  font-family:var(--mono);font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;
+  padding:3px 8px;border-radius:99px;border:1px solid var(--line);color:var(--dim);
+  white-space:nowrap;
+}
+.tag.ok{color:var(--up);border-color:rgba(87,199,155,.3)}
+.tag.bad{color:var(--down);border-color:rgba(222,106,95,.32)}
+.tag.wr{color:var(--warn);border-color:rgba(217,164,65,.32)}
+.tag.ac{color:var(--accent);border-color:rgba(155,192,220,.3)}
+
+/* checklist */
+.chk{
+  display:flex;align-items:flex-start;gap:12px;width:100%;text-align:left;
+  padding:12px 14px;border-radius:10px;border:1px solid var(--line-soft);
+  background:rgba(255,255,255,.015);
+  transition:background .15s,border-color .15s;
+}
+.chk + .chk{margin-top:8px}
+.chk:hover{background:rgba(255,255,255,.035)}
+.chk .box{
+  width:17px;height:17px;flex:0 0 auto;margin-top:1px;
+  border-radius:5px;border:1px solid var(--line);
+  display:flex;align-items:center;justify-content:center;
+  transition:background .15s,border-color .15s;
+}
+.chk .box svg{width:10px;height:10px;stroke:#0A0E15;stroke-width:3;opacity:0}
+.chk.done{border-color:rgba(155,192,220,.28)}
+.chk.done .box{background:var(--accent);border-color:var(--accent)}
+.chk.done .box svg{opacity:1}
+.chk b{font-size:13px;font-weight:600;display:block;line-height:1.3}
+.chk span{font-size:12px;color:var(--dim);display:block;margin-top:2px;line-height:1.45}
+.chk.done b{color:var(--dim);text-decoration:line-through;text-decoration-color:rgba(255,255,255,.25)}
+.chk .t{margin-left:auto;font-family:var(--mono);font-size:10px;color:var(--faint);flex:0 0 auto}
+
+/* veredicto de setup */
+.verdict{
+  border-radius:12px;padding:16px 18px;margin-top:14px;
+  border:1px solid var(--line);
+  font-family:var(--mono);letter-spacing:.04em;
+  display:flex;align-items:center;gap:14px;
+}
+.verdict .vs{font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--dim)}
+.verdict .vt{font-size:15px;font-weight:600}
+.verdict.go{border-color:rgba(87,199,155,.4);background:rgba(87,199,155,.06)}
+.verdict.go .vt{color:var(--up)}
+.verdict.no{border-color:rgba(222,106,95,.35);background:rgba(222,106,95,.05)}
+.verdict.no .vt{color:var(--down)}
+
+/* score */
+.score-wrap{display:flex;gap:26px;align-items:center}
+.score-ring{position:relative;width:132px;height:132px;flex:0 0 auto}
+.score-ring svg{transform:rotate(-90deg)}
+.score-ring .num{
+  position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;
+}
+.score-ring .num b{font-family:var(--mono);font-size:30px;font-weight:300;letter-spacing:-.02em}
+.score-ring .num span{font-family:var(--mono);font-size:9px;letter-spacing:.22em;color:var(--faint)}
+.dims{flex:1;display:flex;flex-direction:column;gap:10px;min-width:0}
+.dim .d-t{display:flex;justify-content:space-between;font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;color:var(--dim);text-transform:uppercase}
+.dim .d-t b{color:var(--txt);font-weight:500}
+
+/* modal */
+.overlay{
+  position:fixed;inset:0;z-index:60;display:none;
+  background:rgba(3,5,9,.7);
+  -webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);
+  align-items:flex-start;justify-content:center;
+  overflow-y:auto;padding:6vh 18px 60px;
+}
+.overlay.on{display:flex}
+.modal{
+  width:100%;max-width:560px;
+  background:linear-gradient(180deg, #0C121C, #080D16);
+  border:1px solid var(--line);border-radius:16px;
+  padding:24px;animation:vin .22s ease both;
+}
+.modal h3{font-size:15px;font-weight:600;margin-bottom:4px}
+.modal .sub,.login-card .sub{font-size:12px;color:var(--dim);margin-bottom:18px}
+.f-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
+/* ── login ── */
+.login{
+  position:fixed;inset:0;z-index:900;display:none;
+  align-items:center;justify-content:center;padding:24px;
+  background:
+    radial-gradient(900px 560px at 70% -10%, rgba(94,140,173,.10), transparent 60%),
+    linear-gradient(180deg,#04060B,#05070C 45%,#070B13);
+}
+.login.on{display:flex}
+.login-card{
+  width:100%;max-width:400px;border-radius:18px;padding:34px 32px 28px;
+  background:linear-gradient(180deg, rgba(12,18,28,.85), rgba(8,12,20,.8));
+  border:1px solid var(--line);
+  box-shadow:0 30px 80px rgba(0,0,0,.5), inset 0 1px 1px rgba(255,255,255,.12);
+}
+.login-brand{display:flex;align-items:center;gap:12px;margin-bottom:18px}
+.login-brand svg{width:30px;height:30px;color:var(--accent)}
+.login-brand b{font-size:17px;font-weight:600;letter-spacing:.1em;display:block}
+.login-brand span{font-family:var(--mono);font-size:9px;letter-spacing:.26em;color:var(--dim)}
+.login-err{font-size:12.5px;color:var(--down);min-height:18px;margin:6px 0 2px}
+body.locked .app{visibility:hidden;pointer-events:none}
+
+/* ── Calendario de metas · Journal (portado de Spotter) ── */
+/* calendario mensual */
+.cal-nav{display:flex;align-items:center;gap:8px}
+.cal-nav button{
+  background:var(--glass);border:1px solid var(--line-soft);border-radius:7px;color:var(--dim);
+  width:26px;height:24px;cursor:pointer;font-size:13px;line-height:1;
+}
+.cal-nav button:hover{color:var(--txt);border-color:var(--line)}
+.ts-cal-head{display:grid;grid-template-columns:repeat(7,1fr) .8fr;gap:6px;margin-bottom:6px}
+.ts-cal-head span{font-family:var(--mono);font-size:9px;text-transform:uppercase;letter-spacing:.1em;color:var(--faint);text-align:center}
+.ts-cal-body{display:grid;grid-template-columns:repeat(7,1fr) .8fr;gap:6px}
+.ts-cell{
+  aspect-ratio:1;border:1px solid var(--line-soft);border-radius:8px;background:rgba(255,255,255,.02);
+  display:flex;flex-direction:column;padding:6px 7px;overflow:hidden;
+}
+.ts-cell.empty{border:none;background:transparent}
+.ts-cell .ts-d{font-family:var(--mono);font-size:10px;color:var(--faint)}
+.ts-cell .ts-pnl{font-family:var(--mono);font-size:12.5px;margin-top:auto;line-height:1}
+.ts-cell .ts-wl{font-family:var(--mono);font-size:9px;color:var(--faint);letter-spacing:.04em;margin-top:3px}
+.ts-pnl i{font-style:normal}
+.ts-pnl .ts-comp{display:none}
+.ts-cell.up{border-color:rgba(87,199,155,.35);background:rgba(87,199,155,.07)}
+.ts-cell.up .ts-pnl{color:var(--up)}
+.ts-cell.down{border-color:rgba(222,106,95,.35);background:rgba(222,106,95,.07)}
+.ts-cell.down .ts-pnl{color:var(--down)}
+.ts-cell.vio{box-shadow:inset 0 0 0 1px rgba(217,164,65,.5)}
+.ts-cell.today{box-shadow:0 0 0 1.5px var(--accent-deep)}
+.ts-cell.today.vio{box-shadow:0 0 0 1.5px var(--accent-deep), inset 0 0 0 1px rgba(217,164,65,.5)}
+.ts-week{
+  border-radius:8px;background:rgba(255,255,255,.03);display:flex;flex-direction:column;
+  align-items:center;justify-content:center;gap:3px;
+}
+.ts-week .ts-wk-pnl{font-family:var(--mono);font-size:11.5px}
+.ts-week.up .ts-wk-pnl{color:var(--up)}
+.ts-week.down .ts-wk-pnl{color:var(--down)}
+.ts-week .ts-wk-n{font-family:var(--mono);font-size:9px;color:var(--faint)}
+
+/* meta del día dentro de la celda */
+.ts-goal{font-family:var(--mono);font-size:9px;color:var(--faint);margin-top:auto;line-height:1.3}
+.ts-cell.fut{border-style:dashed;border-color:rgba(255,255,255,.07)}
+.ts-bar{height:2px;border-radius:2px;background:rgba(255,255,255,.08);margin-top:4px;overflow:hidden}
+.ts-bar i{display:block;height:100%;border-radius:2px}
+.cal-resumen{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:16px}
+.cal-r{border:1px solid var(--line-soft);border-radius:10px;padding:12px 14px;background:rgba(255,255,255,.02)}
+.cal-r .r-l{font-family:var(--mono);font-size:9px;letter-spacing:.16em;color:var(--faint);text-transform:uppercase}
+.cal-r .r-v{font-family:var(--mono);font-weight:300;font-size:19px;margin-top:5px}
+.cal-r .r-s{font-size:11px;color:var(--dim);margin-top:4px}
+.cal-pace{
+  margin-top:12px;padding:12px 14px;border-radius:10px;
+  border:1px solid var(--line-soft);border-left:2px solid var(--accent-deep);
+  background:var(--glass);font-size:13px;color:var(--dim);line-height:1.65;
+}
+.cal-pace b{color:var(--txt);font-weight:500}
+@media (max-width:760px){ .cal-resumen{grid-template-columns:repeat(2,1fr)} }
+
+/* ── Bootcamp · documentos ── */
+.bc-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+.bc-card{
+  border:1px solid var(--line-soft);border-radius:14px;background:var(--glass);
+  padding:20px;display:flex;flex-direction:column;gap:8px;
+  box-shadow:inset 0 1px 1px rgba(255,255,255,.08);transition:background .2s,border-color .2s;
+}
+.bc-card:hover{background:var(--glass-2);border-color:var(--line)}
+.bc-card .n{font-family:var(--mono);font-size:10px;letter-spacing:.18em;color:var(--accent)}
+.bc-card h3{font-size:16px;font-weight:600}
+.bc-card p{font-size:13px;color:var(--dim);line-height:1.6;flex:1}
+.bc-card .foot{display:flex;align-items:center;gap:12px;margin-top:8px}
+.bc-est{font-family:var(--mono);font-size:9.5px;letter-spacing:.16em}
+.bc-est.si{color:var(--up)}
+.bc-est.no{color:var(--faint)}
+.doc{max-width:880px}
+.doc-head{margin:4px 0 6px}
+.doc-head .n{font-family:var(--mono);font-size:10.5px;letter-spacing:.2em;color:var(--accent)}
+.doc-head h2{font-size:26px;font-weight:600;letter-spacing:-.02em;margin-top:8px}
+.doc-head>p{color:var(--dim);margin-top:6px;font-size:14.5px}
+.doc-sec{margin-top:28px}
+.doc-sec h3{font-size:16.5px;font-weight:600;margin-bottom:10px}
+.doc-sec p{font-size:14px;color:var(--dim);line-height:1.75;margin-bottom:12px}
+.doc-fig{border:1px solid var(--line-soft);border-radius:12px;background:rgba(255,255,255,.02);padding:18px 18px 8px;margin:16px 0 6px;overflow-x:auto}
+.doc-fig svg{width:100%;min-width:560px;height:auto;display:block}
+.doc-fig figcaption{font-family:var(--mono);font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--faint);text-align:center;padding:10px 0 6px}
+.doc-nav{display:flex;gap:10px;margin-top:30px;flex-wrap:wrap;align-items:center}
+@media (max-width:900px){ .bc-grid{grid-template-columns:1fr} }
+
+/* ── dashboard de la firma ── */
+.firm-head{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;margin-bottom:18px;flex-wrap:wrap}
+.firm-title{font-size:26px;font-weight:600;letter-spacing:-.02em;margin-top:6px}
+.frow{display:flex;justify-content:space-between;gap:14px;align-items:baseline;padding:10px 2px;border-bottom:1px solid var(--line-soft)}
+.frow:last-child{border-bottom:none}
+.frow .k{font-size:13px;color:var(--dim)}
+.frow .v{font-family:var(--mono);font-size:13.5px}
+.fteam{display:flex;flex-direction:column;gap:10px}
+.fmate{display:flex;gap:12px;align-items:flex-start;padding:10px 2px;border-bottom:1px solid var(--line-soft)}
+.fmate:last-child{border-bottom:none}
+.fmate .av{
+  width:32px;height:32px;border-radius:9px;flex:none;display:grid;place-items:center;
+  background:var(--glass-2);border:1px solid var(--line-soft);
+  font-family:var(--mono);font-size:11px;letter-spacing:.06em;color:var(--accent);
+}
+.fmate b{font-size:13px;display:block}
+.fmate span{font-family:var(--mono);font-size:9.5px;letter-spacing:.1em;color:var(--faint);display:block;margin-top:2px;line-height:1.6}
+.fmate .me{color:var(--accent)}
+
+/* ── mesa de aprobaciones ── */
+.tix{border-radius:14px;border:1px solid var(--line-soft);background:var(--glass);padding:18px;margin-bottom:12px}
+.tix-head{display:flex;gap:12px;align-items:baseline;flex-wrap:wrap}
+.tix-head b{font-family:var(--mono);font-size:13.5px;letter-spacing:.02em}
+.tix-est{font-family:var(--mono);font-size:9.5px;letter-spacing:.18em;padding:4px 10px;border-radius:99px;border:1px solid var(--line)}
+.tix-est.ok{color:var(--up);border-color:rgba(87,199,155,.4)}
+.tix-est.no{color:var(--down);border-color:rgba(222,106,95,.4)}
+.tix-est.run{color:var(--warn);border-color:rgba(217,164,65,.35)}
+.tix-tesis{font-size:13px;color:var(--dim);margin:8px 0 12px;line-height:1.65}
+.gates{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.gate{
+  border:1px solid var(--line-soft);border-radius:10px;padding:10px 12px;
+  display:flex;flex-direction:column;gap:4px;background:rgba(255,255,255,.02);
+}
+.gate .g-t{font-size:11px;font-weight:600}
+.gate .g-s{font-family:var(--mono);font-size:9px;letter-spacing:.08em;color:var(--faint)}
+.gate.done{border-color:rgba(87,199,155,.35)}
+.gate.done .g-s{color:var(--up)}
+.gate button{
+  margin-top:4px;font-size:10.5px;font-weight:600;letter-spacing:.06em;
+  padding:6px 8px;border-radius:7px;border:1px solid var(--line);
+  background:var(--glass-2);color:var(--txt);cursor:pointer;
+}
+.gate button:disabled{opacity:.35;cursor:default}
+.tix-foot{display:flex;gap:10px;margin-top:12px;flex-wrap:wrap}
+@media (max-width:760px){ .gates{grid-template-columns:repeat(2,1fr)} }
+
+.duties{
+  border:1px solid var(--line-soft);border-radius:10px;background:var(--glass);
+  padding:14px 16px;margin-bottom:12px;
+}
+.duties-h{margin-bottom:8px}
+.duties ul{list-style:none;display:flex;flex-direction:column;gap:6px}
+.duties li{
+  font-size:13px;color:var(--dim);line-height:1.55;padding-left:16px;position:relative;
+}
+.duties li::before{content:'—';position:absolute;left:0;color:var(--accent-deep)}
+.f-row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:12px}
+.f-full{margin-bottom:12px}
+.m-foot{display:flex;justify-content:flex-end;gap:10px;margin-top:18px}
+
+/* segmented */
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:9px;overflow:hidden}
+.seg button{
+  font-family:var(--mono);font-size:11px;letter-spacing:.08em;padding:8px 14px;color:var(--dim);
+  transition:background .15s,color .15s;text-transform:uppercase;
+}
+.seg button.on{background:var(--glass-2);color:var(--txt)}
+
+/* study */
+.mod-head{display:flex;align-items:center;gap:14px;width:100%;text-align:left;padding:16px 18px}
+.mod-head .mn{font-family:var(--mono);font-size:11px;color:var(--accent);letter-spacing:.14em;flex:0 0 44px}
+.mod-head b{font-size:13.5px;font-weight:600}
+.mod-head span{display:block;font-size:11.5px;color:var(--dim);margin-top:1px}
+.mod-head .pct{margin-left:auto;font-family:var(--mono);font-size:11px;color:var(--dim)}
+.mod-head .chev{width:14px;height:14px;stroke:var(--faint);transition:transform .2s;flex:0 0 auto}
+.mod.open .chev{transform:rotate(180deg)}
+.mod-body{display:none;padding:0 18px 16px}
+.mod.open .mod-body{display:block}
+.lesson{
+  display:flex;gap:12px;align-items:flex-start;
+  padding:12px 14px;border-radius:10px;border:1px solid var(--line-soft);
+  background:rgba(255,255,255,.015);margin-top:8px;
+}
+.lesson .lx{flex:1;min-width:0}
+.lesson b{font-size:12.5px;font-weight:600;display:block}
+.lesson p{font-size:12px;color:var(--dim);margin-top:3px;line-height:1.5}
+.lesson .lchk{flex:0 0 auto;margin-top:2px}
+
+/* rules view */
+.rule-quote{
+  border-left:2px solid var(--accent-deep);padding:4px 0 4px 18px;margin:6px 0 0;
+  font-size:15px;color:var(--txt);line-height:1.6;font-weight:500;
+}
+.nn{padding:16px 18px}
+.nn b{font-size:13.5px;font-weight:600;display:block}
+.nn p{font-size:12px;color:var(--dim);margin-top:4px;line-height:1.5}
+.nn .micro{color:var(--down);font-size:9px;display:block;margin-bottom:8px}
+
+/* snowball */
+.pos-card{padding:18px}
+.pos-top{display:flex;align-items:flex-start;gap:12px}
+.pos-top b{font-size:14px;font-weight:600;display:block}
+.pos-top .micro{display:block;margin-top:2px;font-size:9px}
+.pos-val{margin-left:auto;text-align:right}
+.pos-val .v{font-family:var(--mono);font-size:19px}
+.pos-val .r{font-family:var(--mono);font-size:11px;margin-top:2px}
+.pos-meta{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:14px;padding-top:12px;border-top:1px solid var(--line-soft)}
+.pos-meta div span{font-family:var(--mono);font-size:9px;letter-spacing:.14em;color:var(--faint);text-transform:uppercase;display:block}
+.pos-meta div b{font-family:var(--mono);font-size:12px;font-weight:500;display:block;margin-top:3px}
+
+/* pipeline */
+.pipe{display:flex;gap:6px;margin-top:12px}
+.pipe i{flex:1;height:4px;border-radius:99px;background:rgba(255,255,255,.07)}
+.pipe i.on{background:var(--accent-deep)}
+.pipe i.now{background:var(--accent)}
+
+/* empty state */
+.empty{
+  text-align:center;padding:46px 20px;color:var(--dim);
+}
+.empty svg{width:26px;height:26px;stroke:var(--faint);margin-bottom:12px}
+.empty b{display:block;font-size:13.5px;color:var(--txt);font-weight:600;margin-bottom:4px}
+.empty p{font-size:12.5px;max-width:380px;margin:0 auto 16px}
+
+/* toast */
+#toast{
+  position:fixed;bottom:26px;left:50%;transform:translateX(-50%) translateY(20px);
+  z-index:80;opacity:0;pointer-events:none;
+  background:#0E1520;border:1px solid var(--line);border-radius:10px;
+  padding:11px 18px;font-family:var(--mono);font-size:12px;letter-spacing:.04em;
+  transition:opacity .25s,transform .25s;
+}
+#toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
+
+/* banner de gestión */
+.g-banner{
+  border-radius:12px;padding:14px 18px;margin-top:14px;
+  border:1px solid var(--line);font-size:13px;color:var(--dim);
+  display:flex;gap:12px;align-items:center;
+}
+.g-banner b{color:var(--txt)}
+.g-banner.win{border-color:rgba(87,199,155,.4);background:rgba(87,199,155,.05)}
+.g-banner.risk{border-color:rgba(217,164,65,.4);background:rgba(217,164,65,.05)}
+.g-banner.stop{border-color:rgba(222,106,95,.4);background:rgba(222,106,95,.05)}
+
+canvas{display:block;width:100%}
+
+#menuBtn{display:none}
+/* responsive */
+@media (max-width:960px){
+  .g4,.g5{grid-template-columns:1fr 1fr}
+  .g3{grid-template-columns:1fr}
+  .g2{grid-template-columns:1fr}
+  .score-wrap{flex-direction:column;align-items:flex-start}
+  .rail{position:fixed;left:0;top:0;bottom:0;z-index:50;transform:translateX(-100%);transition:transform .25s}
+  .rail.open{transform:none}
+  #menuBtn{display:inline-flex}
+  .topbar{padding:0 16px}
+  .content{padding:20px 16px 60px}
+  .top-date{display:none}
+}
+
+/* ── correcciones de auditoría · móvil y movimiento ── */
+@media (max-width:760px){
+  .ts-cal-head,.ts-cal-body{grid-template-columns:repeat(7,1fr)}
+  .ts-cal-head span:last-child,.ts-week{display:none}
+  .ts-cell{aspect-ratio:auto;min-height:38px;padding:3px 2px}
+  .ts-cell .ts-wl,.ts-cell .ts-bar{display:none}
+  .ts-cell .ts-pnl{font-size:9px;letter-spacing:-.02em}
+  .ts-pnl .ts-full{display:none}
+  .ts-pnl .ts-comp{display:inline}
+}
+@media (max-width:640px){
+  .f-row,.f-row3{grid-template-columns:1fr 1fr}
+  .modal{padding:20px 16px}
+  .top-clock{display:none}
+  .sess-pill{font-size:9.5px;letter-spacing:.08em;padding:6px 10px}
+  .topbar>div:not(.top-right){min-width:0;overflow:hidden}
+  .topbar h1{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation:none!important;transition:none!important}
+}
+</style>
+</head>
+<body>
+
+<div class="app">
+
+  <!-- ══════════ RAIL ══════════ -->
+  <aside class="rail" id="rail">
+    <div class="rail-brand">
+      <div>
+        <b>NORTHPOINT</b>
+        <span>TERMINAL · INTERNO</span>
+      </div>
+    </div>
+
+    <nav class="rail-group">
+      <div class="micro">Northpoint</div>
+      <a class="item on" href="#dashboard" data-view="dashboard">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="1.6"><path d="M3 20h18"/><rect x="4.5" y="10" width="4" height="10" rx="1"/><rect x="10" y="5.5" width="4" height="14.5" rx="1"/><rect x="15.5" y="13" width="4" height="7" rx="1"/></svg>
+        Dashboard
+      </a>
+    </nav>
+
+    <nav class="rail-group">
+      <div class="micro">Mesa de futuros</div>
+      <a class="item" href="#mesa" data-view="mesa">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="1.6"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>
+        Mi mesa
+      </a>
+      <a class="item" href="#sesion" data-view="sesion">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg>
+        Sesión <span class="bdg" id="bdgTrades"></span>
+      </a>
+      <a class="item" href="#aprobaciones" data-view="aprobaciones">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="1.6"><path d="M9 12.5l2.2 2.2L15.5 10"/><circle cx="12" cy="12" r="9"/></svg>
+        Aprobaciones <span class="bdg" id="bdgTix"></span>
+      </a>
+      <a class="item" href="#journal" data-view="journal">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="1.6"><path d="M4 19V5a2 2 0 0 1 2-2h13v18H6a2 2 0 0 1-2-2z"/><path d="M8 7h7M8 11h7"/></svg>
+        Journal
+      </a>
+      <a class="item" href="#estudio" data-view="estudio">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="1.6"><path d="M12 4 2 8.5 12 13l10-4.5L12 4z"/><path d="M6 10.5V16c0 1.5 2.7 3 6 3s6-1.5 6-3v-5.5"/></svg>
+        Bootcamp <span class="bdg" id="bdgStudy"></span>
+      </a>
+      <a class="item" href="#reglas" data-view="reglas">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="1.6"><path d="M12 3l8 3v5c0 5-3.4 8.6-8 10-4.6-1.4-8-5-8-10V6l8-3z"/></svg>
+        Reglas
+      </a>
+    </nav>
+
+    <nav class="rail-group">
+      <div class="micro">Snowball Investments</div>
+      <a class="item" href="#posiciones" data-view="posiciones">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><path d="M12 3v18M3.5 7.5l17 9M3.5 16.5l17-9"/></svg>
+        Posiciones
+      </a>
+      <a class="item" href="#clientes" data-view="clientes">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="1.6"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.8-3.4 3.4-5.5 6.5-5.5s5.7 2.1 6.5 5.5"/><path d="M16 4.8a3.5 3.5 0 0 1 0 6.4M18.5 14.7c1.7.9 2.7 2.8 3 5.3"/></svg>
+        Onboarding
+      </a>
+      <a class="item" href="#calculadora" data-view="calculadora">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="1.6"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 7h6M9 12h.01M12 12h.01M15 12h.01M9 16h.01M12 16h.01M15 16h.01"/></svg>
+        Calculadora
+      </a>
+    </nav>
+
+    <div class="rail-foot">
+      <button class="rail-user" id="btnSettings" title="Ajustes">
+        <div class="avatar" id="uAvatar">—</div>
+        <div>
+          <b id="uName">Operador</b>
+          <span id="uRole">MESA · NP-0XX</span>
+        </div>
+      </button>
+      <a class="rail-exit" href="index.html">← NORTHPOINT.IO</a>
+    </div>
+  </aside>
+
+  <!-- ══════════ MAIN ══════════ -->
+  <div class="main">
+    <header class="topbar">
+      <button class="btn-icon" id="menuBtn" aria-label="Menú">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+      </button>
+      <div>
+        <span class="crumb" id="crumb">MESA DE FUTUROS</span>
+        <h1 id="viewTitle">Dashboard</h1>
+      </div>
+      <div class="top-right">
+        <span class="top-date" id="topDate"></span>
+        <span class="sess-pill" id="sessPill"><span class="dot"></span><span id="sessTxt">—</span></span>
+        <span class="top-clock" id="topClock">--:--:--</span>
+      </div>
+    </header>
+
+    <main class="content" id="content">
+
+      <!-- ════ DASHBOARD ════ -->
+      <!-- ════ DASHBOARD DE LA FIRMA ════ -->
+      <section class="view on" id="v-dashboard">
+        <div class="firm-head">
+          <div>
+            <div class="micro">Northpoint Capital Management · vista de la firma</div>
+            <h2 class="firm-title">Estado del fondo</h2>
+          </div>
+          <span class="micro" id="firmDate"></span>
+        </div>
+
+        <div class="grid g4" id="firmKpis"></div>
+
+        <div class="grid g2 mt">
+          <div class="panel">
+            <div class="p-head"><h3>Mesa de futuros</h3><span class="micro">Departamento 01 · diario</span></div>
+            <div class="p-body" id="firmMesa"></div>
+          </div>
+          <div class="panel">
+            <div class="p-head"><h3>Snowball Investments</h3><span class="micro">Departamento 02 · largo plazo</span></div>
+            <div class="p-body" id="firmSnow"></div>
+          </div>
+        </div>
+
+        <div class="grid g2 mt">
+          <div class="panel">
+            <div class="p-head"><h3>Mesa de aprobaciones</h3><span class="micro" id="firmTixSub"></span></div>
+            <div class="p-body" id="firmTix"></div>
+          </div>
+          <div class="panel">
+            <div class="p-head"><h3>Socios de la firma</h3><span class="micro">Cargos y deberes</span></div>
+            <div class="p-body" id="firmTeam"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ════ MI MESA (desempeño del operador) ════ -->
+      <section class="view" id="v-mesa">
+        <div id="dashAlert"></div>
+        <div class="grid g5" id="dashKpis"></div>
+
+        <div class="grid g2 mt">
+          <div class="panel">
+            <div class="p-head"><h3>Northpoint Score</h3><span class="micro">motor conductual Northpoint</span></div>
+            <div class="p-body"><div id="scoreBox"></div></div>
+          </div>
+          <div class="panel">
+            <div class="p-head"><h3>Curva de capital</h3><span class="micro" id="eqLabel">P&L acumulado</span></div>
+            <div class="p-body">
+              <canvas id="eqCanvas" height="180"></canvas>
+              <div id="eqEmpty"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="grid g2 mt">
+          <div class="panel">
+            <div class="p-head"><h3>Estado de la sesión</h3><span class="micro" id="dashSessDate"></span></div>
+            <div class="p-body" id="dashSession"></div>
+          </div>
+          <div class="panel">
+            <div class="p-head"><h3>Estadística de la mesa</h3><span class="micro" id="statRange"></span></div>
+            <div class="p-body" id="dashStats"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ════ SESIÓN ════ -->
+      <section class="view" id="v-sesion">
+        <div class="panel">
+          <div class="p-body" style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
+            <div>
+              <div class="micro">Protocolo del día</div>
+              <div class="mono" id="sesFecha" style="font-size:16px;margin-top:4px"></div>
+            </div>
+            <div style="margin-left:auto;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+              <span class="tag ac" id="sesVentana">VENTANA 7:00 – 8:30 AM</span>
+              <span class="tag" id="sesProgreso">0 / 13</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="grid g2 mt">
+          <div>
+            <div class="panel">
+              <div class="p-head"><h3>01 · Pre-market</h3><span class="micro">Desde 7:00 AM</span></div>
+              <div class="p-body" id="preList"></div>
+            </div>
+            <div class="panel mt">
+              <div class="p-head"><h3>03 · Gestión</h3><span class="micro">2 trades máx · estricto</span></div>
+              <div class="p-body">
+                <div id="gestState"></div>
+                <div class="mt" style="display:flex;gap:10px;flex-wrap:wrap">
+                  <button class="btn primary" id="btnTradeFromSes">+ Registrar trade</button>
+                  <button class="btn" data-goto="journal">Ver journal</button>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div>
+            <div class="panel">
+              <div class="p-head"><h3>02 · Validador de setup</h3><span class="micro">Todas o no hay trade</span></div>
+              <div class="p-body">
+                <div id="setupList"></div>
+                <div id="setupVerdict"></div>
+              </div>
+            </div>
+            <div class="panel mt">
+              <div class="p-head"><h3>04 · Post-market</h3><span class="micro">Cierre operativo</span></div>
+              <div class="p-body">
+                <div id="postList"></div>
+                <button class="btn mt" id="btnReport">Generar reporte al equipo</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ════ JOURNAL ════ -->
+      <section class="view" id="v-journal">
+        <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:14px">
+          <div class="seg" id="jSeg">
+            <button data-r="mes" class="on">Mes</button>
+            <button data-r="todo">Todo</button>
+          </div>
+          <span class="micro" id="jResumen"></span>
+          <div style="margin-left:auto;display:flex;gap:10px">
+            <button class="btn" id="btnExport">Exportar</button>
+            <button class="btn primary" id="btnTrade">+ Registrar trade</button>
+          </div>
+        </div>
+        <div class="grid g4" id="jKpis"></div>
+
+        <div class="panel mt">
+          <div class="p-body" style="padding:6px 6px;overflow-x:auto">
+            <table id="jTable"></table>
+            <div id="jEmpty"></div>
+          </div>
+        </div>
+
+        <div class="panel mt">
+          <div class="p-head">
+            <h3 id="calTitulo">Calendario · objetivos</h3>
+            <div class="cal-nav">
+              <span class="micro" id="calSub"></span>
+              <button id="calPrev" title="Mes anterior">‹</button>
+              <button id="calHoy" title="Mes actual" style="width:auto;padding:0 9px;font-size:10px;letter-spacing:.1em">HOY</button>
+              <button id="calNext" title="Mes siguiente">›</button>
+            </div>
+          </div>
+          <div class="p-body">
+            <div id="calGrid"></div>
+            <div class="cal-resumen" id="calResumen"></div>
+            <div class="cal-pace" id="calPace"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ════ MESA DE APROBACIONES ════ -->
+      <section class="view" id="v-aprobaciones">
+        <div class="panel">
+          <div class="p-body">
+            <div class="micro">Cómo entra un trade a la mesa</div>
+            <p style="font-size:13px;color:var(--dim);margin-top:8px;line-height:1.7">
+              Una tesis se propone, y cada socio firma la puerta de su cargo:
+              <b style="color:var(--txt)">Mateo</b> valida research (NP-030) y riesgo (NP-020) ·
+              <b style="color:var(--txt)">André</b> valida datos (NP-040) ·
+              <b style="color:var(--txt)">Pablo</b> aprueba como CIO (NP-001) y ejecuta como PM (NP-010).
+              Con las cuatro firmas, la tesis queda APROBADA y se ejecuta y registra en el Journal.
+            </p>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px;margin:16px 0 12px;flex-wrap:wrap">
+          <span class="micro">Tesis de la mesa</span>
+          <span class="micro" id="cloudPill" style="color:var(--faint)">NUBE · NO CONECTADA — ESTADO LOCAL</span>
+          <button class="btn primary sm" id="btnTix" style="margin-left:auto">+ Nueva tesis</button>
+        </div>
+        <div id="tixList"></div>
+      </section>
+
+      <!-- ════ ESTUDIO ════ -->
+      <section class="view" id="v-estudio">
+        <div class="grid g3">
+          <div class="panel kpi"><div class="k-l">Progreso del bootcamp</div><div class="k-v" id="stPct">0%</div><div class="bar"><i id="stBar" style="width:0%"></i></div></div>
+          <div class="panel kpi"><div class="k-l">Lecciones completadas</div><div class="k-v" id="stDone">0</div><div class="k-s" id="stTotal"></div></div>
+          <div class="panel kpi"><div class="k-l">Revisiones semanales</div><div class="k-v" id="stRev">0</div><div class="k-s">El error documentado es el activo más valioso</div></div>
+        </div>
+        <div class="mt2" id="mods"></div>
+        <div class="mt2" id="lessonView" hidden></div>
+
+        <div class="panel mt2" id="revBlock">
+          <div class="p-head"><h3>Revisión semanal de proceso</h3><span class="micro">P-06 · Mejora continua</span></div>
+          <div class="p-body">
+            <div class="f-row">
+              <div><label>Qué salió mal esta semana</label><textarea id="rvMal" rows="3" placeholder="Proceso, no personas."></textarea></div>
+              <div><label>Qué salió bien</label><textarea id="rvBien" rows="3" placeholder="Qué repetir."></textarea></div>
+            </div>
+            <div class="f-full"><label>Ajuste al proceso para la próxima semana</label><input id="rvFix" placeholder="Un solo ajuste, concreto y medible."></div>
+            <button class="btn primary" id="btnRev">Guardar revisión</button>
+            <div class="mt" id="revList"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ════ REGLAS ════ -->
+      <section class="view" id="v-reglas">
+        <div class="panel">
+          <div class="p-body">
+            <div class="micro">Principio rector</div>
+            <p class="rule-quote">Ninguna regla de Northpoint tiene «excepción creativa». Cuando una regla parece inconveniente, probablemente es exactamente cuando más se necesita. La disciplina no se aplica cuando es cómodo. Se aplica siempre.</p>
+          </div>
+        </div>
+
+        <div class="mt2 micro" style="margin-bottom:10px">No negociables</div>
+        <div class="grid g4">
+          <div class="panel nn"><span class="micro">NN — 01</span><b>Nunca minis</b><p>Operación en minis está prohibida. Sin excepciones. El Terminal la marca como violación.</p></div>
+          <div class="panel nn"><span class="micro">NN — 02</span><b>Solo la ventana 7:00 – 8:30</b><p>Lunes a viernes. Fuera de esta ventana no se opera. Punto.</p></div>
+          <div class="panel nn"><span class="micro">NN — 03</span><b>Nada abierto después de 8:30</b><p>Toda posición debe estar cerrada antes de las 8:30 AM.</p></div>
+          <div class="panel nn"><span class="micro">NN — 04</span><b>Sin setup, no se opera</b><p>Si el checklist no da setup válido, el mejor trade del día es no operar.</p></div>
+        </div>
+
+        <div class="grid g2 mt2">
+          <div class="panel">
+            <div class="p-head"><h3>Gestión de la sesión</h3><span class="micro">Formato de ejecución</span></div>
+            <div class="p-body">
+              <div class="lesson"><div class="lx"><b>2 trades máximo, estricto</b><p>Máximo dos operaciones por sesión. Sin excepciones.</p></div></div>
+              <div class="lesson"><div class="lx"><b>Se gana el trade 1 → se cierra la plataforma</b><p>Día terminado. Al cerrar el primer trade en ganancia, se cierra la plataforma.</p></div></div>
+              <div class="lesson"><div class="lx"><b>Se pierde el trade 1 → un solo intento más</b><p>ÚNICAMENTE si aparece un setup válido nuevo y completo. Nunca revenge.</p></div></div>
+            </div>
+          </div>
+          <div class="panel">
+            <div class="p-head"><h3>Terminación inmediata</h3><span class="micro">Código de conducta</span></div>
+            <div class="p-body" id="termList"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ════ POSICIONES ════ -->
+      <section class="view" id="v-posiciones">
+        <div class="grid g4" id="posKpis"></div>
+        <div style="display:flex;align-items:center;gap:12px;margin:18px 0 12px">
+          <span class="micro">Posiciones del programa</span>
+          <button class="btn primary sm" id="btnPos" style="margin-left:auto">+ Nueva posición</button>
+        </div>
+        <div class="grid g2" id="posList"></div>
+        <p class="mt2" style="font-size:12px;line-height:1.7;color:var(--faint);max-width:70ch">
+          Los retornos objetivo son proyecciones basadas en el historial de las estrategias de Northpoint y no constituyen garantía de rendimiento futuro. Las inversiones en fondos de cobertura implican riesgos significativos, incluida la posible pérdida del capital invertido.
+        </p>
+      </section>
+
+      <!-- ════ ONBOARDING ════ -->
+      <section class="view" id="v-clientes">
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px">
+          <span class="micro">Pipeline de clientes Snowball · 6 puertas</span>
+          <button class="btn primary sm" id="btnProspect" style="margin-left:auto">+ Nuevo prospecto</button>
+        </div>
+        <div class="grid g2" id="prosList"></div>
+      </section>
+
+      <!-- ════ CALCULADORA ════ -->
+      <section class="view" id="v-calculadora">
+        <div class="grid g2">
+          <div class="panel">
+            <div class="p-head"><h3>Proyección Snowball</h3><span class="micro">Interés compuesto anual</span></div>
+            <div class="p-body">
+              <div class="f-row3">
+                <div><label>Capital inicial USD</label><input type="number" id="cCap" value="250000" min="0" step="10000"></div>
+                <div><label>Retorno anual %</label><input type="number" id="cTasa" value="19" min="0" max="60" step="0.5"></div>
+                <div><label>Aporte anual USD</label><input type="number" id="cAporte" value="0" min="0" step="5000"></div>
+              </div>
+              <div class="f-full">
+                <label>Horizonte: <span class="mono" id="cAniosLbl">20</span> años</label>
+                <input type="range" id="cAnios" min="3" max="30" value="20" style="padding:0">
+              </div>
+              <div id="cNivel" class="mt"></div>
+            </div>
+          </div>
+          <div class="panel">
+            <div class="p-head"><h3>La bola de nieve</h3><span class="micro" id="cFinal"></span></div>
+            <div class="p-body">
+              <canvas id="cCanvas" height="190"></canvas>
+              <div class="p-body" style="padding:14px 0 0"><table id="cTable"></table></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+</div>
+
+<!-- ══════════ MODALES ══════════ -->
+<div class="overlay" id="ovTrade">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="tmTitle">
+    <h3 id="tmTitle">Registrar trade</h3>
+    <p class="sub">Screenshot, setup, resultado y análisis. Todo trade se documenta.</p>
+    <div class="f-row3">
+      <div><label>Fecha</label><input type="date" id="tFecha"></div>
+      <div><label>Hora entrada</label><input type="time" id="tHora" value="07:35"></div>
+      <div><label>Instrumento</label>
+        <select id="tSym">
+          <option>NQ</option><option>ES</option><option>YM</option><option>RTY</option>
+          <option>GC</option><option>CL</option><option>MNQ</option><option>MES</option>
+        </select>
+      </div>
+    </div>
+    <div class="f-row3">
+      <div><label>Dirección</label><select id="tDir"><option value="L">Long</option><option value="S">Short</option></select></div>
+      <div><label>Contratos</label><input type="number" id="tQty" value="1" min="1" step="1"></div>
+      <div><label>Setup del checklist</label><select id="tSetup"><option value="1">Válido · completo</option><option value="0">Incompleto</option></select></div>
+    </div>
+    <div class="f-row3">
+      <div><label>Entrada</label><input type="number" id="tIn" step="0.25" placeholder="0.00"></div>
+      <div><label>Salida</label><input type="number" id="tOut" step="0.25" placeholder="0.00"></div>
+      <div><label>P&L USD <span style="color:var(--faint)">(auto)</span></label><input type="number" id="tPnl" step="1" placeholder="auto"></div>
+    </div>
+    <div class="f-full"><label>Análisis / lección</label><textarea id="tNotas" rows="2" placeholder="Qué vio la mesa, qué se ejecutó, qué se aprende."></textarea></div>
+    <div class="m-foot">
+      <button class="btn" data-close>Cancelar</button>
+      <button class="btn primary" id="tSave">Guardar trade</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="ovPos">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="pmTitle">
+    <h3 id="pmTitle">Nueva posición Snowball</h3>
+    <p class="sub">El nivel se asigna por capital según el plan: Seed 50k · Core 250k · Summit 1M.</p>
+    <div class="f-row">
+      <div><label>Cliente / cuenta</label><input id="pNombre" placeholder="Familia MR · LP-004"></div>
+      <div><label>Fecha de entrada</label><input type="date" id="pFecha"></div>
+    </div>
+    <div class="f-row">
+      <div><label>Capital suscrito USD</label><input type="number" id="pCap" value="250000" min="0" step="10000"></div>
+      <div><label>Valor actual USD</label><input type="number" id="pVal" placeholder="= capital si es nueva"></div>
+    </div>
+    <div class="f-full"><label>Notas / mandato</label><input id="pNotas" placeholder="Perfil de riesgo, acuerdos, restricciones"></div>
+    <div class="m-foot">
+      <button class="btn" data-close>Cancelar</button>
+      <button class="btn primary" id="pSave">Guardar posición</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="ovSet">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="ovSet-t">
+    <h3 id="ovSet-t">Perfil del socio</h3>
+    <p class="sub">Cargos y deberes asignados por la firma. La identidad la define tu acceso.</p>
+    <div id="sIdent"></div>
+    <p class="sub" style="margin:4px 0 14px">Capital y metas vienen por default del plan Northpoint: cuenta base $250,000 · mes $30,000 → quincena $15,000 · semana $7,500 · día $1,500.</p>
+    <div style="display:flex;gap:10px;flex-wrap:wrap">
+      <button class="btn sm" id="btnBackup">Descargar respaldo</button>
+      <button class="btn sm" id="btnDemo">Cargar demo (sintético)</button>
+      <button class="btn sm danger" id="btnWipe">Borrar todo</button>
+    </div>
+    <div class="m-foot">
+      <button class="btn danger" id="btnLogout">Cerrar sesión</button>
+      <button class="btn primary" data-close>Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="ovPro">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="ovPro-t">
+    <h3 id="ovPro-t">Nuevo prospecto Snowball</h3>
+    <p class="sub">Seis puertas antes del portafolio. Ninguna se salta.</p>
+    <div class="f-row">
+      <div><label>Nombre</label><input id="prNombre" placeholder="Prospecto"></div>
+      <div><label>Capital estimado USD</label><input type="number" id="prCap" value="250000" step="10000"></div>
+    </div>
+    <div class="m-foot">
+      <button class="btn" data-close>Cancelar</button>
+      <button class="btn primary" id="prSave">Agregar</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="ovReport">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="ovReport-t">
+    <h3 id="ovReport-t">Reporte al equipo</h3>
+    <p class="sub">Post-market · resultado del día y estado de la cuenta.</p>
+    <textarea id="repText" rows="12" class="mono" style="font-size:12px;line-height:1.7"></textarea>
+    <div class="m-foot">
+      <button class="btn" data-close>Cerrar</button>
+      <button class="btn primary" id="repCopy">Copiar al portapapeles</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="ovTix">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="ovTix-t">
+    <h3 id="ovTix-t">Nueva tesis de trade</h3>
+    <p class="sub">Propón la operación. Entra a la mesa y cada cargo firma su puerta.</p>
+    <div class="f-row3">
+      <div><label>Instrumento</label><select id="xSym"><option>NQ</option><option>ES</option><option>YM</option><option>RTY</option><option>GC</option><option>CL</option></select></div>
+      <div><label>Dirección</label><select id="xDir"><option value="L">Long</option><option value="S">Short</option></select></div>
+      <div><label>Fecha</label><input type="date" id="xFecha"></div>
+    </div>
+    <div class="f-full"><label>Tesis — liquidez, estructura y por qué</label><textarea id="xTesis" rows="4" placeholder="Targets overnight sin tomar en 21,450 · break del ORB apunta a PDH · FVG 5m + EMA a favor…"></textarea></div>
+    <div class="m-foot">
+      <button class="btn" data-close>Cancelar</button>
+      <button class="btn primary" id="xSave">Proponer a la mesa</button>
+    </div>
+  </div>
+</div>
+
+<div class="login" id="login">
+  <div class="login-card">
+    <div class="login-brand">
+      <div>
+        <b>NORTHPOINT</b>
+        <span>CAPITAL MANAGEMENT · TERMINAL</span>
+      </div>
+    </div>
+    <p class="sub" style="margin-bottom:16px">Acceso restringido a socios de la firma.</p>
+    <div class="f-full"><label>Usuario</label><input id="lgUser" autocomplete="username" placeholder="usuario" autocapitalize="none"></div>
+    <div class="f-full"><label>Clave</label><input id="lgPass" type="password" autocomplete="current-password" placeholder="••••••••"></div>
+    <div id="lgErr" class="login-err"></div>
+    <button class="btn primary" id="lgGo" style="width:100%;margin-top:6px">Entrar a la mesa</button>
+    <p class="micro" style="margin-top:18px;text-align:center;font-size:9px;letter-spacing:.2em">CONFIDENCIAL · NORTHPOINT.IO</p>
+  </div>
+</div>
+
+<div id="toast" role="status" aria-live="polite"></div>
+
+<script>
+/* ════════════════════════════════════════════════════════════
+   NORTHPOINT TERMINAL · estado y utilidades
+   ════════════════════════════════════════════════════════════ */
+const LS = 'northpoint_terminal_v3';
+const $  = s => document.querySelector(s);
+const $$ = s => [...document.querySelectorAll(s)];
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+const POINT_VALUE = { NQ:20, ES:50, YM:5, RTY:50, GC:100, CL:1000, MNQ:2, MES:5, MYM:0.5, M2K:5 };
+const MICROS = ['MNQ','MES','MYM','M2K'];
+
+/* Roster de la firma — cargos y deberes (Handbook cap. 02; NP-060 = mesa, cap. 03) */
+const ROLES = {
+  'NP-001': { t:'Chief Investment Officer', d:[
+    'Responsable final de todas las decisiones de inversión del fondo.',
+    'Define la estrategia macroeconómica y los mandatos de cada estrategia.',
+    'Aprueba o rechaza toda tesis de inversión antes de ejecución.',
+    'Responde ante el comité de inversiones y los limited partners.']},
+  'NP-010': { t:'Portfolio Manager', d:[
+    'Gestión activa de portafolios dentro de los mandatos aprobados.',
+    'Construcción y monitoreo de posiciones largas y cortas.',
+    'Comunicación periódica con el CIO sobre exposiciones y riesgo.',
+    'Documenta cada decisión de posición con tesis escrita.']},
+  'NP-020': { t:'Chief Risk Officer', d:[
+    'Monitoreo en tiempo real del drawdown máximo permitido por estrategia.',
+    'Emite alertas de riesgo con autoridad para detener operaciones.',
+    'Reporte diario al CIO sobre posiciones y exposición de mercado.',
+    'Define y actualiza el Risk Management Framework.']},
+  'NP-030': { t:'Research Analyst', d:[
+    'Investigación fundamental y cuantitativa de activos y sectores.',
+    'Produce memos de inversión con evidencia documentada.',
+    'Monitorea earnings, macro data y eventos catalizadores.',
+    'Da seguimiento a posiciones existentes y alerta cambios de tesis.']},
+  'NP-040': { t:'Quantitative Analyst', d:[
+    'Desarrollo y backtesting de modelos cuantitativos de inversión.',
+    'Análisis estadístico de patrones conductuales en datos de mercado.',
+    'Construye el Northpoint Score y métricas de behavioral intelligence.',
+    'Mantiene los sistemas de datos y pipelines de información.']},
+  'NP-050': { t:'Chief Operating Officer', d:[
+    'Gestión de operaciones diarias, compliance y relación con brokers.',
+    'Coordina prime brokerage, custodios y administradores del fondo.',
+    'Supervisa client relations e investor relations.',
+    'Implementa protocolos operativos y auditorías internas.']},
+  'NP-060': { t:'Trader · Mesa de Futuros', d:[
+    'Ejecuta el protocolo diario completo: pre-market 7:00, setup y gestión.',
+    'Opera únicamente la ventana 7:00–8:30, máximo dos trades por sesión.',
+    'Registra cada operación con screenshot, setup, resultado y análisis.',
+    'Envía el reporte del día al equipo y responde por su Score conductual.']},
+};
+
+/* ── Equipo NORTHPOINT · credenciales y cargos ── */
+const USERS = {
+  pablo: { pass:'NP-KEY-01', nombre:'Pablo',  roles:['NP-001','NP-010'] },
+  mateo: { pass:'NP-KEY-02', nombre:'Mateo',  roles:['NP-020','NP-030'] },
+  andre: { pass:'NP-KEY-03', nombre:'André',  roles:['NP-040','NP-050'] },
+};
+/* puertas de aprobación de un trade → rol que firma */
+const GATES = [
+  { k:'research', t:'Research & validación', rol:'NP-030' },
+  { k:'riesgo',   t:'Revisión de riesgo',    rol:'NP-020' },
+  { k:'quant',    t:'Validación cuantitativa',rol:'NP-040' },
+  { k:'cio',      t:'Aprobación CIO',        rol:'NP-001' },
+];
+const userDe = u => USERS[u] || null;
+const rolDeUsuario = (u, rol) => !!(USERS[u] && USERS[u].roles.includes(rol));
+
+const DEFAULTS = () => ({
+  profile: { nombre:'', rol:'NP-060', cuenta:250000, metaMes:30000 },
+  session: { user:null },
+  tickets: [],           // {id,fecha,sym,dir,tesis,por,firmas:{k:{u,ts}},estado,motivo}
+  trades: [],            // {id,date,time,sym,dir,qty,entry,exit,pnl,setupOk,notas}
+  sessions: {},          // date -> {pre:[], setup:[], post:[]}
+  study: { lessons:{}, reviews:[] },
+  positions: [],         // {id,nombre,fecha,capital,valor,notas}
+  prospects: []          // {id,nombre,capital,etapa}
+});
+
+let S = load();
+function load(){
+  try{
+    const raw = localStorage.getItem(LS);
+    if(!raw) return DEFAULTS();
+    const d = DEFAULTS(), s = JSON.parse(raw);
+    return { ...d, ...s, profile:{...d.profile, ...s.profile}, study:{...d.study, ...s.study} };
+  }catch(e){ return DEFAULTS(); }
+}
+function save(){ localStorage.setItem(LS, JSON.stringify(S)); }
+const uid = () => Math.random().toString(36).slice(2,9) + Date.now().toString(36).slice(-4);
+
+const fmt$ = (n, sign=false) => {
+  if(n === null || n === undefined || isNaN(n)) return '—';
+  const s = (sign && n > 0 ? '+' : (n < 0 ? '−' : '')) ;
+  return s + '$' + Math.abs(Math.round(n)).toLocaleString('en-US');
+};
+const fmtPct = n => (isFinite(n) ? (Math.round(n*10)/10) + '%' : '—');
+const todayISO = () => { const d = new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); };
+const fmtFecha = iso => { const [y,m,d] = iso.split('-'); const M = ['ENE','FEB','MAR','ABR','MAY','JUN','JUL','AGO','SEP','OCT','NOV','DIC']; return `${d} ${M[+m-1]} ${y}`; };
+
+function toast(msg){
+  const t = $('#toast'); t.textContent = msg; t.classList.add('on');
+  clearTimeout(toast._h); toast._h = setTimeout(()=>t.classList.remove('on'), 2600);
+}
+
+/* ════════ Reglas del handbook: ventana, metas, violaciones ════════ */
+const VENTANA = { open: 7*60, orb1: 7*60+30, orb2: 7*60+45, close: 8*60+30 };
+
+function metas(){
+  const m = S.profile.metaMes || 30000;
+  return { dia: m/20, semana: m/4, quincena: m/2, mes: m, anio: m*12 };
+}
+
+function sessionState(now = new Date()){
+  const mins = now.getHours()*60 + now.getMinutes();
+  const wd = now.getDay();
+  if(wd === 0 || wd === 6) return { k:'off', txt:'FIN DE SEMANA' };
+  if(mins <  VENTANA.open)  return { k:'pre',  txt:'PRE-MARKET · ABRE 7:00' };
+  if(mins <  VENTANA.orb1)  return { k:'live', txt:'VENTANA ABIERTA · PRE-ORB' };
+  if(mins <= VENTANA.orb2)  return { k:'orb',  txt:'ORB 7:30 – 7:45' };
+  if(mins <= VENTANA.close) return { k:'live', txt:'VENTANA ABIERTA · CIERRA 8:30' };
+  return { k:'off', txt:'MESA CERRADA' };
+}
+
+/* violaciones por trade, dentro de su día (trades ordenados por hora) */
+function violations(trade, dayTrades){
+  const v = [];
+  const idx = dayTrades.findIndex(t => t.id === trade.id);
+  if(MICROS.includes(trade.sym)) v.push('MINIS');
+  if(trade.time){
+    const [h,m] = trade.time.split(':').map(Number);
+    const mins = h*60+m;
+    if(mins < VENTANA.open || mins > VENTANA.close) v.push('FUERA DE VENTANA');
+  }
+  if(idx >= 2) v.push('3ER TRADE');
+  if(idx > 0){
+    const prev = dayTrades[idx-1];
+    if((prev.pnl||0) > 0) v.push('OPERÓ TRAS GANAR');
+    if((prev.pnl||0) < 0 && !trade.setupOk) v.push('REVENGE');
+  }
+  if(!trade.setupOk && v.indexOf('REVENGE') === -1) v.push('SIN SETUP');
+  return v;
+}
+
+function tradesByDay(){
+  const map = {};
+  [...S.trades].sort((a,b)=> (a.date+a.time).localeCompare(b.date+b.time)).forEach(t=>{
+    (map[t.date] = map[t.date] || []).push(t);
+  });
+  return map;
+}
+
+function computeStats(list){
+  const n = list.length;
+  const wins = list.filter(t=>t.pnl>0), losses = list.filter(t=>t.pnl<0);
+  const gw = wins.reduce((a,t)=>a+t.pnl,0), gl = Math.abs(losses.reduce((a,t)=>a+t.pnl,0));
+  const pnl = list.reduce((a,t)=>a+(t.pnl||0),0);
+  return {
+    n, pnl,
+    wr: n ? wins.length/n*100 : NaN,
+    pf: gl > 0 ? gw/gl : (gw>0 ? Infinity : NaN),
+    avgW: wins.length ? gw/wins.length : NaN,
+    avgL: losses.length ? gl/losses.length : NaN,
+  };
+}
+
+/* Northpoint Score 0–1000 sobre los últimos 30 trades */
+function computeScore(){
+  const byDay = tradesByDay();
+  const all = Object.values(byDay).flat();
+  const last = all.slice(-30);
+  if(last.length === 0) return null;
+  const vioOf = t => violations(t, byDay[t.date]);
+  const risk = last.filter(t => { const v = vioOf(t); return !v.includes('MINIS') && !v.includes('FUERA DE VENTANA') && !v.includes('3ER TRADE'); }).length / last.length;
+  const emo  = last.filter(t => { const v = vioOf(t); return !v.includes('REVENGE') && !v.includes('OPERÓ TRAS GANAR'); }).length / last.length;
+  const dec  = last.filter(t => t.setupOk).length / last.length;
+  const days = [...new Set(last.map(t=>t.date))];
+  const cons = days.filter(d => { const s = S.sessions[d]; return s && (s.pre||[]).filter(Boolean).length >= 5; }).length / days.length;
+  const dims = [
+    { k:'Risk Discipline', v: risk },
+    { k:'Emotion Control', v: emo },
+    { k:'Decision Quality', v: dec },
+    { k:'Consistency',     v: cons },
+  ];
+  const total = Math.round(dims.reduce((a,d)=>a+d.v*250,0));
+  const grade = total>=850?'INSTITUCIONAL': total>=700?'PROFESIONAL': total>=500?'EN DESARROLLO':'EN RIESGO';
+  return { total, dims, grade, n:last.length };
+}
+
+/* rangos de P&L */
+function pnlRanges(){
+  const now = new Date(); const iso = todayISO();
+  const y = now.getFullYear(), m = now.getMonth();
+  const day = now.getDate();
+  const startWeek = new Date(now); startWeek.setDate(day - ((now.getDay()+6)%7)); // lunes
+  const swISO = startWeek.getFullYear()+'-'+String(startWeek.getMonth()+1).padStart(2,'0')+'-'+String(startWeek.getDate()).padStart(2,'0');
+  const quinStart = day <= 15 ? 1 : 16;
+  const inMonth = t => { const [ty,tm] = t.date.split('-').map(Number); return ty===y && tm===m+1; };
+  const r = { dia:0, semana:0, quincena:0, mes:0, anio:0 };
+  S.trades.forEach(t=>{
+    const p = t.pnl||0;
+    if(t.date === iso) r.dia += p;
+    if(t.date >= swISO && t.date <= iso) r.semana += p;
+    if(inMonth(t) && +t.date.split('-')[2] >= quinStart) r.quincena += p;
+    if(inMonth(t)) r.mes += p;
+    if(+t.date.split('-')[0] === y) r.anio += p;
+  });
+  return r;
+}
+
+/* ════════ Router ════════ */
+const TITLES = {
+  dashboard:['NORTHPOINT · LA FIRMA','Dashboard'],
+  mesa:['MESA DE FUTUROS','Mi mesa'],
+  sesion:['MESA DE FUTUROS','Sesión'],
+  aprobaciones:['MESA DE FUTUROS','Mesa de aprobaciones'],
+  journal:['MESA DE FUTUROS','Journal'],
+  estudio:['MESA DE FUTUROS','Bootcamp'],
+  reglas:['MESA DE FUTUROS','Reglas & protocolos'],
+  posiciones:['SNOWBALL INVESTMENTS','Posiciones'],
+  clientes:['SNOWBALL INVESTMENTS','Onboarding'],
+  calculadora:['SNOWBALL INVESTMENTS','Calculadora Snowball'],
+};
+function show(view){
+  if(!TITLES[view]) view = 'dashboard';
+  $$('.view').forEach(v=>v.classList.remove('on'));
+  $('#v-'+view).classList.add('on');
+  $$('.rail a.item').forEach(a=>a.classList.toggle('on', a.dataset.view===view));
+  $('#crumb').textContent = TITLES[view][0];
+  $('#viewTitle').textContent = TITLES[view][1];
+  $('#rail').classList.remove('open');
+  $('#content').scrollTop = 0;
+  render(view);
+}
+addEventListener('hashchange', ()=> show(location.hash.slice(1)));
+$$('.rail a.item').forEach(a=> a.addEventListener('click', ()=> setTimeout(()=>show(a.dataset.view))));
+$$('[data-goto]').forEach(b=> b.addEventListener('click', ()=> location.hash = b.dataset.goto));
+$('#menuBtn').addEventListener('click', ()=> $('#rail').classList.toggle('open'));
+
+/* ════════ Reloj / pill de sesión ════════ */
+function tickClock(){
+  const now = new Date();
+  $('#topClock').textContent = now.toLocaleTimeString('es-MX',{hour12:false});
+  const st = sessionState(now);
+  const pill = $('#sessPill');
+  pill.className = 'sess-pill' + (st.k==='live'?' live': st.k==='orb'?' orb':'');
+  $('#sessTxt').textContent = st.txt;
+  const days = ['DOM','LUN','MAR','MIÉ','JUE','VIE','SÁB'];
+  $('#topDate').textContent = days[now.getDay()] + ' · ' + fmtFecha(todayISO());
+}
+setInterval(tickClock, 1000); tickClock();
+
+/* ════════ DASHBOARD ════════ */
+/* ════════ DASHBOARD DE LA FIRMA ════════ */
+function renderFirma(){
+  const R = pnlRanges(), M = metas();
+  const ps = S.positions;
+  const aum = ps.reduce((a,p)=>a+(p.valor ?? p.capital ?? 0), 0);
+  const capSusc = ps.reduce((a,p)=>a+(p.capital||0), 0);
+  const retSnow = capSusc>0 ? (aum/capSusc-1)*100 : NaN;
+  const abiertas = S.tickets.filter(t=>t.estado==='abierta');
+  const sc = computeScore();
+  const me = S.session.user;
+
+  $('#firmDate').textContent = fmtFecha(todayISO());
+
+  $('#firmKpis').innerHTML = [
+    ['P&L MESA · MES', fmt$(R.mes, true), 'meta ' + fmt$(M.mes), R.mes>0?'up':R.mes<0?'down':''],
+    ['AUM SNOWBALL', fmt$(aum), ps.length + (ps.length===1?' posición':' posiciones'), ''],
+    ['TESIS EN MESA', String(abiertas.length), abiertas.length ? 'esperando firmas' : 'sin pendientes', abiertas.length?'warn':''],
+    ['NORTHPOINT SCORE', sc ? String(sc.total) : '—', sc ? sc.grade + ' · ' + sc.n + ' trades' : 'sin trades registrados', ''],
+  ].map(([l,v,s,c])=>`<div class="panel kpi">
+      <div class="k-l">${l}</div>
+      <div class="k-v ${c}">${v}</div>
+      <div class="k-s">${s}</div>
+    </div>`).join('');
+
+  /* departamento 01 */
+  const allTr = S.trades;
+  const wins = allTr.filter(t=>(t.pnl||0)>0).length;
+  const wr = allTr.length ? Math.round(wins/allTr.length*100) : 0;
+  const st = sessionState();
+  const dayTr = tradesByDay()[todayISO()] || [];
+  $('#firmMesa').innerHTML = `
+    <div class="frow"><span class="k">Ventana de hoy</span><span class="v">${st.txt}</span></div>
+    <div class="frow"><span class="k">Operaciones de hoy</span><span class="v">${dayTr.length} / 2</span></div>
+    <div class="frow"><span class="k">P&L de hoy</span><span class="v ${R.dia>0?'up':R.dia<0?'down':''}">${fmt$(R.dia, true)}</span></div>
+    <div class="frow"><span class="k">P&L acumulado del año</span><span class="v ${R.anio>0?'up':R.anio<0?'down':''}">${fmt$(R.anio, true)}</span></div>
+    <div class="frow"><span class="k">Trades registrados · win rate</span><span class="v">${allTr.length} · ${allTr.length?wr+'%':'—'}</span></div>
+    <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn sm" data-goto="mesa">Ver mi mesa</button>
+      <button class="btn sm" data-goto="sesion">Protocolo del día</button>
+    </div>`;
+
+  /* departamento 02 */
+  const pipeline = S.prospects.length;
+  $('#firmSnow').innerHTML = `
+    <div class="frow"><span class="k">Capital suscrito</span><span class="v">${fmt$(capSusc)}</span></div>
+    <div class="frow"><span class="k">Valor actual · AUM</span><span class="v">${fmt$(aum)}</span></div>
+    <div class="frow"><span class="k">Retorno del programa</span><span class="v ${retSnow>0?'up':retSnow<0?'down':''}">${isFinite(retSnow)?fmtPct(retSnow):'—'}</span></div>
+    <div class="frow"><span class="k">Clientes en onboarding</span><span class="v">${pipeline}</span></div>
+    <div class="frow"><span class="k">Próximo reequilibrio</span><span class="v">${Math.ceil((nextRebalance()-new Date())/86400000)} días</span></div>
+    <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn sm" data-goto="posiciones">Ver posiciones</button>
+      <button class="btn sm" data-goto="clientes">Pipeline</button>
+    </div>`;
+
+  /* aprobaciones */
+  $('#firmTixSub').textContent = abiertas.length ? abiertas.length + ' abiertas' : 'al corriente';
+  $('#firmTix').innerHTML = abiertas.length ? abiertas.slice(0,4).map(t=>{
+    const firmas = GATES.filter(g=>t.firmas[g.k]).length;
+    const miFirma = GATES.some(g=>!t.firmas[g.k] && rolDeUsuario(me, g.rol));
+    return `<div class="frow">
+      <span class="k"><b style="color:var(--txt)">${esc(t.sym)} · ${t.dir==='L'?'LONG':'SHORT'}</b> — ${esc(USERS[t.por]?USERS[t.por].nombre:t.por)}${miFirma?' <span class="mono" style="color:var(--warn);font-size:10px">· TE TOCA FIRMAR</span>':''}</span>
+      <span class="v">${firmas}/4</span>
+    </div>`;
+  }).join('') + `<div style="margin-top:12px"><button class="btn sm" data-goto="aprobaciones">Ir a la mesa</button></div>`
+  : `<div class="empty" style="padding:22px 10px">
+      <b>Sin tesis pendientes</b>
+      <p>Ninguna operación espera firmas. Cuando alguien proponga una tesis, aparece aquí.</p>
+      <button class="btn sm" data-goto="aprobaciones">Proponer una tesis</button>
+    </div>`;
+
+  /* socios */
+  $('#firmTeam').innerHTML = '<div class="fteam">' + Object.keys(USERS).map(u=>{
+    const usr = USERS[u];
+    const yo = u===me;
+    return `<div class="fmate">
+      <div class="av">${usr.nombre.slice(0,2).toUpperCase()}</div>
+      <div style="min-width:0">
+        <b>${esc(usr.nombre)}${yo?' <span class="mono me" style="font-size:9px;letter-spacing:.14em">· TÚ</span>':''}</b>
+        ${usr.roles.map(rk=>`<span>${rk} · ${esc(ROLES[rk].t)}</span>`).join('')}
+      </div>
+    </div>`;
+  }).join('') + '</div>';
+
+  $$('#v-dashboard [data-goto]').forEach(b=> b.onclick = ()=> location.hash = b.dataset.goto);
+}
+
+function renderDashboard(){
+  const M = metas(), R = pnlRanges();
+  const kpis = [
+    ['P&L HOY', R.dia, M.dia],
+    ['SEMANA', R.semana, M.semana],
+    ['QUINCENA', R.quincena, M.quincena],
+    ['MES', R.mes, M.mes],
+    ['AÑO', R.anio, M.anio],
+  ];
+  $('#dashKpis').innerHTML = kpis.map(([l,v,goal])=>{
+    const pct = goal>0 ? Math.max(0, Math.min(100, v/goal*100)) : 0;
+    return `<div class="panel kpi">
+      <div class="k-l">${l}</div>
+      <div class="k-v ${v>0?'up':v<0?'down':''}">${fmt$(v,true)}</div>
+      <div class="k-s">meta ${fmt$(goal)}</div>
+      <div class="bar"><i class="${v>=goal?'full':(v<0?'neg':'')}" style="width:${v<0?100:pct}%"></i></div>
+    </div>`;
+  }).join('');
+
+  /* score */
+  const sc = computeScore();
+  if(!sc){
+    $('#scoreBox').innerHTML = `<div class="empty" style="padding:26px 10px">
+      <b>Score en construcción</b>
+      <p>El motor conductual Northpoint necesita tus primeros trades registrados para medir Risk Discipline, Emotion Control, Decision Quality y Consistency.</p>
+      <button class="btn sm" onclick="location.hash='journal'">Ir al journal</button>
+    </div>`;
+  } else {
+    const r = 58, C = 2*Math.PI*r, off = C*(1 - sc.total/1000);
+    $('#scoreBox').innerHTML = `<div class="score-wrap">
+      <div class="score-ring">
+        <svg width="132" height="132" viewBox="0 0 132 132">
+          <circle cx="66" cy="66" r="${r}" fill="none" stroke="rgba(255,255,255,.07)" stroke-width="6"/>
+          <circle cx="66" cy="66" r="${r}" fill="none" stroke="var(--accent)" stroke-width="6"
+            stroke-linecap="round" stroke-dasharray="${C}" stroke-dashoffset="${off}" opacity=".9"/>
+        </svg>
+        <div class="num"><b>${sc.total}</b><span>/ 1000</span></div>
+      </div>
+      <div class="dims">
+        <div class="micro" style="letter-spacing:.2em;color:var(--accent)">${sc.grade} · ${sc.n} TRADES</div>
+        ${sc.dims.map(d=>`<div class="dim">
+          <div class="d-t"><span>${d.k}</span><b>${Math.round(d.v*250)}</b></div>
+          <div class="bar"><i style="width:${d.v*100}%"></i></div>
+        </div>`).join('')}
+      </div>
+    </div>`;
+  }
+
+  /* equity */
+  drawEquity();
+
+  /* sesión de hoy */
+  const iso = todayISO();
+  const ses = S.sessions[iso] || {pre:[],setup:[],post:[]};
+  const preDone = (ses.pre||[]).filter(Boolean).length;
+  const dayTr = tradesByDay()[iso] || [];
+  const dPnl = dayTr.reduce((a,t)=>a+(t.pnl||0),0);
+  $('#dashSessDate').textContent = fmtFecha(iso);
+  const gest = gestionState(dayTr);
+  $('#dashSession').innerHTML = `
+    <div class="grid g3" style="gap:10px">
+      <div><div class="micro">Pre-market</div><div class="mono" style="font-size:18px;margin-top:4px">${preDone}<span style="color:var(--faint)">/6</span></div></div>
+      <div><div class="micro">Trades hoy</div><div class="mono" style="font-size:18px;margin-top:4px">${dayTr.length}<span style="color:var(--faint)">/2</span></div></div>
+      <div><div class="micro">P&L sesión</div><div class="mono ${dPnl>0?'up':dPnl<0?'down':''}" style="font-size:18px;margin-top:4px">${fmt$(dPnl,true)}</div></div>
+    </div>
+    <div class="g-banner ${gest.cls}" style="margin-top:16px"><span>${gest.msg}</span></div>
+    <div class="mt" style="display:flex;gap:10px">
+      <button class="btn sm" onclick="location.hash='sesion'">Abrir protocolo del día</button>
+    </div>`;
+
+  /* violaciones de hoy → alerta arriba */
+  const todaysV = dayTr.flatMap(t => violations(t, dayTr));
+  $('#dashAlert').innerHTML = todaysV.length
+    ? `<div class="g-banner stop" style="margin:0 0 16px"><b>⚠ ${todaysV.length} violación(es) hoy:</b> <span>${[...new Set(todaysV)].join(' · ')}. El CRO tiene autoridad para detener operaciones.</span></div>`
+    : '';
+
+  /* stats */
+  const st = computeStats(S.trades);
+  $('#statRange').textContent = st.n + ' trades registrados';
+  $('#dashStats').innerHTML = st.n === 0
+    ? `<div class="empty" style="padding:26px 10px"><b>Sin operaciones aún</b><p>La estadística de la mesa aparece con el primer trade documentado en el journal.</p></div>`
+    : `<div class="grid g2" style="gap:10px">
+        ${[['Win rate', fmtPct(st.wr)],
+           ['Profit factor', st.pf===Infinity?'∞':(isNaN(st.pf)?'—':st.pf.toFixed(2))],
+           ['Ganancia promedio', fmt$(st.avgW)],
+           ['Pérdida promedio', isNaN(st.avgL)?'—':fmt$(-st.avgL)],
+           ['P&L total', fmt$(st.pnl,true)],
+           ['Cuenta', fmt$((S.profile.cuenta||0)+st.pnl)]
+          ].map(([l,v])=>`<div style="padding:10px 12px;border:1px solid var(--line-soft);border-radius:10px">
+            <div class="micro" style="font-size:9px">${l}</div>
+            <div class="mono" style="font-size:17px;margin-top:3px">${v}</div>
+          </div>`).join('')}
+      </div>`;
+}
+
+function gestionState(dayTr){
+  if(dayTr.length === 0) return { cls:'', msg:'Sin trades hoy. Si el checklist no da setup válido, <b>el mejor trade del día es no operar</b>.' };
+  const first = dayTr[0];
+  if(dayTr.length === 1 && first.pnl > 0) return { cls:'win', msg:'<b>Trade 1 ganado → día terminado.</b> Se cierra la plataforma. Nada más que demostrar hoy.' };
+  if(dayTr.length === 1 && first.pnl < 0) return { cls:'risk', msg:'<b>Trade 1 perdido → un solo intento más.</b> ÚNICAMENTE con un setup válido nuevo y completo. Nunca revenge.' };
+  if(dayTr.length === 1) return { cls:'', msg:'Trade 1 en libro. Queda 1 bala como máximo.' };
+  if(dayTr.length >= 2) return { cls: dayTr.length>2?'stop':'win', msg: dayTr.length>2 ? '<b>Límite excedido.</b> El máximo es 2 operaciones por sesión, sin excepciones.' : '<b>2 trades — sesión completa.</b> Se cierra la plataforma y se documenta.' };
+}
+
+function drawEquity(){
+  const cv = $('#eqCanvas'), wrap = cv.parentElement;
+  const byDay = tradesByDay();
+  const days = Object.keys(byDay).sort();
+  if(days.length < 2){
+    cv.style.display = 'none';
+    $('#eqEmpty').innerHTML = `<div class="empty" style="padding:26px 10px"><b>Curva en espera</b><p>Con dos o más días operados, aquí se dibuja el P&L acumulado de la mesa.</p></div>`;
+    return;
+  }
+  cv.style.display = 'block'; $('#eqEmpty').innerHTML = '';
+  const pts = []; let acc = 0;
+  days.forEach(d=>{ acc += byDay[d].reduce((a,t)=>a+(t.pnl||0),0); pts.push(acc); });
+  const W = wrap.clientWidth - 36, H = 180, dpr = devicePixelRatio||1;
+  cv.width = W*dpr; cv.height = H*dpr; cv.style.height = H+'px';
+  const ctx = cv.getContext('2d'); ctx.scale(dpr,dpr); ctx.clearRect(0,0,W,H);
+  const min = Math.min(0,...pts), max = Math.max(0,...pts), span = (max-min)||1;
+  const X = i => 8 + i*(W-16)/(pts.length-1);
+  const Y = v => 12 + (H-30)*(1-(v-min)/span);
+  /* línea de cero */
+  ctx.strokeStyle = 'rgba(255,255,255,.08)'; ctx.setLineDash([3,5]); ctx.beginPath();
+  ctx.moveTo(8, Y(0)); ctx.lineTo(W-8, Y(0)); ctx.stroke(); ctx.setLineDash([]);
+  /* área */
+  const grad = ctx.createLinearGradient(0,0,0,H);
+  grad.addColorStop(0,'rgba(155,192,220,.16)'); grad.addColorStop(1,'rgba(155,192,220,0)');
+  ctx.beginPath(); ctx.moveTo(X(0), Y(pts[0]));
+  pts.forEach((p,i)=> ctx.lineTo(X(i), Y(p)));
+  ctx.lineTo(X(pts.length-1), H-8); ctx.lineTo(X(0), H-8); ctx.closePath();
+  ctx.fillStyle = grad; ctx.fill();
+  /* línea */
+  ctx.beginPath(); pts.forEach((p,i)=> i?ctx.lineTo(X(i),Y(p)):ctx.moveTo(X(i),Y(p)));
+  ctx.strokeStyle = '#9BC0DC'; ctx.lineWidth = 1.6; ctx.stroke();
+  /* último punto */
+  const lx = X(pts.length-1), ly = Y(pts[pts.length-1]);
+  ctx.beginPath(); ctx.arc(lx,ly,3,0,7); ctx.fillStyle = '#E9EDF2'; ctx.fill();
+  ctx.font = '11px "IBM Plex Mono"'; ctx.fillStyle = acc>=0?'#57C79B':'#DE6A5F';
+  ctx.textAlign = 'right'; ctx.fillText(fmt$(acc,true), W-10, ly-9);
+  $('#eqLabel').textContent = days.length + ' días · P&L acumulado';
+}
+
+/* ════════ SESIÓN ════════ */
+const PRE_ITEMS = [
+  ['Tradingview abierto','Apertura de plataforma y revisión inicial de gráficos.','7:00'],
+  ['Calendario económico','Eventos macro del día que puedan impactar la sesión.','7:05'],
+  ['Análisis overnight','Liquidez tomada en Asia y Londres. H/L marcados.','7:10'],
+  ['Estado de cuenta','Situación actual y objetivos del día por cuenta.','7:15'],
+  ['Daily bias proyectado','Bias direccional definido para la apertura de NY.','7:20'],
+  ['Esperar open + ORB','La apertura y el Opening Range Breakout confirmado.','7:30'],
+];
+const SETUP_ITEMS = [
+  ['Targets overnight sin tomar','Asia o Londres H/L, PDH/PDL aún sin ser tomados.'],
+  ['Break apunta a liquidez clara','La dirección del break apunta a liquidez inequívoca.'],
+  ['BOS / FVG 5m · EMA 14/50','Break of structure, FVG de 5m y EMAs a favor.'],
+  ['Entrada en el break, sin FOMO','Entrar tantito antes o en el break. Nunca persiguiendo.'],
+];
+const POST_ITEMS = [
+  ['Trades registrados','Screenshot, setup, resultado y análisis de cada operación.'],
+  ['Dashboard verificado','Consistencia, drawdown y progreso acumulado revisados.'],
+  ['Reporte enviado al equipo','Resultado del día + estado de cada cuenta.'],
+];
+
+function getSession(iso){
+  const s = S.sessions[iso] = S.sessions[iso] || {};
+  s.pre   = s.pre   || PRE_ITEMS.map(()=>false);
+  s.setup = s.setup || SETUP_ITEMS.map(()=>false);
+  s.post  = s.post  || POST_ITEMS.map(()=>false);
+  return s;
+}
+
+function chkHTML(items, arr, key){
+  return items.map((it,i)=>`
+    <button class="chk ${arr[i]?'done':''}" data-k="${key}" data-i="${i}">
+      <span class="box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M4 12l5 5L20 7"/></svg></span>
+      <span style="flex:1;min-width:0"><b>${it[0]}</b><span>${it[1]}</span></span>
+      ${it[2]?`<span class="t">${it[2]}</span>`:''}
+    </button>`).join('');
+}
+
+function renderSesion(){
+  const iso = todayISO();
+  const ses = getSession(iso);
+  $('#sesFecha').textContent = fmtFecha(iso);
+  $('#preList').innerHTML   = chkHTML(PRE_ITEMS, ses.pre, 'pre');
+  $('#setupList').innerHTML = chkHTML(SETUP_ITEMS, ses.setup, 'setup');
+  $('#postList').innerHTML  = chkHTML(POST_ITEMS, ses.post, 'post');
+  const done = [...ses.pre, ...ses.setup, ...ses.post].filter(Boolean).length;
+  $('#sesProgreso').textContent = done + ' / 13';
+
+  const okAll = ses.setup.every(Boolean);
+  $('#setupVerdict').innerHTML = `
+    <div class="verdict ${okAll?'go':'no'}">
+      <div>
+        <div class="vs">Veredicto</div>
+        <div class="vt">${okAll ? 'SETUP VÁLIDO — ejecutar el plan' : 'NO HAY TRADE'}</div>
+      </div>
+      <div style="margin-left:auto;font-size:11px;color:var(--dim);max-width:200px;text-align:right">
+        ${okAll ? 'Todas las condiciones presentes. Tamaño y stop según plan.' : 'Se cumplen TODAS o no hay trade. El mejor trade del día es no operar.'}
+      </div>
+    </div>`;
+
+  const dayTr = tradesByDay()[iso] || [];
+  const g = gestionState(dayTr);
+  $('#gestState').innerHTML = `<div class="g-banner ${g.cls}" style="margin-top:0"><span>${g.msg}</span></div>`;
+
+  $$('#v-sesion .chk').forEach(b=>{
+    b.onclick = () => {
+      const s = getSession(todayISO());
+      s[b.dataset.k][+b.dataset.i] = !s[b.dataset.k][+b.dataset.i];
+      save(); renderSesion(); updateBadges();
+    };
+  });
+}
+
+/* reporte al equipo */
+function buildReport(){
+  const iso = todayISO();
+  const dayTr = tradesByDay()[iso] || [];
+  const st = computeStats(S.trades);
+  const R = pnlRanges(), M = metas();
+  const dPnl = dayTr.reduce((a,t)=>a+(t.pnl||0),0);
+  const lines = [];
+  lines.push('NORTHPOINT · REPORTE DE MESA');
+  lines.push(fmtFecha(iso) + ' · ' + (S.profile.nombre || 'Operador') + ' · ' + (S.profile.rol||''));
+  lines.push('────────────────────────────');
+  lines.push('Trades: ' + dayTr.length + '  ·  P&L del día: ' + fmt$(dPnl,true));
+  dayTr.forEach((t,i)=>{
+    const v = violations(t, dayTr);
+    lines.push(`${i+1}) ${t.sym} ${t.dir==='L'?'LONG':'SHORT'} x${t.qty} @ ${t.time} → ${fmt$(t.pnl,true)}${t.setupOk?' · setup válido':' · SETUP INCOMPLETO'}${v.length?' · ⚠ '+v.join(', '):''}`);
+    if(t.notas) lines.push('   ' + t.notas);
+  });
+  if(!dayTr.length) lines.push('Sin operaciones. El checklist no dio setup válido — el mejor trade del día fue no operar.');
+  lines.push('────────────────────────────');
+  lines.push('Avance vs meta · Día: ' + fmt$(R.dia,true) + ' / ' + fmt$(M.dia) + ' · Mes: ' + fmt$(R.mes,true) + ' / ' + fmt$(M.mes));
+  lines.push('Cuenta: ' + fmt$((S.profile.cuenta||0) + st.pnl));
+  const sc = computeScore();
+  if(sc) lines.push('Northpoint Score: ' + sc.total + ' / 1000 · ' + sc.grade);
+  return lines.join('\n');
+}
+
+/* ════════ JOURNAL ════════ */
+let jRange = 'mes';
+/* ════════ CALENDARIO DE METAS (Journal) ════════ */
+const DOW_CAL = ['L','M','M','J','V','S','D'];
+const MESES_CAL = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+let calMes = todayISO().slice(0,7);
+
+/* matriz del mes con semanas que empiezan en LUNES */
+function calMatrix(key){
+  const [y,m] = key.split('-').map(Number);
+  const primer = new Date(y, m-1, 1).getDay();      // 0=domingo
+  const offset = (primer + 6) % 7;                   // lunes = 0
+  const dias = new Date(y, m, 0).getDate();
+  const cells = [];
+  for(let i=0;i<offset;i++) cells.push(null);
+  for(let d=1;d<=dias;d++) cells.push(key+'-'+String(d).padStart(2,'0'));
+  while(cells.length % 7) cells.push(null);
+  return cells;
+}
+const esHabil = iso => { const [y,m,d] = iso.split('-').map(Number); const w = new Date(y,m-1,d).getDay(); return w!==0 && w!==6; };
+
+function renderCal(){
+  const byDay = tradesByDay();
+  const M = metas();
+  const hoyISO = todayISO();
+  const [Y, MM] = calMes.split('-').map(Number);
+  $('#calTitulo').textContent = MESES_CAL[MM-1] + ' ' + Y;
+  $('#calSub').textContent = 'META DIARIA ' + fmt$(M.dia);
+
+  const cells = calMatrix(calMes);
+  let html = `<div class="ts-cal-head">${DOW_CAL.map(d=>`<span>${d}</span>`).join('')}<span>Sem</span></div><div class="ts-cal-body">`;
+
+  for(let w=0; w*7 < cells.length; w++){
+    let wkPnl = 0, wkDias = 0;
+    for(let i=0;i<7;i++){
+      const iso = cells[w*7+i];
+      if(!iso){ html += `<div class="ts-cell empty"></div>`; continue; }
+      const tr = byDay[iso] || [];
+      const pnl = tr.reduce((a,t)=>a+(t.pnl||0), 0);
+      const wins = tr.filter(t=>(t.pnl||0)>0).length;
+      const losses = tr.filter(t=>(t.pnl||0)<0).length;
+      const vio = tr.some(t => violations(t, tr).length > 0);
+      const futuro = iso > hoyISO;
+      const habil = esHabil(iso);
+      if(tr.length){ wkPnl += pnl; wkDias++; }
+
+      const cls = [
+        'ts-cell',
+        tr.length ? (pnl>0?'up':pnl<0?'down':'flat') : (futuro && habil ? 'fut' : ''),
+        iso===hoyISO ? 'today' : '',
+        vio ? 'vio' : ''
+      ].filter(Boolean).join(' ');
+
+      let cuerpo;
+      if(tr.length){
+        const pct = M.dia>0 ? Math.max(0, Math.min(100, pnl/M.dia*100)) : 0;
+        const full = fmt$(pnl, true);
+        const comp = Math.abs(pnl) >= 1000
+          ? (pnl>0?'+':'−') + '$' + String(+(Math.abs(pnl)/1000).toFixed(1)).replace(/\.0$/,'') + 'k'
+          : full;
+        cuerpo = `<span class="ts-pnl"><i class="ts-full">${full}</i><i class="ts-comp">${comp}</i></span>
+          <span class="ts-bar"><i style="width:${pnl<0?100:pct}%;background:${pnl>=0?'var(--up)':'var(--down)'}"></i></span>
+          <span class="ts-wl">${wins}W·${losses}L</span>`;
+      } else {
+        cuerpo = '';
+      }
+      html += `<div class="${cls}" title="${iso}"><span class="ts-d">${Number(iso.slice(8))}</span>${cuerpo}</div>`;
+    }
+    const wCls = wkPnl>0?'up':wkPnl<0?'down':'';
+    html += `<div class="ts-week ${wCls}">
+      <span class="ts-wk-pnl">${wkDias?fmt$(wkPnl,true):''}</span>
+      <span class="ts-wk-n">${wkDias?wkDias+'d':''}</span>
+    </div>`;
+  }
+  $('#calGrid').innerHTML = html + '</div>';
+
+  /* resumen del mes visible */
+  const delMes = Object.keys(byDay).filter(d=>d.startsWith(calMes));
+  const pnlMes = delMes.flatMap(d=>byDay[d]).reduce((a,t)=>a+(t.pnl||0), 0);
+  const diasVerdes = delMes.filter(d=>byDay[d].reduce((a,t)=>a+(t.pnl||0),0) > 0).length;
+  const totalHabiles = calMatrix(calMes).filter(x=>x && esHabil(x)).length;
+  const pctMeta = M.mes>0 ? pnlMes/M.mes*100 : 0;
+
+  $('#calResumen').innerHTML = [
+    ['P&L DEL MES', fmt$(pnlMes,true), 'meta ' + fmt$(M.mes), pnlMes>0?'up':pnlMes<0?'down':''],
+    ['AVANCE', fmtPct(pctMeta), pctMeta>=100?'meta cumplida':'de la meta mensual', pctMeta>=100?'up':''],
+    ['DÍAS OPERADOS', delMes.length + ' / ' + totalHabiles, 'días hábiles del mes', ''],
+    ['DÍAS VERDES', diasVerdes + (delMes.length?' / '+delMes.length:''), delMes.length?fmtPct(diasVerdes/delMes.length*100)+' del total':'aún sin operar', ''],
+  ].map(([l,v,s,c])=>`<div class="cal-r"><div class="r-l">${l}</div><div class="r-v ${c}">${v}</div><div class="r-s">${s}</div></div>`).join('');
+
+  /* ritmo: qué te falta y a qué paso, solo para el mes en curso */
+  const mesActual = calMes === hoyISO.slice(0,7);
+  if(!mesActual){
+    $('#calPace').innerHTML = `Mes cerrado. ${delMes.length ? `Cerró en <b>${fmt$(pnlMes,true)}</b> sobre una meta de ${fmt$(M.mes)}.` : 'Sin operaciones registradas en este mes.'}`;
+  } else {
+    const restantes = calMatrix(calMes).filter(x => x && esHabil(x) && x >= hoyISO).length;
+    const falta = M.mes - pnlMes;
+    if(falta <= 0){
+      $('#calPace').innerHTML = `<b>Meta mensual cumplida.</b> Llevas ${fmt$(pnlMes,true)} sobre ${fmt$(M.mes)}. El plan no pide más: pide no devolverlo.`;
+    } else if(restantes > 0){
+      const porDia = falta / restantes;
+      const dias = Math.ceil(falta / M.dia);
+      $('#calPace').innerHTML = `Faltan <b>${fmt$(falta)}</b> para la meta del mes con <b>${restantes}</b> ${restantes===1?'día hábil':'días hábiles'} por delante: <b>${fmt$(porDia)}</b> por día, o <b>${dias}</b> ${dias===1?'día':'días'} al objetivo diario de ${fmt$(M.dia)}.`;
+    } else {
+      $('#calPace').innerHTML = `Mes terminado. Cerró en <b>${fmt$(pnlMes,true)}</b> sobre una meta de ${fmt$(M.mes)}.`;
+    }
+  }
+}
+function calShift(n){
+  const [y,m] = calMes.split('-').map(Number);
+  const d = new Date(y, m-1+n, 1);
+  calMes = d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
+  renderCal();
+}
+$('#calPrev').addEventListener('click', ()=> calShift(-1));
+$('#calNext').addEventListener('click', ()=> calShift(1));
+$('#calHoy').addEventListener('click', ()=>{ calMes = todayISO().slice(0,7); renderCal(); });
+
+function renderJournal(){
+  renderCal();
+  const byDay = tradesByDay();
+  const now = new Date(); const ym = now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
+  const days = Object.keys(byDay).sort().reverse().filter(d => jRange==='todo' || d.startsWith(ym));
+  const list = days.flatMap(d=>byDay[d]);
+  const st = computeStats(list);
+  $('#jResumen').textContent = jRange==='mes' ? 'MES EN CURSO' : 'HISTORIAL COMPLETO';
+
+  $('#jKpis').innerHTML = [
+    ['P&L', fmt$(st.pnl,true), st.pnl>0?'up':st.pnl<0?'down':''],
+    ['Trades', st.n, ''],
+    ['Win rate', fmtPct(st.wr), ''],
+    ['Profit factor', st.pf===Infinity?'∞':(isNaN(st.pf)?'—':st.pf.toFixed(2)), ''],
+  ].map(([l,v,c])=>`<div class="panel kpi"><div class="k-l">${l}</div><div class="k-v ${c}">${v}</div></div>`).join('');
+
+  if(list.length === 0){
+    $('#jTable').innerHTML = '';
+    $('#jEmpty').innerHTML = `<div class="empty">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="1.4"><path d="M4 19V5a2 2 0 0 1 2-2h13v18H6a2 2 0 0 1-2-2z"/><path d="M8 7h7M8 11h7"/></svg>
+      <b>Journal vacío</b>
+      <p>Todo trade se documenta: hora, precio, tamaño y condiciones. Sin registro no hay mesa profesional.</p>
+      <button class="btn primary sm" onclick="openTrade()">+ Registrar el primero</button>
+    </div>`;
+    return;
+  }
+  $('#jEmpty').innerHTML = '';
+  let html = `<thead><tr>
+    <th>Fecha</th><th>Hora</th><th>Instr.</th><th>Dir</th><th class="r">Ct</th>
+    <th class="r">Entrada</th><th class="r">Salida</th><th class="r">P&L</th>
+    <th>Setup</th><th>Disciplina</th><th></th>
+  </tr></thead><tbody>`;
+  days.forEach(d=>{
+    const dt = byDay[d];
+    const dp = dt.reduce((a,t)=>a+(t.pnl||0),0);
+    html += `<tr style="background:rgba(255,255,255,.018)">
+      <td colspan="7" class="mono" style="font-size:10.5px;letter-spacing:.14em;color:var(--dim)">${fmtFecha(d)} · ${dt.length} TRADE${dt.length>1?'S':''}</td>
+      <td class="r mono ${dp>0?'up':dp<0?'down':''}" style="font-size:12px">${fmt$(dp,true)}</td>
+      <td colspan="3"></td></tr>`;
+    dt.forEach(t=>{
+      const v = violations(t, dt);
+      html += `<tr>
+        <td class="mono" style="color:var(--faint);font-size:11px">${t.date.slice(8)}/${t.date.slice(5,7)}</td>
+        <td class="mono">${t.time||'—'}</td>
+        <td class="mono">${esc(t.sym)}</td>
+        <td><span class="tag">${t.dir==='L'?'LONG':'SHORT'}</span></td>
+        <td class="r mono">${t.qty}</td>
+        <td class="r mono" style="color:var(--dim)">${t.entry??'—'}</td>
+        <td class="r mono" style="color:var(--dim)">${t.exit??'—'}</td>
+        <td class="r mono ${t.pnl>0?'up':t.pnl<0?'down':''}">${fmt$(t.pnl,true)}</td>
+        <td>${t.setupOk?'<span class="tag ok">VÁLIDO</span>':'<span class="tag wr">INCOMPLETO</span>'}</td>
+        <td>${v.length? v.map(x=>`<span class="tag bad" style="margin:1px 2px 1px 0">${x}</span>`).join('') : '<span class="tag ok">LIMPIO</span>'}</td>
+        <td class="r" style="white-space:nowrap">
+          <button class="btn-icon" onclick="openTrade('${t.id}')" title="Editar">✎</button>
+          <button class="btn-icon" onclick="delTrade('${t.id}')" title="Eliminar">✕</button>
+        </td>
+      </tr>`;
+    });
+  });
+  $('#jTable').innerHTML = html + '</tbody>';
+}
+$('#jSeg').addEventListener('click', e=>{
+  const b = e.target.closest('button'); if(!b) return;
+  jRange = b.dataset.r;
+  $$('#jSeg button').forEach(x=>x.classList.toggle('on', x===b));
+  renderJournal();
+});
+
+/* trade modal */
+let editingTrade = null;
+function openTrade(id){
+  editingTrade = id ? S.trades.find(t=>t.id===id) : null;
+  $('#tmTitle').textContent = editingTrade ? 'Editar trade' : 'Registrar trade';
+  const t = editingTrade || {};
+  $('#tFecha').value = t.date || todayISO();
+  $('#tHora').value = t.time || '07:35';
+  $('#tSym').value = t.sym || 'NQ';
+  $('#tDir').value = t.dir || 'L';
+  $('#tQty').value = t.qty || 1;
+  $('#tSetup').value = (t.setupOk===false) ? '0' : '1';
+  $('#tIn').value = t.entry ?? '';
+  $('#tOut').value = t.exit ?? '';
+  $('#tPnl').value = t.pnl ?? '';
+  $('#tNotas').value = t.notas || '';
+  openOv('ovTrade');
+}
+window.openTrade = openTrade;
+window.delTrade = id => {
+  if(!confirm('¿Eliminar este trade del journal?')) return;
+  S.trades = S.trades.filter(t=>t.id!==id); save();
+  renderJournal(); updateBadges(); toast('Trade eliminado');
+};
+
+function autoPnl(){
+  const sym = $('#tSym').value, dirn = $('#tDir').value==='L'?1:-1;
+  const en = parseFloat($('#tIn').value), ex = parseFloat($('#tOut').value), q = parseInt($('#tQty').value)||1;
+  if(isFinite(en) && isFinite(ex) && POINT_VALUE[sym]){
+    $('#tPnl').value = Math.round((ex-en) * dirn * POINT_VALUE[sym] * q);
+  }
+}
+['tIn','tOut','tQty','tDir','tSym'].forEach(id => $('#'+id).addEventListener('input', autoPnl));
+
+$('#tSave').addEventListener('click', ()=>{
+  const pnl = parseFloat($('#tPnl').value);
+  if(!isFinite(pnl)){ toast('Falta el P&L del trade'); return; }
+  const data = {
+    date: $('#tFecha').value || todayISO(),
+    time: $('#tHora').value || '07:35',
+    sym: $('#tSym').value,
+    dir: $('#tDir').value,
+    qty: parseInt($('#tQty').value)||1,
+    entry: $('#tIn').value===''?null:parseFloat($('#tIn').value),
+    exit: $('#tOut').value===''?null:parseFloat($('#tOut').value),
+    pnl,
+    setupOk: $('#tSetup').value==='1',
+    notas: $('#tNotas').value.trim(),
+  };
+  if(editingTrade) Object.assign(editingTrade, data);
+  else S.trades.push({ id: uid(), ...data });
+  save(); closeOv();
+  render(location.hash.slice(1)||'dashboard'); updateBadges();
+  toast(editingTrade ? 'Trade actualizado' : 'Trade documentado');
+  editingTrade = null;
+});
+
+/* export */
+$('#btnExport').addEventListener('click', ()=>{
+  const rows = [['fecha','hora','instrumento','direccion','contratos','entrada','salida','pnl','setup_valido','violaciones','notas']];
+  const byDay = tradesByDay();
+  Object.keys(byDay).sort().forEach(d=> byDay[d].forEach(t=>{
+    rows.push([t.date,t.time,t.sym,t.dir==='L'?'LONG':'SHORT',t.qty,t.entry??'',t.exit??'',t.pnl,t.setupOk?'SI':'NO',violations(t,byDay[d]).join('|'),(t.notas||'').replace(/[\n,]/g,' ')]);
+  }));
+  const blob = new Blob([rows.map(r=>r.join(',')).join('\n')], {type:'text/csv'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob); a.download = 'northpoint-journal.csv'; a.click();
+  toast('Journal exportado (CSV)');
+});
+
+/* ════════ BOOTCAMP · documentos de la mesa ════════
+   Cada módulo es un documento: qué es, por qué importa y cómo se ve. */
+const FIG = {
+
+valor: `<svg viewBox="0 0 640 190" fill="none">
+  <text x="24" y="34" font-family="IBM Plex Mono,monospace" font-size="12" fill="#E9EDF2">NQ</text>
+  <text x="70" y="34" font-family="IBM Plex Mono,monospace" font-size="10.5" fill="#8A94A6">1 punto = $20</text>
+  <rect x="210" y="22" width="144" height="15" rx="3" fill="#57C79B" opacity=".85"/>
+  <text x="366" y="34" font-family="IBM Plex Mono,monospace" font-size="10.5" fill="#57C79B">+10 pts = $200 por contrato</text>
+  <text x="24" y="89" font-family="IBM Plex Mono,monospace" font-size="12" fill="#E9EDF2">ES</text>
+  <text x="70" y="89" font-family="IBM Plex Mono,monospace" font-size="10.5" fill="#8A94A6">1 punto = $50</text>
+  <rect x="210" y="77" width="360" height="15" rx="3" fill="#57C79B" opacity=".55"/>
+  <text x="366" y="72" font-family="IBM Plex Mono,monospace" font-size="10.5" fill="#8A94A6">+10 pts = $500</text>
+  <text x="24" y="144" font-family="IBM Plex Mono,monospace" font-size="12" fill="#E9EDF2">YM</text>
+  <text x="70" y="144" font-family="IBM Plex Mono,monospace" font-size="10.5" fill="#8A94A6">1 punto = $5</text>
+  <rect x="210" y="132" width="36" height="15" rx="3" fill="#57C79B" opacity=".4"/>
+  <text x="258" y="144" font-family="IBM Plex Mono,monospace" font-size="10.5" fill="#8A94A6">+10 pts = $50</text>
+  <text x="24" y="176" font-family="IBM Plex Mono,monospace" font-size="9.5" fill="#596374">EL TICK MÍNIMO DE NQ ES 0.25 = $5 — CUATRO TICKS POR PUNTO</text>
+</svg>`,
+
+sesiones: `<svg viewBox="0 0 640 150" fill="none">
+  <rect x="40" y="58" width="160" height="30" rx="4" fill="rgba(255,255,255,.05)"/>
+  <rect x="200" y="58" width="160" height="30" rx="4" fill="rgba(255,255,255,.08)"/>
+  <rect x="360" y="58" width="240" height="30" rx="4" fill="rgba(255,255,255,.12)"/>
+  <text x="120" y="48" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="10" fill="#8A94A6">ASIA</text>
+  <text x="280" y="48" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="10" fill="#8A94A6">LONDRES</text>
+  <text x="480" y="48" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="10" fill="#8A94A6">NUEVA YORK</text>
+  <rect x="380" y="52" width="92" height="42" rx="5" fill="rgba(155,192,220,.22)" stroke="#9BC0DC" stroke-width="1.2"/>
+  <rect x="411" y="58" width="15" height="30" fill="rgba(155,192,220,.55)"/>
+  <text x="426" y="26" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="10" fill="#9BC0DC">TU VENTANA</text>
+  <text x="380" y="112" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="9.5" fill="#8A94A6">7:00</text>
+  <text x="418" y="112" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="9.5" fill="#9BC0DC">ORB</text>
+  <text x="472" y="112" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="9.5" fill="#8A94A6">8:30</text>
+  <text x="320" y="138" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="9" fill="#596374">EL OVERNIGHT DEJA LOS NIVELES · NUEVA YORK TRAE EL VOLUMEN</text>
+</svg>`,
+
+vela: `<svg viewBox="0 0 640 240" fill="none">
+  <line x1="220" y1="40" x2="220" y2="200" stroke="#57C79B" stroke-width="2"/>
+  <rect x="203" y="90" width="34" height="80" rx="3" fill="#57C79B"/>
+  <line x1="420" y1="40" x2="420" y2="200" stroke="#DE6A5F" stroke-width="2"/>
+  <rect x="403" y="70" width="34" height="80" rx="3" fill="#DE6A5F"/>
+  <line x1="130" y1="42" x2="214" y2="42" stroke="rgba(255,255,255,.25)" stroke-dasharray="3 4"/>
+  <text x="124" y="46" text-anchor="end" font-family="IBM Plex Mono,monospace" font-size="10" fill="#8A94A6">MÁXIMO</text>
+  <line x1="130" y1="92" x2="199" y2="92" stroke="rgba(255,255,255,.25)" stroke-dasharray="3 4"/>
+  <text x="124" y="96" text-anchor="end" font-family="IBM Plex Mono,monospace" font-size="10" fill="#8A94A6">CIERRE</text>
+  <line x1="130" y1="168" x2="199" y2="168" stroke="rgba(255,255,255,.25)" stroke-dasharray="3 4"/>
+  <text x="124" y="172" text-anchor="end" font-family="IBM Plex Mono,monospace" font-size="10" fill="#8A94A6">APERTURA</text>
+  <line x1="130" y1="198" x2="214" y2="198" stroke="rgba(255,255,255,.25)" stroke-dasharray="3 4"/>
+  <text x="124" y="202" text-anchor="end" font-family="IBM Plex Mono,monospace" font-size="10" fill="#8A94A6">MÍNIMO</text>
+  <line x1="443" y1="110" x2="510" y2="110" stroke="rgba(255,255,255,.25)" stroke-dasharray="3 4"/>
+  <text x="516" y="114" font-family="IBM Plex Mono,monospace" font-size="10" fill="#8A94A6">CUERPO</text>
+  <line x1="424" y1="52" x2="510" y2="52" stroke="rgba(255,255,255,.25)" stroke-dasharray="3 4"/>
+  <text x="516" y="56" font-family="IBM Plex Mono,monospace" font-size="10" fill="#8A94A6">MECHA</text>
+  <text x="220" y="228" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="9.5" fill="#57C79B">ALCISTA · cierre &gt; apertura</text>
+  <text x="420" y="228" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="9.5" fill="#DE6A5F">BAJISTA · cierre &lt; apertura</text>
+</svg>`,
+
+estructura: `<svg viewBox="0 0 640 220" fill="none">
+  <polyline points="40,185 150,95 210,140 310,65 370,110 470,42 530,80 600,35" stroke="#9BC0DC" stroke-width="2" stroke-linejoin="round" fill="none"/>
+  <circle cx="150" cy="95" r="4" fill="#9BC0DC"/><text x="150" y="82" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="10" fill="#8A94A6">H</text>
+  <circle cx="210" cy="140" r="4" fill="#9BC0DC"/><text x="210" y="160" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="10" fill="#57C79B">HL</text>
+  <circle cx="310" cy="65" r="4" fill="#9BC0DC"/><text x="310" y="52" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="10" fill="#57C79B">HH</text>
+  <circle cx="370" cy="110" r="4" fill="#9BC0DC"/><text x="370" y="130" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="10" fill="#57C79B">HL</text>
+  <circle cx="470" cy="42" r="4" fill="#9BC0DC"/><text x="470" y="30" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="10" fill="#57C79B">HH</text>
+  <circle cx="530" cy="80" r="4" fill="#9BC0DC"/><text x="530" y="100" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="10" fill="#57C79B">HL</text>
+  <text x="60" y="40" font-family="IBM Plex Mono,monospace" font-size="9.5" fill="#596374">MÁXIMOS MÁS ALTOS + MÍNIMOS MÁS ALTOS = TENDENCIA ALCISTA</text>
+</svg>`,
+
+bos: `<svg viewBox="0 0 640 220" fill="none">
+  <polyline points="40,175 140,90 200,128 290,58 350,105 420,78 470,105" stroke="#9BC0DC" stroke-width="2" stroke-linejoin="round" fill="none"/>
+  <line x1="330" y1="105" x2="580" y2="105" stroke="#D9A441" stroke-width="1" stroke-dasharray="4 5"/>
+  <text x="584" y="100" text-anchor="end" font-family="IBM Plex Mono,monospace" font-size="9.5" fill="#D9A441">ÚLTIMO HL</text>
+  <line x1="500" y1="70" x2="500" y2="185" stroke="#DE6A5F" stroke-width="2"/>
+  <rect x="486" y="88" width="28" height="80" rx="3" fill="#DE6A5F"/>
+  <polyline points="470,105 486,120" stroke="#9BC0DC" stroke-width="2" fill="none"/>
+  <path d="M520 175 L560 195" stroke="#DE6A5F" stroke-width="1.6"/>
+  <path d="M560 195 l-10 -3 m10 3 l-4 -9" stroke="#DE6A5F" stroke-width="1.6"/>
+  <text x="416" y="205" font-family="IBM Plex Mono,monospace" font-size="10" fill="#DE6A5F">BOS · CIERRE debajo del último mínimo</text>
+  <text x="60" y="38" font-family="IBM Plex Mono,monospace" font-size="9.5" fill="#596374">UNA MECHA QUE SOLO PERFORA NO ES BOS — EL CIERRE ES LA SENTENCIA</text>
+</svg>`,
+
+liquidez: `<svg viewBox="0 0 640 220" fill="none">
+  <line x1="120" y1="78" x2="500" y2="78" stroke="#D9A441" stroke-width="1" stroke-dasharray="4 5"/>
+  <text x="506" y="82" font-family="IBM Plex Mono,monospace" font-size="9.5" fill="#D9A441">EQUAL HIGHS</text>
+  <circle cx="220" cy="60" r="3" fill="#DE6A5F" opacity=".8"/><circle cx="250" cy="55" r="3" fill="#DE6A5F" opacity=".8"/>
+  <circle cx="285" cy="62" r="3" fill="#DE6A5F" opacity=".8"/><circle cx="320" cy="56" r="3" fill="#DE6A5F" opacity=".8"/>
+  <circle cx="352" cy="61" r="3" fill="#DE6A5F" opacity=".8"/>
+  <text x="286" y="40" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="9.5" fill="#DE6A5F">STOPS ACUMULADOS ($$$)</text>
+  <polyline points="40,165 170,78 235,128 320,78 390,140 450,48 470,78 560,180" stroke="#9BC0DC" stroke-width="2" stroke-linejoin="round" fill="none"/>
+  <circle cx="450" cy="48" r="4" fill="#E9EDF2"/>
+  <text x="452" y="34" font-family="IBM Plex Mono,monospace" font-size="9.5" fill="#E9EDF2">SWEEP</text>
+  <text x="60" y="205" font-family="IBM Plex Mono,monospace" font-size="9.5" fill="#596374">EL PRECIO BARRE LOS STOPS SOBRE LOS MÁXIMOS IGUALES — Y SE MUEVE DE VERDAD</text>
+</svg>`,
+
+niveles: `<svg viewBox="0 0 640 220" fill="none">
+  <line x1="60" y1="46" x2="520" y2="46" stroke="#9BC0DC" stroke-width="1.4"/>
+  <text x="528" y="50" font-family="IBM Plex Mono,monospace" font-size="10" fill="#9BC0DC">PDH</text>
+  <line x1="60" y1="88" x2="520" y2="88" stroke="rgba(255,255,255,.3)" stroke-width="1" stroke-dasharray="4 5"/>
+  <text x="528" y="92" font-family="IBM Plex Mono,monospace" font-size="10" fill="#8A94A6">ASIA H</text>
+  <line x1="60" y1="150" x2="520" y2="150" stroke="rgba(255,255,255,.3)" stroke-width="1" stroke-dasharray="4 5"/>
+  <text x="528" y="154" font-family="IBM Plex Mono,monospace" font-size="10" fill="#8A94A6">LONDRES L</text>
+  <line x1="60" y1="188" x2="520" y2="188" stroke="#9BC0DC" stroke-width="1.4"/>
+  <text x="528" y="192" font-family="IBM Plex Mono,monospace" font-size="10" fill="#9BC0DC">PDL</text>
+  <circle cx="290" cy="120" r="5" fill="#E9EDF2"/>
+  <text x="290" y="139" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="9.5" fill="#8A94A6">PRECIO</text>
+  <path d="M290 112 L290 56 M290 56 l-5 9 m5 -9 l5 9" stroke="#57C79B" stroke-width="1.4"/>
+  <text x="60" y="26" font-family="IBM Plex Mono,monospace" font-size="9.5" fill="#596374">¿QUÉ LIQUIDEZ SIGUE SIN TOMAR? HACIA AHÍ APUNTA EL BREAK</text>
+</svg>`,
+
+sweepbreak: `<svg viewBox="0 0 640 210" fill="none">
+  <text x="170" y="30" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="10.5" fill="#DE6A5F">SWEEP · trampa</text>
+  <line x1="60" y1="92" x2="290" y2="92" stroke="rgba(255,255,255,.3)" stroke-dasharray="4 5"/>
+  <line x1="170" y1="52" x2="170" y2="160" stroke="#DE6A5F" stroke-width="2"/>
+  <rect x="156" y="100" width="28" height="52" rx="3" fill="#DE6A5F"/>
+  <path d="M196 120 C230 130, 245 150, 262 168 M262 168 l-9 -4 m9 4 l-3 -10" stroke="#DE6A5F" stroke-width="1.5" fill="none"/>
+  <text x="350" y="30" font-family="IBM Plex Mono,monospace" font-size="10.5" fill="#57C79B">BREAK · continuación</text>
+  <line x1="350" y1="92" x2="580" y2="92" stroke="rgba(255,255,255,.3)" stroke-dasharray="4 5"/>
+  <line x1="450" y1="48" x2="450" y2="150" stroke="#57C79B" stroke-width="2"/>
+  <rect x="436" y="58" width="28" height="60" rx="3" fill="#57C79B"/>
+  <path d="M476 70 C505 60, 520 50, 545 40 M545 40 l-10 1 m10 -1 l-7 8" stroke="#57C79B" stroke-width="1.5" fill="none"/>
+  <text x="170" y="192" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="9" fill="#596374">MECHA A TRAVÉS · CIERRE ADENTRO</text>
+  <text x="465" y="192" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="9" fill="#596374">CUERPO Y CIERRE MÁS ALLÁ</text>
+</svg>`,
+
+orbRange: `<svg viewBox="0 0 640 220" fill="none">
+  <line x1="120" y1="120" x2="120" y2="170" stroke="rgba(255,255,255,.35)" stroke-width="1.6"/>
+  <rect x="112" y="130" width="16" height="30" rx="2" fill="rgba(255,255,255,.25)"/>
+  <rect x="200" y="66" width="150" height="96" rx="6" fill="rgba(155,192,220,.08)" stroke="#9BC0DC" stroke-width="1.2" stroke-dasharray="5 5"/>
+  <line x1="228" y1="76" x2="228" y2="150" stroke="#57C79B" stroke-width="1.8"/>
+  <rect x="219" y="88" width="18" height="44" rx="2" fill="#57C79B"/>
+  <line x1="272" y1="82" x2="272" y2="155" stroke="#DE6A5F" stroke-width="1.8"/>
+  <rect x="263" y="95" width="18" height="42" rx="2" fill="#DE6A5F"/>
+  <line x1="316" y1="74" x2="316" y2="148" stroke="#57C79B" stroke-width="1.8"/>
+  <rect x="307" y="86" width="18" height="40" rx="2" fill="#57C79B"/>
+  <text x="275" y="52" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="10" fill="#9BC0DC">RANGO DE APERTURA · 15 MIN</text>
+  <text x="200" y="186" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="9.5" fill="#8A94A6">7:30</text>
+  <text x="350" y="186" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="9.5" fill="#8A94A6">7:45</text>
+  <text x="430" y="110" font-family="IBM Plex Mono,monospace" font-size="9.5" fill="#596374">ALTO Y BAJO DEL ORB =</text>
+  <text x="430" y="126" font-family="IBM Plex Mono,monospace" font-size="9.5" fill="#596374">EL CAMPO DE JUEGO DEL DÍA</text>
+</svg>`,
+
+orbBreak: `<svg viewBox="0 0 640 220" fill="none">
+  <rect x="150" y="96" width="150" height="80" rx="6" fill="rgba(155,192,220,.08)" stroke="#9BC0DC" stroke-width="1.2" stroke-dasharray="5 5"/>
+  <text x="225" y="196" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="9.5" fill="#8A94A6">ORB 7:30–7:45</text>
+  <line x1="80" y1="42" x2="580" y2="42" stroke="#D9A441" stroke-width="1.2" stroke-dasharray="4 5"/>
+  <text x="586" y="46" font-family="IBM Plex Mono,monospace" font-size="9.5" fill="#D9A441">PDH</text>
+  <text x="80" y="30" font-family="IBM Plex Mono,monospace" font-size="9.5" fill="#D9A441">LIQUIDEZ SIN TOMAR — EL OBJETIVO</text>
+  <line x1="330" y1="56" x2="330" y2="150" stroke="#57C79B" stroke-width="2"/>
+  <rect x="316" y="64" width="28" height="60" rx="3" fill="#57C79B"/>
+  <path d="M360 70 C400 62, 440 54, 500 46 M500 46 l-10 0 m10 0 l-8 7" stroke="#57C79B" stroke-width="1.6" fill="none"/>
+  <text x="380" y="100" font-family="IBM Plex Mono,monospace" font-size="9.5" fill="#57C79B">BREAK CON CIERRE FUERA + DIRECCIÓN A LIQUIDEZ</text>
+</svg>`,
+
+orbTrade: `<svg viewBox="0 0 640 240" fill="none">
+  <rect x="140" y="100" width="150" height="80" rx="6" fill="rgba(155,192,220,.08)" stroke="#9BC0DC" stroke-width="1.2" stroke-dasharray="5 5"/>
+  <line x1="80" y1="44" x2="560" y2="44" stroke="#57C79B" stroke-width="1.2" stroke-dasharray="4 5"/>
+  <text x="80" y="32" font-family="IBM Plex Mono,monospace" font-size="9.5" fill="#57C79B">TARGET · PDH</text>
+  <line x1="280" y1="196" x2="560" y2="196" stroke="#DE6A5F" stroke-width="1.2" stroke-dasharray="4 5"/>
+  <text x="80" y="212" font-family="IBM Plex Mono,monospace" font-size="9.5" fill="#DE6A5F">STOP · bajo el rango</text>
+  <line x1="320" y1="70" x2="320" y2="160" stroke="#57C79B" stroke-width="2"/>
+  <rect x="306" y="80" width="28" height="60" rx="3" fill="#57C79B"/>
+  <circle cx="320" cy="97" r="6" fill="none" stroke="#E9EDF2" stroke-width="1.6"/>
+  <text x="338" y="101" font-family="IBM Plex Mono,monospace" font-size="9.5" fill="#E9EDF2">ENTRADA</text>
+  <path d="M540 97 L540 196" stroke="#DE6A5F" stroke-width="1.2"/>
+  <path d="M535 97 h10 M535 196 h10" stroke="#DE6A5F" stroke-width="1.2"/>
+  <text x="552" y="150" font-family="IBM Plex Mono,monospace" font-size="10" fill="#DE6A5F">1R</text>
+  <path d="M580 97 L580 44" stroke="#57C79B" stroke-width="1.2"/>
+  <path d="M575 97 h10 M575 44 h10" stroke="#57C79B" stroke-width="1.2"/>
+  <text x="592" y="74" font-family="IBM Plex Mono,monospace" font-size="10" fill="#57C79B">2R</text>
+</svg>`,
+
+fvg: `<svg viewBox="0 0 640 220" fill="none">
+  <rect x="150" y="86" width="330" height="26" fill="rgba(155,192,220,.2)"/>
+  <text x="490" y="103" font-family="IBM Plex Mono,monospace" font-size="10.5" fill="#9BC0DC">FVG</text>
+  <line x1="210" y1="106" x2="210" y2="180" stroke="#57C79B" stroke-width="1.8"/>
+  <rect x="198" y="122" width="24" height="42" rx="2" fill="#57C79B"/>
+  <line x1="280" y1="34" x2="280" y2="160" stroke="#57C79B" stroke-width="1.8"/>
+  <rect x="268" y="44" width="24" height="102" rx="2" fill="#57C79B"/>
+  <line x1="350" y1="52" x2="350" y2="86" stroke="#57C79B" stroke-width="1.8"/>
+  <rect x="338" y="58" width="24" height="22" rx="2" fill="#57C79B"/>
+  <line x1="150" y1="106" x2="230" y2="106" stroke="rgba(255,255,255,.35)" stroke-dasharray="3 4"/>
+  <text x="146" y="110" text-anchor="end" font-family="IBM Plex Mono,monospace" font-size="9" fill="#8A94A6">MÁXIMO VELA 1</text>
+  <line x1="330" y1="86" x2="480" y2="86" stroke="rgba(255,255,255,.35)" stroke-dasharray="3 4"/>
+  <text x="146" y="90" text-anchor="end" font-family="IBM Plex Mono,monospace" font-size="9" fill="#8A94A6">MÍNIMO VELA 3</text>
+  <text x="90" y="205" font-family="IBM Plex Mono,monospace" font-size="9.5" fill="#596374">LA VELA 2 SE MOVIÓ TAN RÁPIDO QUE DEJÓ PRECIO SIN NEGOCIAR — ESE HUECO ES EL IMÁN</text>
+</svg>`,
+
+retest: `<svg viewBox="0 0 640 220" fill="none">
+  <rect x="140" y="98" width="380" height="30" fill="rgba(155,192,220,.18)" stroke="rgba(155,192,220,.4)" stroke-width="1"/>
+  <text x="146" y="92" font-family="IBM Plex Mono,monospace" font-size="9.5" fill="#9BC0DC">ZONA FVG</text>
+  <polyline points="50,185 160,140 250,55 330,113 420,80 470,100 560,34" stroke="#9BC0DC" stroke-width="2" stroke-linejoin="round" fill="none"/>
+  <circle cx="330" cy="113" r="5" fill="#E9EDF2"/>
+  <text x="330" y="150" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="9.5" fill="#E9EDF2">RETEST</text>
+  <text x="330" y="164" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="9" fill="#8A94A6">entrada de menor riesgo</text>
+  <path d="M560 34 l-10 1 m10 -1 l-7 8" stroke="#9BC0DC" stroke-width="1.6"/>
+</svg>`,
+
+emas: `<svg viewBox="0 0 640 210" fill="none">
+  <path d="M40 180 C160 165, 300 140, 580 96" stroke="#596374" stroke-width="1.6" fill="none"/>
+  <text x="588" y="100" font-family="IBM Plex Mono,monospace" font-size="9.5" fill="#596374">EMA 50</text>
+  <path d="M40 168 C160 148, 300 116, 580 66" stroke="#5E8CAD" stroke-width="1.6" fill="none"/>
+  <text x="588" y="70" font-family="IBM Plex Mono,monospace" font-size="9.5" fill="#5E8CAD">EMA 14</text>
+  <polyline points="40,150 120,120 180,138 260,88 320,108 420,54 480,74 570,30" stroke="#E9EDF2" stroke-width="2" stroke-linejoin="round" fill="none"/>
+  <text x="588" y="34" font-family="IBM Plex Mono,monospace" font-size="9.5" fill="#E9EDF2">PRECIO</text>
+  <text x="60" y="38" font-family="IBM Plex Mono,monospace" font-size="9.5" fill="#596374">PRECIO &gt; EMA14 &gt; EMA50 = ESTRUCTURA A FAVOR DEL LONG</text>
+</svg>`,
+
+erre: `<svg viewBox="0 0 640 170" fill="none">
+  <text x="40" y="52" font-family="IBM Plex Mono,monospace" font-size="10" fill="#DE6A5F">RIESGO</text>
+  <rect x="150" y="38" width="120" height="20" rx="4" fill="#DE6A5F" opacity=".85"/>
+  <text x="282" y="53" font-family="IBM Plex Mono,monospace" font-size="10.5" fill="#DE6A5F">−1R · definido ANTES de entrar</text>
+  <text x="40" y="112" font-family="IBM Plex Mono,monospace" font-size="10" fill="#57C79B">OBJETIVO</text>
+  <rect x="150" y="98" width="240" height="20" rx="4" fill="#57C79B" opacity=".85"/>
+  <text x="402" y="113" font-family="IBM Plex Mono,monospace" font-size="10.5" fill="#57C79B">+2R · la liquidez del mapa</text>
+  <text x="40" y="152" font-family="IBM Plex Mono,monospace" font-size="9.5" fill="#596374">CON 40% DE ACIERTO Y 2R PROMEDIO, LA CUENTA CRECE — PIENSA EN R, NO EN DÓLARES</text>
+</svg>`,
+
+sizing: `<svg viewBox="0 0 640 190" fill="none">
+  <rect x="40" y="40" width="170" height="58" rx="9" fill="rgba(255,255,255,.04)" stroke="rgba(255,255,255,.14)"/>
+  <text x="125" y="64" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="9" fill="#8A94A6">RIESGO PERMITIDO</text>
+  <text x="125" y="86" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="15" fill="#E9EDF2">$300</text>
+  <text x="232" y="76" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="18" fill="#8A94A6">÷</text>
+  <rect x="254" y="40" width="200" height="58" rx="9" fill="rgba(255,255,255,.04)" stroke="rgba(255,255,255,.14)"/>
+  <text x="354" y="64" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="9" fill="#8A94A6">STOP × VALOR DEL PUNTO</text>
+  <text x="354" y="86" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="15" fill="#E9EDF2">15 pts × $20</text>
+  <text x="476" y="76" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="18" fill="#8A94A6">=</text>
+  <rect x="498" y="40" width="112" height="58" rx="9" fill="rgba(155,192,220,.12)" stroke="#9BC0DC"/>
+  <text x="554" y="64" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="9" fill="#9BC0DC">TAMAÑO</text>
+  <text x="554" y="86" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="15" fill="#E9EDF2">1 contrato</text>
+  <text x="40" y="145" font-family="IBM Plex Mono,monospace" font-size="9.5" fill="#596374">PRIMERO EL STOP TÉCNICO, DESPUÉS EL TAMAÑO — NUNCA AL REVÉS.</text>
+  <text x="40" y="165" font-family="IBM Plex Mono,monospace" font-size="9.5" fill="#596374">SI NO ALCANZA NI PARA 1 CONTRATO, EL TRADE NO SE TOMA.</text>
+</svg>`,
+
+drawdown: `<svg viewBox="0 0 640 210" fill="none">
+  <polyline points="40,175 130,140 210,150 300,70 360,132 450,110 560,42" stroke="#57C79B" stroke-width="2" stroke-linejoin="round" fill="none"/>
+  <line x1="300" y1="70" x2="380" y2="70" stroke="rgba(255,255,255,.35)" stroke-dasharray="4 5"/>
+  <path d="M372 70 L372 132" stroke="#DE6A5F" stroke-width="1.4"/>
+  <path d="M367 70 h10 M367 132 h10" stroke="#DE6A5F" stroke-width="1.4"/>
+  <text x="386" y="104" font-family="IBM Plex Mono,monospace" font-size="10" fill="#DE6A5F">DRAWDOWN MÁX</text>
+  <circle cx="300" cy="70" r="4" fill="#E9EDF2"/>
+  <text x="300" y="56" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="9.5" fill="#8A94A6">PICO</text>
+  <text x="60" y="30" font-family="IBM Plex Mono,monospace" font-size="9.5" fill="#596374">LA DISTANCIA DEL PICO AL VALLE — LA MÉTRICA QUE LAS FONDEADORAS VIGILAN PRIMERO</text>
+</svg>`,
+
+ciclo: `<svg viewBox="0 0 640 250" fill="none">
+  <rect x="255" y="24" width="130" height="34" rx="9" fill="rgba(222,106,95,.1)" stroke="#DE6A5F"/>
+  <text x="320" y="45" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="10" fill="#DE6A5F">PÉRDIDA</text>
+  <rect x="440" y="108" width="150" height="34" rx="9" fill="rgba(222,106,95,.1)" stroke="#DE6A5F"/>
+  <text x="515" y="129" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="10" fill="#DE6A5F">IMPULSO · «ME LO DEBE»</text>
+  <rect x="245" y="196" width="150" height="34" rx="9" fill="rgba(222,106,95,.1)" stroke="#DE6A5F"/>
+  <text x="320" y="217" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="10" fill="#DE6A5F">TRADE SIN SETUP</text>
+  <rect x="52" y="108" width="150" height="34" rx="9" fill="rgba(222,106,95,.14)" stroke="#DE6A5F" stroke-width="1.4"/>
+  <text x="127" y="129" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="10" fill="#DE6A5F">PÉRDIDA MAYOR</text>
+  <path d="M392 48 C452 62, 492 80, 508 102 M508 102 l-3 -10 m3 10 l-10 -2" stroke="#DE6A5F" stroke-width="1.4" fill="none"/>
+  <path d="M500 148 C462 176, 430 194, 402 202 M402 202 l10 2 m-10 -2 l8 -7" stroke="#DE6A5F" stroke-width="1.4" fill="none"/>
+  <path d="M240 208 C180 196, 140 176, 122 148 M122 148 l2 10 m-2 -10 l9 4" stroke="#DE6A5F" stroke-width="1.4" fill="none"/>
+  <path d="M132 102 C160 76, 200 56, 248 44 M248 44 l-10 -2 m10 2 l-9 6" stroke="#DE6A5F" stroke-width="1.4" fill="none"/>
+  <text x="320" y="128" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="11" fill="#DE6A5F" opacity=".7">REVENGE</text>
+  <path d="M392 32 C470 20, 540 20, 596 30 M596 30 l-9 -5 m9 5 l-10 3" stroke="#57C79B" stroke-width="1.5" fill="none"/>
+  <text x="596" y="56" text-anchor="end" font-family="IBM Plex Mono,monospace" font-size="9.5" fill="#57C79B">LA REGLA ROMPE EL CICLO:</text>
+  <text x="596" y="70" text-anchor="end" font-family="IBM Plex Mono,monospace" font-size="9.5" fill="#57C79B">un intento más o cierre</text>
+</svg>`,
+
+flywheel: `<svg viewBox="0 0 640 240" fill="none">
+  <rect x="262" y="22" width="116" height="34" rx="9" fill="rgba(155,192,220,.1)" stroke="#9BC0DC"/>
+  <text x="320" y="43" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="10" fill="#9BC0DC">OPERAR</text>
+  <rect x="452" y="103" width="130" height="34" rx="9" fill="rgba(155,192,220,.1)" stroke="#9BC0DC"/>
+  <text x="517" y="124" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="10" fill="#9BC0DC">REGISTRAR</text>
+  <rect x="262" y="186" width="116" height="34" rx="9" fill="rgba(155,192,220,.1)" stroke="#9BC0DC"/>
+  <text x="320" y="207" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="10" fill="#9BC0DC">REVISAR</text>
+  <rect x="58" y="103" width="130" height="34" rx="9" fill="rgba(155,192,220,.1)" stroke="#9BC0DC"/>
+  <text x="123" y="124" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="10" fill="#9BC0DC">AJUSTAR</text>
+  <path d="M384 46 C438 58, 478 76, 502 98 M502 98 l-3 -10 m3 10 l-10 -2" stroke="#5E8CAD" stroke-width="1.4" fill="none"/>
+  <path d="M496 142 C460 168, 424 184, 386 194 M386 194 l10 2 m-10 -2 l8 -7" stroke="#5E8CAD" stroke-width="1.4" fill="none"/>
+  <path d="M256 198 C200 188, 158 168, 136 142 M136 142 l2 10 m-2 -10 l9 4" stroke="#5E8CAD" stroke-width="1.4" fill="none"/>
+  <path d="M142 98 C168 74, 210 54, 256 42 M256 42 l-10 -2 m10 2 l-9 6" stroke="#5E8CAD" stroke-width="1.4" fill="none"/>
+  <text x="320" y="124" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="10" fill="#8A94A6">EL CICLO DEL EDGE</text>
+</svg>`,
+
+rutina: `<svg viewBox="0 0 640 160" fill="none">
+  <line x1="50" y1="84" x2="590" y2="84" stroke="rgba(255,255,255,.18)" stroke-width="1.4"/>
+  <circle cx="80" cy="84" r="5" fill="#9BC0DC"/>
+  <text x="80" y="62" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="9.5" fill="#E9EDF2">7:00</text>
+  <text x="80" y="112" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="8.5" fill="#8A94A6">PRE-MARKET</text>
+  <circle cx="210" cy="84" r="5" fill="#9BC0DC"/>
+  <text x="210" y="62" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="9.5" fill="#E9EDF2">7:30–7:45</text>
+  <text x="210" y="112" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="8.5" fill="#8A94A6">ORB</text>
+  <circle cx="350" cy="84" r="5" fill="#9BC0DC"/>
+  <text x="350" y="62" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="9.5" fill="#E9EDF2">VENTANA</text>
+  <text x="350" y="112" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="8.5" fill="#8A94A6">MÁX 2 TRADES</text>
+  <circle cx="470" cy="84" r="5" fill="#D9A441"/>
+  <text x="470" y="62" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="9.5" fill="#E9EDF2">8:30</text>
+  <text x="470" y="112" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="8.5" fill="#D9A441">TODO CERRADO</text>
+  <circle cx="575" cy="84" r="5" fill="#57C79B"/>
+  <text x="575" y="62" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="9.5" fill="#E9EDF2">POST</text>
+  <text x="575" y="112" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="8.5" fill="#57C79B">JOURNAL + REPORTE</text>
+</svg>`
+};
+
+const DOCS = [
+{ id:'m01', n:'MÓDULO 01', t:'Fundamentos de futuros', d:'El instrumento antes que la estrategia.', secs:[
+  { h:'Qué es un contrato de futuros', p:[
+    'Un futuro es un acuerdo estandarizado para comprar o vender un índice a un precio pactado. En la mesa operamos NQ — el futuro del Nasdaq 100 — que se liquida en efectivo: nadie entrega acciones. La diferencia entre tu precio de entrada y tu precio de salida se abona o se carga a la cuenta, punto por punto.',
+    'La palabra clave es apalancamiento: con un margen relativamente pequeño controlas un contrato cuyo valor nominal es mucho mayor. Eso amplifica el resultado en las dos direcciones. Por eso en Northpoint el riesgo se define antes que la entrada — el apalancamiento no perdona la improvisación.'
+  ]},
+  { h:'Cuánto vale cada punto', p:[
+    'En NQ, 1 punto son $20 por contrato y el movimiento mínimo (tick) es 0.25 = $5. En ES el punto vale $50. Antes de tocar el botón tienes que poder responder sin pensar: si esto va 15 puntos en mi contra, ¿cuántos dólares son? Un stop de 15 puntos en NQ son $300 por contrato — ese número decide tu tamaño, no tu convicción.'
+  ], fig:'valor', cap:'valor del punto por contrato — el mismo movimiento, tres cuentas distintas'},
+  { h:'Las sesiones y tu ventana', p:[
+    'El futuro cotiza casi 23 horas, pero no todas valen lo mismo. Asia y Londres construyen los máximos y mínimos overnight — los niveles que después funcionan como imanes — y Nueva York trae el volumen que de verdad mueve al índice.',
+    'Nuestra mesa solo opera la ventana 7:00–8:30 AM: el pre-market se revisa a las 7:00, el rango de apertura se forma de 7:30 a 7:45 y todo queda cerrado antes de las 8:30. Fuera de esa ventana la plataforma está cerrada. No es un capricho: es la franja donde el protocolo tiene ventaja medida.'
+  ], fig:'sesiones', cap:'las 23 horas del futuro — y los 90 minutos que operamos'},
+]},
+{ id:'m02', n:'MÓDULO 02', t:'Velas y estructura de mercado', d:'Leer el precio sin indicadores.', secs:[
+  { h:'Anatomía de una vela', p:[
+    'Cada vela resume la batalla de un periodo: dónde abrió el precio, hasta dónde empujaron los compradores (máximo), hasta dónde los vendedores (mínimo) y dónde cerró. El cuerpo es la decisión final; las mechas son los intentos rechazados.',
+    'Una mecha larga arriba dice que la subida fue vendida. Un cierre fuerte pegado al máximo dice que los compradores tienen el control. La vela no predice — informa. La lectura correcta de una sola vela vale más que tres indicadores encimados.'
+  ], fig:'vela', cap:'la misma información en las dos direcciones'},
+  { h:'HH y HL: la estructura de la tendencia', p:[
+    'Una tendencia alcista es una cadena verificable: máximos más altos (HH) y mínimos más altos (HL). No es una opinión — se puede marcar en el gráfico con puntos. Mientras la cadena se respete, la presunción opera a favor de la tendencia, y los retrocesos a un HL son oportunidad, no amenaza.'
+  ], fig:'estructura', cap:'la cadena HH · HL — la tendencia se marca, no se discute'},
+  { h:'Break of Structure (BOS)', p:[
+    'Cuando el precio CIERRA más allá del último pivote relevante, la estructura cambió: eso es un Break of Structure. El checklist de la mesa lo pide a favor de la dirección del break — es la confirmación de que el mercado ya decidió.',
+    'La distinción crítica: una mecha que solo perfora el nivel y regresa no es BOS, es una barrida. El cierre es la sentencia; la mecha es solo el forcejeo.'
+  ], fig:'bos', cap:'BOS = cierre del cuerpo más allá del pivote, no una mecha'},
+]},
+{ id:'m03', n:'MÓDULO 03', t:'Liquidez', d:'El precio va donde puede ejecutar.', secs:[
+  { h:'Dónde viven los stops', p:[
+    'El mercado necesita contrapartes para llenar órdenes grandes. ¿Dónde hay órdenes garantizadas? En los stops: debajo de cada mínimo obvio hay stops de compradores; encima de cada máximo obvio, stops de vendedores. Esas acumulaciones son la liquidez.',
+    'Por eso los dobles techos "perfectos" (equal highs) casi nunca aguantan: son una piscina de stops que el precio barre antes de moverse de verdad. Lo que el retail ve como resistencia, el mercado lo ve como combustible.'
+  ], fig:'liquidez', cap:'equal highs = piscina de stops — el precio los caza'},
+  { h:'PDH, PDL y los niveles overnight', p:[
+    'Los imanes más confiables del día: el máximo y mínimo del día anterior (PDH/PDL) y los extremos de Asia y Londres. El checklist del pre-market pregunta exactamente esto: ¿qué liquidez sigue SIN tomar? Un nivel intacto es un objetivo; un nivel ya barrido cambió el mapa.'
+  ], fig:'niveles', cap:'el mapa del pre-market — niveles intactos = objetivos'},
+  { h:'Sweep o break: la diferencia que paga', p:[
+    'Las dos jugadas se parecen y son opuestas. En el sweep, el precio atraviesa el nivel con la mecha, toma los stops y CIERRA de regreso: era una cacería, y el movimiento real suele venir al revés. En el break, el cuerpo cierra más allá del nivel y el precio continúa.',
+    'Distinguirlos es la mitad del oficio: el sweep del rango puede armar el trade contrario — únicamente si aparece un setup nuevo completo. Nunca por revancha.'
+  ], fig:'sweepbreak', cap:'misma línea, dos historias — el cierre las separa'},
+]},
+{ id:'m04', n:'MÓDULO 04', t:'ORB · Opening Range Breakout', d:'La estrategia núcleo de la mesa.', secs:[
+  { h:'El rango de apertura', p:[
+    'De 7:30 a 7:45 AM el mercado define su campo de juego: los primeros 15 minutos de la apertura de Nueva York forman el rango de apertura. Su máximo y su mínimo son las dos líneas que gobiernan el resto de la sesión para nosotros.',
+    'Durante esos 15 minutos no se opera — se observa. La paciencia del ORB es parte del setup: entrar antes de que el rango exista es operar sin mapa.'
+  ], fig:'orbRange', cap:'7:30–7:45 · el rango se observa, no se opera'},
+  { h:'El break válido apunta a liquidez', p:[
+    'Un break del rango solo vale si apunta hacia liquidez clara sin tomar: el PDH, el PDL, un high de Asia o Londres intacto. Break hacia el vacío no es trade — es ruido con dirección.',
+    'Esta es la lógica completa de la mesa en una frase: el ORB da el CUÁNDO, la liquidez da el HACIA DÓNDE. Si falta cualquiera de los dos, el mejor trade del día es no operar.'
+  ], fig:'orbBreak', cap:'el break vale por su destino, no por su fuerza'},
+  { h:'Entrada, stop y objetivo', p:[
+    'La entrada es tantito antes o en el break, con la estructura a favor. El stop vive al otro lado del rango — técnico, no emocional. El objetivo ES la liquidez identificada en el pre-market: ahí se toma parcial y se deja correr el resto.',
+    'Con el stop y el target definidos antes de entrar, el trade queda medido en R desde el inicio. Si la geometría no da al menos 1.5R, la operación no se toma — el mercado ofrecerá otra mañana a las 7:30.'
+  ], fig:'orbTrade', cap:'todo definido antes de entrar — entrada, stop, target, R'},
+]},
+{ id:'m05', n:'MÓDULO 05', t:'FVG y confirmaciones', d:'La confluencia que valida el break.', secs:[
+  { h:'Qué es un Fair Value Gap', p:[
+    'Cuando una vela se mueve con tanta violencia que la mecha de la vela anterior y la de la siguiente no se tocan, queda un hueco de precio sin negociar: un Fair Value Gap. El mercado tiende a regresar a esas zonas a "llenar" el precio que dejó pendiente.',
+    'Para la mesa, un FVG de 5 minutos a favor de la dirección del break es la huella de la agresión institucional: confirma que el movimiento tuvo intención, no casualidad.'
+  ], fig:'fvg', cap:'el hueco entre la mecha 1 y la mecha 3 — precio sin negociar'},
+  { h:'El retest: la segunda oportunidad', p:[
+    'El precio suele volver al FVG antes de continuar. Ese retest es la entrada de menor riesgo de todo el playbook: el stop queda más cerca, la geometría en R mejora y la confirmación ya ocurrió. Perderse el break no es perder el trade — es esperar el retest.'
+  ], fig:'retest', cap:'volver a la zona no es debilidad — es la entrada'},
+  { h:'EMA 14/50: el filtro de dirección', p:[
+    'Las medias móviles no predicen nada: confirman. Precio por encima de ambas y la EMA 14 sobre la EMA 50 = estructura alcista a favor del break. Si las medias están en contra, el checklist no pasa — sin excepciones ni interpretaciones creativas.',
+    'La regla de oro del módulo: un solo factor nunca es setup. Targets sin tomar + break hacia liquidez + BOS/FVG + EMA a favor. Las cuatro, o no hay trade. Así se llena el checklist de Sesión cada mañana.'
+  ], fig:'emas', cap:'el orden correcto: precio > EMA 14 > EMA 50'},
+]},
+{ id:'m06', n:'MÓDULO 06', t:'Gestión de riesgo', d:'Sobrevivir es la estrategia.', secs:[
+  { h:'Piensa en R, no en dinero', p:[
+    'R es tu unidad de riesgo: lo que decides arriesgar en un trade. Todo lo demás se mide contra eso. Un trade que arriesga $300 y busca $600 es un trade de 2R — y esa cifra importa más que los dólares, porque hace comparables todas tus operaciones.',
+    'La aritmética que sostiene a la mesa: con 2R promedio de objetivo, ganar solo 4 de cada 10 trades deja la cuenta en positivo. El edge no está en atinarle siempre — está en que tus ganadores midan el doble que tus perdedores.'
+  ], fig:'erre', cap:'arriesgas 1 para buscar 2 — la asimetría es el negocio'},
+  { h:'El tamaño lo dicta el stop', p:[
+    'El orden es sagrado: primero el stop técnico (dónde la tesis queda invalidada), después el tamaño. Contratos = riesgo permitido ÷ (puntos de stop × valor del punto). Nunca al revés — ajustar el stop para que quepa el tamaño que quieres es firmar la ruina por adelantado.'
+  ], fig:'sizing', cap:'la única fórmula de tamaño que existe en la mesa'},
+  { h:'Drawdown: la métrica que manda', p:[
+    'El drawdown es la distancia entre tu pico de capital y el valle que le sigue. Es la métrica que las fondeadoras vigilan primero, y la razón matemática es brutal: perder 20% exige ganar 25% solo para regresar. La curva se defiende antes de construirse.',
+    'De aquí nacen las reglas duras de la mesa: 2 trades máximo, ganaste el primero → cierre, perdiste el primero → un solo intento con setup nuevo. No son estilo — son control de drawdown convertido en protocolo.'
+  ], fig:'drawdown', cap:'del pico al valle — la cifra que decide si sigues operando'},
+]},
+{ id:'m07', n:'MÓDULO 07', t:'Psicología y proceso', d:'El edge eres tú, disciplinado.', secs:[
+  { h:'El ciclo del revenge — y cómo lo rompe la regla', p:[
+    'El asesino de cuentas no es una mala estrategia: es el ciclo. Una pérdida dispara el impulso de recuperarla YA; el impulso mete un trade sin setup; el trade sin setup produce una pérdida mayor — y el ciclo se acelera solo.',
+    'La mesa no confía en la fuerza de voluntad para romperlo: lo rompe por diseño. Perdiste el trade 1 → un único intento más, solo con setup completo. Ganaste el trade 1 → se cierra la plataforma. La regla piensa por ti exactamente cuando tú no puedes.'
+  ], fig:'ciclo', cap:'el ciclo se rompe por diseño, no por voluntad'},
+  { h:'El journal es el espejo', p:[
+    'Las narrativas se descartan; los datos se analizan. Cada trade registrado con su hora, setup, resultado y emoción convierte una experiencia efímera en un dato auditable. Sin registro, la sesión no existió.',
+    'El ciclo del edge es un volante que gira: operar → registrar → revisar → ajustar. Cien vueltas de ese volante valen más que cualquier curso — porque los datos son TUYOS, de tu horario, de tu instrumento, de tus errores.'
+  ], fig:'flywheel', cap:'cada vuelta del ciclo compone — como el interés'},
+  { h:'La rutina diaria', p:[
+    'El mismo pre-market, la misma ventana, el mismo checklist, todos los días. La consistencia del proceso precede a la consistencia del P&L — nunca al revés. Un día perdedor operado dentro del protocolo es un día profesional; un día ganador que violó las reglas es un pasivo.',
+    'Esta es la rutina completa de la mesa. El Bootcamp termina aquí y empieza donde importa: en tu journal, mañana a las 7:00.'
+  ], fig:'rutina', cap:'la rutina de la mesa — de 7:00 al reporte'},
+]},
+];
+
+let docAbierto = null;
+
+function renderEstudio(){
+  const total = DOCS.length;
+  const done = DOCS.filter(m=>S.study.lessons[m.id]).length;
+  const pct = total ? Math.round(done/total*100) : 0;
+  $('#stPct').textContent = pct + '%';
+  $('#stBar').style.width = pct + '%';
+  $('#stDone').textContent = done;
+  $('#stTotal').textContent = 'de ' + total + ' módulos';
+  $('#stRev').textContent = S.study.reviews.length;
+
+  if(docAbierto){ renderDoc(); return; }
+  $('#lessonView').hidden = true;
+  $('#mods').hidden = false;
+  $('#revBlock').hidden = false;
+
+  $('#mods').innerHTML = '<div class="bc-grid">' + DOCS.map(m=>{
+    const on = !!S.study.lessons[m.id];
+    return `<div class="bc-card">
+      <span class="n">${m.n} · ${m.secs.length} secciones</span>
+      <h3>${esc(m.t)}</h3>
+      <p>${esc(m.d)}</p>
+      <div class="foot">
+        <button class="btn sm primary" data-doc="${m.id}">Leer documento</button>
+        <span class="bc-est ${on?'si':'no'}">${on?'✓ ESTUDIADO':'PENDIENTE'}</span>
+      </div>
+    </div>`;
+  }).join('') + '</div>';
+
+  $$('#mods [data-doc]').forEach(b=> b.onclick = ()=>{ docAbierto = b.dataset.doc; renderEstudio(); $('#content').scrollTop = 0; });
+
+  $('#revList').innerHTML = [...S.study.reviews].reverse().slice(0,6).map(r=>`
+    <div class="lesson"><div class="lx">
+      <b>${fmtFecha(r.date)}</b>
+      <p><span class="down">Mal:</span> ${esc(r.mal)||'—'} · <span class="up">Bien:</span> ${esc(r.bien)||'—'}</p>
+      ${r.fix?`<p><span class="warn">Ajuste:</span> ${esc(r.fix)}</p>`:''}
+    </div></div>`).join('');
+}
+
+function renderDoc(){
+  const idx = DOCS.findIndex(m=>m.id===docAbierto);
+  const m = DOCS[idx];
+  if(!m){ docAbierto = null; return renderEstudio(); }
+  const on = !!S.study.lessons[m.id];
+  const prev = DOCS[idx-1], next = DOCS[idx+1];
+
+  $('#mods').hidden = true;
+  $('#revBlock').hidden = true;
+  $('#lessonView').hidden = false;
+  $('#lessonView').innerHTML = `
+    <button class="btn" id="docBack" style="margin-bottom:18px">← Todos los módulos</button>
+    <div class="panel"><div class="p-body doc">
+      <div class="doc-head">
+        <span class="n">${m.n} · BOOTCAMP DE LA MESA</span>
+        <h2>${esc(m.t)}</h2>
+        <p>${esc(m.d)}</p>
+      </div>
+      ${m.secs.map(sc=>`
+        <div class="doc-sec">
+          <h3>${esc(sc.h)}</h3>
+          ${sc.p.map(px=>`<p>${esc(px)}</p>`).join('')}
+          ${sc.fig && FIG[sc.fig] ? `<figure class="doc-fig">${FIG[sc.fig]}<figcaption>${esc(sc.cap||'')}</figcaption></figure>` : ''}
+        </div>`).join('')}
+      <div class="doc-nav">
+        <button class="btn ${on?'':'primary'}" id="docDone">${on?'✓ Estudiado':'Marcar como estudiado'}</button>
+        ${prev?`<button class="btn" data-doc="${prev.id}">← ${esc(prev.t)}</button>`:''}
+        ${next?`<button class="btn" data-doc="${next.id}">${esc(next.t)} →</button>`:''}
+      </div>
+    </div></div>`;
+
+  $('#docBack').onclick = ()=>{ docAbierto = null; renderEstudio(); };
+  $('#docDone').onclick = ()=>{
+    if(S.study.lessons[m.id]) delete S.study.lessons[m.id];
+    else S.study.lessons[m.id] = true;
+    save(); renderEstudio(); updateBadges();
+  };
+  $$('#lessonView [data-doc]').forEach(b=> b.onclick = ()=>{ docAbierto = b.dataset.doc; renderEstudio(); $('#content').scrollTop = 0; });
+}
+
+$('#btnRev').addEventListener('click', ()=>{
+  const mal = $('#rvMal').value.trim(), bien = $('#rvBien').value.trim(), fix = $('#rvFix').value.trim();
+  if(!mal && !bien && !fix){ toast('La revisión está vacía'); return; }
+  S.study.reviews.push({ date: todayISO(), mal, bien, fix });
+  $('#rvMal').value = $('#rvBien').value = $('#rvFix').value = '';
+  save(); renderEstudio(); toast('Revisión semanal guardada');
+});
+
+/* ════════ REGLAS ════════ */
+function renderReglas(){
+  $('#termList').innerHTML = [
+    'Compartir posiciones o estrategias del fondo externamente',
+    'Falsificar registros, reportes o documentación interna',
+    'Operaciones personales en conflicto de interés no declarado',
+    'Hostigamiento, discriminación o conducta abusiva',
+    'Fraude, robo o malversación de activos',
+    'Incumplimiento reiterado de las reglas de riesgo',
+  ].map((t,i)=>`<div style="display:flex;gap:10px;padding:8px 2px;border-bottom:1px solid var(--line-soft);font-size:12.5px;color:var(--dim)">
+      <span class="mono" style="color:var(--down);font-size:10px;padding-top:2px">${String(i+1).padStart(2,'0')}</span><span>${t}</span>
+    </div>`).join('');
+}
+
+/* ════════ SNOWBALL · POSICIONES ════════ */
+function nivelDe(cap){
+  if(cap >= 1000000) return { n:'SUMMIT', r:'18–28%', lock:'Mandato personalizado', f:'Alpha + Macro + Quant' };
+  if(cap >= 250000)  return { n:'CORE', r:'15–22%', lock:'Bloqueo 6 meses', f:'Alpha + Macro' };
+  if(cap >= 50000)   return { n:'SEED', r:'12–18%', lock:'Bloqueo 12 meses', f:'Alpha Fund' };
+  return { n:'SUB-MÍNIMO', r:'—', lock:'No califica (mín $50k)', f:'—' };
+}
+function nextRebalance(){
+  const now = new Date();
+  const q = [[3,1],[6,1],[9,1],[0,1]]; // Abr, Jul, Oct, Ene
+  for(const [m] of [[3],[6],[9]]) if(now.getMonth() < m) return new Date(now.getFullYear(), m, 1);
+  return new Date(now.getFullYear()+1, 0, 1);
+}
+
+function renderPosiciones(){
+  const ps = S.positions;
+  const aum = ps.reduce((a,p)=>a+(p.valor||p.capital||0),0);
+  const cap = ps.reduce((a,p)=>a+(p.capital||0),0);
+  const ret = cap>0 ? (aum/cap-1)*100 : NaN;
+  const nr = nextRebalance();
+  const drr = Math.ceil((nr - new Date())/86400000);
+  $('#posKpis').innerHTML = [
+    ['AUM del programa', fmt$(aum), ''],
+    ['Capital suscrito', fmt$(cap), ''],
+    ['Retorno acumulado', fmtPct(ret), ret>0?'up':ret<0?'down':''],
+    ['Próximo reequilibrio', drr + ' días', ''],
+  ].map(([l,v,c])=>`<div class="panel kpi"><div class="k-l">${l}</div><div class="k-v ${c}">${v}</div></div>`).join('');
+
+  if(ps.length === 0){
+    $('#posList').innerHTML = `<div class="panel empty" style="grid-column:1/-1">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="1.4"><circle cx="12" cy="12" r="9"/><path d="M12 3v18M3.5 7.5l17 9M3.5 16.5l17-9"/></svg>
+      <b>Sin posiciones registradas</b>
+      <p>Registra las cuentas del programa Snowball para seguir valor, retorno y calendario de reequilibrio trimestral.</p>
+      <button class="btn primary sm" onclick="openPos()">+ Primera posición</button>
+    </div>`;
+    return;
+  }
+  $('#posList').innerHTML = ps.map(p=>{
+    const nv = nivelDe(p.capital||0);
+    const val = p.valor ?? p.capital;
+    const r = p.capital>0 ? (val/p.capital-1)*100 : 0;
+    return `<div class="panel pos-card">
+      <div class="pos-top">
+        <div>
+          <b>${esc(p.nombre)}</b>
+          <span class="micro">SNOWBALL ${nv.n} · ${nv.f}</span>
+        </div>
+        <div class="pos-val">
+          <div class="v mono">${fmt$(val)}</div>
+          <div class="r ${r>0?'up':r<0?'down':''}">${r>0?'+':''}${(Math.round(r*10)/10)}% acum.</div>
+        </div>
+      </div>
+      <div class="pos-meta">
+        <div><span>Capital</span><b>${fmt$(p.capital)}</b></div>
+        <div><span>Objetivo anual</span><b>${nv.r}</b></div>
+        <div><span>Entrada</span><b>${p.fecha?fmtFecha(p.fecha):'—'}</b></div>
+        <div><span>Condición</span><b style="font-size:10.5px">${nv.lock}</b></div>
+      </div>
+      ${p.notas?`<p style="font-size:11.5px;color:var(--dim);margin-top:10px">${esc(p.notas)}</p>`:''}
+      <div class="mt" style="display:flex;gap:8px;align-items:center">
+        <input type="number" id="upv-${p.id}" placeholder="Actualizar valor USD" style="max-width:190px;padding:7px 10px;font-size:12px">
+        <button class="btn sm" onclick="updPos('${p.id}')">Actualizar</button>
+        <button class="btn-icon" style="margin-left:auto" onclick="editPos('${p.id}')" title="Editar">✎</button>
+        <button class="btn-icon" onclick="delPos('${p.id}')" title="Eliminar">✕</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+window.updPos = id => {
+  const p = S.positions.find(x=>x.id===id);
+  const v = parseFloat($('#upv-'+id).value);
+  if(!isFinite(v)){ toast('Escribe el valor nuevo'); return; }
+  p.valor = v; save(); renderPosiciones(); toast('Valor actualizado · ' + fmt$(v));
+};
+window.delPos = id => {
+  if(!confirm('¿Eliminar esta posición?')) return;
+  S.positions = S.positions.filter(p=>p.id!==id); save(); renderPosiciones();
+};
+let editingPos = null;
+window.editPos = id => { openPos(id); };
+function openPos(id){
+  editingPos = id ? S.positions.find(p=>p.id===id) : null;
+  $('#pmTitle').textContent = editingPos ? 'Editar posición' : 'Nueva posición Snowball';
+  const p = editingPos || {};
+  $('#pNombre').value = p.nombre || '';
+  $('#pFecha').value = p.fecha || todayISO();
+  $('#pCap').value = p.capital ?? 250000;
+  $('#pVal').value = p.valor ?? '';
+  $('#pNotas').value = p.notas || '';
+  openOv('ovPos');
+}
+window.openPos = openPos;
+$('#pSave').addEventListener('click', ()=>{
+  const nombre = $('#pNombre').value.trim();
+  if(!nombre){ toast('Falta el nombre del cliente'); return; }
+  const capital = parseFloat($('#pCap').value)||0;
+  const data = {
+    nombre, capital,
+    fecha: $('#pFecha').value || todayISO(),
+    valor: $('#pVal').value==='' ? capital : parseFloat($('#pVal').value),
+    notas: $('#pNotas').value.trim(),
+  };
+  if(editingPos) Object.assign(editingPos, data);
+  else S.positions.push({ id: uid(), ...data });
+  save(); closeOv(); renderPosiciones(); toast('Posición guardada');
+  editingPos = null;
+});
+
+/* ════════ ONBOARDING ════════ */
+const ETAPAS = ['Calificación de inversor','Reunión de perfilamiento','Propuesta formal','Due diligence mutuo','Suscripción y transferencia','Onboarding y primer reporte'];
+function renderClientes(){
+  const ps = S.prospects;
+  if(ps.length === 0){
+    $('#prosList').innerHTML = `<div class="panel empty" style="grid-column:1/-1">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="1.4"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.8-3.4 3.4-5.5 6.5-5.5s5.7 2.1 6.5 5.5"/></svg>
+      <b>Pipeline vacío</b>
+      <p>Seis puertas antes del portafolio: calificación, perfilamiento, propuesta, due diligence, suscripción y onboarding.</p>
+      <button class="btn primary sm" onclick="document.getElementById('btnProspect').click()">+ Primer prospecto</button>
+    </div>`;
+    return;
+  }
+  $('#prosList').innerHTML = ps.map(p=>{
+    const et = Math.min(p.etapa, 5);
+    const nv = nivelDe(p.capital||0);
+    const donePipe = et >= 5;
+    return `<div class="panel pos-card">
+      <div class="pos-top">
+        <div>
+          <b>${esc(p.nombre)}</b>
+          <span class="micro">${fmt$(p.capital)} · PERFIL ${nv.n}</span>
+        </div>
+        <div style="margin-left:auto">${donePipe?'<span class="tag ok">CLIENTE ACTIVO</span>':`<span class="tag ac">PUERTA ${et+1} / 6</span>`}</div>
+      </div>
+      <div class="pipe">${ETAPAS.map((_,i)=>`<i class="${i<et?'on':i===et&&!donePipe?'now':donePipe?'on':''}"></i>`).join('')}</div>
+      <p style="font-size:12px;color:var(--dim);margin-top:10px">${donePipe ? 'Proceso completo. Mover a Posiciones.' : esc(ETAPAS[et])}</p>
+      <div class="mt" style="display:flex;gap:8px">
+        ${et>0?`<button class="btn sm" onclick="movePro('${p.id}',-1)">← Regresar</button>`:''}
+        ${!donePipe?`<button class="btn primary sm" onclick="movePro('${p.id}',1)">Avanzar puerta →</button>`
+          : `<button class="btn primary sm" onclick="proToPos('${p.id}')">Convertir en posición</button>`}
+        <button class="btn-icon" style="margin-left:auto" onclick="delPro('${p.id}')">✕</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+window.movePro = (id,d) => {
+  const p = S.prospects.find(x=>x.id===id);
+  p.etapa = Math.max(0, Math.min(5, p.etapa + d));
+  save(); renderClientes();
+  if(p.etapa===5) toast('Las 6 puertas cruzadas — listo para suscribir');
+};
+window.delPro = id => {
+  if(!confirm('¿Eliminar prospecto?')) return;
+  S.prospects = S.prospects.filter(p=>p.id!==id); save(); renderClientes();
+};
+window.proToPos = id => {
+  const p = S.prospects.find(x=>x.id===id);
+  S.positions.push({ id: uid(), nombre: p.nombre, capital: p.capital, valor: p.capital, fecha: todayISO(), notas: 'Onboarding completado.' });
+  S.prospects = S.prospects.filter(x=>x.id!==id);
+  save(); location.hash = 'posiciones'; toast('Cliente suscrito al programa');
+};
+$('#prSave').addEventListener('click', ()=>{
+  const nombre = $('#prNombre').value.trim();
+  if(!nombre){ toast('Falta el nombre'); return; }
+  S.prospects.push({ id: uid(), nombre, capital: parseFloat($('#prCap').value)||0, etapa: 0 });
+  $('#prNombre').value = '';
+  save(); closeOv(); renderClientes(); toast('Prospecto en la puerta 1');
+});
+$('#btnProspect').addEventListener('click', ()=> openOv('ovPro'));
+
+/* ════════ CALCULADORA ════════ */
+function renderCalc(){
+  const cap = parseFloat($('#cCap').value)||0;
+  const tasa = (parseFloat($('#cTasa').value)||0)/100;
+  const aporte = parseFloat($('#cAporte').value)||0;
+  const anios = parseInt($('#cAnios').value)||20;
+  $('#cAniosLbl').textContent = anios;
+
+  const serie = [cap];
+  for(let y=1;y<=anios;y++) serie.push(serie[y-1]*(1+tasa)+aporte);
+  const fin = serie[anios];
+  $('#cFinal').textContent = 'AÑO ' + anios + ' → ' + fmt$(fin);
+
+  const nv = nivelDe(cap);
+  $('#cNivel').innerHTML = `<div class="g-banner" style="margin-top:4px">
+    <span>Nivel <b>SNOWBALL ${nv.n}</b> · objetivo ${nv.r} anual · ${nv.lock}.
+    ${cap>0? 'Multiplicador a '+anios+' años: <b>×'+(Math.round(fin/Math.max(cap,1)*10)/10)+'</b>.':''}</span>
+  </div>`;
+
+  /* tabla hitos */
+  const hitos = [1,5,10,15,20,25,30].filter(y=>y<=anios);
+  $('#cTable').innerHTML = '<thead><tr><th>Año</th><th class="r">Capital proyectado</th><th class="r">Crecimiento</th></tr></thead><tbody>'
+    + hitos.map(y=>`<tr>
+        <td class="mono">${y}</td>
+        <td class="r mono">${fmt$(serie[y])}</td>
+        <td class="r mono ${serie[y]>=cap?'up':''}">${cap>0?'×'+(Math.round(serie[y]/cap*100)/100):'—'}</td>
+      </tr>`).join('') + '</tbody>';
+
+  /* curva */
+  const cv = $('#cCanvas'), wrap = cv.parentElement;
+  const W = wrap.clientWidth - 36, H = 190, dpr = devicePixelRatio||1;
+  cv.width = W*dpr; cv.height = H*dpr; cv.style.height = H+'px';
+  const ctx = cv.getContext('2d'); ctx.scale(dpr,dpr);
+  const max = Math.max(...serie)||1;
+  const X = i => 8 + i*(W-16)/anios;
+  const Y = v => 14 + (H-34)*(1-v/max);
+  const grad = ctx.createLinearGradient(0,0,0,H);
+  grad.addColorStop(0,'rgba(155,192,220,.18)'); grad.addColorStop(1,'rgba(155,192,220,0)');
+  ctx.beginPath(); ctx.moveTo(X(0),Y(serie[0]));
+  serie.forEach((v,i)=>ctx.lineTo(X(i),Y(v)));
+  ctx.lineTo(X(anios),H-8); ctx.lineTo(X(0),H-8); ctx.closePath();
+  ctx.fillStyle = grad; ctx.fill();
+  ctx.beginPath(); serie.forEach((v,i)=> i?ctx.lineTo(X(i),Y(v)):ctx.moveTo(X(i),Y(v)));
+  ctx.strokeStyle = '#9BC0DC'; ctx.lineWidth = 1.6; ctx.stroke();
+  ctx.font = '11px "IBM Plex Mono"'; ctx.fillStyle = '#E9EDF2'; ctx.textAlign='right';
+  ctx.fillText(fmt$(fin), W-8, Y(fin)+14);
+}
+['cCap','cTasa','cAporte','cAnios'].forEach(id => $('#'+id).addEventListener('input', renderCalc));
+
+/* ════════ ACCESO (login de socios) ════════ */
+function currentUser(){ return userDe(S.session && S.session.user); }
+function lockUI(){
+  document.body.classList.add('locked');
+  document.querySelector('.app').setAttribute('inert','');
+  $('#login').classList.add('on');
+  setTimeout(()=> $('#lgUser').focus(), 80);
+}
+function unlockUI(){
+  document.body.classList.remove('locked');
+  document.querySelector('.app').removeAttribute('inert');
+  $('#login').classList.remove('on');
+}
+$('#lgGo').addEventListener('click', doLogin);
+$('#lgPass').addEventListener('keydown', e=>{ if(e.key==='Enter') doLogin(); });
+$('#lgUser').addEventListener('keydown', e=>{ if(e.key==='Enter') $('#lgPass').focus(); });
+function doLogin(){
+  const u = $('#lgUser').value.trim().toLowerCase();
+  const p = $('#lgPass').value;
+  const usr = USERS[u];
+  if(!usr || usr.pass !== p){
+    $('#lgErr').textContent = 'Credenciales incorrectas. El acceso es solo para socios.';
+    $('#lgPass').value = '';
+    return;
+  }
+  S.session = { user:u };
+  S.profile.nombre = usr.nombre;
+  S.profile.rol = usr.roles.join(' + ');
+  S.profile.cuenta = 250000;
+  S.profile.metaMes = 30000;
+  save();
+  $('#lgErr').textContent = '';
+  $('#lgPass').value = '';
+  unlockUI();
+  renderAll();
+  toast('Bienvenido, ' + usr.nombre + '. La mesa te espera.');
+}
+$('#btnLogout').addEventListener('click', ()=>{
+  S.session = { user:null };
+  save(); closeOv(); lockUI();
+});
+
+/* ════════ AJUSTES / PERFIL ════════ */
+$('#btnSettings').addEventListener('click', ()=>{
+  const u = currentUser();
+  if(!u) return;
+  $('#sIdent').innerHTML = !u ? '' : `
+    <div class="duties" style="margin-bottom:10px">
+      <div class="duties-h micro">${esc(u.nombre)} · Socio de la firma</div>
+    </div>
+    ` + u.roles.map(rk => `
+    <div class="duties">
+      <div class="duties-h micro">${rk} · ${esc(ROLES[rk].t)}</div>
+      <ul>${ROLES[rk].d.map(x=>`<li>${esc(x)}</li>`).join('')}</ul>
+    </div>`).join('');
+  openOv('ovSet');
+});
+function applyProfile(){
+  const u = currentUser();
+  const n = u ? u.nombre : 'Sin sesión';
+  $('#uName').textContent = n;
+  $('#uRole').textContent = u ? u.roles.join(' · ') : '—';
+  $('#uAvatar').textContent = u ? n.trim().split(/\s+/).map(w=>w[0]).slice(0,2).join('').toUpperCase() : '—';
+}
+
+$('#btnBackup').addEventListener('click', ()=>{
+  const blob = new Blob([JSON.stringify(S,null,2)], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob); a.download = 'northpoint-terminal-respaldo.json'; a.click();
+  toast('Respaldo descargado');
+});
+$('#btnWipe').addEventListener('click', ()=>{
+  if(!confirm('Esto borra TODO el Terminal en este equipo: trades, sesiones, estudio y posiciones. ¿Seguro?')) return;
+  if(!confirm('Última confirmación. ¿Borrar todo?')) return;
+  localStorage.removeItem(LS); S = DEFAULTS(); save();
+  closeOv(); renderAll(); toast('Terminal en cero');
+});
+
+/* demo sintético — claramente etiquetado */
+$('#btnDemo').addEventListener('click', ()=>{
+  if(!confirm('Carga datos DEMO 100% SINTÉTICOS (no son fills reales) para ver el Terminal lleno. ¿Continuar?')) return;
+  const d = DEFAULTS();
+  d.session = S.session;
+  d.profile = { ...S.profile };
+  const now = new Date();
+  const syms = ['NQ','NQ','NQ','ES'];
+  let n = 0;
+  for(let i=19;i>=0 && n<14;i--){
+    const dt = new Date(now); dt.setDate(now.getDate()-i);
+    if(dt.getDay()===0||dt.getDay()===6) continue;
+    const iso = dt.toISOString().slice(0,10);
+    const win = (n*7+3)%10 > 4;
+    const pnl = win ? 900+((n*137)%900) : -(400+((n*211)%500));
+    d.trades.push({ id:uid(), date:iso, time:'07:'+String(32+(n%9)*3).padStart(2,'0'), sym:syms[n%4], dir:n%3?'L':'S', qty:1+(n%2), entry:null, exit:null, pnl, setupOk:(n%5)!==4, notas:'[DEMO sintético]' });
+    d.sessions[iso] = { pre:[true,true,true,true,true,(n%3)!==0], setup:[true,true,true,(n%5)!==4], post:[true,true,(n%4)!==0] };
+    n++;
+  }
+  d.positions = [
+    { id:uid(), nombre:'[DEMO] Familia A · LP-001', capital:250000, valor:271000, fecha:'2026-01-02', notas:'Demo sintético — no es una cuenta real.' },
+    { id:uid(), nombre:'[DEMO] Cliente B · LP-002', capital:50000, valor:53400, fecha:'2026-03-01', notas:'Demo sintético.' },
+  ];
+  d.prospects = [ { id:uid(), nombre:'[DEMO] Prospecto C', capital:1000000, etapa:3 } ];
+  S = d; save(); closeOv(); renderAll();
+  toast('Demo sintético cargado — nada de esto es real');
+});
+
+/* ════════ Overlays genéricos ════════ */
+let _ovFoco = null;
+function openOv(id){
+  const ov = $('#'+id);
+  _ovFoco = document.activeElement;
+  ov.classList.add('on');
+  document.querySelector('.app').setAttribute('inert','');
+  const f = ov.querySelector('input,select,textarea,button');
+  if(f) setTimeout(()=> f.focus(), 40);
+}
+function closeOv(){
+  $$('.overlay').forEach(o=>o.classList.remove('on'));
+  if(!document.body.classList.contains('locked')) document.querySelector('.app').removeAttribute('inert');
+  if(_ovFoco && _ovFoco.focus) try{ _ovFoco.focus(); }catch(e){}
+  _ovFoco = null;
+}
+$$('.overlay').forEach(o=> o.addEventListener('click', e=>{ if(e.target===o) closeOv(); }));
+$$('[data-close]').forEach(b=> b.addEventListener('click', closeOv));
+addEventListener('keydown', e=>{ if(e.key==='Escape') closeOv(); });
+
+/* reporte */
+$('#btnReport').addEventListener('click', ()=>{
+  $('#repText').value = buildReport();
+  openOv('ovReport');
+});
+$('#repCopy').addEventListener('click', ()=>{
+  navigator.clipboard.writeText($('#repText').value).then(()=>{
+    const iso = todayISO(); const s = getSession(iso);
+    s.post[2] = true; save();
+    toast('Reporte copiado — enviado = post-market ✓');
+    closeOv(); if($('#v-sesion').classList.contains('on')) renderSesion();
+  }).catch(()=> toast('No se pudo copiar'));
+});
+
+$('#btnTrade').addEventListener('click', ()=> openTrade());
+$('#btnTradeFromSes').addEventListener('click', ()=> openTrade());
+$('#btnPos').addEventListener('click', ()=> openPos());
+
+/* ════════ Badges del rail ════════ */
+function updateBadges(){
+  const dayTr = tradesByDay()[todayISO()] || [];
+  $('#bdgTrades').textContent = dayTr.length ? dayTr.length+'/2' : '';
+  const total = DOCS.length;
+  const done = DOCS.filter(m=>S.study.lessons[m.id]).length;
+  $('#bdgStudy').textContent = done && done<total ? done+'/'+total : '';
+  const abiertas = S.tickets.filter(t=>t.estado==='abierta').length;
+  $('#bdgTix').textContent = abiertas || '';
+}
+
+/* ════════ MESA DE APROBACIONES (colaborativa) ════════ */
+function tixEstado(t){
+  if(t.estado==='rechazada') return ['RECHAZADA','no'];
+  if(t.estado==='ejecutada') return ['EJECUTADA','ok'];
+  const firmas = GATES.filter(g=>t.firmas[g.k]).length;
+  if(firmas===GATES.length) return ['APROBADA — LISTA PARA EJECUTAR','ok'];
+  return ['EN MESA · '+firmas+'/'+GATES.length+' FIRMAS','run'];
+}
+function renderTix(){
+  const me = S.session.user;
+  const list = [...S.tickets].reverse();
+  $('#tixList').innerHTML = list.length ? list.map(t=>{
+    const [est, cls] = tixEstado(t);
+    const full = GATES.every(g=>t.firmas[g.k]);
+    return `<div class="tix">
+      <div class="tix-head">
+        <b>${esc(t.sym)} · ${t.dir==='L'?'LONG':'SHORT'}</b>
+        <span class="micro">${fmtFecha(t.fecha)} · propuesta por ${esc(USERS[t.por] ? USERS[t.por].nombre : t.por)}</span>
+        <span class="tix-est ${cls}" style="margin-left:auto">${est}</span>
+      </div>
+      <p class="tix-tesis">${esc(t.tesis)}</p>
+      ${t.estado==='rechazada' && t.motivo ? `<p class="tix-tesis" style="color:var(--down)">Motivo del CIO: ${esc(t.motivo)}</p>` : ''}
+      <div class="gates">
+        ${GATES.map(g=>{
+          const f = t.firmas[g.k];
+          const puede = !f && t.estado==='abierta' && rolDeUsuario(me, g.rol);
+          const dueño = Object.keys(USERS).find(u=>rolDeUsuario(u, g.rol));
+          return `<div class="gate ${f?'done':''}">
+            <span class="g-t">${g.t}</span>
+            <span class="g-s">${g.rol} · ${f ? '✓ '+esc(USERS[f.u].nombre)+' · '+f.ts : (USERS[dueño]?USERS[dueño].nombre:'')}</span>
+            ${f ? '' : `<button data-sign="${t.id}:${g.k}" ${puede?'':'disabled'}>${puede?'Firmar':'Pendiente'}</button>`}
+          </div>`;
+        }).join('')}
+      </div>
+      <div class="tix-foot">
+        ${t.estado==='abierta' && rolDeUsuario(me,'NP-001') ? `<button class="btn sm danger" data-reject="${t.id}">Rechazar (CIO)</button>` : ''}
+        ${full && t.estado==='abierta' && rolDeUsuario(me,'NP-010') ? `<button class="btn sm primary" data-exec="${t.id}">Ejecutada — registrar en Journal</button>` : ''}
+      </div>
+    </div>`;
+  }).join('') : `<div class="panel"><div class="p-body" style="text-align:center;color:var(--faint);padding:34px 20px">Sin tesis en la mesa. Propón la primera con «+ Nueva tesis».</div></div>`;
+
+  $$('#tixList [data-sign]').forEach(b=> b.onclick = ()=>{
+    const [id, gk] = b.dataset.sign.split(':');
+    const t = S.tickets.find(x=>x.id===id);
+    if(!t || t.firmas[gk]) return;
+    const g = GATES.find(x=>x.k===gk);
+    if(!rolDeUsuario(S.session.user, g.rol)) return;
+    const now = new Date();
+    t.firmas[gk] = { u:S.session.user, ts:String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0') };
+    save(); renderTix(); updateBadges();
+    toast(GATES.every(x=>t.firmas[x.k]) ? 'Cuatro firmas — tesis APROBADA' : 'Firma registrada: '+g.t);
+  });
+  $$('#tixList [data-reject]').forEach(b=> b.onclick = ()=>{
+    const t = S.tickets.find(x=>x.id===b.dataset.reject);
+    if(!t) return;
+    const m = prompt('Motivo del rechazo (queda registrado):');
+    if(m===null) return;
+    t.estado = 'rechazada'; t.motivo = m.trim();
+    save(); renderTix(); updateBadges();
+  });
+  $$('#tixList [data-exec]').forEach(b=> b.onclick = ()=>{
+    const t = S.tickets.find(x=>x.id===b.dataset.exec);
+    if(!t) return;
+    t.estado = 'ejecutada';
+    save(); renderTix(); updateBadges();
+    location.hash = 'journal';
+    setTimeout(()=>{
+      $('#btnTrade').click();
+      setTimeout(()=>{ $('#tSym').value = t.sym; $('#tDir').value = t.dir; }, 60);
+    }, 250);
+  });
+  cloudPaint();
+}
+$('#btnTix').addEventListener('click', ()=>{
+  $('#xFecha').value = todayISO();
+  $('#xTesis').value = '';
+  openOv('ovTix');
+});
+$('#xSave').addEventListener('click', ()=>{
+  const tesis = $('#xTesis').value.trim();
+  if(!tesis){ toast('Escribe la tesis — sin tesis no hay mesa'); return; }
+  S.tickets.push({
+    id: uid(), fecha: $('#xFecha').value || todayISO(),
+    sym: $('#xSym').value, dir: $('#xDir').value,
+    tesis, por: S.session.user, firmas: {}, estado: 'abierta'
+  });
+  save(); closeOv(); location.hash = 'aprobaciones'; renderTix(); updateBadges();
+  toast('Tesis propuesta a la mesa');
+});
+
+/* ════════ NUBE (colaboración tipo Drive) ════════
+   Para que Pablo, Mateo y André vean y firmen la MISMA mesa desde sus equipos:
+   crear un proyecto Supabase y pegar url + anon key abajo. Pasos: docs/CLOUD.md */
+const CLOUD = { url:'', anon:'' };
+let cloudTs = 0, cloudBusy = false;
+const cloudOn = () => !!(CLOUD.url && CLOUD.anon);
+function cloudPaint(){
+  const p = $('#cloudPill');
+  if(!p) return;
+  p.textContent = cloudOn()
+    ? 'NUBE · SINCRONIZADA' + (cloudTs ? ' · ' + new Date(cloudTs).toLocaleTimeString('es-MX',{hour12:false}) : '')
+    : 'NUBE · NO CONECTADA — ESTADO LOCAL (ver docs/CLOUD.md)';
+  p.style.color = cloudOn() ? 'var(--up)' : 'var(--faint)';
+}
+async function cloudPush(){
+  if(!cloudOn() || cloudBusy) return;
+  cloudBusy = true;
+  try{
+    const body = { id:1, data:{...S, session:undefined}, updated_at: new Date().toISOString() };
+    await fetch(CLOUD.url + '/rest/v1/northpoint_estado', {
+      method:'POST',
+      headers:{ 'apikey':CLOUD.anon, 'Authorization':'Bearer '+CLOUD.anon,
+        'Content-Type':'application/json', 'Prefer':'resolution=merge-duplicates' },
+      body: JSON.stringify(body)
+    });
+    cloudTs = Date.now(); cloudPaint();
+  }catch(e){} finally{ cloudBusy = false; }
+}
+async function cloudPull(){
+  if(!cloudOn() || cloudBusy) return;
+  try{
+    const r = await fetch(CLOUD.url + '/rest/v1/northpoint_estado?id=eq.1&select=data', {
+      headers:{ 'apikey':CLOUD.anon, 'Authorization':'Bearer '+CLOUD.anon }
+    });
+    const rows = await r.json();
+    if(rows && rows[0] && rows[0].data){
+      const mySession = S.session;
+      S = { ...DEFAULTS(), ...rows[0].data, session: mySession };
+      localStorage.setItem(LS, JSON.stringify(S));
+      cloudTs = Date.now();
+      renderAll();
+    }
+  }catch(e){}
+}
+if(cloudOn()) setInterval(cloudPull, 8000);
+/* empujar a la nube en cada save() */
+const _save0 = save;
+save = function(){ _save0(); if(cloudOn()) cloudPush(); };
+
+/* ════════ Render maestro ════════ */
+function render(view){
+  if(view==='dashboard') renderFirma();
+  else if(view==='mesa') renderDashboard();
+  else if(view==='sesion') renderSesion();
+  else if(view==='aprobaciones') renderTix();
+  else if(view==='journal') renderJournal();
+  else if(view==='estudio') renderEstudio();
+  else if(view==='reglas') renderReglas();
+  else if(view==='posiciones') renderPosiciones();
+  else if(view==='clientes') renderClientes();
+  else if(view==='calculadora') renderCalc();
+  updateBadges();
+}
+function renderAll(){ applyProfile(); render(location.hash.slice(1)||'dashboard'); }
+
+addEventListener('resize', ()=>{
+  if($('#v-mesa').classList.contains('on')) drawEquity();
+  if($('#v-calculadora').classList.contains('on')) renderCalc();
+});
+
+/* init */
+applyProfile();
+show(location.hash.slice(1) || 'dashboard');
+
+/* portón de acceso: sin sesión válida no hay mesa */
+if(!currentUser()) lockUI();
+if(cloudOn()) cloudPull();
+
+/* QA hook */
+window.__np = { state: () => S, score: computeScore, report: buildReport };
+</script>
+</body>
+</html>

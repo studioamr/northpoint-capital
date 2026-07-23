@@ -1,0 +1,1613 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NORTHPOINT — Behavioral Intelligence</title>
+<meta name="description" content="Northpoint Behavioral Intelligence. Inteligencia conductual aplicada a los mercados financieros. Donde otros ven ruido, nosotros vemos patrón.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   NORTHPOINT — Dark Glass Institucional
+   ============================================================ */
+:root{
+  --bg:#05070C;
+  --bg-2:#090D15;
+  --glass:rgba(255,255,255,.045);
+  --glass-2:rgba(255,255,255,.075);
+  --line:rgba(255,255,255,.09);
+  --line-soft:rgba(255,255,255,.05);
+  --txt:#E9EDF2;
+  --dim:#8A94A6;
+  --faint:#596374;
+  --accent:#9BC0DC;
+  --accent-deep:#5E8CAD;
+  --up:#57C79B;
+  --down:#DE6A5F;
+  --warn:#D9A441;
+  --sans:'Inter',-apple-system,system-ui,sans-serif;
+  --mono:'IBM Plex Mono',ui-monospace,monospace;
+}
+
+*{margin:0;padding:0;box-sizing:border-box}
+
+html{
+  scroll-behavior:smooth;
+  scroll-padding-top:84px;
+}
+
+body{
+  background:var(--bg);
+  color:var(--txt);
+  font-family:var(--sans);
+  font-size:15px;
+  line-height:1.65;
+  -webkit-font-smoothing:antialiased;
+  overflow-x:hidden;
+}
+
+/* Fondo: dos radiales muy sutiles, fijos */
+body::before{
+  content:"";
+  position:fixed;
+  inset:0;
+  z-index:-1;
+  background:
+    radial-gradient(900px 600px at 80% -10%, rgba(155,192,220,.07), transparent),
+    radial-gradient(800px 600px at 20% 110%, rgba(155,192,220,.04), transparent);
+  pointer-events:none;
+}
+
+/* Ruido fino */
+body::after{
+  content:"";
+  position:fixed;
+  inset:0;
+  z-index:2000;
+  opacity:.025;
+  pointer-events:none;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+::selection{background:rgba(155,192,220,.22);color:var(--txt)}
+
+a{color:inherit;text-decoration:none}
+a:focus-visible,button:focus-visible{outline:1px solid var(--accent-deep);outline-offset:3px}
+
+.wrap{max-width:1180px;margin:0 auto;padding:0 24px}
+
+.mono{font-family:var(--mono)}
+
+/* Micro-etiquetas */
+.micro{
+  font-size:11px;
+  text-transform:uppercase;
+  letter-spacing:.18em;
+  color:var(--dim);
+  font-weight:500;
+}
+.micro.acc{color:var(--accent)}
+
+/* ============================================================
+   NAV
+   ============================================================ */
+.nav{
+  position:fixed;
+  top:0;left:0;right:0;
+  height:64px;
+  z-index:100;
+  background:rgba(5,7,12,.6);
+  backdrop-filter:blur(28px) saturate(140%);
+  -webkit-backdrop-filter:blur(28px) saturate(140%);
+  border-bottom:1px solid var(--line-soft);
+}
+.nav-in{
+  max-width:1180px;
+  margin:0 auto;
+  padding:0 24px;
+  height:64px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:24px;
+}
+.brand{display:flex;align-items:center;gap:12px}
+.brand svg{width:26px;height:26px;color:var(--accent);flex:none}
+.brand-t{display:flex;flex-direction:column;line-height:1.15}
+.brand-name{
+  font-weight:600;
+  font-size:14px;
+  letter-spacing:.08em;
+  color:var(--txt);
+}
+.brand-sub{
+  font-size:8.5px;
+  letter-spacing:.26em;
+  text-transform:uppercase;
+  color:var(--dim);
+  font-weight:500;
+}
+.nav-links{display:flex;align-items:center;gap:30px}
+.nav-links a{
+  font-size:13px;
+  color:var(--dim);
+  font-weight:500;
+  transition:color .2s;
+}
+.nav-links a:hover{color:var(--txt)}
+.nav-cta{
+  font-family:var(--mono);
+  font-size:12.5px;
+  color:var(--txt);
+  background:var(--glass);
+  border:1px solid var(--line);
+  border-radius:8px;
+  padding:9px 16px;
+  transition:background .2s,border-color .2s;
+  white-space:nowrap;
+}
+.nav-cta:hover{background:var(--glass-2);border-color:rgba(255,255,255,.16)}
+
+/* ============================================================
+   HERO
+   ============================================================ */
+.hero{
+  min-height:100vh;
+  min-height:100svh;
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  position:relative;
+  padding-top:110px;
+  padding-bottom:40px;
+  overflow:hidden;
+}
+.hero-reticle{
+  position:absolute;
+  top:50%;left:62%;
+  width:920px;height:920px;
+  transform:translate(-50%,-50%);
+  color:var(--accent);
+  opacity:.05;
+  pointer-events:none;
+}
+.hero-reticle .spin{
+  transform-origin:460px 460px;
+  animation:drift 320s linear infinite;
+}
+@keyframes drift{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){
+  .hero-reticle .spin{animation:none}
+  html{scroll-behavior:auto}
+}
+.hero .wrap{position:relative;z-index:1}
+.hero-micro{margin-bottom:34px}
+.hero h1{
+  font-size:clamp(44px,8vw,96px);
+  font-weight:600;
+  letter-spacing:-.03em;
+  line-height:.98;
+  color:var(--txt);
+}
+.hero-sub-display{
+  margin-top:14px;
+  font-size:clamp(13px,1.8vw,19px);
+  font-weight:500;
+  letter-spacing:.42em;
+  text-transform:uppercase;
+  color:var(--accent);
+  opacity:.85;
+}
+.hero-quote{
+  margin-top:44px;
+  max-width:640px;
+  font-size:clamp(20px,2.6vw,25px);
+  font-weight:400;
+  line-height:1.4;
+  color:var(--txt);
+}
+.hero-desc{
+  margin-top:18px;
+  max-width:520px;
+  font-size:15px;
+  color:var(--dim);
+}
+.hero-ctas{
+  margin-top:40px;
+  display:flex;
+  align-items:center;
+  gap:26px;
+  flex-wrap:wrap;
+}
+.btn{
+  display:inline-block;
+  font-family:var(--sans);
+  font-size:14px;
+  font-weight:500;
+  color:var(--txt);
+  background:var(--glass-2);
+  border:1px solid var(--line);
+  border-radius:10px;
+  padding:13px 26px;
+  transition:background .2s,border-color .2s,transform .2s;
+}
+.btn:hover{
+  background:rgba(255,255,255,.1);
+  border-color:rgba(255,255,255,.18);
+  transform:translateY(-2px);
+}
+.link-arrow{
+  font-size:14px;
+  font-weight:500;
+  color:var(--dim);
+  transition:color .2s;
+}
+.link-arrow:hover{color:var(--accent)}
+.hero-foot{
+  margin-top:78px;
+  padding-top:18px;
+  border-top:1px solid var(--line-soft);
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:16px;
+  font-family:var(--mono);
+  font-size:12px;
+  color:var(--faint);
+  letter-spacing:.08em;
+}
+
+/* ============================================================
+   SECCIONES
+   ============================================================ */
+section{
+  padding:110px 0;
+  border-top:1px solid var(--line-soft);
+}
+.sec-head{margin-bottom:56px;max-width:720px}
+.sec-num{
+  font-family:var(--mono);
+  font-size:12px;
+  color:var(--accent);
+  letter-spacing:.18em;
+  margin-bottom:14px;
+}
+.sec-head h2{
+  font-size:clamp(28px,4vw,40px);
+  font-weight:600;
+  letter-spacing:-.02em;
+  line-height:1.12;
+  color:var(--txt);
+  margin-bottom:18px;
+}
+.sec-head p{color:var(--dim)}
+
+/* Cards glass */
+.card{
+  background:var(--glass);
+  border:1px solid var(--line);
+  border-radius:14px;
+  backdrop-filter:blur(22px) saturate(140%);
+  -webkit-backdrop-filter:blur(22px) saturate(140%);
+  padding:26px 26px 24px;
+  transition:background .2s,transform .2s;
+}
+.card:hover{background:var(--glass-2);transform:translateY(-2px)}
+.card h3{font-size:16px;font-weight:600;color:var(--txt);margin-bottom:8px}
+.card p{font-size:14px;color:var(--dim);line-height:1.6}
+
+/* Quote separadora */
+.quote-sep{
+  margin:96px auto 0;
+  max-width:680px;
+  text-align:center;
+  font-size:clamp(19px,2.4vw,24px);
+  font-weight:400;
+  line-height:1.45;
+  color:var(--txt);
+}
+.quote-sep::before{
+  content:"";
+  display:block;
+  width:1px;height:44px;
+  margin:0 auto 30px;
+  background:linear-gradient(to bottom,transparent,var(--accent-deep));
+}
+
+/* ---------- FILOSOFÍA ---------- */
+.mv-grid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:16px;
+  margin-bottom:64px;
+}
+.mv{
+  border-left:2px solid var(--accent-deep);
+  border-radius:0 14px 14px 0;
+}
+.mv .micro{margin-bottom:14px}
+.mv p{font-size:16px;color:var(--txt);line-height:1.6;font-weight:400}
+
+.pilares{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:16px;
+}
+.pilar .code{
+  font-family:var(--mono);
+  font-size:12.5px;
+  color:var(--accent);
+  letter-spacing:.14em;
+  margin-bottom:14px;
+}
+
+.noes{
+  margin-top:64px;
+}
+.noes .micro{margin-bottom:22px}
+.noes-row{
+  display:grid;
+  grid-template-columns:minmax(0,340px) 1fr;
+  gap:10px 40px;
+  padding:20px 4px;
+  border-top:1px solid var(--line-soft);
+}
+.noes-row:last-child{border-bottom:1px solid var(--line-soft)}
+.noes-row h4{
+  font-size:15px;
+  font-weight:600;
+  color:var(--txt);
+}
+.noes-row h4::before{
+  content:"—";
+  color:var(--accent-deep);
+  margin-right:12px;
+  font-weight:400;
+}
+.noes-row p{font-size:14px;color:var(--dim)}
+
+/* ---------- ESTRUCTURA ---------- */
+.lead-grid{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:16px;
+}
+.lead .code{
+  font-family:var(--mono);
+  font-size:12.5px;
+  color:var(--accent);
+  letter-spacing:.14em;
+}
+.lead h3{margin-top:12px;margin-bottom:4px}
+.lead .rep{
+  font-size:10.5px;
+  text-transform:uppercase;
+  letter-spacing:.16em;
+  color:var(--faint);
+  font-weight:500;
+  margin-bottom:14px;
+}
+.sub-block{margin-top:88px}
+.sub-block>.micro{display:block;margin-bottom:34px}
+
+/* Timeline proceso */
+.timeline{
+  display:grid;
+  grid-template-columns:repeat(5,1fr);
+  gap:0 18px;
+}
+.tl-step{
+  position:relative;
+  padding-top:26px;
+  border-top:1px solid var(--line);
+}
+.tl-step::before{
+  content:"";
+  position:absolute;
+  top:-4px;left:0;
+  width:7px;height:7px;
+  border-radius:50%;
+  background:var(--bg);
+  border:1px solid var(--accent);
+}
+.tl-step .num{
+  font-family:var(--mono);
+  font-size:12px;
+  color:var(--accent);
+  letter-spacing:.14em;
+  margin-bottom:8px;
+}
+.tl-step h4{font-size:14.5px;font-weight:600;color:var(--txt);margin-bottom:8px}
+.tl-step p{font-size:13px;color:var(--dim);line-height:1.55}
+
+/* Vehículos */
+.veh-grid{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:16px;
+}
+.veh .micro{margin-bottom:6px}
+.veh h3{font-size:17px;margin-bottom:16px}
+.veh-rows{display:flex;flex-direction:column;gap:0}
+.veh-row{
+  display:flex;
+  justify-content:space-between;
+  gap:14px;
+  padding:9px 0;
+  border-top:1px solid var(--line-soft);
+  font-size:13px;
+}
+.veh-row .k{color:var(--faint)}
+.veh-row .v{font-family:var(--mono);color:var(--txt);text-align:right}
+
+/* ---------- CONDUCTA ---------- */
+.valores{
+  display:grid;
+  grid-template-columns:repeat(2,1fr);
+  gap:16px;
+}
+.valor .num{
+  font-family:var(--mono);
+  font-size:12.5px;
+  color:var(--accent);
+  letter-spacing:.14em;
+  margin-bottom:12px;
+}
+.estandares{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:0 56px;
+}
+.est-row{
+  padding:20px 4px;
+  border-top:1px solid var(--line-soft);
+}
+.est-row h4{font-size:15px;font-weight:600;color:var(--txt);margin-bottom:5px}
+.est-row p{font-size:13.5px;color:var(--dim)}
+
+.termina{
+  border-left:2px solid var(--warn);
+  border-radius:0 14px 14px 0;
+}
+.termina:hover{transform:none}
+.termina .micro{color:var(--warn);margin-bottom:6px}
+.termina>p{margin-bottom:20px}
+.termina-list{
+  list-style:none;
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:10px 34px;
+}
+.termina-list li{
+  font-family:var(--mono);
+  font-size:13px;
+  color:var(--txt);
+  line-height:1.5;
+  padding-left:18px;
+  position:relative;
+}
+.termina-list li::before{
+  content:"—";
+  position:absolute;
+  left:0;
+  color:var(--warn);
+}
+
+/* ---------- TECNOLOGÍA ---------- */
+.score-card{
+  display:grid;
+  grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);
+  gap:44px;
+  padding:38px 38px 36px;
+}
+.score-card:hover{transform:none}
+.score-card .micro{margin-bottom:18px}
+.score-big{
+  font-family:var(--mono);
+  font-weight:300;
+  font-size:clamp(46px,6vw,68px);
+  line-height:1;
+  color:var(--txt);
+  letter-spacing:-.02em;
+  margin-bottom:18px;
+}
+.score-big small{font-size:.42em;color:var(--faint);letter-spacing:.06em}
+.score-card p{font-size:14.5px;color:var(--dim)}
+.score-live{
+  margin-top:22px;
+  font-size:14px;
+  color:var(--dim);
+}
+.score-live a{color:var(--accent);font-weight:500;white-space:nowrap}
+.score-live a:hover{color:var(--txt)}
+.dims{display:flex;flex-direction:column;gap:20px;justify-content:center}
+.dim .row{
+  display:flex;
+  justify-content:space-between;
+  align-items:baseline;
+  margin-bottom:8px;
+}
+.dim .name{
+  font-size:11px;
+  text-transform:uppercase;
+  letter-spacing:.16em;
+  color:var(--dim);
+  font-weight:500;
+}
+.dim .val{
+  font-family:var(--mono);
+  font-size:13px;
+  color:var(--txt);
+}
+.dim .val span{color:var(--faint)}
+.bar{
+  height:2px;
+  background:var(--line);
+  border-radius:1px;
+  overflow:hidden;
+}
+.bar i{
+  display:block;
+  height:100%;
+  width:0;
+  background:var(--accent);
+  transition:width 1.1s cubic-bezier(.25,.6,.25,1) .15s;
+}
+.rv.on .bar i{width:var(--w)}
+
+.stack-grid{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:16px;
+}
+.stack .micro{margin-bottom:14px;color:var(--txt)}
+.stack ul{list-style:none}
+.stack li{
+  font-family:var(--mono);
+  font-size:12.5px;
+  color:var(--dim);
+  padding:7px 0;
+  border-top:1px solid var(--line-soft);
+  line-height:1.5;
+}
+
+.protos{border-top:1px solid var(--line-soft)}
+.proto-row{
+  display:grid;
+  grid-template-columns:24px minmax(0,320px) 1fr;
+  gap:10px 28px;
+  align-items:baseline;
+  padding:17px 4px;
+  border-bottom:1px solid var(--line-soft);
+}
+.proto-row .idx{
+  font-family:var(--mono);
+  font-size:12px;
+  color:var(--faint);
+}
+.proto-row h4{font-size:14.5px;font-weight:600;color:var(--txt)}
+.proto-row p{font-size:13.5px;color:var(--dim)}
+
+/* ---------- SNOWBALL ---------- */
+.principio{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:0 56px;
+  margin-bottom:88px;
+}
+.prin{padding-top:22px;border-top:1px solid var(--line)}
+.prin h4{font-size:15px;font-weight:600;color:var(--txt);margin-bottom:8px}
+.prin p{font-size:13.5px;color:var(--dim)}
+
+.niveles{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:16px;
+  align-items:stretch;
+}
+.nivel .micro{margin-bottom:8px}
+.nivel h3{font-size:17px;margin-bottom:2px}
+.nivel .min{
+  font-family:var(--mono);
+  font-weight:300;
+  font-size:26px;
+  color:var(--txt);
+  margin:10px 0 4px;
+}
+.nivel .obj{
+  font-family:var(--mono);
+  font-size:12.5px;
+  color:var(--accent);
+  letter-spacing:.04em;
+  margin-bottom:18px;
+}
+.nivel ul{list-style:none}
+.nivel li{
+  font-size:13.5px;
+  color:var(--dim);
+  padding:8px 0 8px 16px;
+  border-top:1px solid var(--line-soft);
+  position:relative;
+}
+.nivel li::before{
+  content:"·";
+  position:absolute;
+  left:2px;
+  color:var(--accent-deep);
+}
+.nivel-core{
+  background:var(--glass-2);
+  border-color:rgba(94,140,173,.4);
+  transform:translateY(-8px);
+  position:relative;
+}
+.nivel-core:hover{transform:translateY(-10px)}
+.badge{
+  position:absolute;
+  top:22px;right:22px;
+  font-size:9.5px;
+  text-transform:uppercase;
+  letter-spacing:.2em;
+  font-weight:500;
+  color:var(--accent);
+  border:1px solid rgba(155,192,220,.35);
+  border-radius:99px;
+  padding:5px 11px;
+}
+
+.proj-card{padding:36px 36px 30px}
+.proj-card:hover{transform:none}
+.proj-head{
+  display:flex;
+  justify-content:space-between;
+  align-items:baseline;
+  gap:20px;
+  flex-wrap:wrap;
+  margin-bottom:26px;
+}
+.proj-head .micro{color:var(--txt)}
+.proj-head .meta{
+  font-family:var(--mono);
+  font-size:12px;
+  color:var(--faint);
+  letter-spacing:.04em;
+}
+#snowchart{width:100%;height:auto;display:block}
+.proj-note{
+  margin-top:20px;
+  font-size:13.5px;
+  color:var(--dim);
+}
+
+.onb-grid{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:0 56px;
+}
+.onb{
+  padding:22px 4px;
+  border-top:1px solid var(--line-soft);
+}
+.onb .num{
+  font-family:var(--mono);
+  font-size:12px;
+  color:var(--accent);
+  letter-spacing:.14em;
+  margin-bottom:10px;
+}
+.onb h4{font-size:14.5px;font-weight:600;color:var(--txt);margin-bottom:6px}
+.onb p{font-size:13px;color:var(--dim);line-height:1.55}
+
+.legal{
+  margin-top:96px;
+  padding-top:26px;
+  border-top:1px solid var(--line-soft);
+}
+.legal .micro{margin-bottom:14px;color:var(--faint)}
+.legal p{
+  font-size:12px;
+  line-height:1.7;
+  color:var(--faint);
+  max-width:900px;
+}
+
+/* ============================================================
+   FOOTER
+   ============================================================ */
+footer{
+  border-top:1px solid var(--line-soft);
+  padding:64px 0 48px;
+}
+.foot-top{
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+  gap:36px;
+  flex-wrap:wrap;
+  margin-bottom:52px;
+}
+.foot-contact{
+  font-family:var(--mono);
+  font-size:13px;
+  color:var(--dim);
+  line-height:2;
+  text-align:right;
+}
+.foot-contact a:hover{color:var(--accent)}
+.foot-bottom{
+  padding-top:22px;
+  border-top:1px solid var(--line-soft);
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:16px;
+  flex-wrap:wrap;
+}
+.foot-bottom p{
+  font-size:12px;
+  color:var(--faint);
+}
+.foot-bottom .conf{
+  font-family:var(--mono);
+  letter-spacing:.08em;
+}
+.foot-term{
+  font-size:13px;
+  color:var(--dim);
+  transition:color .2s;
+}
+.foot-term:hover{color:var(--accent)}
+
+/* ============================================================
+   SCROLL REVEAL
+   ============================================================ */
+.rv{
+  opacity:0;
+  transform:translateY(14px);
+  transition:opacity .5s ease,transform .5s ease;
+}
+.rv.on{opacity:1;transform:translateY(0)}
+@media (prefers-reduced-motion:reduce){
+  .rv{opacity:1;transform:none;transition:none}
+  .bar i{transition:none;width:var(--w)}
+}
+
+/* ============================================================
+   RESPONSIVE
+   ============================================================ */
+@media (max-width:900px){
+  .nav-links{display:none}
+  section{padding:84px 0}
+  .hero-reticle{left:70%;width:720px;height:720px}
+  .mv-grid{grid-template-columns:1fr}
+  .pilares{grid-template-columns:1fr 1fr}
+  .lead-grid{grid-template-columns:1fr 1fr}
+  .timeline{
+    grid-template-columns:1fr;
+    gap:0;
+  }
+  .tl-step{
+    border-top:none;
+    border-left:1px solid var(--line);
+    padding:0 0 30px 26px;
+  }
+  .tl-step:last-child{padding-bottom:4px}
+  .tl-step::before{top:4px;left:-4px}
+  .veh-grid{grid-template-columns:1fr}
+  .valores{grid-template-columns:1fr}
+  .estandares{grid-template-columns:1fr}
+  .score-card{grid-template-columns:1fr;gap:34px}
+  .stack-grid{grid-template-columns:1fr 1fr}
+  .proto-row{grid-template-columns:24px 1fr;grid-template-rows:auto auto}
+  .proto-row p{grid-column:2}
+  .principio{grid-template-columns:1fr;gap:0}
+  .prin{padding:20px 0}
+  .prin:first-child{border-top:1px solid var(--line)}
+  .niveles{grid-template-columns:1fr}
+  .nivel-core{transform:none}
+  .nivel-core:hover{transform:translateY(-2px)}
+  .onb-grid{grid-template-columns:1fr 1fr;gap:0 40px}
+}
+@media (max-width:640px){
+  .pilares{grid-template-columns:1fr}
+  .lead-grid{grid-template-columns:1fr}
+  .stack-grid{grid-template-columns:1fr}
+  .noes-row{grid-template-columns:1fr;gap:6px}
+  .onb-grid{grid-template-columns:1fr}
+  .termina-list{grid-template-columns:1fr}
+  .hero-foot{flex-direction:column;align-items:flex-start;gap:8px}
+  .score-card{padding:28px 24px}
+  .proj-card{padding:26px 20px 22px}
+  .foot-contact{text-align:left}
+}
+</style>
+</head>
+<body>
+
+<!-- ============================ NAV ============================ -->
+<nav class="nav" aria-label="Navegación principal">
+  <div class="nav-in">
+    <a href="#" class="brand" aria-label="Northpoint — inicio">
+      <svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.25" aria-hidden="true">
+        <circle cx="16" cy="16" r="5.5"/>
+        <line x1="16" y1="1.5" x2="16" y2="8.5"/>
+        <line x1="16" y1="23.5" x2="16" y2="30.5"/>
+        <line x1="1.5" y1="16" x2="8.5" y2="16"/>
+        <line x1="23.5" y1="16" x2="30.5" y2="16"/>
+        <circle cx="16" cy="16" r="1" fill="currentColor" stroke="none"/>
+      </svg>
+      <span class="brand-t">
+        <span class="brand-name">NORTHPOINT</span>
+        <span class="brand-sub">Behavioral Intelligence</span>
+      </span>
+    </a>
+    <div class="nav-links">
+      <a href="#filosofia">Filosofía</a>
+      <a href="#estructura">Estructura</a>
+      <a href="#conducta">Conducta</a>
+      <a href="#tecnologia">Tecnología</a>
+      <a href="#snowball">Snowball</a>
+    </div>
+    <a class="nav-cta" href="app.html">Trader Terminal →</a>
+  </div>
+</nav>
+
+<!-- ============================ HERO ============================ -->
+<header class="hero">
+  <svg class="hero-reticle" viewBox="0 0 920 920" fill="none" stroke="currentColor" stroke-width="1" aria-hidden="true">
+    <g class="spin">
+      <circle cx="460" cy="460" r="340" stroke-dasharray="2 10"/>
+      <line x1="460" y1="120" x2="460" y2="60"/>
+      <line x1="460" y1="800" x2="460" y2="860"/>
+      <line x1="120" y1="460" x2="60" y2="460"/>
+      <line x1="800" y1="460" x2="860" y2="460"/>
+    </g>
+    <circle cx="460" cy="460" r="230"/>
+    <circle cx="460" cy="460" r="12"/>
+    <line x1="460" y1="20" x2="460" y2="448"/>
+    <line x1="460" y1="472" x2="460" y2="900"/>
+    <line x1="20" y1="460" x2="448" y2="460"/>
+    <line x1="472" y1="460" x2="900" y2="460"/>
+  </svg>
+
+  <div class="wrap">
+    <p class="micro hero-micro">Hedge Fund Operations · Internal Document · v1.0 · 2025</p>
+    <h1>NORTHPOINT</h1>
+    <p class="hero-sub-display">Behavioral Intelligence</p>
+    <p class="hero-quote">«The market doesn't defeat traders. Their behavior does.»</p>
+    <p class="hero-desc">Inteligencia conductual aplicada a los mercados financieros. Donde otros ven ruido, nosotros vemos patrón.</p>
+    <div class="hero-ctas">
+      <a class="btn" href="mailto:investors@northpoint.io">Solicitar acceso inversor</a>
+      <a class="link-arrow" href="app.html">Entrar al Terminal →</a>
+    </div>
+    <div class="hero-foot">
+      <span>6 CAPÍTULOS · CONFIDENCIAL · NORTHPOINT.IO</span>
+      <span id="utc-clock">UTC 00:00:00</span>
+    </div>
+  </div>
+</header>
+
+<!-- ============================ 01 FILOSOFÍA ============================ -->
+<section id="filosofia">
+  <div class="wrap">
+    <div class="sec-head rv">
+      <p class="sec-num">01 — FILOSOFÍA</p>
+      <h2>Filosofía Northpoint</h2>
+      <p>Northpoint no es un fondo de inversión tradicional. Es una institución construida sobre inteligencia conductual aplicada a los mercados financieros. Cada decisión, cada protocolo, cada contratación refleja esta filosofía.</p>
+    </div>
+
+    <div class="mv-grid">
+      <div class="card mv rv">
+        <p class="micro acc">Misión</p>
+        <p>Generar retornos superiores ajustados al riesgo mediante el análisis sistemático del comportamiento humano en los mercados. Donde otros ven ruido, nosotros vemos patrón.</p>
+      </div>
+      <div class="card mv rv" data-d="1">
+        <p class="micro acc">Visión</p>
+        <p>Ser la firma de gestión de activos más precisa del mundo, no la más grande. El tamaño se administra. La precisión se construye.</p>
+      </div>
+    </div>
+
+    <p class="micro rv" style="margin-bottom:22px">Pilares fundacionales</p>
+    <div class="pilares">
+      <div class="card pilar rv">
+        <p class="code">P — 01</p>
+        <h3>Precisión sobre volumen</h3>
+        <p>Preferimos diez decisiones correctas que cien decisiones mediocres. La actividad no es rendimiento. La disciplina es rendimiento.</p>
+      </div>
+      <div class="card pilar rv" data-d="1">
+        <p class="code">P — 02</p>
+        <h3>Disciplina conductual</h3>
+        <p>El mercado no derrota traders. Su propio comportamiento lo hace. Cada miembro del equipo entiende y gestiona sus sesgos cognitivos.</p>
+      </div>
+      <div class="card pilar rv" data-d="2">
+        <p class="code">P — 03</p>
+        <h3>Evidencia empírica</h3>
+        <p>Ninguna tesis de inversión se aprueba sin evidencia cuantificable. Las narrativas se descartan. Los datos se analizan.</p>
+      </div>
+      <div class="card pilar rv">
+        <p class="code">P — 04</p>
+        <h3>Control del riesgo primero</h3>
+        <p>La preservación del capital es la primera regla. El crecimiento es consecuencia de no perder. No al revés.</p>
+      </div>
+      <div class="card pilar rv" data-d="1">
+        <p class="code">P — 05</p>
+        <h3>Institucionalidad silenciosa</h3>
+        <p>La voz de Northpoint es precisa y segura. No vendemos esperanza. No prometemos resultados. Documentamos evidencia.</p>
+      </div>
+      <div class="card pilar rv" data-d="2">
+        <p class="code">P — 06</p>
+        <h3>Mejora continua de procesos</h3>
+        <p>Cada semana revisamos qué salió mal, no solo qué salió bien. El error bien documentado es el activo más valioso del equipo.</p>
+      </div>
+    </div>
+
+    <div class="noes rv">
+      <p class="micro">Lo que Northpoint no es</p>
+      <div class="noes-row">
+        <h4>No somos un fondo de trading de alta frecuencia</h4>
+        <p>La velocidad no es nuestra ventaja. La inteligencia aplicada sí.</p>
+      </div>
+      <div class="noes-row">
+        <h4>No somos una firma de asesoría financiera masiva</h4>
+        <p>Seleccionamos clientes. Los clientes no solo nos seleccionan.</p>
+      </div>
+      <div class="noes-row">
+        <h4>No prometemos rendimientos garantizados</h4>
+        <p>Quien promete rendimientos garantizados miente o no entiende los mercados.</p>
+      </div>
+      <div class="noes-row">
+        <h4>No operamos con intuición</h4>
+        <p>Cada decisión de inversión tiene un proceso documentado y auditable.</p>
+      </div>
+    </div>
+
+    <p class="quote-sep rv">«La reputación no se declara. Se construye con datos.»</p>
+  </div>
+</section>
+
+<!-- ============================ 02 ESTRUCTURA ============================ -->
+<section id="estructura">
+  <div class="wrap">
+    <div class="sec-head rv">
+      <p class="sec-num">02 — ESTRUCTURA</p>
+      <h2>Estructura Organizacional</h2>
+      <p>Northpoint opera con una estructura plana y horizontal. Cada rol tiene autoridad clara y rendición de cuentas directa. No hay jerarquías decorativas.</p>
+    </div>
+
+    <div class="lead-grid">
+      <div class="card lead rv">
+        <p class="code">NP-001</p>
+        <h3>Chief Investment Officer</h3>
+        <p class="rep">Reports to · Investment Committee &amp; LPs</p>
+        <p>Responsable final de todas las decisiones de inversión del fondo. Define la estrategia macroeconómica y los mandatos de cada estrategia. Aprueba o rechaza toda tesis de inversión antes de ejecución.</p>
+      </div>
+      <div class="card lead rv" data-d="1">
+        <p class="code">NP-010</p>
+        <h3>Portfolio Manager</h3>
+        <p class="rep">Reports to · CIO</p>
+        <p>Gestión activa de portafolios dentro de los mandatos aprobados. Construcción y monitoreo de posiciones largas y cortas. Cada decisión de posición se documenta con tesis escrita.</p>
+      </div>
+      <div class="card lead rv" data-d="2">
+        <p class="code">NP-020</p>
+        <h3>Chief Risk Officer</h3>
+        <p class="rep">Reports to · CIO</p>
+        <p>Monitoreo en tiempo real del drawdown máximo permitido por estrategia. Autoridad para detener operaciones mediante alertas de riesgo. Define y actualiza el Risk Management Framework.</p>
+      </div>
+      <div class="card lead rv">
+        <p class="code">NP-030</p>
+        <h3>Research Analyst</h3>
+        <p class="rep">Reports to · Portfolio Manager</p>
+        <p>Investigación fundamental y cuantitativa de activos y sectores. Producción de memos de inversión con evidencia documentada. Monitoreo de earnings, macro data y eventos catalizadores.</p>
+      </div>
+      <div class="card lead rv" data-d="1">
+        <p class="code">NP-040</p>
+        <h3>Quantitative Analyst</h3>
+        <p class="rep">Reports to · CIO</p>
+        <p>Desarrollo y backtesting de modelos cuantitativos de inversión. Análisis estadístico de patrones conductuales en datos de mercado. Construcción del Northpoint Score y de los pipelines de información.</p>
+      </div>
+      <div class="card lead rv" data-d="2">
+        <p class="code">NP-050</p>
+        <h3>Chief Operating Officer</h3>
+        <p class="rep">Reports to · CIO</p>
+        <p>Gestión de operaciones diarias, compliance y relaciones con brokers. Coordinación con prime brokerage, custodios y administradores del fondo. Protocolos operativos y auditorías internas.</p>
+      </div>
+    </div>
+
+    <div class="sub-block rv">
+      <p class="micro">Proceso de toma de decisiones</p>
+      <div class="timeline">
+        <div class="tl-step">
+          <p class="num">01</p>
+          <h4>Generación de idea</h4>
+          <p>Cualquier miembro del equipo puede proponer una tesis. Se documenta con hipótesis, datos de soporte y nivel de convicción.</p>
+        </div>
+        <div class="tl-step">
+          <p class="num">02</p>
+          <h4>Research &amp; validación</h4>
+          <p>El Research Analyst asignado conduce due diligence independiente. Mínimo 72 horas de análisis antes de presentación formal.</p>
+        </div>
+        <div class="tl-step">
+          <p class="num">03</p>
+          <h4>Revisión de riesgo</h4>
+          <p>El CRO evalúa el impacto en el portafolio: correlaciones, drawdown proyectado y sizing máximo permitido según mandato.</p>
+        </div>
+        <div class="tl-step">
+          <p class="num">04</p>
+          <h4>Aprobación CIO</h4>
+          <p>El CIO aprueba, rechaza o pide revisión adicional. Las decisiones se registran con justificación escrita, sin excepciones.</p>
+        </div>
+        <div class="tl-step">
+          <p class="num">05</p>
+          <h4>Ejecución documentada</h4>
+          <p>El Portfolio Manager ejecuta y documenta hora, precio, tamaño y condiciones de mercado al momento de la operación.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="sub-block">
+      <p class="micro rv">Vehículos de inversión</p>
+      <div class="veh-grid">
+        <div class="card veh rv">
+          <p class="micro acc">Long/Short Equity</p>
+          <h3>Northpoint Alpha Fund</h3>
+          <div class="veh-rows">
+            <div class="veh-row"><span class="k">Estrategia</span><span class="v">Principal</span></div>
+            <div class="veh-row"><span class="k">Mínimo</span><span class="v">$250,000 USD</span></div>
+          </div>
+        </div>
+        <div class="card veh rv" data-d="1">
+          <p class="micro acc">Global Macro</p>
+          <h3>Northpoint Macro</h3>
+          <div class="veh-rows">
+            <div class="veh-row"><span class="k">Estrategia</span><span class="v">Secundaria</span></div>
+            <div class="veh-row"><span class="k">Mínimo</span><span class="v">$500,000 USD</span></div>
+          </div>
+        </div>
+        <div class="card veh rv" data-d="2">
+          <p class="micro acc">Quantitative / Systematic</p>
+          <h3>Northpoint Quant</h3>
+          <div class="veh-rows">
+            <div class="veh-row"><span class="k">Estrategia</span><span class="v">Emergente</span></div>
+            <div class="veh-row"><span class="k">Mínimo</span><span class="v">$1,000,000 USD</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================ 04 CONDUCTA ============================ -->
+<section id="conducta">
+  <div class="wrap">
+    <div class="sec-head rv">
+      <p class="sec-num">04 — CONDUCTA</p>
+      <h2>Código de Conducta</h2>
+      <p>El estándar de comportamiento en Northpoint es el de una institución financiera de primer nivel. No toleramos atajos éticos, comportamientos que dañen la reputación del fondo, ni conductas que violen la confianza de nuestros inversores.</p>
+    </div>
+
+    <p class="micro rv" style="margin-bottom:22px">Valores no negociables</p>
+    <div class="valores">
+      <div class="card valor rv">
+        <p class="num">01</p>
+        <h3>Integridad</h3>
+        <p>Hacemos lo correcto incluso cuando nadie mira. La integridad no se demuestra en los buenos momentos. Se demuestra bajo presión.</p>
+      </div>
+      <div class="card valor rv" data-d="1">
+        <p class="num">02</p>
+        <h3>Transparencia</h3>
+        <p>Con nuestros inversores, con nuestro equipo, y con nosotros mismos sobre las limitaciones de nuestro proceso.</p>
+      </div>
+      <div class="card valor rv">
+        <p class="num">03</p>
+        <h3>Responsabilidad</h3>
+        <p>Cuando algo sale mal, no buscamos culpables externos. Analizamos el proceso, identificamos la falla, y la corregimos.</p>
+      </div>
+      <div class="card valor rv" data-d="1">
+        <p class="num">04</p>
+        <h3>Excelencia sin arrogancia</h3>
+        <p>Buscamos la excelencia en todo lo que hacemos. Pero sabemos que los mercados siempre pueden sorprendernos. La humildad es parte del proceso.</p>
+      </div>
+    </div>
+
+    <div class="sub-block rv">
+      <p class="micro">Estándares de comportamiento profesional</p>
+      <div class="estandares">
+        <div class="est-row">
+          <h4>Puntualidad y preparación</h4>
+          <p>Llegar preparado a cada reunión es una muestra de respeto al tiempo de los demás. La improvisación no tiene lugar aquí.</p>
+        </div>
+        <div class="est-row">
+          <h4>Comunicación precisa</h4>
+          <p>Si no sabes algo, dilo. Si tienes dudas, exprésalas. La falsa certeza es más peligrosa que la duda honesta.</p>
+        </div>
+        <div class="est-row">
+          <h4>Feedback directo y constructivo</h4>
+          <p>El feedback se da directo y en privado. Se discute el proceso, nunca la persona.</p>
+        </div>
+        <div class="est-row">
+          <h4>Gestión del ego</h4>
+          <p>Ningún trade es «tuyo». Ninguna pérdida es «de ellos». Las decisiones y sus consecuencias son del equipo.</p>
+        </div>
+        <div class="est-row">
+          <h4>Discreción absoluta</h4>
+          <p>Conversaciones, posiciones, clientes, estrategias, discusiones internas — todo es confidencial. Siempre.</p>
+        </div>
+        <div class="est-row">
+          <h4>Desarrollo continuo</h4>
+          <p>Los mercados evolucionan. Quien no evoluciona, se queda atrás.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="sub-block rv">
+      <div class="card termina">
+        <p class="micro">Terminación inmediata</p>
+        <p>Las siguientes conductas resultan en terminación inmediata, sin proceso de advertencia previa:</p>
+        <ul class="termina-list">
+          <li>Operar con información privilegiada (insider trading)</li>
+          <li>Compartir posiciones o estrategias del fondo externamente</li>
+          <li>Falsificar registros, reportes o documentación interna</li>
+          <li>Operaciones personales en conflicto de interés no declarado</li>
+          <li>Violación del protocolo de MNPI sin reporte inmediato</li>
+          <li>Hostigamiento, discriminación o conducta abusiva hacia el equipo</li>
+          <li>Fraude, robo o malversación de activos del fondo o de clientes</li>
+          <li>Incumplimiento reiterado y documentado de las reglas de riesgo</li>
+        </ul>
+      </div>
+    </div>
+
+    <p class="quote-sep rv">«Al unirte a Northpoint, aceptas estos estándares sin reservas. No son aspiracionales. Son el piso mínimo.»</p>
+  </div>
+</section>
+
+<!-- ============================ 05 TECNOLOGÍA ============================ -->
+<section id="tecnologia">
+  <div class="wrap">
+    <div class="sec-head rv">
+      <p class="sec-num">05 — TECNOLOGÍA</p>
+      <h2>Tecnología &amp; Sistemas</h2>
+      <p>Northpoint opera sobre infraestructura institucional. Cada herramienta fue seleccionada por criterios de precisión, seguridad y velocidad. El stack tecnológico no es negociable.</p>
+    </div>
+
+    <div class="card score-card rv" style="margin-bottom:88px">
+      <div>
+        <p class="micro acc">Northpoint Score — Sistema propietario</p>
+        <p class="score-big">0–1000 <small>SCORE COMPUESTO</small></p>
+        <p>El Northpoint Score es nuestro sistema propietario de evaluación conductual aplicado a trading (Behavioral Intelligence Engine). Analiza cuatro dimensiones del comportamiento del trader para producir un score compuesto de 0 a 1000.</p>
+        <p class="score-live">Los traders del fondo operan con su Score en vivo dentro del Terminal. <a href="app.html">Ver el Terminal →</a></p>
+      </div>
+      <div class="dims" aria-label="Dimensiones del Northpoint Score (valores de ejemplo)">
+        <div class="dim">
+          <div class="row"><span class="name">Risk Discipline</span><span class="val">232 <span>/ 250</span></span></div>
+          <div class="bar"><i style="--w:92.8%"></i></div>
+        </div>
+        <div class="dim">
+          <div class="row"><span class="name">Emotion Control</span><span class="val">218 <span>/ 250</span></span></div>
+          <div class="bar"><i style="--w:87.2%"></i></div>
+        </div>
+        <div class="dim">
+          <div class="row"><span class="name">Decision Quality</span><span class="val">226 <span>/ 250</span></span></div>
+          <div class="bar"><i style="--w:90.4%"></i></div>
+        </div>
+        <div class="dim">
+          <div class="row"><span class="name">Consistency</span><span class="val">215 <span>/ 250</span></span></div>
+          <div class="bar"><i style="--w:86%"></i></div>
+        </div>
+      </div>
+    </div>
+
+    <p class="micro rv" style="margin-bottom:22px">Stack tecnológico institucional</p>
+    <div class="stack-grid" style="margin-bottom:88px">
+      <div class="card stack rv">
+        <p class="micro">Datos de Mercado</p>
+        <ul>
+          <li>Bloomberg Terminal</li>
+          <li>Reuters Eikon</li>
+          <li>FactSet</li>
+        </ul>
+      </div>
+      <div class="card stack rv" data-d="1">
+        <p class="micro">Ejecución &amp; Brokerage</p>
+        <ul>
+          <li>Prime Brokerage Goldman Sachs / Morgan Stanley</li>
+          <li>Interactive Brokers (FIX API)</li>
+          <li>FlexTrade OMS/EMS</li>
+        </ul>
+      </div>
+      <div class="card stack rv" data-d="2">
+        <p class="micro">Research &amp; Analytics</p>
+        <ul>
+          <li>Python / R + Jupyter</li>
+          <li>SEC EDGAR / EDGAR Online</li>
+          <li>Northpoint Quant Platform</li>
+        </ul>
+      </div>
+      <div class="card stack rv">
+        <p class="micro">Gestión de Portafolio</p>
+        <ul>
+          <li>Advent Portfolio Exchange (APX)</li>
+          <li>Risk Metrics / MSCI RiskManager</li>
+          <li>Northpoint Risk Dashboard</li>
+        </ul>
+      </div>
+      <div class="card stack rv" data-d="1">
+        <p class="micro">Operaciones &amp; Compliance</p>
+        <ul>
+          <li>SS&amp;C Geneva</li>
+          <li>ComplySci</li>
+          <li>DocuSign + SharePoint</li>
+        </ul>
+      </div>
+      <div class="card stack rv" data-d="2">
+        <p class="micro">Comunicación &amp; Seguridad</p>
+        <ul>
+          <li>Microsoft Teams (cifrado E2E)</li>
+          <li>ProtonMail</li>
+          <li>1Password Teams</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="rv">
+      <p class="micro" style="margin-bottom:22px">Protocolos de seguridad digital</p>
+      <div class="protos">
+        <div class="proto-row">
+          <span class="idx">01</span>
+          <h4>Autenticación de dos factores (2FA hardware)</h4>
+          <p>Obligatoria en todos los sistemas.</p>
+        </div>
+        <div class="proto-row">
+          <span class="idx">02</span>
+          <h4>VPN corporativa</h4>
+          <p>Requerida para cualquier acceso remoto a sistemas internos.</p>
+        </div>
+        <div class="proto-row">
+          <span class="idx">03</span>
+          <h4>Dispositivos personales</h4>
+          <p>Prohibidos para acceso a sistemas del fondo.</p>
+        </div>
+        <div class="proto-row">
+          <span class="idx">04</span>
+          <h4>Pantallas bloqueadas</h4>
+          <p>Automáticamente a los 2 minutos de inactividad.</p>
+        </div>
+        <div class="proto-row">
+          <span class="idx">05</span>
+          <h4>Redes WiFi públicas</h4>
+          <p>Prohibido usarlas para trabajo relacionado con el fondo.</p>
+        </div>
+        <div class="proto-row">
+          <span class="idx">06</span>
+          <h4>Backup encriptado</h4>
+          <p>Diario, de todos los sistemas críticos, en múltiples ubicaciones.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================ 06 SNOWBALL ============================ -->
+<section id="snowball">
+  <div class="wrap">
+    <div class="sec-head rv">
+      <p class="sec-num">06 — SNOWBALL</p>
+      <h2>Plan de Inversión Snowball</h2>
+      <p>El Plan Snowball es nuestro programa de inversión de largo plazo para clientes calificados. Basado en el principio del interés compuesto aplicado con disciplina conductual, el capital crece como una bola de nieve: lentamente al principio, de forma exponencial con el tiempo.</p>
+    </div>
+
+    <div class="rv">
+      <p class="micro" style="margin-bottom:26px">El principio Snowball</p>
+      <div class="principio">
+        <div class="prin">
+          <h4>Reinversión total</h4>
+          <p>Los retornos no se distribuyen. Se reinvierten en el portafolio para maximizar el efecto del interés compuesto.</p>
+        </div>
+        <div class="prin">
+          <h4>Horizonte mínimo 3 años</h4>
+          <p>El plan requiere un horizonte de inversión mínimo de 3 años. Los inversores con liquidez de corto plazo no son candidatos.</p>
+        </div>
+        <div class="prin">
+          <h4>Reequilibrio trimestral</h4>
+          <p>El portafolio se reequilibra trimestralmente según las condiciones de mercado y el perfil de riesgo acordado con el inversor.</p>
+        </div>
+      </div>
+    </div>
+
+    <p class="micro rv" style="margin-bottom:26px">Niveles de participación</p>
+    <div class="niveles" style="margin-bottom:88px">
+      <div class="card nivel rv">
+        <p class="micro">Snowball Seed</p>
+        <p class="min">$50,000 <small style="font-size:.5em;color:var(--faint)">USD</small></p>
+        <p class="obj">Retorno objetivo 12–18% anual</p>
+        <ul>
+          <li>Acceso a Alpha Fund</li>
+          <li>Reportes trimestrales</li>
+          <li>1 reunión anual</li>
+          <li>Periodo de bloqueo 12 meses</li>
+        </ul>
+      </div>
+      <div class="card nivel nivel-core rv" data-d="1">
+        <span class="badge">Recomendado</span>
+        <p class="micro">Snowball Core</p>
+        <p class="min">$250,000 <small style="font-size:.5em;color:var(--faint)">USD</small></p>
+        <p class="obj">Retorno objetivo 15–22% anual</p>
+        <ul>
+          <li>Acceso a Alpha + Macro Fund</li>
+          <li>Reportes mensuales</li>
+          <li>2 reuniones anuales con el CIO</li>
+          <li>Perfil de riesgo personalizado</li>
+          <li>Periodo de bloqueo 6 meses</li>
+        </ul>
+      </div>
+      <div class="card nivel rv" data-d="2">
+        <p class="micro">Snowball Summit</p>
+        <p class="min">$1,000,000 <small style="font-size:.5em;color:var(--faint)">USD</small></p>
+        <p class="obj">Retorno objetivo 18–28% anual</p>
+        <ul>
+          <li>Acceso completo a los 3 fondos</li>
+          <li>Reporting semanal en tiempo real</li>
+          <li>Acceso directo al CIO trimestral</li>
+          <li>Mandato personalizado</li>
+          <li>Co-inversión en oportunidades especiales</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="card proj-card rv" style="margin-bottom:88px">
+      <div class="proj-head">
+        <p class="micro">Proyección Snowball — Ejemplo referencial</p>
+        <p class="meta">$250,000 INICIAL · 19% ANUAL · SIN APORTES · 20 AÑOS</p>
+      </div>
+      <svg id="snowchart" viewBox="0 0 600 260" role="img" aria-label="Curva de crecimiento compuesto de $250,000 al 19% anual durante 20 años, alcanzando aproximadamente $8.11 millones en el año 20">
+        <defs>
+          <linearGradient id="snowfill" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#9BC0DC" stop-opacity=".08"/>
+            <stop offset="1" stop-color="#9BC0DC" stop-opacity="0"/>
+          </linearGradient>
+        </defs>
+        <g id="sc-grid"></g>
+        <path id="sc-area" fill="url(#snowfill)" d=""/>
+        <path id="sc-line" fill="none" stroke="#9BC0DC" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round" d=""/>
+        <g id="sc-marks"></g>
+      </svg>
+      <p class="proj-note">Capital inicial $250,000 USD, retorno objetivo 19% anual (Snowball Core), sin aportes adicionales. El interés compuesto transforma el capital con tiempo y disciplina.</p>
+    </div>
+
+    <div class="rv">
+      <p class="micro" style="margin-bottom:22px">Proceso de onboarding — Cliente Snowball</p>
+      <div class="onb-grid">
+        <div class="onb">
+          <p class="num">01</p>
+          <h4>Calificación de inversor</h4>
+          <p>Verificación de calificación como inversor acreditado según regulación aplicable. Este paso es obligatorio y no negociable.</p>
+        </div>
+        <div class="onb">
+          <p class="num">02</p>
+          <h4>Reunión de perfilamiento</h4>
+          <p>Sesión de 60 minutos con Investor Relations para definir objetivos, tolerancia al riesgo y horizonte de inversión.</p>
+        </div>
+        <div class="onb">
+          <p class="num">03</p>
+          <h4>Propuesta formal de inversión</h4>
+          <p>Northpoint elabora una propuesta con estructura de portafolio recomendada, proyecciones conservadoras y términos del acuerdo.</p>
+        </div>
+        <div class="onb">
+          <p class="num">04</p>
+          <h4>Due diligence mutuo</h4>
+          <p>El inversor recibe acceso al Data Room de Northpoint: track record auditado, documentos legales del fondo y estructura operativa.</p>
+        </div>
+        <div class="onb">
+          <p class="num">05</p>
+          <h4>Suscripción y transferencia</h4>
+          <p>Firma de documentos de suscripción, apertura de cuenta en custodio y transferencia de capital al vehículo correspondiente.</p>
+        </div>
+        <div class="onb">
+          <p class="num">06</p>
+          <h4>Onboarding y primer reporte</h4>
+          <p>Acceso al portal de inversores, comunicación periódica establecida y entrega del primer reporte de posición inicial.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="legal rv">
+      <p class="micro">Aviso legal</p>
+      <p>Los retornos objetivo indicados son proyecciones basadas en el historial de performance de las estrategias de Northpoint y no constituyen una garantía de rendimiento futuro. Las inversiones en fondos de cobertura implican riesgos significativos incluyendo la posible pérdida del capital invertido. Este documento es de carácter informativo y no constituye oferta de valores. Northpoint Behavioral Intelligence no está registrado como asesor de inversiones en todas las jurisdicciones. Los inversores deben consultar con asesores legales y fiscales antes de tomar decisiones de inversión.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============================ FOOTER ============================ -->
+<footer>
+  <div class="wrap">
+    <div class="foot-top">
+      <a href="#" class="brand" aria-label="Northpoint — volver arriba">
+        <svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.25" aria-hidden="true" style="width:24px;height:24px;color:var(--accent)">
+          <circle cx="16" cy="16" r="5.5"/>
+          <line x1="16" y1="1.5" x2="16" y2="8.5"/>
+          <line x1="16" y1="23.5" x2="16" y2="30.5"/>
+          <line x1="1.5" y1="16" x2="8.5" y2="16"/>
+          <line x1="23.5" y1="16" x2="30.5" y2="16"/>
+          <circle cx="16" cy="16" r="1" fill="currentColor" stroke="none"/>
+        </svg>
+        <span class="brand-t">
+          <span class="brand-name">NORTHPOINT</span>
+          <span class="brand-sub">Behavioral Intelligence</span>
+        </span>
+      </a>
+      <div class="foot-contact">
+        <p>northpoint.io</p>
+        <p><a href="mailto:investors@northpoint.io">investors@northpoint.io</a></p>
+        <p><a class="foot-term" href="app.html">Terminal de traders →</a></p>
+      </div>
+    </div>
+    <div class="foot-bottom">
+      <p>© 2025 Northpoint Behavioral Intelligence. Todos los derechos reservados. Documento confidencial. Distribución restringida a personal autorizado.</p>
+      <p class="conf">CONFIDENCIAL · NORTHPOINT.IO</p>
+    </div>
+  </div>
+</footer>
+
+<script>
+(function(){
+  'use strict';
+
+  /* ---------- Scroll reveal ---------- */
+  var revealEls = document.querySelectorAll('.rv');
+  if ('IntersectionObserver' in window) {
+    var io = new IntersectionObserver(function(entries){
+      entries.forEach(function(entry){
+        if (entry.isIntersecting) {
+          var el = entry.target;
+          var d = parseInt(el.getAttribute('data-d') || '0', 10);
+          if (d > 0) el.style.transitionDelay = (d * 70) + 'ms';
+          el.classList.add('on');
+          io.unobserve(el);
+        }
+      });
+    }, { threshold: 0.12, rootMargin: '0px 0px -30px 0px' });
+    revealEls.forEach(function(el){ io.observe(el); });
+  } else {
+    revealEls.forEach(function(el){ el.classList.add('on'); });
+  }
+
+  /* ---------- Smooth scroll para anchors (respeta reduced-motion) ---------- */
+  var scrollBehavior = window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth';
+  document.querySelectorAll('a[href^="#"]').forEach(function(a){
+    a.addEventListener('click', function(e){
+      var href = a.getAttribute('href');
+      if (href === '#') {
+        e.preventDefault();
+        window.scrollTo({ top: 0, behavior: scrollBehavior });
+        return;
+      }
+      var target = document.querySelector(href);
+      if (target) {
+        e.preventDefault();
+        target.scrollIntoView({ behavior: scrollBehavior, block: 'start' });
+        if (history.pushState) history.pushState(null, '', href);
+      }
+    });
+  });
+
+  /* ---------- Reloj UTC (detalle mono del hero) ---------- */
+  var clock = document.getElementById('utc-clock');
+  if (clock) {
+    var pad = function(n){ return (n < 10 ? '0' : '') + n; };
+    var tick = function(){
+      var d = new Date();
+      clock.textContent = 'UTC ' + pad(d.getUTCHours()) + ':' + pad(d.getUTCMinutes()) + ':' + pad(d.getUTCSeconds());
+    };
+    tick();
+    setInterval(tick, 1000);
+  }
+
+  /* ---------- Curva Snowball: 250,000 * 1.19^t, 20 años ---------- */
+  var svg = document.getElementById('snowchart');
+  var lineEl = document.getElementById('sc-line');
+  var areaEl = document.getElementById('sc-area');
+  var gridEl = document.getElementById('sc-grid');
+  var marksEl = document.getElementById('sc-marks');
+
+  if (svg && lineEl && areaEl && gridEl && marksEl) {
+    var NS = 'http://www.w3.org/2000/svg';
+    var W = 600, H = 260;
+    var padL = 14, padR = 20, padT = 30, padB = 36;
+    var P0 = 250000, RATE = 0.19, YEARS = 20;
+    var maxV = P0 * Math.pow(1 + RATE, YEARS) * 1.05;
+    var baseY = H - padB;
+
+    var x = function(t){ return padL + (t / YEARS) * (W - padL - padR); };
+    var y = function(v){ return padT + (1 - v / maxV) * (H - padT - padB); };
+    var mk = function(tag, attrs){
+      var el = document.createElementNS(NS, tag);
+      for (var k in attrs) el.setAttribute(k, attrs[k]);
+      return el;
+    };
+
+    /* Gridlines horizontales sutiles: $2M, $4M, $6M, $8M */
+    [2000000, 4000000, 6000000, 8000000].forEach(function(v){
+      gridEl.appendChild(mk('line', {
+        x1: padL, y1: y(v), x2: W - padR, y2: y(v),
+        stroke: 'rgba(255,255,255,.05)', 'stroke-width': 1
+      }));
+      var lbl = mk('text', {
+        x: padL + 2, y: y(v) - 4,
+        fill: '#596374', 'font-size': 9,
+        'font-family': "'IBM Plex Mono',ui-monospace,monospace",
+        'letter-spacing': '.06em'
+      });
+      lbl.textContent = '$' + (v / 1000000) + 'M';
+      gridEl.appendChild(lbl);
+    });
+
+    /* Línea base */
+    gridEl.appendChild(mk('line', {
+      x1: padL, y1: baseY, x2: W - padR, y2: baseY,
+      stroke: 'rgba(255,255,255,.09)', 'stroke-width': 1
+    }));
+
+    /* Path de la curva (paso 0.25 años) */
+    var d = '';
+    for (var t = 0; t <= YEARS + 0.001; t += 0.25) {
+      var v = P0 * Math.pow(1 + RATE, t);
+      var px = x(t).toFixed(2), py = y(v).toFixed(2);
+      d += (d === '' ? 'M' : 'L') + px + ' ' + py;
+    }
+    lineEl.setAttribute('d', d);
+    areaEl.setAttribute('d', d + 'L' + x(YEARS).toFixed(2) + ' ' + baseY + 'L' + x(0).toFixed(2) + ' ' + baseY + 'Z');
+
+    /* Hitos — labels calculados desde la fórmula (consistencia con "19% ANUAL") */
+    var fmtHito = function(v){
+      return v >= 1e6 ? '≈ $' + (v/1e6).toFixed(2) + 'M' : '≈ $' + Math.round(v/1000) + 'K';
+    };
+    var milestones = [ { t: 5 }, { t: 10 }, { t: 15 }, { t: 20 } ];
+    milestones.forEach(function(m){
+      var v = P0 * Math.pow(1 + RATE, m.t);
+      m.label = fmtHito(v);
+      var mx = x(m.t), my = y(v);
+      var last = (m.t === YEARS);
+
+      marksEl.appendChild(mk('circle', {
+        cx: mx, cy: my, r: 3,
+        fill: '#05070C', stroke: '#9BC0DC', 'stroke-width': 1.25
+      }));
+
+      var valLbl = mk('text', {
+        x: last ? mx - 8 : mx, y: my - 11,
+        fill: '#E9EDF2', 'font-size': 11,
+        'text-anchor': last ? 'end' : 'middle',
+        'font-family': "'IBM Plex Mono',ui-monospace,monospace",
+        'letter-spacing': '.04em'
+      });
+      valLbl.textContent = m.label;
+      marksEl.appendChild(valLbl);
+
+      var yrLbl = mk('text', {
+        x: last ? mx - 2 : mx, y: baseY + 16,
+        fill: '#8A94A6', 'font-size': 9.5,
+        'text-anchor': last ? 'end' : 'middle',
+        'font-family': "'IBM Plex Mono',ui-monospace,monospace",
+        'letter-spacing': '.14em'
+      });
+      yrLbl.textContent = 'AÑO ' + m.t;
+      marksEl.appendChild(yrLbl);
+    });
+
+    /* Marca de inicio en el eje */
+    var startLbl = mk('text', {
+      x: x(0), y: baseY + 16,
+      fill: '#596374', 'font-size': 9.5,
+      'text-anchor': 'start',
+      'font-family': "'IBM Plex Mono',ui-monospace,monospace",
+      'letter-spacing': '.14em'
+    });
+    startLbl.textContent = '$250K';
+    marksEl.appendChild(startLbl);
+  }
+})();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,2222 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CENIT TERMINAL</title>
+<meta name="description" content="Terminal interno de Cenit Capital Management. Mesa de futuros y Snowball Investments.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   CENIT TERMINAL · Dark Liquid Glass
+   Mismo sistema que la landing: un acento polar, mono para datos.
+   ============================================================ */
+:root{
+  --bg:#05070C;
+  --bg-2:#090D15;
+  --glass:rgba(255,255,255,.045);
+  --glass-2:rgba(255,255,255,.075);
+  --line:rgba(255,255,255,.09);
+  --line-soft:rgba(255,255,255,.05);
+  --txt:#E9EDF2;
+  --dim:#8A94A6;
+  --faint:#596374;
+  --accent:#9BC0DC;
+  --accent-deep:#5E8CAD;
+  --up:#5FBF9A;
+  --down:#D96D62;
+  --warn:#D9A441;
+  --sans:'Inter',-apple-system,system-ui,sans-serif;
+  --mono:'IBM Plex Mono',ui-monospace,monospace;
+  color-scheme:dark;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{
+  background:var(--bg);
+  color:var(--txt);
+  font-family:var(--sans);
+  font-size:14px;
+  line-height:1.55;
+  overflow:hidden;
+}
+::selection{background:rgba(155,192,220,.25)}
+a{color:var(--accent);text-decoration:none}
+button{font-family:inherit;color:inherit;background:none;border:none;cursor:pointer}
+input,select,textarea{
+  font-family:var(--mono);font-size:13px;color:var(--txt);
+  background:rgba(255,255,255,.04);border:1px solid var(--line);
+  border-radius:8px;padding:9px 11px;width:100%;
+}
+input:focus,select:focus,textarea:focus{outline:1px solid var(--accent-deep);outline-offset:1px}
+input[type=checkbox]{width:auto}
+label{font-family:var(--mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--dim);display:block;margin-bottom:6px}
+:focus-visible{outline:1px solid var(--accent-deep);outline-offset:2px}
+.micro{font-family:var(--mono);font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--dim);font-weight:500}
+.mono{font-family:var(--mono)}
+.up{color:var(--up)}
+.down{color:var(--down)}
+.warn{color:var(--warn)}
+
+/* ═══ Shell ═══ */
+.app{display:flex;height:100vh;height:100svh}
+
+/* fondo con glow polar sutil */
+.app::before{
+  content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
+  background:
+    radial-gradient(900px 600px at 78% -10%, rgba(120,165,200,.07), transparent 62%),
+    radial-gradient(1100px 700px at -10% 110%, rgba(94,140,173,.05), transparent 60%);
+}
+
+/* ═══ Rail (sidebar) ═══ */
+.rail{
+  position:relative;z-index:5;
+  width:236px;flex:0 0 236px;height:100%;
+  display:flex;flex-direction:column;
+  background:rgba(8,12,20,.66);
+  -webkit-backdrop-filter:blur(22px) saturate(150%);
+  backdrop-filter:blur(22px) saturate(150%);
+  border-right:1px solid var(--line-soft);
+  padding:22px 14px 14px;
+}
+.rail-brand{display:flex;align-items:center;gap:10px;padding:0 8px 20px}
+.rail-brand svg{width:20px;height:20px;stroke:var(--accent);flex:0 0 auto}
+.rail-brand b{font-size:13px;font-weight:600;letter-spacing:.09em}
+.rail-brand span{display:block;font-family:var(--mono);font-size:8px;letter-spacing:.28em;color:var(--dim)}
+.rail-group{margin-top:14px}
+.rail-group .micro{padding:0 10px 8px;font-size:9.5px;color:var(--faint)}
+.rail a.item{
+  display:flex;align-items:center;gap:11px;
+  padding:9px 10px;border-radius:9px;color:var(--dim);
+  font-size:13px;font-weight:500;letter-spacing:.02em;
+  border:1px solid transparent;
+  transition:background .15s,color .15s,border-color .15s;
+}
+.rail a.item:hover{color:var(--txt);background:rgba(255,255,255,.03)}
+.rail a.item.on{
+  color:var(--txt);background:var(--glass);
+  border-color:var(--line-soft);
+}
+.rail a.item svg{width:15px;height:15px;stroke:currentColor;opacity:.85;flex:0 0 auto}
+.rail a.item .bdg{
+  margin-left:auto;font-family:var(--mono);font-size:10px;color:var(--accent);
+}
+.rail-foot{margin-top:auto;border-top:1px solid var(--line-soft);padding-top:12px}
+.rail-user{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:9px;width:100%;text-align:left;transition:background .15s}
+.rail-user:hover{background:rgba(255,255,255,.03)}
+.avatar{
+  width:28px;height:28px;border-radius:50%;flex:0 0 auto;
+  display:flex;align-items:center;justify-content:center;
+  background:linear-gradient(160deg, rgba(155,192,220,.22), rgba(94,140,173,.10));
+  border:1px solid var(--line);
+  font-family:var(--mono);font-size:11px;color:var(--accent);
+}
+.rail-user b{font-size:12.5px;font-weight:600;display:block;line-height:1.2}
+.rail-user span{font-family:var(--mono);font-size:9px;letter-spacing:.14em;color:var(--faint)}
+.rail-exit{display:block;padding:8px 10px;font-family:var(--mono);font-size:10px;letter-spacing:.16em;color:var(--faint)}
+.rail-exit:hover{color:var(--dim)}
+
+/* ═══ Main ═══ */
+.main{position:relative;z-index:1;flex:1;min-width:0;display:flex;flex-direction:column}
+.topbar{
+  flex:0 0 auto;height:60px;
+  display:flex;align-items:center;gap:18px;
+  padding:0 26px;border-bottom:1px solid var(--line-soft);
+  background:rgba(6,9,15,.45);
+  -webkit-backdrop-filter:blur(18px) saturate(140%);
+  backdrop-filter:blur(18px) saturate(140%);
+}
+.topbar h1{font-size:15px;font-weight:600;letter-spacing:.02em}
+.topbar .crumb{font-family:var(--mono);font-size:9.5px;letter-spacing:.22em;color:var(--faint);text-transform:uppercase;display:block}
+.top-right{margin-left:auto;display:flex;align-items:center;gap:14px}
+.top-date{font-family:var(--mono);font-size:11px;color:var(--dim);letter-spacing:.06em}
+.sess-pill{
+  display:inline-flex;align-items:center;gap:8px;
+  font-family:var(--mono);font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;
+  padding:7px 13px;border-radius:99px;
+  background:var(--glass);border:1px solid var(--line);color:var(--dim);
+  white-space:nowrap;
+}
+.sess-pill .dot{width:6px;height:6px;border-radius:50%;background:var(--faint);flex:0 0 auto}
+.sess-pill.live{color:var(--txt);border-color:rgba(95,191,154,.35)}
+.sess-pill.live .dot{background:var(--up);animation:pulse 2.2s ease-in-out infinite}
+.sess-pill.orb{color:var(--txt);border-color:rgba(155,192,220,.4)}
+.sess-pill.orb .dot{background:var(--accent);animation:pulse 1.4s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+.top-clock{font-family:var(--mono);font-size:13px;color:var(--txt);letter-spacing:.08em;min-width:78px;text-align:right}
+
+/* ═══ Views ═══ */
+.content{flex:1;overflow-y:auto;padding:28px 26px 60px;scrollbar-width:thin;scrollbar-color:rgba(255,255,255,.12) transparent}
+.content::-webkit-scrollbar{width:8px}
+.content::-webkit-scrollbar-thumb{background:rgba(255,255,255,.09);border-radius:99px}
+.view{display:none;max-width:1180px;margin:0 auto;animation:vin .28s ease both}
+.view.on{display:block}
+@keyframes vin{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+/* ═══ Panels & grids ═══ */
+.panel{
+  background:linear-gradient(180deg, rgba(12,18,28,.62), rgba(8,12,20,.5));
+  border:1px solid var(--line-soft);
+  border-radius:14px;
+  -webkit-backdrop-filter:blur(14px) saturate(140%);
+  backdrop-filter:blur(14px) saturate(140%);
+  position:relative;
+}
+.panel::before{
+  content:'';position:absolute;inset:0 0 auto 0;height:1px;border-radius:14px 14px 0 0;
+  background:linear-gradient(90deg, transparent, rgba(255,255,255,.10), transparent);
+  pointer-events:none;
+}
+.p-head{display:flex;align-items:baseline;gap:12px;padding:16px 18px 0}
+.p-head h3{font-size:13.5px;font-weight:600;letter-spacing:.02em}
+.p-head .micro{margin-left:auto;font-size:9.5px}
+.p-body{padding:14px 18px 18px}
+.grid{display:grid;gap:14px}
+.g2{grid-template-columns:1fr 1fr}
+.g3{grid-template-columns:repeat(3,1fr)}
+.g4{grid-template-columns:repeat(4,1fr)}
+.g5{grid-template-columns:repeat(5,1fr)}
+.mt{margin-top:14px}
+.mt2{margin-top:22px}
+
+/* KPI tiles */
+.kpi{padding:15px 16px 13px}
+.kpi .k-l{font-family:var(--mono);font-size:9.5px;letter-spacing:.18em;text-transform:uppercase;color:var(--faint)}
+.kpi .k-v{font-family:var(--mono);font-size:22px;font-weight:500;letter-spacing:-.01em;margin-top:6px;line-height:1.1}
+.kpi .k-s{font-family:var(--mono);font-size:10.5px;color:var(--dim);margin-top:5px}
+.bar{height:3px;border-radius:99px;background:rgba(255,255,255,.07);margin-top:10px;overflow:hidden}
+.bar i{display:block;height:100%;border-radius:99px;background:var(--accent-deep);transition:width .5s ease}
+.bar i.full{background:var(--up)}
+.bar i.neg{background:var(--down)}
+
+/* botones */
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:8px;
+  font-size:12.5px;font-weight:500;letter-spacing:.03em;
+  padding:9px 16px;border-radius:9px;white-space:nowrap;
+  border:1px solid var(--line);background:var(--glass);color:var(--txt);
+  transition:background .15s,border-color .15s,transform .15s;
+}
+.btn:hover{background:var(--glass-2);border-color:var(--accent-deep)}
+.btn.primary{background:#E9EDF2;color:#0A0E15;border-color:#E9EDF2;font-weight:600}
+.btn.primary:hover{background:#fff;transform:translateY(-1px)}
+.btn.danger:hover{border-color:var(--down);color:var(--down)}
+.btn.sm{padding:6px 11px;font-size:11.5px;border-radius:7px}
+.btn-icon{padding:6px 8px;border-radius:7px;color:var(--faint)}
+.btn-icon:hover{color:var(--txt)}
+
+/* tablas */
+table{width:100%;border-collapse:collapse}
+th{
+  font-family:var(--mono);font-size:9.5px;letter-spacing:.16em;text-transform:uppercase;
+  color:var(--faint);font-weight:500;text-align:left;
+  padding:10px 12px;border-bottom:1px solid var(--line-soft);
+}
+td{
+  padding:11px 12px;border-bottom:1px solid var(--line-soft);
+  font-size:13px;vertical-align:middle;
+}
+td.mono,th.r,td.r{font-family:var(--mono);font-size:12.5px}
+th.r,td.r{text-align:right}
+tr:last-child td{border-bottom:none}
+tbody tr{transition:background .12s}
+tbody tr:hover{background:rgba(255,255,255,.02)}
+
+/* tags */
+.tag{
+  display:inline-flex;align-items:center;gap:5px;
+  font-family:var(--mono);font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;
+  padding:3px 8px;border-radius:99px;border:1px solid var(--line);color:var(--dim);
+  white-space:nowrap;
+}
+.tag.ok{color:var(--up);border-color:rgba(95,191,154,.3)}
+.tag.bad{color:var(--down);border-color:rgba(217,109,98,.32)}
+.tag.wr{color:var(--warn);border-color:rgba(217,164,65,.32)}
+.tag.ac{color:var(--accent);border-color:rgba(155,192,220,.3)}
+
+/* checklist */
+.chk{
+  display:flex;align-items:flex-start;gap:12px;width:100%;text-align:left;
+  padding:12px 14px;border-radius:10px;border:1px solid var(--line-soft);
+  background:rgba(255,255,255,.015);
+  transition:background .15s,border-color .15s;
+}
+.chk + .chk{margin-top:8px}
+.chk:hover{background:rgba(255,255,255,.035)}
+.chk .box{
+  width:17px;height:17px;flex:0 0 auto;margin-top:1px;
+  border-radius:5px;border:1px solid var(--line);
+  display:flex;align-items:center;justify-content:center;
+  transition:background .15s,border-color .15s;
+}
+.chk .box svg{width:10px;height:10px;stroke:#0A0E15;stroke-width:3;opacity:0}
+.chk.done{border-color:rgba(155,192,220,.28)}
+.chk.done .box{background:var(--accent);border-color:var(--accent)}
+.chk.done .box svg{opacity:1}
+.chk b{font-size:13px;font-weight:600;display:block;line-height:1.3}
+.chk span{font-size:12px;color:var(--dim);display:block;margin-top:2px;line-height:1.45}
+.chk.done b{color:var(--dim);text-decoration:line-through;text-decoration-color:rgba(255,255,255,.25)}
+.chk .t{margin-left:auto;font-family:var(--mono);font-size:10px;color:var(--faint);flex:0 0 auto}
+
+/* veredicto de setup */
+.verdict{
+  border-radius:12px;padding:16px 18px;margin-top:14px;
+  border:1px solid var(--line);
+  font-family:var(--mono);letter-spacing:.04em;
+  display:flex;align-items:center;gap:14px;
+}
+.verdict .vs{font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--dim)}
+.verdict .vt{font-size:15px;font-weight:600}
+.verdict.go{border-color:rgba(95,191,154,.4);background:rgba(95,191,154,.06)}
+.verdict.go .vt{color:var(--up)}
+.verdict.no{border-color:rgba(217,109,98,.35);background:rgba(217,109,98,.05)}
+.verdict.no .vt{color:var(--down)}
+
+/* score */
+.score-wrap{display:flex;gap:26px;align-items:center}
+.score-ring{position:relative;width:132px;height:132px;flex:0 0 auto}
+.score-ring svg{transform:rotate(-90deg)}
+.score-ring .num{
+  position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;
+}
+.score-ring .num b{font-family:var(--mono);font-size:30px;font-weight:500;letter-spacing:-.02em}
+.score-ring .num span{font-family:var(--mono);font-size:8.5px;letter-spacing:.22em;color:var(--faint)}
+.dims{flex:1;display:flex;flex-direction:column;gap:10px;min-width:0}
+.dim .d-t{display:flex;justify-content:space-between;font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;color:var(--dim);text-transform:uppercase}
+.dim .d-t b{color:var(--txt);font-weight:500}
+
+/* modal */
+.overlay{
+  position:fixed;inset:0;z-index:60;display:none;
+  background:rgba(3,5,9,.7);
+  -webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);
+  align-items:flex-start;justify-content:center;
+  overflow-y:auto;padding:6vh 18px 60px;
+}
+.overlay.on{display:flex}
+.modal{
+  width:100%;max-width:560px;
+  background:linear-gradient(180deg, #0C121C, #080D16);
+  border:1px solid var(--line);border-radius:16px;
+  padding:24px;animation:vin .22s ease both;
+}
+.modal h3{font-size:15px;font-weight:600;margin-bottom:4px}
+.modal .sub{font-size:12px;color:var(--dim);margin-bottom:18px}
+.f-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
+/* ── login ── */
+.login{
+  position:fixed;inset:0;z-index:900;display:none;
+  align-items:center;justify-content:center;padding:24px;
+  background:
+    radial-gradient(900px 560px at 70% -10%, rgba(94,140,173,.10), transparent 60%),
+    linear-gradient(180deg,#04060B,#05070C 45%,#070B13);
+}
+.login.on{display:flex}
+.login-card{
+  width:100%;max-width:400px;border-radius:18px;padding:34px 32px 28px;
+  background:linear-gradient(180deg, rgba(12,18,28,.85), rgba(8,12,20,.8));
+  border:1px solid var(--line);
+  box-shadow:0 30px 80px rgba(0,0,0,.5), inset 0 1px 1px rgba(255,255,255,.12);
+}
+.login-brand{display:flex;align-items:center;gap:12px;margin-bottom:18px}
+.login-brand svg{width:30px;height:30px;color:var(--accent)}
+.login-brand b{font-size:17px;font-weight:600;letter-spacing:.1em;display:block}
+.login-brand span{font-family:var(--mono);font-size:8.5px;letter-spacing:.26em;color:var(--dim)}
+.login-err{font-size:12.5px;color:var(--down);min-height:18px;margin:6px 0 2px}
+body.locked .app{filter:blur(10px);pointer-events:none;user-select:none}
+
+/* ── mesa de aprobaciones ── */
+.tix{border-radius:14px;border:1px solid var(--line-soft);background:var(--glass);padding:18px;margin-bottom:12px}
+.tix-head{display:flex;gap:12px;align-items:baseline;flex-wrap:wrap}
+.tix-head b{font-size:14.5px}
+.tix-est{font-family:var(--mono);font-size:9.5px;letter-spacing:.18em;padding:4px 10px;border-radius:99px;border:1px solid var(--line)}
+.tix-est.ok{color:var(--up);border-color:rgba(87,199,155,.4)}
+.tix-est.no{color:var(--down);border-color:rgba(222,106,95,.4)}
+.tix-est.run{color:var(--warn);border-color:rgba(217,164,65,.35)}
+.tix-tesis{font-size:13px;color:var(--dim);margin:8px 0 12px;line-height:1.65}
+.gates{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.gate{
+  border:1px solid var(--line-soft);border-radius:10px;padding:10px 12px;
+  display:flex;flex-direction:column;gap:4px;background:rgba(255,255,255,.02);
+}
+.gate .g-t{font-size:11px;font-weight:600}
+.gate .g-s{font-family:var(--mono);font-size:9px;letter-spacing:.08em;color:var(--faint)}
+.gate.done{border-color:rgba(87,199,155,.35)}
+.gate.done .g-s{color:var(--up)}
+.gate button{
+  margin-top:4px;font-size:10.5px;font-weight:600;letter-spacing:.06em;
+  padding:6px 8px;border-radius:7px;border:1px solid var(--line);
+  background:var(--glass-2);color:var(--txt);cursor:pointer;
+}
+.gate button:disabled{opacity:.35;cursor:default}
+.tix-foot{display:flex;gap:10px;margin-top:12px;flex-wrap:wrap}
+@media (max-width:760px){ .gates{grid-template-columns:repeat(2,1fr)} }
+
+.duties{
+  border:1px solid var(--line-soft);border-radius:10px;background:var(--glass);
+  padding:14px 16px;margin-bottom:12px;
+}
+.duties-h{margin-bottom:8px}
+.duties ul{list-style:none;display:flex;flex-direction:column;gap:6px}
+.duties li{
+  font-size:12.8px;color:var(--dim);line-height:1.55;padding-left:16px;position:relative;
+}
+.duties li::before{content:'—';position:absolute;left:0;color:var(--accent-deep)}
+.f-row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:12px}
+.f-full{margin-bottom:12px}
+.m-foot{display:flex;justify-content:flex-end;gap:10px;margin-top:18px}
+
+/* segmented */
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:9px;overflow:hidden}
+.seg button{
+  font-family:var(--mono);font-size:11px;letter-spacing:.08em;padding:8px 14px;color:var(--dim);
+  transition:background .15s,color .15s;text-transform:uppercase;
+}
+.seg button.on{background:var(--glass-2);color:var(--txt)}
+
+/* study */
+.mod-head{display:flex;align-items:center;gap:14px;width:100%;text-align:left;padding:16px 18px}
+.mod-head .mn{font-family:var(--mono);font-size:11px;color:var(--accent);letter-spacing:.14em;flex:0 0 44px}
+.mod-head b{font-size:13.5px;font-weight:600}
+.mod-head span{display:block;font-size:11.5px;color:var(--dim);margin-top:1px}
+.mod-head .pct{margin-left:auto;font-family:var(--mono);font-size:11px;color:var(--dim)}
+.mod-head .chev{width:14px;height:14px;stroke:var(--faint);transition:transform .2s;flex:0 0 auto}
+.mod.open .chev{transform:rotate(180deg)}
+.mod-body{display:none;padding:0 18px 16px}
+.mod.open .mod-body{display:block}
+.lesson{
+  display:flex;gap:12px;align-items:flex-start;
+  padding:12px 14px;border-radius:10px;border:1px solid var(--line-soft);
+  background:rgba(255,255,255,.015);margin-top:8px;
+}
+.lesson .lx{flex:1;min-width:0}
+.lesson b{font-size:12.5px;font-weight:600;display:block}
+.lesson p{font-size:12px;color:var(--dim);margin-top:3px;line-height:1.5}
+.lesson .lchk{flex:0 0 auto;margin-top:2px}
+
+/* rules view */
+.rule-quote{
+  border-left:2px solid var(--accent-deep);padding:4px 0 4px 18px;margin:6px 0 0;
+  font-size:15px;color:var(--txt);line-height:1.6;font-weight:500;
+}
+.nn{padding:16px 18px}
+.nn b{font-size:13.5px;font-weight:600;display:block}
+.nn p{font-size:12px;color:var(--dim);margin-top:4px;line-height:1.5}
+.nn .micro{color:var(--down);font-size:9px;display:block;margin-bottom:8px}
+
+/* snowball */
+.pos-card{padding:18px}
+.pos-top{display:flex;align-items:flex-start;gap:12px}
+.pos-top b{font-size:14px;font-weight:600;display:block}
+.pos-top .micro{display:block;margin-top:2px;font-size:9px}
+.pos-val{margin-left:auto;text-align:right}
+.pos-val .v{font-family:var(--mono);font-size:19px}
+.pos-val .r{font-family:var(--mono);font-size:11px;margin-top:2px}
+.pos-meta{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:14px;padding-top:12px;border-top:1px solid var(--line-soft)}
+.pos-meta div span{font-family:var(--mono);font-size:9px;letter-spacing:.14em;color:var(--faint);text-transform:uppercase;display:block}
+.pos-meta div b{font-family:var(--mono);font-size:12px;font-weight:500;display:block;margin-top:3px}
+
+/* pipeline */
+.pipe{display:flex;gap:6px;margin-top:12px}
+.pipe i{flex:1;height:4px;border-radius:99px;background:rgba(255,255,255,.07)}
+.pipe i.on{background:var(--accent-deep)}
+.pipe i.now{background:var(--accent)}
+
+/* empty state */
+.empty{
+  text-align:center;padding:46px 20px;color:var(--dim);
+}
+.empty svg{width:26px;height:26px;stroke:var(--faint);margin-bottom:12px}
+.empty b{display:block;font-size:13.5px;color:var(--txt);font-weight:600;margin-bottom:4px}
+.empty p{font-size:12.5px;max-width:380px;margin:0 auto 16px}
+
+/* toast */
+#toast{
+  position:fixed;bottom:26px;left:50%;transform:translateX(-50%) translateY(20px);
+  z-index:80;opacity:0;pointer-events:none;
+  background:#0E1520;border:1px solid var(--line);border-radius:10px;
+  padding:11px 18px;font-family:var(--mono);font-size:12px;letter-spacing:.04em;
+  transition:opacity .25s,transform .25s;
+}
+#toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
+
+/* banner de gestión */
+.g-banner{
+  border-radius:12px;padding:14px 18px;margin-top:14px;
+  border:1px solid var(--line);font-size:13px;color:var(--dim);
+  display:flex;gap:12px;align-items:center;
+}
+.g-banner b{color:var(--txt)}
+.g-banner.win{border-color:rgba(95,191,154,.4);background:rgba(95,191,154,.05)}
+.g-banner.risk{border-color:rgba(217,164,65,.4);background:rgba(217,164,65,.05)}
+.g-banner.stop{border-color:rgba(217,109,98,.4);background:rgba(217,109,98,.05)}
+
+canvas{display:block;width:100%}
+
+#menuBtn{display:none}
+/* responsive */
+@media (max-width:960px){
+  .g4,.g5{grid-template-columns:1fr 1fr}
+  .g3{grid-template-columns:1fr}
+  .g2{grid-template-columns:1fr}
+  .score-wrap{flex-direction:column;align-items:flex-start}
+  .rail{position:fixed;left:0;top:0;bottom:0;z-index:50;transform:translateX(-100%);transition:transform .25s}
+  .rail.open{transform:none}
+  #menuBtn{display:inline-flex}
+  .topbar{padding:0 16px}
+  .content{padding:20px 16px 60px}
+  .top-date{display:none}
+}
+</style>
+</head>
+<body>
+
+<div class="app">
+
+  <!-- ══════════ RAIL ══════════ -->
+  <aside class="rail" id="rail">
+    <div class="rail-brand">
+      <svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.6">
+        <path d="M4 24a12 12 0 0 1 24 0"/>
+        <path d="M2.5 24h27" opacity=".4"/>
+        <circle cx="16" cy="5.5" r="2.2" fill="currentColor" stroke="none"/>
+        <path d="M16 8.8v3.2"/>
+      </svg>
+      <div>
+        <b>CENIT</b>
+        <span>TERMINAL · INTERNO</span>
+      </div>
+    </div>
+
+    <nav class="rail-group">
+      <div class="micro">Mesa de futuros</div>
+      <a class="item on" href="#dashboard" data-view="dashboard">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="1.6"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>
+        Dashboard
+      </a>
+      <a class="item" href="#sesion" data-view="sesion">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg>
+        Sesión <span class="bdg" id="bdgTrades"></span>
+      </a>
+      <a class="item" href="#aprobaciones" data-view="aprobaciones">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="1.6"><path d="M9 12.5l2.2 2.2L15.5 10"/><circle cx="12" cy="12" r="9"/></svg>
+        Aprobaciones <span class="bdg" id="bdgTix"></span>
+      </a>
+      <a class="item" href="#journal" data-view="journal">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="1.6"><path d="M4 19V5a2 2 0 0 1 2-2h13v18H6a2 2 0 0 1-2-2z"/><path d="M8 7h7M8 11h7"/></svg>
+        Journal
+      </a>
+      <a class="item" href="#estudio" data-view="estudio">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="1.6"><path d="M12 4 2 8.5 12 13l10-4.5L12 4z"/><path d="M6 10.5V16c0 1.5 2.7 3 6 3s6-1.5 6-3v-5.5"/></svg>
+        Bootcamp TJR <span class="bdg" id="bdgStudy"></span>
+      </a>
+      <a class="item" href="#reglas" data-view="reglas">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="1.6"><path d="M12 3l8 3v5c0 5-3.4 8.6-8 10-4.6-1.4-8-5-8-10V6l8-3z"/></svg>
+        Reglas
+      </a>
+    </nav>
+
+    <nav class="rail-group">
+      <div class="micro">Snowball Investments</div>
+      <a class="item" href="#posiciones" data-view="posiciones">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><path d="M12 3v18M3.5 7.5l17 9M3.5 16.5l17-9"/></svg>
+        Posiciones
+      </a>
+      <a class="item" href="#clientes" data-view="clientes">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="1.6"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.8-3.4 3.4-5.5 6.5-5.5s5.7 2.1 6.5 5.5"/><path d="M16 4.8a3.5 3.5 0 0 1 0 6.4M18.5 14.7c1.7.9 2.7 2.8 3 5.3"/></svg>
+        Onboarding
+      </a>
+      <a class="item" href="#calculadora" data-view="calculadora">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="1.6"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 7h6M9 12h.01M12 12h.01M15 12h.01M9 16h.01M12 16h.01M15 16h.01"/></svg>
+        Calculadora
+      </a>
+    </nav>
+
+    <div class="rail-foot">
+      <button class="rail-user" id="btnSettings" title="Ajustes">
+        <div class="avatar" id="uAvatar">—</div>
+        <div>
+          <b id="uName">Operador</b>
+          <span id="uRole">MESA · NP-0XX</span>
+        </div>
+      </button>
+      <a class="rail-exit" href="index.html">← CENIT.CAPITAL</a>
+    </div>
+  </aside>
+
+  <!-- ══════════ MAIN ══════════ -->
+  <div class="main">
+    <header class="topbar">
+      <button class="btn-icon" id="menuBtn" aria-label="Menú">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+      </button>
+      <div>
+        <span class="crumb" id="crumb">MESA DE FUTUROS</span>
+        <h1 id="viewTitle">Dashboard</h1>
+      </div>
+      <div class="top-right">
+        <span class="top-date" id="topDate"></span>
+        <span class="sess-pill" id="sessPill"><span class="dot"></span><span id="sessTxt">—</span></span>
+        <span class="top-clock" id="topClock">--:--:--</span>
+      </div>
+    </header>
+
+    <main class="content" id="content">
+
+      <!-- ════ DASHBOARD ════ -->
+      <section class="view on" id="v-dashboard">
+        <div id="dashAlert"></div>
+        <div class="grid g5" id="dashKpis"></div>
+
+        <div class="grid g2 mt">
+          <div class="panel">
+            <div class="p-head"><h3>Cenit Score</h3><span class="micro">motor conductual Cenit</span></div>
+            <div class="p-body"><div id="scoreBox"></div></div>
+          </div>
+          <div class="panel">
+            <div class="p-head"><h3>Curva de capital</h3><span class="micro" id="eqLabel">P&L acumulado</span></div>
+            <div class="p-body">
+              <canvas id="eqCanvas" height="180"></canvas>
+              <div id="eqEmpty"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="grid g2 mt">
+          <div class="panel">
+            <div class="p-head"><h3>Estado de la sesión</h3><span class="micro" id="dashSessDate"></span></div>
+            <div class="p-body" id="dashSession"></div>
+          </div>
+          <div class="panel">
+            <div class="p-head"><h3>Estadística de la mesa</h3><span class="micro" id="statRange"></span></div>
+            <div class="p-body" id="dashStats"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ════ SESIÓN ════ -->
+      <section class="view" id="v-sesion">
+        <div class="panel">
+          <div class="p-body" style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
+            <div>
+              <div class="micro">Protocolo del día</div>
+              <div class="mono" id="sesFecha" style="font-size:16px;margin-top:4px"></div>
+            </div>
+            <div style="margin-left:auto;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+              <span class="tag ac" id="sesVentana">VENTANA 7:00 – 8:30 AM</span>
+              <span class="tag" id="sesProgreso">0 / 13</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="grid g2 mt">
+          <div>
+            <div class="panel">
+              <div class="p-head"><h3>01 · Pre-market</h3><span class="micro">Desde 7:00 AM</span></div>
+              <div class="p-body" id="preList"></div>
+            </div>
+            <div class="panel mt">
+              <div class="p-head"><h3>03 · Gestión</h3><span class="micro">2 trades máx · estricto</span></div>
+              <div class="p-body">
+                <div id="gestState"></div>
+                <div class="mt" style="display:flex;gap:10px;flex-wrap:wrap">
+                  <button class="btn primary" id="btnTradeFromSes">+ Registrar trade</button>
+                  <button class="btn" data-goto="journal">Ver journal</button>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div>
+            <div class="panel">
+              <div class="p-head"><h3>02 · Validador de setup</h3><span class="micro">Todas o no hay trade</span></div>
+              <div class="p-body">
+                <div id="setupList"></div>
+                <div id="setupVerdict"></div>
+              </div>
+            </div>
+            <div class="panel mt">
+              <div class="p-head"><h3>04 · Post-market</h3><span class="micro">Cierre operativo</span></div>
+              <div class="p-body">
+                <div id="postList"></div>
+                <button class="btn mt" id="btnReport">Generar reporte al equipo</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ════ JOURNAL ════ -->
+      <section class="view" id="v-journal">
+        <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:14px">
+          <div class="seg" id="jSeg">
+            <button data-r="mes" class="on">Mes</button>
+            <button data-r="todo">Todo</button>
+          </div>
+          <span class="micro" id="jResumen"></span>
+          <div style="margin-left:auto;display:flex;gap:10px">
+            <button class="btn" id="btnExport">Exportar</button>
+            <button class="btn primary" id="btnTrade">+ Registrar trade</button>
+          </div>
+        </div>
+        <div class="grid g4" id="jKpis"></div>
+        <div class="panel mt">
+          <div class="p-body" style="padding:6px 6px;overflow-x:auto">
+            <table id="jTable"></table>
+            <div id="jEmpty"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ════ MESA DE APROBACIONES ════ -->
+      <section class="view" id="v-aprobaciones">
+        <div class="panel">
+          <div class="p-body">
+            <div class="micro">Cómo entra un trade a la mesa</div>
+            <p style="font-size:13px;color:var(--dim);margin-top:8px;line-height:1.7">
+              Una tesis se propone, y cada socio firma la puerta de su cargo:
+              <b style="color:var(--txt)">Mateo</b> valida research (NP-030) y riesgo (NP-020) ·
+              <b style="color:var(--txt)">André</b> valida datos (NP-040) ·
+              <b style="color:var(--txt)">Pablo</b> aprueba como CIO (NP-001) y ejecuta como PM (NP-010).
+              Con las cuatro firmas, la tesis queda APROBADA y se ejecuta y registra en el Journal.
+            </p>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px;margin:16px 0 12px;flex-wrap:wrap">
+          <span class="micro">Tesis de la mesa</span>
+          <span class="micro" id="cloudPill" style="color:var(--faint)">NUBE · NO CONECTADA — ESTADO LOCAL</span>
+          <button class="btn primary sm" id="btnTix" style="margin-left:auto">+ Nueva tesis</button>
+        </div>
+        <div id="tixList"></div>
+      </section>
+
+      <!-- ════ ESTUDIO ════ -->
+      <section class="view" id="v-estudio">
+        <div class="grid g3">
+          <div class="panel kpi"><div class="k-l">Progreso del bootcamp</div><div class="k-v" id="stPct">0%</div><div class="bar"><i id="stBar" style="width:0%"></i></div></div>
+          <div class="panel kpi"><div class="k-l">Lecciones completadas</div><div class="k-v" id="stDone">0</div><div class="k-s" id="stTotal"></div></div>
+          <div class="panel kpi"><div class="k-l">Revisiones semanales</div><div class="k-v" id="stRev">0</div><div class="k-s">El error documentado es el activo más valioso</div></div>
+        </div>
+        <div class="mt2" id="mods"></div>
+
+        <div class="panel mt2">
+          <div class="p-head"><h3>Revisión semanal de proceso</h3><span class="micro">P-06 · Mejora continua</span></div>
+          <div class="p-body">
+            <div class="f-row">
+              <div><label>Qué salió mal esta semana</label><textarea id="rvMal" rows="3" placeholder="Proceso, no personas."></textarea></div>
+              <div><label>Qué salió bien</label><textarea id="rvBien" rows="3" placeholder="Qué repetir."></textarea></div>
+            </div>
+            <div class="f-full"><label>Ajuste al proceso para la próxima semana</label><input id="rvFix" placeholder="Un solo ajuste, concreto y medible."></div>
+            <button class="btn primary" id="btnRev">Guardar revisión</button>
+            <div class="mt" id="revList"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ════ REGLAS ════ -->
+      <section class="view" id="v-reglas">
+        <div class="panel">
+          <div class="p-body">
+            <div class="micro">Principio rector</div>
+            <p class="rule-quote">Ninguna regla de Cenit tiene «excepción creativa». Cuando una regla parece inconveniente, probablemente es exactamente cuando más se necesita. La disciplina no se aplica cuando es cómodo. Se aplica siempre.</p>
+          </div>
+        </div>
+
+        <div class="mt2 micro" style="margin-bottom:10px">No negociables</div>
+        <div class="grid g4">
+          <div class="panel nn"><span class="micro">NN — 01</span><b>Nunca minis</b><p>Operación en minis está prohibida. Sin excepciones. El Terminal la marca como violación.</p></div>
+          <div class="panel nn"><span class="micro">NN — 02</span><b>Solo la ventana 7:00 – 8:30</b><p>Lunes a viernes. Fuera de esta ventana no se opera. Punto.</p></div>
+          <div class="panel nn"><span class="micro">NN — 03</span><b>Nada abierto después de 8:30</b><p>Toda posición debe estar cerrada antes de las 8:30 AM.</p></div>
+          <div class="panel nn"><span class="micro">NN — 04</span><b>Sin setup, no se opera</b><p>Si el checklist no da setup válido, el mejor trade del día es no operar.</p></div>
+        </div>
+
+        <div class="grid g2 mt2">
+          <div class="panel">
+            <div class="p-head"><h3>Gestión de la sesión</h3><span class="micro">Formato de ejecución</span></div>
+            <div class="p-body">
+              <div class="lesson"><div class="lx"><b>2 trades máximo, estricto</b><p>Máximo dos operaciones por sesión. Sin excepciones.</p></div></div>
+              <div class="lesson"><div class="lx"><b>Se gana el trade 1 → se cierra la plataforma</b><p>Día terminado. Al cerrar el primer trade en ganancia, se cierra la plataforma.</p></div></div>
+              <div class="lesson"><div class="lx"><b>Se pierde el trade 1 → un solo intento más</b><p>ÚNICAMENTE si aparece un setup válido nuevo y completo. Nunca revenge.</p></div></div>
+            </div>
+          </div>
+          <div class="panel">
+            <div class="p-head"><h3>Terminación inmediata</h3><span class="micro">Código de conducta</span></div>
+            <div class="p-body" id="termList"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ════ POSICIONES ════ -->
+      <section class="view" id="v-posiciones">
+        <div class="grid g4" id="posKpis"></div>
+        <div style="display:flex;align-items:center;gap:12px;margin:18px 0 12px">
+          <span class="micro">Posiciones del programa</span>
+          <button class="btn primary sm" id="btnPos" style="margin-left:auto">+ Nueva posición</button>
+        </div>
+        <div class="grid g2" id="posList"></div>
+        <p class="micro mt2" style="font-size:9px;letter-spacing:.08em;line-height:1.7;color:var(--faint);text-transform:none">
+          Los retornos objetivo son proyecciones basadas en el historial de las estrategias de Cenit y no constituyen garantía de rendimiento futuro. Las inversiones en fondos de cobertura implican riesgos significativos, incluida la posible pérdida del capital invertido.
+        </p>
+      </section>
+
+      <!-- ════ ONBOARDING ════ -->
+      <section class="view" id="v-clientes">
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px">
+          <span class="micro">Pipeline de clientes Snowball · 6 puertas</span>
+          <button class="btn primary sm" id="btnProspect" style="margin-left:auto">+ Nuevo prospecto</button>
+        </div>
+        <div class="grid g2" id="prosList"></div>
+      </section>
+
+      <!-- ════ CALCULADORA ════ -->
+      <section class="view" id="v-calculadora">
+        <div class="grid g2">
+          <div class="panel">
+            <div class="p-head"><h3>Proyección Snowball</h3><span class="micro">Interés compuesto anual</span></div>
+            <div class="p-body">
+              <div class="f-row3">
+                <div><label>Capital inicial USD</label><input type="number" id="cCap" value="250000" min="0" step="10000"></div>
+                <div><label>Retorno anual %</label><input type="number" id="cTasa" value="19" min="0" max="60" step="0.5"></div>
+                <div><label>Aporte anual USD</label><input type="number" id="cAporte" value="0" min="0" step="5000"></div>
+              </div>
+              <div class="f-full">
+                <label>Horizonte: <span class="mono" id="cAniosLbl">20</span> años</label>
+                <input type="range" id="cAnios" min="3" max="30" value="20" style="padding:0">
+              </div>
+              <div id="cNivel" class="mt"></div>
+            </div>
+          </div>
+          <div class="panel">
+            <div class="p-head"><h3>La bola de nieve</h3><span class="micro" id="cFinal"></span></div>
+            <div class="p-body">
+              <canvas id="cCanvas" height="190"></canvas>
+              <div class="p-body" style="padding:14px 0 0"><table id="cTable"></table></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+</div>
+
+<!-- ══════════ MODALES ══════════ -->
+<div class="overlay" id="ovTrade">
+  <div class="modal">
+    <h3 id="tmTitle">Registrar trade</h3>
+    <p class="sub">Screenshot, setup, resultado y análisis. Todo trade se documenta.</p>
+    <div class="f-row3">
+      <div><label>Fecha</label><input type="date" id="tFecha"></div>
+      <div><label>Hora entrada</label><input type="time" id="tHora" value="07:35"></div>
+      <div><label>Instrumento</label>
+        <select id="tSym">
+          <option>NQ</option><option>ES</option><option>YM</option><option>RTY</option>
+          <option>GC</option><option>CL</option><option>MNQ</option><option>MES</option>
+        </select>
+      </div>
+    </div>
+    <div class="f-row3">
+      <div><label>Dirección</label><select id="tDir"><option value="L">Long</option><option value="S">Short</option></select></div>
+      <div><label>Contratos</label><input type="number" id="tQty" value="1" min="1" step="1"></div>
+      <div><label>Setup del checklist</label><select id="tSetup"><option value="1">Válido · completo</option><option value="0">Incompleto</option></select></div>
+    </div>
+    <div class="f-row3">
+      <div><label>Entrada</label><input type="number" id="tIn" step="0.25" placeholder="0.00"></div>
+      <div><label>Salida</label><input type="number" id="tOut" step="0.25" placeholder="0.00"></div>
+      <div><label>P&L USD <span style="color:var(--faint)">(auto)</span></label><input type="number" id="tPnl" step="1" placeholder="auto"></div>
+    </div>
+    <div class="f-full"><label>Análisis / lección</label><textarea id="tNotas" rows="2" placeholder="Qué vio la mesa, qué se ejecutó, qué se aprende."></textarea></div>
+    <div class="m-foot">
+      <button class="btn" data-close>Cancelar</button>
+      <button class="btn primary" id="tSave">Guardar trade</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="ovPos">
+  <div class="modal">
+    <h3 id="pmTitle">Nueva posición Snowball</h3>
+    <p class="sub">El nivel se asigna por capital según el plan: Seed 50k · Core 250k · Summit 1M.</p>
+    <div class="f-row">
+      <div><label>Cliente / cuenta</label><input id="pNombre" placeholder="Familia MR · LP-004"></div>
+      <div><label>Fecha de entrada</label><input type="date" id="pFecha"></div>
+    </div>
+    <div class="f-row">
+      <div><label>Capital suscrito USD</label><input type="number" id="pCap" value="250000" min="0" step="10000"></div>
+      <div><label>Valor actual USD</label><input type="number" id="pVal" placeholder="= capital si es nueva"></div>
+    </div>
+    <div class="f-full"><label>Notas / mandato</label><input id="pNotas" placeholder="Perfil de riesgo, acuerdos, restricciones"></div>
+    <div class="m-foot">
+      <button class="btn" data-close>Cancelar</button>
+      <button class="btn primary" id="pSave">Guardar posición</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="ovSet">
+  <div class="modal">
+    <h3>Perfil del socio</h3>
+    <p class="sub">Cargos y deberes asignados por la firma. La identidad la define tu acceso.</p>
+    <div id="sIdent"></div>
+    <p class="sub" style="margin:4px 0 14px">Capital y metas vienen por default del plan Cenit: cuenta base $250,000 · mes $30,000 → quincena $15,000 · semana $7,500 · día $1,500.</p>
+    <div style="display:flex;gap:10px;flex-wrap:wrap">
+      <button class="btn sm" id="btnBackup">Descargar respaldo</button>
+      <button class="btn sm" id="btnDemo">Cargar demo (sintético)</button>
+      <button class="btn sm danger" id="btnWipe">Borrar todo</button>
+    </div>
+    <div class="m-foot">
+      <button class="btn danger" id="btnLogout">Cerrar sesión</button>
+      <button class="btn primary" data-close>Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="ovPro">
+  <div class="modal">
+    <h3>Nuevo prospecto Snowball</h3>
+    <p class="sub">Seis puertas antes del portafolio. Ninguna se salta.</p>
+    <div class="f-row">
+      <div><label>Nombre</label><input id="prNombre" placeholder="Prospecto"></div>
+      <div><label>Capital estimado USD</label><input type="number" id="prCap" value="250000" step="10000"></div>
+    </div>
+    <div class="m-foot">
+      <button class="btn" data-close>Cancelar</button>
+      <button class="btn primary" id="prSave">Agregar</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="ovReport">
+  <div class="modal">
+    <h3>Reporte al equipo</h3>
+    <p class="sub">Post-market · resultado del día y estado de la cuenta.</p>
+    <textarea id="repText" rows="12" class="mono" style="font-size:12px;line-height:1.7"></textarea>
+    <div class="m-foot">
+      <button class="btn" data-close>Cerrar</button>
+      <button class="btn primary" id="repCopy">Copiar al portapapeles</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="ovTix">
+  <div class="modal">
+    <h3>Nueva tesis de trade</h3>
+    <p class="sub">Propón la operación. Entra a la mesa y cada cargo firma su puerta.</p>
+    <div class="f-row3">
+      <div><label>Instrumento</label><select id="xSym"><option>NQ</option><option>ES</option><option>YM</option><option>RTY</option><option>GC</option><option>CL</option></select></div>
+      <div><label>Dirección</label><select id="xDir"><option value="L">Long</option><option value="S">Short</option></select></div>
+      <div><label>Fecha</label><input type="date" id="xFecha"></div>
+    </div>
+    <div class="f-full"><label>Tesis — liquidez, estructura y por qué</label><textarea id="xTesis" rows="4" placeholder="Targets overnight sin tomar en 21,450 · break del ORB apunta a PDH · FVG 5m + EMA a favor…"></textarea></div>
+    <div class="m-foot">
+      <button class="btn" data-close>Cancelar</button>
+      <button class="btn primary" id="xSave">Proponer a la mesa</button>
+    </div>
+  </div>
+</div>
+
+<div class="login" id="login">
+  <div class="login-card">
+    <div class="login-brand">
+      <svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.4">
+        <path d="M4 24a12 12 0 0 1 24 0"/>
+        <path d="M2.5 24h27" opacity=".4"/>
+        <circle cx="16" cy="5.5" r="2" fill="currentColor" stroke="none"/>
+        <path d="M16 8.6v3.2"/>
+      </svg>
+      <div>
+        <b>CENIT</b>
+        <span>CAPITAL MANAGEMENT · TERMINAL</span>
+      </div>
+    </div>
+    <p class="sub" style="margin-bottom:16px">Acceso restringido a socios de la firma.</p>
+    <div class="f-full"><label>Usuario</label><input id="lgUser" autocomplete="username" placeholder="usuario" autocapitalize="none"></div>
+    <div class="f-full"><label>Clave</label><input id="lgPass" type="password" autocomplete="current-password" placeholder="••••••••"></div>
+    <div id="lgErr" class="login-err"></div>
+    <button class="btn primary" id="lgGo" style="width:100%;margin-top:6px">Entrar a la mesa</button>
+    <p class="micro" style="margin-top:18px;text-align:center;font-size:9px;letter-spacing:.2em">CONFIDENCIAL · CENIT.CAPITAL</p>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+/* ════════════════════════════════════════════════════════════
+   CENIT TERMINAL · estado y utilidades
+   ════════════════════════════════════════════════════════════ */
+const LS = 'cenit_terminal_v1';
+const $  = s => document.querySelector(s);
+const $$ = s => [...document.querySelectorAll(s)];
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+const POINT_VALUE = { NQ:20, ES:50, YM:5, RTY:50, GC:100, CL:1000, MNQ:2, MES:5, MYM:0.5, M2K:5 };
+const MICROS = ['MNQ','MES','MYM','M2K'];
+
+/* Roster de la firma — cargos y deberes (Handbook cap. 02; NP-060 = mesa, cap. 03) */
+const ROLES = {
+  'NP-001': { t:'Chief Investment Officer', d:[
+    'Responsable final de todas las decisiones de inversión del fondo.',
+    'Define la estrategia macroeconómica y los mandatos de cada estrategia.',
+    'Aprueba o rechaza toda tesis de inversión antes de ejecución.',
+    'Responde ante el comité de inversiones y los limited partners.']},
+  'NP-010': { t:'Portfolio Manager', d:[
+    'Gestión activa de portafolios dentro de los mandatos aprobados.',
+    'Construcción y monitoreo de posiciones largas y cortas.',
+    'Comunicación periódica con el CIO sobre exposiciones y riesgo.',
+    'Documenta cada decisión de posición con tesis escrita.']},
+  'NP-020': { t:'Chief Risk Officer', d:[
+    'Monitoreo en tiempo real del drawdown máximo permitido por estrategia.',
+    'Emite alertas de riesgo con autoridad para detener operaciones.',
+    'Reporte diario al CIO sobre posiciones y exposición de mercado.',
+    'Define y actualiza el Risk Management Framework.']},
+  'NP-030': { t:'Research Analyst', d:[
+    'Investigación fundamental y cuantitativa de activos y sectores.',
+    'Produce memos de inversión con evidencia documentada.',
+    'Monitorea earnings, macro data y eventos catalizadores.',
+    'Da seguimiento a posiciones existentes y alerta cambios de tesis.']},
+  'NP-040': { t:'Quantitative Analyst', d:[
+    'Desarrollo y backtesting de modelos cuantitativos de inversión.',
+    'Análisis estadístico de patrones conductuales en datos de mercado.',
+    'Construye el Cenit Score y métricas de behavioral intelligence.',
+    'Mantiene los sistemas de datos y pipelines de información.']},
+  'NP-050': { t:'Chief Operating Officer', d:[
+    'Gestión de operaciones diarias, compliance y relación con brokers.',
+    'Coordina prime brokerage, custodios y administradores del fondo.',
+    'Supervisa client relations e investor relations.',
+    'Implementa protocolos operativos y auditorías internas.']},
+  'NP-060': { t:'Trader · Mesa de Futuros', d:[
+    'Ejecuta el protocolo diario completo: pre-market 7:00, setup y gestión.',
+    'Opera únicamente la ventana 7:00–8:30, máximo dos trades por sesión.',
+    'Registra cada operación con screenshot, setup, resultado y análisis.',
+    'Envía el reporte del día al equipo y responde por su Score conductual.']},
+};
+
+/* ── Equipo CENIT · credenciales y cargos ── */
+const USERS = {
+  pablo: { pass:'CENIT-01', nombre:'Pablo',  roles:['NP-001','NP-010'] },
+  mateo: { pass:'CENIT-02', nombre:'Mateo',  roles:['NP-020','NP-030'] },
+  andre: { pass:'CENIT-03', nombre:'André',  roles:['NP-040','NP-050'] },
+};
+/* puertas de aprobación de un trade → rol que firma */
+const GATES = [
+  { k:'research', t:'Research & validación', rol:'NP-030' },
+  { k:'riesgo',   t:'Revisión de riesgo',    rol:'NP-020' },
+  { k:'quant',    t:'Validación cuantitativa',rol:'NP-040' },
+  { k:'cio',      t:'Aprobación CIO',        rol:'NP-001' },
+];
+const userDe = u => USERS[u] || null;
+const rolDeUsuario = (u, rol) => !!(USERS[u] && USERS[u].roles.includes(rol));
+
+const DEFAULTS = () => ({
+  profile: { nombre:'', rol:'NP-060', cuenta:250000, metaMes:30000 },
+  session: { user:null },
+  tickets: [],           // {id,fecha,sym,dir,tesis,por,firmas:{k:{u,ts}},estado,motivo}
+  trades: [],            // {id,date,time,sym,dir,qty,entry,exit,pnl,setupOk,notas}
+  sessions: {},          // date -> {pre:[], setup:[], post:[]}
+  study: { lessons:{}, reviews:[] },
+  positions: [],         // {id,nombre,fecha,capital,valor,notas}
+  prospects: []          // {id,nombre,capital,etapa}
+});
+
+let S = load();
+function load(){
+  try{
+    const raw = localStorage.getItem(LS);
+    if(!raw) return DEFAULTS();
+    const d = DEFAULTS(), s = JSON.parse(raw);
+    return { ...d, ...s, profile:{...d.profile, ...s.profile}, study:{...d.study, ...s.study} };
+  }catch(e){ return DEFAULTS(); }
+}
+function save(){ localStorage.setItem(LS, JSON.stringify(S)); }
+const uid = () => Math.random().toString(36).slice(2,9) + Date.now().toString(36).slice(-4);
+
+const fmt$ = (n, sign=false) => {
+  if(n === null || n === undefined || isNaN(n)) return '—';
+  const s = (sign && n > 0 ? '+' : (n < 0 ? '−' : '')) ;
+  return s + '$' + Math.abs(Math.round(n)).toLocaleString('en-US');
+};
+const fmtPct = n => (isFinite(n) ? (Math.round(n*10)/10) + '%' : '—');
+const todayISO = () => { const d = new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); };
+const fmtFecha = iso => { const [y,m,d] = iso.split('-'); const M = ['ENE','FEB','MAR','ABR','MAY','JUN','JUL','AGO','SEP','OCT','NOV','DIC']; return `${d} ${M[+m-1]} ${y}`; };
+
+function toast(msg){
+  const t = $('#toast'); t.textContent = msg; t.classList.add('on');
+  clearTimeout(toast._h); toast._h = setTimeout(()=>t.classList.remove('on'), 2600);
+}
+
+/* ════════ Reglas del handbook: ventana, metas, violaciones ════════ */
+const VENTANA = { open: 7*60, orb1: 7*60+30, orb2: 7*60+45, close: 8*60+30 };
+
+function metas(){
+  const m = S.profile.metaMes || 30000;
+  return { dia: m/20, semana: m/4, quincena: m/2, mes: m, anio: m*12 };
+}
+
+function sessionState(now = new Date()){
+  const mins = now.getHours()*60 + now.getMinutes();
+  const wd = now.getDay();
+  if(wd === 0 || wd === 6) return { k:'off', txt:'FIN DE SEMANA' };
+  if(mins <  VENTANA.open)  return { k:'pre',  txt:'PRE-MARKET · ABRE 7:00' };
+  if(mins <  VENTANA.orb1)  return { k:'live', txt:'VENTANA ABIERTA · PRE-ORB' };
+  if(mins <= VENTANA.orb2)  return { k:'orb',  txt:'ORB 7:30 – 7:45' };
+  if(mins <= VENTANA.close) return { k:'live', txt:'VENTANA ABIERTA · CIERRA 8:30' };
+  return { k:'off', txt:'MESA CERRADA' };
+}
+
+/* violaciones por trade, dentro de su día (trades ordenados por hora) */
+function violations(trade, dayTrades){
+  const v = [];
+  const idx = dayTrades.findIndex(t => t.id === trade.id);
+  if(MICROS.includes(trade.sym)) v.push('MINIS');
+  if(trade.time){
+    const [h,m] = trade.time.split(':').map(Number);
+    const mins = h*60+m;
+    if(mins < VENTANA.open || mins > VENTANA.close) v.push('FUERA DE VENTANA');
+  }
+  if(idx >= 2) v.push('3ER TRADE');
+  if(idx > 0){
+    const prev = dayTrades[idx-1];
+    if((prev.pnl||0) > 0) v.push('OPERÓ TRAS GANAR');
+    if((prev.pnl||0) < 0 && !trade.setupOk) v.push('REVENGE');
+  }
+  if(!trade.setupOk && v.indexOf('REVENGE') === -1) v.push('SIN SETUP');
+  return v;
+}
+
+function tradesByDay(){
+  const map = {};
+  [...S.trades].sort((a,b)=> (a.date+a.time).localeCompare(b.date+b.time)).forEach(t=>{
+    (map[t.date] = map[t.date] || []).push(t);
+  });
+  return map;
+}
+
+function computeStats(list){
+  const n = list.length;
+  const wins = list.filter(t=>t.pnl>0), losses = list.filter(t=>t.pnl<0);
+  const gw = wins.reduce((a,t)=>a+t.pnl,0), gl = Math.abs(losses.reduce((a,t)=>a+t.pnl,0));
+  const pnl = list.reduce((a,t)=>a+(t.pnl||0),0);
+  return {
+    n, pnl,
+    wr: n ? wins.length/n*100 : NaN,
+    pf: gl > 0 ? gw/gl : (gw>0 ? Infinity : NaN),
+    avgW: wins.length ? gw/wins.length : NaN,
+    avgL: losses.length ? gl/losses.length : NaN,
+  };
+}
+
+/* Cenit Score 0–1000 sobre los últimos 30 trades */
+function computeScore(){
+  const byDay = tradesByDay();
+  const all = Object.values(byDay).flat();
+  const last = all.slice(-30);
+  if(last.length === 0) return null;
+  const vioOf = t => violations(t, byDay[t.date]);
+  const risk = last.filter(t => { const v = vioOf(t); return !v.includes('MINIS') && !v.includes('FUERA DE VENTANA') && !v.includes('3ER TRADE'); }).length / last.length;
+  const emo  = last.filter(t => { const v = vioOf(t); return !v.includes('REVENGE') && !v.includes('OPERÓ TRAS GANAR'); }).length / last.length;
+  const dec  = last.filter(t => t.setupOk).length / last.length;
+  const days = [...new Set(last.map(t=>t.date))];
+  const cons = days.filter(d => { const s = S.sessions[d]; return s && (s.pre||[]).filter(Boolean).length >= 5; }).length / days.length;
+  const dims = [
+    { k:'Risk Discipline', v: risk },
+    { k:'Emotion Control', v: emo },
+    { k:'Decision Quality', v: dec },
+    { k:'Consistency',     v: cons },
+  ];
+  const total = Math.round(dims.reduce((a,d)=>a+d.v*250,0));
+  const grade = total>=850?'INSTITUCIONAL': total>=700?'PROFESIONAL': total>=500?'EN DESARROLLO':'EN RIESGO';
+  return { total, dims, grade, n:last.length };
+}
+
+/* rangos de P&L */
+function pnlRanges(){
+  const now = new Date(); const iso = todayISO();
+  const y = now.getFullYear(), m = now.getMonth();
+  const day = now.getDate();
+  const startWeek = new Date(now); startWeek.setDate(day - ((now.getDay()+6)%7)); // lunes
+  const swISO = startWeek.toISOString().slice(0,10);
+  const quinStart = day <= 15 ? 1 : 16;
+  const inMonth = t => { const [ty,tm] = t.date.split('-').map(Number); return ty===y && tm===m+1; };
+  const r = { dia:0, semana:0, quincena:0, mes:0, anio:0 };
+  S.trades.forEach(t=>{
+    const p = t.pnl||0;
+    if(t.date === iso) r.dia += p;
+    if(t.date >= swISO && t.date <= iso) r.semana += p;
+    if(inMonth(t) && +t.date.split('-')[2] >= quinStart) r.quincena += p;
+    if(inMonth(t)) r.mes += p;
+    if(+t.date.split('-')[0] === y) r.anio += p;
+  });
+  return r;
+}
+
+/* ════════ Router ════════ */
+const TITLES = {
+  dashboard:['MESA DE FUTUROS','Dashboard'],
+  sesion:['MESA DE FUTUROS','Sesión'],
+  aprobaciones:['MESA DE FUTUROS','Mesa de aprobaciones'],
+  journal:['MESA DE FUTUROS','Journal'],
+  estudio:['MESA DE FUTUROS','Bootcamp TJR'],
+  reglas:['MESA DE FUTUROS','Reglas & protocolos'],
+  posiciones:['SNOWBALL INVESTMENTS','Posiciones'],
+  clientes:['SNOWBALL INVESTMENTS','Onboarding'],
+  calculadora:['SNOWBALL INVESTMENTS','Calculadora Snowball'],
+};
+function show(view){
+  if(!TITLES[view]) view = 'dashboard';
+  $$('.view').forEach(v=>v.classList.remove('on'));
+  $('#v-'+view).classList.add('on');
+  $$('.rail a.item').forEach(a=>a.classList.toggle('on', a.dataset.view===view));
+  $('#crumb').textContent = TITLES[view][0];
+  $('#viewTitle').textContent = TITLES[view][1];
+  $('#rail').classList.remove('open');
+  $('#content').scrollTop = 0;
+  render(view);
+}
+addEventListener('hashchange', ()=> show(location.hash.slice(1)));
+$$('.rail a.item').forEach(a=> a.addEventListener('click', ()=> setTimeout(()=>show(a.dataset.view))));
+$$('[data-goto]').forEach(b=> b.addEventListener('click', ()=> location.hash = b.dataset.goto));
+$('#menuBtn').addEventListener('click', ()=> $('#rail').classList.toggle('open'));
+
+/* ════════ Reloj / pill de sesión ════════ */
+function tickClock(){
+  const now = new Date();
+  $('#topClock').textContent = now.toLocaleTimeString('es-MX',{hour12:false});
+  const st = sessionState(now);
+  const pill = $('#sessPill');
+  pill.className = 'sess-pill' + (st.k==='live'?' live': st.k==='orb'?' orb':'');
+  $('#sessTxt').textContent = st.txt;
+  const days = ['DOM','LUN','MAR','MIÉ','JUE','VIE','SÁB'];
+  $('#topDate').textContent = days[now.getDay()] + ' · ' + fmtFecha(todayISO());
+}
+setInterval(tickClock, 1000); tickClock();
+
+/* ════════ DASHBOARD ════════ */
+function renderDashboard(){
+  const M = metas(), R = pnlRanges();
+  const kpis = [
+    ['P&L HOY', R.dia, M.dia],
+    ['SEMANA', R.semana, M.semana],
+    ['QUINCENA', R.quincena, M.quincena],
+    ['MES', R.mes, M.mes],
+    ['AÑO', R.anio, M.anio],
+  ];
+  $('#dashKpis').innerHTML = kpis.map(([l,v,goal])=>{
+    const pct = goal>0 ? Math.max(0, Math.min(100, v/goal*100)) : 0;
+    return `<div class="panel kpi">
+      <div class="k-l">${l}</div>
+      <div class="k-v ${v>0?'up':v<0?'down':''}">${fmt$(v,true)}</div>
+      <div class="k-s">meta ${fmt$(goal)}</div>
+      <div class="bar"><i class="${v>=goal?'full':(v<0?'neg':'')}" style="width:${v<0?100:pct}%"></i></div>
+    </div>`;
+  }).join('');
+
+  /* score */
+  const sc = computeScore();
+  if(!sc){
+    $('#scoreBox').innerHTML = `<div class="empty" style="padding:26px 10px">
+      <b>Score en construcción</b>
+      <p>El motor conductual Cenit necesita tus primeros trades registrados para medir Risk Discipline, Emotion Control, Decision Quality y Consistency.</p>
+      <button class="btn sm" onclick="location.hash='journal'">Ir al journal</button>
+    </div>`;
+  } else {
+    const r = 58, C = 2*Math.PI*r, off = C*(1 - sc.total/1000);
+    $('#scoreBox').innerHTML = `<div class="score-wrap">
+      <div class="score-ring">
+        <svg width="132" height="132" viewBox="0 0 132 132">
+          <circle cx="66" cy="66" r="${r}" fill="none" stroke="rgba(255,255,255,.07)" stroke-width="6"/>
+          <circle cx="66" cy="66" r="${r}" fill="none" stroke="var(--accent)" stroke-width="6"
+            stroke-linecap="round" stroke-dasharray="${C}" stroke-dashoffset="${off}" opacity=".9"/>
+        </svg>
+        <div class="num"><b>${sc.total}</b><span>/ 1000</span></div>
+      </div>
+      <div class="dims">
+        <div class="micro" style="letter-spacing:.2em;color:var(--accent)">${sc.grade} · ${sc.n} TRADES</div>
+        ${sc.dims.map(d=>`<div class="dim">
+          <div class="d-t"><span>${d.k}</span><b>${Math.round(d.v*250)}</b></div>
+          <div class="bar"><i style="width:${d.v*100}%"></i></div>
+        </div>`).join('')}
+      </div>
+    </div>`;
+  }
+
+  /* equity */
+  drawEquity();
+
+  /* sesión de hoy */
+  const iso = todayISO();
+  const ses = S.sessions[iso] || {pre:[],setup:[],post:[]};
+  const preDone = (ses.pre||[]).filter(Boolean).length;
+  const dayTr = tradesByDay()[iso] || [];
+  const dPnl = dayTr.reduce((a,t)=>a+(t.pnl||0),0);
+  $('#dashSessDate').textContent = fmtFecha(iso);
+  const gest = gestionState(dayTr);
+  $('#dashSession').innerHTML = `
+    <div class="grid g3" style="gap:10px">
+      <div><div class="micro">Pre-market</div><div class="mono" style="font-size:18px;margin-top:4px">${preDone}<span style="color:var(--faint)">/6</span></div></div>
+      <div><div class="micro">Trades hoy</div><div class="mono" style="font-size:18px;margin-top:4px">${dayTr.length}<span style="color:var(--faint)">/2</span></div></div>
+      <div><div class="micro">P&L sesión</div><div class="mono ${dPnl>0?'up':dPnl<0?'down':''}" style="font-size:18px;margin-top:4px">${fmt$(dPnl,true)}</div></div>
+    </div>
+    <div class="g-banner ${gest.cls}" style="margin-top:16px"><span>${gest.msg}</span></div>
+    <div class="mt" style="display:flex;gap:10px">
+      <button class="btn sm" onclick="location.hash='sesion'">Abrir protocolo del día</button>
+    </div>`;
+
+  /* violaciones de hoy → alerta arriba */
+  const todaysV = dayTr.flatMap(t => violations(t, dayTr));
+  $('#dashAlert').innerHTML = todaysV.length
+    ? `<div class="g-banner stop" style="margin:0 0 16px"><b>⚠ ${todaysV.length} violación(es) hoy:</b> <span>${[...new Set(todaysV)].join(' · ')}. El CRO tiene autoridad para detener operaciones.</span></div>`
+    : '';
+
+  /* stats */
+  const st = computeStats(S.trades);
+  $('#statRange').textContent = st.n + ' trades registrados';
+  $('#dashStats').innerHTML = st.n === 0
+    ? `<div class="empty" style="padding:26px 10px"><b>Sin operaciones aún</b><p>La estadística de la mesa aparece con el primer trade documentado en el journal.</p></div>`
+    : `<div class="grid g2" style="gap:10px">
+        ${[['Win rate', fmtPct(st.wr)],
+           ['Profit factor', st.pf===Infinity?'∞':(isNaN(st.pf)?'—':st.pf.toFixed(2))],
+           ['Ganancia promedio', fmt$(st.avgW)],
+           ['Pérdida promedio', isNaN(st.avgL)?'—':fmt$(-st.avgL)],
+           ['P&L total', fmt$(st.pnl,true)],
+           ['Cuenta', fmt$((S.profile.cuenta||0)+st.pnl)]
+          ].map(([l,v])=>`<div style="padding:10px 12px;border:1px solid var(--line-soft);border-radius:10px">
+            <div class="micro" style="font-size:9px">${l}</div>
+            <div class="mono" style="font-size:17px;margin-top:3px">${v}</div>
+          </div>`).join('')}
+      </div>`;
+}
+
+function gestionState(dayTr){
+  if(dayTr.length === 0) return { cls:'', msg:'Sin trades hoy. Si el checklist no da setup válido, <b>el mejor trade del día es no operar</b>.' };
+  const first = dayTr[0];
+  if(dayTr.length === 1 && first.pnl > 0) return { cls:'win', msg:'<b>Trade 1 ganado → día terminado.</b> Se cierra la plataforma. Nada más que demostrar hoy.' };
+  if(dayTr.length === 1 && first.pnl < 0) return { cls:'risk', msg:'<b>Trade 1 perdido → un solo intento más.</b> ÚNICAMENTE con un setup válido nuevo y completo. Nunca revenge.' };
+  if(dayTr.length === 1) return { cls:'', msg:'Trade 1 en libro. Queda 1 bala como máximo.' };
+  if(dayTr.length >= 2) return { cls: dayTr.length>2?'stop':'win', msg: dayTr.length>2 ? '<b>Límite excedido.</b> El máximo es 2 operaciones por sesión, sin excepciones.' : '<b>2 trades — sesión completa.</b> Se cierra la plataforma y se documenta.' };
+}
+
+function drawEquity(){
+  const cv = $('#eqCanvas'), wrap = cv.parentElement;
+  const byDay = tradesByDay();
+  const days = Object.keys(byDay).sort();
+  if(days.length < 2){
+    cv.style.display = 'none';
+    $('#eqEmpty').innerHTML = `<div class="empty" style="padding:26px 10px"><b>Curva en espera</b><p>Con dos o más días operados, aquí se dibuja el P&L acumulado de la mesa.</p></div>`;
+    return;
+  }
+  cv.style.display = 'block'; $('#eqEmpty').innerHTML = '';
+  const pts = []; let acc = 0;
+  days.forEach(d=>{ acc += byDay[d].reduce((a,t)=>a+(t.pnl||0),0); pts.push(acc); });
+  const W = wrap.clientWidth - 36, H = 180, dpr = devicePixelRatio||1;
+  cv.width = W*dpr; cv.height = H*dpr; cv.style.height = H+'px';
+  const ctx = cv.getContext('2d'); ctx.scale(dpr,dpr); ctx.clearRect(0,0,W,H);
+  const min = Math.min(0,...pts), max = Math.max(0,...pts), span = (max-min)||1;
+  const X = i => 8 + i*(W-16)/(pts.length-1);
+  const Y = v => 12 + (H-30)*(1-(v-min)/span);
+  /* línea de cero */
+  ctx.strokeStyle = 'rgba(255,255,255,.08)'; ctx.setLineDash([3,5]); ctx.beginPath();
+  ctx.moveTo(8, Y(0)); ctx.lineTo(W-8, Y(0)); ctx.stroke(); ctx.setLineDash([]);
+  /* área */
+  const grad = ctx.createLinearGradient(0,0,0,H);
+  grad.addColorStop(0,'rgba(155,192,220,.16)'); grad.addColorStop(1,'rgba(155,192,220,0)');
+  ctx.beginPath(); ctx.moveTo(X(0), Y(pts[0]));
+  pts.forEach((p,i)=> ctx.lineTo(X(i), Y(p)));
+  ctx.lineTo(X(pts.length-1), H-8); ctx.lineTo(X(0), H-8); ctx.closePath();
+  ctx.fillStyle = grad; ctx.fill();
+  /* línea */
+  ctx.beginPath(); pts.forEach((p,i)=> i?ctx.lineTo(X(i),Y(p)):ctx.moveTo(X(i),Y(p)));
+  ctx.strokeStyle = '#9BC0DC'; ctx.lineWidth = 1.6; ctx.stroke();
+  /* último punto */
+  const lx = X(pts.length-1), ly = Y(pts[pts.length-1]);
+  ctx.beginPath(); ctx.arc(lx,ly,3,0,7); ctx.fillStyle = '#E9EDF2'; ctx.fill();
+  ctx.font = '11px "IBM Plex Mono"'; ctx.fillStyle = acc>=0?'#5FBF9A':'#D96D62';
+  ctx.textAlign = 'right'; ctx.fillText(fmt$(acc,true), W-10, ly-9);
+  $('#eqLabel').textContent = days.length + ' días · P&L acumulado';
+}
+
+/* ════════ SESIÓN ════════ */
+const PRE_ITEMS = [
+  ['Tradingview abierto','Apertura de plataforma y revisión inicial de gráficos.','7:00'],
+  ['Calendario económico','Eventos macro del día que puedan impactar la sesión.','7:05'],
+  ['Análisis overnight','Liquidez tomada en Asia y Londres. H/L marcados.','7:10'],
+  ['Estado de cuenta','Situación actual y objetivos del día por cuenta.','7:15'],
+  ['Daily bias proyectado','Bias direccional definido para la apertura de NY.','7:20'],
+  ['Esperar open + ORB','La apertura y el Opening Range Breakout confirmado.','7:30'],
+];
+const SETUP_ITEMS = [
+  ['Targets overnight sin tomar','Asia o Londres H/L, PDH/PDL aún sin ser tomados.'],
+  ['Break apunta a liquidez clara','La dirección del break apunta a liquidez inequívoca.'],
+  ['BOS / FVG 5m · EMA 14/50','Break of structure, FVG de 5m y EMAs a favor.'],
+  ['Entrada en el break, sin FOMO','Entrar tantito antes o en el break. Nunca persiguiendo.'],
+];
+const POST_ITEMS = [
+  ['Trades registrados','Screenshot, setup, resultado y análisis de cada operación.'],
+  ['Dashboard verificado','Consistencia, drawdown y progreso acumulado revisados.'],
+  ['Reporte enviado al equipo','Resultado del día + estado de cada cuenta.'],
+];
+
+function getSession(iso){
+  const s = S.sessions[iso] = S.sessions[iso] || {};
+  s.pre   = s.pre   || PRE_ITEMS.map(()=>false);
+  s.setup = s.setup || SETUP_ITEMS.map(()=>false);
+  s.post  = s.post  || POST_ITEMS.map(()=>false);
+  return s;
+}
+
+function chkHTML(items, arr, key){
+  return items.map((it,i)=>`
+    <button class="chk ${arr[i]?'done':''}" data-k="${key}" data-i="${i}">
+      <span class="box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M4 12l5 5L20 7"/></svg></span>
+      <span style="flex:1;min-width:0"><b>${it[0]}</b><span>${it[1]}</span></span>
+      ${it[2]?`<span class="t">${it[2]}</span>`:''}
+    </button>`).join('');
+}
+
+function renderSesion(){
+  const iso = todayISO();
+  const ses = getSession(iso);
+  $('#sesFecha').textContent = fmtFecha(iso);
+  $('#preList').innerHTML   = chkHTML(PRE_ITEMS, ses.pre, 'pre');
+  $('#setupList').innerHTML = chkHTML(SETUP_ITEMS, ses.setup, 'setup');
+  $('#postList').innerHTML  = chkHTML(POST_ITEMS, ses.post, 'post');
+  const done = [...ses.pre, ...ses.setup, ...ses.post].filter(Boolean).length;
+  $('#sesProgreso').textContent = done + ' / 13';
+
+  const okAll = ses.setup.every(Boolean);
+  $('#setupVerdict').innerHTML = `
+    <div class="verdict ${okAll?'go':'no'}">
+      <div>
+        <div class="vs">Veredicto</div>
+        <div class="vt">${okAll ? 'SETUP VÁLIDO — ejecutar el plan' : 'NO HAY TRADE'}</div>
+      </div>
+      <div style="margin-left:auto;font-size:11px;color:var(--dim);max-width:200px;text-align:right">
+        ${okAll ? 'Todas las condiciones presentes. Tamaño y stop según plan.' : 'Se cumplen TODAS o no hay trade. El mejor trade del día es no operar.'}
+      </div>
+    </div>`;
+
+  const dayTr = tradesByDay()[iso] || [];
+  const g = gestionState(dayTr);
+  $('#gestState').innerHTML = `<div class="g-banner ${g.cls}" style="margin-top:0"><span>${g.msg}</span></div>`;
+
+  $$('#v-sesion .chk').forEach(b=>{
+    b.onclick = () => {
+      const s = getSession(todayISO());
+      s[b.dataset.k][+b.dataset.i] = !s[b.dataset.k][+b.dataset.i];
+      save(); renderSesion(); updateBadges();
+    };
+  });
+}
+
+/* reporte al equipo */
+function buildReport(){
+  const iso = todayISO();
+  const dayTr = tradesByDay()[iso] || [];
+  const st = computeStats(S.trades);
+  const R = pnlRanges(), M = metas();
+  const dPnl = dayTr.reduce((a,t)=>a+(t.pnl||0),0);
+  const lines = [];
+  lines.push('CENIT · REPORTE DE MESA');
+  lines.push(fmtFecha(iso) + ' · ' + (S.profile.nombre || 'Operador') + ' · ' + (S.profile.rol||''));
+  lines.push('────────────────────────────');
+  lines.push('Trades: ' + dayTr.length + '  ·  P&L del día: ' + fmt$(dPnl,true));
+  dayTr.forEach((t,i)=>{
+    const v = violations(t, dayTr);
+    lines.push(`${i+1}) ${t.sym} ${t.dir==='L'?'LONG':'SHORT'} x${t.qty} @ ${t.time} → ${fmt$(t.pnl,true)}${t.setupOk?' · setup válido':' · SETUP INCOMPLETO'}${v.length?' · ⚠ '+v.join(', '):''}`);
+    if(t.notas) lines.push('   ' + t.notas);
+  });
+  if(!dayTr.length) lines.push('Sin operaciones. El checklist no dio setup válido — el mejor trade del día fue no operar.');
+  lines.push('────────────────────────────');
+  lines.push('Avance vs meta · Día: ' + fmt$(R.dia,true) + ' / ' + fmt$(M.dia) + ' · Mes: ' + fmt$(R.mes,true) + ' / ' + fmt$(M.mes));
+  lines.push('Cuenta: ' + fmt$((S.profile.cuenta||0) + st.pnl));
+  const sc = computeScore();
+  if(sc) lines.push('Cenit Score: ' + sc.total + ' / 1000 · ' + sc.grade);
+  return lines.join('\n');
+}
+
+/* ════════ JOURNAL ════════ */
+let jRange = 'mes';
+function renderJournal(){
+  const byDay = tradesByDay();
+  const now = new Date(); const ym = now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
+  const days = Object.keys(byDay).sort().reverse().filter(d => jRange==='todo' || d.startsWith(ym));
+  const list = days.flatMap(d=>byDay[d]);
+  const st = computeStats(list);
+  $('#jResumen').textContent = jRange==='mes' ? 'MES EN CURSO' : 'HISTORIAL COMPLETO';
+
+  $('#jKpis').innerHTML = [
+    ['P&L', fmt$(st.pnl,true), st.pnl>0?'up':st.pnl<0?'down':''],
+    ['Trades', st.n, ''],
+    ['Win rate', fmtPct(st.wr), ''],
+    ['Profit factor', st.pf===Infinity?'∞':(isNaN(st.pf)?'—':st.pf.toFixed(2)), ''],
+  ].map(([l,v,c])=>`<div class="panel kpi"><div class="k-l">${l}</div><div class="k-v ${c}">${v}</div></div>`).join('');
+
+  if(list.length === 0){
+    $('#jTable').innerHTML = '';
+    $('#jEmpty').innerHTML = `<div class="empty">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="1.4"><path d="M4 19V5a2 2 0 0 1 2-2h13v18H6a2 2 0 0 1-2-2z"/><path d="M8 7h7M8 11h7"/></svg>
+      <b>Journal vacío</b>
+      <p>Todo trade se documenta: hora, precio, tamaño y condiciones. Sin registro no hay mesa profesional.</p>
+      <button class="btn primary sm" onclick="openTrade()">+ Registrar el primero</button>
+    </div>`;
+    return;
+  }
+  $('#jEmpty').innerHTML = '';
+  let html = `<thead><tr>
+    <th>Fecha</th><th>Hora</th><th>Instr.</th><th>Dir</th><th class="r">Ct</th>
+    <th class="r">Entrada</th><th class="r">Salida</th><th class="r">P&L</th>
+    <th>Setup</th><th>Disciplina</th><th></th>
+  </tr></thead><tbody>`;
+  days.forEach(d=>{
+    const dt = byDay[d];
+    const dp = dt.reduce((a,t)=>a+(t.pnl||0),0);
+    html += `<tr style="background:rgba(255,255,255,.018)">
+      <td colspan="7" class="mono" style="font-size:10.5px;letter-spacing:.14em;color:var(--dim)">${fmtFecha(d)} · ${dt.length} TRADE${dt.length>1?'S':''}</td>
+      <td class="r mono ${dp>0?'up':dp<0?'down':''}" style="font-size:12px">${fmt$(dp,true)}</td>
+      <td colspan="3"></td></tr>`;
+    dt.forEach(t=>{
+      const v = violations(t, dt);
+      html += `<tr>
+        <td class="mono" style="color:var(--faint);font-size:11px">${t.date.slice(8)}/${t.date.slice(5,7)}</td>
+        <td class="mono">${t.time||'—'}</td>
+        <td class="mono">${esc(t.sym)}</td>
+        <td><span class="tag ${t.dir==='L'?'ok':'bad'}" style="border-color:var(--line)">${t.dir==='L'?'LONG':'SHORT'}</span></td>
+        <td class="r mono">${t.qty}</td>
+        <td class="r mono" style="color:var(--dim)">${t.entry??'—'}</td>
+        <td class="r mono" style="color:var(--dim)">${t.exit??'—'}</td>
+        <td class="r mono ${t.pnl>0?'up':t.pnl<0?'down':''}">${fmt$(t.pnl,true)}</td>
+        <td>${t.setupOk?'<span class="tag ok">VÁLIDO</span>':'<span class="tag wr">INCOMPLETO</span>'}</td>
+        <td>${v.length? v.map(x=>`<span class="tag bad" style="margin:1px 2px 1px 0">${x}</span>`).join('') : '<span class="tag ok">LIMPIO</span>'}</td>
+        <td class="r" style="white-space:nowrap">
+          <button class="btn-icon" onclick="openTrade('${t.id}')" title="Editar">✎</button>
+          <button class="btn-icon" onclick="delTrade('${t.id}')" title="Eliminar">✕</button>
+        </td>
+      </tr>`;
+    });
+  });
+  $('#jTable').innerHTML = html + '</tbody>';
+}
+$('#jSeg').addEventListener('click', e=>{
+  const b = e.target.closest('button'); if(!b) return;
+  jRange = b.dataset.r;
+  $$('#jSeg button').forEach(x=>x.classList.toggle('on', x===b));
+  renderJournal();
+});
+
+/* trade modal */
+let editingTrade = null;
+function openTrade(id){
+  editingTrade = id ? S.trades.find(t=>t.id===id) : null;
+  $('#tmTitle').textContent = editingTrade ? 'Editar trade' : 'Registrar trade';
+  const t = editingTrade || {};
+  $('#tFecha').value = t.date || todayISO();
+  $('#tHora').value = t.time || '07:35';
+  $('#tSym').value = t.sym || 'NQ';
+  $('#tDir').value = t.dir || 'L';
+  $('#tQty').value = t.qty || 1;
+  $('#tSetup').value = (t.setupOk===false) ? '0' : '1';
+  $('#tIn').value = t.entry ?? '';
+  $('#tOut').value = t.exit ?? '';
+  $('#tPnl').value = t.pnl ?? '';
+  $('#tNotas').value = t.notas || '';
+  openOv('ovTrade');
+}
+window.openTrade = openTrade;
+window.delTrade = id => {
+  if(!confirm('¿Eliminar este trade del journal?')) return;
+  S.trades = S.trades.filter(t=>t.id!==id); save();
+  renderJournal(); updateBadges(); toast('Trade eliminado');
+};
+
+function autoPnl(){
+  const sym = $('#tSym').value, dirn = $('#tDir').value==='L'?1:-1;
+  const en = parseFloat($('#tIn').value), ex = parseFloat($('#tOut').value), q = parseInt($('#tQty').value)||1;
+  if(isFinite(en) && isFinite(ex) && POINT_VALUE[sym]){
+    $('#tPnl').value = Math.round((ex-en) * dirn * POINT_VALUE[sym] * q);
+  }
+}
+['tIn','tOut','tQty','tDir','tSym'].forEach(id => $('#'+id).addEventListener('input', autoPnl));
+
+$('#tSave').addEventListener('click', ()=>{
+  const pnl = parseFloat($('#tPnl').value);
+  if(!isFinite(pnl)){ toast('Falta el P&L del trade'); return; }
+  const data = {
+    date: $('#tFecha').value || todayISO(),
+    time: $('#tHora').value || '07:35',
+    sym: $('#tSym').value,
+    dir: $('#tDir').value,
+    qty: parseInt($('#tQty').value)||1,
+    entry: $('#tIn').value===''?null:parseFloat($('#tIn').value),
+    exit: $('#tOut').value===''?null:parseFloat($('#tOut').value),
+    pnl,
+    setupOk: $('#tSetup').value==='1',
+    notas: $('#tNotas').value.trim(),
+  };
+  if(editingTrade) Object.assign(editingTrade, data);
+  else S.trades.push({ id: uid(), ...data });
+  save(); closeOv();
+  renderJournal(); renderDashboard(); updateBadges();
+  toast(editingTrade ? 'Trade actualizado' : 'Trade documentado');
+  editingTrade = null;
+});
+
+/* export */
+$('#btnExport').addEventListener('click', ()=>{
+  const rows = [['fecha','hora','instrumento','direccion','contratos','entrada','salida','pnl','setup_valido','violaciones','notas']];
+  const byDay = tradesByDay();
+  Object.keys(byDay).sort().forEach(d=> byDay[d].forEach(t=>{
+    rows.push([t.date,t.time,t.sym,t.dir==='L'?'LONG':'SHORT',t.qty,t.entry??'',t.exit??'',t.pnl,t.setupOk?'SI':'NO',violations(t,byDay[d]).join('|'),(t.notas||'').replace(/[\n,]/g,' ')]);
+  }));
+  const blob = new Blob([rows.map(r=>r.join(',')).join('\n')], {type:'text/csv'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob); a.download = 'cenit-journal.csv'; a.click();
+  toast('Journal exportado (CSV)');
+});
+
+/* ════════ BOOTCAMP TJR ════════
+   Currículum basado en el bootcamp público de TJR (futuros, ORB, liquidez). */
+const CURRICULUM = [
+  { n:'TJR-01', t:'Fundamentos de futuros', d:'El instrumento antes que la estrategia', lessons:[
+    ['Qué es un contrato de futuros','Acuerdo apalancado sobre un índice. Nosotros operamos NQ (Nasdaq 100): se liquida en efectivo, nadie recibe acciones.'],
+    ['Ticks, puntos y valor','NQ: 1 punto = $20, 1 tick = 0.25 = $5. ES: 1 punto = $50. Saber cuánto vale cada movimiento ANTES de entrar no es opcional.'],
+    ['Apalancamiento y margen','El bróker presta; el margen es tu garantía. El apalancamiento amplifica en ambas direcciones — por eso el riesgo se define primero.'],
+    ['Sesiones del mercado','Asia → Londres → Nueva York. Cada sesión deja máximos y mínimos que se convierten en imanes de liquidez para la siguiente.'],
+    ['Micros vs minis','Los micros (MNQ) son 1/10 del mini. En Cenit los minis de aprendizaje están prohibidos: la mesa opera el tamaño del plan, no el del ego.'],
+  ]},
+  { n:'TJR-02', t:'Velas y estructura de mercado', d:'Leer el precio sin indicadores', lessons:[
+    ['Anatomía de la vela','Cuerpo, mecha y cierre. La mecha es la historia: dónde el precio fue rechazado. El cierre es la sentencia.'],
+    ['Swings: HH, HL, LH, LL','Tendencia alcista = máximos y mínimos ascendentes. Cuando la secuencia se rompe, la estructura cambió — no antes.'],
+    ['Break of Structure (BOS)','El precio rompe el último swing relevante y cierra más allá. Confirma dirección; una mecha que solo barre NO es BOS.'],
+    ['Rango vs tendencia','El mercado pasa la mayor parte del día en rango. La apertura de NY es de los pocos momentos con energía direccional real.'],
+  ]},
+  { n:'TJR-03', t:'Liquidez', d:'Dónde están los stops, ahí va el precio', lessons:[
+    ['Qué es la liquidez','Órdenes acumuladas: stops de compradores bajo mínimos, de vendedores sobre máximos. El precio se mueve hacia donde puede ejecutar volumen.'],
+    ['Equal highs / equal lows','Dobles techos y pisos "perfectos" son piscinas de stops. El mercado los barre antes de moverse de verdad.'],
+    ['PDH / PDL','Previous Day High/Low: los imanes más confiables del día. Si no se han tomado, son target; si ya se tomaron, el mapa cambió.'],
+    ['Highs y lows de Asia y Londres','El overnight deja niveles marcados. El checklist de la mesa pregunta: ¿qué liquidez sigue SIN tomar? Hacia ahí apunta el break.'],
+    ['El sweep (stop hunt)','Barrida rápida de un nivel con reversa inmediata: el mercado tomó combustible. Distinguir sweep de break es la mitad del oficio.'],
+  ]},
+  { n:'TJR-04', t:'ORB — Opening Range Breakout', d:'La estrategia núcleo de la mesa', lessons:[
+    ['El rango de apertura','7:30–7:45 AM (apertura de NY): los primeros 15 minutos definen el rango. Alto y bajo del ORB = el campo de juego del día.'],
+    ['El break válido','El precio rompe el rango Y apunta hacia liquidez clara sin tomar (PDH/PDL, highs de sesión). Break hacia nada = no hay trade.'],
+    ['La entrada','Tantito antes o en el break, con estructura a favor. Sin perseguir: si el tren se fue sin ti, hay otro mañana a las 7:30.'],
+    ['Targets y parciales','El target ES la liquidez identificada. Parcial en el primer nivel, resto al objetivo. El stop siempre definido antes de entrar.'],
+    ['Cuando el ORB falla','Rango roto en falso (sweep) puede armar el trade contrario — SOLO si aparece un setup nuevo completo. Nunca por revancha.'],
+  ]},
+  { n:'TJR-05', t:'FVG y confirmaciones', d:'La confluencia que valida el break', lessons:[
+    ['Fair Value Gap (FVG)','Hueco entre la mecha de la vela 1 y la 3 cuando la 2 se movió con violencia: precio "sin negociar" que actúa como imán y soporte.'],
+    ['El FVG de 5 minutos','Nuestra confirmación: el break deja un FVG de 5m a favor. El retest del FVG es la segunda oportunidad de entrada con menos riesgo.'],
+    ['EMA 14/50','Las medias no predicen: confirman. Precio sobre ambas y 14 sobre 50 = estructura alcista a favor del break. En contra, el checklist no pasa.'],
+    ['Confluencia, no indicadores','Un solo factor no es setup. Targets sin tomar + break a liquidez + BOS/FVG + EMA a favor: las 4 o no hay trade. Así se llena el checklist de Sesión.'],
+  ]},
+  { n:'TJR-06', t:'Gestión de riesgo y fondeo', d:'Sobrevivir es la estrategia', lessons:[
+    ['La unidad R','Todo se mide en R (riesgo por trade). Un trade de +2R con 1% arriesgado vale más que +5% apostado. Pensar en R, no en dinero.'],
+    ['Sizing por stop','Primero el stop técnico, luego el tamaño: contratos = riesgo permitido ÷ (puntos de stop × valor del punto). Nunca al revés.'],
+    ['Drawdown y las reglas de fondeo','Las prop firms miden drawdown diario y total. Conocer los 3 tipos de drawdown de tu firma es parte del trabajo, no letra chica.'],
+    ['El payout es el objetivo','La cuenta fondeada es una licencia de operación: consistencia + reglas = retiros. Un día heroico que viola límites cuesta la cuenta entera.'],
+  ]},
+  { n:'TJR-07', t:'Psicología y proceso', d:'El edge eres tú, disciplinado', lessons:[
+    ['FOMO y revenge','Los dos asesinos de cuentas. La mesa los neutraliza por diseño: 2 trades máximo, ganaste el 1 → plataforma cerrada.'],
+    ['El journal como evidencia','Cada trade con screenshot, setup y emoción. Las narrativas se descartan; los datos se analizan. Sin registro, la sesión no existió.'],
+    ['Backtesting','Cien repeticiones del ORB en histórico valen más que cien opiniones. El backtest convierte fe en estadística.'],
+    ['La rutina es el edge','Mismo pre-market, misma ventana, mismo checklist, todos los días. La consistencia del proceso precede a la consistencia del P&L.'],
+  ]},
+];
+
+function lessonId(mi, li){ return 'm'+mi+'l'+li; }
+
+function renderEstudio(){
+  const total = CURRICULUM.reduce((a,m)=>a+m.lessons.length,0);
+  const done = Object.values(S.study.lessons).filter(Boolean).length;
+  const pct = total? Math.round(done/total*100) : 0;
+  $('#stPct').textContent = pct + '%';
+  $('#stBar').style.width = pct + '%';
+  $('#stDone').textContent = done;
+  $('#stTotal').textContent = 'de ' + total + ' del bootcamp';
+  $('#stRev').textContent = S.study.reviews.length;
+
+  $('#mods').innerHTML = CURRICULUM.map((m,mi)=>{
+    const mDone = m.lessons.filter((_,li)=>S.study.lessons[lessonId(mi,li)]).length;
+    return `<div class="panel mod ${mi===0?'open':''}" style="margin-top:10px">
+      <button class="mod-head" data-mod="${mi}">
+        <span class="mn">${m.n}</span>
+        <span style="flex:1;min-width:0"><b>${m.t}</b><span>${m.d}</span></span>
+        <span class="pct">${mDone}/${m.lessons.length}</span>
+        <svg class="chev" viewBox="0 0 24 24" fill="none" stroke-width="1.8"><path d="M6 9l6 6 6-6"/></svg>
+      </button>
+      <div class="mod-body">
+        ${m.lessons.map((l,li)=>{
+          const id = lessonId(mi,li), on = !!S.study.lessons[id];
+          return `<div class="lesson">
+            <div class="lx"><b style="${on?'color:var(--dim)':''}">${l[0]}</b><p>${l[1]}</p></div>
+            <button class="chk lchk ${on?'done':''}" data-lesson="${id}" style="padding:0;border:none;background:none;width:auto">
+              <span class="box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M4 12l5 5L20 7"/></svg></span>
+            </button>
+          </div>`;
+        }).join('')}
+      </div>
+    </div>`;
+  }).join('');
+
+  $$('#mods .mod-head').forEach(b=> b.onclick = ()=> b.closest('.mod').classList.toggle('open'));
+  $$('#mods [data-lesson]').forEach(b=> b.onclick = ()=>{
+    S.study.lessons[b.dataset.lesson] = !S.study.lessons[b.dataset.lesson];
+    save(); renderEstudio(); updateBadges();
+  });
+
+  $('#revList').innerHTML = [...S.study.reviews].reverse().slice(0,6).map(r=>`
+    <div class="lesson"><div class="lx">
+      <b>${fmtFecha(r.date)}</b>
+      <p><span class="down">Mal:</span> ${esc(r.mal)||'—'} · <span class="up">Bien:</span> ${esc(r.bien)||'—'}</p>
+      ${r.fix?`<p><span class="warn">Ajuste:</span> ${esc(r.fix)}</p>`:''}
+    </div></div>`).join('');
+}
+
+$('#btnRev').addEventListener('click', ()=>{
+  const mal = $('#rvMal').value.trim(), bien = $('#rvBien').value.trim(), fix = $('#rvFix').value.trim();
+  if(!mal && !bien && !fix){ toast('La revisión está vacía'); return; }
+  S.study.reviews.push({ date: todayISO(), mal, bien, fix });
+  $('#rvMal').value = $('#rvBien').value = $('#rvFix').value = '';
+  save(); renderEstudio(); toast('Revisión semanal guardada');
+});
+
+/* ════════ REGLAS ════════ */
+function renderReglas(){
+  $('#termList').innerHTML = [
+    'Compartir posiciones o estrategias del fondo externamente',
+    'Falsificar registros, reportes o documentación interna',
+    'Operaciones personales en conflicto de interés no declarado',
+    'Hostigamiento, discriminación o conducta abusiva',
+    'Fraude, robo o malversación de activos',
+    'Incumplimiento reiterado de las reglas de riesgo',
+  ].map((t,i)=>`<div style="display:flex;gap:10px;padding:8px 2px;border-bottom:1px solid var(--line-soft);font-size:12.5px;color:var(--dim)">
+      <span class="mono" style="color:var(--down);font-size:10px;padding-top:2px">${String(i+1).padStart(2,'0')}</span><span>${t}</span>
+    </div>`).join('');
+}
+
+/* ════════ SNOWBALL · POSICIONES ════════ */
+function nivelDe(cap){
+  if(cap >= 1000000) return { n:'SUMMIT', r:'18–28%', lock:'Mandato personalizado', f:'Alpha + Macro + Quant' };
+  if(cap >= 250000)  return { n:'CORE', r:'15–22%', lock:'Bloqueo 6 meses', f:'Alpha + Macro' };
+  if(cap >= 50000)   return { n:'SEED', r:'12–18%', lock:'Bloqueo 12 meses', f:'Alpha Fund' };
+  return { n:'SUB-MÍNIMO', r:'—', lock:'No califica (mín $50k)', f:'—' };
+}
+function nextRebalance(){
+  const now = new Date();
+  const q = [[3,1],[6,1],[9,1],[0,1]]; // Abr, Jul, Oct, Ene
+  for(const [m] of [[3],[6],[9]]) if(now.getMonth() < m) return new Date(now.getFullYear(), m, 1);
+  return new Date(now.getFullYear()+1, 0, 1);
+}
+
+function renderPosiciones(){
+  const ps = S.positions;
+  const aum = ps.reduce((a,p)=>a+(p.valor||p.capital||0),0);
+  const cap = ps.reduce((a,p)=>a+(p.capital||0),0);
+  const ret = cap>0 ? (aum/cap-1)*100 : NaN;
+  const nr = nextRebalance();
+  const drr = Math.ceil((nr - new Date())/86400000);
+  $('#posKpis').innerHTML = [
+    ['AUM del programa', fmt$(aum), ''],
+    ['Capital suscrito', fmt$(cap), ''],
+    ['Retorno acumulado', fmtPct(ret), ret>0?'up':ret<0?'down':''],
+    ['Próximo reequilibrio', drr + ' días', ''],
+  ].map(([l,v,c])=>`<div class="panel kpi"><div class="k-l">${l}</div><div class="k-v ${c}" style="font-size:19px">${v}</div></div>`).join('');
+
+  if(ps.length === 0){
+    $('#posList').innerHTML = `<div class="panel empty" style="grid-column:1/-1">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="1.4"><circle cx="12" cy="12" r="9"/><path d="M12 3v18M3.5 7.5l17 9M3.5 16.5l17-9"/></svg>
+      <b>Sin posiciones registradas</b>
+      <p>Registra las cuentas del programa Snowball para seguir valor, retorno y calendario de reequilibrio trimestral.</p>
+      <button class="btn primary sm" onclick="openPos()">+ Primera posición</button>
+    </div>`;
+    return;
+  }
+  $('#posList').innerHTML = ps.map(p=>{
+    const nv = nivelDe(p.capital||0);
+    const val = p.valor ?? p.capital;
+    const r = p.capital>0 ? (val/p.capital-1)*100 : 0;
+    return `<div class="panel pos-card">
+      <div class="pos-top">
+        <div>
+          <b>${esc(p.nombre)}</b>
+          <span class="micro">SNOWBALL ${nv.n} · ${nv.f}</span>
+        </div>
+        <div class="pos-val">
+          <div class="v mono">${fmt$(val)}</div>
+          <div class="r ${r>0?'up':r<0?'down':''}">${r>0?'+':''}${(Math.round(r*10)/10)}% acum.</div>
+        </div>
+      </div>
+      <div class="pos-meta">
+        <div><span>Capital</span><b>${fmt$(p.capital)}</b></div>
+        <div><span>Objetivo anual</span><b>${nv.r}</b></div>
+        <div><span>Entrada</span><b>${p.fecha?fmtFecha(p.fecha):'—'}</b></div>
+        <div><span>Condición</span><b style="font-size:10.5px">${nv.lock}</b></div>
+      </div>
+      ${p.notas?`<p style="font-size:11.5px;color:var(--dim);margin-top:10px">${esc(p.notas)}</p>`:''}
+      <div class="mt" style="display:flex;gap:8px;align-items:center">
+        <input type="number" id="upv-${p.id}" placeholder="Actualizar valor USD" style="max-width:190px;padding:7px 10px;font-size:12px">
+        <button class="btn sm" onclick="updPos('${p.id}')">Actualizar</button>
+        <button class="btn-icon" style="margin-left:auto" onclick="editPos('${p.id}')" title="Editar">✎</button>
+        <button class="btn-icon" onclick="delPos('${p.id}')" title="Eliminar">✕</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+window.updPos = id => {
+  const p = S.positions.find(x=>x.id===id);
+  const v = parseFloat($('#upv-'+id).value);
+  if(!isFinite(v)){ toast('Escribe el valor nuevo'); return; }
+  p.valor = v; save(); renderPosiciones(); toast('Valor actualizado · ' + fmt$(v));
+};
+window.delPos = id => {
+  if(!confirm('¿Eliminar esta posición?')) return;
+  S.positions = S.positions.filter(p=>p.id!==id); save(); renderPosiciones();
+};
+let editingPos = null;
+window.editPos = id => { openPos(id); };
+function openPos(id){
+  editingPos = id ? S.positions.find(p=>p.id===id) : null;
+  $('#pmTitle').textContent = editingPos ? 'Editar posición' : 'Nueva posición Snowball';
+  const p = editingPos || {};
+  $('#pNombre').value = p.nombre || '';
+  $('#pFecha').value = p.fecha || todayISO();
+  $('#pCap').value = p.capital ?? 250000;
+  $('#pVal').value = p.valor ?? '';
+  $('#pNotas').value = p.notas || '';
+  openOv('ovPos');
+}
+window.openPos = openPos;
+$('#pSave').addEventListener('click', ()=>{
+  const nombre = $('#pNombre').value.trim();
+  if(!nombre){ toast('Falta el nombre del cliente'); return; }
+  const capital = parseFloat($('#pCap').value)||0;
+  const data = {
+    nombre, capital,
+    fecha: $('#pFecha').value || todayISO(),
+    valor: $('#pVal').value==='' ? capital : parseFloat($('#pVal').value),
+    notas: $('#pNotas').value.trim(),
+  };
+  if(editingPos) Object.assign(editingPos, data);
+  else S.positions.push({ id: uid(), ...data });
+  save(); closeOv(); renderPosiciones(); toast('Posición guardada');
+  editingPos = null;
+});
+
+/* ════════ ONBOARDING ════════ */
+const ETAPAS = ['Calificación de inversor','Reunión de perfilamiento','Propuesta formal','Due diligence mutuo','Suscripción y transferencia','Onboarding y primer reporte'];
+function renderClientes(){
+  const ps = S.prospects;
+  if(ps.length === 0){
+    $('#prosList').innerHTML = `<div class="panel empty" style="grid-column:1/-1">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="1.4"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.8-3.4 3.4-5.5 6.5-5.5s5.7 2.1 6.5 5.5"/></svg>
+      <b>Pipeline vacío</b>
+      <p>Seis puertas antes del portafolio: calificación, perfilamiento, propuesta, due diligence, suscripción y onboarding.</p>
+      <button class="btn primary sm" onclick="document.getElementById('btnProspect').click()">+ Primer prospecto</button>
+    </div>`;
+    return;
+  }
+  $('#prosList').innerHTML = ps.map(p=>{
+    const et = Math.min(p.etapa, 5);
+    const nv = nivelDe(p.capital||0);
+    const donePipe = et >= 5;
+    return `<div class="panel pos-card">
+      <div class="pos-top">
+        <div>
+          <b>${esc(p.nombre)}</b>
+          <span class="micro">${fmt$(p.capital)} · PERFIL ${nv.n}</span>
+        </div>
+        <div style="margin-left:auto">${donePipe?'<span class="tag ok">CLIENTE ACTIVO</span>':`<span class="tag ac">PUERTA ${et+1} / 6</span>`}</div>
+      </div>
+      <div class="pipe">${ETAPAS.map((_,i)=>`<i class="${i<et?'on':i===et&&!donePipe?'now':donePipe?'on':''}"></i>`).join('')}</div>
+      <p style="font-size:12px;color:var(--dim);margin-top:10px">${donePipe ? 'Proceso completo. Mover a Posiciones.' : esc(ETAPAS[et])}</p>
+      <div class="mt" style="display:flex;gap:8px">
+        ${et>0?`<button class="btn sm" onclick="movePro('${p.id}',-1)">← Regresar</button>`:''}
+        ${!donePipe?`<button class="btn primary sm" onclick="movePro('${p.id}',1)">Avanzar puerta →</button>`
+          : `<button class="btn primary sm" onclick="proToPos('${p.id}')">Convertir en posición</button>`}
+        <button class="btn-icon" style="margin-left:auto" onclick="delPro('${p.id}')">✕</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+window.movePro = (id,d) => {
+  const p = S.prospects.find(x=>x.id===id);
+  p.etapa = Math.max(0, Math.min(5, p.etapa + d));
+  save(); renderClientes();
+  if(p.etapa===5) toast('Las 6 puertas cruzadas — listo para suscribir');
+};
+window.delPro = id => {
+  if(!confirm('¿Eliminar prospecto?')) return;
+  S.prospects = S.prospects.filter(p=>p.id!==id); save(); renderClientes();
+};
+window.proToPos = id => {
+  const p = S.prospects.find(x=>x.id===id);
+  S.positions.push({ id: uid(), nombre: p.nombre, capital: p.capital, valor: p.capital, fecha: todayISO(), notas: 'Onboarding completado.' });
+  S.prospects = S.prospects.filter(x=>x.id!==id);
+  save(); location.hash = 'posiciones'; toast('Cliente suscrito al programa');
+};
+$('#prSave').addEventListener('click', ()=>{
+  const nombre = $('#prNombre').value.trim();
+  if(!nombre){ toast('Falta el nombre'); return; }
+  S.prospects.push({ id: uid(), nombre, capital: parseFloat($('#prCap').value)||0, etapa: 0 });
+  $('#prNombre').value = '';
+  save(); closeOv(); renderClientes(); toast('Prospecto en la puerta 1');
+});
+$('#btnProspect').addEventListener('click', ()=> openOv('ovPro'));
+
+/* ════════ CALCULADORA ════════ */
+function renderCalc(){
+  const cap = parseFloat($('#cCap').value)||0;
+  const tasa = (parseFloat($('#cTasa').value)||0)/100;
+  const aporte = parseFloat($('#cAporte').value)||0;
+  const anios = parseInt($('#cAnios').value)||20;
+  $('#cAniosLbl').textContent = anios;
+
+  const serie = [cap];
+  for(let y=1;y<=anios;y++) serie.push(serie[y-1]*(1+tasa)+aporte);
+  const fin = serie[anios];
+  $('#cFinal').textContent = 'AÑO ' + anios + ' → ' + fmt$(fin);
+
+  const nv = nivelDe(cap);
+  $('#cNivel').innerHTML = `<div class="g-banner" style="margin-top:4px">
+    <span>Nivel <b>SNOWBALL ${nv.n}</b> · objetivo ${nv.r} anual · ${nv.lock}.
+    ${cap>0? 'Multiplicador a '+anios+' años: <b>×'+(Math.round(fin/Math.max(cap,1)*10)/10)+'</b>.':''}</span>
+  </div>`;
+
+  /* tabla hitos */
+  const hitos = [1,5,10,15,20,25,30].filter(y=>y<=anios);
+  $('#cTable').innerHTML = '<thead><tr><th>Año</th><th class="r">Capital proyectado</th><th class="r">Crecimiento</th></tr></thead><tbody>'
+    + hitos.map(y=>`<tr>
+        <td class="mono">${y}</td>
+        <td class="r mono">${fmt$(serie[y])}</td>
+        <td class="r mono ${serie[y]>=cap?'up':''}">${cap>0?'×'+(Math.round(serie[y]/cap*100)/100):'—'}</td>
+      </tr>`).join('') + '</tbody>';
+
+  /* curva */
+  const cv = $('#cCanvas'), wrap = cv.parentElement;
+  const W = wrap.clientWidth - 36, H = 190, dpr = devicePixelRatio||1;
+  cv.width = W*dpr; cv.height = H*dpr; cv.style.height = H+'px';
+  const ctx = cv.getContext('2d'); ctx.scale(dpr,dpr);
+  const max = Math.max(...serie)||1;
+  const X = i => 8 + i*(W-16)/anios;
+  const Y = v => 14 + (H-34)*(1-v/max);
+  const grad = ctx.createLinearGradient(0,0,0,H);
+  grad.addColorStop(0,'rgba(155,192,220,.18)'); grad.addColorStop(1,'rgba(155,192,220,0)');
+  ctx.beginPath(); ctx.moveTo(X(0),Y(serie[0]));
+  serie.forEach((v,i)=>ctx.lineTo(X(i),Y(v)));
+  ctx.lineTo(X(anios),H-8); ctx.lineTo(X(0),H-8); ctx.closePath();
+  ctx.fillStyle = grad; ctx.fill();
+  ctx.beginPath(); serie.forEach((v,i)=> i?ctx.lineTo(X(i),Y(v)):ctx.moveTo(X(i),Y(v)));
+  ctx.strokeStyle = '#9BC0DC'; ctx.lineWidth = 1.6; ctx.stroke();
+  ctx.font = '11px "IBM Plex Mono"'; ctx.fillStyle = '#E9EDF2'; ctx.textAlign='right';
+  ctx.fillText(fmt$(fin), W-8, Y(fin)+14);
+}
+['cCap','cTasa','cAporte','cAnios'].forEach(id => $('#'+id).addEventListener('input', renderCalc));
+
+/* ════════ ACCESO (login de socios) ════════ */
+function currentUser(){ return userDe(S.session && S.session.user); }
+function lockUI(){
+  document.body.classList.add('locked');
+  $('#login').classList.add('on');
+  setTimeout(()=> $('#lgUser').focus(), 80);
+}
+function unlockUI(){
+  document.body.classList.remove('locked');
+  $('#login').classList.remove('on');
+}
+$('#lgGo').addEventListener('click', doLogin);
+$('#lgPass').addEventListener('keydown', e=>{ if(e.key==='Enter') doLogin(); });
+$('#lgUser').addEventListener('keydown', e=>{ if(e.key==='Enter') $('#lgPass').focus(); });
+function doLogin(){
+  const u = $('#lgUser').value.trim().toLowerCase();
+  const p = $('#lgPass').value;
+  const usr = USERS[u];
+  if(!usr || usr.pass !== p){
+    $('#lgErr').textContent = 'Credenciales incorrectas. El acceso es solo para socios.';
+    $('#lgPass').value = '';
+    return;
+  }
+  S.session = { user:u };
+  S.profile.nombre = usr.nombre;
+  S.profile.rol = usr.roles.join(' + ');
+  S.profile.cuenta = 250000;
+  S.profile.metaMes = 30000;
+  save();
+  $('#lgErr').textContent = '';
+  $('#lgPass').value = '';
+  unlockUI();
+  renderAll();
+  toast('Bienvenido, ' + usr.nombre + '. La mesa te espera.');
+}
+$('#btnLogout').addEventListener('click', ()=>{
+  S.session = { user:null };
+  save(); closeOv(); lockUI();
+});
+
+/* ════════ AJUSTES / PERFIL ════════ */
+$('#btnSettings').addEventListener('click', ()=>{
+  const u = currentUser();
+  $('#sIdent').innerHTML = !u ? '' : `
+    <div class="duties" style="margin-bottom:10px">
+      <div class="duties-h micro">${esc(u.nombre)} · Socio de la firma</div>
+    </div>
+    ` + u.roles.map(rk => `
+    <div class="duties">
+      <div class="duties-h micro">${rk} · ${esc(ROLES[rk].t)}</div>
+      <ul>${ROLES[rk].d.map(x=>`<li>${esc(x)}</li>`).join('')}</ul>
+    </div>`).join('');
+  openOv('ovSet');
+});
+function applyProfile(){
+  const u = currentUser();
+  const n = u ? u.nombre : 'Sin sesión';
+  $('#uName').textContent = n;
+  $('#uRole').textContent = u ? u.roles.join(' · ') : '—';
+  $('#uAvatar').textContent = u ? n.trim().split(/\s+/).map(w=>w[0]).slice(0,2).join('').toUpperCase() : '—';
+}
+
+$('#btnBackup').addEventListener('click', ()=>{
+  const blob = new Blob([JSON.stringify(S,null,2)], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob); a.download = 'cenit-terminal-respaldo.json'; a.click();
+  toast('Respaldo descargado');
+});
+$('#btnWipe').addEventListener('click', ()=>{
+  if(!confirm('Esto borra TODO el Terminal en este equipo: trades, sesiones, estudio y posiciones. ¿Seguro?')) return;
+  if(!confirm('Última confirmación. ¿Borrar todo?')) return;
+  localStorage.removeItem(LS); S = DEFAULTS(); save();
+  closeOv(); renderAll(); toast('Terminal en cero');
+});
+
+/* demo sintético — claramente etiquetado */
+$('#btnDemo').addEventListener('click', ()=>{
+  if(!confirm('Carga datos DEMO 100% SINTÉTICOS (no son fills reales) para ver el Terminal lleno. ¿Continuar?')) return;
+  const d = DEFAULTS();
+  d.profile = { nombre:'Demo Sintético', rol:'NP-0XX', cuenta:250000, metaMes:30000 };
+  const now = new Date();
+  const syms = ['NQ','NQ','NQ','ES'];
+  let n = 0;
+  for(let i=19;i>=0 && n<14;i--){
+    const dt = new Date(now); dt.setDate(now.getDate()-i);
+    if(dt.getDay()===0||dt.getDay()===6) continue;
+    const iso = dt.toISOString().slice(0,10);
+    const win = (n*7+3)%10 > 4;
+    const pnl = win ? 900+((n*137)%900) : -(400+((n*211)%500));
+    d.trades.push({ id:uid(), date:iso, time:'07:'+String(32+(n%9)*3).padStart(2,'0'), sym:syms[n%4], dir:n%3?'L':'S', qty:1+(n%2), entry:null, exit:null, pnl, setupOk:(n%5)!==4, notas:'[DEMO sintético]' });
+    d.sessions[iso] = { pre:[true,true,true,true,true,(n%3)!==0], setup:[true,true,true,(n%5)!==4], post:[true,true,(n%4)!==0] };
+    n++;
+  }
+  d.positions = [
+    { id:uid(), nombre:'[DEMO] Familia A · LP-001', capital:250000, valor:271000, fecha:'2026-01-02', notas:'Demo sintético — no es una cuenta real.' },
+    { id:uid(), nombre:'[DEMO] Cliente B · LP-002', capital:50000, valor:53400, fecha:'2026-03-01', notas:'Demo sintético.' },
+  ];
+  d.prospects = [ { id:uid(), nombre:'[DEMO] Prospecto C', capital:1000000, etapa:3 } ];
+  S = d; save(); closeOv(); renderAll();
+  toast('Demo sintético cargado — nada de esto es real');
+});
+
+/* ════════ Overlays genéricos ════════ */
+function openOv(id){ $('#'+id).classList.add('on'); }
+function closeOv(){ $$('.overlay').forEach(o=>o.classList.remove('on')); }
+$$('.overlay').forEach(o=> o.addEventListener('click', e=>{ if(e.target===o) closeOv(); }));
+$$('[data-close]').forEach(b=> b.addEventListener('click', closeOv));
+addEventListener('keydown', e=>{ if(e.key==='Escape') closeOv(); });
+
+/* reporte */
+$('#btnReport').addEventListener('click', ()=>{
+  $('#repText').value = buildReport();
+  openOv('ovReport');
+});
+$('#repCopy').addEventListener('click', ()=>{
+  navigator.clipboard.writeText($('#repText').value).then(()=>{
+    const iso = todayISO(); const s = getSession(iso);
+    s.post[2] = true; save();
+    toast('Reporte copiado — enviado = post-market ✓');
+    closeOv(); if($('#v-sesion').classList.contains('on')) renderSesion();
+  }).catch(()=> toast('No se pudo copiar'));
+});
+
+$('#btnTrade').addEventListener('click', ()=> openTrade());
+$('#btnTradeFromSes').addEventListener('click', ()=> openTrade());
+$('#btnPos').addEventListener('click', ()=> openPos());
+
+/* ════════ Badges del rail ════════ */
+function updateBadges(){
+  const dayTr = tradesByDay()[todayISO()] || [];
+  $('#bdgTrades').textContent = dayTr.length ? dayTr.length+'/2' : '';
+  const total = CURRICULUM.reduce((a,m)=>a+m.lessons.length,0);
+  const done = Object.values(S.study.lessons).filter(Boolean).length;
+  $('#bdgStudy').textContent = done && done<total ? Math.round(done/total*100)+'%' : '';
+  const abiertas = S.tickets.filter(t=>t.estado==='abierta').length;
+  $('#bdgTix').textContent = abiertas || '';
+}
+
+/* ════════ MESA DE APROBACIONES (colaborativa) ════════ */
+function tixEstado(t){
+  if(t.estado==='rechazada') return ['RECHAZADA','no'];
+  if(t.estado==='ejecutada') return ['EJECUTADA','ok'];
+  const firmas = GATES.filter(g=>t.firmas[g.k]).length;
+  if(firmas===GATES.length) return ['APROBADA — LISTA PARA EJECUTAR','ok'];
+  return ['EN MESA · '+firmas+'/'+GATES.length+' FIRMAS','run'];
+}
+function renderTix(){
+  const me = S.session.user;
+  const list = [...S.tickets].reverse();
+  $('#tixList').innerHTML = list.length ? list.map(t=>{
+    const [est, cls] = tixEstado(t);
+    const full = GATES.every(g=>t.firmas[g.k]);
+    return `<div class="tix">
+      <div class="tix-head">
+        <b>${esc(t.sym)} · ${t.dir==='L'?'LONG':'SHORT'}</b>
+        <span class="micro">${fmtFecha(t.fecha)} · propuesta por ${esc(USERS[t.por] ? USERS[t.por].nombre : t.por)}</span>
+        <span class="tix-est ${cls}" style="margin-left:auto">${est}</span>
+      </div>
+      <p class="tix-tesis">${esc(t.tesis)}</p>
+      ${t.estado==='rechazada' && t.motivo ? `<p class="tix-tesis" style="color:var(--down)">Motivo del CIO: ${esc(t.motivo)}</p>` : ''}
+      <div class="gates">
+        ${GATES.map(g=>{
+          const f = t.firmas[g.k];
+          const puede = !f && t.estado==='abierta' && rolDeUsuario(me, g.rol);
+          const dueño = Object.keys(USERS).find(u=>rolDeUsuario(u, g.rol));
+          return `<div class="gate ${f?'done':''}">
+            <span class="g-t">${g.t}</span>
+            <span class="g-s">${g.rol} · ${f ? '✓ '+esc(USERS[f.u].nombre)+' · '+f.ts : (USERS[dueño]?USERS[dueño].nombre:'')}</span>
+            ${f ? '' : `<button data-sign="${t.id}:${g.k}" ${puede?'':'disabled'}>${puede?'Firmar':'Pendiente'}</button>`}
+          </div>`;
+        }).join('')}
+      </div>
+      <div class="tix-foot">
+        ${t.estado==='abierta' && rolDeUsuario(me,'NP-001') ? `<button class="btn sm danger" data-reject="${t.id}">Rechazar (CIO)</button>` : ''}
+        ${full && t.estado==='abierta' && rolDeUsuario(me,'NP-010') ? `<button class="btn sm primary" data-exec="${t.id}">Ejecutada — registrar en Journal</button>` : ''}
+      </div>
+    </div>`;
+  }).join('') : `<div class="panel"><div class="p-body" style="text-align:center;color:var(--faint);padding:34px 20px">Sin tesis en la mesa. Propón la primera con «+ Nueva tesis».</div></div>`;
+
+  $$('#tixList [data-sign]').forEach(b=> b.onclick = ()=>{
+    const [id, gk] = b.dataset.sign.split(':');
+    const t = S.tickets.find(x=>x.id===id);
+    if(!t || t.firmas[gk]) return;
+    const g = GATES.find(x=>x.k===gk);
+    if(!rolDeUsuario(S.session.user, g.rol)) return;
+    const now = new Date();
+    t.firmas[gk] = { u:S.session.user, ts:String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0') };
+    save(); renderTix(); updateBadges();
+    toast(GATES.every(x=>t.firmas[x.k]) ? 'Cuatro firmas — tesis APROBADA' : 'Firma registrada: '+g.t);
+  });
+  $$('#tixList [data-reject]').forEach(b=> b.onclick = ()=>{
+    const t = S.tickets.find(x=>x.id===b.dataset.reject);
+    if(!t) return;
+    const m = prompt('Motivo del rechazo (queda registrado):');
+    if(m===null) return;
+    t.estado = 'rechazada'; t.motivo = m.trim();
+    save(); renderTix(); updateBadges();
+  });
+  $$('#tixList [data-exec]').forEach(b=> b.onclick = ()=>{
+    const t = S.tickets.find(x=>x.id===b.dataset.exec);
+    if(!t) return;
+    t.estado = 'ejecutada';
+    save(); renderTix(); updateBadges();
+    location.hash = 'journal';
+    setTimeout(()=> $('#btnTrade').click(), 250);
+  });
+  cloudPaint();
+}
+$('#btnTix').addEventListener('click', ()=>{
+  $('#xFecha').value = todayISO();
+  $('#xTesis').value = '';
+  openOv('ovTix');
+});
+$('#xSave').addEventListener('click', ()=>{
+  const tesis = $('#xTesis').value.trim();
+  if(!tesis){ toast('Escribe la tesis — sin tesis no hay mesa'); return; }
+  S.tickets.push({
+    id: uid(), fecha: $('#xFecha').value || todayISO(),
+    sym: $('#xSym').value, dir: $('#xDir').value,
+    tesis, por: S.session.user, firmas: {}, estado: 'abierta'
+  });
+  save(); closeOv(); location.hash = 'aprobaciones'; renderTix(); updateBadges();
+  toast('Tesis propuesta a la mesa');
+});
+
+/* ════════ NUBE (colaboración tipo Drive) ════════
+   Para que Pablo, Mateo y André vean y firmen la MISMA mesa desde sus equipos:
+   crear un proyecto Supabase y pegar url + anon key abajo. Pasos: docs/CLOUD.md */
+const CLOUD = { url:'', anon:'' };
+let cloudTs = 0, cloudBusy = false;
+const cloudOn = () => !!(CLOUD.url && CLOUD.anon);
+function cloudPaint(){
+  const p = $('#cloudPill');
+  if(!p) return;
+  p.textContent = cloudOn()
+    ? 'NUBE · SINCRONIZADA' + (cloudTs ? ' · ' + new Date(cloudTs).toLocaleTimeString('es-MX',{hour12:false}) : '')
+    : 'NUBE · NO CONECTADA — ESTADO LOCAL (ver docs/CLOUD.md)';
+  p.style.color = cloudOn() ? 'var(--up)' : 'var(--faint)';
+}
+async function cloudPush(){
+  if(!cloudOn() || cloudBusy) return;
+  cloudBusy = true;
+  try{
+    const body = { id:1, data:{...S, session:undefined}, updated_at: new Date().toISOString() };
+    await fetch(CLOUD.url + '/rest/v1/cenit_estado', {
+      method:'POST',
+      headers:{ 'apikey':CLOUD.anon, 'Authorization':'Bearer '+CLOUD.anon,
+        'Content-Type':'application/json', 'Prefer':'resolution=merge-duplicates' },
+      body: JSON.stringify(body)
+    });
+    cloudTs = Date.now(); cloudPaint();
+  }catch(e){} finally{ cloudBusy = false; }
+}
+async function cloudPull(){
+  if(!cloudOn() || cloudBusy) return;
+  try{
+    const r = await fetch(CLOUD.url + '/rest/v1/cenit_estado?id=eq.1&select=data', {
+      headers:{ 'apikey':CLOUD.anon, 'Authorization':'Bearer '+CLOUD.anon }
+    });
+    const rows = await r.json();
+    if(rows && rows[0] && rows[0].data){
+      const mySession = S.session;
+      S = { ...DEFAULTS(), ...rows[0].data, session: mySession };
+      localStorage.setItem(LS, JSON.stringify(S));
+      cloudTs = Date.now();
+      renderAll();
+    }
+  }catch(e){}
+}
+if(cloudOn()) setInterval(cloudPull, 8000);
+/* empujar a la nube en cada save() */
+const _save0 = save;
+save = function(){ _save0(); if(cloudOn()) cloudPush(); };
+
+/* ════════ Render maestro ════════ */
+function render(view){
+  if(view==='dashboard') renderDashboard();
+  else if(view==='sesion') renderSesion();
+  else if(view==='aprobaciones') renderTix();
+  else if(view==='journal') renderJournal();
+  else if(view==='estudio') renderEstudio();
+  else if(view==='reglas') renderReglas();
+  else if(view==='posiciones') renderPosiciones();
+  else if(view==='clientes') renderClientes();
+  else if(view==='calculadora') renderCalc();
+  updateBadges();
+}
+function renderAll(){ applyProfile(); render(location.hash.slice(1)||'dashboard'); }
+
+addEventListener('resize', ()=>{
+  if($('#v-dashboard').classList.contains('on')) drawEquity();
+  if($('#v-calculadora').classList.contains('on')) renderCalc();
+});
+
+/* init */
+applyProfile();
+show(location.hash.slice(1) || 'dashboard');
+
+/* portón de acceso: sin sesión válida no hay mesa */
+if(!currentUser()) lockUI();
+if(cloudOn()) cloudPull();
+
+/* QA hook */
+window.__np = { state: () => S, score: computeScore, report: buildReport };
+</script>
+</body>
+</html>
