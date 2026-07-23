@@ -10,14 +10,14 @@ se conecta una nube gratuita de Supabase. Son ~5 minutos y solo se hace una vez.
 2. En el proyecto: **SQL Editor** → pegar y correr esto:
 
 ```sql
-create table if not exists cenit_estado (
+create table if not exists northpoint_estado (
   id int primary key,
   data jsonb,
   updated_at timestamptz default now()
 );
-insert into cenit_estado (id, data) values (1, '{}') on conflict do nothing;
-alter table cenit_estado enable row level security;
-create policy "cenit rw" on cenit_estado for all using (true) with check (true);
+insert into northpoint_estado (id, data) values (1, '{}') on conflict do nothing;
+alter table northpoint_estado enable row level security;
+create policy "northpoint rw" on northpoint_estado for all using (true) with check (true);
 ```
 
 3. En **Settings → API** copiar dos cosas:

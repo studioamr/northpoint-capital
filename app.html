@@ -1717,6 +1717,48 @@ const I18N = {
   'ac.linea':          { es:'Línea DD',              en:'DD line' },
   'ac.colchon':        { es:'Colchón',               en:'Cushion' },
   'ac.consist':        { es:'Consistencia',          en:'Consistency' },
+
+  /* violaciones · se guardan como código y se traducen sólo al pintar */
+  'vio.MICROS':        { es:'Minis',                 en:'Micros' },
+  'vio.OUT_OF_WINDOW': { es:'Fuera de ventana',      en:'Outside window' },
+  'vio.THIRD_TRADE':   { es:'3er trade',             en:'3rd trade' },
+  'vio.AFTER_WIN':     { es:'Operó tras ganar',      en:'Traded after a win' },
+  'vio.REVENGE':       { es:'Revenge',               en:'Revenge' },
+  'vio.NO_SETUP':      { es:'Sin setup',             en:'No setup' },
+  'vio.FIRM_LIMIT':    { es:'Límite de la firma',    en:'Firm limit' },
+  'vio.DAY_RISK':      { es:'Riesgo diario excedido', en:'Daily risk exceeded' },
+
+  /* estado del día */
+  'ges.sinTrades':     { es:'Sin trades hoy. Si el checklist no da setup válido, <b>el mejor trade del día es no operar</b>.',
+                         en:'No trades today. If the checklist gives no valid setup, <b>the best trade of the day is no trade</b>.' },
+  'ges.gano1':         { es:'<b>Trade 1 ganado → día terminado.</b> Se cierra la plataforma. Nada más que demostrar hoy.',
+                         en:'<b>Trade 1 won → day over.</b> Platform closes. Nothing left to prove today.' },
+  'ges.perdio1':       { es:'<b>Trade 1 perdido → un solo intento más.</b> ÚNICAMENTE con un setup válido nuevo y completo. Nunca revenge.',
+                         en:'<b>Trade 1 lost → one more attempt only.</b> ONLY with a fresh, complete, valid setup. Never revenge.' },
+  'ges.enLibro':       { es:'Trade 1 en libro. Queda 1 bala como máximo.',
+                         en:'Trade 1 on the book. One bullet left at most.' },
+  'ges.excedido':      { es:'<b>Límite excedido.</b> El máximo es 2 operaciones por sesión, sin excepciones.',
+                         en:'<b>Limit exceeded.</b> Two trades per session, no exceptions.' },
+  'ges.sucio':         { es:'<b>2 trades, pero el día no está limpio:</b>',
+                         en:'<b>2 trades, but the day is not clean:</b>' },
+  'ges.completa':      { es:'<b>2 trades — sesión completa.</b> Se cierra la plataforma y se documenta.',
+                         en:'<b>2 trades — session complete.</b> Platform closes and it gets documented.' },
+
+  /* ritmo del calendario */
+  'cal.faltan':        { es:'Faltan',                 en:'Needs' },
+  'cal.paraMeta':      { es:'para la meta del mes con', en:'to hit the month target with' },
+  'cal.diasHabiles':   { es:'días hábiles por delante:', en:'business days left:' },
+  'cal.porDia':        { es:'por día.',               en:'per day.' },
+  'cal.cumplida':      { es:'<b>Meta mensual cumplida.</b>', en:'<b>Monthly target met.</b>' },
+  'cal.noDevolver':    { es:'El plan no pide más: pide no devolverlo.',
+                         en:'The plan asks for nothing more: just do not give it back.' },
+  'cal.cerrado':       { es:'Mes cerrado.',           en:'Month closed.' },
+  'cal.porVenir':      { es:'Mes por venir. Todavía no hay nada que reportar.',
+                         en:'Month ahead. Nothing to report yet.' },
+  'cal.sinOps':        { es:'Sin operaciones registradas en este mes.',
+                         en:'No trades logged this month.' },
+  'cal.cerroEn':       { es:'Cerró en',               en:'Closed at' },
+  'cal.sobreMeta':     { es:'sobre una meta de',      en:'against a target of' },
   'ac.fija':           { es:'Fija',                  en:'Locked' },
   'ac.sinVerificar':   { es:'Sin verificar',         en:'Unverified' },
   'ac.todoFondo':      { es:'Todo el fondo',         en:'Whole fund' },
@@ -2238,24 +2280,24 @@ function violations(trade, dayTrades){
     const perdida = perdidaDia(dayTrades);
     if(perdida < 0){
       const L = limitesDia(trade);
-      if(L.dailyLoss && -perdida >= L.dailyLoss) v.push('LÍMITE DE LA FIRMA');
-      else if(L.rDia && -perdida > L.rDia)       v.push('RIESGO DIARIO EXCEDIDO');
+      if(L.dailyLoss && -perdida >= L.dailyLoss) v.push('FIRM_LIMIT');
+      else if(L.rDia && -perdida > L.rDia)       v.push('DAY_RISK');
     }
   }
   const idx = dayTrades.findIndex(t => t.id === trade.id);
-  if(MICROS.includes(trade.sym)) v.push('MINIS');
+  if(MICROS.includes(trade.sym)) v.push('MICROS');
   if(trade.time){
     const [h,m] = trade.time.split(':').map(Number);
     const mins = h*60+m;
-    if(mins < VENTANA.open || mins > VENTANA.close) v.push('FUERA DE VENTANA');
+    if(mins < VENTANA.open || mins > VENTANA.close) v.push('OUT_OF_WINDOW');
   }
-  if(idx >= 2) v.push('3ER TRADE');
+  if(idx >= 2) v.push('THIRD_TRADE');
   if(idx > 0){
     const prev = dayTrades[idx-1];
-    if((prev.pnl||0) > 0) v.push('OPERÓ TRAS GANAR');
+    if((prev.pnl||0) > 0) v.push('AFTER_WIN');
     if((prev.pnl||0) < 0 && !trade.setupOk) v.push('REVENGE');
   }
-  if(!trade.setupOk && v.indexOf('REVENGE') === -1) v.push('SIN SETUP');
+  if(!trade.setupOk && v.indexOf('REVENGE') === -1) v.push('NO_SETUP');
   return v;
 }
 
@@ -2308,8 +2350,8 @@ function computeScore(){
   if(last.length === 0) return null;
   if(last.length < SCORE_MIN) return { total:null, dims:[], grade:'MUESTRA INSUFICIENTE', n:last.length, min:SCORE_MIN };
   const vioOf = t => violations(t, byDay[t.date]);
-  const risk = last.filter(t => { const v = vioOf(t); return !v.includes('MINIS') && !v.includes('FUERA DE VENTANA') && !v.includes('3ER TRADE'); }).length / last.length;
-  const emo  = last.filter(t => { const v = vioOf(t); return !v.includes('REVENGE') && !v.includes('OPERÓ TRAS GANAR'); }).length / last.length;
+  const risk = last.filter(t => { const v = vioOf(t); return !v.includes('MICROS') && !v.includes('OUT_OF_WINDOW') && !v.includes('THIRD_TRADE'); }).length / last.length;
+  const emo  = last.filter(t => { const v = vioOf(t); return !v.includes('REVENGE') && !v.includes('AFTER_WIN'); }).length / last.length;
   const dec  = last.filter(t => t.setupOk).length / last.length;
   const days = [...new Set(last.map(t=>t.date))];
   const cons = days.filter(d => { const s = S.sessions[d]; return s && (s.pre||[]).filter(Boolean).length >= 5; }).length / days.length;
@@ -2323,7 +2365,7 @@ function computeScore(){
   /* Una violación de riesgo no se promedia: tapa el grado. Antes, cuatro banderas
      en el mes costaban 46 puntos sobre 1000 y el score seguía diciendo INSTITUCIONAL. */
   const graves = new Set(last.flatMap(t => vioOf(t))
-    .filter(x => x==='MINIS' || x==='FUERA DE VENTANA' || x==='LÍMITE DE LA FIRMA' || x==='RIESGO DIARIO EXCEDIDO'));
+    .filter(x => x==='MICROS' || x==='OUT_OF_WINDOW' || x==='FIRM_LIMIT' || x==='DAY_RISK'));
   const tope = graves.size ? 690 : 1000;
   if(total > tope) total = tope;
   const grade = total>=850?'INSTITUCIONAL': total>=700?'PROFESIONAL': total>=500?'EN DESARROLLO':'EN RIESGO';
@@ -3092,7 +3134,7 @@ function renderDashboard(){
   } else {
     const r = 58, C = 2*Math.PI*r, off = C*(1 - sc.total/1000);
     $('#scoreBox').innerHTML = `<div class="score-wrap">
-      ${sc.graves && sc.graves.length ? `<div class="g-banner stop" style="margin:0 0 14px"><b>⚠ Grado topado:</b> <span>${sc.graves.join(' · ')}. Una violación de riesgo no se promedia.</span></div>` : ''}
+      ${sc.graves && sc.graves.length ? `<div class="g-banner stop" style="margin:0 0 14px"><b>⚠ Grado topado:</b> <span>${sc.graves.map(x=>tr('vio.'+x)).join(' · ')}. Una violación de riesgo no se promedia.</span></div>` : ''}
       <div class="score-ring">
         <svg width="132" height="132" viewBox="0 0 132 132">
           <circle cx="66" cy="66" r="${r}" fill="none" stroke="rgba(255,255,255,.07)" stroke-width="6"/>
@@ -3159,17 +3201,17 @@ function renderDashboard(){
 }
 
 function gestionState(dayTr){
-  if(dayTr.length === 0) return { cls:'', msg:'Sin trades hoy. Si el checklist no da setup válido, <b>el mejor trade del día es no operar</b>.' };
+  if(dayTr.length === 0) return { cls:'', msg: tr('ges.sinTrades') };
   const first = dayTr[0];
-  if(dayTr.length === 1 && first.pnl > 0) return { cls:'win', msg:'<b>Trade 1 ganado → día terminado.</b> Se cierra la plataforma. Nada más que demostrar hoy.' };
-  if(dayTr.length === 1 && first.pnl < 0) return { cls:'risk', msg:'<b>Trade 1 perdido → un solo intento más.</b> ÚNICAMENTE con un setup válido nuevo y completo. Nunca revenge.' };
-  if(dayTr.length === 1) return { cls:'', msg:'Trade 1 en libro. Queda 1 bala como máximo.' };
+  if(dayTr.length === 1 && first.pnl > 0) return { cls:'win', msg: tr('ges.gano1') };
+  if(dayTr.length === 1 && first.pnl < 0) return { cls:'risk', msg: tr('ges.perdio1') };
+  if(dayTr.length === 1) return { cls:'', msg: tr('ges.enLibro') };
   if(dayTr.length >= 2){
-    if(dayTr.length > 2) return { cls:'stop', msg:'<b>Límite excedido.</b> El máximo es 2 operaciones por sesión, sin excepciones.' };
+    if(dayTr.length > 2) return { cls:'stop', msg: tr('ges.excedido') };
     /* Antes felicitaba por "sesión completa" un día que la tabla marcaba en rojo. */
     const vs = [...new Set(dayTr.flatMap(t => violations(t, dayTr)))];
-    if(vs.length) return { cls:'stop', msg:`<b>2 trades, pero el día no está limpio:</b> ${vs.join(' · ')}.` };
-    return { cls:'win', msg:'<b>2 trades — sesión completa.</b> Se cierra la plataforma y se documenta.' };
+    if(vs.length) return { cls:'stop', msg:`${tr('ges.sucio')} ${vs.map(x=>tr('vio.'+x)).join(' · ')}.` };
+    return { cls:'win', msg: tr('ges.completa') };
   }
 }
 
@@ -3299,7 +3341,7 @@ function buildReport(){
   lines.push('Trades: ' + dayTr.length + '  ·  P&L del día: ' + fmt$(dPnl,true));
   dayTr.forEach((t,i)=>{
     const v = violations(t, dayTr);
-    lines.push(`${i+1}) ${t.sym} ${t.dir==='L'?'LONG':'SHORT'} x${t.qty} @ ${t.time} → ${fmt$(t.pnl,true)}${t.setupOk?' · setup válido':' · SETUP INCOMPLETO'}${v.length?' · ⚠ '+v.join(', '):''}`);
+    lines.push(`${i+1}) ${t.sym} ${t.dir==='L'?'LONG':'SHORT'} x${t.qty} @ ${t.time} → ${fmt$(t.pnl,true)}${t.setupOk?' · setup válido':' · SETUP INCOMPLETO'}${v.length?' · ⚠ '+v.map(x=>tr('vio.'+x)).join(', '):''}`);
     if(t.notas) lines.push('   ' + t.notas);
   });
   if(!dayTr.length) lines.push('Sin operaciones. El checklist no dio setup válido — el mejor trade del día fue no operar.');
@@ -3410,18 +3452,18 @@ function renderCal(){
   if(!mesActual){
     const futuro = calMes > hoyISO.slice(0,7);
     $('#calPace').innerHTML = futuro
-      ? 'Mes por venir. Todavía no hay nada que reportar.'
-      : `Mes cerrado. ${delMes.length ? `Cerró en <b>${fmt$(pnlMes,true)}</b> sobre una meta de ${fmt$(M.mes)}.` : 'Sin operaciones registradas en este mes.'}`;
+      ? tr('cal.porVenir')
+      : `${tr('cal.cerrado')} ${delMes.length ? `${tr('cal.cerroEn')} <b>${fmt$(pnlMes,true)}</b> ${tr('cal.sobreMeta')} ${fmt$(M.mes)}.` : tr('cal.sinOps')}`;
   } else {
     const restantes = calMatrix(calMes).filter(x => x && esHabil(x) && x >= hoyISO).length;
     const falta = M.mes - pnlMes;
     if(falta <= 0){
-      $('#calPace').innerHTML = `<b>Meta mensual cumplida.</b> Llevas ${fmt$(pnlMes,true)} sobre ${fmt$(M.mes)}. El plan no pide más: pide no devolverlo.`;
+      $('#calPace').innerHTML = `${tr('cal.cumplida')} ${fmt$(pnlMes,true)} / ${fmt$(M.mes)}. ${tr('cal.noDevolver')}`;
     } else if(restantes > 0){
       const porDia = falta / restantes;
-      $('#calPace').innerHTML = `Faltan <b>${fmt$(falta)}</b> para la meta del mes con <b>${restantes}</b> ${restantes===1?'día hábil':'días hábiles'} por delante: <b>${fmt$(porDia)}</b> por día.`;
+      $('#calPace').innerHTML = `${tr('cal.faltan')} <b>${fmt$(falta)}</b> ${tr('cal.paraMeta')} <b>${restantes}</b> ${tr('cal.diasHabiles')} <b>${fmt$(porDia)}</b> ${tr('cal.porDia')}`;
     } else {
-      $('#calPace').innerHTML = `Mes terminado. Cerró en <b>${fmt$(pnlMes,true)}</b> sobre una meta de ${fmt$(M.mes)}.`;
+      $('#calPace').innerHTML = `${tr('cal.cerrado')} ${tr('cal.cerroEn')} <b>${fmt$(pnlMes,true)}</b> ${tr('cal.sobreMeta')} ${fmt$(M.mes)}.`;
     }
   }
 }
@@ -3619,7 +3661,7 @@ function renderJournal(){
         <td class="r mono" style="color:var(--dim)">${t.exit??'—'}</td>
         <td class="r mono ${t.pnl>0?'up':t.pnl<0?'down':''}">${fmt$(t.pnl,true)}</td>
         <td>${t.setupOk?`<span class="tag ok">${tr('j.valido').toUpperCase()}</span>`:`<span class="tag wr">${tr('j.incompleto').toUpperCase()}</span>`}</td>
-        <td>${v.length? v.map(x=>`<span class="tag bad" style="margin:1px 2px 1px 0">${x}</span>`).join('') : `<span class="tag ok">${tr('j.limpio').toUpperCase()}</span>`}</td>
+        <td>${v.length? v.map(x=>`<span class="tag bad" style="margin:1px 2px 1px 0">${tr('vio.'+x).toUpperCase()}</span>`).join('') : `<span class="tag ok">${tr('j.limpio').toUpperCase()}</span>`}</td>
         <td class="r" style="white-space:nowrap">
           <button class="btn-icon" onclick="openTrade('${t.id}')" title="Editar">✎</button>
           <button class="btn-icon" onclick="delTrade('${t.id}')" title="Eliminar">✕</button>
@@ -3657,7 +3699,7 @@ function openTrade(id){
 }
 /* La orden se replica a varias cuentas (copiadora). Sin al menos una, el trade
    quedaría invisible para el journal, el score y los balances: por eso se exige. */
-let tradeAccts = [];
+let tradeAccts = [], pendienteTix = null;
 function renderTradeAccts(pre){
   const cont = $('#tAccts');
   tradeAccts = (pre || []).filter(id => id === SIN_CUENTA || S.accounts.some(a=>a.id===id));
@@ -3719,6 +3761,12 @@ $('#tSave').addEventListener('click', ()=>{
   if(S.accounts.length && !tradeAccts.length){
     toast('Elige al menos una cuenta'); return;
   }
+  if(pendienteTix && !editingTrade){
+    data.tixId = pendienteTix;
+    const tk = S.tickets.find(x => x.id === pendienteTix);
+    if(tk) tk.estado = 'ejecutada';
+    pendienteTix = null;
+  }
   if(editingTrade) Object.assign(editingTrade, data);
   else S.trades.push({ id: uid(), ...data });
   save(); closeOv();
@@ -3729,14 +3777,23 @@ $('#tSave').addEventListener('click', ()=>{
 
 /* export */
 $('#btnExport').addEventListener('click', ()=>{
-  const rows = [['fecha','hora','instrumento','direccion','contratos','entrada','salida','pnl','setup_valido','violaciones','notas']];
+  /* El mismo journal daba cifras distintas según el selector, sin decirlo. Ahora
+     salen las dos escalas: por cuenta y total proyectado, más cuántas cuentas son. */
+  const rows = [['fecha','hora','instrumento','direccion','contratos','cuentas',
+                 'entrada','salida','pnl_por_cuenta','pnl_total','setup_valido','violaciones','notas']];
   const byDay = tradesByDay();
   Object.keys(byDay).sort().forEach(d=> byDay[d].forEach(t=>{
-    rows.push([t.date,t.time,t.sym,t.dir==='L'?'LONG':'SHORT',t.qty,t.entry??'',t.exit??'',t.pnl,t.setupOk?'SI':'NO',violations(t,byDay[d]).join('|'),(t.notas||'').replace(/[\n,]/g,' ')]);
+    const n = t.nAcc || 1, p1 = t.pnl1 != null ? t.pnl1 : t.pnl;
+    rows.push([t.date,t.time,t.sym,t.dir==='L'?'LONG':'SHORT',t.qty,n,
+               t.entry??'',t.exit??'',p1,t.pnl,t.setupOk?'SI':'NO',
+               violations(t,byDay[d]).map(x=>tr('vio.'+x)).join('|'),
+               (t.notas||'').replace(/[\n,]/g,' ')]);
   }));
   const blob = new Blob([rows.map(r=>r.join(',')).join('\n')], {type:'text/csv'});
   const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob); a.download = 'northpoint-journal.csv'; a.click();
+  a.href = URL.createObjectURL(blob);
+  a.download = 'northpoint-journal-' + etiquetaSel().toLowerCase().replace(/[^a-z0-9]+/g,'-') + '.csv';
+  a.click();
   toast('Journal exportado (CSV)');
 });
 
@@ -4397,11 +4454,12 @@ function nivelDe(cap){
   if(cap >= 50000)   return { n:'SEED', r:'12–18%', lock:'Bloqueo 12 meses', f:'Alpha Fund' };
   return { n:'SUB-MÍNIMO', r:'—', lock:'No califica (mín $50k)', f:'—' };
 }
-function nextRebalance(){
-  const now = new Date();
-  const q = [[3,1],[6,1],[9,1],[0,1]]; // Abr, Jul, Oct, Ene
-  for(const [m] of [[3],[6],[9]]) if(now.getMonth() < m) return new Date(now.getFullYear(), m, 1);
-  return new Date(now.getFullYear()+1, 0, 1);
+/* Primer día del siguiente trimestre. La versión anterior se saltaba julio por
+   comparar con "<" sobre una lista que no incluía enero. */
+function nextRebalance(desde = new Date()){
+  const m = desde.getMonth(), y = desde.getFullYear();
+  const sig = (Math.floor(m / 3) + 1) * 3;      // 0,3,6,9 → siguiente múltiplo de 3
+  return sig >= 12 ? new Date(y + 1, 0, 1) : new Date(y, sig, 1);
 }
 
 function renderPosiciones(){
@@ -4749,6 +4807,7 @@ function openOv(id){
   if(f) setTimeout(()=> f.focus(), 40);
 }
 function closeOv(){
+  pendienteTix = null;      // cancelar el modal no debe dejar la tesis ejecutada
   $$('.overlay').forEach(o=>o.classList.remove('on'));
   if(!document.body.classList.contains('locked')) document.querySelector('.app').removeAttribute('inert');
   if(_ovFoco && _ovFoco.focus) try{ _ovFoco.focus(); }catch(e){}
@@ -4850,8 +4909,9 @@ function renderTix(){
   $$('#tixList [data-exec]').forEach(b=> b.onclick = ()=>{
     const t = S.tickets.find(x=>x.id===b.dataset.exec);
     if(!t) return;
-    t.estado = 'ejecutada';
-    save(); renderTix(); updateBadges();
+    /* Antes se marcaba EJECUTADA de inmediato: si el PM cancelaba el modal, la
+       tesis quedaba ejecutada para siempre y sin trade. Ahora espera al guardado. */
+    pendienteTix = t.id;
     location.hash = 'journal';
     setTimeout(()=>{
       $('#btnTrade').click();
@@ -4883,27 +4943,44 @@ $('#xSave').addEventListener('click', ()=>{
 const CLOUD = { url:'', anon:'' };
 let cloudTs = 0, cloudBusy = false;
 const cloudOn = () => !!(CLOUD.url && CLOUD.anon);
+let cloudErr = null;
 function cloudPaint(){
   const p = $('#cloudPill');
   if(!p) return;
-  p.textContent = cloudOn()
-    ? 'NUBE · SINCRONIZADA' + (cloudTs ? ' · ' + new Date(cloudTs).toLocaleTimeString('es-MX',{hour12:false}) : '')
-    : 'NUBE · NO CONECTADA — ESTADO LOCAL (ver docs/CLOUD.md)';
-  p.style.color = cloudOn() ? 'var(--up)' : 'var(--faint)';
+  if(!cloudOn()){
+    p.textContent = 'NUBE · NO CONECTADA — ESTADO LOCAL (ver docs/CLOUD.md)';
+    p.style.color = 'var(--faint)';
+    return;
+  }
+  /* Antes decía SINCRONIZADA con sólo tener la url puesta: los errores se los
+     tragaban los catch y los tres socios podían creer que veían lo mismo. */
+  if(cloudErr){
+    p.textContent = 'NUBE · ERROR ' + cloudErr + ' — ESTADO LOCAL';
+    p.style.color = 'var(--down)';
+    return;
+  }
+  const viejo = cloudTs && (Date.now() - cloudTs > 30000);
+  p.textContent = (viejo ? 'NUBE · SIN RESPUESTA' : 'NUBE · SINCRONIZADA')
+    + (cloudTs ? ' · ' + new Date(cloudTs).toLocaleTimeString('es-MX',{hour12:false}) : '');
+  p.style.color = viejo ? 'var(--warn)' : 'var(--up)';
 }
 async function cloudPush(){
   if(!cloudOn() || cloudBusy) return;
   cloudBusy = true;
   try{
-    const body = { id:1, data:{...S, session:undefined}, updated_at: new Date().toISOString() };
-    await fetch(CLOUD.url + '/rest/v1/northpoint_estado', {
+    /* profile y la selección de cuentas son de cada socio: no viajan al documento común */
+    const compartido = {...S, session:undefined, profile:undefined, ui:undefined, rev:undefined};
+    const body = { id:1, data:compartido, updated_at: new Date().toISOString() };
+    const r = await fetch(CLOUD.url + '/rest/v1/northpoint_estado', {
       method:'POST',
       headers:{ 'apikey':CLOUD.anon, 'Authorization':'Bearer '+CLOUD.anon,
         'Content-Type':'application/json', 'Prefer':'resolution=merge-duplicates' },
       body: JSON.stringify(body)
     });
-    cloudTs = Date.now(); cloudPaint();
-  }catch(e){} finally{ cloudBusy = false; }
+    if(!r.ok) throw new Error(r.status);
+    cloudErr = null; cloudTs = Date.now(); cloudPaint();
+  }catch(e){ cloudErr = (e && e.message) || 'sin red'; cloudPaint(); }
+  finally{ cloudBusy = false; }
 }
 async function cloudPull(){
   if(!cloudOn() || cloudBusy) return;
@@ -4911,6 +4988,7 @@ async function cloudPull(){
     const r = await fetch(CLOUD.url + '/rest/v1/northpoint_estado?id=eq.1&select=data', {
       headers:{ 'apikey':CLOUD.anon, 'Authorization':'Bearer '+CLOUD.anon }
     });
+    if(!r.ok) throw new Error(r.status);
     const rows = await r.json();
     if(rows && rows[0] && rows[0].data){
       const mySession = S.session;
@@ -4921,7 +4999,8 @@ async function cloudPull(){
       cloudTs = Date.now();
       renderAll();
     }
-  }catch(e){}
+    cloudErr = null; cloudPaint();
+  }catch(e){ cloudErr = (e && e.message) || 'sin red'; cloudPaint(); }
 }
 if(cloudOn()) setInterval(cloudPull, 8000);
 /* empujar a la nube en cada save() */
