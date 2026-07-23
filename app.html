@@ -651,17 +651,38 @@ button.tag.quemada{text-decoration:line-through;text-decoration-color:var(--down
 @media (pointer:coarse){ button.tag{min-height:38px;padding:0 12px} }
 
 /* ── Bootcamp · documentos ── */
-.bc-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+.bc-wrap{position:relative}
+.bc-rail{display:flex;gap:16px;overflow-x:auto;scroll-behavior:smooth;
+  scrollbar-width:none;-ms-overflow-style:none;padding:4px 2px 10px;scroll-snap-type:x proximity}
+.bc-rail::-webkit-scrollbar{display:none}
 .bc-card{
-  border:1px solid var(--line-soft);border-radius:14px;background:var(--glass);
-  padding:20px;display:flex;flex-direction:column;gap:8px;
-  box-shadow:inset 0 1px 1px rgba(255,255,255,.08);transition:background .2s,border-color .2s;
+  flex:0 0 380px;max-width:380px;min-height:330px;scroll-snap-align:start;
+  border:1px solid var(--line-soft);border-radius:18px;background:var(--glass);
+  padding:26px 26px 22px;display:flex;flex-direction:column;gap:10px;position:relative;overflow:hidden;
+  box-shadow:inset 0 1px 0 var(--edge);transition:background .2s,border-color .2s,transform .2s;
 }
-.bc-card:hover{background:var(--glass-2);border-color:var(--line)}
-.bc-card .n{font-family:var(--mono);font-size:10px;letter-spacing:.18em;color:var(--accent)}
-.bc-card h3{font-size:16px;font-weight:600}
-.bc-card p{font-size:13px;color:var(--dim);line-height:1.6;flex:1}
-.bc-card .foot{display:flex;align-items:center;gap:12px;margin-top:8px}
+.bc-card:not(.bloq):hover{background:var(--glass-2);border-color:var(--accent-deep);transform:translateY(-3px)}
+.bc-card .n{font-family:var(--mono);font-size:10.5px;letter-spacing:.2em;color:var(--dim)}
+.bc-card .paso{
+  font-family:var(--mono);font-size:44px;font-weight:200;line-height:1;letter-spacing:-.03em;
+  color:var(--txt);opacity:.14;position:absolute;top:18px;right:24px;
+}
+.bc-card h3{font-size:20px;font-weight:600;line-height:1.25;letter-spacing:-.01em;margin-top:2px}
+.bc-card p{font-size:13.5px;color:var(--dim);line-height:1.65;flex:1}
+.bc-card .foot{display:flex;align-items:center;gap:12px;margin-top:10px}
+.bc-card .btn{padding:10px 16px}
+/* bloqueado */
+.bc-card.bloq{background:var(--w015);border-style:dashed}
+.bc-card.bloq h3,.bc-card.bloq p{opacity:.45}
+.bc-card.bloq .paso{opacity:.07}
+.bc-lock{display:flex;align-items:center;gap:9px;margin-top:10px;
+  font-family:var(--mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--faint)}
+.bc-lock svg{width:14px;height:14px;stroke:var(--faint);stroke-width:1.7;fill:none;flex:0 0 auto}
+.bc-card.hecho{border-color:var(--up)}
+.bc-card.hecho .n{color:var(--up)}
+.bc-prog{height:4px;border-radius:99px;background:var(--w07);overflow:hidden;margin-top:4px}
+.bc-prog i{display:block;height:100%;background:var(--txt);border-radius:99px;transition:width .5s ease}
+@media (max-width:640px){ .bc-rail .bc-card{flex-basis:84vw;max-width:84vw;min-height:0} }
 .bc-est{font-family:var(--mono);font-size:9.5px;letter-spacing:.16em}
 .bc-est.si{color:var(--up)}
 .bc-est.no{color:var(--faint)}
@@ -677,7 +698,6 @@ button.tag.quemada{text-decoration:line-through;text-decoration-color:var(--down
 .doc-fig svg{width:100%;min-width:560px;height:auto;display:block}
 .doc-fig figcaption{font-family:var(--mono);font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--faint);text-align:center;padding:10px 0 6px}
 .doc-nav{display:flex;gap:10px;margin-top:30px;flex-wrap:wrap;align-items:center}
-@media (max-width:900px){ .bc-grid{grid-template-columns:1fr} }
 
 /* ── dashboard de la firma ── */
 .firm-head{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;margin-bottom:18px;flex-wrap:wrap}
@@ -1077,6 +1097,11 @@ stop[stop-color="#9BC0DC"]{stop-color:var(--txt)}
           <span class="micro" id="firmDate"></span>
         </div>
 
+        <div class="acct-top" style="margin-bottom:16px">
+          <div id="pickFirma"></div>
+          <span class="micro" id="firmAcctSub"></span>
+        </div>
+
         <div class="grid g4" id="firmKpis"></div>
 
         <div class="grid g2 mt">
@@ -1112,9 +1137,10 @@ stop[stop-color="#9BC0DC"]{stop-color:var(--txt)}
           <div class="p-body">
             <div class="acct-top">
               <div id="pickMesa"></div>
+              <button class="btn sm" id="btnAcctDet" aria-expanded="false" aria-controls="acctTable">Ver detalle</button>
               <button class="btn sm" id="btnAcctMgr">Gestionar</button>
             </div>
-            <div id="acctTable"></div>
+            <div id="acctTable" hidden></div>
             <p class="sr-only" id="acctLive" role="status" aria-live="polite"></p>
           </div>
         </div>
@@ -1967,9 +1993,13 @@ setInterval(tickClock, 1000); tickClock();
 /* ════════ DASHBOARD DE LA FIRMA ════════ */
 const idsTodas = () => new Set([...S.accounts.map(a=>a.id), SIN_CUENTA]);
 function renderFirma(){
-  /* la vista de la firma se le reporta a Pablo y a Mateo: muestra el fondo completo,
-     no la selección de cuentas de quien esté viendo */
-  const R = pnlRanges(idsTodas()), M = metas();
+  renderPicker($('#pickFirma'));
+  const sel = acctsSel(), viva = cuentasVivas();
+  $('#firmAcctSub').textContent = S.accounts.length
+    ? (sel.length === viva.length ? 'TODO EL FONDO · ' + fmt$(capitalVista())
+                                  : sel.length + ' DE ' + viva.length + ' CUENTAS · ' + fmt$(capitalVista()))
+    : '';
+  const R = pnlRanges(), M = metas();
   const ps = S.positions;
   const aum = ps.reduce((a,p)=>a+(p.valor ?? p.capital ?? 0), 0);
   const capSusc = ps.reduce((a,p)=>a+(p.capital||0), 0);
@@ -2394,8 +2424,9 @@ function refrescarSeleccion(){
   const v = location.hash.slice(1) || 'home';
   if(v === 'mesa') renderDashboard();
   else if(v === 'journal') renderJournal();
+  else if(v === 'dashboard') renderFirma();
   else if(v === 'home') renderHome();
-  else { renderPicker($('#pickMesa')); renderPicker($('#pickJournal')); }
+  else { renderPicker($('#pickMesa')); renderPicker($('#pickJournal')); renderPicker($('#pickFirma')); }
 }
 
 function toggleAcct(id){
@@ -2444,6 +2475,8 @@ function renderAcctPanel(){
   if(!S.accounts.length){
     $('#acctSummary').textContent = 'SIN CUENTAS DADAS DE ALTA';
     renderPicker($('#pickMesa'));
+    $('#btnAcctDet').hidden = true;
+    $('#acctTable').hidden = false;
     $('#acctTable').innerHTML = `<div class="empty" style="padding:22px 10px">
       <b>Todavía no hay cuentas</b>
       <p>La mesa opera 5 cuentas de 50k con una copiadora: una orden cae en todas. Da de alta las cuentas para ver el balance y el colchón de cada una.</p>
@@ -2452,12 +2485,19 @@ function renderAcctPanel(){
     const b = $('#acSeedBtn'); if(b) b.onclick = sembrarCuentas;
     return;
   }
+  $('#btnAcctDet').hidden = false;
   const sel = acctsSel(), viva = cuentasVivas();
   const mixta = new Set(sel.map(a=>a.fase)).size > 1;
   $('#acctSummary').innerHTML = `${sel.length} DE ${viva.length} · ${fmt$(capitalVista())}` +
     (mixta ? ' <span class="tag wr">FASES MIXTAS</span>' : '');
   renderPicker($('#pickMesa'));
-  renderAcctTable();
+  const abierto = !!(S.ui && S.ui.acctDet);
+  const tabla = $('#acctTable'), bt = $('#btnAcctDet');
+  tabla.hidden = !abierto;
+  bt.setAttribute('aria-expanded', String(abierto));
+  bt.textContent = abierto ? 'Ocultar detalle' : 'Ver detalle';
+  bt.onclick = ()=>{ S.ui.acctDet = !S.ui.acctDet; save(); renderAcctPanel(); };
+  if(abierto) renderAcctTable();
   const min = sel.map(a=>saludDe(a)).filter(h=>h.colchon!=null).sort((x,y)=>x.colchon-y.colchon)[0];
   $('#acctLive').textContent = `${sel.length} de ${viva.length} cuentas, ${capitalVista()} dólares` +
     (min ? `, colchón mínimo ${Math.round(min.colchon)} dólares` : '');
@@ -3586,20 +3626,56 @@ function renderEstudio(){
   $('#lessonView').hidden = true;
   $('#mods').hidden = false;
 
-  $('#mods').innerHTML = '<div class="bc-grid">' + DOCS.map(m=>{
-    const on = !!S.study.lessons[m.id];
-    return `<div class="bc-card">
-      <span class="n">${m.n} · ${m.secs.length} secciones</span>
-      <h3>${esc(m.t)}</h3>
-      <p>${esc(m.d)}</p>
-      <div class="foot">
-        <button class="btn sm primary" data-doc="${m.id}">Leer documento</button>
-        <span class="bc-est ${on?'si':'no'}">${on?'✓ ESTUDIADO':'PENDIENTE'}</span>
-      </div>
-    </div>`;
-  }).join('') + '</div>';
+  /* El bootcamp se abre en orden: un módulo se desbloquea cuando el anterior
+     quedó marcado como estudiado. El primero siempre está abierto. */
+  const candado = `<svg viewBox="0 0 24 24"><rect x="4.5" y="10.5" width="15" height="10" rx="2"/><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"/></svg>`;
+
+  $('#mods').innerHTML = `<div class="bc-wrap">
+    <button class="rail-arrow izq" id="bcPrev" aria-label="Anterior">‹</button>
+    <div class="bc-rail" id="bcRail" role="list" tabindex="0" aria-label="Módulos del bootcamp">` +
+    DOCS.map((m,i)=>{
+      const on = !!S.study.lessons[m.id];
+      const abierto = i === 0 || !!S.study.lessons[DOCS[i-1].id];
+      const previo = i > 0 ? DOCS[i-1] : null;
+      return `<div class="bc-card${abierto ? (on?' hecho':'') : ' bloq'}" role="listitem"
+                   aria-disabled="${!abierto}">
+        <span class="paso">${String(i+1).padStart(2,'0')}</span>
+        <span class="n">${m.n} · ${m.secs.length} secciones</span>
+        <h3>${esc(m.t)}</h3>
+        <p>${esc(m.d)}</p>
+        ${abierto
+          ? `<div class="foot">
+               <button class="btn primary" data-doc="${m.id}">${on?'Repasar':'Leer documento'}</button>
+               <span class="bc-est ${on?'si':'no'}">${on?'✓ ESTUDIADO':'PENDIENTE'}</span>
+             </div>`
+          : `<div class="bc-lock">${candado}<span>Termina ${esc(previo.n)} para abrirlo</span></div>`}
+      </div>`;
+    }).join('') + `</div>
+    <button class="rail-arrow der" id="bcNext" aria-label="Siguiente">›</button>
+  </div>`;
 
   $$('#mods [data-doc]').forEach(b=> b.onclick = ()=>{ docAbierto = b.dataset.doc; renderEstudio(); $('#content').scrollTop = 0; });
+
+  const rail = $('#bcRail');
+  const paso = dir => { const c = rail.querySelector('.bc-card');
+    rail.scrollLeft += dir * ((c ? c.offsetWidth : 380) + 16); };
+  $('#bcPrev').onclick = ()=> paso(-1);
+  $('#bcNext').onclick = ()=> paso(1);
+  rail.onkeydown = e => {
+    if(e.key==='ArrowRight'){ e.preventDefault(); paso(1); }
+    if(e.key==='ArrowLeft'){ e.preventDefault(); paso(-1); }
+  };
+  rail.addEventListener('wheel', e=>{
+    if(Math.abs(e.deltaY) <= Math.abs(e.deltaX)) return;
+    e.preventDefault(); rail.scrollLeft += e.deltaY;
+  }, { passive:false });
+
+  /* deja a la vista el primero sin terminar: donde se quedó la mesa */
+  const siguiente = DOCS.findIndex(m => !S.study.lessons[m.id]);
+  if(siguiente > 0) requestAnimationFrame(()=>{
+    const c = rail.children[siguiente];
+    if(c) rail.scrollLeft = c.offsetLeft - 4;
+  });
 }
 
 function renderDoc(){
