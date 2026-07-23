@@ -359,7 +359,9 @@ def main():
     hechos = []
     for s in SOCIOS:
         htm = SALIDA / f"_{s['usuario']}.html"
-        pdf = SALIDA / f"NORTHPOINT-{s['nombre']}.pdf"
+        # sin acentos en el nombre: algunos clientes de mensajería rompen la liga
+        slug = s['nombre'].translate(str.maketrans('ÁÉÍÓÚÑáéíóúñ', 'AEIOUNaeioun'))
+        pdf = SALIDA / f"NORTHPOINT-{slug}.pdf"
         htm.write_text(documento(s), encoding='utf-8')
         r = subprocess.run(
             [CHROME, '--headless', '--disable-gpu', '--no-pdf-header-footer',
