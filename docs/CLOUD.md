@@ -1,38 +1,52 @@
 # NORTHPOINT · Nube compartida (la misma mesa para Pablo, Mateo y André)
 
-Hoy el terminal guarda todo en la máquina de cada quien. Con esto, los tres ven y firman
-**la misma** mesa de aprobaciones desde sus propias computadoras. Son unos 10 minutos y
-se hace una sola vez.
+**Estado: conectada.** El backend ya está montado y la app ya apunta a él.
+Falta un solo paso, que tiene que hacer André — está abajo en "Lo único que falta".
 
 ---
 
-## Antes de empezar: por qué la llave sí va en el código
+## Cómo quedó montado
+
+| Qué | Dónde |
+|---|---|
+| Proyecto Supabase | `spotter-ai` (`eskpyntqmioiwvaczpcl`) |
+| Tabla | `northpoint_estado` |
+| Llave en `app.html` | `sb_publishable_…` (publicable, ver abajo) |
+
+**Se reusó el proyecto de SPOTTER en vez de crear uno nuevo.** El plan gratis sólo
+permite 2 proyectos activos y ya estaban ocupados por *Agrofin app* y *spotter-ai*.
+Crear uno nuevo obligaba a pausar alguno; pausar SPOTTER habría tumbado el backend de
+una app que ya está en manos de gente. Un proyecto de Supabase aguanta muchas tablas,
+así que `northpoint_estado` vive junto a `posts` y `profiles` **sin tocarlas**.
+
+Como el proyecto es compartido, la política **no** se conformó con "cualquiera con sesión":
+está restringida a los tres correos de los socios. Un usuario de SPOTTER, aunque tenga
+sesión válida en el mismo proyecto, no puede leer ni escribir la mesa.
+
+---
+
+## Por qué la llave sí va en el código
 
 En Supabase hay dos llaves y se confunden seguido:
 
-| Llave | Va en el navegador | Qué pasa si se filtra |
+| Llave | Va en el navegador | Si se filtra |
 |---|---|---|
-| `anon` / publishable | **Sí, está diseñada para eso** | Nada por sí sola: sólo deja *intentar*, y la política decide |
-| `service_role` | **Nunca** | Acceso total, se salta todas las políticas |
+| `sb_publishable_…` (antes `anon`) | **Sí, está diseñada para eso** — el propio panel dice *"Publishable keys can be safely shared publicly"* | Nada por sí sola: sólo deja *intentar*, y la política decide |
+| `sb_secret_…` (antes `service_role`) | **Nunca** | Acceso total, se salta todas las políticas |
 
-Lo que protege los datos **no es esconder la llave `anon`** — es la política **RLS** de la
-tabla. La versión anterior de este instructivo traía `using (true) with check (true)`, que
-significa *cualquiera con la URL puede leer y borrar la mesa*. Eso sí era un hueco real,
-y es lo que corrige el paso 2.
+Lo que protege los datos no es esconder la llave publicable — es la política RLS.
+**Nunca pegues la `sb_secret_…` en `app.html`.** El repositorio es público.
 
-**Nunca pegues la `service_role` en `app.html`.** El repositorio es público.
+Comprobado desde fuera, sin sesión:
+
+```
+GET  northpoint_estado  → []        (no filtra nada)
+PATCH northpoint_estado → []        (0 filas: no deja escribir)
+```
 
 ---
 
-## Paso 1 · Crear el proyecto
-
-Entra a https://supabase.com → **New project** (el plan gratis alcanza de sobra).
-Nombre: `northpoint`. Guarda la contraseña de la base que te pida; no la vas a necesitar
-para esto, pero sí para administrar después.
-
-## Paso 2 · Crear la tabla con seguridad de verdad
-
-**SQL Editor** → pega esto completo y córrelo:
+## El SQL que se corrió
 
 ```sql
 create table if not exists northpoint_estado (
@@ -41,30 +55,35 @@ create table if not exists northpoint_estado (
   rev        int  not null default 0,
   updated_at timestamptz default now()
 );
-
-insert into northpoint_estado (id, data, rev)
-values (1, '{}'::jsonb, 0)
+insert into northpoint_estado (id, data, rev) values (1, '{}'::jsonb, 0)
 on conflict (id) do nothing;
 
 alter table northpoint_estado enable row level security;
 
--- Sólo alguien con sesión iniciada puede leer o escribir.
--- Sin esto, cualquiera con la URL y la llave pública vería y borraría la mesa.
-drop policy if exists "northpoint rw"      on northpoint_estado;
-drop policy if exists "socios leen"        on northpoint_estado;
-drop policy if exists "socios escriben"    on northpoint_estado;
-
+-- Sólo los tres socios. No basta con tener sesión en el proyecto.
 create policy "socios leen" on northpoint_estado
-  for select to authenticated using (true);
+  for select to authenticated
+  using (auth.jwt() ->> 'email' in
+    ('pablo@northpoint.mx','mateo@northpoint.mx','andre@northpoint.mx'));
 
 create policy "socios escriben" on northpoint_estado
-  for update to authenticated using (true) with check (true);
+  for update to authenticated
+  using (auth.jwt() ->> 'email' in
+    ('pablo@northpoint.mx','mateo@northpoint.mx','andre@northpoint.mx'))
+  with check (auth.jwt() ->> 'email' in
+    ('pablo@northpoint.mx','mateo@northpoint.mx','andre@northpoint.mx'));
 ```
 
-## Paso 3 · Dar de alta a los tres socios
+---
 
-**Authentication → Users → Add user** (elige *Auto Confirm User* para no lidiar con correos).
-Crea exactamente estos tres, cada quien con la contraseña que él elija:
+## Lo único que falta (2 minutos, lo hace André)
+
+Dar de alta a los tres socios. **Yo no lo hago a propósito: implicaría que yo teclee
+las contraseñas de Pablo y de Mateo, y esas claves deben ser suyas, no mías ni tuyas.**
+
+Ve a **Authentication → Users** del proyecto `spotter-ai` y elige uno de los dos caminos:
+
+**Camino A — Add user (lo más rápido).** Marca *Auto Confirm User* y crea:
 
 | Correo | Quién |
 |---|---|
@@ -72,62 +91,47 @@ Crea exactamente estos tres, cada quien con la contraseña que él elija:
 | `mateo@northpoint.mx` | Mateo — CRO + Research |
 | `andre@northpoint.mx` | André — Quant + COO |
 
-> Si prefieren otros correos, cámbialos también en `app.html`, en el campo `correo` de
-> `const USERS`. Lo que debe coincidir es el correo, no el usuario que se teclea al entrar.
+Pon una contraseña temporal y que cada quien la cambie al entrar.
 
-**Cada quien pone su propia contraseña.** Nadie más la escribe, y no queda en el código:
-Supabase la valida del lado del servidor.
+**Camino B — Invite user (más limpio).** Supabase les manda un correo con liga y cada
+quien pone su propia contraseña sin que nadie más la vea. Requiere que esos correos
+existan de verdad; si `@northpoint.mx` no es un dominio tuyo, usa sus correos reales y
+cámbialos también en `app.html`, en el campo `correo` de `const USERS`.
 
-## Paso 4 · Conectar la app
-
-En `app.html` busca:
-
-```js
-const CLOUD = { url:'', anon:'' };
-```
-
-y pega lo que aparece en **Settings → API**:
-
-```js
-const CLOUD = { url:'https://xxxxx.supabase.co', anon:'eyJhbGciOi...' };
-```
-
-Sube el cambio y listo.
+Ya con los usuarios creados, el pill de Aprobaciones pasa de `NUBE · SIN SESIÓN` a
+`NUBE · SINCRONIZADA` en cuanto cada quien entre con su correo.
 
 ---
 
-## Qué cambia al conectarla
+## Qué cambia ahora que está conectada
 
-- **El acceso deja de ser de adorno.** Sin nube, la clave del login sólo separa perfiles y
-  está a la vista en el código. Con nube, la contraseña la valida Supabase y sin sesión
-  válida la política RLS ni siquiera deja leer la mesa.
+- **El acceso deja de ser de adorno.** Las claves `NP-KEY-0X` están a la vista en el
+  código y sólo separaban perfiles. Ahora la contraseña la valida Supabase del lado del
+  servidor, y sin sesión válida la política ni siquiera deja leer la mesa.
 - **Las firmas ya no se pisan.** Cada guardado lleva número de revisión y escribe sólo si
-  nadie tocó la fila desde su última lectura. Si alguien se adelantó, la app **fusiona por
-  id** (trades, tesis, cuentas, posiciones) y reintenta. Las firmas de una misma tesis se
-  suman: Pablo y Mateo pueden firmar al mismo tiempo sin borrarse.
-- **Lo personal no viaja.** Tu perfil y la selección de cuentas se quedan en tu máquina.
-  A la nube sólo sube lo que es de la mesa.
-- **El indicador dice la verdad.** El pill de Aprobaciones muestra `SINCRONIZADA`,
-  `SIN SESIÓN`, `SIN RESPUESTA` o `ERROR <código>` según lo que de verdad esté pasando.
-  Antes decía "sincronizada" con sólo tener la URL puesta, aunque todas las peticiones
-  estuvieran fallando.
+  nadie tocó la fila desde su última lectura. Si alguien se adelantó, la app **fusiona
+  por id** (trades, tesis, cuentas, posiciones) y reintenta. Las firmas de una misma
+  tesis se suman: Pablo y Mateo pueden firmar al mismo tiempo sin borrarse.
+- **Lo personal no viaja.** Tu perfil y tu selección de cuentas se quedan en tu máquina.
+- **El indicador dice la verdad:** `SINCRONIZADA`, `SIN SESIÓN`, `SIN RESPUESTA` o
+  `ERROR <código>` según lo que de verdad esté pasando.
 
 ## Si algo no jala
 
 | Síntoma | Causa casi siempre |
 |---|---|
-| `ERROR 401` | La sesión venció y no pudo renovarse. Cierra sesión y vuelve a entrar. |
-| `ERROR 404` | La tabla no existe o se llama distinto. Vuelve a correr el SQL del paso 2. |
-| `ERROR 42501` | La política RLS no deja. Revisa que corriste las tres `create policy`. |
-| `SIN SESIÓN` | La app tiene la nube configurada pero nadie ha entrado con su correo. |
-| No aparece lo del otro socio | Revisa que los dos vean el mismo proyecto y que ambos entraron con su cuenta. |
+| `SIN SESIÓN` | Todavía no existen los usuarios, o nadie ha entrado con su correo |
+| `ERROR 401` | La sesión venció y no pudo renovarse. Cierra sesión y vuelve a entrar |
+| `ERROR 42501` | El correo con el que entraste no está en la lista de la política |
+| Entra pero no ve nada del otro | Revisa que los dos entraron con su correo, no con la clave local |
 
 ## Lo que sigue faltando
 
 - **No hay historial ni marcha atrás.** Es un documento que se sobrescribe (fusionando).
   Si alguien borra algo por error, se recupera del respaldo local, no de la nube.
 - **La fusión favorece a quien guarda.** En un empate sobre el mismo registro gana la
-  versión local de quien escribe. Para trades y firmas no estorba porque cada quien toca
-  los suyos, pero no es un sistema de control de versiones.
-- **Sigue sin haber roles del lado del servidor.** Cualquiera de los tres puede escribir
-  cualquier cosa; quién puede firmar qué lo decide la app, no la base.
+  versión local de quien escribe.
+- **Los roles siguen siendo cosa de la app.** La base deja escribir a los tres por igual;
+  quién puede firmar qué lo decide el terminal, no Postgres.
+- **El proyecto es compartido con SPOTTER.** Si algún día SPOTTER crece o se separa,
+  vale la pena mover NORTHPOINT a su propio proyecto.
