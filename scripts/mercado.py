@@ -151,16 +151,29 @@ def noticias():
     return out[:24]
 
 
+POR_CANAL = 4      # varios por canal: con 3 canales vivos el muro ya pasa de 10
+
 def videos():
-    """Video más reciente de cada canal.
+    """Los videos más recientes de cada canal.
 
     El RSS de YouTube (feeds/videos.xml) responde 404 desde servidores, así que se
     lee la pestaña /videos del canal y se saca el primer elemento de ytInitialData.
     De ahí salen id, título y antigüedad; la miniatura se arma con el id.
     """
     cfg = json.loads((RAIZ / 'data' / 'canales.json').read_text())
+    # YouTube estrangula el raspado por ráfagas: si un canal falla en esta vuelta se
+    # conserva el que ya se tenía, en vez de borrarlo del muro hasta la próxima.
+    antes = {}
+    if SALIDA.exists():
+        try:
+            for v in json.loads(SALIDA.read_text()).get('videos', []):
+                antes.setdefault(v.get('canalId'), []).append(v)
+        except Exception:
+            pass
     out = []
-    for c in cfg.get('canales', []):
+    for i, c in enumerate(cfg.get('canales', [])):
+        if i:
+            time.sleep(6)          # espaciar: YouTube corta las ráfagas
         try:
             html = baja(f"https://www.youtube.com/channel/{c['id']}/videos", timeout=30)
             m = re.search(r'var ytInitialData = (\{.*?\});</script>', html, re.S)
@@ -169,12 +182,13 @@ def videos():
             datos = json.loads(m.group(1))
         except Exception as err:
             print(f"  ! {c['nombre']}: {err}", file=sys.stderr)
+            out.extend(antes.get(c['id'], []))
             continue
 
         encontrados = []
 
         def recorre(o):
-            if encontrados:
+            if len(encontrados) >= POR_CANAL:
                 return
             if isinstance(o, dict):
                 lv = o.get('lockupViewModel')
@@ -190,26 +204,38 @@ def videos():
         recorre(datos)
         if not encontrados:
             print(f"  ! {c['nombre']}: sin videos en la página", file=sys.stderr)
+            out.extend(antes.get(c['id'], []))
             continue
 
-        lv = encontrados[0]
-        vid = lv['contentId']
-        meta = lv.get('metadata', {}).get('lockupMetadataViewModel', {})
-        titulo = (meta.get('title') or {}).get('content', '').strip()
-        cuando = ''
-        for fila in (meta.get('metadata', {}).get('contentMetadataViewModel', {})
-                         .get('metadataRows', [])):
-            for parte in fila.get('metadataParts', []):
-                t = (parte.get('text') or {}).get('content', '')
-                if t.startswith('hace') or 'ago' in t:
-                    cuando = t
-        out.append({
-            'canal': c['nombre'], 'canalId': c['id'],
-            'id': vid, 'titulo': titulo, 'cuando': cuando,
-            'thumb': f'https://i.ytimg.com/vi/{vid}/hqdefault.jpg',
-            'url': f'https://www.youtube.com/watch?v={vid}',
-        })
-    return out
+        for lv in encontrados:
+            vid = lv['contentId']
+            meta = lv.get('metadata', {}).get('lockupMetadataViewModel', {})
+            titulo = (meta.get('title') or {}).get('content', '').strip()
+            cuando = ''
+            for fila in (meta.get('metadata', {}).get('contentMetadataViewModel', {})
+                             .get('metadataRows', [])):
+                for parte in fila.get('metadataParts', []):
+                    t = (parte.get('text') or {}).get('content', '')
+                    if t.startswith('hace') or 'ago' in t:
+                        cuando = t
+            out.append({
+                'canal': c['nombre'], 'canalId': c['id'],
+                'id': vid, 'titulo': titulo, 'cuando': cuando,
+                'thumb': f'https://i.ytimg.com/vi/{vid}/hqdefault.jpg',
+                'url': f'https://www.youtube.com/watch?v={vid}',
+            })
+
+    # intercalar canales para que el muro no salga en bloques del mismo autor
+    porCanal = {}
+    for v in out:
+        porCanal.setdefault(v['canalId'], []).append(v)
+    mezclado, i = [], 0
+    while any(len(v) > i for v in porCanal.values()):
+        for lista in porCanal.values():
+            if len(lista) > i:
+                mezclado.append(lista[i])
+        i += 1
+    return mezclado
 
 
 def directos():
