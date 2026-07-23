@@ -184,8 +184,6 @@ responde por ella. Con las cuatro, queda aprobada. Sin una sola, no existe.</p>
 <div class="nota"><b>Se firma antes de la sesión, no durante.</b> Una tesis que llega a
 medio mercado ya viene contaminada por el precio. Lo que se opera de 7:00 a 8:30 se
 decidió antes de que abriera.</div>"""
-        cierre_correo = ('<p>Cuando te toque firmar, te va a llegar un correo. No hay '
-                         'excusa de «no me enteré».</p>')
     else:
         intro = (f'{html.escape(s["puerta"])} No te sientas en ninguna de las cuatro '
                  'puertas de firma, y es a propósito: tu trabajo va <b>aguas arriba</b>. '
@@ -200,8 +198,6 @@ vale la pena construir. Lo que produces es la dirección dentro de la cual la me
 convicción que después alguien más firma y ejecuta.</p>
 <div class="nota"><b>Tu ritmo no es el de la ventana.</b> Los que operan viven en los
 noventa minutos de la mañana; tú vives en el trimestre. Las dos cosas se necesitan.</div>"""
-        cierre_correo = ('<p>Aunque tú no firmes, te llega todo: así sabes qué está '
-                         'operando la mesa y en qué dirección, sin tener que preguntar.</p>')
 
     return f"""<!doctype html>
 <html lang="es"><head><meta charset="utf-8"><title>Northpoint · {nombre}</title>
@@ -232,29 +228,13 @@ derecha. Esta hoja trae tu contraseña escrita: no la reenvíes.</div>
 
 {bloque_firma}
 
-<h2>LO QUE TE VA A LLEGAR AL CORREO</h2>
-<p>El terminal avisa solo. No hay que estar entrando a ver si pasó algo:</p>
-<div class="caja">
-  <div class="par"><span class="k">6:20</span><span class="v2">Resumen del overnight, con gráficas y los niveles de la noche</span></div>
-  <div class="par"><span class="k">6:50</span><span class="v2">La ventana abre a las 7:00 — con lo que quedó pendiente de firmar</span></div>
-  <div class="par"><span class="k">7:20</span><span class="v2">El rango de apertura empieza a las 7:30</span></div>
-  <div class="par"><span class="k">8:35</span><span class="v2">Cerró la ventana — los trades del día y si se cumplió la meta</span></div>
-  <div class="par"><span class="k">DÍA 1 Y 16</span><span class="v2">Corte de quincena, con el estado de cada cuenta</span></div>
-</div>
-<p>Y además, en cuanto pasa: una <b>tesis nueva</b> esperando firmas, <b>cada firma</b>
-que se agrega y a quién le toca la siguiente, una tesis <b>lista para ejecutar</b>,
-<b>cada trade</b> que alguien registra con su resultado, y las alertas de riesgo cuando
-una cuenta se acerca a su límite.</p>
-{cierre_correo}
-
 <h2>CÓMO EMPEZAR</h2>
 <ol>
   <li>Abre el terminal en el enlace de arriba y entra con esos datos.</li>
   <li>La primera vez te va a salir un recorrido de un minuto por las pantallas. Hazlo.</li>
   <li>Cambia tu contraseña en Ajustes.</li>
-  <li>Listo. A partir de mañana el correo te llega solo: el resumen del overnight a las
-      6:20, un aviso antes de que abra la ventana, y uno cada vez que alguien firma una
-      tesis o registra un trade.</li>
+  <li>Listo. Entra cada mañana y revisa Aprobaciones: si una tesis espera tu firma,
+      aparece hasta arriba marcada con tu nombre.</li>
 </ol>
 
 <h2>LO QUE NO SE NEGOCIA</h2>

@@ -58,13 +58,13 @@ def baja(url, timeout=25, intentos=4):
         espera *= 2
 
 
+# Huso de la mesa. México ya no cambia horario, así que es UTC-6 todo el año.
+# Si el equipo se mueve de zona, se cambia AQUÍ y en los cron de mercado.yml.
+UTC_MESA = -6
+
+
 def huso_mesa():
-    """Horas a las que opera la mesa. Vive en data/avisos.json para no repetirlo."""
-    try:
-        cfg = json.loads((RAIZ / 'data' / 'avisos.json').read_text())
-        return int(cfg.get('utc_offset', -6))
-    except Exception:
-        return -6
+    return UTC_MESA
 
 
 def calendario():
