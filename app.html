@@ -1812,6 +1812,8 @@ const I18N = {
                   en:'That password does not match the one in the cloud. Check it in Supabase (Authentication → Users).' },
   'lg.sinRed':  { es:'Sin conexión con la nube. Revisa tu internet e inténtalo otra vez.',
                   en:'No connection to the cloud. Check your internet and try again.' },
+  'lg.reconecta': { es:'Vuelve a entrar en este equipo para conectar a la mesa compartida.',
+                    en:'Sign in again on this device to connect to the shared desk.' },
   'lg.malas':     { es:'Credenciales incorrectas. El acceso es solo para socios.',
                     en:'Wrong credentials. Access is for partners only.' },
   'lg.entrando':  { es:'Entrando…',                  en:'Signing in…' },
@@ -5679,7 +5681,16 @@ applyProfile();
 show(location.hash.slice(1) || 'home');
 
 /* portón de acceso: sin sesión válida no hay mesa */
-if(!currentUser()) lockUI();
+if(!currentUser()){
+  lockUI();
+} else if(cloudOn() && !cloudTok){
+  /* Tiene sesión local pero sin token de nube: entró en otro navegador, o el token
+     se perdió. Se le pide reingresar en ESTE equipo para reconectar a la mesa
+     compartida — con el usuario ya escrito, sólo teclea su clave. */
+  lockUI();
+  const uu = S.session && S.session.user;
+  if(uu){ $('#lgUser').value = uu; setTimeout(()=>{ $('#lgErr').textContent = tr('lg.reconecta'); $('#lgPass').focus(); }, 90); }
+}
 if(cloudOn()) cloudPull();
 
 /* QA hook */
