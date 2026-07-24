@@ -5061,6 +5061,7 @@ async function doLogin(){
     return;
   }
   S.session = { user:u };
+  try{ localStorage.setItem('np_last_user', u); }catch(e){}
   S.profile.nombre = usr.nombre;
   S.profile.rol = usr.roles.join(' + ');
   if(!S.profile.metaMes) S.profile.metaMes = 30000;
@@ -5621,13 +5622,11 @@ async function cloudPush(reintento){
 if(cloudOn()) setInterval(cloudPull, 8000);
 if(cloudOn()) cloudPaint();
 
-/* SESIÓN PERSISTENTE. Una vez que entras en este dispositivo, la sesión se guarda
-   (S.session.user + el token de Supabase en np_tok) y el mismo enlace te abre logueado.
-   El token de acceso caduca en una hora, así que se renueva solo:
-   · al arrancar, si hay token guardado, se refresca antes de que el primer pull falle;
-   · cada 45 min mientras la pestaña siga viva, para que nunca expire en uso. */
-if(cloudOn() && cloudTok){
-  cloudRefresh().then(ok => { if(ok){ cloudPaint(); cloudPull(); } });
+/* NO se queda logueado entre aperturas (decisión de André). Cada vez que se abre
+   la app se arranca en el login: nunca queda una sesión a medias sin token de nube,
+   que era lo que causaba el limbo «SIN SESIÓN». El token se renueva solo sólo MIENTRAS
+   la pestaña sigue abierta, para que una jornada larga no expire a media sesión. */
+if(cloudOn()){
   setInterval(() => { if(cloudTok) cloudRefresh().then(r => r && cloudPaint()); }, 45*60*1000);
 }
 /* empujar a la nube en cada save() */
@@ -5680,18 +5679,15 @@ if(__tb) __tb.addEventListener('click', function(){
 applyProfile();
 show(location.hash.slice(1) || 'home');
 
-/* portón de acceso: sin sesión válida no hay mesa */
-if(!currentUser()){
-  lockUI();
-} else if(cloudOn() && !cloudTok){
-  /* Tiene sesión local pero sin token de nube: entró en otro navegador, o el token
-     se perdió. Se le pide reingresar en ESTE equipo para reconectar a la mesa
-     compartida — con el usuario ya escrito, sólo teclea su clave. */
-  lockUI();
-  const uu = S.session && S.session.user;
-  if(uu){ $('#lgUser').value = uu; setTimeout(()=>{ $('#lgErr').textContent = tr('lg.reconecta'); $('#lgPass').focus(); }, 90); }
-}
-if(cloudOn()) cloudPull();
+/* portón de acceso: SIEMPRE se entra desde el login, sin sesión pegada.
+   Se olvida la sesión y el token guardados; se recuerda sólo el usuario para
+   dejarlo escrito, así basta con teclear la contraseña. */
+if(cloudOn()){ cloudTok = null; try{ localStorage.removeItem('np_tok'); }catch(e){} }
+S.session = { user: null };
+lockUI();
+let ultimoUser = '';
+try{ ultimoUser = localStorage.getItem('np_last_user') || ''; }catch(e){}
+if(ultimoUser){ $('#lgUser').value = ultimoUser; setTimeout(()=> $('#lgPass').focus(), 90); }
 
 /* QA hook */
 window.__np = { state: () => S, score: computeScore, report: buildReport };
