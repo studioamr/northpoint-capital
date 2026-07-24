@@ -5618,6 +5618,16 @@ async function cloudPush(reintento){
 }
 if(cloudOn()) setInterval(cloudPull, 8000);
 if(cloudOn()) cloudPaint();
+
+/* SESIÓN PERSISTENTE. Una vez que entras en este dispositivo, la sesión se guarda
+   (S.session.user + el token de Supabase en np_tok) y el mismo enlace te abre logueado.
+   El token de acceso caduca en una hora, así que se renueva solo:
+   · al arrancar, si hay token guardado, se refresca antes de que el primer pull falle;
+   · cada 45 min mientras la pestaña siga viva, para que nunca expire en uso. */
+if(cloudOn() && cloudTok){
+  cloudRefresh().then(ok => { if(ok){ cloudPaint(); cloudPull(); } });
+  setInterval(() => { if(cloudTok) cloudRefresh().then(r => r && cloudPaint()); }, 45*60*1000);
+}
 /* empujar a la nube en cada save() */
 const _save0 = save;
 save = function(){ _save0(); if(cloudOn()) cloudPush(); };
