@@ -6266,12 +6266,69 @@ function dibujaOficina(t){
   }
   const N = ISO.N, MU = ISO.MUR;
 
+  /* ══ LA CALLE · 88 pisos abajo ══
+     Las avenidas van por las DOS caras que da al espectador (x>N y y>N). Puestas
+     con coordenadas negativas se proyectaban arriba y detrás del edificio, que es
+     justo al revés de lo que se quiere ver. */
+  const Z_CALLE = -6, ANCHO = 4.6;
+  losa(c, -1, -1, Z_CALLE, '#39404A', N + 1 + ANCHO + 2, N + 1 + ANCHO + 2);   // asfalto
+  losa(c, -1, -1, Z_CALLE + .05, '#8A929C', N + 2.4, N + 2.4);                 // banqueta de la manzana
+  losa(c, -.4, -.4, Z_CALLE + .07, '#7E868F', N + 1.2, N + 1.2);
+  // rayas de los carriles, en las dos avenidas
+  for(let u = -1; u < N + 5; u += 1.6){
+    losa(c, u, N + 2.2, Z_CALLE + .06, 'rgba(236,226,152,.55)', .85, .11);
+    losa(c, N + 2.2, u, Z_CALLE + .06, 'rgba(236,226,152,.55)', .11, .85);
+  }
+
+  const coche = (x, y, col, horiz, dir) => {
+    const L = horiz ? 1.6 : .8, A = horiz ? .8 : 1.6;
+    caja(c, x, y, Z_CALLE + .1, L, A, .46, col, 22, -30);
+    caja(c, x + (horiz ? .34 : .13), y + (horiz ? .13 : .34), Z_CALLE + .56,
+         horiz ? .86 : .54, horiz ? .54 : .86, .28, mez(col, -18), 14, -22);
+    // faros: blancos al frente, rojos atrás
+    const hx = horiz ? x + (dir > 0 ? L : 0) : x + .4;
+    const hy = horiz ? y + .4 : y + (dir > 0 ? A : 0);
+    const fx = iX(hx, hy), fy = iY(hx, hy, Z_CALLE + .34);
+    const g = c.createRadialGradient(fx, fy, 1, fx, fy, 30);
+    g.addColorStop(0, dir > 0 ? 'rgba(255,240,196,.55)' : 'rgba(255,96,80,.5)');
+    g.addColorStop(1, 'rgba(255,240,196,0)');
+    c.fillStyle = g; c.beginPath(); c.arc(fx, fy, 30, 0, 7); c.fill();
+  };
+  const TRAF = [
+    { c:'#C4483E', v:0.00040, off:0.05, h:true,  dir: 1, carril:N + 1.5 },
+    { c:'#EDE7DA', v:0.00032, off:0.42, h:true,  dir: 1, carril:N + 1.5 },
+    { c:'#E8B04A', v:0.00048, off:0.72, h:true,  dir:-1, carril:N + 3.0 },   // taxi
+    { c:'#2E3A4C', v:0.00036, off:0.20, h:false, dir: 1, carril:N + 1.5 },
+    { c:'#4A6E8A', v:0.00044, off:0.60, h:false, dir:-1, carril:N + 3.0 },
+    { c:'#8E9AA8', v:0.00029, off:0.88, h:false, dir: 1, carril:N + 1.5 },
+  ];
+  TRAF.forEach(car => {
+    const largo = N + 7;
+    let f = (t * car.v + car.off) % 1;
+    if(car.dir < 0) f = 1 - f;
+    const u = -1.5 + f * largo;
+    if(car.h) coche(u, car.carril, car.c, true, car.dir);
+    else      coche(car.carril, u, car.c, false, car.dir);
+  });
+  /* farolas en la banqueta, mirando a la avenida */
+  for(let u = 0; u < N + 1; u += 3.6){
+    [[u, N + .7], [N + .7, u]].forEach(([lx, ly]) => {
+      const bx = iX(lx, ly), by = iY(lx, ly, Z_CALLE + .1);
+      c.strokeStyle = '#59616B'; c.lineWidth = 2.6;
+      c.beginPath(); c.moveTo(bx, by); c.lineTo(bx, by - 52); c.stroke();
+      const g2 = c.createRadialGradient(bx, by - 52, 1, bx, by - 52, 40);
+      g2.addColorStop(0, 'rgba(255,232,168,.5)'); g2.addColorStop(1, 'rgba(255,232,168,0)');
+      c.fillStyle = g2; c.beginPath(); c.arc(bx, by - 52, 40, 0, 7); c.fill();
+      c.fillStyle = '#FFEBBC'; c.beginPath(); c.arc(bx, by - 52, 3.6, 0, 7); c.fill();
+    });
+  }
+
   /* ── nuestra torre: el mismo volumen del despacho, extruido hacia abajo ──
      Antes era una fachada plana de frente pegada a un cuarto isométrico: las dos
      perspectivas se peleaban y la oficina parecía flotar sobre un cartel. Ahora la
      torre es una caja isométrica que comparte planta con el despacho, así que el
      penthouse se lee como lo que es: el último piso de este edificio. */
-  const PROF = 9;                                    // pisos visibles hacia abajo
+  const PROF = 6;                                    // pisos visibles hasta la calle
   const caraTorre = (lado, fn) => {
     c.save();
     if(lado === 'der') c.setTransform(-ISO.TW/2, ISO.TH/2, 0, -ISO.TZ, iX(ISO.N, 0), iY(ISO.N, 0, 0));
@@ -6391,6 +6448,32 @@ function dibujaOficina(t){
   c.fillStyle = 'rgba(70,90,110,.42)';
   c.fillText('POST · qué salió bien / qué no', 8, 15 + 8 * 13 + 6);
   c.restore();
+  /* muro de pantallas: seis monitores con velas, como en una mesa de verdad */
+  enMuro(c, 'izq', c2 => {
+    c2.fillStyle = '#1A2028'; c2.fillRect(5.6, 2.2, 4.0, 2.3);
+    for(let g = 0; g < 6; g++){
+      const gx = 5.72 + (g % 3) * 1.30, gy = 2.32 + Math.floor(g / 3) * 1.12;
+      c2.fillStyle = '#0B131C'; c2.fillRect(gx, gy, 1.16, .98);
+      for(let k = 0; k < 9; k++){
+        const f = (Math.sin((k + g * 3) * 1.7 + t / 900) + 1) / 2;
+        const alto = .08 + f * .62, sube = f > .5;
+        c2.fillStyle = sube ? 'rgba(87,199,155,.9)' : 'rgba(222,106,95,.9)';
+        c2.fillRect(gx + .09 + k * .115, gy + .82 - alto, .062, alto);
+      }
+      c2.fillStyle = 'rgba(155,192,220,.28)'; c2.fillRect(gx, gy, 1.16, .05);
+    }
+    c2.fillStyle = '#2A323C'; c2.fillRect(5.6, 2.2, 4.0, .1);
+    /* cinta de cotizaciones bajo las pantallas */
+    c2.fillStyle = '#0E1620'; c2.fillRect(5.6, 4.62, 4.0, .3);
+    const desfile = (t / 22) % 200;
+    for(let k = 0; k < 12; k++){
+      const px2 = 5.7 + ((k * .95 + 200 - desfile * .02) % 4.2);
+      if(px2 > 9.4) continue;
+      c2.fillStyle = k % 3 === 0 ? 'rgba(87,199,155,.85)' : (k % 3 === 1 ? 'rgba(222,106,95,.85)' : 'rgba(200,214,228,.7)');
+      c2.fillRect(px2, 4.72, .52, .12);
+    }
+  });
+
   // el nombre de la casa, rotulado sobre el muro izquierdo
   const mk = { x: iX(0, 6.0), y: iY(0, 6.0, 4.55) };
   c.save(); c.translate(mk.x, mk.y); c.transform(1, .5, 0, 1, 0, 0);
@@ -6445,6 +6528,42 @@ function dibujaOficina(t){
       c2.fillStyle = dy < -30 ? '#4C9E68' : '#3E8A5C'; c2.fill(); });
   });
   add(9.0, c2 => caja(c2, .35, 8.6, 0, 1.2, .85, 1.35, '#EEF1F4', 12, -24));  // credenza
+  /* torre de servidores: la infraestructura de la mesa */
+  add(1.4, c2 => {
+    caja(c2, .35, .35, 0, .9, .9, 3.0, '#20252C', 10, -26);
+    for(let k = 0; k < 9; k++){
+      const ly = iY(.8, .8, .3 + k * .3);
+      c2.fillStyle = k % 3 === 0 ? '#57C79B' : (k % 4 === 0 ? '#DE6A5F' : '#3A4450');
+      c2.fillRect(iX(.8, .8) - 13, ly, 5, 3);
+      c2.fillStyle = 'rgba(155,192,220,.5)'; c2.fillRect(iX(.8, .8) - 5, ly, 12, 1.5);
+    }
+  });
+  /* papeles, tazas y un teléfono de mesa */
+  add(10.6, c2 => {
+    losa(c2, 5.9, 6.5, .94, '#FFFFFF', .42, .3);
+    losa(c2, 5.98, 6.56, .95, 'rgba(120,150,180,.35)', .26, .04);
+    losa(c2, 5.98, 6.64, .95, 'rgba(120,150,180,.28)', .3, .04);
+    c2.fillStyle = '#FFFFFF'; c2.beginPath();
+    c2.ellipse(iX(6.9, 6.4), iY(6.9, 6.4, .95), 7, 4, 0, 0, 7); c2.fill();
+    c2.fillStyle = '#6B4A32'; c2.beginPath();
+    c2.ellipse(iX(6.9, 6.4), iY(6.9, 6.4, .95), 5, 2.8, 0, 0, 7); c2.fill();
+    caja(c2, 7.7, 6.5, .93, .42, .3, .12, '#252A32', 12, -22);
+  });
+  /* reloj de pared con la hora de Nueva York */
+  add(2.2, c2 => {
+    const rx = iX(2.6, 0), ry = iY(2.6, 0, 5.2);
+    c2.fillStyle = '#FFFFFF'; c2.beginPath(); c2.arc(rx, ry, 17, 0, 7); c2.fill();
+    c2.strokeStyle = '#2A3540'; c2.lineWidth = 2; c2.beginPath(); c2.arc(rx, ry, 17, 0, 7); c2.stroke();
+    const ny = new Date(Date.now() - 2 * 3600 * 1000);   // Morelia + 2 = Nueva York
+    const hh = (ny.getHours() % 12) / 12 * 6.283 - 1.571;
+    const mm = ny.getMinutes() / 60 * 6.283 - 1.571;
+    c2.strokeStyle = '#1E2733'; c2.lineWidth = 2.6;
+    c2.beginPath(); c2.moveTo(rx, ry); c2.lineTo(rx + Math.cos(hh) * 8, ry + Math.sin(hh) * 8); c2.stroke();
+    c2.lineWidth = 1.8;
+    c2.beginPath(); c2.moveTo(rx, ry); c2.lineTo(rx + Math.cos(mm) * 12, ry + Math.sin(mm) * 12); c2.stroke();
+    c2.fillStyle = 'rgba(50,70,95,.6)'; c2.font = '7px "IBM Plex Mono", monospace'; c2.textAlign = 'center';
+    c2.fillText('NY', rx, ry + 27);
+  });
 
   /* ══ ENTRESUELO en L, con barandal de cristal ══ */
   for(let x = 0; x < N; x++) for(let y = 0; y < N; y++){
