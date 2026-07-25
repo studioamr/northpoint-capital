@@ -847,7 +847,23 @@ button.tag.quemada{text-decoration:line-through;text-decoration-color:var(--down
 /* ── Gabinete de agentes IA ── */
 .ag-modo .ag-pill{font-family:var(--mono);font-size:9.5px;letter-spacing:.14em;color:var(--warn);
   border:1px solid var(--line);border-radius:99px;padding:5px 11px}
-.ag-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px}
+.ag-grid{margin-bottom:16px}
+.eq-tira{overflow:hidden;position:relative;padding:4px 0;
+  -webkit-mask-image:linear-gradient(90deg,transparent,#000 5%,#000 95%,transparent);
+          mask-image:linear-gradient(90deg,transparent,#000 5%,#000 95%,transparent)}
+.eq-pista{display:flex;gap:12px;width:max-content;animation:eqRueda 46s linear infinite}
+.eq-tira:hover .eq-pista{animation-play-state:paused}
+@keyframes eqRueda{ from{transform:translateX(0)} to{transform:translateX(-50%)} }
+.eq-card{flex:none;width:132px;background:var(--panel-bg);border:1px solid var(--line);
+  border-radius:12px;padding:14px 10px;display:flex;flex-direction:column;align-items:center;
+  gap:7px;cursor:pointer;transition:border-color .2s,transform .2s;text-align:center}
+.eq-card:hover{border-color:var(--accent);transform:translateY(-2px)}
+.eq-cara{width:72px;height:72px;border-radius:50%;image-rendering:pixelated;
+  border:2px solid var(--line);object-fit:cover}
+.eq-card:hover .eq-cara{border-color:var(--accent)}
+.eq-nom{font-family:var(--mono);font-size:11.5px;font-weight:600;letter-spacing:.04em;color:var(--txt)}
+.eq-cargo{font-size:9.5px;color:var(--faint);line-height:1.35}
+@media (prefers-reduced-motion:reduce){ .eq-pista{animation:none} }
 .ag-card{border:1px solid var(--line);border-radius:13px;background:var(--panel-bg);padding:16px}
 .ag-card.ceo{border-color:var(--accent);background:rgba(155,192,220,.06)}
 .ag-top{display:flex;gap:11px;align-items:center;margin-bottom:10px}
@@ -1356,7 +1372,7 @@ stop[stop-color="#9BC0DC"]{stop-color:var(--txt)}
         </div>
         <div class="ag-grid" id="agGrid"></div>
         <div class="ag-oficina-wrap">
-          <canvas id="agOficina" width="1600" height="1040" aria-label="La oficina de Northpoint — piso 88, Nueva York"></canvas>
+          <canvas id="agOficina" width="1600" height="1260" aria-label="La oficina de Northpoint — piso 88, Nueva York"></canvas>
           <div class="ofi-pista" data-i18n="ag.pista">Pícale a cualquiera para ver en qué te puede ayudar</div>
         </div>
         <div id="agDetalle"></div>
@@ -6071,6 +6087,43 @@ function enMuro(c, lado, fn){
   fn(c); c.restore();
 }
 
+/* Retrato de un agente: la misma cara del pixel-art, recortada en círculo para
+   la tira del equipo. Se dibuja una vez y se guarda como imagen. */
+const CARAS = {};
+function caraAgente(nom, px = 96){
+  if(CARAS[nom]) return CARAS[nom];
+  const L = OFI.look[nom]; if(!L) return '';
+  const cv = document.createElement('canvas'); cv.width = px; cv.height = px;
+  const c = cv.getContext('2d'); c.imageSmoothingEnabled = false;
+  const g = c.createLinearGradient(0, 0, 0, px);
+  g.addColorStop(0, mez(L.traje, 30)); g.addColorStop(1, L.traje);
+  c.fillStyle = g; c.fillRect(0, 0, px, px);
+  const k = px / 22;                       // la cabeza mide ~15 unidades de ancho
+  c.save(); c.translate(px/2, px * .62); c.scale(k, k);
+  const P = (x, y, w, h, col) => { c.fillStyle = col; c.fillRect(x, y, w, h); };
+  P(-7, -10, 14, 13.5, L.piel);                                   // cabeza
+  P(-7.5, -6.6, .9, 4.2, L.piel); P(6.6, -6.6, .9, 4.2, L.piel);  // orejas
+  if(L.greñas){ P(-7.6, -11.8, 15.2, 5, L.pelo); P(-8.2, -9.4, 1.5, 3.2, L.pelo); P(6.7, -9.8, 1.7, 3.6, L.pelo); }
+  else if(L.capucha){ P(-7, -11.2, 14, 3.8, L.pelo); }
+  else { P(-7.1, -11.4, 14.2, 4.4, L.pelo); }
+  if(L.canas) P(-7.1, -11.4, 14.2, 1.5, '#D8DCE0');
+  if(L.barba) P(-5, -1.2, 10, 4.4, mez(L.pelo, 16));
+  if(L.lentes){ P(-5.4, -5.2, 4.6, 3.5, '#15191F'); P(.8, -5.2, 4.6, 3.5, '#15191F'); P(-.8, -3.9, 1.6, .8, '#15191F'); }
+  else {
+    P(-4.5, -4.8, 2.2, 2.6, '#1B1B1B'); P(2.3, -4.8, 2.2, 2.6, '#1B1B1B');
+    if(L.cara === 'ceño'){ P(-4.9, -6.4, 3, 1.1, mez(L.pelo, 10)); P(1.9, -6.4, 3, 1.1, mez(L.pelo, 10)); }
+    if(L.cara === 'sabio'){ P(-5, -6.2, 3.2, .9, '#C9CDD2'); P(1.8, -6.2, 3.2, .9, '#C9CDD2'); }
+  }
+  P(-1.9, -.6, 3.8, L.cara === 'ceño' ? .8 : 1.2, '#A87560');
+  if(L.cara === 'curioso') P(1.1, -.6, 2.5, 1.1, '#A87560');
+  P(-6, 3.4, 12, 5, L.traje);                                     // hombros
+  P(-1.6, 3.4, 3.2, 5, L.camisa);
+  if(L.corbata) P(-.9, 3.8, 1.8, 4.6, L.ac);
+  c.restore();
+  CARAS[nom] = cv.toDataURL();
+  return CARAS[nom];
+}
+
 /* ── avatar estilo Habbo: cabeza grande, cuerpo compacto, carácter propio ── */
 function figura(c, s, habla, t){
   const L = OFI.look[s.n]; if(!L) return;
@@ -6178,12 +6231,12 @@ function dibujaOficina(t){
   const c = cv.getContext('2d');
   c.setTransform(1,0,0,1,0,0);
   c.imageSmoothingEnabled = false;
-  const W = 1600, H = 1040;
+  const W = 1600, H = 1260;
   c.clearRect(0, 0, W, H);
   /* ── cielo de Nueva York al atardecer ── */
-  const cielo = c.createLinearGradient(0, 0, 0, 620);
-  cielo.addColorStop(0, '#1E3357'); cielo.addColorStop(.45, '#4E6A8E');
-  cielo.addColorStop(.78, '#9BA8B8'); cielo.addColorStop(1, '#D8DEE6');
+  const cielo = c.createLinearGradient(0, 0, 0, 760);
+  cielo.addColorStop(0, '#16294A'); cielo.addColorStop(.3, '#3E5A80');
+  cielo.addColorStop(.52, '#8496AC'); cielo.addColorStop(.62, '#C8D2DE'); cielo.addColorStop(1, '#DDE3EA');
   c.fillStyle = cielo; c.fillRect(0, 0, W, H);
   const rr = i => ((Math.sin(i * 12.9898) * 43758.5453) % 1 + 1) % 1;
   for(let i = 0; i < 70; i++){                       // estrellas altas
@@ -6192,7 +6245,7 @@ function dibujaOficina(t){
   }
   /* ── skyline lejano: la ciudad muy abajo ── */
   for(let capa = 0; capa < 3; capa++){
-    const base = 300 + capa * 46, alpha = .2 + capa * .22;
+    const base = 340 + capa * 46, alpha = .2 + capa * .22;
     for(let i = 0; i < 26; i++){
       const bx = (i * (W / 26)) - 20 + rr(i + capa*40) * 22;
       const bw = W / 26 * (.6 + rr(i + capa*7) * .5);
@@ -6227,6 +6280,28 @@ function dibujaOficina(t){
     }
   }
   c.fillStyle = 'rgba(20,34,54,.16)'; c.fillRect(torreX0, piso, torreX1 - torreX0, 10);
+  /* coronamiento de la torre: cornisa, letrero y el número de piso */
+  c.fillStyle = '#9FAEBE'; c.fillRect(torreX0 - 14, piso - 4, (torreX1 - torreX0) + 28, 16);
+  c.fillStyle = '#8B9BAC'; c.fillRect(torreX0 - 14, piso + 8, (torreX1 - torreX0) + 28, 5);
+  // el letrero de la casa, iluminado
+  const lw = 430, lx = ISO.ox - lw/2, ly = piso + 30;
+  c.fillStyle = 'rgba(12,20,34,.9)'; c.fillRect(lx, ly, lw, 62);
+  c.fillStyle = 'rgba(155,192,220,.5)'; c.fillRect(lx, ly, lw, 2); c.fillRect(lx, ly + 60, lw, 2);
+  const brillo = .78 + Math.sin(t / 1400) * .12;
+  c.save(); c.textAlign = 'center';
+  c.shadowColor = `rgba(155,192,220,${brillo})`; c.shadowBlur = 22;
+  c.fillStyle = '#EAF2F8'; c.font = 'bold 30px "IBM Plex Mono", monospace';
+  c.fillText('NORTHPOINT', ISO.ox, ly + 34);
+  c.shadowBlur = 0;
+  c.fillStyle = 'rgba(190,214,232,.75)'; c.font = '12px "IBM Plex Mono", monospace';
+  c.fillText('C A P I T A L   M A N A G E M E N T', ISO.ox, ly + 52);
+  c.restore();
+  // placa del piso, sobre la cornisa
+  c.fillStyle = 'rgba(12,20,34,.75)'; c.fillRect(torreX1 - 116, piso - 46, 104, 34);
+  c.textAlign = 'center'; c.fillStyle = '#CFE0EC';
+  c.font = 'bold 19px "IBM Plex Mono", monospace'; c.fillText('88', torreX1 - 64, piso - 28);
+  c.font = '8.5px "IBM Plex Mono", monospace'; c.fillStyle = 'rgba(190,214,232,.6)';
+  c.fillText('PISO', torreX1 - 64, piso - 38);
   const N = ISO.N, MU = ISO.MUR;
 
   /* ══ MURO DERECHO · ventanal de piso a techo ══ */
@@ -6270,6 +6345,10 @@ function dibujaOficina(t){
     c.fillStyle = 'rgba(30,45,70,.06)'; c.fillRect(0, MU - .18, N, .18);
     c.fillStyle = '#FFFFFF'; c.fillRect(1.0, 3.5, 4.2, 2.9);           // tablero
     c.fillStyle = '#E2E7EC'; c.fillRect(1.0, 3.5, 4.2, .1);
+    // marca de la casa en el muro
+    c.fillStyle = '#1E3A52'; c.fillRect(6.0, 4.2, 3.4, .34);
+    c.fillStyle = 'rgba(70,110,150,.5)'; c.fillRect(6.0, 4.62, 2.2, .12);
+    c.fillStyle = '#9BC0DC'; c.fillRect(6.0, 5.0, .34, .34);
   });
   // el texto del tablero, inclinado con el muro pero legible
   const pz = { x: iX(0, 1.0), y: iY(0, 1.0, 6.4) };
@@ -6288,6 +6367,15 @@ function dibujaOficina(t){
   });
   c.fillStyle = 'rgba(70,90,110,.42)';
   c.fillText('POST · qué salió bien / qué no', 8, 15 + 8 * 13 + 6);
+  c.restore();
+  // el nombre de la casa, rotulado sobre el muro izquierdo
+  const mk = { x: iX(0, 6.0), y: iY(0, 6.0, 4.55) };
+  c.save(); c.translate(mk.x, mk.y); c.transform(1, .5, 0, 1, 0, 0);
+  c.textAlign = 'left';
+  c.fillStyle = '#1E3A52'; c.font = 'bold 22px "IBM Plex Mono", monospace';
+  c.fillText('NORTHPOINT', 8, 0);
+  c.fillStyle = 'rgba(70,110,150,.6)'; c.font = '9px "IBM Plex Mono", monospace';
+  c.fillText('CAPITAL MANAGEMENT', 9, 15);
   c.restore();
 
   /* ══ PISO · mármol blanco ══ */
@@ -6365,12 +6453,20 @@ function dibujaOficina(t){
   for(let y = 3; y < N; y++) cristal(2.92, y, .08, 1);
   for(let x = 3; x < N; x++) cristal(x, 2.92, 1, .08);
   // escritorios del entresuelo con su monitor
-  const puesto = (x, y, w, h) => {
+  const puesto = (x, y, w, h, semilla) => {
     caja(c, x, y, ISO.MEZ, w, h, .88, '#FBFCFD', 10, -22);
     caja(c, x + w*.5 - .3, y + .1, ISO.MEZ + .88, .6, .09, .5, '#20242A');
-    losa(c, x + w*.5 - .28, y + .12, ISO.MEZ + 1.38, '#3A6E8A', .56, .06);
+    // la pantalla, con velas que se mueven: es una mesa de trading
+    const px0 = iX(x + w*.5 - .28, y + .12), py0 = iY(x + w*.5 - .28, y + .12, ISO.MEZ + 1.38);
+    losa(c, x + w*.5 - .28, y + .12, ISO.MEZ + 1.38, '#0E1A24', .56, .06);
+    for(let k = 0; k < 7; k++){
+      const f = ((Math.sin((k + semilla) * 2.3 + t / 1100) + 1) / 2);
+      const alto = 4 + f * 13, sube = f > .5;
+      c.fillStyle = sube ? 'rgba(87,199,155,.95)' : 'rgba(222,106,95,.95)';
+      c.fillRect(px0 + 6 + k * 6, py0 - 6 - alto/2, 3.2, alto);
+    }
   };
-  puesto(.45, 4.5, 1.5, .85); puesto(.45, 6.9, 1.5, .85); puesto(4.6, .45, .85, 1.5);
+  puesto(.45, 4.5, 1.5, .85, 0); puesto(.45, 6.9, 1.5, .85, 3); puesto(4.6, .45, .85, 1.5, 6);
   // librero blanco contra el muro
   caja(c, .05, 1.1, ISO.MEZ, .5, 1.5, 1.9, '#FFFFFF', 8, -20);
   ['#8FB4CE','#C4A47C','#9EC4A8','#C49AA4'].forEach((col, i) =>
@@ -7097,35 +7193,17 @@ function renderAgentes(){
   }
   $('#agModo').innerHTML = `<span class="ag-pill">${tr('ag.guionado')}</span>`;
 
-  grid.innerHTML = GABINETE.map(a => {
-    const v = paramVal(a);
-    const ctrl = a.param ? `
-      <div class="ag-param">
-        <div class="ag-param-h"><span>${esc(a.param.label)}</span><b id="agv_${a.id}">${v}</b></div>
-        <input type="range" min="${a.param.min}" max="${a.param.max}" value="${v}" data-ag="${a.id}" class="ag-slider">
-        <div class="ag-param-ends"><span>${esc(a.param.izq)}</span><span>${esc(a.param.der)}</span></div>
-      </div>` : `<div class="ag-ceo">${tr('ag.ceo')}</div>`;
-    const E = entrenamiento(a.nom);
-    const form = E.secs.length ? `<div class="ag-form">
-        <span class="ag-form-l">${tr('ag.entrenado')}</span>
-        <b>${E.secs.length} ${tr('ag.secciones')}</b> · ${esc(E.foco)}
-        <div class="ag-form-s">${E.secs.slice(0,3).map(x=>esc(x.h)).join(' · ')}${E.secs.length>3?' …':''}</div>
-      </div>` : '';
-    return `<div class="ag-card${a.id==='atlas'?' ceo':''}">
-      <div class="ag-top"><span class="ag-ava">${esc(a.ini)}</span>
-        <div><div class="ag-nom">${esc(a.nom)}</div><div class="ag-cargo">${esc(a.cargo)} · ${a.codigo}</div></div></div>
-      <p class="ag-bio">${esc(a.bio)}</p>
-      ${form}
-      ${ctrl}
-    </div>`;
-  }).join('');
-
-  grid.querySelectorAll('.ag-slider').forEach(s => s.addEventListener('input', () => {
-    const id = s.dataset.ag, v = +s.value;
-    gabineteDe()[id] = { val:v };
-    $('#agv_'+id).textContent = v;
-    save();
-  }));
+  /* Tira horizontal en bucle: la cara, el nombre y el puesto. Se duplica el juego
+     para que el desplazamiento no tenga costura, y se detiene al pasar el cursor. */
+  const tarjeta = a => `<button class="eq-card" data-ag="${esc(a.nom)}" title="${esc(a.cargo)}">
+      <img class="eq-cara" src="${caraAgente(a.nom)}" alt="${esc(a.nom)}" width="72" height="72">
+      <span class="eq-nom">${esc(a.nom)}</span>
+      <span class="eq-cargo">${esc(a.cargo)}</span>
+    </button>`;
+  grid.innerHTML = `<div class="eq-tira"><div class="eq-pista" id="eqPista">
+      ${GABINETE.map(tarjeta).join('')}${GABINETE.map(tarjeta).join('')}
+    </div></div>`;
+  grid.querySelectorAll('[data-ag]').forEach(b => b.onclick = () => abreAgente(b.dataset.ag));
 
   cargarAgChat().then(doc => {
     ofiJunta = doc.junta || [];      // la oficina habla la junta real
