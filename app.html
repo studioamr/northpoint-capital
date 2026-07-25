@@ -892,6 +892,19 @@ button.tag.quemada{text-decoration:line-through;text-decoration-color:var(--down
 .ag-msg-h span{font-size:9.5px;color:var(--faint)}
 .ag-msg-h i{font-family:var(--mono);font-size:9.5px;color:var(--faint);margin-left:auto;font-style:normal}
 .ag-msg-c p{font-size:13px;line-height:1.62;color:var(--dim);overflow-wrap:anywhere}
+.marc{border:1px solid var(--line);border-radius:13px;padding:17px 19px;margin-bottom:16px;background:var(--panel-bg)}
+.marc-h{display:flex;align-items:baseline;gap:12px;margin-bottom:9px}
+.marc-n{font-size:26px;font-weight:300;margin-left:auto}
+.marc-n.mal{color:var(--down)} .marc-n.bien{color:var(--up)}
+.marc-p{font-size:12.5px;color:var(--dim);line-height:1.6}
+.marc-ver{font-size:12.5px;color:var(--down);margin-top:8px;line-height:1.55}
+.marc-ver.ok{color:var(--up)}
+.marc-pend{border-top:1px solid var(--line);margin-top:13px;padding-top:12px}
+.marc-item{display:flex;gap:12px;align-items:center;flex-wrap:wrap;padding:8px 0;border-bottom:1px solid var(--line)}
+.marc-item:last-child{border-bottom:none}
+.marc-i-t{flex:1;min-width:200px;font-size:12px;color:var(--dim);line-height:1.5}
+.marc-i-t b{font-family:var(--mono);font-size:10.5px;color:var(--txt);margin-right:5px}
+.marc-i-b{display:flex;gap:7px;flex-wrap:wrap}
 .proto{border:1px solid var(--accent);border-radius:13px;padding:18px 20px;margin-bottom:16px;background:rgba(155,192,220,.05)}
 .proto-lab{font-family:var(--mono);font-size:10px;letter-spacing:.16em;color:var(--accent);font-weight:600}
 .proto-sub{font-size:12.5px;color:var(--dim);line-height:1.6;margin:6px 0 14px;max-width:70ch}
@@ -1343,6 +1356,7 @@ stop[stop-color="#9BC0DC"]{stop-color:var(--txt)}
           </div>
           <div id="agReportes"></div>
         </div>
+        <div id="agMarcador"></div>
         <div id="agFirma"></div>
         <div id="agVuelo"></div>
         <div class="ag-oficina-wrap"><canvas id="agOficina" width="1600" height="980" aria-label="La oficina del gabinete — piso 88, Nueva York"></canvas></div>
@@ -1886,6 +1900,19 @@ const I18N = {
   'ag.chat':           { es:'Junta de la mesa',         en:'Desk meeting' },
   'ag.mensajes':       { es:'mensajes',                 en:'messages' },
   'ag.sinchat':        { es:'Todavía no hay junta. Cuando corras el gabinete, aquí queda la conversación completa.', en:'No meeting yet. When you run the cabinet, the full conversation lands here.' },
+  'ag.marcador':       { es:'COSTO DE IGNORAR AL GABINETE', en:'COST OF IGNORING THE CABINET' },
+  'ag.marcTxt':        { es:'Acataste %a de %t avisos. Los %i que ignoraste suman esto.',
+                         en:'You followed %a of %t alerts. The %i you ignored add up to this.' },
+  'ag.marcSin':        { es:'Todavía no ignoras ningún aviso. Cuando lo hagas, aquí verás cuánto costó.',
+                         en:'You have not ignored any alert yet. When you do, the cost shows here.' },
+  'ag.marcMal':        { es:'Ignorar al gabinete te ha costado %d. El veto existe por algo.',
+                         en:'Ignoring the cabinet has cost you %d. The veto exists for a reason.' },
+  'ag.marcBien':       { es:'Ignorarlo te salió bien. Si se repite, hay que bajarle la severidad a DIQUE — el sistema aprende de ti.',
+                         en:'Ignoring it worked out. If this repeats, lower DIQUE severity — the system learns from you.' },
+  'ag.pendientes':     { es:'AVISOS SIN MARCAR',        en:'UNMARKED ALERTS' },
+  'ag.loacate':        { es:'Lo acaté',                 en:'I followed it' },
+  'ag.loignore':       { es:'Lo ignoré',                en:'I ignored it' },
+  'ag.anotado':        { es:'Anotado en el marcador',   en:'Logged in the scoreboard' },
   'ag.protocolo':      { es:'PROTOCOLO DE LA MAÑANA',  en:'MORNING PROTOCOL' },
   'ag.protosub':       { es:'Corre a los siete agentes sobre el activo que les pongas. Cada uno investiga lo suyo con el método de la casa y entrega su reporte.',
                          en:'Runs all seven agents on the asset you give them. Each researches their own field using the house method and files a report.' },
@@ -6649,6 +6676,105 @@ async function cargarAgChat(){
   return AG_CHAT;
 }
 
+/* ════════ EL MARCADOR · ¿el gabinete sirve o no? ════════
+   Sin esto todo lo demás es fe. Cada veto queda registrado; tú marcas si lo
+   acataste o lo ignoraste, y el sistema compara contra lo que de verdad pasó ese
+   día. Si el número sale en contra del gabinete, se dice — eso también es
+   información honesta, y es lo que hace creíble al resto. */
+function avisosDe(){ S.avisos = S.avisos || []; return S.avisos; }
+
+function registraVetos(sym, reps){
+  const hoy = todayISO(), av = avisosDe();
+  reps.filter(r => r.veto).forEach(r => {
+    const id = `${hoy}|${r.ag}|${sym}`;
+    if(av.some(x => x.id === id)) return;              // no se duplica al recorrer otra vez
+    av.push({ id, fecha:hoy, agente:r.ag, sym, aviso:(r.lineas||[])[0] || r.titulo,
+              acatado:null, motivo:null });
+  });
+  save();
+}
+
+/* Compara cada aviso contra el P&L real de ese día. */
+function marcador(){
+  const av = avisosDe();
+  const dias = tradesByDay(idsTodas());
+  const porC = t => t.pnl1 != null ? t.pnl1 : (t.pnl||0);
+  let acatados = 0, ignorados = 0, costoIgnorar = 0, ahorro = 0;
+  const detalle = [];
+  av.forEach(a => {
+    const dia = dias[a.fecha] || [];
+    const pnl = dia.reduce((s,t)=>s+porC(t), 0);
+    if(a.acatado === true){
+      acatados++;
+      // acatar un veto y no operar: el ahorro es la pérdida media de un día malo
+      if(!dia.length) ahorro += 0;
+    } else if(a.acatado === false){
+      ignorados++;
+      costoIgnorar += pnl;                              // lo que pasó ese día, para bien o para mal
+      detalle.push({ fecha:a.fecha, agente:a.agente, pnl });
+    }
+  });
+  const pend = av.filter(a => a.acatado === null).length;
+  return { total:av.length, acatados, ignorados, pend, costoIgnorar, detalle,
+           tasa: av.length ? acatados / (acatados + ignorados || 1) : null };
+}
+
+const MOTIVOS_RECHAZO = [
+  ['no-aplica',   'No aplicaba hoy'],
+  ['conservador', 'Muy conservador'],
+  ['no-le-creo',  'No le creo al dato'],
+  ['ya-entre',    'Ya había entrado'],
+];
+
+function pintaMarcador(){
+  const box = $('#agMarcador'); if(!box) return;
+  const M = marcador();
+  if(!M.total){ box.innerHTML = ''; return; }
+  const av = avisosDe().slice().reverse();
+  const pend = av.filter(a => a.acatado === null).slice(0, 4);
+  const signo = M.costoIgnorar < 0 ? 'mal' : (M.costoIgnorar > 0 ? 'bien' : '');
+
+  box.innerHTML = `
+  <div class="marc">
+    <div class="marc-h"><span class="fb-lab">${tr('ag.marcador')}</span>
+      <b class="marc-n ${signo}">${M.ignorados ? fmt$(M.costoIgnorar, true) : '—'}</b></div>
+    <p class="marc-p">${ M.ignorados
+      ? tr('ag.marcTxt').replace('%a', M.acatados).replace('%t', M.acatados + M.ignorados).replace('%i', M.ignorados)
+      : tr('ag.marcSin') }</p>
+    ${ M.ignorados && M.costoIgnorar < 0
+      ? `<p class="marc-ver">${tr('ag.marcMal').replace('%d', fmt$(Math.abs(M.costoIgnorar)))}</p>` : '' }
+    ${ M.ignorados && M.costoIgnorar > 0
+      ? `<p class="marc-ver ok">${tr('ag.marcBien')}</p>` : '' }
+    ${ pend.length ? `<div class="marc-pend">
+        <span class="fb-lab">${tr('ag.pendientes')}</span>
+        ${pend.map(a => `<div class="marc-item" data-av="${esc(a.id)}">
+          <div class="marc-i-t"><b>${esc(a.agente)}</b> ${esc(a.aviso)}</div>
+          <div class="marc-i-b">
+            <button class="btn sm" data-si="${esc(a.id)}">${tr('ag.loacate')}</button>
+            <button class="btn sm danger" data-no="${esc(a.id)}">${tr('ag.loignore')}</button>
+          </div></div>`).join('')}
+      </div>` : '' }
+  </div>`;
+
+  box.querySelectorAll('[data-si]').forEach(b => b.onclick = () => {
+    const a = avisosDe().find(x => x.id === b.dataset.si);
+    if(a){ a.acatado = true; save(); pintaMarcador(); toast(tr('ag.anotado')); }
+  });
+  box.querySelectorAll('[data-no]').forEach(b => b.onclick = () => {
+    const a = avisosDe().find(x => x.id === b.dataset.no);
+    if(!a) return;
+    /* Rechazar exige motivo: sin eso el botón es un sello de goma y el marcador
+       no puede aprender de las veces que tuviste razón tú. */
+    const cont = b.closest('.marc-item');
+    cont.querySelector('.marc-i-b').innerHTML = MOTIVOS_RECHAZO.map(([k, t]) =>
+      `<button class="btn sm" data-mot="${k}" data-para="${esc(a.id)}">${t}</button>`).join('');
+    cont.querySelectorAll('[data-mot]').forEach(mb => mb.onclick = () => {
+      const t2 = avisosDe().find(x => x.id === mb.dataset.para);
+      if(t2){ t2.acatado = false; t2.motivo = mb.dataset.mot; save(); pintaMarcador(); toast(tr('ag.anotado')); }
+    });
+  });
+}
+
 /* Corre el protocolo: cada agente investiga lo suyo sobre el activo pedido y
    entrega su reporte. Todo lo que dice sale de un dato real (recolector de mercado,
    tus trades, las reglas verificadas) o se marca como no disponible. */
@@ -6661,6 +6787,7 @@ async function correrProtocolo(sym){
   await cargarMercado();
   await cargarDoctrina();
   const R = analizarActivo(sym);
+  registraVetos(sym, R.rep);        // queda constancia de cada veto para poder medirlo
   const orden = ['HORIZONTE','SONDA','ÁBACO','DIQUE','YUNQUE','VÉRTICE'];
   const espera = ms => new Promise(r => setTimeout(r, ms));
 
@@ -6708,6 +6835,7 @@ async function correrProtocolo(sym){
   cont.appendChild(card);
 
   est.textContent = tr('ag.terminado').replace('%n', orden.length + 1);
+  pintaMarcador();
   btn.disabled = false;
   protoCorriendo = false;
 }
@@ -6790,6 +6918,7 @@ function pintaVuelo(){
 function renderAgentes(){
   const grid = $('#agGrid'); if(!grid) return;
   pintaFirma();
+  pintaMarcador();
   cargarDoctrina().then(()=>{ pintaMetodo(); });
   const runBtn = $('#agRun');
   if(runBtn && !runBtn.dataset.at){
