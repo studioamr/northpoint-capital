@@ -912,6 +912,23 @@ button.tag.quemada{text-decoration:line-through;text-decoration-color:var(--down
 .ofi-pista{position:absolute;left:14px;bottom:12px;font-family:var(--mono);font-size:10px;
   letter-spacing:.1em;color:rgba(255,255,255,.7);background:rgba(10,16,26,.55);padding:6px 11px;border-radius:20px}
 .ag-oficina-wrap{position:relative}
+.chat{border:1px solid var(--line);border-radius:13px;margin-top:16px;background:var(--panel-bg);overflow:hidden}
+.chat-h{padding:14px 18px 10px;border-bottom:1px solid var(--line)}
+.chat-sug{display:block;font-size:11px;color:var(--faint);margin-top:5px;line-height:1.5}
+.chat-log{max-height:340px;overflow-y:auto;padding:14px 18px;display:flex;flex-direction:column;gap:12px}
+.ch-msg{display:flex;gap:10px;align-items:flex-start}
+.ch-msg.yo{justify-content:flex-end}
+.ch-cara{width:34px;height:34px;border-radius:50%;image-rendering:pixelated;border:1px solid var(--line);flex:none}
+.ch-n{display:flex;gap:7px;align-items:baseline;margin-bottom:3px}
+.ch-n b{font-family:var(--mono);font-size:10.5px;letter-spacing:.04em;color:var(--txt)}
+.ch-n span{font-size:9px;color:var(--faint)}
+.ch-b{font-size:13px;line-height:1.6;color:var(--dim);background:var(--w03);
+  border-radius:10px;padding:9px 13px;max-width:60ch}
+.ch-b.yo{background:var(--accent);color:#05070C;max-width:52ch}
+.chat-f{display:flex;gap:9px;padding:12px 18px;border-top:1px solid var(--line)}
+#chatIn{flex:1;background:var(--w03);border:1px solid var(--line);border-radius:9px;
+  padding:11px 14px;color:var(--txt);font-family:inherit;font-size:13.5px}
+#chatIn:focus{outline:none;border-color:var(--accent)}
 .det{position:relative;border:1px solid var(--accent);border-radius:13px;padding:20px;margin-top:16px;background:rgba(155,192,220,.05)}
 .det-x{position:absolute;top:12px;right:14px;background:none;border:none;color:var(--faint);font-size:22px;cursor:pointer;line-height:1}
 .det-x:hover{color:var(--txt)}
@@ -1372,10 +1389,19 @@ stop[stop-color="#9BC0DC"]{stop-color:var(--txt)}
         </div>
         <div class="ag-grid" id="agGrid"></div>
         <div class="ag-oficina-wrap">
-          <canvas id="agOficina" width="1600" height="1260" aria-label="La oficina de Northpoint — piso 88, Nueva York"></canvas>
+          <canvas id="agOficina" width="1800" height="1160" aria-label="La oficina de Northpoint — piso 88, Nueva York"></canvas>
           <div class="ofi-pista" data-i18n="ag.pista">Pícale a cualquiera para ver en qué te puede ayudar</div>
         </div>
         <div id="agDetalle"></div>
+        <div class="chat">
+          <div class="chat-h"><span class="fb-lab" data-i18n="ag.chatlab">HABLA CON LA OFICINA</span>
+            <span class="chat-sug" data-i18n="ag.chatsug">Prueba: «¿puedo operar hoy?» · «corre el protocolo en NQ» · «cuánto me falta»</span></div>
+          <div class="chat-log" id="chatLog"></div>
+          <form class="chat-f" id="chatF" autocomplete="off">
+            <input id="chatIn" placeholder="Escríbele a la mesa…" aria-label="Mensaje a la oficina">
+            <button class="btn primary" type="submit" data-i18n="ag.enviar">Enviar</button>
+          </form>
+        </div>
       </section>
 
       <section class="view" id="v-dashboard">
@@ -1911,6 +1937,10 @@ const I18N = {
   'ag.chat':           { es:'Junta de la mesa',         en:'Desk meeting' },
   'ag.mensajes':       { es:'mensajes',                 en:'messages' },
   'ag.sinchat':        { es:'Todavía no hay junta. Cuando corras el gabinete, aquí queda la conversación completa.', en:'No meeting yet. When you run the cabinet, the full conversation lands here.' },
+  'ag.chatlab':        { es:'HABLA CON LA OFICINA',    en:'TALK TO THE DESK' },
+  'ag.chatsug':        { es:'Prueba: «¿puedo operar hoy?» · «corre el protocolo en NQ» · «cuánto me falta»',
+                         en:'Try: “can I trade today?” · “run the protocol on NQ” · “how far am I”' },
+  'ag.enviar':         { es:'Enviar',                   en:'Send' },
   'ag.pista':          { es:'Pícale a cualquiera para ver en qué te puede ayudar', en:'Click anyone to see how they can help' },
   'ag.enquetayuda':    { es:'EN QUÉ TE AYUDA',          en:'HOW THEY HELP' },
   'ag.quenecesita':    { es:'QUÉ NECESITA DE TI',       en:'WHAT THEY NEED' },
@@ -6007,13 +6037,13 @@ const OFI = {
                  prop:'headset', porte:'listo', cara:'alerta', fuerte:true },
   },
   sillas: [
-    { n:'SONDA',     x:1,   y:4.8, z:ISO.MEZ, flip:false },
-    { n:'HORIZONTE', x:1,   y:7.2, z:ISO.MEZ, flip:false },
-    { n:'ÁBACO',     x:5.0, y:1,   z:ISO.MEZ, flip:true  },
-    { n:'ATLAS',     x:6.4, y:6.3, z:0, flip:false, jefe:true },
-    { n:'VÉRTICE',   x:4.6, y:5.6, z:0, flip:false },
-    { n:'DIQUE',     x:8.1, y:5.6, z:0, flip:true  },
-    { n:'YUNQUE',    x:6.4, y:8.2, z:0, flip:true  },
+    { n:'ÁBACO',     x:2.0, y:1.5, z:0, flip:false },
+    { n:'SONDA',     x:3.6, y:1.5, z:0, flip:false },
+    { n:'HORIZONTE', x:1.5, y:3.4, z:0, flip:true  },
+    { n:'VÉRTICE',   x:1.5, y:5.2, z:0, flip:true  },
+    { n:'ATLAS',     x:6.2, y:5.6, z:0, flip:false, jefe:true },
+    { n:'DIQUE',     x:4.2, y:5.0, z:0, flip:false },
+    { n:'YUNQUE',    x:6.0, y:7.4, z:0, flip:true  },
   ],
   etapas: ['01 CONTEXTO','02 TESIS','03 RIESGO','04 FIRMA','05 EJECUTA','06 GESTIÓN','07 CIERRE','08 JOURNAL'],
 };
@@ -6024,7 +6054,7 @@ const NPCS = [
   { ruta:[[4.2,9.2],[8.4,9.2],[8.4,7.4],[4.2,7.4]], v:0.00022, t0:0,    col:'#4A5A6E', piel:'#E4B189' },
   { ruta:[[3.6,4.2],[3.6,8.6]],                     v:0.00030, t0:2200, col:'#5E4A62', piel:'#C89468' },
   { ruta:[[9.2,3.6],[9.2,8.2]],                     v:0.00026, t0:5400, col:'#3E5A54', piel:'#F0C79E' },
-  { ruta:[[1.4,1.4],[1.4,2.4],[2.4,2.4]],           v:0.00034, t0:1200, col:'#6E5A46', piel:'#B98157', z:ISO.MEZ },
+  { ruta:[[7.4,1.6],[7.4,4.2],[5.6,4.2]],           v:0.00034, t0:1200, col:'#6E5A46', piel:'#B98157' },
 ];
 function posNPC(n, t){
   const R = n.ruta, tt = (t + n.t0) * n.v;
@@ -6231,423 +6261,260 @@ function dibujaOficina(t){
   const c = cv.getContext('2d');
   c.setTransform(1,0,0,1,0,0);
   c.imageSmoothingEnabled = false;
-  const W = 1600, H = 1260;
+  const W = 1800, H = 1160;
   c.clearRect(0, 0, W, H);
-  /* ── cielo de Nueva York al atardecer ── */
-  const cielo = c.createLinearGradient(0, 0, 0, 760);
-  cielo.addColorStop(0, '#16294A'); cielo.addColorStop(.3, '#3E5A80');
-  cielo.addColorStop(.52, '#8496AC'); cielo.addColorStop(.62, '#C8D2DE'); cielo.addColorStop(1, '#DDE3EA');
+  const N = ISO.N, rr = i => ((Math.sin(i * 12.9898) * 43758.5453) % 1 + 1) % 1;
+
+  /* ══ NOCHE ══ */
+  const cielo = c.createLinearGradient(0, 0, 0, 620);
+  cielo.addColorStop(0, '#141733'); cielo.addColorStop(.45, '#232A52');
+  cielo.addColorStop(.8, '#3A3F66'); cielo.addColorStop(1, '#4A4B72');
   c.fillStyle = cielo; c.fillRect(0, 0, W, H);
-  const rr = i => ((Math.sin(i * 12.9898) * 43758.5453) % 1 + 1) % 1;
-  for(let i = 0; i < 70; i++){                       // estrellas altas
-    c.fillStyle = `rgba(255,255,255,${.1 + rr(i)*.3})`;
-    c.fillRect(rr(i)*W, rr(i+50)*160, 1.6, 1.6);
+  for(let i = 0; i < 130; i++){
+    const sx = rr(i) * W, sy = rr(i + 300) * 420;
+    c.fillStyle = `rgba(255,255,255,${.2 + rr(i+7) * .6})`;
+    c.fillRect(sx, sy, rr(i+9) > .8 ? 2.4 : 1.6, rr(i+9) > .8 ? 2.4 : 1.6);
   }
-  /* ── skyline lejano: la ciudad muy abajo ── */
+  // luna creciente
+  c.fillStyle = '#F2F1E4'; c.beginPath(); c.arc(1560, 118, 42, 0, 7); c.fill();
+  c.fillStyle = cielo2(c, 1540, 76); c.beginPath(); c.arc(1540, 104, 40, 0, 7); c.fill();
+  function cielo2(){ return '#181C3C'; }
+
+  /* ══ CIUDAD DE FONDO ══ */
   for(let capa = 0; capa < 3; capa++){
-    const base = 340 + capa * 46, alpha = .2 + capa * .22;
-    for(let i = 0; i < 26; i++){
-      const bx = (i * (W / 26)) - 20 + rr(i + capa*40) * 22;
-      const bw = W / 26 * (.6 + rr(i + capa*7) * .5);
-      const bh = 60 + rr(i + capa*13) * (150 + capa * 60);
-      c.fillStyle = `rgba(${28 + capa*12},${40 + capa*14},${62 + capa*16},${alpha})`;
-      c.fillRect(bx, base - bh, bw, bh + 260);
-      if(capa === 2){
-        for(let wy = base - bh + 10; wy < base + 40; wy += 13){
-          for(let wx = bx + 5; wx < bx + bw - 6; wx += 10){
-            if(rr(wx*3 + wy*7) < .42){
-              c.fillStyle = rr(wx+wy) > .82 ? 'rgba(255,238,180,.55)' : 'rgba(150,180,210,.3)';
-              c.fillRect(wx, wy, 4, 6);
-            }
+    const base = 470 + capa * 34, al = .3 + capa * .24;
+    for(let i = 0; i < 30; i++){
+      const bx = i * (W / 30) - 24 + rr(i + capa*40) * 26;
+      const bw = W / 30 * (.62 + rr(i + capa*7) * .5);
+      const bh = 90 + rr(i + capa*13) * (190 + capa * 70);
+      c.fillStyle = `rgba(${44 + capa*14},${48 + capa*16},${88 + capa*14},${al})`;
+      c.fillRect(bx, base - bh, bw, bh + 200);
+      for(let wy = base - bh + 12; wy < base + 30; wy += 15){
+        for(let wx = bx + 6; wx < bx + bw - 7; wx += 11){
+          if(rr(wx*3 + wy*7 + capa) < .4){
+            c.fillStyle = rr(wx+wy) > .78 ? `rgba(255,238,182,${.3 + capa*.2})` : `rgba(150,170,220,${.18 + capa*.12})`;
+            c.fillRect(wx, wy, 5, 7);
           }
         }
       }
     }
   }
-  const N = ISO.N, MU = ISO.MUR;
 
-  /* ══ LA CALLE · 88 pisos abajo ══
-     Las avenidas van por las DOS caras que da al espectador (x>N y y>N). Puestas
-     con coordenadas negativas se proyectaban arriba y detrás del edificio, que es
-     justo al revés de lo que se quiere ver. */
-  const Z_CALLE = -6, ANCHO = 4.6;
-  losa(c, -1, -1, Z_CALLE, '#39404A', N + 1 + ANCHO + 2, N + 1 + ANCHO + 2);   // asfalto
-  losa(c, -1, -1, Z_CALLE + .05, '#8A929C', N + 2.4, N + 2.4);                 // banqueta de la manzana
-  losa(c, -.4, -.4, Z_CALLE + .07, '#7E868F', N + 1.2, N + 1.2);
-  // rayas de los carriles, en las dos avenidas
-  for(let u = -1; u < N + 5; u += 1.6){
-    losa(c, u, N + 2.2, Z_CALLE + .06, 'rgba(236,226,152,.55)', .85, .11);
-    losa(c, N + 2.2, u, Z_CALLE + .06, 'rgba(236,226,152,.55)', .11, .85);
-  }
-
-  const coche = (x, y, col, horiz, dir) => {
-    const L = horiz ? 1.6 : .8, A = horiz ? .8 : 1.6;
-    caja(c, x, y, Z_CALLE + .1, L, A, .46, col, 22, -30);
-    caja(c, x + (horiz ? .34 : .13), y + (horiz ? .13 : .34), Z_CALLE + .56,
-         horiz ? .86 : .54, horiz ? .54 : .86, .28, mez(col, -18), 14, -22);
-    // faros: blancos al frente, rojos atrás
-    const hx = horiz ? x + (dir > 0 ? L : 0) : x + .4;
-    const hy = horiz ? y + .4 : y + (dir > 0 ? A : 0);
-    const fx = iX(hx, hy), fy = iY(hx, hy, Z_CALLE + .34);
-    const g = c.createRadialGradient(fx, fy, 1, fx, fy, 30);
-    g.addColorStop(0, dir > 0 ? 'rgba(255,240,196,.55)' : 'rgba(255,96,80,.5)');
-    g.addColorStop(1, 'rgba(255,240,196,0)');
-    c.fillStyle = g; c.beginPath(); c.arc(fx, fy, 30, 0, 7); c.fill();
+  /* ══ MANZANAS LATERALES · edificios bajos, árboles y avenida ══ */
+  const manzana = (ox0, oy0, lado) => {
+    c.save(); c.translate(ox0, oy0);
+    for(let i = 0; i < 7; i++){
+      const bx = lado * (i * 96) + rr(i)*18, by = i * 52 + rr(i+5)*14;
+      const bw = 118 + rr(i+2)*44, bh = 96 + rr(i+3)*120;
+      // bloque en isométrica sencilla
+      c.fillStyle = i % 2 ? '#4E4C6E' : '#585472';
+      c.beginPath();
+      c.moveTo(bx, by); c.lineTo(bx + bw*lado, by + bw*.5);
+      c.lineTo(bx + bw*lado, by + bw*.5 + bh); c.lineTo(bx, by + bh);
+      c.closePath(); c.fill();
+      c.fillStyle = i % 2 ? '#63608A' : '#6E6A92';
+      c.beginPath();
+      c.moveTo(bx, by); c.lineTo(bx - 74*lado, by + 38);
+      c.lineTo(bx - 74*lado, by + 38 + bh); c.lineTo(bx, by + bh);
+      c.closePath(); c.fill();
+      c.fillStyle = '#7C7AA4';
+      c.beginPath();
+      c.moveTo(bx, by); c.lineTo(bx + bw*lado, by + bw*.5);
+      c.lineTo(bx + (bw-74)*lado, by + bw*.5 + 38); c.lineTo(bx - 74*lado, by + 38);
+      c.closePath(); c.fill();
+      for(let wy = by + 24; wy < by + bh - 12; wy += 26){
+        for(let k = 0; k < 3; k++){
+          const wx = bx - (18 + k*20)*lado, wyy = wy + (18 + k*20)*.5;
+          c.fillStyle = rr(i*9+wy+k) < .55 ? '#FFE9AE' : '#3E3C5E';
+          c.fillRect(Math.min(wx, wx+9*lado), wyy, 9, 12);
+        }
+      }
+    }
+    c.restore();
   };
-  const TRAF = [
-    { c:'#C4483E', v:0.00040, off:0.05, h:true,  dir: 1, carril:N + 1.5 },
-    { c:'#EDE7DA', v:0.00032, off:0.42, h:true,  dir: 1, carril:N + 1.5 },
-    { c:'#E8B04A', v:0.00048, off:0.72, h:true,  dir:-1, carril:N + 3.0 },   // taxi
-    { c:'#2E3A4C', v:0.00036, off:0.20, h:false, dir: 1, carril:N + 1.5 },
-    { c:'#4A6E8A', v:0.00044, off:0.60, h:false, dir:-1, carril:N + 3.0 },
-    { c:'#8E9AA8', v:0.00029, off:0.88, h:false, dir: 1, carril:N + 1.5 },
-  ];
-  TRAF.forEach(car => {
-    const largo = N + 7;
-    let f = (t * car.v + car.off) % 1;
-    if(car.dir < 0) f = 1 - f;
-    const u = -1.5 + f * largo;
-    if(car.h) coche(u, car.carril, car.c, true, car.dir);
-    else      coche(car.carril, u, car.c, false, car.dir);
-  });
-  /* farolas en la banqueta, mirando a la avenida */
-  for(let u = 0; u < N + 1; u += 3.6){
-    [[u, N + .7], [N + .7, u]].forEach(([lx, ly]) => {
-      const bx = iX(lx, ly), by = iY(lx, ly, Z_CALLE + .1);
-      c.strokeStyle = '#59616B'; c.lineWidth = 2.6;
-      c.beginPath(); c.moveTo(bx, by); c.lineTo(bx, by - 52); c.stroke();
-      const g2 = c.createRadialGradient(bx, by - 52, 1, bx, by - 52, 40);
-      g2.addColorStop(0, 'rgba(255,232,168,.5)'); g2.addColorStop(1, 'rgba(255,232,168,0)');
-      c.fillStyle = g2; c.beginPath(); c.arc(bx, by - 52, 40, 0, 7); c.fill();
-      c.fillStyle = '#FFEBBC'; c.beginPath(); c.arc(bx, by - 52, 3.6, 0, 7); c.fill();
+  manzana(250, 620, -1); manzana(1550, 620, 1);
+  // árboles
+  for(let i = 0; i < 26; i++){
+    const lado = i % 2 ? 1 : -1;
+    const tx = 900 + lado * (330 + rr(i)*440), ty = 690 + rr(i+3) * 420;
+    c.fillStyle = '#3E2A1E'; c.fillRect(tx - 3, ty, 6, 16);
+    ['#2E5C38','#376E42','#2A5232'].forEach((col, k) => {
+      c.fillStyle = col;
+      c.beginPath(); c.ellipse(tx + (k-1)*9, ty - 8 - k*7, 15 - k*3, 11 - k*2, 0, 0, 7); c.fill();
     });
   }
+  // avenidas laterales con coches
+  [[-1, 640], [1, 640]].forEach(([lado, y0]) => {
+    c.save();
+    c.fillStyle = '#33334E';
+    c.beginPath();
+    c.moveTo(900 + lado*300, y0); c.lineTo(900 + lado*760, y0 + 260);
+    c.lineTo(900 + lado*760, y0 + 336); c.lineTo(900 + lado*300, y0 + 76);
+    c.closePath(); c.fill();
+    for(let k = 0; k < 8; k++){
+      const f = ((t * 0.00007 * (1 + k*.14) + k * .13) % 1);
+      const cx = 900 + lado * (300 + f * 460), cy = y0 + f * 260 + 26;
+      c.fillStyle = ['#B8BEE8','#8E96D4','#D8DCF0','#9AA4DC'][k % 4];
+      c.fillRect(cx - 17, cy - 8, 34, 15);
+      c.fillStyle = 'rgba(255,246,206,.75)'; c.fillRect(cx + lado*15, cy - 5, 5, 4);
+      const g = c.createRadialGradient(cx + lado*20, cy - 3, 1, cx + lado*20, cy - 3, 30);
+      g.addColorStop(0, 'rgba(255,244,200,.4)'); g.addColorStop(1, 'rgba(255,244,200,0)');
+      c.fillStyle = g; c.beginPath(); c.arc(cx + lado*20, cy - 3, 30, 0, 7); c.fill();
+    }
+    c.restore();
+  });
 
-  /* ── nuestra torre: el mismo volumen del despacho, extruido hacia abajo ──
-     Antes era una fachada plana de frente pegada a un cuarto isométrico: las dos
-     perspectivas se peleaban y la oficina parecía flotar sobre un cartel. Ahora la
-     torre es una caja isométrica que comparte planta con el despacho, así que el
-     penthouse se lee como lo que es: el último piso de este edificio. */
-  const PROF = 6;                                    // pisos visibles hasta la calle
+  /* ══ LA TORRE · cristal, muchos pisos, y la azotea abierta ══ */
+  const PISOS = 11;
   const caraTorre = (lado, fn) => {
     c.save();
-    if(lado === 'der') c.setTransform(-ISO.TW/2, ISO.TH/2, 0, -ISO.TZ, iX(ISO.N, 0), iY(ISO.N, 0, 0));
-    else               c.setTransform( ISO.TW/2, ISO.TH/2, 0, -ISO.TZ, iX(0, ISO.N), iY(0, ISO.N, 0));
+    if(lado === 'der') c.setTransform(-ISO.TW/2, ISO.TH/2, 0, -ISO.TZ, iX(N, 0), iY(N, 0, 0));
+    else               c.setTransform( ISO.TW/2, ISO.TH/2, 0, -ISO.TZ, iX(0, N), iY(0, N, 0));
     fn(c); c.restore();
   };
-  const ventanas = (c2, tono) => {
-    c2.fillStyle = tono; c2.fillRect(0, -PROF, ISO.N, PROF);
-    for(let f = 0; f < PROF; f++){                     // losa de cada piso
-      c2.fillStyle = 'rgba(28,44,66,.24)'; c2.fillRect(0, -f - .06, ISO.N, .06);
-      for(let u = .3; u < ISO.N - .5; u += .74){
-        const sm = rr(u * 31 + f * 17);
-        const on = sm < .52;
-        c2.fillStyle = on ? (rr(u+f) > .8 ? 'rgba(255,240,190,.85)' : 'rgba(246,226,168,.62)')
-                          : 'rgba(96,124,156,.34)';
-        c2.fillRect(u, -f - .78, .5, .58);
-        c2.fillStyle = 'rgba(255,255,255,.1)'; c2.fillRect(u, -f - .78, .5, .12);
-      }
-    }
-  };
-  caraTorre('der', c2 => ventanas(c2, '#8FA2B6'));
-  caraTorre('izq', c2 => ventanas(c2, '#7E92A8'));
-
-  /* cornisa del coronamiento, siguiendo las dos aristas */
-  caraTorre('der', c2 => { c2.fillStyle = '#C6D0DA'; c2.fillRect(-.12, -.34, ISO.N + .24, .34); });
-  caraTorre('izq', c2 => { c2.fillStyle = '#B4C0CC'; c2.fillRect(-.12, -.34, ISO.N + .24, .34); });
-
-  /* el letrero de la casa, sobre la cara derecha de la torre */
-  caraTorre('der', c2 => {
-    c2.fillStyle = 'rgba(12,20,34,.92)'; c2.fillRect(1.5, -3.5, 7, 1.5);
-    c2.fillStyle = 'rgba(155,192,220,.55)';
-    c2.fillRect(1.5, -3.5, 7, .05); c2.fillRect(1.5, -2.05, 7, .05);
-  });
-  // el texto va aparte para que no salga deformado por la matriz
-  const sgX = iX(ISO.N, 5), sgY = iY(ISO.N, 5, -2.55);
-  c.save(); c.translate(sgX, sgY); c.transform(1, -.5, 0, 1, 0, 0);
-  c.textAlign = 'center';
-  const bri = .72 + Math.sin(t / 1400) * .14;
-  c.shadowColor = `rgba(155,192,220,${bri})`; c.shadowBlur = 20;
-  c.fillStyle = '#EDF4FA'; c.font = 'bold 27px "IBM Plex Mono", monospace';
-  c.fillText('NORTHPOINT', 0, 0);
-  c.shadowBlur = 0;
-  c.fillStyle = 'rgba(196,218,236,.8)'; c.font = '10px "IBM Plex Mono", monospace';
-  c.fillText('C A P I T A L   M A N A G E M E N T', 0, 15);
-  c.restore();
-
-  /* placa del piso, en la esquina del coronamiento */
-  const plX = iX(ISO.N, 0), plY = iY(ISO.N, 0, 0);
-  c.fillStyle = 'rgba(12,20,34,.8)'; c.fillRect(plX - 46, plY + 14, 92, 30);
-  c.textAlign = 'center';
-  c.fillStyle = 'rgba(190,214,232,.62)'; c.font = '8px "IBM Plex Mono", monospace';
-  c.fillText('PISO', plX, plY + 25);
-  c.fillStyle = '#D6E6F2'; c.font = 'bold 17px "IBM Plex Mono", monospace';
-  c.fillText('88', plX, plY + 40);
-
-  /* ══ MURO DERECHO · ventanal de piso a techo ══ */
-  enMuro(c, 'der', () => {
-    c.fillStyle = '#F4F6F8'; c.fillRect(0, 0, N, MU);
-    c.fillStyle = '#FFFFFF'; c.fillRect(0, 0, N, .12);
-    c.fillStyle = '#0F1B2E'; c.fillRect(.45, 1.5, N - .9, 4.9);      // cristal
-    const r = i => ((Math.sin(i * 12.9898) * 43758.5453) % 1 + 1) % 1;
-    const cielo = c.createLinearGradient(0, 1.5, 0, 6.4);
-    cielo.addColorStop(0, '#1B3350'); cielo.addColorStop(1, '#3E5A78');
-    c.fillStyle = cielo; c.fillRect(.45, 1.5, N - .9, 4.9);
-    for(let i = 0; i < 18; i++){                                      // rascacielos
-      const bx = .5 + i * ((N - 1) / 18), bw = (N - 1) / 18 * .84;
-      const bh = .9 + r(i + 3) * 2.6;
-      c.fillStyle = i % 2 ? '#22384F' : '#1B2F44';
-      c.fillRect(bx, 6.4 - bh, bw, bh);
-      for(let wy = .12; wy < bh - .12; wy += .26){
-        for(let wx = .05; wx < bw - .08; wx += .14){
-          const sm = r(i * 29 + wy * 19 + wx * 47);
-          if(sm < .5){
-            const guiña = sm > .45 && Math.floor(t / 900 + i + wx * 8) % 4 === 0;
-            c.fillStyle = guiña ? '#FFF6D8' : (sm < .26 ? '#F2DFA8' : '#96B4CE');
-            c.fillRect(bx + wx, 6.4 - bh + wy, .075, .14);
-          }
+  const fachada = (c2, base, vidrio) => {
+    c2.fillStyle = base; c2.fillRect(0, -PISOS, N, PISOS);
+    for(let f = 0; f < PISOS; f++){
+      // banda del entrepiso, ondulada como en la referencia
+      c2.fillStyle = 'rgba(222,228,244,.9)'; c2.fillRect(0, -f - .1, N, .16);
+      c2.fillStyle = 'rgba(180,190,220,.5)'; c2.fillRect(0, -f - .01, N, .05);
+      // cristal del piso, con oficinas encendidas
+      c2.fillStyle = vidrio; c2.fillRect(.12, -f - .88, N - .24, .74);
+      for(let u = .3; u < N - .5; u += .82){
+        const on = rr(u * 27 + f * 19) < .62;
+        c2.fillStyle = on ? (rr(u+f) > .74 ? 'rgba(255,240,196,.62)' : 'rgba(228,232,248,.4)')
+                          : 'rgba(70,80,120,.34)';
+        c2.fillRect(u, -f - .8, .6, .58);
+        // silueta de mobiliario dentro
+        if(on && rr(u*5+f*3) > .5){
+          c2.fillStyle = 'rgba(60,66,102,.5)'; c2.fillRect(u + .12, -f - .48, .32, .22);
         }
       }
     }
-    c.fillStyle = '#C8D2DA';                                          // carpintería
-    c.fillRect(.45, 1.5, N - .9, .1); c.fillRect(.45, 6.32, N - .9, .12);
-    for(let u = .45; u <= N - .4; u += (N - .9) / 5) c.fillRect(u, 1.5, .07, 4.9);
-    c.fillStyle = 'rgba(255,255,255,.06)'; c.fillRect(.45, 1.5, N - .9, 2.4);  // reflejo
-  });
+  };
+  caraTorre('der', c2 => fachada(c2, '#8E96C0', 'rgba(150,166,214,.55)'));
+  caraTorre('izq', c2 => fachada(c2, '#7A83AE', 'rgba(130,146,196,.5)'));
 
-  /* ══ MURO IZQUIERDO · paneles blancos y el tablero ══ */
-  enMuro(c, 'izq', () => {
-    c.fillStyle = '#F7F8FA'; c.fillRect(0, 0, N, MU);
-    c.fillStyle = '#FFFFFF'; c.fillRect(0, 0, N, .12);
-    for(let u = 0; u < N; u += 1.6){                                   // juntas de panel
-      c.fillStyle = 'rgba(30,45,70,.05)'; c.fillRect(u, 0, .025, MU);
-    }
-    c.fillStyle = 'rgba(30,45,70,.06)'; c.fillRect(0, MU - .18, N, .18);
-    c.fillStyle = '#FFFFFF'; c.fillRect(1.0, 3.5, 4.2, 2.9);           // tablero
-    c.fillStyle = '#E2E7EC'; c.fillRect(1.0, 3.5, 4.2, .1);
-    // marca de la casa en el muro
-    c.fillStyle = '#1E3A52'; c.fillRect(6.0, 4.2, 3.4, .34);
-    c.fillStyle = 'rgba(70,110,150,.5)'; c.fillRect(6.0, 4.62, 2.2, .12);
-    c.fillStyle = '#9BC0DC'; c.fillRect(6.0, 5.0, .34, .34);
-  });
-  // el texto del tablero, inclinado con el muro pero legible
-  const pz = { x: iX(0, 1.0), y: iY(0, 1.0, 6.4) };
-  c.save(); c.translate(pz.x - 6, pz.y + 20); c.transform(1, .5, 0, 1, 0, 0);
-  c.textAlign = 'left';
-  c.font = 'bold 12px "IBM Plex Mono", monospace'; c.fillStyle = '#2C6E52';
-  c.fillText('DE 0 A 100 · UN TRADE', 8, 0);
-  c.fillStyle = 'rgba(44,110,82,.25)'; c.fillRect(8, 6, 150, 1.5);
-  c.font = '11px "IBM Plex Mono", monospace';
-  OFI.etapas.forEach((e, i) => {
-    const activa = Math.floor(t / 2100) % OFI.etapas.length === i;
-    c.fillStyle = activa ? '#2C6E52' : 'rgba(70,90,110,.3)';
-    c.fillRect(8, 15 + i * 13, 4, 4);
-    c.fillStyle = activa ? '#1E2733' : 'rgba(70,90,110,.5)';
-    c.fillText(e, 18, 19 + i * 13);
-  });
-  c.fillStyle = 'rgba(70,90,110,.42)';
-  c.fillText('POST · qué salió bien / qué no', 8, 15 + 8 * 13 + 6);
-  c.restore();
-  /* muro de pantallas: seis monitores con velas, como en una mesa de verdad */
-  enMuro(c, 'izq', c2 => {
-    c2.fillStyle = '#1A2028'; c2.fillRect(5.6, 2.2, 4.0, 2.3);
-    for(let g = 0; g < 6; g++){
-      const gx = 5.72 + (g % 3) * 1.30, gy = 2.32 + Math.floor(g / 3) * 1.12;
-      c2.fillStyle = '#0B131C'; c2.fillRect(gx, gy, 1.16, .98);
-      for(let k = 0; k < 9; k++){
-        const f = (Math.sin((k + g * 3) * 1.7 + t / 900) + 1) / 2;
-        const alto = .08 + f * .62, sube = f > .5;
-        c2.fillStyle = sube ? 'rgba(87,199,155,.9)' : 'rgba(222,106,95,.9)';
-        c2.fillRect(gx + .09 + k * .115, gy + .82 - alto, .062, alto);
-      }
-      c2.fillStyle = 'rgba(155,192,220,.28)'; c2.fillRect(gx, gy, 1.16, .05);
-    }
-    c2.fillStyle = '#2A323C'; c2.fillRect(5.6, 2.2, 4.0, .1);
-    /* cinta de cotizaciones bajo las pantallas */
-    c2.fillStyle = '#0E1620'; c2.fillRect(5.6, 4.62, 4.0, .3);
-    const desfile = (t / 22) % 200;
-    for(let k = 0; k < 12; k++){
-      const px2 = 5.7 + ((k * .95 + 200 - desfile * .02) % 4.2);
-      if(px2 > 9.4) continue;
-      c2.fillStyle = k % 3 === 0 ? 'rgba(87,199,155,.85)' : (k % 3 === 1 ? 'rgba(222,106,95,.85)' : 'rgba(200,214,228,.7)');
-      c2.fillRect(px2, 4.72, .52, .12);
-    }
-  });
-
-  // el nombre de la casa, rotulado sobre el muro izquierdo
-  const mk = { x: iX(0, 6.0), y: iY(0, 6.0, 4.55) };
-  c.save(); c.translate(mk.x, mk.y); c.transform(1, .5, 0, 1, 0, 0);
-  c.textAlign = 'left';
-  c.fillStyle = '#1E3A52'; c.font = 'bold 22px "IBM Plex Mono", monospace';
-  c.fillText('NORTHPOINT', 8, 0);
-  c.fillStyle = 'rgba(70,110,150,.6)'; c.font = '9px "IBM Plex Mono", monospace';
-  c.fillText('CAPITAL MANAGEMENT', 9, 15);
+  /* rótulo en la fachada */
+  const rotX = iX(N, 5.2), rotY = iY(N, 5.2, -3.4);
+  c.save(); c.translate(rotX, rotY); c.transform(1, -.5, 0, 1, 0, 0);
+  c.textAlign = 'center'; c.fillStyle = '#2C3560';
+  c.font = 'bold 40px "IBM Plex Mono", monospace'; c.fillText('NORTHPOINT', 0, 0);
+  c.font = 'bold 30px "IBM Plex Mono", monospace'; c.fillText('DE TRADING', 0, 38);
   c.restore();
 
-  /* ══ PISO · mármol blanco ══ */
+  /* ══ AZOTEA ══ */
   for(let x = 0; x < N; x++) for(let y = 0; y < N; y++){
-    const bajo = enMez(x, y);
-    const base = (x + y) % 2 ? '#F2F4F6' : '#EAEEF1';
-    losa(c, x, y, 0, bajo ? mez(base, -20) : base);
-    c.strokeStyle = 'rgba(120,140,160,.16)'; c.lineWidth = 1;
+    losa(c, x, y, 0, (x + y) % 2 ? '#D8DCE6' : '#CED3DF');
+    c.strokeStyle = 'rgba(110,122,150,.22)'; c.lineWidth = 1;
     c.beginPath();
     c.moveTo(iX(x, y), iY(x, y, 0)); c.lineTo(iX(x+1, y), iY(x+1, y, 0));
     c.lineTo(iX(x+1, y+1), iY(x+1, y+1, 0)); c.lineTo(iX(x, y+1), iY(x, y+1, 0));
     c.closePath(); c.stroke();
-    if((x * 3 + y * 7) % 5 === 0){                                     // vetas del mármol
-      c.strokeStyle = 'rgba(150,168,186,.2)'; c.lineWidth = 1.4;
-      c.beginPath(); c.moveTo(iX(x + .18, y + .3), iY(x + .18, y + .3, 0));
-      c.lineTo(iX(x + .8, y + .62), iY(x + .8, y + .62, 0)); c.stroke();
-    }
   }
-  c.globalAlpha = .5; losa(c, 4.0, 4.9, .02, '#C9D6E0', 4.7, 4.2); c.globalAlpha = 1;   // tapete
+  // pretil con barandal de cristal en las dos caras frontales
+  const pretil = (x, y, w, h) => {
+    caja(c, x, y, 0, w, h, .34, '#E8ECF2', 12, -20);
+    c.globalAlpha = .34; caja(c, x, y, .34, w, h, .8, '#AECAE0', 22, -8); c.globalAlpha = 1;
+    caja(c, x - .02, y - .02, 1.14, w + .04, h + .04, .07, '#C6CEDA', 20, -16);
+  };
+  for(let y = 0; y < N; y++) pretil(N - .12, y, .12, 1);
+  for(let x = 0; x < N; x++) pretil(x, N - .12, 1, .12);
 
-  /* ══ mobiliario del piso bajo, por profundidad ══ */
+  /* ══ MESA DE TRADING · filas de escritorios con pantallas ══ */
   const piezas = []; const add = (d, fn) => piezas.push({ d, fn });
-
-  add(10.2, c2 => {                                                    // mesa de juntas
-    caja(c2, 4.6, 5.5, 0, 3.5, 2.1, .92, '#FBFCFD', 10, -22);
-    losa(c2, 4.66, 5.56, .93, '#FFFFFF', 3.38, 1.98);
-    c2.globalAlpha = .35; losa(c2, 5.0, 5.85, .94, '#DCE8F0', 1.9, .9); c2.globalAlpha = 1;
-    c2.fillStyle = 'rgba(70,90,110,.1)';                               // pata central
-    caja(c2, 6.0, 6.3, 0, .7, .5, .08, '#D8DFE6');
-  });
-  add(11.2, c2 => { caja(c2, 5.1, 5.9, .93, .66, .1, .54, '#20242A');  // monitores
-                    losa(c2, 5.12, 5.92, 1.47, '#2E7A5E', .62, .07); });
-  add(13.3, c2 => { caja(c2, 7.2, 5.9, .93, .66, .1, .54, '#20242A');
-                    losa(c2, 7.22, 5.92, 1.47, '#8A4640', .62, .07); });
-  OFI.sillas.filter(s => s.z === 0).forEach(s => add(s.x + s.y + .4, c2 => {
-    caja(c2, s.x - .3, s.y + .2, 0, .6, .46, .42, '#E6EAEE', 12, -22);
-    caja(c2, s.x - .3, s.y + .54, 0, .6, .1, 1.02, '#1E2733', 14, -26);
-  }));
-  add(17.6, c2 => {                                                    // planta grande
-    caja(c2, 8.5, 8.5, 0, .8, .8, .52, '#FFFFFF', 12, -22);
-    c2.fillStyle = '#3E8A5C';
-    [[0,-20],[-13,-11],[13,-11],[0,-36],[-10,-28],[10,-28],[-5,-44],[6,-42]].forEach(([dx,dy]) => {
-      c2.beginPath(); c2.ellipse(iX(8.9, 8.9) + dx, iY(8.9, 8.9, .52) + dy, 10, 6, dx/26, 0, 7);
-      c2.fillStyle = dy < -30 ? '#4C9E68' : '#3E8A5C'; c2.fill(); });
-  });
-  add(9.0, c2 => caja(c2, .35, 8.6, 0, 1.2, .85, 1.35, '#EEF1F4', 12, -24));  // credenza
-  /* torre de servidores: la infraestructura de la mesa */
-  add(1.4, c2 => {
-    caja(c2, .35, .35, 0, .9, .9, 3.0, '#20252C', 10, -26);
-    for(let k = 0; k < 9; k++){
-      const ly = iY(.8, .8, .3 + k * .3);
-      c2.fillStyle = k % 3 === 0 ? '#57C79B' : (k % 4 === 0 ? '#DE6A5F' : '#3A4450');
-      c2.fillRect(iX(.8, .8) - 13, ly, 5, 3);
-      c2.fillStyle = 'rgba(155,192,220,.5)'; c2.fillRect(iX(.8, .8) - 5, ly, 12, 1.5);
-    }
-  });
-  /* papeles, tazas y un teléfono de mesa */
-  add(10.6, c2 => {
-    losa(c2, 5.9, 6.5, .94, '#FFFFFF', .42, .3);
-    losa(c2, 5.98, 6.56, .95, 'rgba(120,150,180,.35)', .26, .04);
-    losa(c2, 5.98, 6.64, .95, 'rgba(120,150,180,.28)', .3, .04);
+  const puesto = (x, y, sem, giro) => {
+    add(x + y, c2 => {
+      caja(c2, x, y, 0, giro ? .8 : 1.5, giro ? 1.5 : .8, .82, '#F4F6FA', 10, -22);
+      const mw = giro ? .12 : .62, mh = giro ? .62 : .12;
+      const mx = x + (giro ? .1 : .42), my = y + (giro ? .42 : .1);
+      caja(c2, mx, my, .82, mw, mh, .52, '#1C222C');
+      const px0 = iX(mx, my), py0 = iY(mx, my, 1.34);
+      c2.fillStyle = '#0A1420';
+      losa(c2, mx, my, 1.34, '#0A1420', mw + .02, mh + .02);
+      for(let k = 0; k < 6; k++){
+        const f = (Math.sin((k + sem) * 1.9 + t / 950) + 1) / 2;
+        const alto = 3 + f * 12;
+        c2.fillStyle = f > .5 ? 'rgba(96,214,164,.95)' : 'rgba(228,110,98,.95)';
+        c2.fillRect(px0 - 12 + k * 5, py0 - 4 - alto/2, 2.6, alto);
+      }
+      c2.fillStyle = 'rgba(160,200,232,.3)'; c2.fillRect(px0 - 14, py0 - 14, 30, 2);
+    });
+  };
+  // dos hileras contra el fondo, como en la referencia
+  for(let i = 0; i < 5; i++) puesto(1.2 + i * 1.6, .5, i * 3, false);
+  for(let i = 0; i < 5; i++) puesto(.5, 1.2 + i * 1.6, i * 3 + 1, true);
+  // isla central
+  add(11, c2 => {
+    caja(c2, 4.6, 4.6, 0, 3.0, 2.2, .86, '#F8FAFC', 10, -22);
+    losa(c2, 4.66, 4.66, .87, '#FFFFFF', 2.88, 2.08);
     c2.fillStyle = '#FFFFFF'; c2.beginPath();
-    c2.ellipse(iX(6.9, 6.4), iY(6.9, 6.4, .95), 7, 4, 0, 0, 7); c2.fill();
-    c2.fillStyle = '#6B4A32'; c2.beginPath();
-    c2.ellipse(iX(6.9, 6.4), iY(6.9, 6.4, .95), 5, 2.8, 0, 0, 7); c2.fill();
-    caja(c2, 7.7, 6.5, .93, .42, .3, .12, '#252A32', 12, -22);
+    c2.ellipse(iX(5.4, 5.2), iY(5.4, 5.2, .88), 7, 4, 0, 0, 7); c2.fill();
+    losa(c2, 6.2, 5.3, .88, '#E8EEF4', .4, .3);
   });
-  /* reloj de pared con la hora de Nueva York */
-  add(2.2, c2 => {
-    const rx = iX(2.6, 0), ry = iY(2.6, 0, 5.2);
-    c2.fillStyle = '#FFFFFF'; c2.beginPath(); c2.arc(rx, ry, 17, 0, 7); c2.fill();
-    c2.strokeStyle = '#2A3540'; c2.lineWidth = 2; c2.beginPath(); c2.arc(rx, ry, 17, 0, 7); c2.stroke();
-    const ny = new Date(Date.now() - 2 * 3600 * 1000);   // Morelia + 2 = Nueva York
-    const hh = (ny.getHours() % 12) / 12 * 6.283 - 1.571;
-    const mm = ny.getMinutes() / 60 * 6.283 - 1.571;
-    c2.strokeStyle = '#1E2733'; c2.lineWidth = 2.6;
-    c2.beginPath(); c2.moveTo(rx, ry); c2.lineTo(rx + Math.cos(hh) * 8, ry + Math.sin(hh) * 8); c2.stroke();
-    c2.lineWidth = 1.8;
-    c2.beginPath(); c2.moveTo(rx, ry); c2.lineTo(rx + Math.cos(mm) * 12, ry + Math.sin(mm) * 12); c2.stroke();
-    c2.fillStyle = 'rgba(50,70,95,.6)'; c2.font = '7px "IBM Plex Mono", monospace'; c2.textAlign = 'center';
-    c2.fillText('NY', rx, ry + 27);
+  // jardineras y palmeras del borde
+  [[8.4, 2.2],[8.4, 6.0],[2.2, 8.4],[6.2, 8.4],[8.6, 8.6]].forEach(([px, py], i) => {
+    add(px + py + .2, c2 => {
+      caja(c2, px, py, 0, .8, .8, .42, '#E4E8EE', 12, -20);
+      const cx = iX(px + .4, py + .4), cy = iY(px + .4, py + .4, .42);
+      [['#2F6B44', 0, -14, 13, 8],['#3B8354', -11, -8, 11, 7],['#3B8354', 11, -8, 11, 7],
+       ['#489A63', 0, -26, 10, 6],['#2F6B44', -8, -21, 9, 6],['#489A63', 8, -21, 9, 6]]
+       .forEach(([col, dx, dy, rx, ry]) => {
+        c2.fillStyle = col; c2.beginPath(); c2.ellipse(cx + dx, cy + dy, rx, ry, dx/30, 0, 7); c2.fill();
+      });
+    });
   });
-
-  /* ══ ENTRESUELO en L, con barandal de cristal ══ */
-  for(let x = 0; x < N; x++) for(let y = 0; y < N; y++){
-    if(!enMez(x, y)) continue;
-    losa(c, x, y, ISO.MEZ, (x + y) % 2 ? '#F4F6F8' : '#ECF0F3');
-    c.strokeStyle = 'rgba(120,140,160,.14)'; c.lineWidth = 1;
-    c.beginPath();
-    c.moveTo(iX(x, y), iY(x, y, ISO.MEZ)); c.lineTo(iX(x+1, y), iY(x+1, y, ISO.MEZ));
-    c.lineTo(iX(x+1, y+1), iY(x+1, y+1, ISO.MEZ)); c.lineTo(iX(x, y+1), iY(x, y+1, ISO.MEZ));
-    c.closePath(); c.stroke();
-    if(!enMez(x + 1, y)){                                              // canto
-      c.beginPath();
-      c.moveTo(iX(x+1, y), iY(x+1, y, ISO.MEZ)); c.lineTo(iX(x+1, y+1), iY(x+1, y+1, ISO.MEZ));
-      c.lineTo(iX(x+1, y+1), iY(x+1, y+1, ISO.MEZ - .3)); c.lineTo(iX(x+1, y), iY(x+1, y, ISO.MEZ - .3));
-      c.closePath(); c.fillStyle = '#D2DAE2'; c.fill();
+  // paneles solares y aerogeneradores al fondo
+  add(.4, c2 => {
+    for(let k = 0; k < 3; k++){
+      const sx = .4 + k * 1.5;
+      caja(c2, sx, -1.5, 0, 1.3, 1.0, .5, '#39406A', 14, -22);
+      losa(c2, sx, -1.5, .52, '#2B3358', 1.3, 1.0);
+      for(let q = 0; q < 3; q++) losa(c2, sx + .06 + q*.42, -1.44, .53, '#4A5A96', .34, .88);
     }
-    if(!enMez(x, y + 1)){
-      c.beginPath();
-      c.moveTo(iX(x, y+1), iY(x, y+1, ISO.MEZ)); c.lineTo(iX(x+1, y+1), iY(x+1, y+1, ISO.MEZ));
-      c.lineTo(iX(x+1, y+1), iY(x+1, y+1, ISO.MEZ - .3)); c.lineTo(iX(x, y+1), iY(x, y+1, ISO.MEZ - .3));
-      c.closePath(); c.fillStyle = '#C6CFD8'; c.fill();
-    }
-  }
-  // barandal: cristal con pasamanos cromado
-  const cristal = (x, y, w, h) => {
-    c.globalAlpha = .3; caja(c, x, y, ISO.MEZ, w, h, .78, '#BBD4E4', 20, -10); c.globalAlpha = 1;
-    caja(c, x - .02, y - .02, ISO.MEZ + .78, w + .04, h + .04, .07, '#C8CFD6', 22, -18);
-  };
-  for(let y = 3; y < N; y++) cristal(2.92, y, .08, 1);
-  for(let x = 3; x < N; x++) cristal(x, 2.92, 1, .08);
-  // escritorios del entresuelo con su monitor
-  const puesto = (x, y, w, h, semilla) => {
-    caja(c, x, y, ISO.MEZ, w, h, .88, '#FBFCFD', 10, -22);
-    caja(c, x + w*.5 - .3, y + .1, ISO.MEZ + .88, .6, .09, .5, '#20242A');
-    // la pantalla, con velas que se mueven: es una mesa de trading
-    const px0 = iX(x + w*.5 - .28, y + .12), py0 = iY(x + w*.5 - .28, y + .12, ISO.MEZ + 1.38);
-    losa(c, x + w*.5 - .28, y + .12, ISO.MEZ + 1.38, '#0E1A24', .56, .06);
-    for(let k = 0; k < 7; k++){
-      const f = ((Math.sin((k + semilla) * 2.3 + t / 1100) + 1) / 2);
-      const alto = 4 + f * 13, sube = f > .5;
-      c.fillStyle = sube ? 'rgba(87,199,155,.95)' : 'rgba(222,106,95,.95)';
-      c.fillRect(px0 + 6 + k * 6, py0 - 6 - alto/2, 3.2, alto);
-    }
-  };
-  puesto(.45, 4.5, 1.5, .85, 0); puesto(.45, 6.9, 1.5, .85, 3); puesto(4.6, .45, .85, 1.5, 6);
-  // librero blanco contra el muro
-  caja(c, .05, 1.1, ISO.MEZ, .5, 1.5, 1.9, '#FFFFFF', 8, -20);
-  ['#8FB4CE','#C4A47C','#9EC4A8','#C49AA4'].forEach((col, i) =>
-    caja(c, .1, 1.18 + i * .34, ISO.MEZ + .08, .34, .28, .42 + (i % 2) * .18, col, 12, -22));
-
-  /* ══ luz cálida colgante ══ */
-  [[3.4, 3.4], [7.2, 3.9], [4.8, 7.9]].forEach(([lx, ly], i) => {
-    const px = iX(lx, ly), py = iY(lx, ly, ISO.MUR - 1.5);
-    c.strokeStyle = 'rgba(60,80,100,.3)'; c.lineWidth = 1.4;
-    c.beginPath(); c.moveTo(px, iY(lx, ly, ISO.MUR)); c.lineTo(px, py); c.stroke();
-    const pulso = 1 + Math.sin(t / 950 + i * 2) * .05;
-    const g = c.createRadialGradient(px, py + 10, 3, px, py + 10, 118 * pulso);
-    g.addColorStop(0, 'rgba(255,226,168,.3)'); g.addColorStop(1, 'rgba(255,226,168,0)');
-    c.fillStyle = g; c.beginPath(); c.arc(px, py + 10, 118 * pulso, 0, 7); c.fill();
-    c.fillStyle = '#F2F5F8'; c.beginPath();
-    c.moveTo(px - 17, py); c.lineTo(px + 17, py); c.lineTo(px + 9, py + 14); c.lineTo(px - 9, py + 14);
-    c.closePath(); c.fill();
-    c.fillStyle = 'rgba(60,80,100,.14)'; c.beginPath();
-    c.moveTo(px - 9, py + 13); c.lineTo(px + 9, py + 13); c.lineTo(px + 9, py + 15); c.lineTo(px - 9, py + 15);
-    c.closePath(); c.fill();
-    c.fillStyle = '#FFE9B0'; c.beginPath(); c.arc(px, py + 16, 5.5, 0, 7); c.fill();
+  });
+  [[-1.2, 2.2],[-1.2, 6.4]].forEach(([tx, ty], i) => {
+    add(tx + ty, c2 => {
+      const bx = iX(tx, ty), by = iY(tx, ty, 0);
+      c2.strokeStyle = '#C6CEDA'; c2.lineWidth = 3;
+      c2.beginPath(); c2.moveTo(bx, by); c2.lineTo(bx, by - 96); c2.stroke();
+      const a = t / 340 + i * 2;
+      c2.lineWidth = 2.4;
+      for(let b = 0; b < 3; b++){
+        const ang = a + b * 2.094;
+        c2.beginPath(); c2.moveTo(bx, by - 96);
+        c2.lineTo(bx + Math.cos(ang) * 26, by - 96 + Math.sin(ang) * 13); c2.stroke();
+      }
+    });
   });
 
+  /* ══ EL LETRERO DEL TECHO ══ */
+  const letX = iX(2.2, -2.4), letY = iY(2.2, -2.4, 0);
+  c.save(); c.translate(letX, letY);
+  c.transform(1, .5, 0, 1, 0, 0);
+  c.textAlign = 'left';
+  const bri = .7 + Math.sin(t / 1300) * .18;
+  c.shadowColor = `rgba(206,226,246,${bri})`; c.shadowBlur = 26;
+  c.fillStyle = '#F6FAFF'; c.font = 'bold 62px "IBM Plex Mono", monospace';
+  c.fillText('NORTHPOINT', 0, 0);
+  c.restore();
+  c.shadowBlur = 0;
+
+  /* ══ LA GENTE ══ */
   piezas.sort((a, b) => a.d - b.d).forEach(p => p.fn(c));
-  /* la gente se ordena por profundidad: agentes y analistas mezclados */
   const gente = [
-    ...OFI.sillas.map(s => ({ d:s.x + s.y, z:s.z, dib:() => figura(c, s, ofiHablando === s.n, t) })),
-    ...NPCS.map(n => { const P = posNPC(n, t); return { d:P.x + P.y, z:P.z, dib:() => dibujaNPC(c, n, t) }; }),
+    ...OFI.sillas.map(s => ({ d:s.x + s.y, dib:() => figura(c, s, ofiHablando === s.n, t) })),
+    ...NPCS.map(n => { const P = posNPC(n, t); return { d:P.x + P.y, dib:() => dibujaNPC(c, n, t) }; }),
   ];
-  gente.sort((a, b) => (a.z - b.z) || (a.d - b.d)).forEach(g => g.dib());
-  /* zonas de clic: dónde quedó cada agente en pantalla */
+  gente.sort((a, b) => a.d - b.d).forEach(g => g.dib());
   OFI_HIT = OFI.sillas.map(s => ({ n:s.n, x:iX(s.x, s.y), y:iY(s.x, s.y, s.z) }));
 
   const hab = OFI.sillas.find(s => s.n === ofiHablando);
   if(hab && ofiJunta[ofiIdx]) globo(c, hab, ofiJunta[ofiIdx].txt, t);
 
-  c.font = '11px "IBM Plex Mono", monospace'; c.textAlign = 'left';
-  c.fillStyle = 'rgba(50,70,95,.4)';
-  c.fillText('NORTHPOINT CAPITAL · PISO 88 · NEW YORK', 20, 960);
+  c.font = '12px "IBM Plex Mono", monospace'; c.textAlign = 'left';
+  c.fillStyle = 'rgba(255,255,255,.4)';
+  c.fillText('NORTHPOINT CAPITAL · PISO 88 · NEW YORK', 24, H - 22);
 }
 
 function animaOficina(){
@@ -7315,8 +7182,127 @@ async function correrUno(nom, sym){
     ${ent.secs.length ? `<p class="rep-doc">${tr('ag.segun')} ${ent.secs.slice(0,2).map(x=>esc(x.h)).join(' · ')}</p>` : ''}</div>`;
 }
 
+/* ════════ CHAT CON LA OFICINA ════════
+   Le escribes a la mesa y contesta el agente al que le toca. Todo lo que responde
+   sale del cálculo real: no es un modelo conversando, es el gabinete consultando
+   sus propios números. Cuando se conecte la llave, aquí entra el razonamiento. */
+function chatDi(quien, txt, cargo){
+  const log = $('#chatLog'); if(!log) return;
+  const A = GABINETE.find(g => g.nom === quien);
+  const yo = quien === 'TÚ';
+  const d = document.createElement('div');
+  d.className = 'ch-msg' + (yo ? ' yo' : '');
+  d.innerHTML = yo
+    ? `<div class="ch-b yo">${esc(txt)}</div>`
+    : `<img class="ch-cara" src="${caraAgente(quien)}" alt="" width="34" height="34">
+       <div><div class="ch-n"><b>${esc(quien)}</b><span>${esc(cargo || (A ? A.cargo : ''))}</span></div>
+       <div class="ch-b">${esc(txt)}</div></div>`;
+  log.appendChild(d);
+  log.scrollTop = log.scrollHeight;
+}
+
+function responde(msg){
+  const m = msg.toLowerCase();
+  const v = preVuelo(), E = estadoFirma(), A = abacoStats();
+  const simMatch = msg.toUpperCase().match(/\b(NQ|ES|YM|RTY|GC|CL|MNQ|MES)\b/);
+  const sim = simMatch ? simMatch[1] : 'NQ';
+
+  if(/protocolo|corre|junta|reun/.test(m)){
+    chatDi('ATLAS', `Va. Corro a los seis sobre ${sim} y te sintetizo abajo.`);
+    correrProtocoloChat(sim);
+    return;
+  }
+  if(/puedo operar|se opera|opero hoy|hoy puedo/.test(m)){
+    if(!E){ chatDi('DIQUE', 'No tienes cuentas configuradas, así que no hay reglas que calcular.'); return; }
+    const est = v.estado === 'opera' ? 'Sí, tienes permiso.' : (v.estado === 'medio' ? 'Sí, pero a medio tamaño.' : 'No. La mesa está cerrada.');
+    chatDi('DIQUE', `${est} Tope del día ${fmt$(v.topeDia)}, te restan ${fmt$(v.resta)}, y el riesgo por trade es ${fmt$(v.rTrade)} por cuenta.`);
+    (v.motivos || []).slice(0, 2).forEach(mo => chatDi(mo.ag, mo.txt));
+    return;
+  }
+  if(/falta|objetivo|meta|cuanto|cuánto|dias|días/.test(m)){
+    if(!E){ chatDi('ATLAS', 'Sin cuentas configuradas no puedo decirte dónde vas.'); return; }
+    chatDi('ATLAS', `Vas en ${E.faseNom}, ${E.pct.toFixed(0)}% del objetivo. Llevas ${fmt$(E.ganado)} por cuenta y te faltan ${fmt$(E.falta)}.`);
+    chatDi('ÁBACO', E.diasFalta != null
+      ? `A tu ritmo son ${E.diasFalta} días hábiles más${E.fuente === 'estimada' ? ' (estimado: aún no tengo muestra tuya)' : ''}. Llevas ${E.operados} días operados de ${E.minDias} mínimos.`
+      : 'Ya cubriste el objetivo.');
+    return;
+  }
+  if(/riesgo|tamañ|tamano|stop|contrato/.test(m)){
+    const pv = PUNTO[sim];
+    chatDi('YUNQUE', pv && v.rTrade
+      ? `Para ${sim}: ${fmt$(v.rTrade)} por cuenta, que a $${pv} por punto son ${Math.floor(v.rTrade / pv)} puntos de stop con 1 contrato. El copiador lo replica en ${v.cuentas} cuentas.`
+      : `No tengo valor por punto de ${sim}, así que no calculo tamaño a ciegas.`);
+    return;
+  }
+  if(/estadis|estadís|aciertos|win|esperanza|equilibrio/.test(m)){
+    chatDi('ÁBACO', A.n
+      ? (A.muestraOk
+        ? `${A.n} trades: ${Math.round(A.wr*100)}% de aciertos, esperanza ${fmt$(Math.round(A.esperanza))} por trade, equilibrio en ${A.be!=null?Math.round(A.be*100):'—'}%.`
+        : `Sólo llevas ${A.n} trades. Con menos de 30 no concluyo nada, y no te lo voy a inventar.`)
+      : 'Todavía no tienes trades registrados. Sin datos tuyos no hay estadística que darte.');
+    return;
+  }
+  if(/evitar|violac|error|regla/.test(m)){
+    const ev = queEvitar();
+    chatDi('DIQUE', ev.total
+      ? `Lo que ya te ha costado: ${ev.lista.slice(0,3).map(x => `${x.txt} (${x.n}×)`).join(', ')}.`
+      : 'No tienes violaciones registradas. Así se ve un expediente limpio — sosténlo.');
+    return;
+  }
+  if(/calendario|evento|dato|macro/.test(m)){
+    const R = analizarActivo(sim);
+    const h = R.rep.find(x => x.ag === 'HORIZONTE');
+    (h ? h.lineas : ['No pude leer el calendario.']).forEach(l => chatDi('HORIZONTE', l));
+    return;
+  }
+  if(/precio|nivel|tecnic|técnic|grafic|gráfic/.test(m)){
+    const R = analizarActivo(sim);
+    const so = R.rep.find(x => x.ag === 'SONDA');
+    (so ? so.lineas : []).forEach(l => chatDi('SONDA', l));
+    if(so && so.nota) chatDi('SONDA', so.nota);
+    return;
+  }
+  if(/hola|buenos|buenas|que tal|qué tal/.test(m)){
+    chatDi('ATLAS', 'Aquí andamos. Pregúntame si hoy se opera, cuánto te falta, o pídeme que corra el protocolo.');
+    return;
+  }
+  chatDi('ATLAS', 'Puedo con esto: si hoy se opera, cuánto te falta para el objetivo, tu riesgo y tamaño, tu estadística, qué evitar, el calendario, o correr el protocolo en un activo.');
+}
+
+/* El protocolo, contado en el chat */
+async function correrProtocoloChat(sym){
+  await cargarMercado(); await cargarDoctrina();
+  const R = analizarActivo(sym);
+  registraVetos(sym, R.rep);
+  const espera = ms => new Promise(r => setTimeout(r, ms));
+  for(const nom of ['HORIZONTE','SONDA','ÁBACO','DIQUE','YUNQUE','VÉRTICE']){
+    const r = R.rep.find(x => x.ag === nom); if(!r) continue;
+    ofiHablando = nom;
+    await espera(560);
+    chatDi(nom, r.lineas[0] + (r.veto ? ' — y por eso veto.' : ''));
+  }
+  ofiHablando = 'ATLAS';
+  await espera(600);
+  const vetos = R.rep.filter(x => x.veto);
+  chatDi('ATLAS', vetos.length
+    ? `Cierro: hoy no se opera ${sym}. Vetan ${vetos.map(x=>x.ag).join(' y ')}, y un veto no se negocia.`
+    : `Cierro: nadie veta ${sym}. Si tu setup aparece en la ventana, tienes permiso y tamaño. La dirección la pones tú.`);
+}
+
 function renderAgentes(){
   const grid = $('#agGrid'); if(!grid) return;
+  const fch = $('#chatF');
+  if(fch && !fch.dataset.at){
+    fch.dataset.at = '1';
+    chatDi('ATLAS', 'Buenas. Soy ATLAS y coordino la mesa. Pregúntame lo que sea de la operación de hoy.');
+    fch.addEventListener('submit', ev => {
+      ev.preventDefault();
+      const txt = $('#chatIn').value.trim(); if(!txt) return;
+      chatDi('TÚ', txt); $('#chatIn').value = '';
+      setTimeout(() => responde(txt), 320);
+    });
+  }
+
   const cv = $('#agOficina');
   if(cv && !cv.dataset.at){
     cv.dataset.at = '1';
