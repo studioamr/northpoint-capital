@@ -118,18 +118,30 @@ concluir nada»*. No inventa confianza que no existe.
 
 ---
 
-## Lo que falta, en orden
+## Lo que ya se hizo después de la auditoría
 
-1. **Registro de avisos con motivo de rechazo.** Cada veto se guarda con si lo acataste
-   y por qué no. Sin eso no se puede medir nada.
-2. **El marcador «costo de ignorar al gabinete»**, en dólares. Si sale negativo, el
-   gabinete se apaga — eso también es información honesta.
-3. **La oficina como estado, no como adorno.** Que DIQUE se pare y se ponga rojo cuando
+1. ✅ **El método 0→100 del negocio, escrito** (`data/doctrina.json`): las cuatro fases
+   con objetivo, qué hacer, qué evitar y cómo se sabe que avanzaste; el 0→100 de un día;
+   las verdades medidas; y las líneas rojas. Antes sólo existía la técnica (Bootcamp),
+   no el método para llegar al payout.
+2. ✅ **Agentes atados a la doctrina.** Cada uno se entrena con las secciones del manual
+   de la casa que le tocan y **cita de dónde sale** cada cosa que dice.
+3. ✅ **Protocolo de la mañana.** Se escribe el activo y corren los siete en secuencia
+   con datos reales; ATLAS sintetiza y dice si se opera o no.
+4. ✅ **Registro de avisos con motivo de rechazo.** Rechazar exige motivo de una lista
+   corta, para que el botón no sea un sello de goma.
+5. ✅ **El marcador «costo de ignorar al gabinete»**, en dólares, comparado contra el
+   P&L real del día. Si sale a favor del humano, el sistema lo dice y propone bajarle
+   la severidad a DIQUE.
+
+## Lo que falta
+
+1. **La oficina como estado, no como adorno.** Que DIQUE se pare y se ponga rojo cuando
    quedan menos de $200 de tope; que las sillas estén vacías fuera de la ventana. Si el
    canvas se ve igual con las cuentas sanas que a un trade del corte, es fondo de
    pantalla.
-4. **La llave de IA, sólo al final, y sólo para redactar.** El modelo narra en prosa lo
-   que los cálculos ya decidieron. Escribe; nunca decide.
+2. **La llave de IA, y sólo para razonar y redactar sobre lo ya calculado.** El modelo
+   investiga y narra; los vetos siguen siendo aritmética.
 
 ---
 
