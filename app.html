@@ -6264,45 +6264,68 @@ function dibujaOficina(t){
       }
     }
   }
-  /* ── nuestra torre: la fachada que baja bajo la oficina ── */
-  const torreX0 = iX(0, ISO.N), torreX1 = iX(ISO.N, 0);
-  const piso = iY(ISO.N, ISO.N, 0) + 24;
-  c.fillStyle = '#C3CCD6'; c.fillRect(torreX0, piso, torreX1 - torreX0, H - piso);
-  c.fillStyle = '#B2BCC8'; c.fillRect(torreX0, piso, 26, H - piso);
-  c.fillStyle = '#CFD8E0'; c.fillRect(torreX1 - 26, piso, 26, H - piso);
-  for(let fy = piso + 26; fy < H; fy += 54){         // los pisos de abajo
-    c.fillStyle = 'rgba(60,80,105,.18)'; c.fillRect(torreX0, fy, torreX1 - torreX0, 3);
-    for(let fx = torreX0 + 34; fx < torreX1 - 40; fx += 46){
-      const on = rr(fx * 5 + fy * 3) < .5;
-      c.fillStyle = on ? 'rgba(255,236,186,.5)' : 'rgba(90,120,150,.26)';
-      c.fillRect(fx, fy + 9, 30, 32);
-      c.fillStyle = 'rgba(255,255,255,.16)'; c.fillRect(fx, fy + 9, 30, 6);
-    }
-  }
-  c.fillStyle = 'rgba(20,34,54,.16)'; c.fillRect(torreX0, piso, torreX1 - torreX0, 10);
-  /* coronamiento de la torre: cornisa, letrero y el número de piso */
-  c.fillStyle = '#9FAEBE'; c.fillRect(torreX0 - 14, piso - 4, (torreX1 - torreX0) + 28, 16);
-  c.fillStyle = '#8B9BAC'; c.fillRect(torreX0 - 14, piso + 8, (torreX1 - torreX0) + 28, 5);
-  // el letrero de la casa, iluminado
-  const lw = 430, lx = ISO.ox - lw/2, ly = piso + 30;
-  c.fillStyle = 'rgba(12,20,34,.9)'; c.fillRect(lx, ly, lw, 62);
-  c.fillStyle = 'rgba(155,192,220,.5)'; c.fillRect(lx, ly, lw, 2); c.fillRect(lx, ly + 60, lw, 2);
-  const brillo = .78 + Math.sin(t / 1400) * .12;
-  c.save(); c.textAlign = 'center';
-  c.shadowColor = `rgba(155,192,220,${brillo})`; c.shadowBlur = 22;
-  c.fillStyle = '#EAF2F8'; c.font = 'bold 30px "IBM Plex Mono", monospace';
-  c.fillText('NORTHPOINT', ISO.ox, ly + 34);
-  c.shadowBlur = 0;
-  c.fillStyle = 'rgba(190,214,232,.75)'; c.font = '12px "IBM Plex Mono", monospace';
-  c.fillText('C A P I T A L   M A N A G E M E N T', ISO.ox, ly + 52);
-  c.restore();
-  // placa del piso, sobre la cornisa
-  c.fillStyle = 'rgba(12,20,34,.75)'; c.fillRect(torreX1 - 116, piso - 46, 104, 34);
-  c.textAlign = 'center'; c.fillStyle = '#CFE0EC';
-  c.font = 'bold 19px "IBM Plex Mono", monospace'; c.fillText('88', torreX1 - 64, piso - 28);
-  c.font = '8.5px "IBM Plex Mono", monospace'; c.fillStyle = 'rgba(190,214,232,.6)';
-  c.fillText('PISO', torreX1 - 64, piso - 38);
   const N = ISO.N, MU = ISO.MUR;
+
+  /* ── nuestra torre: el mismo volumen del despacho, extruido hacia abajo ──
+     Antes era una fachada plana de frente pegada a un cuarto isométrico: las dos
+     perspectivas se peleaban y la oficina parecía flotar sobre un cartel. Ahora la
+     torre es una caja isométrica que comparte planta con el despacho, así que el
+     penthouse se lee como lo que es: el último piso de este edificio. */
+  const PROF = 9;                                    // pisos visibles hacia abajo
+  const caraTorre = (lado, fn) => {
+    c.save();
+    if(lado === 'der') c.setTransform(-ISO.TW/2, ISO.TH/2, 0, -ISO.TZ, iX(ISO.N, 0), iY(ISO.N, 0, 0));
+    else               c.setTransform( ISO.TW/2, ISO.TH/2, 0, -ISO.TZ, iX(0, ISO.N), iY(0, ISO.N, 0));
+    fn(c); c.restore();
+  };
+  const ventanas = (c2, tono) => {
+    c2.fillStyle = tono; c2.fillRect(0, -PROF, ISO.N, PROF);
+    for(let f = 0; f < PROF; f++){                     // losa de cada piso
+      c2.fillStyle = 'rgba(28,44,66,.24)'; c2.fillRect(0, -f - .06, ISO.N, .06);
+      for(let u = .3; u < ISO.N - .5; u += .74){
+        const sm = rr(u * 31 + f * 17);
+        const on = sm < .52;
+        c2.fillStyle = on ? (rr(u+f) > .8 ? 'rgba(255,240,190,.85)' : 'rgba(246,226,168,.62)')
+                          : 'rgba(96,124,156,.34)';
+        c2.fillRect(u, -f - .78, .5, .58);
+        c2.fillStyle = 'rgba(255,255,255,.1)'; c2.fillRect(u, -f - .78, .5, .12);
+      }
+    }
+  };
+  caraTorre('der', c2 => ventanas(c2, '#8FA2B6'));
+  caraTorre('izq', c2 => ventanas(c2, '#7E92A8'));
+
+  /* cornisa del coronamiento, siguiendo las dos aristas */
+  caraTorre('der', c2 => { c2.fillStyle = '#C6D0DA'; c2.fillRect(-.12, -.34, ISO.N + .24, .34); });
+  caraTorre('izq', c2 => { c2.fillStyle = '#B4C0CC'; c2.fillRect(-.12, -.34, ISO.N + .24, .34); });
+
+  /* el letrero de la casa, sobre la cara derecha de la torre */
+  caraTorre('der', c2 => {
+    c2.fillStyle = 'rgba(12,20,34,.92)'; c2.fillRect(1.5, -3.5, 7, 1.5);
+    c2.fillStyle = 'rgba(155,192,220,.55)';
+    c2.fillRect(1.5, -3.5, 7, .05); c2.fillRect(1.5, -2.05, 7, .05);
+  });
+  // el texto va aparte para que no salga deformado por la matriz
+  const sgX = iX(ISO.N, 5), sgY = iY(ISO.N, 5, -2.55);
+  c.save(); c.translate(sgX, sgY); c.transform(1, -.5, 0, 1, 0, 0);
+  c.textAlign = 'center';
+  const bri = .72 + Math.sin(t / 1400) * .14;
+  c.shadowColor = `rgba(155,192,220,${bri})`; c.shadowBlur = 20;
+  c.fillStyle = '#EDF4FA'; c.font = 'bold 27px "IBM Plex Mono", monospace';
+  c.fillText('NORTHPOINT', 0, 0);
+  c.shadowBlur = 0;
+  c.fillStyle = 'rgba(196,218,236,.8)'; c.font = '10px "IBM Plex Mono", monospace';
+  c.fillText('C A P I T A L   M A N A G E M E N T', 0, 15);
+  c.restore();
+
+  /* placa del piso, en la esquina del coronamiento */
+  const plX = iX(ISO.N, 0), plY = iY(ISO.N, 0, 0);
+  c.fillStyle = 'rgba(12,20,34,.8)'; c.fillRect(plX - 46, plY + 14, 92, 30);
+  c.textAlign = 'center';
+  c.fillStyle = 'rgba(190,214,232,.62)'; c.font = '8px "IBM Plex Mono", monospace';
+  c.fillText('PISO', plX, plY + 25);
+  c.fillStyle = '#D6E6F2'; c.font = 'bold 17px "IBM Plex Mono", monospace';
+  c.fillText('88', plX, plY + 40);
 
   /* ══ MURO DERECHO · ventanal de piso a techo ══ */
   enMuro(c, 'der', () => {
