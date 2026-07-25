@@ -892,6 +892,8 @@ button.tag.quemada{text-decoration:line-through;text-decoration-color:var(--down
 .ag-msg-h span{font-size:9.5px;color:var(--faint)}
 .ag-msg-h i{font-family:var(--mono);font-size:9.5px;color:var(--faint);margin-left:auto;font-style:normal}
 .ag-msg-c p{font-size:13px;line-height:1.62;color:var(--dim);overflow-wrap:anywhere}
+.ag-oficina-wrap{border:1px solid var(--line);border-radius:14px;overflow:hidden;margin-bottom:18px;background:#0E1018;line-height:0}
+#agOficina{display:block;width:100%;height:auto}
 @media (max-width:760px){ .ag-grid{grid-template-columns:1fr} }
 
 .duties{
@@ -1252,6 +1254,7 @@ stop[stop-color="#9BC0DC"]{stop-color:var(--txt)}
           <div class="ag-modo" id="agModo"></div>
         </div>
         <p class="sub" style="max-width:70ch;margin:-6px 0 20px" data-i18n="ag.intro">Siete agentes dirigen tu firma. Tú no operas: ajustas sus parámetros y ellos deciden a tu beneficio. Abajo ves cómo se coordinan, quién propone, quién objeta y cómo cierran cada decisión.</p>
+        <div class="ag-oficina-wrap"><canvas id="agOficina" width="960" height="400" aria-label="La oficina del gabinete — piso 88, Nueva York"></canvas></div>
         <div class="ag-grid" id="agGrid"></div>
         <div class="sec-h" style="margin-top:26px"><h3 data-i18n="ag.decision">Decisión del día</h3><span class="micro" data-i18n="ag.decision.sub">ATLAS propone · tú aceptas o rechazas</span></div>
         <div id="agProp"></div>
@@ -5766,6 +5769,201 @@ const GABINETE = [
 ];
 let AG_CHAT = null;
 
+/* ════════ LA OFICINA · piso 88, Nueva York ════════
+   Pixel-art dibujado a mano en canvas: cero librerías, cero imágenes externas.
+   Cada puesto tiene su personaje —silueta, paleta y detalle propios— y va hablando
+   la junta real. Al fondo, los rascacielos y el pizarrón con las etapas 0→100 de
+   un trade y el post-trade. */
+const OFI = {
+  // paleta por agente: [piel, pelo, saco, camisa, acento]
+  look: {
+    ATLAS:     { piel:'#E8B48C', pelo:'#2A2118', saco:'#1E2A3A', camisa:'#F2F4F7', ac:'#9BC0DC', prop:'taza' },
+    'VÉRTICE': { piel:'#D9A377', pelo:'#3A2A1A', saco:'#2B2118', camisa:'#E8D9C0', ac:'#D9A441', prop:'puro' },
+    DIQUE:     { piel:'#C98F63', pelo:'#1A1A1A', saco:'#2A2E38', camisa:'#DCE4EC', ac:'#DE6A5F', prop:'carpeta' },
+    SONDA:     { piel:'#F0C9A0', pelo:'#6B3A1E', saco:'#3A2E4A', camisa:'#EFE6F5', ac:'#B18FD9', prop:'lupa' },
+    'ÁBACO':   { piel:'#B87C4E', pelo:'#141414', saco:'#1E3A32', camisa:'#DDEFE7', ac:'#57C79B', prop:'laptop' },
+    HORIZONTE: { piel:'#E0AE85', pelo:'#8A8F98', saco:'#3A3320', camisa:'#F0EBDC', ac:'#E0B44A', prop:'globo' },
+    YUNQUE:    { piel:'#A9714A', pelo:'#241C14', saco:'#33202A', camisa:'#F0DCE4', ac:'#E07A9B', prop:'telefono' },
+  },
+  // asientos alrededor de la mesa: x, y, si mira a la izquierda
+  sillas: [
+    { n:'ATLAS',     x:480, y:262, flip:false, cabecera:true },
+    { n:'VÉRTICE',   x:348, y:250, flip:false },
+    { n:'DIQUE',     x:612, y:250, flip:true  },
+    { n:'SONDA',     x:236, y:290, flip:false },
+    { n:'ÁBACO',     x:724, y:290, flip:true  },
+    { n:'HORIZONTE', x:168, y:314, flip:false },
+    { n:'YUNQUE',    x:792, y:314, flip:true  },
+  ],
+  etapas: ['01 CONTEXTO','02 TESIS','03 RIESGO','04 FIRMA','05 EJECUTA','06 GESTIÓN','07 CIERRE','08 JOURNAL'],
+};
+let ofiT = 0, ofiIdx = 0, ofiHablando = null, ofiRAF = null, ofiJunta = [];
+
+function px(c, x, y, w, h, col){ c.fillStyle = col; c.fillRect(x|0, y|0, w|0, h|0); }
+
+/* Un personaje. Cada puesto cambia de silueta por su prop y su pelo. */
+function dibujaAgente(c, s, habla, t){
+  const L = OFI.look[s.n]; if(!L) return;
+  const x = s.x, y = s.y, f = s.flip ? -1 : 1;
+  c.save(); c.translate(x, y); c.scale(f * 1.55, 1.55);   // más grandes: se aprecia el detalle
+  const bob = habla ? Math.round(Math.sin(t/180)*1.5) : 0;   // se mece al hablar
+
+  px(c, -13, 4 + bob, 26, 30, L.saco);                        // torso
+  px(c, -13, 4 + bob, 26, 4, shade(L.saco, 18));              // hombros
+  px(c, -4, 6 + bob, 8, 22, L.camisa);                        // camisa
+  px(c, -2, 8 + bob, 4, 12, L.ac);                            // corbata
+  px(c, -9, -14 + bob, 18, 20, L.piel);                       // cabeza
+  px(c, -10, -18 + bob, 20, 8, L.pelo);                       // pelo
+  if(s.n === 'HORIZONTE') px(c, -10, -18 + bob, 20, 3, '#C9CDD4');   // canas
+  if(s.n === 'ÁBACO'){ px(c, -8, -8 + bob, 6, 4, '#0E1018'); px(c, 2, -8 + bob, 6, 4, '#0E1018'); px(c, -2, -7 + bob, 4, 1, '#0E1018'); }  // lentes
+  else { px(c, -6, -8 + bob, 3, 3, '#1A1A1A'); px(c, 3, -8 + bob, 3, 3, '#1A1A1A'); }  // ojos
+  px(c, -3, -2 + bob, 6, habla ? 3 : 1, habla ? '#2A1518' : '#8A5A44');   // boca
+
+  // el prop de cada quien
+  const P = L.prop;
+  if(P === 'taza'){ px(c, 14, 24, 7, 6, '#F2F4F7'); px(c, 21, 26, 2, 3, '#F2F4F7'); }
+  if(P === 'puro'){ px(c, 8, -3 + bob, 7, 2, '#C9B79B'); px(c, 15, -3 + bob, 2, 2, '#E07A4A'); }
+  if(P === 'carpeta'){ px(c, 12, 20, 12, 15, '#B33A32'); px(c, 14, 23, 8, 1, '#F2F4F7'); px(c, 14, 26, 8, 1, '#F2F4F7'); }
+  if(P === 'lupa'){ c.strokeStyle = '#B18FD9'; c.lineWidth = 2; c.beginPath(); c.arc(20, 24, 5, 0, 7); c.stroke(); px(c, 23, 28, 5, 2, '#B18FD9'); }
+  if(P === 'laptop'){ px(c, 10, 24, 18, 10, '#2A3038'); px(c, 12, 26, 14, 6, '#57C79B'); }
+  if(P === 'globo'){ c.fillStyle = '#3A5A7A'; c.beginPath(); c.arc(20, 26, 7, 0, 7); c.fill(); px(c, 14, 25, 13, 1, '#7AA4C4'); px(c, 19, 19, 1, 14, '#7AA4C4'); }
+  if(P === 'telefono'){ px(c, 14, 18, 5, 14, '#1A1A1A'); px(c, 15, 20, 3, 8, '#E07A9B'); }
+  c.restore();
+
+  // etiqueta del puesto
+  c.font = '9px "IBM Plex Mono", monospace'; c.textAlign = 'center';
+  c.fillStyle = habla ? L.ac : 'rgba(255,255,255,.34)';
+  c.fillText(s.n, x, y + 62);
+}
+
+function shade(hex, d){
+  const n = parseInt(hex.slice(1), 16);
+  const cl = v => Math.max(0, Math.min(255, v + d));
+  return `rgb(${cl(n>>16)},${cl((n>>8)&255)},${cl(n&255)})`;
+}
+
+/* Globo de diálogo arriba del que habla */
+function globo(c, s, txt, t){
+  const x = s.x, y = s.y - 46;
+  c.font = '11px system-ui, -apple-system, sans-serif';
+  const pal = txt.split(' '); const lineas = []; let ln = '';
+  pal.forEach(p => { const pr = ln ? ln + ' ' + p : p;
+    if(c.measureText(pr).width > 250){ lineas.push(ln); ln = p; } else ln = pr; });
+  if(ln) lineas.push(ln);
+  const vis = lineas.slice(0, 3);
+  const w = Math.max(...vis.map(l => c.measureText(l).width)) + 20;
+  const h = vis.length * 15 + 14;
+  let bx = x - w/2; bx = Math.max(8, Math.min(952 - w, bx));
+  const by = y - h;
+
+  c.fillStyle = 'rgba(14,16,24,.95)'; c.strokeStyle = OFI.look[s.n].ac; c.lineWidth = 1;
+  c.beginPath(); c.roundRect(bx, by, w, h, 5); c.fill(); c.stroke();
+  c.beginPath(); c.moveTo(x - 5, by + h); c.lineTo(x, by + h + 7); c.lineTo(x + 5, by + h); c.fill();
+  c.fillStyle = '#E9EDF2'; c.textAlign = 'left';
+  vis.forEach((l, i) => c.fillText(l, bx + 10, by + 18 + i*15));
+}
+
+function dibujaOficina(t){
+  const cv = $('#agOficina'); if(!cv) return;
+  const c = cv.getContext('2d');
+  c.imageSmoothingEnabled = false;
+  const W = 960, H = 400;
+
+  // ── noche de Nueva York tras el ventanal ──
+  const g = c.createLinearGradient(0, 0, 0, 250);
+  g.addColorStop(0, '#0A1428'); g.addColorStop(1, '#1E2A44');
+  c.fillStyle = g; c.fillRect(0, 0, W, 250);
+  for(let i = 0; i < 60; i++){                       // estrellas
+    const sx = (i * 137) % W, sy = (i * 53) % 90;
+    px(c, sx, sy, 1, 1, i % 3 ? 'rgba(255,255,255,.35)' : 'rgba(255,255,255,.7)');
+  }
+  // rascacielos, con ventanas que titilan
+  const torres = [[20,150,58],[86,110,44],[136,175,66],[208,128,50],[264,196,72],[342,142,46],
+                  [396,168,60],[462,104,52],[520,186,68],[594,132,44],[644,160,58],[708,118,48],
+                  [762,180,64],[832,146,54],[892,168,52]];
+  torres.forEach(([bx, bh, bw], ti) => {
+    const top = 250 - bh;
+    px(c, bx, top, bw, bh, ti % 2 ? '#141E30' : '#101828');
+    px(c, bx, top, bw, 2, '#1E2A40');
+    for(let wy = top + 7; wy < 244; wy += 9){
+      for(let wx = bx + 5; wx < bx + bw - 5; wx += 8){
+        const sem = (wx * 7 + wy * 13 + ti) % 11;
+        if(sem < 6){
+          const parpadea = sem === 5 && Math.floor(t / 900 + wx) % 4 === 0;
+          px(c, wx, wy, 3, 4, parpadea ? '#FFF0B8' : (sem < 3 ? '#F2D98A' : '#8FA8C4'));
+        }
+      }
+    }
+  });
+  px(c, 0, 246, W, 4, '#0A0E16');
+  // marco del ventanal
+  c.fillStyle = '#0B0D14';
+  [0, 238, 478, 718, 952].forEach(mx => c.fillRect(mx, 0, 8, 250));
+  c.fillRect(0, 0, W, 6);
+
+  // ── interior: piso y pared ──
+  px(c, 0, 250, W, 150, '#171A22');
+  px(c, 0, 250, W, 3, '#22262F');
+  for(let fx = 0; fx < W; fx += 40) px(c, fx, 250, 1, 150, 'rgba(255,255,255,.028)');
+  for(let fy = 262; fy < H; fy += 26) px(c, 0, fy, W, 1, 'rgba(255,255,255,.022)');
+
+  // ── pizarrón: las etapas 0 → 100 ──
+  const bx = 706, by = 22, bw = 238, bh = 150;
+  px(c, bx - 3, by - 3, bw + 6, bh + 6, '#2A2118');
+  px(c, bx, by, bw, bh, '#10261E');
+  c.font = '8px "IBM Plex Mono", monospace'; c.textAlign = 'left';
+  c.fillStyle = '#6FD9A8'; c.fillText('DE 0 A 100 · UN TRADE', bx + 10, by + 16);
+  px(c, bx + 10, by + 21, 110, 1, 'rgba(111,217,168,.45)');
+  OFI.etapas.forEach((e, i) => {
+    const ey = by + 34 + i * 13;
+    const activa = Math.floor(t / 2200) % OFI.etapas.length === i;
+    px(c, bx + 10, ey - 4, 4, 4, activa ? '#8FE9C0' : 'rgba(111,217,168,.4)');
+    c.fillStyle = activa ? '#CFF5E4' : 'rgba(163,214,192,.62)';
+    c.fillText(e, bx + 20, ey);
+  });
+  c.fillStyle = 'rgba(111,217,168,.5)';
+  c.fillText('POST · qué salió bien / qué no', bx + 10, by + bh - 8);
+
+  // ── mesa de juntas ──
+  c.fillStyle = '#241C16'; c.beginPath(); c.ellipse(480, 316, 250, 52, 0, 0, 7); c.fill();
+  c.fillStyle = '#33271E'; c.beginPath(); c.ellipse(480, 312, 244, 48, 0, 0, 7); c.fill();
+  c.fillStyle = 'rgba(255,255,255,.05)'; c.beginPath(); c.ellipse(470, 302, 180, 26, 0, 0, 7); c.fill();
+  px(c, 300, 300, 26, 8, '#1E2630'); px(c, 304, 296, 18, 5, '#57C79B');   // monitor en la mesa
+  px(c, 620, 302, 20, 6, '#1E2630');
+  c.fillStyle = '#7A5A3A'; c.beginPath(); c.arc(560, 300, 5, 0, 7); c.fill();  // tazas
+  c.fillStyle = '#7A5A3A'; c.beginPath(); c.arc(410, 306, 5, 0, 7); c.fill();
+
+  // ── los siete, el que habla al frente ──
+  const orden = [...OFI.sillas].sort((a, b) => a.y - b.y);
+  orden.forEach(s => dibujaAgente(c, s, ofiHablando === s.n, t));
+  const hab = OFI.sillas.find(s => s.n === ofiHablando);
+  if(hab && ofiJunta[ofiIdx]) globo(c, hab, ofiJunta[ofiIdx].txt, t);
+
+  // ── rótulo del piso ──
+  c.font = '9px "IBM Plex Mono", monospace'; c.textAlign = 'left';
+  c.fillStyle = 'rgba(255,255,255,.28)';
+  c.fillText('NORTHPOINT CAPITAL · PISO 88 · NEW YORK', 16, 393);
+}
+
+function animaOficina(){
+  const cv = $('#agOficina'); if(!cv) return;
+  cancelAnimationFrame(ofiRAF);
+  const paso = 4200;                      // cada mensaje dura ~4.2s
+  const t0 = performance.now();
+  const loop = (now) => {
+    if(!document.getElementById('v-agentes').classList.contains('on')) return;  // se detiene fuera de la vista
+    const t = now - t0;
+    if(ofiJunta.length){
+      const i = Math.floor(t / paso) % ofiJunta.length;
+      if(i !== ofiIdx){ ofiIdx = i; }
+      ofiHablando = ofiJunta[ofiIdx].de;
+    }
+    dibujaOficina(t);
+    ofiRAF = requestAnimationFrame(loop);
+  };
+  ofiRAF = requestAnimationFrame(loop);
+}
+
 function gabineteDe(){ S.gabinete = S.gabinete || {}; return S.gabinete; }
 function paramVal(a){
   const g = gabineteDe();
@@ -5812,6 +6010,7 @@ function renderAgentes(){
     const junta = doc.junta || [];
     $('#agChatSub').textContent = junta.length ? `${junta.length} ${tr('ag.mensajes')}` : '';
     pintaPropuesta(doc.propuesta);
+    ofiJunta = junta; ofiIdx = 0; animaOficina();   // la oficina habla la junta real
     const cont = $('#agChat');
     if(!junta.length){ cont.innerHTML = `<div class="panel"><div class="p-body"><p class="sub" style="margin:0">${tr('ag.sinchat')}</p></div></div>`; return; }
     const nom = {}; GABINETE.forEach(a => nom[a.nom] = a);
