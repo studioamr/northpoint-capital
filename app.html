@@ -914,6 +914,16 @@ button.tag.quemada{text-decoration:line-through;text-decoration-color:var(--down
 .ag-oficina-wrap{position:relative}
 .chat{border:1px solid var(--line);border-radius:13px;margin-top:16px;background:var(--panel-bg);overflow:hidden}
 .chat-h{padding:14px 18px 10px;border-bottom:1px solid var(--line)}
+.chat-h-t{display:flex;align-items:center;gap:12px}
+.chat-h-t .btn{margin-left:auto}
+.llave-caja{margin-top:11px;border:1px solid var(--line);border-radius:9px;padding:13px 15px;background:var(--w02)}
+.llave-p{font-size:11.5px;line-height:1.6;color:var(--dim);margin-bottom:10px;max-width:72ch}
+.llave-f{display:flex;gap:8px;flex-wrap:wrap}
+#llaveIn{flex:1;min-width:220px;background:var(--w03);border:1px solid var(--line);border-radius:8px;
+  padding:9px 12px;color:var(--txt);font-family:var(--mono);font-size:12px}
+#llaveIn:focus{outline:none;border-color:var(--accent)}
+.llave-link{display:inline-block;margin-top:9px;font-size:11px;color:var(--accent);text-decoration:none}
+.llave-link:hover{text-decoration:underline}
 .chat-sug{display:block;font-size:11px;color:var(--faint);margin-top:5px;line-height:1.5}
 .chat-log{max-height:340px;overflow-y:auto;padding:14px 18px;display:flex;flex-direction:column;gap:12px}
 .ch-msg{display:flex;gap:10px;align-items:flex-start}
@@ -1394,8 +1404,22 @@ stop[stop-color="#9BC0DC"]{stop-color:var(--txt)}
         </div>
         <div id="agDetalle"></div>
         <div class="chat">
-          <div class="chat-h"><span class="fb-lab" data-i18n="ag.chatlab">HABLA CON LA OFICINA</span>
-            <span class="chat-sug" data-i18n="ag.chatsug">Prueba: «¿puedo operar hoy?» · «corre el protocolo en NQ» · «cuánto me falta»</span></div>
+          <div class="chat-h">
+            <div class="chat-h-t">
+              <span class="fb-lab" data-i18n="ag.chatlab">HABLA CON LA OFICINA</span>
+              <button class="btn sm" id="btnLlave"></button>
+            </div>
+            <span class="chat-sug" data-i18n="ag.chatsug">Prueba: «¿puedo operar hoy?» · «corre el protocolo en NQ» · «cuánto me falta»</span>
+            <div class="llave-caja" id="llaveCaja" hidden>
+              <p class="llave-p" data-i18n="ag.llaveP">Pega tu llave de Anthropic (empieza con sk-ant-). Se guarda sólo en este navegador y nunca sale de tu equipo. Sin llave el gabinete sigue funcionando, pero contesta con cálculo en vez de razonamiento.</p>
+              <div class="llave-f">
+                <input id="llaveIn" type="password" placeholder="sk-ant-…" autocomplete="off" spellcheck="false">
+                <button class="btn primary sm" id="llaveGo" data-i18n="ag.llaveGuardar">Guardar</button>
+                <button class="btn sm danger" id="llaveDel" data-i18n="ag.llaveBorrar">Borrar</button>
+              </div>
+              <a class="llave-link" href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener" data-i18n="ag.llaveSacar">Sacar una llave en console.anthropic.com →</a>
+            </div>
+          </div>
           <div class="chat-log" id="chatLog"></div>
           <form class="chat-f" id="chatF" autocomplete="off">
             <input id="chatIn" placeholder="Escríbele a la mesa…" aria-label="Mensaje a la oficina">
@@ -1937,6 +1961,18 @@ const I18N = {
   'ag.chat':           { es:'Junta de la mesa',         en:'Desk meeting' },
   'ag.mensajes':       { es:'mensajes',                 en:'messages' },
   'ag.sinchat':        { es:'Todavía no hay junta. Cuando corras el gabinete, aquí queda la conversación completa.', en:'No meeting yet. When you run the cabinet, the full conversation lands here.' },
+  'ag.llaveOn':        { es:'IA EN VIVO ✓',             en:'LIVE AI ✓' },
+  'ag.llaveOff':       { es:'Conectar IA',              en:'Connect AI' },
+  'ag.llaveP':         { es:'Pega tu llave de Anthropic (empieza con sk-ant-). Se guarda sólo en este navegador y nunca sale de tu equipo. Sin llave el gabinete sigue funcionando, pero contesta con cálculo en vez de razonamiento.',
+                         en:'Paste your Anthropic key (starts with sk-ant-). It is stored only in this browser and never leaves your machine. Without it the cabinet still works, answering with computation instead of reasoning.' },
+  'ag.llaveGuardar':   { es:'Guardar',                  en:'Save' },
+  'ag.llaveBorrar':    { es:'Borrar',                   en:'Delete' },
+  'ag.llaveSacar':     { es:'Sacar una llave en console.anthropic.com →', en:'Get a key at console.anthropic.com →' },
+  'ag.llaveMala':      { es:'Esa no parece llave de Anthropic: debe empezar con sk-ant-', en:'That does not look like an Anthropic key: it must start with sk-ant-' },
+  'ag.llaveLista':     { es:'Llave guardada · el gabinete ya razona', en:'Key saved · the cabinet now reasons' },
+  'ag.llaveFuera':     { es:'Llave borrada de este navegador', en:'Key removed from this browser' },
+  'ag.llaveSaludo':    { es:'Listo, ya puedo razonar. Pregúntame con tus palabras: entiendo lo que quieras saber de la mesa, no sólo frases hechas.',
+                         en:'Done, I can reason now. Ask me in your own words — I understand anything about the desk, not just canned phrases.' },
   'ag.chatlab':        { es:'HABLA CON LA OFICINA',    en:'TALK TO THE DESK' },
   'ag.chatsug':        { es:'Prueba: «¿puedo operar hoy?» · «corre el protocolo en NQ» · «cuánto me falta»',
                          en:'Try: “can I trade today?” · “run the protocol on NQ” · “how far am I”' },
@@ -6405,8 +6441,7 @@ function dibujaOficina(t){
   const rotX = iX(N, 5.2), rotY = iY(N, 5.2, -3.4);
   c.save(); c.translate(rotX, rotY); c.transform(1, -.5, 0, 1, 0, 0);
   c.textAlign = 'center'; c.fillStyle = '#2C3560';
-  c.font = 'bold 40px "IBM Plex Mono", monospace'; c.fillText('NORTHPOINT', 0, 0);
-  c.font = 'bold 30px "IBM Plex Mono", monospace'; c.fillText('DE TRADING', 0, 38);
+  c.font = 'bold 46px "IBM Plex Mono", monospace'; c.fillText('NORTHPOINT', 0, 0);
   c.restore();
 
   /* ══ AZOTEA ══ */
@@ -6592,18 +6627,6 @@ function dibujaOficina(t){
       }
     });
   });
-
-  /* ══ EL LETRERO DEL TECHO ══ */
-  const letX = iX(2.2, -2.4), letY = iY(2.2, -2.4, 0);
-  c.save(); c.translate(letX, letY);
-  c.transform(1, .5, 0, 1, 0, 0);
-  c.textAlign = 'left';
-  const bri = .7 + Math.sin(t / 1300) * .18;
-  c.shadowColor = `rgba(206,226,246,${bri})`; c.shadowBlur = 26;
-  c.fillStyle = '#F6FAFF'; c.font = 'bold 62px "IBM Plex Mono", monospace';
-  c.fillText('NORTHPOINT', 0, 0);
-  c.restore();
-  c.shadowBlur = 0;
 
   /* ══ LA GENTE ══ */
   piezas.sort((a, b) => a.d - b.d).forEach(p => p.fn(c));
@@ -7288,6 +7311,58 @@ async function correrUno(nom, sym){
     ${ent.secs.length ? `<p class="rep-doc">${tr('ag.segun')} ${ent.secs.slice(0,2).map(x=>esc(x.h)).join(' · ')}</p>` : ''}</div>`;
 }
 
+/* ════════ RAZONAMIENTO EN VIVO ════════
+   Con una llave de Anthropic, los agentes dejan de sólo consultar sus cálculos y
+   pasan a razonar sobre ellos. Reglas del sistema, no negociables:
+   · La llave la pega el dueño y vive SÓLO en su navegador (localStorage). Nunca
+     viaja al repositorio ni a ningún servidor nuestro.
+   · El modelo razona y redacta; los VETOS siguen siendo aritmética. Un agente no
+     puede levantar un veto que el cálculo impuso.
+   · Todo lo que el modelo recibe son datos ya calculados, más la doctrina de la
+     casa: no se le pide que adivine dirección. */
+const LLAVE_LS = 'np_ia_key';
+const getLlave = () => { try{ return localStorage.getItem(LLAVE_LS) || ''; }catch(e){ return ''; } };
+const hayLlave = () => /^sk-ant-/.test(getLlave());
+
+async function piensa(agente, pregunta, datos){
+  const key = getLlave();
+  if(!hayLlave()) return null;
+  const A = GABINETE.find(g => g.nom === agente) || {};
+  const ent = entrenamiento(agente);
+  const D = DOCTRINA_DOC || {};
+  const F = faseDoctrina();
+  const sistema = [
+    A.prompt || `Eres ${agente} en la mesa de trading Northpoint.`,
+    'Trabajas para el dueño de la firma. Contestas en español mexicano, natural y directo.',
+    'REGLAS DURAS: no predices la dirección del mercado — no tienes ventaja ahí y fingir que sí es el error más caro.',
+    'No levantas ni suavizas un veto: los vetos son aritmética y ya vienen calculados en los datos.',
+    'Si no tienes datos suficientes lo dices en vez de inventar.',
+    'Respondes en 1 a 3 frases. Sin listas, sin preámbulos, sin repetir la pregunta.',
+    ent.secs.length ? `Tu formación es el manual de la casa: ${ent.secs.map(x=>x.h).join(' · ')}.` : '',
+    F ? `Fase actual del método: ${F.n} ${F.nombre}. Objetivo: ${F.objetivo}. A evitar: ${(F.evitar||[]).join(' ')}` : '',
+    (D.verdades||[]).length ? 'Verdades medidas de la casa: ' + D.verdades.map(v=>`${v.t}: ${v.d}`).join(' ') : '',
+  ].filter(Boolean).join('\n');
+
+  try{
+    const r = await fetch('https://api.anthropic.com/v1/messages', {
+      method:'POST',
+      headers:{ 'content-type':'application/json', 'x-api-key':key,
+                'anthropic-version':'2023-06-01', 'anthropic-dangerous-direct-browser-access':'true' },
+      body: JSON.stringify({
+        model:'claude-sonnet-5', max_tokens:320, system:sistema,
+        messages:[{ role:'user', content:
+          `Datos calculados de la mesa ahora mismo (son la verdad, no los contradigas):\n` +
+          JSON.stringify(datos, null, 1) + `\n\nEl dueño pregunta: ${pregunta}` }],
+      }),
+    });
+    if(!r.ok){ const e = await r.json().catch(()=>({})); throw new Error((e.error&&e.error.message) || r.status); }
+    const d = await r.json();
+    return (d.content || []).filter(x => x.type === 'text').map(x => x.text).join(' ').trim();
+  }catch(e){
+    return { error: String(e.message || e) };
+  }
+}
+
 /* ════════ CHAT CON LA OFICINA ════════
    Le escribes a la mesa y contesta el agente al que le toca. Todo lo que responde
    sale del cálculo real: no es un modelo conversando, es el gabinete consultando
@@ -7397,15 +7472,59 @@ async function correrProtocoloChat(sym){
 
 function renderAgentes(){
   const grid = $('#agGrid'); if(!grid) return;
+  const bl = $('#btnLlave');
+  if(bl && !bl.dataset.at){
+    bl.dataset.at = '1';
+    const pinta = () => {
+      bl.textContent = hayLlave() ? tr('ag.llaveOn') : tr('ag.llaveOff');
+      bl.className = 'btn sm' + (hayLlave() ? ' primary' : '');
+    };
+    pinta();
+    bl.onclick = () => { const cj = $('#llaveCaja'); cj.hidden = !cj.hidden; };
+    $('#llaveGo').onclick = () => {
+      const k = $('#llaveIn').value.trim();
+      if(!/^sk-ant-/.test(k)){ toast(tr('ag.llaveMala')); return; }
+      try{ localStorage.setItem(LLAVE_LS, k); }catch(e){}
+      $('#llaveIn').value = ''; $('#llaveCaja').hidden = true; pinta();
+      toast(tr('ag.llaveLista'));
+      chatDi('ATLAS', tr('ag.llaveSaludo'));
+    };
+    $('#llaveDel').onclick = () => {
+      try{ localStorage.removeItem(LLAVE_LS); }catch(e){}
+      pinta(); toast(tr('ag.llaveFuera'));
+    };
+  }
+
   const fch = $('#chatF');
   if(fch && !fch.dataset.at){
     fch.dataset.at = '1';
     chatDi('ATLAS', 'Buenas. Soy ATLAS y coordino la mesa. Pregúntame lo que sea de la operación de hoy.');
-    fch.addEventListener('submit', ev => {
+    fch.addEventListener('submit', async ev => {
       ev.preventDefault();
       const txt = $('#chatIn').value.trim(); if(!txt) return;
       chatDi('TÚ', txt); $('#chatIn').value = '';
-      setTimeout(() => responde(txt), 320);
+      if(!hayLlave()){ setTimeout(() => responde(txt), 320); return; }
+      /* Con llave: el cálculo manda, el modelo lo explica. */
+      const v = preVuelo(), E = estadoFirma(), A = abacoStats();
+      const quien = /riesgo|tamañ|stop|puedo operar|veto/.test(txt.toLowerCase()) ? 'DIQUE'
+                  : /precio|nivel|tecnic|técnic/.test(txt.toLowerCase()) ? 'SONDA'
+                  : /estadis|estadís|aciertos|esperanza/.test(txt.toLowerCase()) ? 'ÁBACO'
+                  : /calendario|evento|macro/.test(txt.toLowerCase()) ? 'HORIZONTE'
+                  : 'ATLAS';
+      chatDi(quien, '…');
+      const burbuja = $('#chatLog').lastElementChild.querySelector('.ch-b');
+      const datos = { estado_mesa:v.estado, tope_dia:v.topeDia, restante:v.resta,
+                      riesgo_por_trade:v.rTrade, trades_hoy:(v.hoyTrades||[]).length,
+                      motivos:(v.motivos||[]).map(m=>m.ag+': '+m.txt),
+                      fase:E&&E.faseNom, ganado:E&&E.ganado, falta:E&&E.falta,
+                      dias_habiles_restantes:E&&E.diasFalta, dias_operados:E&&E.operados,
+                      minimo_dias:E&&E.minDias, cuentas:v.cuentas,
+                      mis_trades:A.n, mis_aciertos:A.n?Math.round(A.wr*100)+'%':'sin muestra',
+                      muestra_suficiente:A.muestraOk };
+      const res = await piensa(quien, txt, datos);
+      if(res && res.error){ burbuja.textContent = 'No pude pensar: ' + res.error + '. Reviso la llave en Ajustes.'; }
+      else if(res){ burbuja.textContent = res; }
+      else { $('#chatLog').lastElementChild.remove(); responde(txt); }
     });
   }
 
