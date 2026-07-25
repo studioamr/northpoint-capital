@@ -892,6 +892,27 @@ button.tag.quemada{text-decoration:line-through;text-decoration-color:var(--down
 .ag-msg-h span{font-size:9.5px;color:var(--faint)}
 .ag-msg-h i{font-family:var(--mono);font-size:9.5px;color:var(--faint);margin-left:auto;font-style:normal}
 .ag-msg-c p{font-size:13px;line-height:1.62;color:var(--dim);overflow-wrap:anywhere}
+.vuelo{border:1px solid var(--line);border-left-width:3px;border-radius:13px;padding:17px 19px;margin-bottom:16px;background:var(--panel-bg)}
+.vuelo.ok{border-left-color:var(--up)}
+.vuelo.medio{border-left-color:var(--warn)}
+.vuelo.no{border-left-color:var(--down)}
+.vuelo.neutro{border-left-color:var(--faint)}
+.vuelo-h{display:flex;align-items:center;gap:12px;margin-bottom:14px;flex-wrap:wrap}
+.vuelo-lab{font-family:var(--mono);font-size:9.5px;letter-spacing:.14em;color:var(--faint)}
+.vuelo-est{font-family:var(--mono);font-size:12px;letter-spacing:.12em;font-weight:600;margin-left:auto}
+.vuelo.ok .vuelo-est{color:var(--up)} .vuelo.medio .vuelo-est{color:var(--warn)} .vuelo.no .vuelo-est{color:var(--down)}
+.vuelo-cifras{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:14px;margin-bottom:13px}
+.vuelo-cifras>div{display:flex;flex-direction:column;gap:2px}
+.vuelo-cifras span{font-family:var(--mono);font-size:9px;letter-spacing:.1em;color:var(--faint);text-transform:uppercase}
+.vuelo-cifras b{font-size:20px;font-weight:300;letter-spacing:-.01em}
+.vuelo-cifras i{font-family:var(--mono);font-size:9px;color:var(--faint);font-style:normal}
+.vuelo-mot{list-style:none;display:flex;flex-direction:column;gap:7px;margin:0 0 10px}
+.vuelo-mot li{font-size:12.5px;line-height:1.55;color:var(--dim);padding-left:12px;border-left:2px solid var(--line)}
+.vuelo-mot b{font-family:var(--mono);font-size:10.5px;letter-spacing:.06em;color:var(--txt);margin-right:5px}
+.vuelo-p{font-size:12.5px;color:var(--dim);line-height:1.6;margin-bottom:8px}
+.vuelo-pie{font-size:11.5px;color:var(--faint);margin-bottom:8px}
+.vuelo-abaco{font-size:11.5px;color:var(--dim);border-top:1px solid var(--line);padding-top:10px;margin:0}
+.vuelo-abaco b{font-family:var(--mono);font-size:10.5px;color:var(--txt)}
 .ag-oficina-wrap{border:1px solid var(--line);border-radius:14px;overflow:hidden;margin-bottom:18px;background:#0E1018;line-height:0}
 #agOficina{display:block;width:100%;height:auto}
 @media (max-width:760px){ .ag-grid{grid-template-columns:1fr} }
@@ -1254,6 +1275,7 @@ stop[stop-color="#9BC0DC"]{stop-color:var(--txt)}
           <div class="ag-modo" id="agModo"></div>
         </div>
         <p class="sub" style="max-width:70ch;margin:-6px 0 20px" data-i18n="ag.intro">Siete agentes dirigen tu firma. Tú no operas: ajustas sus parámetros y ellos deciden a tu beneficio. Abajo ves cómo se coordinan, quién propone, quién objeta y cómo cierran cada decisión.</p>
+        <div id="agVuelo"></div>
         <div class="ag-oficina-wrap"><canvas id="agOficina" width="960" height="400" aria-label="La oficina del gabinete — piso 88, Nueva York"></canvas></div>
         <div class="ag-grid" id="agGrid"></div>
         <div class="sec-h" style="margin-top:26px"><h3 data-i18n="ag.decision">Decisión del día</h3><span class="micro" data-i18n="ag.decision.sub">ATLAS propone · tú aceptas o rechazas</span></div>
@@ -1795,6 +1817,29 @@ const I18N = {
   'ag.chat':           { es:'Junta de la mesa',         en:'Desk meeting' },
   'ag.mensajes':       { es:'mensajes',                 en:'messages' },
   'ag.sinchat':        { es:'Todavía no hay junta. Cuando corras el gabinete, aquí queda la conversación completa.', en:'No meeting yet. When you run the cabinet, the full conversation lands here.' },
+  'ag.prevuelo':       { es:'PRE-VUELO · lo que el gabinete calcula, no opina', en:'PRE-FLIGHT · computed, not opined' },
+  'ag.puedes':         { es:'PUEDES OPERAR',           en:'CLEARED TO TRADE' },
+  'ag.mediotam':       { es:'MEDIO TAMAÑO',            en:'HALF SIZE' },
+  'ag.cerrado':        { es:'MESA CERRADA',            en:'DESK CLOSED' },
+  'ag.tope':           { es:'Tope del día',            en:'Daily cap' },
+  'ag.resta':          { es:'Te resta',                en:'Remaining' },
+  'ag.portrade':       { es:'Riesgo por trade',        en:'Risk per trade' },
+  'ag.trades':         { es:'Trades de hoy',           en:'Trades today' },
+  'ag.severidad':      { es:'severidad',               en:'severity' },
+  'ag.casa':           { es:'regla de la casa',        en:'house rule' },
+  'ag.gastado':        { es:'ya gastaste',             en:'already used' },
+  'ag.intacto':        { es:'intacto',                 en:'untouched' },
+  'ag.doscaben':       { es:'dos stops caben en el tope', en:'two stops fit the cap' },
+  'ag.cuentas':        { es:'cuentas vivas',           en:'live accounts' },
+  'ag.todobien':       { es:'Nada te bloquea: estás en ventana, con riesgo disponible y las cuentas con colchón.', en:'Nothing blocks you: in window, risk available, accounts with cushion.' },
+  'ag.colchon':        { es:'Cuenta más apretada',     en:'Tightest account' },
+  'ag.delcorte':       { es:'del corte',               en:'from the line' },
+  'ag.consis':         { es:'tope de consistencia',    en:'consistency cap' },
+  'ag.esperanza':      { es:'esperanza',               en:'expectancy' },
+  'ag.equilibrio':     { es:'equilibrio',              en:'breakeven' },
+  'ag.pocamuestra':    { es:'trades: muestra insuficiente para concluir nada (hacen falta 30).', en:'trades: sample too small to conclude anything (30 needed).' },
+  'ag.sindatos':       { es:'sin trades todavía. Cuando registres, aquí sale tu estadística real.', en:'no trades yet. Once you log some, your real stats show here.' },
+  'ag.sincuentas':     { es:'No hay cuentas configuradas, así que no hay reglas que calcular.', en:'No accounts configured, so there are no rules to compute.' },
   'ag.propone':        { es:'ATLAS PROPONE',            en:'ATLAS PROPOSES' },
   'ag.porque':         { es:'Por qué',                  en:'Why' },
   'ag.riesgo':         { es:'Riesgo',                   en:'Risk' },
@@ -5965,6 +6010,118 @@ function animaOficina(){
 }
 
 function gabineteDe(){ S.gabinete = S.gabinete || {}; return S.gabinete; }
+
+/* ════════ PRE-VUELO · el gabinete que SÍ sirve ════════
+   Auditoría de julio 2026: un panel de IA no predice la dirección del NQ, y fingir
+   que sí es el modo de falla más caro (produce un trade convincente TODOS los días).
+   Los dos peores días del mes simulado no se perdieron por mala predicción: se
+   perdieron por dimensionamiento y disciplina. Así que el gabinete no propone
+   entrar — CALCULA si puedes, con qué tamaño, y cuándo tienes que parar.
+   Todo aquí es aritmética determinista sobre las reglas verificadas y tus propios
+   trades. Cero opinión, cero modelo. Los sliders entran como coeficientes reales:
+   si mueves una perilla, estos números se mueven. */
+const PUNTO = { NQ:20, ES:50, YM:5, RTY:50, GC:100, CL:1000, MNQ:2, MES:5, MYM:0.5, M2K:5, MGC:10, MCL:100 };
+
+function preVuelo(){
+  const sev  = paramVal(GABINETE.find(a=>a.id==='dique'));      // 0-100 severidad
+  const apet = paramVal(GABINETE.find(a=>a.id==='vertice'));    // 0-100 apetito
+  const vivas = S.accounts.filter(a => reglasDe(a));
+  const hoy = todayISO();
+  const hoyTrades = (tradesByDay(idsTodas())[hoy] || []);
+
+  if(!vivas.length) return { estado:'sin-cuentas', motivos:[], hoyTrades };
+
+  // ── tope del día por cuenta: la regla de la casa, apretada por la severidad ──
+  const rCasa = Math.min(...vivas.map(a => { const h = saludDe(a); return h.rDia || 0; }).filter(Boolean));
+  const factorSev = 1 - sev/200;                    // sev 0→100% · 50→75% · 100→50%
+  const topeDia = Math.round(rCasa * factorSev);
+
+  // ── lo ya consumido hoy (por cuenta, no de mesa) ──
+  const pnlHoy = hoyTrades.reduce((a,t)=> a + (t.pnl1 != null ? t.pnl1 : (t.pnl||0)), 0);
+  const gastado = pnlHoy < 0 ? -pnlHoy : 0;
+  const resta = Math.max(0, topeDia - gastado);
+
+  // ── riesgo por trade: DOS stops tienen que caber en el tope, con margen de
+  //    deslizamiento. Ésta es la lección del 1 de julio, ahora en código. ──
+  const MARGEN = 0.94;
+  const factorApet = 0.6 + (apet/100) * 0.4;        // apetito 40→0.76 · 100→1.0
+  const rTrade = Math.round(topeDia * MARGEN / 2 * factorApet);
+
+  // ── el colchón más apretado de tus cuentas manda ──
+  const colchones = vivas.map(a => ({ alias:a.alias, colchon: saludDe(a).colchon }))
+                         .filter(x => x.colchon != null);
+  const peorColchon = colchones.length ? colchones.reduce((m,x)=> x.colchon < m.colchon ? x : m) : null;
+
+  // ── veredicto ──
+  const motivos = [];
+  let estado = 'opera';
+  const mins = new Date().getHours()*60 + new Date().getMinutes();
+  const finde = [0,6].includes(new Date().getDay());
+
+  if(finde){ estado = 'cerrado'; motivos.push({ ag:'YUNQUE', txt:'Fin de semana. La mesa no abre.' }); }
+  else if(mins < VENTANA.open || mins > VENTANA.close){
+    estado = 'cerrado';
+    motivos.push({ ag:'YUNQUE', txt:`Fuera de la ventana 7:00–8:30. Ahora son las ${String(new Date().getHours()).padStart(2,'0')}:${String(new Date().getMinutes()).padStart(2,'0')}.` });
+  }
+  if(hoyTrades.length >= 2){
+    estado = 'cerrado';
+    motivos.push({ ag:'YUNQUE', txt:'Ya van 2 trades hoy. La sesión se cierra ahí, sin excepción.' });
+  } else if(hoyTrades.length === 1){
+    const p = hoyTrades[0].pnl1 != null ? hoyTrades[0].pnl1 : hoyTrades[0].pnl;
+    if(p > 0){
+      estado = 'cerrado';
+      motivos.push({ ag:'YUNQUE', txt:`El primero ganó ${fmt$(p)}. Regla de la casa: si gana, se para.` });
+    }
+  }
+  if(resta < rTrade){
+    if(resta <= 0){ estado = 'cerrado'; motivos.push({ ag:'DIQUE', txt:`Riesgo del día agotado: llevas ${fmt$(gastado)} de un tope de ${fmt$(topeDia)}.` }); }
+    else { if(estado !== 'cerrado') estado = 'medio'; motivos.push({ ag:'DIQUE', txt:`Sólo restan ${fmt$(resta)} del tope. No cabe un trade completo de ${fmt$(rTrade)}.` }); }
+  }
+  if(peorColchon && peorColchon.colchon != null && peorColchon.colchon < rTrade){
+    estado = 'cerrado';
+    motivos.push({ ag:'DIQUE', txt:`${peorColchon.alias} está a ${fmt$(peorColchon.colchon)} del corte, menos que el riesgo de un trade. Se protege la cuenta.` });
+  }
+
+  // ── consistencia 40%: un día demasiado bueno también rompe la evaluación ──
+  const R0 = reglasDe(vivas[0]);
+  let consis = null;
+  if(R0 && R0.consistency){
+    const acum = vivas.length ? (saludDe(vivas[0]).balance - vivas[0].start) : 0;
+    const tope = Math.round(R0.consistency * Math.max(acum, R0.target));
+    const gananciaHoy = pnlHoy > 0 ? pnlHoy : 0;
+    consis = { tope, hoy:gananciaHoy, margen: tope - gananciaHoy };
+    if(gananciaHoy > tope){
+      motivos.push({ ag:'DIQUE', txt:`Hoy llevas ${fmt$(gananciaHoy)} y el tope de consistencia (40%) es ${fmt$(tope)}. Un día así te obliga a seguir operando para diluirlo.` });
+    }
+  }
+
+  return { estado, motivos, topeDia, rCasa, factorSev, resta, gastado, rTrade,
+           peorColchon, consis, hoyTrades, sev, apet, cuentas: vivas.length };
+}
+
+/* ÁBACO real: estadística sobre TUS trades, no sobre un backtest genérico. */
+function abacoStats(){
+  const dias = tradesByDay(idsTodas());
+  const todos = Object.keys(dias).sort().flatMap(d => dias[d]);
+  const n = todos.length;
+  if(!n) return { n:0 };
+  const g = todos.filter(t => (t.pnl1 != null ? t.pnl1 : t.pnl) > 0).length;
+  const wr = g / n;
+  const porC = t => t.pnl1 != null ? t.pnl1 : (t.pnl||0);
+  const gan = todos.filter(t=>porC(t)>0), per = todos.filter(t=>porC(t)<0);
+  const media = a => a.length ? a.reduce((x,t)=>x+porC(t),0)/a.length : 0;
+  const mediaG = media(gan), mediaP = Math.abs(media(per));
+  const esperanza = wr*mediaG - (1-wr)*mediaP;
+  // punto de equilibrio real con la relación ganancia/pérdida medida
+  const be = mediaG + mediaP > 0 ? mediaP / (mediaG + mediaP) : null;
+  // el corte más útil: ¿el setup válido cambia algo?
+  const conSetup = todos.filter(t=>t.setupOk), sinSetup = todos.filter(t=>!t.setupOk);
+  const pnlDe = a => a.reduce((x,t)=>x+porC(t),0);
+  return { n, g, wr, mediaG, mediaP, esperanza, be,
+           conSetup:{ n:conSetup.length, pnl:pnlDe(conSetup) },
+           sinSetup:{ n:sinSetup.length, pnl:pnlDe(sinSetup) },
+           muestraOk: n >= 30 };
+}
 function paramVal(a){
   const g = gabineteDe();
   return (g[a.id] && g[a.id].val != null) ? g[a.id].val : (a.param ? a.param.val : null);
@@ -5979,8 +6136,42 @@ async function cargarAgChat(){
   return AG_CHAT;
 }
 
+function pintaVuelo(){
+  const box = $('#agVuelo'); if(!box) return;
+  const v = preVuelo();
+  if(v.estado === 'sin-cuentas'){
+    box.innerHTML = `<div class="vuelo neutro"><div class="vuelo-h"><span class="vuelo-lab">${tr('ag.prevuelo')}</span></div>
+      <p class="vuelo-p">${tr('ag.sincuentas')}</p></div>`;
+    return;
+  }
+  const cls = v.estado === 'opera' ? 'ok' : (v.estado === 'medio' ? 'medio' : 'no');
+  const txt = v.estado === 'opera' ? tr('ag.puedes') : (v.estado === 'medio' ? tr('ag.mediotam') : tr('ag.cerrado'));
+  const A = abacoStats();
+
+  box.innerHTML = `
+  <div class="vuelo ${cls}">
+    <div class="vuelo-h">
+      <span class="vuelo-lab">${tr('ag.prevuelo')}</span>
+      <span class="vuelo-est">${txt}</span>
+    </div>
+    <div class="vuelo-cifras">
+      <div><span>${tr('ag.tope')}</span><b>${fmt$(v.topeDia)}</b><i>${tr('ag.severidad')} ${v.sev} · ${tr('ag.casa')} ${fmt$(v.rCasa)}</i></div>
+      <div><span>${tr('ag.resta')}</span><b>${fmt$(v.resta)}</b><i>${v.gastado ? tr('ag.gastado')+' '+fmt$(v.gastado) : tr('ag.intacto')}</i></div>
+      <div><span>${tr('ag.portrade')}</span><b>${fmt$(v.rTrade)}</b><i>${tr('ag.doscaben')}</i></div>
+      <div><span>${tr('ag.trades')}</span><b>${v.hoyTrades.length} / 2</b><i>${tr('ag.cuentas')} ${v.cuentas}</i></div>
+    </div>
+    ${v.motivos.length ? `<ul class="vuelo-mot">${v.motivos.map(m=>`<li><b>${esc(m.ag)}</b> ${esc(m.txt)}</li>`).join('')}</ul>` : `<p class="vuelo-p">${tr('ag.todobien')}</p>`}
+    ${v.peorColchon && v.peorColchon.colchon != null ? `<p class="vuelo-pie">${tr('ag.colchon')}: <b>${esc(v.peorColchon.alias)}</b> ${fmt$(v.peorColchon.colchon)} ${tr('ag.delcorte')}${v.consis ? ` · ${tr('ag.consis')} ${fmt$(v.consis.tope)}` : ''}</p>` : ''}
+    <p class="vuelo-abaco">${ A.n ? (A.muestraOk
+        ? `<b>ÁBACO:</b> ${A.n} trades · ${Math.round(A.wr*100)}% aciertos · ${tr('ag.esperanza')} ${fmt$(Math.round(A.esperanza))}/trade · ${tr('ag.equilibrio')} ${A.be!=null?Math.round(A.be*100)+'%':'—'}`
+        : `<b>ÁBACO:</b> ${A.n} ${tr('ag.pocamuestra')}`)
+      : `<b>ÁBACO:</b> ${tr('ag.sindatos')}` }</p>
+  </div>`;
+}
+
 function renderAgentes(){
   const grid = $('#agGrid'); if(!grid) return;
+  pintaVuelo();
   $('#agModo').innerHTML = `<span class="ag-pill">${tr('ag.guionado')}</span>`;
 
   grid.innerHTML = GABINETE.map(a => {
@@ -6004,6 +6195,7 @@ function renderAgentes(){
     gabineteDe()[id] = { val:v };
     $('#agv_'+id).textContent = v;
     save();
+    pintaVuelo();          // la perilla mueve números de verdad, a la vista
   }));
 
   cargarAgChat().then(doc => {
