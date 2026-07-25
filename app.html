@@ -909,11 +909,6 @@ button.tag.quemada{text-decoration:line-through;text-decoration-color:var(--down
 .ag-msg-h i{font-family:var(--mono);font-size:9.5px;color:var(--faint);margin-left:auto;font-style:normal}
 .ag-msg-c p{font-size:13px;line-height:1.62;color:var(--dim);overflow-wrap:anywhere}
 .ag-head{display:flex;align-items:flex-start;gap:16px;margin-bottom:16px;flex-wrap:wrap}
-.ofi-zoom{position:absolute;right:14px;bottom:12px;display:flex;gap:5px}
-.ofi-zoom button{width:34px;height:34px;border-radius:8px;border:1px solid rgba(255,255,255,.2);
-  background:rgba(10,16,26,.62);color:#EAF0F6;font-size:16px;cursor:pointer;line-height:1;
-  backdrop-filter:blur(4px)}
-.ofi-zoom button:hover{background:rgba(20,32,50,.85);border-color:var(--accent)}
 .ofi-pista{position:absolute;left:14px;bottom:12px;font-family:var(--mono);font-size:10px;
   letter-spacing:.1em;color:rgba(255,255,255,.7);background:rgba(10,16,26,.55);padding:6px 11px;border-radius:20px}
 .ag-oficina-wrap{position:relative}
@@ -1408,11 +1403,6 @@ stop[stop-color="#9BC0DC"]{stop-color:var(--txt)}
         <div class="ag-oficina-wrap">
           <canvas id="agOficina" width="1800" height="1160" aria-label="La oficina de Northpoint — piso 88, Nueva York"></canvas>
           <div class="ofi-pista" data-i18n="ag.pista">Pícale a cualquiera para ver en qué te puede ayudar</div>
-          <div class="ofi-zoom">
-            <button id="zOut" aria-label="Alejar">−</button>
-            <button id="zRe" aria-label="Restablecer">⌂</button>
-            <button id="zIn" aria-label="Acercar">+</button>
-          </div>
         </div>
         <div id="agDetalle"></div>
         <div class="chat">
@@ -6336,7 +6326,6 @@ function globo(c, s, txt, t){
   vis.forEach((l, i) => c.fillText(l, bx + 15, by + 26 + i*21));
 }
 
-let OFI_ZOOM = 1, OFI_DX = 0, OFI_DY = 0;
 function dibujaOficina(t){
   const cv = $('#agOficina'); if(!cv) return;
   const c = cv.getContext('2d');
@@ -6351,13 +6340,6 @@ function dibujaOficina(t){
   cielo.addColorStop(0, '#141733'); cielo.addColorStop(.45, '#232A52');
   cielo.addColorStop(.8, '#3A3F66'); cielo.addColorStop(1, '#4A4B72');
   c.fillStyle = cielo; c.fillRect(0, 0, W, H);
-  /* Zoom: se acerca hacia el centro de la azotea, no hacia la esquina del lienzo. */
-  if(OFI_ZOOM !== 1 || OFI_DX || OFI_DY){
-    const fx = W/2, fy = H * .42;
-    c.translate(fx + OFI_DX, fy + OFI_DY);
-    c.scale(OFI_ZOOM, OFI_ZOOM);
-    c.translate(-fx, -fy);
-  }
   for(let i = 0; i < 130; i++){
     const sx = rr(i) * W, sy = rr(i + 300) * 420;
     c.fillStyle = `rgba(255,255,255,${.2 + rr(i+7) * .6})`;
@@ -7652,27 +7634,14 @@ function renderAgentes(){
     });
   }
 
-  const zi = $('#zIn');
-  if(zi && !zi.dataset.at){
-    zi.dataset.at = '1';
-    const aplica = () => { OFI_ZOOM = Math.max(.7, Math.min(2.6, OFI_ZOOM)); };
-    zi.onclick   = () => { OFI_ZOOM *= 1.25; OFI_DY -= 26; aplica(); };
-    $('#zOut').onclick = () => { OFI_ZOOM /= 1.25; OFI_DY += 26; aplica(); };
-    $('#zRe').onclick  = () => { OFI_ZOOM = 1; OFI_DX = 0; OFI_DY = 0; };
-  }
-
   const cv = $('#agOficina');
   if(cv && !cv.dataset.at){
     cv.dataset.at = '1';
     cv.style.cursor = 'pointer';
     cv.addEventListener('click', ev => {
       const r = cv.getBoundingClientRect();
-      let mx = (ev.clientX - r.left) * (cv.width / r.width);
-      let my = (ev.clientY - r.top) * (cv.height / r.height);
-      // se deshace el zoom para acertarle a la gente
-      const fx = cv.width/2, fy = cv.height * .42;
-      mx = (mx - fx - OFI_DX) / OFI_ZOOM + fx;
-      my = (my - fy - OFI_DY) / OFI_ZOOM + fy;
+      const mx = (ev.clientX - r.left) * (cv.width / r.width);
+      const my = (ev.clientY - r.top) * (cv.height / r.height);
       let mejor = null, dm = 1e9;
       OFI_HIT.forEach(h => {
         const d = Math.hypot(mx - h.x, my - (h.y - 34));
