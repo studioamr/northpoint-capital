@@ -909,6 +909,11 @@ button.tag.quemada{text-decoration:line-through;text-decoration-color:var(--down
 .ag-msg-h i{font-family:var(--mono);font-size:9.5px;color:var(--faint);margin-left:auto;font-style:normal}
 .ag-msg-c p{font-size:13px;line-height:1.62;color:var(--dim);overflow-wrap:anywhere}
 .ag-head{display:flex;align-items:flex-start;gap:16px;margin-bottom:16px;flex-wrap:wrap}
+.ofi-zoom{position:absolute;right:14px;bottom:12px;display:flex;gap:5px}
+.ofi-zoom button{width:34px;height:34px;border-radius:8px;border:1px solid rgba(255,255,255,.2);
+  background:rgba(10,16,26,.62);color:#EAF0F6;font-size:16px;cursor:pointer;line-height:1;
+  backdrop-filter:blur(4px)}
+.ofi-zoom button:hover{background:rgba(20,32,50,.85);border-color:var(--accent)}
 .ofi-pista{position:absolute;left:14px;bottom:12px;font-family:var(--mono);font-size:10px;
   letter-spacing:.1em;color:rgba(255,255,255,.7);background:rgba(10,16,26,.55);padding:6px 11px;border-radius:20px}
 .ag-oficina-wrap{position:relative}
@@ -918,6 +923,8 @@ button.tag.quemada{text-decoration:line-through;text-decoration-color:var(--down
 .chat-h-t .btn{margin-left:auto}
 .llave-caja{margin-top:11px;border:1px solid var(--line);border-radius:9px;padding:13px 15px;background:var(--w02)}
 .llave-p{font-size:11.5px;line-height:1.6;color:var(--dim);margin-bottom:10px;max-width:72ch}
+.llave-p b{color:var(--txt)}
+.llave-p code{font-family:var(--mono);font-size:10.5px;background:var(--w08);padding:2px 5px;border-radius:4px}
 .llave-f{display:flex;gap:8px;flex-wrap:wrap}
 #llaveIn{flex:1;min-width:220px;background:var(--w03);border:1px solid var(--line);border-radius:8px;
   padding:9px 12px;color:var(--txt);font-family:var(--mono);font-size:12px}
@@ -1401,6 +1408,11 @@ stop[stop-color="#9BC0DC"]{stop-color:var(--txt)}
         <div class="ag-oficina-wrap">
           <canvas id="agOficina" width="1800" height="1160" aria-label="La oficina de Northpoint — piso 88, Nueva York"></canvas>
           <div class="ofi-pista" data-i18n="ag.pista">Pícale a cualquiera para ver en qué te puede ayudar</div>
+          <div class="ofi-zoom">
+            <button id="zOut" aria-label="Alejar">−</button>
+            <button id="zRe" aria-label="Restablecer">⌂</button>
+            <button id="zIn" aria-label="Acercar">+</button>
+          </div>
         </div>
         <div id="agDetalle"></div>
         <div class="chat">
@@ -1411,7 +1423,8 @@ stop[stop-color="#9BC0DC"]{stop-color:var(--txt)}
             </div>
             <span class="chat-sug" data-i18n="ag.chatsug">Prueba: «¿puedo operar hoy?» · «corre el protocolo en NQ» · «cuánto me falta»</span>
             <div class="llave-caja" id="llaveCaja" hidden>
-              <p class="llave-p" data-i18n="ag.llaveP">Pega tu llave de Anthropic (empieza con sk-ant-). Se guarda sólo en este navegador y nunca sale de tu equipo. Sin llave el gabinete sigue funcionando, pero contesta con cálculo en vez de razonamiento.</p>
+              <p class="llave-p" data-i18n="ag.puenteP"><b>Gratis, con tu Claude Code:</b> abre una terminal en la carpeta del proyecto y corre <code>python3 scripts/puente.py</code> (o doble clic en <code>puente.command</code>). El terminal lo detecta solo y el gabinete empieza a razonar sin pagar nada extra.</p>
+              <p class="llave-p" data-i18n="ag.llaveP">O si prefieres, pega una llave de Anthropic (empieza con sk-ant-). Ésa sí se cobra por uso. Se guarda sólo en este navegador.</p>
               <div class="llave-f">
                 <input id="llaveIn" type="password" placeholder="sk-ant-…" autocomplete="off" spellcheck="false">
                 <button class="btn primary sm" id="llaveGo" data-i18n="ag.llaveGuardar">Guardar</button>
@@ -1961,10 +1974,15 @@ const I18N = {
   'ag.chat':           { es:'Junta de la mesa',         en:'Desk meeting' },
   'ag.mensajes':       { es:'mensajes',                 en:'messages' },
   'ag.sinchat':        { es:'Todavía no hay junta. Cuando corras el gabinete, aquí queda la conversación completa.', en:'No meeting yet. When you run the cabinet, the full conversation lands here.' },
+  'ag.puenteOn':       { es:'IA LOCAL ✓ · gratis',      en:'LOCAL AI ✓ · free' },
+  'ag.puenteP':        { es:'Gratis, con tu Claude Code: abre una terminal en la carpeta del proyecto y corre python3 scripts/puente.py (o doble clic en puente.command). El terminal lo detecta solo y el gabinete empieza a razonar sin pagar nada extra.',
+                         en:'Free, using your Claude Code: open a terminal in the project folder and run python3 scripts/puente.py (or double-click puente.command). The terminal detects it and the cabinet starts reasoning at no extra cost.' },
+  'ag.puenteSaludo':   { es:'Puente local conectado: estoy razonando con tu Claude Code, sin costo extra. Pregúntame con tus palabras.',
+                         en:'Local bridge connected: I am reasoning through your Claude Code at no extra cost. Ask me in your own words.' },
   'ag.llaveOn':        { es:'IA EN VIVO ✓',             en:'LIVE AI ✓' },
   'ag.llaveOff':       { es:'Conectar IA',              en:'Connect AI' },
-  'ag.llaveP':         { es:'Pega tu llave de Anthropic (empieza con sk-ant-). Se guarda sólo en este navegador y nunca sale de tu equipo. Sin llave el gabinete sigue funcionando, pero contesta con cálculo en vez de razonamiento.',
-                         en:'Paste your Anthropic key (starts with sk-ant-). It is stored only in this browser and never leaves your machine. Without it the cabinet still works, answering with computation instead of reasoning.' },
+  'ag.llaveP':         { es:'O si prefieres, pega una llave de Anthropic (empieza con sk-ant-). Ésa sí se cobra por uso. Se guarda sólo en este navegador.',
+                         en:'Or paste an Anthropic key (starts with sk-ant-). That one bills per use. Stored only in this browser.' },
   'ag.llaveGuardar':   { es:'Guardar',                  en:'Save' },
   'ag.llaveBorrar':    { es:'Borrar',                   en:'Delete' },
   'ag.llaveSacar':     { es:'Sacar una llave en console.anthropic.com →', en:'Get a key at console.anthropic.com →' },
@@ -6318,6 +6336,7 @@ function globo(c, s, txt, t){
   vis.forEach((l, i) => c.fillText(l, bx + 15, by + 26 + i*21));
 }
 
+let OFI_ZOOM = 1, OFI_DX = 0, OFI_DY = 0;
 function dibujaOficina(t){
   const cv = $('#agOficina'); if(!cv) return;
   const c = cv.getContext('2d');
@@ -6332,6 +6351,13 @@ function dibujaOficina(t){
   cielo.addColorStop(0, '#141733'); cielo.addColorStop(.45, '#232A52');
   cielo.addColorStop(.8, '#3A3F66'); cielo.addColorStop(1, '#4A4B72');
   c.fillStyle = cielo; c.fillRect(0, 0, W, H);
+  /* Zoom: se acerca hacia el centro de la azotea, no hacia la esquina del lienzo. */
+  if(OFI_ZOOM !== 1 || OFI_DX || OFI_DY){
+    const fx = W/2, fy = H * .42;
+    c.translate(fx + OFI_DX, fy + OFI_DY);
+    c.scale(OFI_ZOOM, OFI_ZOOM);
+    c.translate(-fx, -fy);
+  }
   for(let i = 0; i < 130; i++){
     const sx = rr(i) * W, sy = rr(i + 300) * 420;
     c.fillStyle = `rgba(255,255,255,${.2 + rr(i+7) * .6})`;
@@ -7320,13 +7346,25 @@ async function correrUno(nom, sym){
      puede levantar un veto que el cálculo impuso.
    · Todo lo que el modelo recibe son datos ya calculados, más la doctrina de la
      casa: no se le pide que adivine dirección. */
+const PUENTE = 'http://localhost:4319/';
+let puenteVivo = null;
+/* Se prefiere el puente local: usa el Claude Code que el dueño ya paga, así que
+   razonar no cuesta un centavo extra. La llave de API queda como alternativa. */
+async function checaPuente(){
+  try{
+    const r = await fetch(PUENTE, { method:'GET' });
+    const d = await r.json();
+    puenteVivo = !!(d && d.ok && d.claude);
+  }catch(e){ puenteVivo = false; }
+  return puenteVivo;
+}
 const LLAVE_LS = 'np_ia_key';
 const getLlave = () => { try{ return localStorage.getItem(LLAVE_LS) || ''; }catch(e){ return ''; } };
 const hayLlave = () => /^sk-ant-/.test(getLlave());
 
 async function piensa(agente, pregunta, datos){
   const key = getLlave();
-  if(!hayLlave()) return null;
+  if(!puenteVivo && !hayLlave()) return null;
   const A = GABINETE.find(g => g.nom === agente) || {};
   const ent = entrenamiento(agente);
   const D = DOCTRINA_DOC || {};
@@ -7343,6 +7381,23 @@ async function piensa(agente, pregunta, datos){
     (D.verdades||[]).length ? 'Verdades medidas de la casa: ' + D.verdades.map(v=>`${v.t}: ${v.d}`).join(' ') : '',
   ].filter(Boolean).join('\n');
 
+  const usuario = `Datos calculados de la mesa ahora mismo (son la verdad, no los contradigas):\n`
+    + JSON.stringify(datos, null, 1) + `\n\nEl dueño pregunta: ${pregunta}`;
+
+  /* Camino gratis: el Claude Code del propio equipo, por el puente local. */
+  if(puenteVivo){
+    try{
+      const r = await fetch(PUENTE, {
+        method:'POST', headers:{ 'content-type':'application/json' },
+        body: JSON.stringify({ sistema, mensaje: usuario }),
+      });
+      const d = await r.json();
+      if(d.texto) return d.texto;
+      return { error: d.error || 'el puente no devolvió texto' };
+    }catch(e){ puenteVivo = false; }      // se cayó: se sigue con lo que haya
+  }
+  if(!hayLlave()) return null;
+
   try{
     const r = await fetch('https://api.anthropic.com/v1/messages', {
       method:'POST',
@@ -7350,9 +7405,7 @@ async function piensa(agente, pregunta, datos){
                 'anthropic-version':'2023-06-01', 'anthropic-dangerous-direct-browser-access':'true' },
       body: JSON.stringify({
         model:'claude-sonnet-5', max_tokens:320, system:sistema,
-        messages:[{ role:'user', content:
-          `Datos calculados de la mesa ahora mismo (son la verdad, no los contradigas):\n` +
-          JSON.stringify(datos, null, 1) + `\n\nEl dueño pregunta: ${pregunta}` }],
+        messages:[{ role:'user', content: usuario }],
       }),
     });
     if(!r.ok){ const e = await r.json().catch(()=>({})); throw new Error((e.error&&e.error.message) || r.status); }
@@ -7383,71 +7436,139 @@ function chatDi(quien, txt, cargo){
 }
 
 function responde(msg){
-  const m = msg.toLowerCase();
+  /* Sin llave de IA el gabinete no razona, pero sí entiende. Se normaliza el texto
+     (sin acentos, sin signos) y se busca por familias de palabras, así aguanta
+     como escribe la gente de verdad: con prisa, sin tildes y con typos comunes. */
+  const m = ' ' + msg.toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/[¿?¡!.,;:]/g, ' ')
+    .replace(/\bq\b/g, 'que').replace(/\bxq\b|\bpq\b/g, 'porque')
+    .replace(/\bk\b/g, 'que').replace(/\btmb\b/g, 'tambien') + ' ';
+  const tiene = (...ps) => ps.some(w => m.includes(w));
   const v = preVuelo(), E = estadoFirma(), A = abacoStats();
   const simMatch = msg.toUpperCase().match(/\b(NQ|ES|YM|RTY|GC|CL|MNQ|MES)\b/);
   const sim = simMatch ? simMatch[1] : 'NQ';
 
-  if(/protocolo|corre|junta|reun/.test(m)){
+  /* correr el protocolo */
+  if(tiene('protocolo','corre','correr','junta','reunion','analiza','analicen','revisen')){
     chatDi('ATLAS', `Va. Corro a los seis sobre ${sim} y te sintetizo abajo.`);
     correrProtocoloChat(sim);
     return;
   }
-  if(/puedo operar|se opera|opero hoy|hoy puedo/.test(m)){
-    if(!E){ chatDi('DIQUE', 'No tienes cuentas configuradas, así que no hay reglas que calcular.'); return; }
-    const est = v.estado === 'opera' ? 'Sí, tienes permiso.' : (v.estado === 'medio' ? 'Sí, pero a medio tamaño.' : 'No. La mesa está cerrada.');
+
+  /* ¿se opera hoy? */
+  if(tiene('puedo operar','se opera','opero','puedo entrar','entro hoy','tradear','tradeo',
+           'esta abierta','mesa abierta','permiso','luz verde','hoy si')){
+    if(!E){ chatDi('DIQUE', 'No tienes cuentas configuradas, así que no hay reglas que calcular. Dalas de alta y vuelve.'); return; }
+    const est = v.estado === 'opera' ? 'Sí, tienes permiso.'
+              : v.estado === 'medio' ? 'Sí, pero a medio tamaño.'
+              : 'No. La mesa está cerrada.';
     chatDi('DIQUE', `${est} Tope del día ${fmt$(v.topeDia)}, te restan ${fmt$(v.resta)}, y el riesgo por trade es ${fmt$(v.rTrade)} por cuenta.`);
-    (v.motivos || []).slice(0, 2).forEach(mo => chatDi(mo.ag, mo.txt));
+    (v.motivos || []).slice(0, 3).forEach(mo => chatDi(mo.ag, mo.txt));
+    if(v.estado === 'opera') chatDi('YUNQUE', 'Recuerda: máximo dos trades, y si el primero gana se cierra el día.');
     return;
   }
-  if(/falta|objetivo|meta|cuanto|cuánto|dias|días/.test(m)){
+
+  /* avance hacia el objetivo */
+  if(tiene('falta','objetivo','meta','cuanto llevo','voy','avance','progreso','dias','cuando paso',
+           'cuanto me queda','termino')){
     if(!E){ chatDi('ATLAS', 'Sin cuentas configuradas no puedo decirte dónde vas.'); return; }
-    chatDi('ATLAS', `Vas en ${E.faseNom}, ${E.pct.toFixed(0)}% del objetivo. Llevas ${fmt$(E.ganado)} por cuenta y te faltan ${fmt$(E.falta)}.`);
+    chatDi('ATLAS', `Vas en ${E.faseNom}, ${E.pct.toFixed(0)}% del objetivo. Llevas ${fmt$(E.ganado)} por cuenta (${fmt$(E.mesa.ganado)} en la mesa) y te faltan ${fmt$(E.falta)}.`);
     chatDi('ÁBACO', E.diasFalta != null
-      ? `A tu ritmo son ${E.diasFalta} días hábiles más${E.fuente === 'estimada' ? ' (estimado: aún no tengo muestra tuya)' : ''}. Llevas ${E.operados} días operados de ${E.minDias} mínimos.`
-      : 'Ya cubriste el objetivo.');
+      ? `A tu ritmo son ${E.diasFalta} días hábiles más${E.fuente === 'estimada' ? ', y eso es estimado: aún no tengo muestra tuya' : ''}. Llevas ${E.operados} días operados de ${E.minDias} mínimos.`
+      : 'Ya cubriste el objetivo. Toca revisar días mínimos y consistencia antes de pedir nada.');
     return;
   }
-  if(/riesgo|tamañ|tamano|stop|contrato/.test(m)){
+
+  /* riesgo, tamaño, stop */
+  if(tiene('riesgo','tamañ','tamano','stop','contrato','cuanto arriesgo','cuanto puedo perder','lote')){
     const pv = PUNTO[sim];
     chatDi('YUNQUE', pv && v.rTrade
-      ? `Para ${sim}: ${fmt$(v.rTrade)} por cuenta, que a $${pv} por punto son ${Math.floor(v.rTrade / pv)} puntos de stop con 1 contrato. El copiador lo replica en ${v.cuentas} cuentas.`
-      : `No tengo valor por punto de ${sim}, así que no calculo tamaño a ciegas.`);
+      ? `Para ${sim}: ${fmt$(v.rTrade)} por cuenta, que a $${pv} por punto son ${Math.floor(v.rTrade / pv)} puntos de stop con 1 contrato. El copiador lo replica en ${v.cuentas} cuentas, o sea ${fmt$(v.rTrade * v.cuentas)} de riesgo en la mesa.`
+      : `No tengo el valor por punto de ${sim}, así que no te calculo tamaño a ciegas.`);
+    chatDi('DIQUE', `Ese número sale de que DOS stops quepan en el tope del día con margen de deslizamiento. Es la lección del 1 de julio, ahora en código.`);
     return;
   }
-  if(/estadis|estadís|aciertos|win|esperanza|equilibrio/.test(m)){
+
+  /* estadística propia */
+  if(tiene('estadis','aciertos','win','esperanza','equilibrio','breakeven','como voy',
+           'mis numeros','mi rendimiento','rendimiento')){
     chatDi('ÁBACO', A.n
       ? (A.muestraOk
-        ? `${A.n} trades: ${Math.round(A.wr*100)}% de aciertos, esperanza ${fmt$(Math.round(A.esperanza))} por trade, equilibrio en ${A.be!=null?Math.round(A.be*100):'—'}%.`
+        ? `${A.n} trades: ${Math.round(A.wr*100)}% de aciertos, esperanza ${fmt$(Math.round(A.esperanza))} por trade, y tu punto de equilibrio está en ${A.be!=null?Math.round(A.be*100):'—'}%.`
         : `Sólo llevas ${A.n} trades. Con menos de 30 no concluyo nada, y no te lo voy a inventar.`)
       : 'Todavía no tienes trades registrados. Sin datos tuyos no hay estadística que darte.');
     return;
   }
-  if(/evitar|violac|error|regla/.test(m)){
+
+  /* qué evitar */
+  if(tiene('evitar','violac','error','regla','que no','cuidado','fallo','me equivoc')){
     const ev = queEvitar();
     chatDi('DIQUE', ev.total
       ? `Lo que ya te ha costado: ${ev.lista.slice(0,3).map(x => `${x.txt} (${x.n}×)`).join(', ')}.`
       : 'No tienes violaciones registradas. Así se ve un expediente limpio — sosténlo.');
+    const F = faseDoctrina();
+    if(F && (F.evitar||[]).length) chatDi('ATLAS', `En esta fase, lo primero a evitar: ${F.evitar[0]}`);
     return;
   }
-  if(/calendario|evento|dato|macro/.test(m)){
+
+  /* método de la casa */
+  if(tiene('metodo','como funciona','doctrina','manual','proceso','fase','que hago','como le hago')){
+    const F = faseDoctrina();
+    if(F){
+      chatDi('ATLAS', `${F.n} · ${F.nombre}. ${F.objetivo}`);
+      (F.hacer||[]).slice(0,2).forEach(h => chatDi('YUNQUE', h));
+    } else {
+      // aún no estaba en memoria: se trae y se contesta en cuanto llegue
+      cargarDoctrina().then(() => {
+        const F2 = faseDoctrina();
+        if(F2){ chatDi('ATLAS', `${F2.n} · ${F2.nombre}. ${F2.objetivo}`);
+                (F2.hacer||[]).slice(0,2).forEach(h => chatDi('YUNQUE', h)); }
+        else chatDi('ATLAS', 'No pude leer el método de la casa. Revisa que data/doctrina.json esté publicado.');
+      });
+    }
+    return;
+  }
+
+  /* calendario */
+  if(tiene('calendario','evento','dato','macro','noticia','fed','cpi','nomina')){
     const R = analizarActivo(sim);
     const h = R.rep.find(x => x.ag === 'HORIZONTE');
     (h ? h.lineas : ['No pude leer el calendario.']).forEach(l => chatDi('HORIZONTE', l));
     return;
   }
-  if(/precio|nivel|tecnic|técnic|grafic|gráfic/.test(m)){
+
+  /* precio y estructura */
+  if(tiene('precio','nivel','tecnic','grafic','como esta','vale','cotiza','esta el')){
     const R = analizarActivo(sim);
     const so = R.rep.find(x => x.ag === 'SONDA');
     (so ? so.lineas : []).forEach(l => chatDi('SONDA', l));
     if(so && so.nota) chatDi('SONDA', so.nota);
     return;
   }
-  if(/hola|buenos|buenas|que tal|qué tal/.test(m)){
-    chatDi('ATLAS', 'Aquí andamos. Pregúntame si hoy se opera, cuánto te falta, o pídeme que corra el protocolo.');
+
+  /* cuentas */
+  if(tiene('cuenta','colchon','corte','drawdown','balance','saldo')){
+    if(!E){ chatDi('DIQUE', 'No hay cuentas dadas de alta.'); return; }
+    chatDi('DIQUE', `${E.cuentas} cuentas vivas, balance ${fmt$(E.balance)} por cuenta. La línea de corte está en ${fmt$(E.linea)}, o sea ${fmt$(E.colchon)} de colchón.`);
+    if(v.peorColchon) chatDi('DIQUE', `La más apretada es ${v.peorColchon.alias}, a ${fmt$(v.peorColchon.colchon)} del corte.`);
     return;
   }
-  chatDi('ATLAS', 'Puedo con esto: si hoy se opera, cuánto te falta para el objetivo, tu riesgo y tamaño, tu estadística, qué evitar, el calendario, o correr el protocolo en un activo.');
+
+  /* quién es quién */
+  if(tiene('quien','equipo','agentes','gabinete','presenta')){
+    chatDi('ATLAS', 'Somos siete: yo coordino, VÉRTICE decide, DIQUE veta por riesgo, SONDA lee estructura, ÁBACO los números, HORIZONTE el macro y YUNQUE ejecuta. Pícale a cualquiera arriba para ver en qué te ayuda.');
+    return;
+  }
+
+  /* saludo */
+  if(tiene('hola','buenos','buenas','que tal','que onda','hey','saludos')){
+    chatDi('ATLAS', 'Aquí andamos. Pregúntame si hoy se opera, cuánto te falta, tu riesgo, o pídeme que corra el protocolo.');
+    return;
+  }
+
+  /* no entendí: se dice, y se ofrece lo que sí se puede */
+  chatDi('ATLAS', 'Ésa no la entendí. Puedo con: si hoy se opera, cuánto te falta al objetivo, tu riesgo y tamaño, tu estadística, qué evitar, el método de la casa, el calendario, el precio, tus cuentas, o correr el protocolo en un activo.');
 }
 
 /* El protocolo, contado en el chat */
@@ -7476,10 +7597,13 @@ function renderAgentes(){
   if(bl && !bl.dataset.at){
     bl.dataset.at = '1';
     const pinta = () => {
-      bl.textContent = hayLlave() ? tr('ag.llaveOn') : tr('ag.llaveOff');
-      bl.className = 'btn sm' + (hayLlave() ? ' primary' : '');
+      const on = puenteVivo || hayLlave();
+      bl.textContent = puenteVivo ? tr('ag.puenteOn') : (hayLlave() ? tr('ag.llaveOn') : tr('ag.llaveOff'));
+      bl.className = 'btn sm' + (on ? ' primary' : '');
     };
     pinta();
+    checaPuente().then(v => { pinta(); if(v) chatDi('ATLAS', tr('ag.puenteSaludo')); });
+    setInterval(() => checaPuente().then(pinta), 30000);   // por si lo prendes después
     bl.onclick = () => { const cj = $('#llaveCaja'); cj.hidden = !cj.hidden; };
     $('#llaveGo').onclick = () => {
       const k = $('#llaveIn').value.trim();
@@ -7503,7 +7627,7 @@ function renderAgentes(){
       ev.preventDefault();
       const txt = $('#chatIn').value.trim(); if(!txt) return;
       chatDi('TÚ', txt); $('#chatIn').value = '';
-      if(!hayLlave()){ setTimeout(() => responde(txt), 320); return; }
+      if(!puenteVivo && !hayLlave()){ setTimeout(() => responde(txt), 320); return; }
       /* Con llave: el cálculo manda, el modelo lo explica. */
       const v = preVuelo(), E = estadoFirma(), A = abacoStats();
       const quien = /riesgo|tamañ|stop|puedo operar|veto/.test(txt.toLowerCase()) ? 'DIQUE'
@@ -7528,14 +7652,27 @@ function renderAgentes(){
     });
   }
 
+  const zi = $('#zIn');
+  if(zi && !zi.dataset.at){
+    zi.dataset.at = '1';
+    const aplica = () => { OFI_ZOOM = Math.max(.7, Math.min(2.6, OFI_ZOOM)); };
+    zi.onclick   = () => { OFI_ZOOM *= 1.25; OFI_DY -= 26; aplica(); };
+    $('#zOut').onclick = () => { OFI_ZOOM /= 1.25; OFI_DY += 26; aplica(); };
+    $('#zRe').onclick  = () => { OFI_ZOOM = 1; OFI_DX = 0; OFI_DY = 0; };
+  }
+
   const cv = $('#agOficina');
   if(cv && !cv.dataset.at){
     cv.dataset.at = '1';
     cv.style.cursor = 'pointer';
     cv.addEventListener('click', ev => {
       const r = cv.getBoundingClientRect();
-      const mx = (ev.clientX - r.left) * (cv.width / r.width);
-      const my = (ev.clientY - r.top) * (cv.height / r.height);
+      let mx = (ev.clientX - r.left) * (cv.width / r.width);
+      let my = (ev.clientY - r.top) * (cv.height / r.height);
+      // se deshace el zoom para acertarle a la gente
+      const fx = cv.width/2, fy = cv.height * .42;
+      mx = (mx - fx - OFI_DX) / OFI_ZOOM + fx;
+      my = (my - fy - OFI_DY) / OFI_ZOOM + fy;
       let mejor = null, dm = 1e9;
       OFI_HIT.forEach(h => {
         const d = Math.hypot(mx - h.x, my - (h.y - 34));
