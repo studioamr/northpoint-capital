@@ -1019,25 +1019,6 @@ button.tag.quemada{text-decoration:line-through;text-decoration-color:var(--down
 .pj-m.lema{color:var(--txt);font-style:italic}
 @keyframes pjIn{ from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:none} }
 @media (prefers-reduced-motion:reduce){ .pj-m{animation:none} }
-/* ── La vida del negocio ── */
-.vida{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-.vida-lado{border:1px solid var(--line);border-radius:13px;background:var(--panel-bg);
-  padding:20px 18px;display:flex;flex-direction:column;gap:6px;min-width:0}
-.vida-lado span{font-family:var(--mono);font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;
-  color:var(--faint)}
-.vida-lado b{font-family:var(--mono);font-size:clamp(26px,7vw,42px);font-weight:300;
-  letter-spacing:-.02em;line-height:1.05;overflow-wrap:anywhere}
-.vida-lado.gasto{border-color:rgba(222,106,95,.3)}
-.vida-lado.gasto b{color:#DE6A5F}
-.vida-lado.ingreso{border-color:rgba(87,199,155,.3)}
-.vida-lado.ingreso b{color:#57C79B}
-.vida-neto{margin-top:11px;font-family:var(--mono);font-size:12px;letter-spacing:.04em;
-  color:var(--faint);line-height:1.6}
-.vida-neto.up{color:#57C79B} .vida-neto.dn{color:#DE6A5F}
-.vida-b{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}
-.cja-x{background:none;border:none;color:var(--faint);font-size:9.5px;cursor:pointer;
-  text-decoration:underline;padding:0 0 0 6px;font-family:inherit}
-.cja-x:hover{color:#DE6A5F}
 .eqd-sec{font-family:var(--mono);font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;
   color:var(--faint);margin:26px 2px 12px}
 .eqd-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(268px,1fr));gap:12px}
@@ -1453,7 +1434,6 @@ stop[stop-color="#9BC0DC"]{stop-color:var(--txt)}
         <div class="ag-oficina-wrap">
           <canvas id="agOficina" width="1800" height="1160" aria-label="La oficina de Northpoint — piso 88, Nueva York"></canvas>
         </div>
-        <div id="agEquipo"></div>
       </section>
 
       <section class="view" id="v-dashboard">
@@ -1849,22 +1829,6 @@ stop[stop-color="#9BC0DC"]{stop-color:var(--txt)}
     <div class="m-foot">
       <button class="btn" data-close>Cancelar</button>
       <button class="btn primary" id="ncSave">Dar de alta</button>
-    </div>
-  </div>
-</div>
-
-<div class="overlay" id="ovCaja">
-  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="cjTitle">
-    <h3 id="cjTitle">Movimiento</h3>
-    <p class="sub" id="cjSub"></p>
-    <div class="f-row">
-      <div><label id="cjConceptoLbl">Concepto</label><input id="cjConcepto" placeholder="ej. payout Tradeify"></div>
-      <div><label>Monto USD</label><input type="number" id="cjMonto" min="0" step="1" placeholder="0"></div>
-    </div>
-    <p class="micro" id="cjErr" style="color:var(--down);min-height:14px"></p>
-    <div class="m-foot">
-      <button class="btn" data-close>Cancelar</button>
-      <button class="btn primary" id="cjSave">Registrar</button>
     </div>
   </div>
 </div>
@@ -5461,27 +5425,6 @@ $('#ncSave').addEventListener('click', ()=>{
   toast('Cuenta dada de alta');
 });
 
-let cajaTipo = 'ingreso';
-window.abrirCaja = tipo => {
-  cajaTipo = tipo;
-  $('#cjTitle').textContent = tipo === 'ingreso' ? 'Nuevo ingreso' : 'Nuevo gasto';
-  $('#cjSub').textContent = tipo === 'ingreso' ? 'Dinero real que entró: un payout cobrado.' : 'Dinero real que salió: lo que costó operar.';
-  $('#cjConceptoLbl').textContent = tipo === 'ingreso' ? '¿De qué es el ingreso?' : '¿De qué es el gasto?';
-  $('#cjConcepto').value = ''; $('#cjMonto').value = ''; $('#cjErr').textContent = '';
-  $('#cjConcepto').placeholder = tipo === 'ingreso' ? 'ej. payout Tradeify' : 'ej. evaluación, reset, mensualidad';
-  openOv('ovCaja');
-};
-$('#cjSave').addEventListener('click', ()=>{
-  const concepto = $('#cjConcepto').value.trim();
-  const monto = parseFloat($('#cjMonto').value);
-  if(!concepto){ $('#cjErr').textContent = 'Falta el concepto.'; return; }
-  if(!isFinite(monto) || monto <= 0){ $('#cjErr').textContent = 'Escribe un monto válido, mayor a cero.'; return; }
-  S.caja = S.caja || [];
-  S.caja.push({ id:uid(), fecha:todayISO(), tipo:cajaTipo, concepto, monto:Math.abs(monto) });
-  save(); closeOv(); renderVida();
-  toast(cajaTipo === 'ingreso' ? 'Ingreso registrado' : 'Gasto registrado');
-});
-
 let tixRechazando = null;
 window.abrirRechazo = id => { tixRechazando = id; $('#rjMotivo').value = ''; openOv('ovRechazo'); };
 $('#rjSave').addEventListener('click', ()=>{
@@ -6830,55 +6773,6 @@ function dibujaOficina(t){
   c.fillStyle = 'rgba(255,255,255,.4)';
   c.fillText('NORTHPOINT CAPITAL · PISO 88 · NEW YORK', 24, H - 22);
 
-  /* ══ EL TABLERO DEL NEGOCIO ══
-     Arriba a la izquierda, sobre el cielo. Lo primero que se ve al abrir la vista.
-     Si algo falla en la cuenta, no se dibuja: el edificio nunca se rompe por esto. */
-  try{
-    const N = valorDelNegocio();
-    /* Grande a propósito: el canvas mide 1800px y se muestra a ~300 en móvil, así
-       que un panel «normal» se vuelve ilegible. Se dibuja a escala del edificio. */
-    const PX = 44, PY = 40, PW = 700, PH = 320;
-    c.save();
-    c.fillStyle = 'rgba(10,14,22,.82)';
-    c.strokeStyle = 'rgba(255,255,255,.14)';
-    c.lineWidth = 1.5;
-    c.lineWidth = 3;
-    c.beginPath(); c.roundRect(PX, PY, PW, PH, 22); c.fill(); c.stroke();
-
-    c.textAlign = 'left';
-    c.font = '600 21px "IBM Plex Mono", monospace';
-    c.fillStyle = 'rgba(255,255,255,.45)';
-    c.fillText('DINERO REAL', PX + 36, PY + 52);
-
-    /* El número grande: sólo lo cobrado más lo que posees. */
-    c.font = '300 86px "IBM Plex Mono", monospace';
-    c.fillStyle = N.valor > 0 ? '#57C79B' : (N.valor < 0 ? '#DE6A5F' : 'rgba(255,255,255,.86)');
-    c.fillText(fmt$(N.valor), PX + 36, PY + 140);
-
-    c.font = '19px "IBM Plex Mono", monospace';
-    c.fillStyle = 'rgba(255,255,255,.36)';
-    c.fillText('lo cobrado menos lo gastado, más lo que posees', PX + 36, PY + 174);
-
-    /* Las tres cifras de abajo, con su significado. */
-    const fila = (x, et, val, col) => {
-      c.font = '17px "IBM Plex Mono", monospace';
-      c.fillStyle = 'rgba(255,255,255,.36)';
-      c.fillText(et, x, PY + 226);
-      c.font = '400 33px "IBM Plex Mono", monospace';
-      c.fillStyle = col;
-      c.fillText(val, x, PY + 264);
-    };
-    fila(PX + 36,  'INGRESOS',   fmt$(N.ingresos),  '#57C79B');
-    fila(PX + 262, 'GASTOS',     fmt$(N.gastos),    '#DE6A5F');
-    fila(PX + 476, 'EN CUENTAS', fmt$(N.enCuentas), 'rgba(255,255,255,.75)');
-
-    c.font = '16px "IBM Plex Mono", monospace';
-    c.fillStyle = 'rgba(255,255,255,.32)';
-    c.fillText(N.cuentas
-      ? `${N.cuentas} cuenta${N.cuentas>1?'s':''} · colchón ${fmt$(N.colchon)} · la ganancia en cuentas no es tuya hasta retirarla`
-      : 'sin cuentas dadas de alta', PX + 36, PY + 300);
-    c.restore();
-  }catch(e){ /* el tablero es un extra: nunca tumba el dibujo */ }
 }
 
 function animaOficina(){
@@ -6928,6 +6822,24 @@ function statsDeSocio(userId){
     sim: todas.filter(esSim).length,
   };
 }
+/* Cada tarjeta se abre para mostrar SUS cuentas — alias, tipo, balance. Un
+   solo clic, sin ir al gestor de cuentas nada más para ver quién trae qué. */
+function detalleDeSocio(uid){
+  const cuentas = cuentasVivas().filter(a => a.owner === uid);
+  if(!cuentas.length){
+    return `<p class="micro" style="color:var(--faint);padding:10px 2px">${bi('Todavía no da de alta ninguna cuenta.','Hasn’t registered any account yet.')}</p>`;
+  }
+  return `<div class="casa" style="margin-top:10px">${cuentas.map(a => {
+    const h = saludDe(a);
+    const tipoTxt = esLive(a) ? bi('Propia','Own') : esSim(a) ? bi('Práctica','Practice') : bi('Fondeada','Funded');
+    const faseTxt = (!esLive(a) && !esSim(a)) ? ' · ' + esc((FASES[a.fase]||FASES.eval).t) : '';
+    return `<div class="casa-row">
+      <span>${esc(a.alias)}</span>
+      <b>${fmt$(h.balance)}</b>
+      <i>${tipoTxt}${faseTxt}</i>
+    </div>`;
+  }).join('')}</div>`;
+}
 function renderAgentes(){
   const grid = $('#agGrid'); if(!grid) return;
   /* Ya no es la tarjeta de quien entró — son los cuatro, cada uno con SUS
@@ -6943,98 +6855,24 @@ function renderAgentes(){
     const linea = st.n
       ? `${st.n} ${bi(st.n>1?'cuentas':'cuenta', st.n>1?'accounts':'account')} · ${fmt$(st.balance)} ${bi('en cuentas','in accounts')} · ${fmt$(st.mes,true)} ${bi('este mes','this month')}${st.sim?` · +${st.sim} ${bi('de práctica','practice')}`:''}`
       : (st.sim ? `${bi('Sin cuentas reales','No real accounts')} · ${st.sim} ${bi('de práctica','practice')}` : bi('Sin cuentas todavía','No accounts yet'));
-    return `<div class="pj" style="cursor:default${tuyo?';border-color:var(--accent)':''}">
-      <img class="pj-cara" src="${caraAgente(p.nom)}" alt="" width="52" height="52">
-      <div class="pj-i">
-        <b>${esc(usr.nombre||'')}${tuyo?' · '+bi('TÚ','YOU'):''}</b>
-        <span>${esc(cargo)}</span>
-        <i>${linea}</i>
-      </div>
+    return `<div class="pj-wrap">
+      <button type="button" class="pj" data-uid="${uid}"${tuyo?' style="border-color:var(--accent)"':''}>
+        <img class="pj-cara" src="${caraAgente(p.nom)}" alt="" width="52" height="52">
+        <div class="pj-i">
+          <b>${esc(usr.nombre||'')}${tuyo?' · '+bi('TÚ','YOU'):''}</b>
+          <span>${esc(cargo)}</span>
+          <i>${linea}</i>
+        </div>
+      </button>
+      <div class="pj-detalle" hidden>${detalleDeSocio(uid)}</div>
     </div>`;
   }).join('');
+  $$('#agGrid .pj').forEach(btn => btn.onclick = () => {
+    const det = btn.nextElementSibling;
+    if(det) det.hidden = !det.hidden;
+  });
   ofiJunta = guionOficina();
   if(typeof animaOficina === 'function') animaOficina();
-  renderVida();
-}
-
-/* ════════ LA VIDA DEL NEGOCIO ════════
-   Lo único que queda debajo del edificio. No es el P&L de plataforma: al pasar una
-   evaluación la cuenta reinicia y esa ganancia se evapora. Aquí sólo va dinero que
-   se movió de verdad — payouts cobrados contra lo que costó conseguirlos. */
-/* ¿Cuánto vale el negocio? La distinción que importa: el saldo de una cuenta
-   fondeada NO es tuyo — es de la fondeadora, y sólo se vuelve tuyo cuando lo
-   retiras. Por eso el VALOR real es lo cobrado más lo que posees, y la ganancia
-   sin retirar va aparte, como lo que es: una promesa.
-
-   Julio «ganó» $28,000 y al banco entraron $0. Ese es exactamente el error que
-   esta separación evita. */
-function valorDelNegocio(){
-  const V = vidaDelNegocio();
-  const vivas = cuentasVivas().filter(a => reglasDe(a));
-  /* Ganancia acumulada en cuentas — pero sólo la que ya pasó el colchón.
-     En evaluación, la cuenta reinicia a $50,000 al pasarla: esa ganancia se
-     evapora, nunca fue real. En colchón, sigue en riesgo hasta cubrir el hito
-     (p.ej. $52,100): un solo mal día la devuelve a cero. Nada cuenta como
-     ganancia hasta que la fase es 'payout' — antes de eso, es $0, no una cifra
-     que crece y crece sin que exista de verdad. */
-  const enCuentas = vivas.reduce((x, a) => {
-    if(a.fase !== 'payout') return x;
-    return x + Math.max(0, saludDe(a).balance - a.start);
-  }, 0);
-  /* Lo que sostiene la cuenta viva: distancia al corte. Si esto llega a cero, la
-     cuenta muere y la ganancia de arriba se vuelve humo. */
-  const colchon = vivas.reduce((x, a) => { const h = saludDe(a); return x + (h.colchon || 0); }, 0);
-  const portafolio = (S.positions || []).reduce((x, p) => x + (p.valor || p.capital || 0), 0);
-  return {
-    ...V, enCuentas, colchon, portafolio, cuentas: vivas.length,
-    /* Sólo lo cobrado y lo que posees. Lo demás todavía no es tuyo. */
-    valor: V.neto + portafolio,
-  };
-}
-
-function vidaDelNegocio(){
-  const c = S.caja || [];
-  const ingresos = c.filter(x => x.tipo === 'ingreso').reduce((a,b) => a + (b.monto||0), 0);
-  const gastos   = c.filter(x => x.tipo === 'gasto').reduce((a,b) => a + (b.monto||0), 0);
-  return { ingresos, gastos, neto: ingresos - gastos, n: c.length };
-}
-
-function renderVida(){
-  const box = $('#agEquipo'); if(!box) return;
-  const V = vidaDelNegocio();
-
-  box.innerHTML = `
-    <div class="vida">
-      <div class="vida-lado gasto"><span>Gastos</span><b>${fmt$(V.gastos)}</b></div>
-      <div class="vida-lado ingreso"><span>Ingresos</span><b>${fmt$(V.ingresos)}</b></div>
-    </div>
-    <div class="vida-neto ${V.neto > 0 ? 'up' : (V.neto < 0 ? 'dn' : '')}">
-      ${V.n ? `El negocio va ${fmt$(V.neto, true)}`
-            : 'Sin movimientos. Aquí sólo va dinero real: payouts cobrados y lo que costó conseguirlos.'}
-    </div>
-    <div class="vida-b">
-      <button class="btn sm" id="cajaIn">+ Ingreso</button>
-      <button class="btn sm" id="cajaOut">+ Gasto</button>
-      ${V.n ? `<button class="btn sm" id="cajaVer">Ver movimientos (${V.n})</button>` : ''}
-    </div>
-    <div id="cajaLista"></div>`;
-
-  if($('#cajaIn'))  $('#cajaIn').onclick  = () => abrirCaja('ingreso');
-  if($('#cajaOut')) $('#cajaOut').onclick = () => abrirCaja('gasto');
-  if($('#cajaVer')) $('#cajaVer').onclick = () => {
-    const L = $('#cajaLista');
-    if(L.innerHTML){ L.innerHTML = ''; return; }
-    L.innerHTML = `<div class="casa" style="margin-top:10px">${
-      [...(S.caja||[])].reverse().map(x => `<div class="casa-row">
-        <span>${fmtFecha(x.fecha)}</span>
-        <b class="${x.tipo === 'ingreso' ? 'up' : 'dn'}">${x.tipo === 'ingreso' ? '+' : '−'}${fmt$(x.monto)}</b>
-        <i>${esc(x.concepto)} <button class="cja-x" data-del="${x.id}">borrar</button></i>
-      </div>`).join('')}</div>`;
-    $$('#cajaLista [data-del]').forEach(b => b.onclick = () => {
-      S.caja = (S.caja||[]).filter(x => x.id !== b.dataset.del);
-      save(); renderVida();
-    });
-  };
 }
 
 function render(view){
