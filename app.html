@@ -2677,16 +2677,17 @@ const SISTEMA = {
               desde:50100 },
   },
 
-  /* Fase 3 · cada 15 días. Operando solo desaparecen los tres 20% de socios, pero
-     se conserva lo que hacía útil el reparto: que una parte NO se toque. El 40% que
-     se queda adentro es lo que sostiene la operación cuando venga una racha mala. */
-  /* 'personal' se reparte 50/50 entre André y Pablo — socios parejos, mismo tramo.
-     Si el arreglo real es otro, es el número que hay que cambiar aquí. */
+  /* Fase 3 · cada 15 días. 20% cuentas, 20% portafolio y 20% para cada uno de los
+     tres socios fundadores (Mateo, Pablo, André). Gregorio tiene cargo y voz —
+     Chief Strategy Officer— pero no entra en este reparto: se sumó después, como
+     cargo, no como socio con tramo propio. Si eso cambia, es este arreglo el que
+     hay que tocar. */
   reparto: [
-    { k:'cuentas',    pct:.20, t:'A las fondeadas', d:'engorda el colchón: sin cuenta viva no hay payout' },
-    { k:'acciones',   pct:.20, t:'A acciones',      d:'patrimonio que ya no depende de operar' },
-    { k:'live',       pct:.30, t:'A la cuenta propia', d:'capital tuyo — la salida de las fondeadoras' },
-    { k:'personal',   pct:.30, t:'Entre los dos',   d:'50/50 André y Pablo — el único tramo que sale de verdad' },
+    { k:'cuentas',    pct:.20, t:'a las cuentas',   d:'engorda el colchón: sin cuenta viva no hay payout' },
+    { k:'portafolio', pct:.20, t:'al portafolio',   d:'patrimonio que ya no depende de operar' },
+    { k:'mateo',      pct:.20, t:'para Mateo',       d:'su tramo del reparto' },
+    { k:'pablo',      pct:.20, t:'para Pablo',       d:'su tramo del reparto' },
+    { k:'andre',      pct:.20, t:'para André',       d:'su tramo del reparto' },
   ],
 
   /* El destino del trade: liquidez sin tomar, no una R fija. */
@@ -2799,31 +2800,46 @@ function hoyPorEstrategia(){
    custodios, client relations, investor relations. Nada de eso existe aquí, y un
    cargo que describe trabajo que nadie hace sólo sirve para disfrazar el que sí. */
 const ROLES = {
-  'NP-01': { t:'Mesa', d:[
-    'Corre el protocolo completo: pre-market 7:00, rango 7:30–7:45, ventana hasta 8:30.',
-    `Máximo ${SISTEMA.fases.eval.maxTrades} trades. Si gana el primero, cierra la plataforma y el día terminó.`,
-    'Registra cada operación el mismo día: setup, resultado y qué se rompió.',
-    'Nada queda abierto después de las 8:30.']},
-  'NP-02': { t:'Riesgo', d:[
-    'Mantiene al día el riesgo permitido de la fase en curso: tope diario, tamaño que cabe y tope por día.',
-    'Frena la sesión cuando se agota el tope, aunque el setup se vea bien.',
-    'Avisa cuando una cuenta queda más cerca del corte que el riesgo de un trade.',
-    'Verifica que las reglas del terminal sigan coincidiendo con el contrato de la fondeadora.']},
-  'NP-03': { t:'Payouts', d:[
-    'Vigila la elegibilidad: días mínimos operados, consistencia y balance sobre el piso.',
-    'Solicita el retiro en la fecha de corte, ni antes ni después.',
-    'Registra lo que entró de verdad al banco — no el P&L de plataforma.',
-    'Aplica el reparto: 20% fondeadas · 20% acciones · 30% cuenta propia · 30% entre los dos.']},
-  'NP-04': { t:'Portafolio · acciones', d:[
-    'Lleva el plan de ahorro: cuánto se acumula por quincena y cuándo alcanza el mínimo para comprar.',
-    'Investiga en qué acciones se coloca el tramo y lo documenta ANTES de comprar.',
-    'Ejecuta la compra y rebalancea en la fecha, no cuando se siente.',
-    'Reporta el patrimonio acumulado aparte del P&L de la mesa: son cifras distintas.']},
-  'NP-05': { t:'Cuenta propia', d:[
-    'Crece la cuenta live con el tramo que le toca de cada payout.',
-    'Opera el mismo sistema que la mesa, con el riesgo escalado al tamaño real de la cuenta.',
-    'Mide su avance por separado: aquí el capital es tuyo y no hay quien te reponga la cuenta.',
-    'El objetivo de fondo: que la cuenta propia llegue a producir más que las fondeadas.']},
+  'NP-001': { t:'Chief Investment Officer', d:[
+    'Responsable final de todas las decisiones de inversión del fondo.',
+    'Define la estrategia macroeconómica y los mandatos de cada estrategia.',
+    'Aprueba o rechaza toda tesis de inversión antes de ejecución.',
+    'Responde ante el comité de inversiones y los limited partners.']},
+  'NP-010': { t:'Portfolio Manager', d:[
+    'Gestión activa de portafolios dentro de los mandatos aprobados.',
+    'Construcción y monitoreo de posiciones largas y cortas.',
+    'Comunicación periódica con el CIO sobre exposiciones y riesgo.',
+    'Documenta cada decisión de posición con tesis escrita.']},
+  'NP-020': { t:'Chief Risk Officer', d:[
+    'Monitoreo en tiempo real del drawdown máximo permitido por estrategia.',
+    'Emite alertas de riesgo con autoridad para detener operaciones.',
+    'Reporte diario al CIO sobre posiciones y exposición de mercado.',
+    'Define y actualiza el Risk Management Framework.']},
+  'NP-030': { t:'Research Analyst', d:[
+    'Investigación fundamental y cuantitativa de activos y sectores.',
+    'Produce memos de inversión con evidencia documentada.',
+    'Monitorea earnings, macro data y eventos catalizadores.',
+    'Da seguimiento a posiciones existentes y alerta cambios de tesis.']},
+  'NP-040': { t:'Quantitative Analyst', d:[
+    'Desarrollo y backtesting de modelos cuantitativos de inversión.',
+    'Análisis estadístico de patrones conductuales en datos de mercado.',
+    'Construye el Northpoint Score y métricas de behavioral intelligence.',
+    'Mantiene los sistemas de datos y pipelines de información.']},
+  'NP-050': { t:'Chief Operating Officer', d:[
+    'Gestión de operaciones diarias, compliance y relación con brokers.',
+    'Coordina prime brokerage, custodios y administradores del fondo.',
+    'Supervisa client relations e investor relations.',
+    'Implementa protocolos operativos y auditorías internas.']},
+  'NP-060': { t:'Trader · Mesa de Futuros', d:[
+    'Ejecuta el protocolo diario completo: pre-market 7:00, setup y gestión.',
+    `Opera únicamente la ventana 7:00–8:30, máximo ${SISTEMA.fases.eval.maxTrades} trades por sesión.`,
+    'Registra cada operación con screenshot, setup, resultado y análisis.',
+    'Envía el reporte del día al equipo y responde por su Score conductual.']},
+  'NP-070': { t:'Chief Strategy Officer', d:[
+    'Define la estrategia de largo plazo de la casa, con horizonte de meses a años.',
+    'Investigación macro y sectorial que sostiene esa estrategia.',
+    'Da seguimiento a las tesis vivas y alerta cambios estructurales.',
+    'Traduce la visión de largo plazo en mandatos accionables para la mesa.']},
 };
 
 /* ════════ LOS PERSONAJES DE LA OFICINA ════════
@@ -2834,31 +2850,26 @@ const ROLES = {
 
    Son arquetipos con nombre propio, no personas reales: ponerle palabras inventadas
    a alguien que existe sería fabricar una cita. */
+/* Los cuatro socios reales, no arquetipos: Pablo, Mateo, André y Gregorio, cada
+   uno con su cargo real (ver ROLES/USERS). El "look" es sólo el dibujo pixel-art
+   del puesto — no es un retrato de nadie, es la silla que ocupa ese cargo. */
 const PERSONAJES = [
-  { id:'andre', nom:'ANDRÉ', rol:null, ceo:true, lema:'Northpoint son dos cosas: sacar payouts y saber qué hacer con ellos.',
-    voz:'El dueño. Marca el número y deja que cada quien haga lo suyo.',
-    look:{ piel:'#EFC39B', pelo:'#2B2119', traje:'#1E2A3C', camisa:'#FFFFFF', ac:'#4A7FA8',
-           prop:'taza', corbata:true, porte:'erguido', cara:'sereno' } },
-  { id:'tirador', nom:'EL TIRADOR', rol:'NP-01', lema:'Un disparo, y si entra me voy.',
-    voz:'Preciso y corto. Habla como quien espera horas por un solo tiro.',
+  { id:'pablo', nom:'PABLO', rol:'NP-010', lema:'Cada posición lleva su tesis escrita, antes de abrirla.',
+    voz:'CIO y Portfolio Manager. Decide el mandato, no improvisa la exposición.',
     look:{ piel:'#EFC39B', pelo:'#2B2119', traje:'#1E2A3C', camisa:'#FFFFFF', ac:'#4A7FA8',
            prop:'laptop', corbata:true, porte:'erguido', cara:'sereno' } },
-  { id:'portero', nom:'EL PORTERO', rol:'NP-02', lema:'Aquí no pasas. Ni tú.',
-    voz:'Seco, aritmético. No discute: cierra.',
+  { id:'mateo', nom:'MATEO', rol:'NP-030', lema:'El riesgo se vigila en tiempo real, no se revisa al cierre.',
+    voz:'CRO y Research. Seco, aritmético — el drawdown no negocia.',
     look:{ piel:'#D09A6E', pelo:'#1C1A18', traje:'#4E545E', camisa:'#FFFFFF', ac:'#C4544A',
            prop:'carpeta', chaleco:true, porte:'tenso', cara:'ceño' } },
-  { id:'cobrador', nom:'EL COBRADOR', rol:'NP-03', lema:'Lo que no se cobra, no existe.',
-    voz:'Contador de pueblo. Sabe fechas y no perdona una.',
+  { id:'andre', nom:'ANDRÉ', rol:'NP-050', ceo:true, lema:'Northpoint son dos cosas: sacar payouts y saber qué hacer con ellos.',
+    voz:'Quant y COO. Construye el Score, corre la operación diaria.',
     look:{ piel:'#C08A5C', pelo:'#141414', traje:'#22282E', camisa:'#EFE8F6', ac:'#3EA97C',
-           prop:'carpeta', lentes:true, porte:'inclinado', cara:'concentrado' } },
-  { id:'jardinero', nom:'EL JARDINERO', rol:'NP-04', lema:'Lo que se siembra hoy no se cosecha hoy.',
-    voz:'Paciente, habla en temporadas. El único que no tiene prisa.',
+           prop:'taza', lentes:true, porte:'inclinado', cara:'concentrado' } },
+  { id:'goyo', nom:'GREGORIO', rol:'NP-070', lema:'La estrategia se mide en meses, no en el trade de hoy.',
+    voz:'Chief Strategy Officer. Paciente, habla en horizontes largos.',
     look:{ piel:'#E7B78E', pelo:'#9AA0A8', traje:'#5E5540', camisa:'#F2EDE0', ac:'#C79A3A',
            prop:'globo', barba:true, porte:'erguido', cara:'sabio', canas:true } },
-  { id:'herrero', nom:'EL HERRERO', rol:'NP-05', lema:'La cuenta que forjas no te la quita nadie.',
-    voz:'Terco y de largo plazo. Golpea el mismo punto hasta que cede.',
-    look:{ piel:'#B57E52', pelo:'#2A211A', traje:'#2E4A46', camisa:'#DCEDE9', ac:'#C86A86',
-           prop:'headset', porte:'listo', cara:'alerta', fuerte:true } },
 ];
 const personajeDeRol = rol => PERSONAJES.find(p => p.rol === rol) || null;
 
@@ -2868,17 +2879,12 @@ const personajeDeRol = rol => PERSONAJES.find(p => p.rol === rol) || null;
    no hay payouts que cobrar, sin posiciones no hay portafolio, sin cuenta
    propia no hay quien la forje. Un escritorio vacío dice más que un personaje
    hablando de un trabajo que todavía no empieza. */
-function personajeActivo(nombre){
-  const p = PERSONAJES.find(x => x.nom === nombre);
-  if(!p) return true;
-  if(p.ceo) return true;
-  if(p.rol === 'NP-01' || p.rol === 'NP-02') return cuentasProp().some(a => reglasDe(a));
-  if(p.rol === 'NP-03') return (S.caja||[]).length > 0;
-  if(p.rol === 'NP-04') return (S.positions||[]).length > 0;
-  if(p.rol === 'NP-05') return cuentasLive().length > 0;
-  return true;
-}
-const sillasActivas = () => OFI.sillas.filter(s => personajeActivo(s.n));
+/* Antes esto apagaba a un personaje-arquetipo si su cargo no tenía actividad
+   todavía (sin cuenta live no se sentaba "El Herrero", etc.) — tenía sentido
+   para roles decorativos que representaban una función. Pablo, Mateo, André y
+   Gregorio son socios reales: están en la oficina porque son parte de la firma,
+   no porque su cargo ya tenga datos que mostrar. Los cuatro se sientan siempre. */
+const sillasActivas = () => OFI.sillas;
 
 /* ── Equipo NORTHPOINT · credenciales y cargos ── */
 /* Sin nube, `pass` es la clave local (y está a la vista en el código: sirve para
@@ -2888,28 +2894,27 @@ const sillasActivas = () => OFI.sillas.filter(s => personajeActivo(s.n));
    individual —los payouts salieron a nombre de André— así que la firma es él.
    Carga los siete cargos porque no hay a quién delegarlos. */
 const USERS = {
-  /* Socios parejos: André y Pablo, sin roles fijos — los dos hacen de todo, así que
-     los dos tienen las cinco duties completas, no una división de cargos. */
-  'andre.np': { nombre:'André',
-                roles:['NP-01','NP-02','NP-03','NP-04','NP-05'],
-                correo:'andre@northpoint.mx' },
-  'pablo.np': { nombre:'Pablo',
-                roles:['NP-01','NP-02','NP-03','NP-04','NP-05'],
-                correo:'pablo@northpoint.mx' },
+  /* Los cuatro socios reales, cada quien con su cargo — como se les mandó por
+     correo cuando se dio de alta a Gregorio. No es "socios parejos": cada uno
+     responde por un cargo distinto, igual que en el documento que se envió. */
+  'pablo.np': { nombre:'Pablo',    roles:['NP-001','NP-010'], correo:'pablo@northpoint.mx' },
+  'mateo.np': { nombre:'Mateo',    roles:['NP-020','NP-030'], correo:'mateo@northpoint.mx' },
+  'andre.np': { nombre:'André',    roles:['NP-040','NP-050'], correo:'andre@northpoint.mx' },
+  'goyo.np':  { nombre:'Gregorio', roles:['NP-070'],          correo:'goyo@northpoint.mx' },
   /* 10 invitados para que André reparta acceso sin tocar código. Cada quien entra
      con 1234 la primera vez en SU propio navegador — como no hay nube conectada,
      cada uno arranca con su copia en blanco, sin ver los datos de los demás.
      Renombrar el nombre visible aquí, no requiere que el invitado haga nada. */
-  'invitado1':  { nombre:'Invitado 1',  roles:['NP-01','NP-02','NP-03','NP-04','NP-05'], correo:'invitado1@northpoint.local' },
-  'invitado2':  { nombre:'Invitado 2',  roles:['NP-01','NP-02','NP-03','NP-04','NP-05'], correo:'invitado2@northpoint.local' },
-  'invitado3':  { nombre:'Invitado 3',  roles:['NP-01','NP-02','NP-03','NP-04','NP-05'], correo:'invitado3@northpoint.local' },
-  'invitado4':  { nombre:'Invitado 4',  roles:['NP-01','NP-02','NP-03','NP-04','NP-05'], correo:'invitado4@northpoint.local' },
-  'invitado5':  { nombre:'Invitado 5',  roles:['NP-01','NP-02','NP-03','NP-04','NP-05'], correo:'invitado5@northpoint.local' },
-  'invitado6':  { nombre:'Invitado 6',  roles:['NP-01','NP-02','NP-03','NP-04','NP-05'], correo:'invitado6@northpoint.local' },
-  'invitado7':  { nombre:'Invitado 7',  roles:['NP-01','NP-02','NP-03','NP-04','NP-05'], correo:'invitado7@northpoint.local' },
-  'invitado8':  { nombre:'Invitado 8',  roles:['NP-01','NP-02','NP-03','NP-04','NP-05'], correo:'invitado8@northpoint.local' },
-  'invitado9':  { nombre:'Invitado 9',  roles:['NP-01','NP-02','NP-03','NP-04','NP-05'], correo:'invitado9@northpoint.local' },
-  'invitado10': { nombre:'Invitado 10', roles:['NP-01','NP-02','NP-03','NP-04','NP-05'], correo:'invitado10@northpoint.local' },
+  'invitado1':  { nombre:'Invitado 1',  roles:['NP-060'], correo:'invitado1@northpoint.local' },
+  'invitado2':  { nombre:'Invitado 2',  roles:['NP-060'], correo:'invitado2@northpoint.local' },
+  'invitado3':  { nombre:'Invitado 3',  roles:['NP-060'], correo:'invitado3@northpoint.local' },
+  'invitado4':  { nombre:'Invitado 4',  roles:['NP-060'], correo:'invitado4@northpoint.local' },
+  'invitado5':  { nombre:'Invitado 5',  roles:['NP-060'], correo:'invitado5@northpoint.local' },
+  'invitado6':  { nombre:'Invitado 6',  roles:['NP-060'], correo:'invitado6@northpoint.local' },
+  'invitado7':  { nombre:'Invitado 7',  roles:['NP-060'], correo:'invitado7@northpoint.local' },
+  'invitado8':  { nombre:'Invitado 8',  roles:['NP-060'], correo:'invitado8@northpoint.local' },
+  'invitado9':  { nombre:'Invitado 9',  roles:['NP-060'], correo:'invitado9@northpoint.local' },
+  'invitado10': { nombre:'Invitado 10', roles:['NP-060'], correo:'invitado10@northpoint.local' },
 };
 /* Todos entran con 1234 la primera vez y la cambian en Configuración.
    La clave local se guarda como hash SHA-256 en tu equipo: no impide
@@ -2936,7 +2941,7 @@ const rolDeUsuario = (u, rol) => !!(USERS[u] && USERS[u].roles.includes(rol));
 const SCHEMA = 4;
 const DEFAULTS = () => ({
   schema: SCHEMA,
-  profile: { nombre:'', rol:'NP-01', metaMes:30000 },    // el capital se deriva de las cuentas
+  profile: { nombre:'', rol:'NP-060', metaMes:30000 },    // el capital se deriva de las cuentas
   session: { user:null },
   bienvenida: {},        // usuario -> true, para que el recorrido salga una sola vez
   tickets: [],           // {id,fecha,sym,dir,tesis,por,firmas:{k:{u,ts}},estado,motivo}
@@ -3494,7 +3499,7 @@ function renderFirma(){
   const aum = pos.reduce((x,p) => x + (p.valor || p.capital || 0), 0);
   const invertido = pos.reduce((x,p) => x + (p.capital || 0), 0);
   const cobrado = (S.caja||[]).filter(m => m.tipo === 'ingreso').reduce((x,m) => x + (m.monto||0), 0);
-  const cuota = (SISTEMA.reparto.find(r => r.k === 'acciones')?.pct || .20);
+  const cuota = (SISTEMA.reparto.find(r => r.k === 'portafolio')?.pct || .20);
   const pc = Math.round(cuota * 100);
   const debe = cobrado * cuota;
   const p2 = debe > 0
@@ -6387,12 +6392,10 @@ const OFI = {
     return o;
   },
   sillas: [
-    { n:'ANDRÉ',        x:6.2, y:5.8, z:0, flip:true, jefe:true },
-    { n:'EL TIRADOR',   x:5.6, y:4.2, z:0, flip:false },
-    { n:'EL PORTERO',   x:4.0, y:4.6, z:0, flip:false },
-    { n:'EL COBRADOR',  x:5.4, y:6.6, z:0, flip:true  },
-    { n:'EL JARDINERO', x:3.0, y:6.0, z:0, flip:true  },
-    { n:'EL HERRERO',   x:3.4, y:8.0, z:0, flip:true  },
+    { n:'ANDRÉ',    x:6.2, y:5.8, z:0, flip:true,  jefe:true },
+    { n:'PABLO',    x:5.6, y:4.2, z:0, flip:false },
+    { n:'MATEO',    x:4.0, y:4.6, z:0, flip:false },
+    { n:'GREGORIO', x:3.0, y:6.0, z:0, flip:true  },
   ],
   etapas: ['01 CONTEXTO','02 TESIS','03 RIESGO','04 FIRMA','05 EJECUTA','06 GESTIÓN','07 CIERRE','08 JOURNAL'],
 };
@@ -6470,51 +6473,50 @@ function guionOficina(){
   const hhmm = m => String(Math.floor(m/60)).padStart(2,'0') + ':' + String(m%60).padStart(2,'0');
   const P = id => (PERSONAJES.find(x => x.id === id) || {}).nom;
 
-  const ANDRE = P('andre'), TIRA = P('tirador'), PORT = P('portero'),
-        COBR = P('cobrador'), JARD = P('jardinero'), HERR = P('herrero');
+  const ANDRE = P('andre'), PABLO = P('pablo'), MATEO = P('mateo'), GOYO = P('goyo');
 
-  /* ── 1 · el dueño pone el número ── */
-  di(ANDRE, PERSONAJES[0].lema);
+  /* ── 1 · André, Quant + COO: el número y la operación diaria ── */
+  di(ANDRE, PERSONAJES.find(x=>x.id==='andre').lema);
   di(ANDRE, `La meta es ${fmt$(M.anual)} al año: ${fmt$(M.mensual)} al mes, ${fmt$(M.quincenal)} la quincena.`);
   di(ANDRE, `Eso son ${fmt$(M.semanal)} a la semana y ${fmt$(M.diaria)} al día. 0.6% diario, nada más.`);
+  (ROLES['NP-040'] ? ROLES['NP-040'].d : []).forEach(d => di(ANDRE, d));
+  (ROLES['NP-050'] ? ROLES['NP-050'].d : []).forEach(d => di(ANDRE, d));
 
-  /* ── 2 · la mesa: cómo se opera ── */
+  /* ── 2 · la mesa: el protocolo diario (NP-060, sin socio asignado — lo relata
+        André porque como COO responde por la operación del día a día) ── */
   const e = ESTRS[0];
-  di(TIRA, PERSONAJES.find(x=>x.id==='tirador').lema);
-  di(TIRA, `${esc ? '' : ''}Operamos ${SISTEMA.instrumento} en ${SISTEMA.graficos.join(' y ')}. ${SISTEMA.estrategia}.`);
-  di(TIRA, `Ventana ${hhmm(e.ventana.open)} a ${hhmm(e.ventana.close)}, lunes a viernes. El rango se forma ${hhmm(e.ventana.orb1)}–${hhmm(e.ventana.orb2)}.`);
-  di(TIRA, e.entrada);
-  (ROLES['NP-01'] ? ROLES['NP-01'].d : []).forEach(d => di(TIRA, d));
-  di(TIRA, 'Si el checklist no da setup válido, el mejor trade del día es no operar.');
+  di(ANDRE, `Operamos ${SISTEMA.instrumento} en ${SISTEMA.graficos.join(' y ')}. ${SISTEMA.estrategia}.`);
+  di(ANDRE, `Ventana ${hhmm(e.ventana.open)} a ${hhmm(e.ventana.close)}, lunes a viernes. El rango se forma ${hhmm(e.ventana.orb1)}–${hhmm(e.ventana.orb2)}.`);
+  di(ANDRE, e.entrada);
+  (ROLES['NP-060'] ? ROLES['NP-060'].d : []).forEach(d => di(ANDRE, d));
+  di(ANDRE, 'Si el checklist no da setup válido, el mejor trade del día es no operar.');
 
-  /* ── 3 · riesgo: los topes de cada fase ── */
-  di(PORT, PERSONAJES.find(x=>x.id==='portero').lema);
+  /* ── 3 · Mateo, CRO + Research: riesgo y los topes de cada fase ── */
+  di(MATEO, PERSONAJES.find(x=>x.id==='mateo').lema);
   Object.entries(F).forEach(([k, f]) => {
     const nom = k === 'eval' ? 'En evaluación' : (k === 'buffer' ? 'En colchón' : 'En retiros');
-    di(PORT, `${nom}: riesgo ${fmt$(f.maxPerdidaDia)} al día, objetivo ${fmt$(f.objetivoDia)}, ${f.maxTrades} trades estrictos.`
+    di(MATEO, `${nom}: riesgo ${fmt$(f.maxPerdidaDia)} al día, objetivo ${fmt$(f.objetivoDia)}, ${f.maxTrades} trades estrictos.`
            + (f.topeDia ? ` Y ningún día mayor a ${fmt$(f.topeDia)}.` : ''));
   });
-  (ROLES['NP-02'] ? ROLES['NP-02'].d : []).forEach(d => di(PORT, d));
-  di(PORT, 'Nunca minis. Sólo micros. Eso no se discute.');
+  (ROLES['NP-020'] ? ROLES['NP-020'].d : []).forEach(d => di(MATEO, d));
+  (ROLES['NP-030'] ? ROLES['NP-030'].d : []).forEach(d => di(MATEO, d));
+  di(MATEO, 'Nunca minis. Sólo micros. Eso no se discute.');
 
-  /* ── 4 · payouts y el reparto ── */
-  di(COBR, PERSONAJES.find(x=>x.id==='cobrador').lema);
-  (ROLES['NP-03'] ? ROLES['NP-03'].d : []).forEach(d => di(COBR, d));
-  di(COBR, 'Cada 15 días se parte así, y no se toca el orden:');
-  SISTEMA.reparto.forEach(r => di(COBR, `${Math.round(r.pct*100)}% ${r.t.toLowerCase()} — ${r.d}`));
+  /* ── 4 · Pablo, CIO + Portfolio Manager: el portafolio y el reparto ── */
+  di(PABLO, PERSONAJES.find(x=>x.id==='pablo').lema);
+  (ROLES['NP-001'] ? ROLES['NP-001'].d : []).forEach(d => di(PABLO, d));
+  (ROLES['NP-010'] ? ROLES['NP-010'].d : []).forEach(d => di(PABLO, d));
+  di(PABLO, 'Cada 15 días se parte así, y no se toca el orden:');
+  SISTEMA.reparto.forEach(r => di(PABLO, `${Math.round(r.pct*100)}% ${r.t} — ${r.d}`));
 
-  /* ── 5 · el portafolio ── */
-  di(JARD, PERSONAJES.find(x=>x.id==='jardinero').lema);
-  (ROLES['NP-04'] ? ROLES['NP-04'].d : []).forEach(d => di(JARD, d));
+  /* ── 5 · Gregorio, Chief Strategy Officer: la estrategia de largo plazo ── */
+  di(GOYO, PERSONAJES.find(x=>x.id==='goyo').lema);
+  (ROLES['NP-070'] ? ROLES['NP-070'].d : []).forEach(d => di(GOYO, d));
 
-  /* ── 6 · la cuenta propia ── */
-  di(HERR, PERSONAJES.find(x=>x.id==='herrero').lema);
-  (ROLES['NP-05'] ? ROLES['NP-05'].d : []).forEach(d => di(HERR, d));
-
-  /* ── cierre: el dueño recuerda para qué es todo ── */
+  /* ── cierre: André recuerda para qué es todo ── */
   di(ANDRE, 'Nada queda abierto después de las 8:30. Ese es el trato.');
 
-  return g.filter(l => personajeActivo(l.de));
+  return g;
 }
 
 
@@ -7104,16 +7106,18 @@ function animaOficina(){
    de la operación, no un adorno del equipo. */
 function renderAgentes(){
   const grid = $('#agGrid'); if(!grid) return;
-  /* André y Pablo son socios parejos, no jefe y equipo: nadie es "CEO" de esto.
-     Se muestra a quien inició la sesión real (con nube conectada, cualquiera de
-     los dos ve el mismo negocio); el dibujo sigue siendo el mismo look genérico
-     —no es un retrato, es la silla de quien está mirando la pantalla ahora. */
-  const nombre = S.profile.nombre || (USERS[S.session.user] || {}).nombre || 'Socio';
+  /* Cada socio tiene cargo propio (a diferencia del arreglo solo/parejo de antes):
+     se muestra a quien inició la sesión real, con SU título verdadero, no un
+     genérico "Socio" para los cuatro. */
+  const usr = USERS[S.session.user] || {};
+  const nombre = S.profile.nombre || usr.nombre || 'Socio';
+  const cargo = (usr.roles || []).map(r => (ROLES[r] || {}).t).filter(Boolean).join(' + ') || 'Socio';
+  const p = PERSONAJES.find(x => x.nom === nombre.toUpperCase()) || PERSONAJES.find(x=>x.id==='andre');
   grid.innerHTML = `<div class="op">
-    <img class="op-cara" src="${caraAgente('ANDRÉ')}" alt="" width="64" height="64">
+    <img class="op-cara" src="${caraAgente(p.nom)}" alt="" width="64" height="64">
     <div class="op-i">
       <b>${esc(nombre)}</b>
-      <span>Socio · Northpoint Capital Management</span>
+      <span>${esc(cargo)} · Northpoint Capital Management</span>
     </div>
   </div>`;
   ofiJunta = guionOficina();
