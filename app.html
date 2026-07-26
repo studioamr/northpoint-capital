@@ -1559,10 +1559,11 @@ stop[stop-color="#9BC0DC"]{stop-color:var(--txt)}
           </div>
         </div>
 
-        <div style="display:flex;align-items:center;gap:12px;margin:22px 0 12px;flex-wrap:wrap">
+        <div style="display:flex;align-items:center;gap:12px;margin:22px 0 4px;flex-wrap:wrap">
           <span class="micro" data-i18n="pg.targets">Objetivos del plan</span>
           <div id="pickProgreso" style="margin-left:auto"></div>
         </div>
+        <p class="micro" data-i18n="pg.targetsD" style="color:var(--faint);margin:0 0 12px;max-width:62ch">Cuenta lo que ganaste sólo desde que la cuenta pasó a retiros. En evaluación y en colchón el saldo puede subir, pero todavía se puede evaporar — no es tuyo hasta entonces.</p>
         <div class="grid g5" id="dashKpis"></div>
 
         <div style="display:flex;align-items:center;gap:12px;margin:26px 0 12px;flex-wrap:wrap">
@@ -2174,6 +2175,8 @@ const I18N = {
   'sn.crecimiento': { es:'Crecimiento',       en:'Growth' },
 
   'pg.targets': { es:'Objetivos del plan', en:'Plan targets' },
+  'pg.targetsD': { es:'Cuenta lo que ganaste sólo desde que la cuenta pasó a retiros. En evaluación y en colchón el saldo puede subir, pero todavía se puede evaporar — no es tuyo hasta entonces.',
+                   en:'Counts what you made only once the account reached payout status. In evaluation and buffer the balance can rise, but it can still evaporate — it is not yours until then.' },
   'md.avgWL':    { es:'Avg Win/Loss',           en:'Avg Win/Loss' },
   'md.porTrade': { es:'Por trade',              en:'Per trade' },
   'md.longShort':{ es:'Long vs Short',          en:'Long vs Short' },
@@ -3334,7 +3337,16 @@ function computeScore(){
 }
 
 /* rangos de P&L */
-function pnlRanges(ids = idsSel()){
+/* soloReal: cuenta sólo los toques a cuentas en fase 'payout' (las live siempre
+   están ahí, porque no tienen evaluación ni colchón que pasar). En evaluación y
+   en construcción de colchón el saldo puede subir, pero esa ganancia todavía se
+   puede evaporar en un reinicio o un mal día — no es dinero real hasta que la
+   cuenta ya está en retiros. Antes esta función sumaba TODO sin importar la
+   fase, así que "Objetivos del plan" mostraba en verde ganancia de una cuenta
+   que ni siquiera había pasado el examen. buildReport() sigue usando el total
+   sin filtrar a propósito: la bitácora del día es un registro honesto de lo que
+   pasó en la mesa, no una promesa de dinero cobrado. */
+function pnlRanges(ids = idsSel(), soloReal = false){
   const now = new Date(); const iso = todayISO();
   const y = now.getFullYear(), m = now.getMonth();
   const day = now.getDate();
@@ -3346,7 +3358,17 @@ function pnlRanges(ids = idsSel()){
   const inMonth = t => { const [ty,tm] = t.date.split('-').map(Number); return ty===y && tm===m+1 && t.date <= iso; };
   const r = { dia:0, semana:0, quincena:0, mes:0, anio:0 };
   S.trades.forEach(t=>{
-    const n = nSel(t, ids); if(!n) return;
+    let n;
+    if(soloReal){
+      n = (t.accts||[]).reduce((acc,id)=>{
+        if(!ids.has(id)) return acc;
+        const a = S.accounts.find(x=>x.id===id);
+        return acc + (a && a.fase === 'payout' ? 1 : 0);
+      }, 0);
+    } else {
+      n = nSel(t, ids);
+    }
+    if(!n) return;
     const p = (t.pnl||0) * n;
     if(t.date === iso) r.dia += p;
     if(t.date >= swISO && t.date <= iso) r.semana += p;
@@ -3957,7 +3979,7 @@ function renderProgreso(){
   renderPicker($('#pickProgreso'));
   renderProceso();
   renderProgresoCuentas();
-  const M = metas(), R = pnlRanges();
+  const M = metas(), R = pnlRanges(idsSel(), true);
   const kpis = [
     [tr('me.pnlHoy').toUpperCase(), R.dia, M.dia],
     [tr('me.semana').toUpperCase(), R.semana, M.semana],
