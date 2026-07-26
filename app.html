@@ -478,9 +478,14 @@ body.locked .app{visibility:hidden;pointer-events:none}
 .cal-ev .t i{width:6px;height:6px;border-radius:50%;background:var(--down);flex:0 0 auto;margin-top:4px}
 .cal-ev .m{font-family:var(--mono);font-size:9px;letter-spacing:.1em;color:var(--faint);margin-top:4px}
 .cal-vacio{font-family:var(--mono);font-size:9px;letter-spacing:.12em;color:var(--faint);margin:auto;text-align:center}
+.cal-fuera{grid-column:1/-1;text-align:center;padding:28px 14px;color:var(--dim)}
+.cal-fuera b{display:block;color:var(--txt);font-size:13px;margin-bottom:6px}
+.cal-fuera p{font-size:12px;line-height:1.6;max-width:46ch;margin:0 auto}
 
 /* precios */
-.px-rail{display:flex;gap:12px;overflow-x:auto;scrollbar-width:none;padding-bottom:4px}
+.px-rail{display:flex;gap:12px;overflow-x:auto;scrollbar-width:none;padding-bottom:4px;
+  cursor:grab;user-select:none}
+.px-rail:active{cursor:grabbing}
 .px-rail::-webkit-scrollbar{display:none}
 .px-card{flex:0 0 168px;border:1px solid var(--line-soft);border-radius:14px;background:var(--glass);
   padding:14px 16px;box-shadow:inset 0 1px 0 var(--edge)}
@@ -571,17 +576,7 @@ body.locked .app{visibility:hidden;pointer-events:none}
 @media (max-width:640px){ .vid-rail .vid-card{flex-basis:82vw;max-width:82vw} }
 
 /* ── proceso por fases ── */
-.pr-toggle{display:block;width:100%;text-align:left;cursor:pointer;border-radius:10px;
-  padding:2px 4px 0;transition:background .15s}
-.pr-toggle:hover{background:var(--glass)}
-.pr-toggle:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .pr-pasos{display:flex;align-items:flex-start;gap:0;margin:6px 0 10px}
-.pr-mas{display:flex;align-items:center;justify-content:center;gap:6px;padding:4px 0 6px;
-  font-family:var(--mono);font-size:9px;letter-spacing:.16em;text-transform:uppercase;color:var(--faint)}
-.pr-mas .car{transition:transform .2s}
-.pr-toggle[aria-expanded="true"] .pr-mas .car{transform:rotate(180deg)}
-#prDetalle[hidden]{display:none}
-#prDetalle{animation:vin .2s ease both}
 .pr-paso{flex:1;position:relative;text-align:center;padding-top:22px}
 .pr-paso::before{
   content:'';position:absolute;top:5px;left:50%;width:11px;height:11px;margin-left:-5.5px;
@@ -607,6 +602,24 @@ body.locked .app{visibility:hidden;pointer-events:none}
 .pr-fila .cifras{font-family:var(--mono);font-size:10px;color:var(--faint);margin-top:5px;
   display:flex;justify-content:space-between;gap:10px}
 .pr-fila .falta{font-family:var(--mono);font-size:12px;text-align:right;min-width:96px}
+/* días de la fase: puntos, no sólo dinero. minDias llena de izquierda a derecha
+   hasta el mínimo exigido; maxDias es un plazo que se va gastando — por eso se
+   pone ámbar cerca del límite y rojo si ya se pasó. */
+.pr-dias{margin-bottom:8px}
+.pr-dots{display:flex;gap:3px;flex-wrap:wrap}
+.pr-dots i{width:7px;height:7px;border-radius:2px;background:var(--w08);flex:0 0 auto}
+.pr-dots i.on{background:var(--txt)}
+.pr-dots i.on.excedido{background:var(--down)}
+.pr-dias-t{display:block;font-family:var(--mono);font-size:9.5px;letter-spacing:.04em;
+  color:var(--faint);margin-top:5px}
+.pr-dias.cerca .pr-dots i.on{background:var(--warn,#D9A441)}
+.pr-dias.cerca .pr-dias-t{color:var(--warn,#D9A441)}
+.pr-dias.agotado .pr-dias-t{color:var(--down)}
+/* el cierre: saldo y cobrado, siempre visibles, nunca detrás de un toggle */
+.pr-cierre{display:flex;gap:22px;flex-wrap:wrap;margin-top:12px;padding-top:12px;
+  border-top:1px solid var(--line-soft);
+  font-family:var(--mono);font-size:9.5px;letter-spacing:.1em;color:var(--faint)}
+.pr-cierre b{color:var(--txt);font-size:13px;letter-spacing:0;margin-left:6px}
 .pr-nota{font-size:12px;color:var(--dim);line-height:1.6;margin-top:14px;padding-top:12px;
   border-top:1px solid var(--line-soft)}
 .pr-nota b{color:var(--txt);font-weight:500}
@@ -1589,14 +1602,9 @@ stop[stop-color="#9BC0DC"]{stop-color:var(--txt)}
         <div class="panel" id="prPanel">
           <div class="p-head"><h3 data-i18n="pr.titulo">Proceso</h3><span class="micro" id="prSub"></span></div>
           <div class="p-body">
-            <button type="button" class="pr-toggle" id="prToggle" aria-expanded="false" aria-controls="prDetalle">
-              <div class="pr-pasos" id="prPasos"></div>
-              <div class="pr-mas"><span id="prMasTxt">Ver detalle</span><span class="car">&#9660;</span></div>
-            </button>
-            <div id="prDetalle" hidden>
-              <div id="prFilas"></div>
-              <p class="pr-nota" id="prNota"></p>
-            </div>
+            <div class="pr-pasos" id="prPasos"></div>
+            <div id="prFilas"></div>
+            <p class="pr-nota" id="prNota"></p>
           </div>
         </div>
 
@@ -2155,6 +2163,9 @@ const I18N = {
   'home.news':         { es:'Noticias del mercado',  en:'Market news' },
   'home.vid':          { es:'Videos de trading',     en:'Trading videos' },
   'home.sinEventos':   { es:'Sin eventos',           en:'No events' },
+  'eco.sinDatos':      { es:'Sin datos para esta semana', en:'No data for this week' },
+  'eco.sinDatosD':      { es:'La fuente gratuita sólo publica la semana en curso. Esto no significa que no haya noticias — significa que todavía no hay forma de verlas aquí.',
+                          en:'The free source only publishes the current week. This does not mean there is no news — it means there is no way to see it here yet.' },
   'home.sinPrecios':   { es:'Sin cotizaciones. Se actualizan solas cada 20 minutos.',
                          en:'No quotes yet. They refresh on their own every 20 minutes.' },
   'home.sinNews':      { es:'Sin titulares por ahora.', en:'No headlines right now.' },
@@ -2375,10 +2386,7 @@ const I18N = {
   'sn.anioN':     { es:'AÑO',                        en:'YEAR' },
 
   /* nube */
-  'nu.noConectada': { es:'NUBE · NO CONECTADA — ESTADO LOCAL (ver docs/CLOUD.md)',
-                      en:'CLOUD · NOT CONNECTED — LOCAL STATE (see docs/CLOUD.md)' },
   'nu.local':     { es:'ESTADO LOCAL',               en:'LOCAL STATE' },
-  'nu.sinSesion': { es:'NUBE · SIN SESIÓN — ',       en:'CLOUD · NO SESSION — ' },
   'nu.errPre':    { es:'NUBE · ERROR ',              en:'CLOUD · ERROR ' },
 
   /* markup de vistas */
@@ -2477,11 +2485,18 @@ const I18N = {
 
   /* proceso */
   'pr.titulo':         { es:'Proceso',               en:'Progress' },
-  'pr.ver':            { es:'Ver detalle',           en:'Show detail' },
-  'pr.ocultar':        { es:'Ocultar detalle',       en:'Hide detail' },
   'pr.faltan':         { es:'faltan',                en:'needs' },
   'pr.hito':           { es:'Hito alcanzado',        en:'Target reached' },
   'pr.zonaRetiros':    { es:'En zona de retiros',    en:'In payout zone' },
+  'pr.diasCumplidos':  { es:'Mínimo de %D días cubierto', en:'%D-day minimum covered' },
+  'pr.diaDeMin':       { es:'Día %a de %b mínimo',   en:'Day %a of %b minimum' },
+  'pr.diasAgotados':   { es:'Plazo de %D días agotado', en:'%D-day window used up' },
+  'pr.diaDeMax':       { es:'Día %a de %b máximo',   en:'Day %a of %b maximum' },
+  'pr.mixtaNota':      { es:'Las cuentas en vista están en fases distintas: cada barra corre contra el hito de la suya.',
+                         en:'The accounts in view are in different phases: each bar runs against its own target.' },
+  'pr.reglasDe':       { es:'Reglas de esta fase:',  en:'Rules for this phase:' },
+  'pr.saldoVivo':      { es:'Saldo en vivo',         en:'Live balance' },
+  'pr.cobradoFecha':   { es:'Cobrado a la fecha',    en:'Withdrawn to date' },
   'pr.reinicia':       { es:'reinicia a',            en:'resets to' },
   'pr.a':              { es:'a',                     en:'at' },
   'pr.desde':          { es:'desde',                 en:'from' },
@@ -3634,6 +3649,22 @@ function renderEco(){
   const f = d => d.getDate() + ' ' + MESES3[idi()][d.getMonth()].toLowerCase();
   $('#ecoRango').textContent = f(dias[0]) + ' – ' + f(dias[6]) + ' · ' + dias[6].getFullYear();
 
+  /* La fuente gratuita (nfs.faireconomy.media) sólo publica la semana en curso —
+     no existe un «próxima semana» ahí, lo confirmamos a mano. Sin este aviso,
+     una semana fuera de ese rango se veía igual que una semana real sin
+     noticias de alto impacto: dos cosas muy distintas. */
+  if(evs.length){
+    const isos = evs.map(e=>e.dia).sort();
+    const fueraDeRango = isoDe(dias[6]) < isos[0] || isoDe(dias[0]) > isos[isos.length-1];
+    if(fueraDeRango){
+      cont.innerHTML = `<div class="cal-fuera">
+        <b>${tr('eco.sinDatos')}</b>
+        <p>${tr('eco.sinDatosD')}</p>
+      </div>`;
+      return;
+    }
+  }
+
   const NOM = DIAS3[idi()];
   cont.innerHTML = dias.map((d,i)=>{
     const iso = isoDe(d);
@@ -3843,6 +3874,30 @@ function cerrarPickers(){
 }
 addEventListener('click', ()=> { if(pickerAbierto) cerrarPickers(); });
 addEventListener('keydown', e=>{ if(e.key==='Escape' && pickerAbierto) cerrarPickers(); });
+
+/* ════════ Arrastrar para mover las franjas horizontales (.px-rail) ════════
+   Con el mouse, overflow-x:auto sólo responde a la rueda: un clic y arrastre
+   sobre las tarjetas no movía nada, sólo seleccionaba el texto de adentro —
+   sensación de "scroll roto". Delegado en document porque las franjas se
+   vuelven a pintar (cuentas, idioma, tema) y un listener atado al elemento
+   viejo se perdía en cada render. */
+(function(){
+  let rail = null, x0 = 0, sl0 = 0, movido = false;
+  addEventListener('mousedown', e=>{
+    const r = e.target.closest('.px-rail'); if(!r) return;
+    rail = r; x0 = e.clientX; sl0 = r.scrollLeft; movido = false;
+  });
+  addEventListener('mousemove', e=>{
+    if(!rail) return;
+    const dx = e.clientX - x0;
+    if(Math.abs(dx) > 3){ movido = true; rail.scrollLeft = sl0 - dx; }
+  });
+  addEventListener('mouseup', ()=>{ rail = null; });
+  /* Si de verdad arrastró, el click que sigue no debe activar la tarjeta de abajo. */
+  addEventListener('click', e=>{
+    if(movido && e.target.closest('.px-rail')){ e.preventDefault(); e.stopPropagation(); movido = false; }
+  }, true);
+})();
 
 /* repinta todo lo que depende de la selección, sin perder el desplegable abierto */
 function refrescarSeleccion(){
@@ -4794,14 +4849,6 @@ function renderProceso(){
   const idxActual = Math.min(...sel.map(a => Math.max(0, orden.indexOf(a.fase))));
   const R0 = reglasDe(sel[0]), Rf0 = reglasFondeadas(sel[0]);
 
-  const abierto = !!(S.ui && S.ui.prAbierto);
-  $('#prDetalle').hidden = !abierto;
-  $('#prToggle').setAttribute('aria-expanded', String(abierto));
-  $('#prMasTxt').textContent = abierto ? tr('pr.ocultar') : tr('pr.ver');
-  $('#prToggle').onclick = ()=>{
-    S.ui.prAbierto = !S.ui.prAbierto; save(); renderProceso();
-  };
-
   $('#prSub').innerHTML = mixta
     ? '<span class="tag wr">FASES MIXTAS</span>'
     : (FASES[sel[0].fase] || FASES.eval).t.toUpperCase();
@@ -4811,15 +4858,41 @@ function renderProceso(){
     return `<div class="pr-paso ${cls}"><b>${esc(p.t)}</b><span>${esc(p.sub(R0, Rf0, sel[0]))}</span></div>`;
   }).join('');
 
+  /* Día a día, no sólo el hito en dinero. Evaluación pide un MÍNIMO de días
+     (SISTEMA.fases.eval.minDias): no se puede pasar antes aunque el saldo ya
+     llegue, así que cada punto llenado es un día que sí cuenta. Colchón es al
+     revés — un MÁXIMO (maxDias): los puntos son el plazo que se va gastando,
+     no una meta a cumplir. Antes esto vivía escondido detrás de «Ver detalle»;
+     ahora es lo primero que se ve de cada cuenta. */
+  const stepper = (hechos, req, tipo) => {
+    const lleno = tipo === 'min' ? hechos >= req : hechos > req;
+    const cerca = tipo === 'max' && hechos >= req - 2 && !lleno;
+    const puntos = Array.from({length: req}, (_,i) =>
+      `<i class="${i < Math.min(hechos, req) ? 'on' : ''}"></i>`
+    ).join('') + (tipo==='max' && hechos > req ? '<i class="on excedido"></i>'.repeat(Math.min(hechos-req,4)) : '');
+    const texto = tipo === 'min'
+      ? (lleno ? tr('pr.diasCumplidos').replace('%D', req) : tr('pr.diaDeMin').replace('%a',Math.min(hechos,req)).replace('%b',req))
+      : (lleno ? tr('pr.diasAgotados').replace('%D', req) : tr('pr.diaDeMax').replace('%a',hechos).replace('%b',req));
+    return `<div class="pr-dias${lleno && tipo==='max' ? ' agotado':cerca?' cerca':''}">
+      <div class="pr-dots">${puntos}</div>
+      <span class="pr-dias-t">${texto}</span>
+    </div>`;
+  };
+
   $('#prFilas').innerHTML = sel.map(a=>{
     const h = saludDe(a), F = FASES[a.fase] || FASES.eval;
     const meta = h.hito;
+    const dias = h.dias || 0;
+    const diasHtml = a.fase === 'eval' ? stepper(dias, SISTEMA.fases.eval.minDias, 'min')
+                    : a.fase === 'buffer' ? stepper(dias, SISTEMA.fases.buffer.maxDias, 'max')
+                    : '';
     if(meta == null){
       /* zona de retiros: ya no hay hito que perseguir, lo que importa es el colchón */
       const pct = h.maxDD ? Math.max(0, Math.min(100, h.colchon / h.maxDD * 100)) : 0;
       return `<div class="pr-fila">
         <span class="al">${esc(a.alias)}</span>
         <div class="via">
+          ${diasHtml}
           <div class="pr-track"><i class="listo" style="width:${pct}%"></i></div>
           <div class="cifras"><span>${tr('pr.zonaRetiros').toUpperCase()}</span><span>colchón ${fmt$(h.colchon)} de ${fmt$(h.maxDD)}</span></div>
         </div>
@@ -4833,6 +4906,7 @@ function renderProceso(){
     return `<div class="pr-fila">
       <span class="al">${esc(a.alias)}</span>
       <div class="via">
+        ${diasHtml}
         <div class="pr-track"><i class="${listo?'listo':''}" style="width:${pct}%"></i></div>
         <div class="cifras"><span>${fmt$(a.start)}</span><span>${F.t.toUpperCase()} · ${fmtPct(pct)}</span><span>${fmt$(meta)}</span></div>
       </div>
@@ -4855,10 +4929,20 @@ function renderProceso(){
                 buffer:'Al llegar al hito entras a zona de retiros y el riesgo baja a la mitad.',
                 payout:'Cada 15 días se reparte el retiro. El piso ya está congelado.' }[sel[0].fase];
 
-  $('#prNota').innerHTML = mixta
-    ? 'Las cuentas en vista están en fases distintas: cada barra corre contra el hito de la suya.'
-    : 'Reglas de esta fase: ' + reglas.join(' · ') + '. ' + sig;
+  /* El cierre de la cadena: llegar a la meta no es el final, es sólo la fase.
+     Lo que de verdad importa —saldo de hoy y lo que ya cobraste de verdad—
+     va siempre al pie, sin esconderse detrás de nada. */
+  const saldoVivo = sel.reduce((x,a) => x + saludDe(a).balance, 0);
+  const cobrado = (S.caja||[]).filter(m => m.tipo === 'ingreso').reduce((x,m) => x + (m.monto||0), 0);
+  $('#prNota').innerHTML = (mixta
+    ? tr('pr.mixtaNota')
+    : tr('pr.reglasDe') + ' ' + reglas.join(' · ') + '. ' + sig)
+    + `<div class="pr-cierre">
+        <span>${tr('pr.saldoVivo').toUpperCase()} <b>${fmt$(saldoVivo)}</b></span>
+        <span>${tr('pr.cobradoFecha').toUpperCase()} <b>${fmt$(cobrado)}</b></span>
+      </div>`;
 }
+
 
 function renderJournal(){
   /* El Proceso (fases) vive en Progreso; el calendario y el registro, aquí. */
@@ -6344,14 +6428,14 @@ function cloudPaint(){
 }
 function pintaPill(p){
   if(!p) return;
-  if(!cloudOn()){
-    p.textContent = tr('nu.noConectada');
-    p.style.color = 'var(--faint)';
-    return;
-  }
-  if(!cloudTok){
-    p.textContent = tr('nu.sinSesion') + tr('nu.local');
-    p.style.color = 'var(--warn)';
+  /* Con Supabase configurado pero SIN nadie logueado a la nube (el caso de
+     todo mundo hoy: André y los 10 invitados), esto decía «NUBE · SIN SESIÓN
+     — ESTADO LOCAL» en cada pantalla, siempre — una alerta permanente por
+     una función que nadie encendió. No decía nada que se pudiera actuar, así
+     que ahora se calla. Esto NO toca cómo se guardan los datos: save() sigue
+     escribiendo en localStorage exactamente igual, con o sin nube. */
+  if(!cloudOn() || !cloudTok){
+    p.textContent = '';
     return;
   }
   if(cloudErr){
@@ -7241,11 +7325,15 @@ function animaOficina(){
    de la operación, no un adorno del equipo. */
 function renderAgentes(){
   const grid = $('#agGrid'); if(!grid) return;
-  const u = USERS['andre.np'];
+  /* Antes esto era siempre USERS['andre.np'], sin importar quién entrara: los
+     10 invitados veían "André" como CEO de SU propio edificio. El nombre sale
+     de la sesión real; el dibujo del jefe sigue siendo el mismo look genérico
+     —no es un retrato, es la silla del que manda. */
+  const nombre = S.profile.nombre || (USERS[S.session.user] || {}).nombre || 'CEO';
   grid.innerHTML = `<div class="op">
     <img class="op-cara" src="${caraAgente('ANDRÉ')}" alt="" width="64" height="64">
     <div class="op-i">
-      <b>${esc(u ? u.nombre : 'André')}</b>
+      <b>${esc(nombre)}</b>
       <span>CEO · Northpoint Capital Management</span>
     </div>
   </div>`;
