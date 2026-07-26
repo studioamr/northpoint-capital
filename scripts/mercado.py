@@ -31,6 +31,9 @@ FUTUROS = [
     ('CL',  'CL=F',  'Crudo WTI'),
     ('RTY', 'RTY=F', 'Russell 2000'),
     ('YM',  'YM=F',  'Dow 30'),
+    # Bitcoin: el único que sigue vivo en la ventana asiática, cuando los índices
+    # de Chicago están en su tramo más flojo. Se lee el futuro de CME (BTC=F).
+    ('BTC', 'BTC=F', 'Bitcoin CME'),
 ]
 
 NOTICIAS = [
