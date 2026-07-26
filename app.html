@@ -615,11 +615,6 @@ body.locked .app{visibility:hidden;pointer-events:none}
 .pr-dias.cerca .pr-dots i.on{background:var(--warn,#D9A441)}
 .pr-dias.cerca .pr-dias-t{color:var(--warn,#D9A441)}
 .pr-dias.agotado .pr-dias-t{color:var(--down)}
-/* el cierre: saldo y cobrado, siempre visibles, nunca detrás de un toggle */
-.pr-cierre{display:flex;gap:22px;flex-wrap:wrap;margin-top:12px;padding-top:12px;
-  border-top:1px solid var(--line-soft);
-  font-family:var(--mono);font-size:9.5px;letter-spacing:.1em;color:var(--faint)}
-.pr-cierre b{color:var(--txt);font-size:13px;letter-spacing:0;margin-left:6px}
 .pr-nota{font-size:12px;color:var(--dim);line-height:1.6;margin-top:14px;padding-top:12px;
   border-top:1px solid var(--line-soft)}
 .pr-nota b{color:var(--txt);font-weight:500}
@@ -2488,6 +2483,7 @@ const I18N = {
   'pr.faltan':         { es:'faltan',                en:'needs' },
   'pr.hito':           { es:'Hito alcanzado',        en:'Target reached' },
   'pr.zonaRetiros':    { es:'En zona de retiros',    en:'In payout zone' },
+  'pr.colchonDe':      { es:'colchón %a de %b',       en:'cushion %a of %b' },
   'pr.diasCumplidos':  { es:'Mínimo de %D días cubierto', en:'%D-day minimum covered' },
   'pr.diaDeMin':       { es:'Día %a de %b mínimo',   en:'Day %a of %b minimum' },
   'pr.diasAgotados':   { es:'Plazo de %D días agotado', en:'%D-day window used up' },
@@ -2495,8 +2491,6 @@ const I18N = {
   'pr.mixtaNota':      { es:'Las cuentas en vista están en fases distintas: cada barra corre contra el hito de la suya.',
                          en:'The accounts in view are in different phases: each bar runs against its own target.' },
   'pr.reglasDe':       { es:'Reglas de esta fase:',  en:'Rules for this phase:' },
-  'pr.saldoVivo':      { es:'Saldo en vivo',         en:'Live balance' },
-  'pr.cobradoFecha':   { es:'Cobrado a la fecha',    en:'Withdrawn to date' },
   'pr.reinicia':       { es:'reinicia a',            en:'resets to' },
   'pr.a':              { es:'a',                     en:'at' },
   'pr.desde':          { es:'desde',                 en:'from' },
@@ -4894,7 +4888,7 @@ function renderProceso(){
         <div class="via">
           ${diasHtml}
           <div class="pr-track"><i class="listo" style="width:${pct}%"></i></div>
-          <div class="cifras"><span>${tr('pr.zonaRetiros').toUpperCase()}</span><span>colchón ${fmt$(h.colchon)} de ${fmt$(h.maxDD)}</span></div>
+          <div class="cifras"><span>${tr('pr.zonaRetiros').toUpperCase()}</span><span>${tr('pr.colchonDe').replace('%a',fmt$(h.colchon)).replace('%b',fmt$(h.maxDD))}</span></div>
         </div>
         <b class="falta up">${fmt$(h.balance)}</b>
       </div>`;
@@ -4929,18 +4923,14 @@ function renderProceso(){
                 buffer:'Al llegar al hito entras a zona de retiros y el riesgo baja a la mitad.',
                 payout:'Cada 15 días se reparte el retiro. El piso ya está congelado.' }[sel[0].fase];
 
-  /* El cierre de la cadena: llegar a la meta no es el final, es sólo la fase.
-     Lo que de verdad importa —saldo de hoy y lo que ya cobraste de verdad—
-     va siempre al pie, sin esconderse detrás de nada. */
-  const saldoVivo = sel.reduce((x,a) => x + saludDe(a).balance, 0);
-  const cobrado = (S.caja||[]).filter(m => m.tipo === 'ingreso').reduce((x,m) => x + (m.monto||0), 0);
-  $('#prNota').innerHTML = (mixta
+  /* Saldo y cobrado ya viven en Objetivos del plan y en Camino al retiro, más
+     abajo en esta misma pantalla. Repetirlos aquí abajo era la misma cifra dos
+     veces —y «saldo en vivo» aquí sumaba el balance completo de la cuenta,
+     mientras que el de Objetivos del plan suma la ganancia sobre el arranque:
+     dos cosas distintas con (casi) el mismo nombre. Mejor uno solo, correcto. */
+  $('#prNota').innerHTML = mixta
     ? tr('pr.mixtaNota')
-    : tr('pr.reglasDe') + ' ' + reglas.join(' · ') + '. ' + sig)
-    + `<div class="pr-cierre">
-        <span>${tr('pr.saldoVivo').toUpperCase()} <b>${fmt$(saldoVivo)}</b></span>
-        <span>${tr('pr.cobradoFecha').toUpperCase()} <b>${fmt$(cobrado)}</b></span>
-      </div>`;
+    : tr('pr.reglasDe') + ' ' + reglas.join(' · ') + '. ' + sig;
 }
 
 
