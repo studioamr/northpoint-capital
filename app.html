@@ -2359,8 +2359,6 @@ const I18N = {
   'me.quincena':  { es:'Quincena',                   en:'Fortnight' },
   'me.mes':       { es:'Mes',                        en:'Month' },
   'me.anio':      { es:'Año',                        en:'Year' },
-  'me.saldoVivo': { es:'Saldo vivo',                 en:'Live balance' },
-  'me.sobreArranque': { es:'sobre el arranque de las cuentas', en:'above the accounts’ starting point' },
   'me.violaciones': { es:'violación(es) hoy:',       en:'violation(s) today:' },
   'me.croPuede':  { es:'El CRO tiene autoridad para detener operaciones.',
                     en:'The CRO has authority to stop trading.' },
@@ -4226,9 +4224,6 @@ function renderProgreso(){
     [tr('me.mes').toUpperCase(), R.mes, M.mes],
     [tr('me.anio').toUpperCase(), R.anio, M.anio],
   ];
-  /* El P&L del mes NO es dinero que quedó: al pasar la evaluación la cuenta reinicia
-     y esa ganancia desaparece. El saldo vivo es lo que de verdad hay sobre el arranque. */
-  const vivo = acctsSel().reduce((x,a)=> x + (saludDe(a).balance - (a.start||0)), 0);
   $('#dashKpis').innerHTML = kpis.map(([l,v,goal])=>{
     const pct = goal>0 ? Math.max(0, Math.min(100, v/goal*100)) : 0;
     return `<div class="panel kpi">
@@ -4237,11 +4232,7 @@ function renderProgreso(){
       <div class="k-s">${tr('c.meta')} ${fmt$(goal)}</div>
       <div class="bar"><i class="${v>=goal?'full':(v<0?'neg':'')}" style="width:${v<0?100:pct}%"></i></div>
     </div>`;
-  }).join('') + (S.accounts.length ? `<div class="panel kpi">
-      <div class="k-l">${tr('me.saldoVivo').toUpperCase()}</div>
-      <div class="k-v ${vivo>0?'up':vivo<0?'down':''}">${fmt$(vivo,true)}</div>
-      <div class="k-s">${tr('me.sobreArranque')}</div>
-    </div>` : '');
+  }).join('');
 }
 
 function renderDashboard(){
