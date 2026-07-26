@@ -1849,6 +1849,47 @@ stop[stop-color="#9BC0DC"]{stop-color:var(--txt)}
   </div>
 </div>
 
+<div class="overlay" id="ovLive">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="lvTitle">
+    <h3 id="lvTitle">Cuenta propia</h3>
+    <p class="sub">Capital tuyo, sin fases ni firma. El punto de partida para medir lo que crece.</p>
+    <div class="f-full"><label>¿Con cuánto arranca? USD</label><input type="number" id="lvCap" min="0" step="100" placeholder="0"></div>
+    <p class="micro" id="lvErr" style="color:var(--down);min-height:14px"></p>
+    <div class="m-foot">
+      <button class="btn" data-close>Cancelar</button>
+      <button class="btn primary" id="lvSave">Dar de alta</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="ovCaja">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="cjTitle">
+    <h3 id="cjTitle">Movimiento</h3>
+    <p class="sub" id="cjSub"></p>
+    <div class="f-row">
+      <div><label id="cjConceptoLbl">Concepto</label><input id="cjConcepto" placeholder="ej. payout Tradeify"></div>
+      <div><label>Monto USD</label><input type="number" id="cjMonto" min="0" step="1" placeholder="0"></div>
+    </div>
+    <p class="micro" id="cjErr" style="color:var(--down);min-height:14px"></p>
+    <div class="m-foot">
+      <button class="btn" data-close>Cancelar</button>
+      <button class="btn primary" id="cjSave">Registrar</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="ovRechazo">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="rjTitle">
+    <h3 id="rjTitle">Por qué no la tomaste</h3>
+    <p class="sub">Queda registrado junto con la tesis. Puede quedar en blanco.</p>
+    <div class="f-full"><label>Motivo</label><input id="rjMotivo" placeholder="ej. no llegó el setup, se pasó la ventana"></div>
+    <div class="m-foot">
+      <button class="btn" data-close>Cancelar</button>
+      <button class="btn primary" id="rjSave">Guardar</button>
+    </div>
+  </div>
+</div>
+
 <div class="overlay" id="ovPos">
   <div class="modal" role="dialog" aria-modal="true" aria-labelledby="pmTitle">
     <h3 id="pmTitle">Nueva compra</h3>
@@ -2201,18 +2242,9 @@ const I18N = {
 
   'c.tu': { es:'TÚ', en:'YOU' },
   'ac.sinLimite': { es:'no pone límite diario', en:'sets no daily limit' },
-
-  'lg.noNube':  { es:'Esa clave no coincide con la de la nube. Revísala en Supabase (Authentication → Users).',
-                  en:'That password does not match the one in the cloud. Check it in Supabase (Authentication → Users).' },
-  'lg.sinRed':  { es:'Sin conexión con la nube. Revisa tu internet e inténtalo otra vez.',
-                  en:'No connection to the cloud. Check your internet and try again.' },
-  'lg.reconecta': { es:'Vuelve a entrar en este equipo para conectar a la mesa compartida.',
-                    en:'Sign in again on this device to connect to the shared desk.' },
   'lg.malas':     { es:'Credenciales incorrectas.',
-                    en:'Wrong credentials. Access is for partners only.' },
+                    en:'Wrong credentials.' },
   'lg.entrando':  { es:'Entrando…',                  en:'Signing in…' },
-  'lg.soloLocal': { es:'Entraste en local: la nube no aceptó esa clave. Usa la de Supabase para ver la mesa compartida.',
-                    en:'Signed in locally: the cloud rejected that key. Use your Supabase password to see the shared desk.' },
   'lg.bienvenido':{ es:'Bienvenido',                 en:'Welcome' },
   'tour.saltar':  { es:'Saltar',    en:'Skip' },
   'tour.atras':   { es:'Atrás',     en:'Back' },
@@ -3779,14 +3811,7 @@ function renderAcctMgr(){
        </div></div>` : '');
   const b2 = $('#acSeed2'); if(b2) b2.onclick = sembrarCuentas;
   const bl = $('#acLive');
-  if(bl) bl.onclick = () => {
-    const cap = parseFloat(prompt('¿Con cuánto capital propio arranca?'));
-    if(!isFinite(cap) || cap <= 0){ toast('Capital inválido'); return; }
-    S.accounts.push({ id:'ac_live_'+uid(), alias:'PROPIA', orden:(S.accounts.length+1), tipo:'live',
-      firm:'—', plan:'—', size:cap, start:cap, desde:todayISO(), fase:'payout', estado:'activa' });
-    save(); renderAcctMgr(); renderDashboard();
-    toast('Cuenta propia dada de alta');
-  };
+  if(bl) bl.onclick = () => { $('#lvCap').value=''; $('#lvErr').textContent=''; openOv('ovLive'); };
 
   $$('#acList [data-f]').forEach(el => el.onchange = ()=>{
     const a = S.accounts.find(x=>x.id===el.dataset.id); if(!a) return;
@@ -5580,6 +5605,48 @@ $('#pSave').addEventListener('click', ()=>{
   editingPos = null;
 });
 
+/* Cuenta propia, movimiento de caja y motivo de rechazo vivían detrás de
+   prompt(): un cuadro nativo que no se puede probar en automático y que
+   varios navegadores bloquean o restringen. Tres modales de verdad, iguales
+   al resto de la app. */
+$('#lvSave').addEventListener('click', ()=>{
+  const cap = parseFloat($('#lvCap').value);
+  if(!isFinite(cap) || cap <= 0){ $('#lvErr').textContent = 'Escribe un capital válido, mayor a cero.'; return; }
+  S.accounts.push({ id:'ac_live_'+uid(), alias:'PROPIA', orden:(S.accounts.length+1), tipo:'live',
+    firm:'—', plan:'—', size:cap, start:cap, desde:todayISO(), fase:'payout', estado:'activa' });
+  save(); closeOv(); renderAcctMgr(); renderDashboard();
+  toast('Cuenta propia dada de alta');
+});
+
+let cajaTipo = 'ingreso';
+window.abrirCaja = tipo => {
+  cajaTipo = tipo;
+  $('#cjTitle').textContent = tipo === 'ingreso' ? 'Nuevo ingreso' : 'Nuevo gasto';
+  $('#cjSub').textContent = tipo === 'ingreso' ? 'Dinero real que entró: un payout cobrado.' : 'Dinero real que salió: lo que costó operar.';
+  $('#cjConceptoLbl').textContent = tipo === 'ingreso' ? '¿De qué es el ingreso?' : '¿De qué es el gasto?';
+  $('#cjConcepto').value = ''; $('#cjMonto').value = ''; $('#cjErr').textContent = '';
+  $('#cjConcepto').placeholder = tipo === 'ingreso' ? 'ej. payout Tradeify' : 'ej. evaluación, reset, mensualidad';
+  openOv('ovCaja');
+};
+$('#cjSave').addEventListener('click', ()=>{
+  const concepto = $('#cjConcepto').value.trim();
+  const monto = parseFloat($('#cjMonto').value);
+  if(!concepto){ $('#cjErr').textContent = 'Falta el concepto.'; return; }
+  if(!isFinite(monto) || monto <= 0){ $('#cjErr').textContent = 'Escribe un monto válido, mayor a cero.'; return; }
+  S.caja = S.caja || [];
+  S.caja.push({ id:uid(), fecha:todayISO(), tipo:cajaTipo, concepto, monto:Math.abs(monto) });
+  save(); closeOv(); renderVida();
+  toast(cajaTipo === 'ingreso' ? 'Ingreso registrado' : 'Gasto registrado');
+});
+
+let tixRechazando = null;
+window.abrirRechazo = id => { tixRechazando = id; $('#rjMotivo').value = ''; openOv('ovRechazo'); };
+$('#rjSave').addEventListener('click', ()=>{
+  const t = S.tickets.find(x => x.id === tixRechazando);
+  if(t){ t.estado = 'rechazada'; t.motivo = $('#rjMotivo').value.trim(); save(); renderTix(); updateBadges(); toast('Anotada como no tomada'); }
+  closeOv(); tixRechazando = null;
+});
+
 /* ════════ CALCULADORA ════════ */
 function renderCalc(){
   const cap = parseFloat($('#cCap').value)||0;
@@ -5672,19 +5739,17 @@ async function doLogin(){
         S.claves[u] = await hashClave(p);
       }
     }catch(err){
+      /* Nadie en este terminal usa la nube todavía (nunca se conectó Supabase de
+         verdad): decirle a quien se equivocó de clave "revísala en Supabase" es
+         mandarlo a un panel que no puede abrir. El intento de nube queda —por si
+         algún día sí se conecta— pero el mensaje al usuario es el mismo de
+         siempre: la clave no sirvió, sin mencionar infraestructura que no le
+         toca administrar. */
       if(!(await claveLocalOk(u, p))){
-        /* «Credenciales incorrectas» a secas no dice nada: puede ser que la nube
-           rechazó la clave, que no hay internet, o que el usuario ni existe allá.
-           Cada caso se arregla distinto, así que se distinguen. */
-        const m = String((err && err.message) || '');
-        $('#lgErr').textContent =
-          /Invalid login|invalid_credentials|credenciales/i.test(m) ? tr('lg.noNube') :
-          /Failed to fetch|NetworkError|network/i.test(m)           ? tr('lg.sinRed')  :
-          tr('lg.malas');
+        $('#lgErr').textContent = tr('lg.malas');
         $('#lgPass').value = '';
         return;
       }
-      setTimeout(()=> toast(tr('lg.soloLocal')), 900);
     }
   } else if(!(await claveLocalOk(u, p))){
     $('#lgErr').textContent = tr('lg.malas');
@@ -6006,13 +6071,8 @@ function renderTix(){
     </div>${antes.map(tarjeta).join('')}` : ''}`;
 
   $$('#tixList [data-reject]').forEach(b => b.onclick = () => {
-    const t = S.tickets.find(x => x.id === b.dataset.reject);
-    if(!t) return;
-    const m = prompt('Por qué no la tomaste (queda registrado):');
-    if(m === null) return;
-    t.estado = 'rechazada'; t.motivo = m.trim();
-    save(); renderTix(); updateBadges();
-    toast('Anotada como no tomada');
+    if(!S.tickets.find(x => x.id === b.dataset.reject)) return;
+    abrirRechazo(b.dataset.reject);
   });
   $$('#tixList [data-exec]').forEach(b => b.onclick = () => {
     const t = S.tickets.find(x => x.id === b.dataset.exec);
@@ -7090,20 +7150,8 @@ function renderVida(){
     </div>
     <div id="cajaLista"></div>`;
 
-  const alta = tipo => {
-    const concepto = prompt(tipo === 'ingreso'
-      ? '¿De qué es el ingreso? (ej. payout Tradeify)'
-      : '¿De qué es el gasto? (ej. evaluación, reset, mensualidad)');
-    if(concepto === null || !concepto.trim()) return;
-    const m = parseFloat(prompt('¿De cuánto? (sólo el número)'));
-    if(!isFinite(m) || m <= 0){ toast('Monto inválido'); return; }
-    S.caja = S.caja || [];
-    S.caja.push({ id:uid(), fecha:todayISO(), tipo, concepto:concepto.trim(), monto:Math.abs(m) });
-    save(); renderVida();
-    toast(tipo === 'ingreso' ? 'Ingreso registrado' : 'Gasto registrado');
-  };
-  if($('#cajaIn'))  $('#cajaIn').onclick  = () => alta('ingreso');
-  if($('#cajaOut')) $('#cajaOut').onclick = () => alta('gasto');
+  if($('#cajaIn'))  $('#cajaIn').onclick  = () => abrirCaja('ingreso');
+  if($('#cajaOut')) $('#cajaOut').onclick = () => abrirCaja('gasto');
   if($('#cajaVer')) $('#cajaVer').onclick = () => {
     const L = $('#cajaLista');
     if(L.innerHTML){ L.innerHTML = ''; return; }
