@@ -990,19 +990,8 @@ button.tag.quemada{text-decoration:line-through;text-decoration-color:var(--down
 @media (max-width:760px){ .gates{grid-template-columns:repeat(2,1fr)} }
 
 /* ── Gabinete de agentes IA ── */
-.ag-grid{margin-bottom:16px}
-/* ── Detalle del equipo, debajo del edificio ── */
-.op{display:flex;align-items:center;gap:16px;border:1px solid var(--line);
-  border-radius:13px;background:var(--panel-bg);padding:16px 18px}
-.op-cara{width:64px;height:64px;border-radius:50%;image-rendering:pixelated;
-  border:1px solid var(--line);flex:none}
-.op-i{display:flex;flex-direction:column;gap:3px;min-width:0}
-.op-i b{font-family:var(--mono);font-size:16px;letter-spacing:.05em;color:var(--txt)}
-.op-i span{font-size:11px;color:var(--dim)}
-.op-i i{font-style:normal;font-family:var(--mono);font-size:9px;letter-spacing:.08em;color:var(--faint)}
-.eqd-cod{font-family:var(--mono);font-size:9px;letter-spacing:.08em;color:var(--faint);margin-bottom:7px}
 /* ── Los personajes de la oficina ── */
-.pj-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(232px,1fr));gap:10px}
+.pj-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(232px,1fr));gap:10px;margin-bottom:16px}
 .pj{display:flex;align-items:center;gap:12px;text-align:left;font:inherit;color:inherit;
   border:1px solid var(--line);border-radius:13px;background:var(--panel-bg);padding:13px;
   cursor:pointer;transition:border-color .2s,transform .2s;width:100%}
@@ -1159,7 +1148,6 @@ button.tag.quemada{text-decoration:line-through;text-decoration-color:var(--down
 .ag-form-s{font-size:10.5px;color:var(--faint);margin-top:4px;line-height:1.45}
 .ag-oficina-wrap{border:1px solid var(--line);border-radius:14px;overflow:hidden;margin-bottom:18px;background:#0E1018;line-height:0}
 #agOficina{display:block;width:100%;height:auto}
-@media (max-width:760px){ .ag-grid{grid-template-columns:1fr} }
 
 .duties{
   border:1px solid var(--line-soft);border-radius:10px;background:var(--glass);
@@ -1461,7 +1449,7 @@ stop[stop-color="#9BC0DC"]{stop-color:var(--txt)}
             <h2 class="firm-title" data-i18n="ag.t">El negocio</h2>
           </div>
         </div>
-        <div class="ag-grid" id="agGrid"></div>
+        <div class="pj-grid" id="agGrid"></div>
         <div class="ag-oficina-wrap">
           <canvas id="agOficina" width="1800" height="1160" aria-label="La oficina de Northpoint — piso 88, Nueva York"></canvas>
         </div>
@@ -1550,32 +1538,12 @@ stop[stop-color="#9BC0DC"]{stop-color:var(--txt)}
            Dónde vas: la fase en curso, los objetivos del plan y el mes día por día.
            Antes esto estaba mezclado con el registro de trades y se perdía. -->
       <section class="view" id="v-progreso">
-        <div class="panel" id="prPanel">
-          <div class="p-head"><h3 data-i18n="pr.titulo">Proceso</h3><span class="micro" id="prSub"></span></div>
-          <div class="p-body">
-            <div class="pr-pasos" id="prPasos"></div>
-            <div id="prFilas"></div>
-            <p class="pr-nota" id="prNota"></p>
-          </div>
-        </div>
-
-        <div style="display:flex;align-items:center;gap:12px;margin:22px 0 4px;flex-wrap:wrap">
+        <div style="display:flex;align-items:center;gap:12px;margin:4px 0 4px;flex-wrap:wrap">
           <span class="micro" data-i18n="pg.targets">Objetivos del plan</span>
           <div id="pickProgreso" style="margin-left:auto"></div>
         </div>
         <p class="micro" data-i18n="pg.targetsD" style="color:var(--faint);margin:0 0 12px;max-width:62ch">Cuenta lo que ganaste sólo desde que la cuenta pasó a retiros. En evaluación y en colchón el saldo puede subir, pero todavía se puede evaporar — no es tuyo hasta entonces.</p>
         <div class="grid g5" id="dashKpis"></div>
-
-        <div style="display:flex;align-items:center;gap:12px;margin:26px 0 12px;flex-wrap:wrap">
-          <span class="micro" data-i18n="pg.cuentas">Cada cuenta, dónde va</span>
-          <span class="micro" id="pgSub" style="color:var(--faint);margin-left:auto"></span>
-        </div>
-        <div class="grid g2" id="pgCuentas"></div>
-
-        <div style="display:flex;align-items:center;gap:12px;margin:26px 0 12px">
-          <span class="micro" data-i18n="pg.retiros">Camino al retiro</span>
-        </div>
-        <div class="grid g3" id="pgRetiro"></div>
       </section>
 
 <section class="view" id="v-journal">
@@ -1850,15 +1818,37 @@ stop[stop-color="#9BC0DC"]{stop-color:var(--txt)}
   </div>
 </div>
 
-<div class="overlay" id="ovLive">
-  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="lvTitle">
-    <h3 id="lvTitle">Cuenta propia</h3>
-    <p class="sub">Capital tuyo, sin fases ni firma. El punto de partida para medir lo que crece.</p>
-    <div class="f-full"><label>¿Con cuánto arranca? USD</label><input type="number" id="lvCap" min="0" step="100" placeholder="0"></div>
-    <p class="micro" id="lvErr" style="color:var(--down);min-height:14px"></p>
+<div class="overlay" id="ovNuevaCuenta">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="ncTitle">
+    <h3 id="ncTitle">Nueva cuenta</h3>
+    <p class="sub">¿Qué tipo de cuenta es? El resto del formulario cambia según lo que elijas.</p>
+    <div class="seg" id="ncTipo" style="margin-bottom:16px">
+      <button type="button" data-t="prop" class="on">Fondeada</button>
+      <button type="button" data-t="live">Cuenta propia</button>
+      <button type="button" data-t="sim">Práctica</button>
+    </div>
+
+    <div class="f-full"><label>Alias</label><input id="ncAlias" placeholder="T1, Mi cuenta, Demo..."></div>
+
+    <div id="ncCamposProp">
+      <div class="f-row" style="margin-top:10px">
+        <div><label>Plan</label><select id="ncPlan"></select></div>
+        <div><label>Tamaño</label><select id="ncSize"></select></div>
+      </div>
+    </div>
+
+    <div id="ncCamposSimple" hidden>
+      <div class="f-full" style="margin-top:10px">
+        <label id="ncStartLbl">Balance de arranque USD</label>
+        <input type="number" id="ncStart" min="0" step="100" placeholder="0">
+      </div>
+      <p class="micro" id="ncNota" style="color:var(--faint);margin-top:4px"></p>
+    </div>
+
+    <p class="micro" id="ncErr" style="color:var(--down);min-height:14px;margin-top:8px"></p>
     <div class="m-foot">
       <button class="btn" data-close>Cancelar</button>
-      <button class="btn primary" id="lvSave">Dar de alta</button>
+      <button class="btn primary" id="ncSave">Dar de alta</button>
     </div>
   </div>
 </div>
@@ -2180,30 +2170,6 @@ const I18N = {
   'md.avgWL':    { es:'Avg Win/Loss',           en:'Avg Win/Loss' },
   'md.porTrade': { es:'Por trade',              en:'Per trade' },
   'md.longShort':{ es:'Long vs Short',          en:'Long vs Short' },
-  'pg.cuentas':   { es:'Cada cuenta, dónde va',    en:'Each account, where it stands' },
-  'pg.retiros':   { es:'Camino al retiro',         en:'Road to payout' },
-  'pg.fondeadas': { es:'fondeadas',                en:'funded' },
-  'pg.propia':    { es:'propia',                   en:'own' },
-  'pg.propiaCap': { es:'Capital propio',           en:'Own capital' },
-  'pg.tuya':      { es:'Tuya',                     en:'Yours' },
-  'pg.balance':   { es:'Balance',                  en:'Balance' },
-  'pg.sobreArr':  { es:'Sobre el arranque',        en:'Over start' },
-  'pg.colchon':   { es:'Colchón',                  en:'Buffer' },
-  'pg.hasta':     { es:'hasta',                    en:'to' },
-  'pg.cubierto':  { es:'Objetivo cubierto.',       en:'Target covered.' },
-  'pg.faltan':    { es:'Faltan %s.',               en:'%s to go.' },
-  'pg.sinHito':   { es:'El plan no fija hito para esta fase.', en:'The plan sets no milestone for this phase.' },
-  'pg.sinHitoLive':{ es:'Cuenta propia: sin fases ni corte. Lo que pierdes, lo pierdes.', en:'Own account: no phases, no reset. What you lose, you lose.' },
-  'pg.linea':     { es:'Línea de drawdown',        en:'Drawdown line' },
-  'pg.fija':      { es:'fija',                     en:'locked' },
-  'pg.sinCuentas':{ es:'Todavía no hay cuentas',   en:'No accounts yet' },
-  'pg.sinCuentasD':{ es:'Sin cuentas dadas de alta no hay fase, ni colchón, ni progreso que medir.', en:'With no accounts there is no phase, no buffer and no progress to measure.' },
-  'pg.r1':        { es:'Falta para el hito',       en:'Left to milestone' },
-  'pg.r1s':       { es:'de %s en total',           en:'of %s total' },
-  'pg.r2':        { es:'Cuentas en retiros',       en:'Accounts in payout' },
-  'pg.r2s':       { es:'ya pueden cobrar',         en:'eligible to withdraw' },
-  'pg.r3':        { es:'Cobrado a la fecha',       en:'Withdrawn to date' },
-  'pg.r3s':       { es:'dinero que sí salió',      en:'money that actually left' },
   'md.winRate':  { es:'Win rate · por trade',   en:'Win rate · per trade' },
   'md.diaWin':   { es:'Días ganados',           en:'Winning days' },
   'md.gana':     { es:'gana',                   en:'win' },
@@ -2443,21 +2409,6 @@ const I18N = {
   'fase.payout':       { es:'Retiros',               en:'Payouts' },
 
   /* proceso */
-  'pr.titulo':         { es:'Proceso',               en:'Progress' },
-  'pr.faltan':         { es:'faltan',                en:'needs' },
-  'pr.hito':           { es:'Hito alcanzado',        en:'Target reached' },
-  'pr.zonaRetiros':    { es:'En zona de retiros',    en:'In payout zone' },
-  'pr.colchonDe':      { es:'colchón %a de %b',       en:'cushion %a of %b' },
-  'pr.diasCumplidos':  { es:'Mínimo de %D días cubierto', en:'%D-day minimum covered' },
-  'pr.diaDeMin':       { es:'Día %a de %b mínimo',   en:'Day %a of %b minimum' },
-  'pr.diasAgotados':   { es:'Plazo de %D días agotado', en:'%D-day window used up' },
-  'pr.diaDeMax':       { es:'Día %a de %b máximo',   en:'Day %a of %b maximum' },
-  'pr.mixtaNota':      { es:'Las cuentas en vista están en fases distintas: cada barra corre contra el hito de la suya.',
-                         en:'The accounts in view are in different phases: each bar runs against its own target.' },
-  'pr.reglasDe':       { es:'Reglas de esta fase:',  en:'Rules for this phase:' },
-  'pr.reinicia':       { es:'reinicia a',            en:'resets to' },
-  'pr.a':              { es:'a',                     en:'at' },
-  'pr.desde':          { es:'desde',                 en:'from' },
 
   /* journal */
   'j.mes':             { es:'Mes',                   en:'Month' },
@@ -2916,6 +2867,9 @@ const USERS = {
   'invitado9':  { nombre:'Invitado 9',  roles:['NP-060'], correo:'invitado9@northpoint.local' },
   'invitado10': { nombre:'Invitado 10', roles:['NP-060'], correo:'invitado10@northpoint.local' },
 };
+/* Los únicos que pueden ser dueños de una cuenta real: los cuatro socios,
+   nunca un invitado de acceso de prueba. */
+const SOCIOS_REALES = ['pablo.np','mateo.np','andre.np','goyo.np'];
 /* Todos entran con 1234 la primera vez y la cambian en Configuración.
    La clave local se guarda como hash SHA-256 en tu equipo: no impide
    nada a quien tenga acceso al navegador, pero evita que quede escrita en claro.
@@ -3072,10 +3026,14 @@ addEventListener('storage', e => {
 const esViva = a => !!a && a.estado !== 'quemada';
 function cuentasVivas(){ return S.accounts.filter(esViva); }
 /* Sin tipo marcado se asume fondeada: así las cuentas viejas no cambian de
-   naturaleza al migrar. */
+   naturaleza al migrar. 'sim' es dinero de práctica — ni fondeada (no hay
+   firma que la respalde) ni cuenta propia real (no cuenta para nada de lo
+   que mide dinero de verdad: Objetivos del plan, El negocio, Panorama). */
 const esLive = a => a && a.tipo === 'live';
-const cuentasProp = () => cuentasVivas().filter(a => !esLive(a));
+const esSim  = a => a && a.tipo === 'sim';
+const cuentasProp = () => cuentasVivas().filter(a => !esLive(a) && !esSim(a));
 const cuentasLive = () => cuentasVivas().filter(esLive);
+const cuentasSim  = () => cuentasVivas().filter(esSim);
 function ordenar(xs){ return xs.slice().sort((a,b)=> (a.orden||0)-(b.orden||0)); }
 
 function acctsSel(){
@@ -3368,7 +3326,8 @@ function pnlRanges(ids = idsSel(), soloReal = false){
       n = (t.accts||[]).reduce((acc,id)=>{
         if(!ids.has(id)) return acc;
         const a = S.accounts.find(x=>x.id===id);
-        return acc + (a && a.fase === 'payout' ? 1 : 0);
+        /* 'sim' nunca cuenta: es dinero de práctica, no real bajo ninguna fase. */
+        return acc + (a && a.fase === 'payout' && a.tipo !== 'sim' ? 1 : 0);
       }, 0);
     } else {
       n = nSel(t, ids);
@@ -3769,7 +3728,7 @@ function renderAcctPanel(){
 function sembrarCuentas(){
   S.accounts = SEED_CUENTAS();
   S.ui.acctSel = { mode:'all', ids:[] };
-  save(); renderDashboard(); renderAcctMgr();
+  save(); renderDashboard(); renderAcctMgr(); renderAgentes();
   toast('5 cuentas dadas de alta');
 }
 
@@ -3784,18 +3743,26 @@ function renderAcctMgr(){
       <div class="acct-row">
         <div><label>Alias</label><input data-f="alias" data-id="${a.id}" value="${esc(a.alias)}"></div>
         <div><label>Tipo</label><select data-f="tipo" data-id="${a.id}">
-          <option value="prop"${!esLive(a)?' selected':''}>Fondeada</option>
+          <option value="prop"${(!esLive(a)&&!esSim(a))?' selected':''}>Fondeada</option>
           <option value="live"${esLive(a)?' selected':''}>Propia (capital tuyo)</option>
+          <option value="sim"${esSim(a)?' selected':''}>Práctica</option>
         </select></div>
       </div>
-      ${esLive(a) ? '' : `<div class="acct-row" style="margin-top:10px">
+      <div class="acct-row" style="margin-top:10px">
+        <div><label>Dueño</label><select data-f="owner" data-id="${a.id}">
+          <option value=""${!a.owner?' selected':''}>Sin asignar</option>
+          ${SOCIOS_REALES.map(u=>`<option value="${u}"${a.owner===u?' selected':''}>${esc(USERS[u].nombre)}</option>`).join('')}
+        </select></div>
+        <div></div>
+      </div>
+      ${(esLive(a)||esSim(a)) ? '' : `<div class="acct-row" style="margin-top:10px">
         <div><label>Plan</label><select data-f="plan" data-id="${a.id}">
           ${planes.map(p=>`<option${p===a.plan?' selected':''}>${esc(p)}</option>`).join('')}
         </select></div>
         <div><label>Balance de arranque</label><input type="number" data-f="start" data-id="${a.id}" value="${a.start}" step="100"></div>
       </div>`}
-      ${esLive(a) ? `<div class="acct-row" style="margin-top:10px">
-        <div><label>Capital inicial</label><input type="number" data-f="start" data-id="${a.id}" value="${a.start}" step="100"></div>
+      ${(esLive(a)||esSim(a)) ? `<div class="acct-row" style="margin-top:10px">
+        <div><label>${esLive(a)?'Capital inicial':'Balance de práctica'}</label><input type="number" data-f="start" data-id="${a.id}" value="${a.start}" step="100"></div>
         <div><label>Estado</label><select data-f="estado" data-id="${a.id}">
           ${['activa','pausada','quemada'].map(e=>`<option${e===a.estado?' selected':''}>${e}</option>`).join('')}
         </select></div>
@@ -3813,7 +3780,7 @@ function renderAcctMgr(){
         </select></div>
         <div></div>
       </div>`}
-      ${(!esLive(a) && a.fase !== 'eval' && R && R.lockAtProfit == null)
+      ${(!esLive(a) && !esSim(a) && a.fase !== 'eval' && R && R.lockAtProfit == null)
         ? `<div class="cal-pace" style="margin-top:10px;border-left-color:var(--warn)">
              <b>La fase y el plan no coinciden.</b> Está en ${esc((FASES[a.fase]||FASES.eval).t)}
              pero el plan sigue siendo de evaluación, así que el piso nunca se congela y el colchón
@@ -3823,6 +3790,7 @@ function renderAcctMgr(){
         : ''}
       <div class="micro" style="margin-top:10px;color:var(--dim)">
         ${esLive(a) ? `Balance ${fmt$(h.balance)} · capital propio: sin fases, sin corte y sin quien te reponga la cuenta`
+          : esSim(a) ? `Balance ${fmt$(h.balance)} · dinero de práctica: no cuenta en El negocio ni en Objetivos del plan`
           : R ? `Balance ${fmt$(h.balance)} · línea DD ${fmt$(h.linea)}${h.fija?' (fija)':''} · colchón ${fmt$(h.colchon)}
                · límite diario de la firma ${R.dailyLoss ? fmt$(R.dailyLoss) : 'sin límite'}
                · desde ${fmtFecha(a.desde)}`
@@ -3838,22 +3806,19 @@ function renderAcctMgr(){
   $('#acFoot').innerHTML = (!S.accounts.length
       ? '<button class="btn primary" id="acSeed2">Dar de alta las 5 cuentas del plan</button> '
       : '') +
-    (!cuentasLive().length ? '<button class="btn" id="acLive">+ Cuenta propia</button>' : '') +
     (huerf ? `<div class="cal-pace" style="margin-top:12px">Hay <b>${huerf}</b> trade${huerf>1?'s':''} registrado${huerf>1?'s':''} antes de las cuentas.
        <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">
        ${ordenar(S.accounts).map(a=>`<button class="btn sm" onclick="asignarHuerfanos('${a.id}')">Asignar a ${esc(a.alias)}</button>`).join('')}
        ${S.accounts.length>1?`<button class="btn sm primary" onclick="asignarHuerfanos('*')">Asignar a todas</button>`:''}
        </div></div>` : '');
   const b2 = $('#acSeed2'); if(b2) b2.onclick = sembrarCuentas;
-  const bl = $('#acLive');
-  if(bl) bl.onclick = () => { $('#lvCap').value=''; $('#lvErr').textContent=''; openOv('ovLive'); };
 
   $$('#acList [data-f]').forEach(el => el.onchange = ()=>{
     const a = S.accounts.find(x=>x.id===el.dataset.id); if(!a) return;
     const f = el.dataset.f;
     a[f] = (f==='size'||f==='start') ? (parseFloat(el.value)||0) : el.value.trim();
     if(f==='alias' && !a.alias) a.alias = 'T'+a.orden;
-    save(); renderAcctMgr(); renderDashboard();
+    save(); renderAcctMgr(); renderDashboard(); renderAgentes(); renderAgentes();
   });
 }
 window.corregirPlan = id => {
@@ -3861,7 +3826,7 @@ window.corregirPlan = id => {
   const Rf = reglasFondeadas(a);
   if(!Rf || !Rf.plan){ toast('No hay plan fondeado para ese tamaño'); return; }
   a.plan = Rf.plan;
-  save(); renderAcctMgr(); renderDashboard();
+  save(); renderAcctMgr(); renderDashboard(); renderAgentes();
   toast('Plan actualizado a ' + Rf.plan);
 };
 window.reiniciarCuenta = id => {
@@ -3875,7 +3840,7 @@ window.reiniciarCuenta = id => {
     .reduce((x,t) => x + (t.pnl||0), 0);
   a.start = a.size - hoyPnl;
   a.desde = hoy;
-  save(); renderAcctMgr(); renderDashboard();
+  save(); renderAcctMgr(); renderDashboard(); renderAgentes();
   toast(hoyPnl ? `Reiniciada en ${fmt$(a.size)} (se descontó el día del pase)` : 'Balance reiniciado desde hoy');
 };
 window.borrarCuenta = id => {
@@ -3887,103 +3852,20 @@ window.borrarCuenta = id => {
     if(!t.accts.length) t.accts = [SIN_CUENTA];
   });
   S.ui.acctSel = { mode:'all', ids:[] };
-  save(); renderAcctMgr(); renderDashboard(); toast('Cuenta eliminada');
+  save(); renderAcctMgr(); renderDashboard(); renderAgentes(); toast('Cuenta eliminada');
 };
 window.asignarHuerfanos = destino => {
   const ids = destino === '*' ? ordenar(S.accounts).map(a=>a.id) : [destino];
   let n = 0;
   S.trades.forEach(t=>{ if(!Array.isArray(t.accts) || t.accts.includes(SIN_CUENTA)){ t.accts = [...ids]; n++; } });
-  save(); renderAcctMgr(); renderDashboard();
+  save(); renderAcctMgr(); renderDashboard(); renderAgentes();
   toast(n + ' trade' + (n>1?'s':'') + ' asignado' + (n>1?'s':''));
 };
 
 $('#btnAcctMgr').addEventListener('click', ()=>{ renderAcctMgr(); openOv('ovAcct'); });
-$('#acAdd').addEventListener('click', ()=>{
-  const n = S.accounts.length + 1;
-  S.accounts.push({ id:'ac_'+uid(), alias:'T'+n, orden:n, firm:'Tradeify',
-    plan:'Select Evaluation', size:50000, start:50000, desde:todayISO(),
-    fase:'eval', estado:'activa' });
-  save(); renderAcctMgr(); renderDashboard();
-});
-/* ════════ PROGRESO ════════
-   Dónde vas contra el plan: la fase en curso, los objetivos por periodo y el mes
-   día por día. Vivía revuelto con el registro de trades, donde no se leía. */
-/* ── Progreso: una tarjeta por cuenta con su balance, su colchón y lo que le falta.
-      El colchón es la distancia a la línea de drawdown: es lo que puedes perder hoy
-      antes de quemarla, y es el número que de verdad manda. ── */
-function renderProgresoCuentas(){
-  const cont = $('#pgCuentas'); if(!cont) return;
-  const prop = cuentasProp().filter(esViva);
-  const live = cuentasLive().filter(esViva);
-  const sub = $('#pgSub');
-  if(sub) sub.textContent = prop.length
-    ? `${prop.length} ${tr('pg.fondeadas')}${live.length ? ' · '+live.length+' '+tr('pg.propia') : ''}`
-    : '';
-
-  if(!prop.length && !live.length){
-    cont.innerHTML = `<div class="panel empty" style="grid-column:1/-1;padding:26px 12px">
-      <b>${tr('pg.sinCuentas')}</b><p>${tr('pg.sinCuentasD')}</p>
-      <button class="btn primary sm" onclick="document.getElementById('btnAcctMgr').click()">${tr('ac.gestionar')}</button>
-    </div>`;
-    $('#pgRetiro').innerHTML = '';
-    return;
-  }
-
-  cont.innerHTML = [...prop, ...live].map(a => {
-    const h = saludDe(a), F = FASES[a.fase] || FASES.eval;
-    const esL = esLive(a);
-    const ganado = h.balance - a.start;
-    const meta = h.hito != null ? h.hito - a.start : null;
-    const pct = meta && meta > 0 ? Math.max(0, Math.min(100, ganado/meta*100)) : null;
-    /* Sin reglas cargadas no hay línea ni colchón: se dice, no se inventa un 0. */
-    const colTxt = h.colchon == null ? '—' : fmt$(h.colchon);
-    const colCls = h.colchon == null ? '' : (h.colchon <= 0 ? 'down' : h.colchon < (h.maxDD||0)*.25 ? 'warn' : 'up');
-    return `<div class="panel pg-acct${esL?' live':''}">
-      <div class="pg-h">
-        <div>
-          <b>${esc(a.alias)}</b>
-          <span class="micro">${esL ? tr('pg.propiaCap') : esc(a.firm||'') + ' · ' + esc(a.plan||'')}</span>
-        </div>
-        <span class="tag ${esL?'ok':'ac'}">${esL ? tr('pg.tuya').toUpperCase() : F.corto}</span>
-      </div>
-
-      <div class="pg-bal">
-        <div><span class="k-l">${tr('pg.balance')}</span><b class="mono">${fmt$(h.balance)}</b></div>
-        <div><span class="k-l">${tr('pg.sobreArr')}</span><b class="mono ${ganado>0?'up':ganado<0?'down':''}">${fmt$(ganado,true)}</b></div>
-        <div><span class="k-l">${tr('pg.colchon')}</span><b class="mono ${colCls}">${colTxt}</b></div>
-      </div>
-
-      ${pct != null ? `<div class="pg-prog">
-        <div class="pg-prog-t"><span>${F.t} · ${tr('pg.hasta')} ${fmt$(h.hito)}</span><b>${Math.round(pct)}%</b></div>
-        <div class="bar"><i class="${pct>=100?'full':''}" style="width:${pct}%"></i></div>
-        <div class="pg-prog-f">${pct>=100 ? tr('pg.cubierto') : tr('pg.faltan').replace('%s', fmt$(meta-ganado))}</div>
-      </div>` : `<div class="pg-prog"><div class="pg-prog-f">${esL ? tr('pg.sinHitoLive') : tr('pg.sinHito')}</div></div>`}
-
-      ${h.linea != null ? `<div class="pg-dd">
-        <span>${tr('pg.linea')} <b class="mono">${fmt$(h.linea)}</b>${h.fija ? ' <i class="tag ok">'+tr('pg.fija').toUpperCase()+'</i>' : ''}</span>
-      </div>` : ''}
-    </div>`;
-  }).join('');
-
-  /* ── camino al retiro: lo que falta para cobrar, en tres cifras ── */
-  const conReglas = prop.filter(a => reglasDe(a));
-  const totalGan = conReglas.reduce((x,a) => x + Math.max(0, saludDe(a).balance - a.start), 0);
-  const totalMeta = conReglas.reduce((x,a) => { const h = saludDe(a);
-    return x + (h.hito != null ? Math.max(0, h.hito - a.start) : 0); }, 0);
-  const cobrado = (S.caja||[]).filter(m => m.tipo === 'ingreso').reduce((x,m) => x + (m.monto||0), 0);
-  const enRetiro = prop.filter(a => a.fase === 'payout').length;
-  $('#pgRetiro').innerHTML = [
-    [tr('pg.r1'), totalMeta ? fmt$(Math.max(0, totalMeta - totalGan)) : '—',
-     totalMeta ? tr('pg.r1s').replace('%s', fmt$(totalMeta)) : tr('pg.sinHito')],
-    [tr('pg.r2'), enRetiro + ' / ' + (prop.length||0), tr('pg.r2s')],
-    [tr('pg.r3'), fmt$(cobrado), tr('pg.r3s')],
-  ].map(([l,v,s2]) => `<div class="panel kpi"><div class="k-l">${l}</div><div class="k-v">${v}</div><div class="k-s">${s2}</div></div>`).join('');
-}
-
+$('#acAdd').addEventListener('click', ncAbrir);
 function renderProgreso(){
   renderPicker($('#pickProgreso'));
-  renderProceso();
-  renderProgresoCuentas();
   const M = metas(), R = pnlRanges(idsSel(), true);
   const kpis = [
     [tr('me.pnlHoy').toUpperCase(), R.dia, M.dia],
@@ -4576,121 +4458,6 @@ const reglasEval = a => {
   return planDeFase(a, 'eval', (p,n) => p.sizes[a.size].target > 0 && n.startsWith(fam))
       || planDeFase(a, 'eval', p => p.sizes[a.size].target > 0);
 };
-
-const PASOS = [
-  { get t(){ return tr('fase.eval'); },   sub: (R,Rf,a) => { const Re = reglasEval(a);
-      return Re ? tr('pr.a') + ' ' + fmt$(a.size + Re.target) : ''; } },
-  { get t(){ return tr('fase.buffer'); }, sub: (R,Rf,a) => tr('pr.reinicia') + ' ' + fmt$(a.size) },
-  { get t(){ return tr('fase.payout'); }, sub: (R,Rf,a) => Rf ? tr('pr.desde') + ' ' + fmt$(a.start + Rf.maxDD + Rf.lockAtProfit) : '' },
-];
-
-function renderProceso(){
-  const panel = $('#prPanel'); if(!panel) return;
-  const sel = acctsSel().filter(a => reglasDe(a));
-  if(!sel.length){
-    panel.hidden = true;
-    return;
-  }
-  panel.hidden = false;
-
-  const orden = ['eval','buffer','payout'];
-  /* No basta con la fase: dos cuentas de tamaños o planes distintos tienen cifras
-     distintas, y el panel presentaba las de la PRIMERA como si fueran de todas. */
-  const clave = a => a.fase + '|' + a.plan + '|' + a.size;
-  const mixta = new Set(sel.map(clave)).size > 1;
-  /* con varias cuentas manda la más atrasada: avanzas al paso de la más lenta */
-  const idxActual = Math.min(...sel.map(a => Math.max(0, orden.indexOf(a.fase))));
-  const R0 = reglasDe(sel[0]), Rf0 = reglasFondeadas(sel[0]);
-
-  $('#prSub').innerHTML = mixta
-    ? '<span class="tag wr">FASES MIXTAS</span>'
-    : (FASES[sel[0].fase] || FASES.eval).t.toUpperCase();
-
-  $('#prPasos').innerHTML = PASOS.map((p,i)=>{
-    const cls = i < idxActual ? 'hecho' : i === idxActual ? 'activa' : '';
-    return `<div class="pr-paso ${cls}"><b>${esc(p.t)}</b><span>${esc(p.sub(R0, Rf0, sel[0]))}</span></div>`;
-  }).join('');
-
-  /* Día a día, no sólo el hito en dinero. Evaluación pide un MÍNIMO de días
-     (SISTEMA.fases.eval.minDias): no se puede pasar antes aunque el saldo ya
-     llegue, así que cada punto llenado es un día que sí cuenta. Colchón es al
-     revés — un MÁXIMO (maxDias): los puntos son el plazo que se va gastando,
-     no una meta a cumplir. Antes esto vivía escondido detrás de «Ver detalle»;
-     ahora es lo primero que se ve de cada cuenta. */
-  const stepper = (hechos, req, tipo) => {
-    const lleno = tipo === 'min' ? hechos >= req : hechos > req;
-    const cerca = tipo === 'max' && hechos >= req - 2 && !lleno;
-    const puntos = Array.from({length: req}, (_,i) =>
-      `<i class="${i < Math.min(hechos, req) ? 'on' : ''}"></i>`
-    ).join('') + (tipo==='max' && hechos > req ? '<i class="on excedido"></i>'.repeat(Math.min(hechos-req,4)) : '');
-    const texto = tipo === 'min'
-      ? (lleno ? tr('pr.diasCumplidos').replace('%D', req) : tr('pr.diaDeMin').replace('%a',Math.min(hechos,req)).replace('%b',req))
-      : (lleno ? tr('pr.diasAgotados').replace('%D', req) : tr('pr.diaDeMax').replace('%a',hechos).replace('%b',req));
-    return `<div class="pr-dias${lleno && tipo==='max' ? ' agotado':cerca?' cerca':''}">
-      <div class="pr-dots">${puntos}</div>
-      <span class="pr-dias-t">${texto}</span>
-    </div>`;
-  };
-
-  $('#prFilas').innerHTML = sel.map(a=>{
-    const h = saludDe(a), F = FASES[a.fase] || FASES.eval;
-    const meta = h.hito;
-    const dias = h.dias || 0;
-    const diasHtml = a.fase === 'eval' ? stepper(dias, SISTEMA.fases.eval.minDias, 'min')
-                    : a.fase === 'buffer' ? stepper(dias, SISTEMA.fases.buffer.maxDias, 'max')
-                    : '';
-    if(meta == null){
-      /* zona de retiros: ya no hay hito que perseguir, lo que importa es el colchón */
-      const pct = h.maxDD ? Math.max(0, Math.min(100, h.colchon / h.maxDD * 100)) : 0;
-      return `<div class="pr-fila">
-        <span class="al">${esc(a.alias)}</span>
-        <div class="via">
-          ${diasHtml}
-          <div class="pr-track"><i class="listo" style="width:${pct}%"></i></div>
-          <div class="cifras"><span>${tr('pr.zonaRetiros').toUpperCase()}</span><span>${tr('pr.colchonDe').replace('%a',fmt$(h.colchon)).replace('%b',fmt$(h.maxDD))}</span></div>
-        </div>
-        <b class="falta up">${fmt$(h.balance)}</b>
-      </div>`;
-    }
-    const avance = meta > a.start ? (h.balance - a.start) / (meta - a.start) : 0;
-    const pct = Math.max(0, Math.min(100, avance * 100));
-    const falta = meta - h.balance;
-    const listo = falta <= 0;
-    return `<div class="pr-fila">
-      <span class="al">${esc(a.alias)}</span>
-      <div class="via">
-        ${diasHtml}
-        <div class="pr-track"><i class="${listo?'listo':''}" style="width:${pct}%"></i></div>
-        <div class="cifras"><span>${fmt$(a.start)}</span><span>${F.t.toUpperCase()} · ${fmtPct(pct)}</span><span>${fmt$(meta)}</span></div>
-      </div>
-      <b class="falta ${listo?'up':''}">${listo ? tr('pr.hito').toUpperCase() : tr('pr.faltan') + ' ' + fmt$(falta)}</b>
-    </div>`;
-  }).join('');
-
-  const F = FASES[sel[0].fase] || FASES.eval;
-  const cons0 = consistenciaDe(sel[0]);
-  const rD = F.rDia(R0), oD = F.oDia(R0), tope = F.tope(R0, cons0 && cons0.acum);
-  const reglas = [
-    'riesgo máximo <b>' + fmt$(rD) + '</b> por día',
-    'objetivo <b>' + fmt$(oD) + '</b> por día',
-    tope ? 'ningún día por encima de <b>' + fmt$(tope) + '</b> (consistencia ' + Math.round(R0.consistency*100) + '%)' : null,
-    R0.dailyLoss ? 'la firma corta en <b>' + fmt$(R0.dailyLoss) + '</b> de pérdida diaria'
-                 : bi('la firma <b>no pone límite diario</b>: el freno es tuyo','the firm <b>sets no daily limit</b>: the brake is yours'),
-  ].filter(Boolean);
-
-  const sig = { eval:'Al tocar el objetivo la cuenta se reinicia a ' + fmt$(sel[0].size) + ' y empieza el colchón.',
-                buffer:'Al llegar al hito entras a zona de retiros y el riesgo baja a la mitad.',
-                payout:'Cada 15 días se reparte el retiro. El piso ya está congelado.' }[sel[0].fase];
-
-  /* Saldo y cobrado ya viven en Objetivos del plan y en Camino al retiro, más
-     abajo en esta misma pantalla. Repetirlos aquí abajo era la misma cifra dos
-     veces —y «saldo en vivo» aquí sumaba el balance completo de la cuenta,
-     mientras que el de Objetivos del plan suma la ganancia sobre el arranque:
-     dos cosas distintas con (casi) el mismo nombre. Mejor uno solo, correcto. */
-  $('#prNota').innerHTML = mixta
-    ? tr('pr.mixtaNota')
-    : tr('pr.reglasDe') + ' ' + reglas.join(' · ') + '. ' + sig;
-}
 
 
 function renderJournal(){
@@ -5644,13 +5411,54 @@ $('#pSave').addEventListener('click', ()=>{
    prompt(): un cuadro nativo que no se puede probar en automático y que
    varios navegadores bloquean o restringen. Tres modales de verdad, iguales
    al resto de la app. */
-$('#lvSave').addEventListener('click', ()=>{
-  const cap = parseFloat($('#lvCap').value);
-  if(!isFinite(cap) || cap <= 0){ $('#lvErr').textContent = 'Escribe un capital válido, mayor a cero.'; return; }
-  S.accounts.push({ id:'ac_live_'+uid(), alias:'PROPIA', orden:(S.accounts.length+1), tipo:'live',
-    firm:'—', plan:'—', size:cap, start:cap, desde:todayISO(), fase:'payout', estado:'activa' });
-  save(); closeOv(); renderAcctMgr(); renderDashboard();
-  toast('Cuenta propia dada de alta');
+/* ── Nueva cuenta: el tipo se elige primero, y sólo entonces aparecen los
+   campos que ese tipo necesita — fondeada pide plan y tamaño; propia y
+   práctica sólo piden un balance de arranque. Cada cuenta que se da de alta
+   queda etiquetada con quién la creó (S.session.user), para que en El
+   negocio cada socio vea las suyas, no las de todos revueltas. */
+let ncTipoActual = 'prop';
+function ncPintaTipo(){
+  $$('#ncTipo button').forEach(b => b.classList.toggle('on', b.dataset.t === ncTipoActual));
+  $('#ncCamposProp').hidden = ncTipoActual !== 'prop';
+  $('#ncCamposSimple').hidden = ncTipoActual === 'prop';
+  if(ncTipoActual !== 'prop'){
+    $('#ncStartLbl').textContent = ncTipoActual === 'live' ? 'Capital inicial USD' : 'Balance de práctica USD';
+    $('#ncNota').textContent = ncTipoActual === 'live'
+      ? 'Capital tuyo, sin fases ni firma. Cuenta como dinero real en El negocio y en Objetivos del plan.'
+      : 'Dinero de práctica: no cuenta en El negocio, en Panorama ni en Objetivos del plan. Es sólo para llevar el journal.';
+  }
+}
+function ncAbrir(){
+  ncTipoActual = 'prop'; ncPintaTipo();
+  $('#ncAlias').value = ''; $('#ncStart').value = ''; $('#ncErr').textContent = '';
+  const planes = Object.keys(FIRM_CATALOG.Tradeify.plans);
+  $('#ncPlan').innerHTML = planes.map(p=>`<option>${esc(p)}</option>`).join('');
+  ncPintaSizes();
+  openOv('ovNuevaCuenta');
+}
+function ncPintaSizes(){
+  const plan = $('#ncPlan').value;
+  const tallas = Object.keys((FIRM_CATALOG.Tradeify.plans[plan]||{}).sizes||{});
+  $('#ncSize').innerHTML = tallas.map(t=>`<option value="${t}">${fmt$(+t)}</option>`).join('');
+}
+$$('#ncTipo button').forEach(b => b.onclick = () => { ncTipoActual = b.dataset.t; ncPintaTipo(); });
+$('#ncPlan').addEventListener('change', ncPintaSizes);
+$('#ncSave').addEventListener('click', ()=>{
+  const alias = $('#ncAlias').value.trim() || ('T' + (S.accounts.length+1));
+  const base = { id:'ac_'+uid(), alias, orden:(S.accounts.length+1),
+                 desde:todayISO(), estado:'activa', owner:S.session.user };
+  let cuenta;
+  if(ncTipoActual === 'prop'){
+    const plan = $('#ncPlan').value, size = parseFloat($('#ncSize').value)||0;
+    cuenta = { ...base, tipo:'prop', firm:'Tradeify', plan, size, start:size, fase:'eval' };
+  } else {
+    const cap = parseFloat($('#ncStart').value);
+    if(!isFinite(cap) || cap <= 0){ $('#ncErr').textContent = 'Escribe un balance válido, mayor a cero.'; return; }
+    cuenta = { ...base, tipo:ncTipoActual, firm:'—', plan:'—', size:cap, start:cap, fase:'payout' };
+  }
+  S.accounts.push(cuenta);
+  save(); closeOv(); renderAcctMgr(); renderDashboard(); renderAgentes();
+  toast('Cuenta dada de alta');
 });
 
 let cajaTipo = 'ingreso';
@@ -7104,22 +6912,46 @@ function animaOficina(){
 /* La vista del equipo se convirtió en la del operador: una sola persona, sus
    cargos y el plan de la casa. El edificio se queda porque sigue siendo el mapa
    de la operación, no un adorno del equipo. */
+/* Lo que ese socio trae puesto: sólo sus cuentas, no las de los otros tres.
+   Así "cada quien maneje sus cuentas" se ve, no nada más se dice. */
+function statsDeSocio(userId){
+  const todas = cuentasVivas().filter(a => a.owner === userId);
+  /* La práctica no cuenta como dinero real en ningún lado — tampoco aquí. */
+  const reales = todas.filter(a => !esSim(a));
+  const ids = new Set(reales.map(a=>a.id));
+  const balance = reales.reduce((x,a) => x + saludDe(a).balance, 0);
+  const mes = pnlRanges(ids, true).mes;
+  return {
+    n: reales.length, balance, mes,
+    prop: todas.filter(a=>!esLive(a)&&!esSim(a)).length,
+    live: todas.filter(esLive).length,
+    sim: todas.filter(esSim).length,
+  };
+}
 function renderAgentes(){
   const grid = $('#agGrid'); if(!grid) return;
-  /* Cada socio tiene cargo propio (a diferencia del arreglo solo/parejo de antes):
-     se muestra a quien inició la sesión real, con SU título verdadero, no un
-     genérico "Socio" para los cuatro. */
-  const usr = USERS[S.session.user] || {};
-  const nombre = S.profile.nombre || usr.nombre || 'Socio';
-  const cargo = (usr.roles || []).map(r => (ROLES[r] || {}).t).filter(Boolean).join(' + ') || 'Socio';
-  const p = PERSONAJES.find(x => x.nom === nombre.toUpperCase()) || PERSONAJES.find(x=>x.id==='andre');
-  grid.innerHTML = `<div class="op">
-    <img class="op-cara" src="${caraAgente(p.nom)}" alt="" width="64" height="64">
-    <div class="op-i">
-      <b>${esc(nombre)}</b>
-      <span>${esc(cargo)} · Northpoint Capital Management</span>
-    </div>
-  </div>`;
+  /* Ya no es la tarjeta de quien entró — son los cuatro, cada uno con SUS
+     cuentas. Antes esto mostraba nada más al que inició sesión; con cuentas
+     atribuidas a un dueño, tiene sentido ver de un vistazo quién trae qué. */
+  grid.className = 'pj-grid';
+  grid.innerHTML = SOCIOS_REALES.map(uid => {
+    const usr = USERS[uid] || {};
+    const cargo = (usr.roles || []).map(r => (ROLES[r] || {}).t).filter(Boolean).join(' + ') || 'Socio';
+    const p = PERSONAJES.find(x => x.id === uid.replace('.np',''));
+    const st = statsDeSocio(uid);
+    const tuyo = S.session.user === uid;
+    const linea = st.n
+      ? `${st.n} ${bi(st.n>1?'cuentas':'cuenta', st.n>1?'accounts':'account')} · ${fmt$(st.balance)} ${bi('en cuentas','in accounts')} · ${fmt$(st.mes,true)} ${bi('este mes','this month')}${st.sim?` · +${st.sim} ${bi('de práctica','practice')}`:''}`
+      : (st.sim ? `${bi('Sin cuentas reales','No real accounts')} · ${st.sim} ${bi('de práctica','practice')}` : bi('Sin cuentas todavía','No accounts yet'));
+    return `<div class="pj" style="cursor:default${tuyo?';border-color:var(--accent)':''}">
+      <img class="pj-cara" src="${caraAgente(p.nom)}" alt="" width="52" height="52">
+      <div class="pj-i">
+        <b>${esc(usr.nombre||'')}${tuyo?' · '+bi('TÚ','YOU'):''}</b>
+        <span>${esc(cargo)}</span>
+        <i>${linea}</i>
+      </div>
+    </div>`;
+  }).join('');
   ofiJunta = guionOficina();
   if(typeof animaOficina === 'function') animaOficina();
   renderVida();
