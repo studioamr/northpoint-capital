@@ -2040,7 +2040,6 @@ const I18N = {
   'ag.enquetayuda':    { es:'EN QUÉ TE AYUDA',          en:'HOW THEY HELP' },
   'ag.quenecesita':    { es:'QUÉ NECESITA DE TI',       en:'WHAT THEY NEED' },
   'ag.pedirle':        { es:'Pedirle su reporte',       en:'Ask for their report' },
-  'ag.marcador':       { es:'COSTO DE IGNORAR AL GABINETE', en:'COST OF IGNORING THE CABINET' },
   'ag.marcTxt':        { es:'Acataste %a de %t avisos. Los %i que ignoraste suman esto.',
                          en:'You followed %a of %t alerts. The %i you ignored add up to this.' },
   'ag.marcSin':        { es:'Todavía no ignoras ningún aviso. Cuando lo hagas, aquí verás cuánto costó.',
@@ -2342,6 +2341,8 @@ const I18N = {
 
   /* nube */
   'nu.local':     { es:'ESTADO LOCAL',               en:'LOCAL STATE' },
+  'nu.soloLocal': { es:'TRABAJANDO SOLO · esto no le llega a tu socio',
+                    en:'WORKING ALONE · your partner does not see this' },
   'nu.errPre':    { es:'NUBE · ERROR ',              en:'CLOUD · ERROR ' },
 
   /* markup de vistas */
@@ -2676,11 +2677,13 @@ const SISTEMA = {
   /* Fase 3 · cada 15 días. Operando solo desaparecen los tres 20% de socios, pero
      se conserva lo que hacía útil el reparto: que una parte NO se toque. El 40% que
      se queda adentro es lo que sostiene la operación cuando venga una racha mala. */
+  /* 'personal' se reparte 50/50 entre André y Pablo — socios parejos, mismo tramo.
+     Si el arreglo real es otro, es el número que hay que cambiar aquí. */
   reparto: [
     { k:'cuentas',    pct:.20, t:'A las fondeadas', d:'engorda el colchón: sin cuenta viva no hay payout' },
     { k:'acciones',   pct:.20, t:'A acciones',      d:'patrimonio que ya no depende de operar' },
     { k:'live',       pct:.30, t:'A la cuenta propia', d:'capital tuyo — la salida de las fondeadoras' },
-    { k:'personal',   pct:.30, t:'Tuyo',            d:'el único tramo que sale de verdad' },
+    { k:'personal',   pct:.30, t:'Entre los dos',   d:'50/50 André y Pablo — el único tramo que sale de verdad' },
   ],
 
   /* El destino del trade: liquidez sin tomar, no una R fija. */
@@ -2807,7 +2810,7 @@ const ROLES = {
     'Vigila la elegibilidad: días mínimos operados, consistencia y balance sobre el piso.',
     'Solicita el retiro en la fecha de corte, ni antes ni después.',
     'Registra lo que entró de verdad al banco — no el P&L de plataforma.',
-    'Aplica el reparto: 20% fondeadas · 20% acciones · 30% cuenta propia · 30% tuyo.']},
+    'Aplica el reparto: 20% fondeadas · 20% acciones · 30% cuenta propia · 30% entre los dos.']},
   'NP-04': { t:'Portafolio · acciones', d:[
     'Lleva el plan de ahorro: cuánto se acumula por quincena y cuándo alcanza el mínimo para comprar.',
     'Investiga en qué acciones se coloca el tramo y lo documenta ANTES de comprar.',
@@ -2882,9 +2885,14 @@ const sillasActivas = () => OFI.sillas.filter(s => personajeActivo(s.n));
    individual —los payouts salieron a nombre de André— así que la firma es él.
    Carga los siete cargos porque no hay a quién delegarlos. */
 const USERS = {
+  /* Socios parejos: André y Pablo, sin roles fijos — los dos hacen de todo, así que
+     los dos tienen las cinco duties completas, no una división de cargos. */
   'andre.np': { nombre:'André',
                 roles:['NP-01','NP-02','NP-03','NP-04','NP-05'],
                 correo:'andre@northpoint.mx' },
+  'pablo.np': { nombre:'Pablo',
+                roles:['NP-01','NP-02','NP-03','NP-04','NP-05'],
+                correo:'pablo@northpoint.mx' },
   /* 10 invitados para que André reparta acceso sin tocar código. Cada quien entra
      con 1234 la primera vez en SU propio navegador — como no hay nube conectada,
      cada uno arranca con su copia en blanco, sin ver los datos de los demás.
@@ -6174,14 +6182,17 @@ function cloudPaint(){
 }
 function pintaPill(p){
   if(!p) return;
-  /* Con Supabase configurado pero SIN nadie logueado a la nube (el caso de
-     todo mundo hoy: André y los 10 invitados), esto decía «NUBE · SIN SESIÓN
-     — ESTADO LOCAL» en cada pantalla, siempre — una alerta permanente por
-     una función que nadie encendió. No decía nada que se pudiera actuar, así
-     que ahora se calla. Esto NO toca cómo se guardan los datos: save() sigue
-     escribiendo en localStorage exactamente igual, con o sin nube. */
+  /* Los 10 invitados nunca usan la nube — cada uno trabaja aislado a propósito,
+     y avisarles "no sincronizado" sería ruido sobre una función que no les
+     aplica. Pero André y Pablo SÍ comparten la mesa: si a uno de ellos se le cae
+     la sesión de nube y no se entera, puede pasar el día entero sin que su
+     trabajo le llegue al otro. Para ellos el aviso es la diferencia entre
+     "estoy trabajando solo sin darme cuenta" y saberlo a tiempo. */
+  const socio = (USERS[S.session.user] || {}).correo || '';
+  const esSocioReal = /@northpoint\.mx$/.test(socio);
   if(!cloudOn() || !cloudTok){
-    p.textContent = '';
+    p.textContent = esSocioReal ? tr('nu.soloLocal') : '';
+    p.style.color = esSocioReal ? 'var(--warn)' : '';
     return;
   }
   if(cloudErr){
@@ -6205,9 +6216,20 @@ function fusionarListas(mias, suyas){
 function fusionarEstado(local, remoto){
   if(!remoto) return local;
   const f = { ...remoto, ...local };
-  ['trades','tickets','accounts','positions'].forEach(k => {
+  /* 'caja' faltaba aquí: sin fusionarse por id, el spread de arriba se quedaba
+     con el arreglo local completo y BORRABA en silencio los movimientos que el
+     otro socio hubiera registrado en su equipo — justo el dato que más importa
+     entre dos personas cobrando payouts por separado. */
+  ['trades','tickets','accounts','positions','caja'].forEach(k => {
     f[k] = fusionarListas(local[k], remoto[k]);
   });
+  /* bienvenida (quién ya vio el recorrido) es un objeto por usuario, no una lista
+     con id — el spread tampoco lo fusionaba: el socio que sincroniza último le
+     borraba al otro su marca de "ya lo vi" y el tour le volvía a salir. */
+  f.bienvenida = { ...(remoto.bienvenida||{}), ...(local.bienvenida||{}) };
+  /* mismo caso con el contador de trades: si cada quien trae el suyo, gana el
+     mayor — así ninguno vuelve a emitir un 'seq' que ya usó el otro. */
+  f.seqTrade = Math.max(local.seqTrade||0, remoto.seqTrade||0);
   /* El checklist puede llenarse desde dos equipos: si cada uno marca casillas
      distintas, se combinan una por una en vez de que gane el último que guardó. */
   f.sessions = { ...(remoto.sessions||{}) };
@@ -6306,17 +6328,6 @@ const _save0 = save;
 save = function(){ _save0(); if(cloudOn()) cloudPush(); };
 
 /* ════════ Render maestro ════════ */
-/* ════════ EL EQUIPO ════════
-   Los cuatro socios reales de la firma. Sólo nombre y cargo: son quienes aparecen
-   en la oficina y en la tira del equipo. Aquí no hay agentes, modelos ni prompts —
-   el laboratorio cuantitativo se eliminó porque no medía nada.
-
-   Los cargos salen de ROLES/USERS (NP-0XX), que es el roster que ya usa el login. */
-/* Una sola persona. Se conserva la lista porque la oficina y el avatar cuelgan
-   de ella; ya no es un roster de equipo. */
-const GABINETE = [
-  { id:'andre', nom:'ANDRÉ', cargo:'Northpoint · operación', ini:'AN', codigo:'NP-01' },
-];
 
 
 /* ════════ LA OFICINA · piso 88, Nueva York ════════
@@ -7071,16 +7082,16 @@ function animaOficina(){
    de la operación, no un adorno del equipo. */
 function renderAgentes(){
   const grid = $('#agGrid'); if(!grid) return;
-  /* Antes esto era siempre USERS['andre.np'], sin importar quién entrara: los
-     10 invitados veían "André" como CEO de SU propio edificio. El nombre sale
-     de la sesión real; el dibujo del jefe sigue siendo el mismo look genérico
-     —no es un retrato, es la silla del que manda. */
-  const nombre = S.profile.nombre || (USERS[S.session.user] || {}).nombre || 'CEO';
+  /* André y Pablo son socios parejos, no jefe y equipo: nadie es "CEO" de esto.
+     Se muestra a quien inició la sesión real (con nube conectada, cualquiera de
+     los dos ve el mismo negocio); el dibujo sigue siendo el mismo look genérico
+     —no es un retrato, es la silla de quien está mirando la pantalla ahora. */
+  const nombre = S.profile.nombre || (USERS[S.session.user] || {}).nombre || 'Socio';
   grid.innerHTML = `<div class="op">
     <img class="op-cara" src="${caraAgente('ANDRÉ')}" alt="" width="64" height="64">
     <div class="op-i">
       <b>${esc(nombre)}</b>
-      <span>CEO · Northpoint Capital Management</span>
+      <span>Socio · Northpoint Capital Management</span>
     </div>
   </div>`;
   ofiJunta = guionOficina();
