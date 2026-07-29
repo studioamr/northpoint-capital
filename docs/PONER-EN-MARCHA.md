@@ -1,4 +1,4 @@
-# Poner la mesa en marcha para los cuatro
+# Poner la mesa en marcha para los tres
 
 El terminal ya está listo. Lo único que falta son **cuentas y contraseñas**, y eso lo
 tiene que hacer André: yo no creo cuentas ni tecleo contraseñas de nadie.
@@ -21,7 +21,7 @@ Son dos pasos en Supabase y toma unos minutos.
 
 ---
 
-## Paso 1 · Crear los cuatro accesos
+## Paso 1 · Crear los tres accesos
 
 En Supabase → proyecto **spotter-ai** → **Authentication → Users → Add user**, con
 **Auto Confirm User** activado (si no, quedan esperando un correo que nunca llega).
@@ -31,27 +31,26 @@ En Supabase → proyecto **spotter-ai** → **Authentication → Users → Add u
 | `pablo@northpoint.mx` | `northpointpablo` | Pablo |
 | `mateo@northpoint.mx` | `northpointmateo` | Mateo |
 | `andre@northpoint.mx` | `northpointandre` | André |
-| `goyo@northpoint.mx`  | `northpointgoyo`  | Gregorio |
 
 > Esos correos **no son reales ni tienen que serlo**: son sólo el identificador con el
 > que Supabase reconoce a cada quien. Lo que cada socio escribe en el terminal es su
-> usuario (`pablo.np`, `mateo.np`, `andre.np`, `goyo.np`); el terminal lo traduce solo.
+> usuario (`pablo.np`, `mateo.np`, `andre.np`); el terminal lo traduce solo.
 
 **Las contraseñas tienen que ser exactamente ésas**, porque son las que van impresas en
 las hojas PDF que les vas a mandar. Si pones otra, entran igual pero **en modo local**:
 verían su propia mesa vacía en vez de la compartida, y su trabajo no le llegaría a nadie.
 
-Si ya creaste a Pablo, Mateo y André antes, revisa nada más que las contraseñas
-coincidan y agrega a Goyo.
+Si en algún momento creaste a Gregorio (`goyo@northpoint.mx`), bórralo: ya no es
+parte de la mesa.
 
 ---
 
-## Paso 2 · Dejar entrar a Goyo en la política
+## Paso 2 · La política de acceso (la lista de los tres)
 
-La tabla no se conforma con «tener cuenta»: exige estar en una lista de los socios.
-Goyo es nuevo, así que hay que agregarlo.
-
-En Supabase → **SQL Editor** → pega y ejecuta:
+La tabla no se conforma con «tener cuenta»: exige estar en una lista de correos.
+La política original ya es exactamente la de los tres socios, así que **normalmente no
+hay nada que correr aquí**. Este SQL es por si algún día hay que reponerla o editarla
+(en Supabase → **SQL Editor**):
 
 ```sql
 drop policy if exists "socios leen" on northpoint_estado;
@@ -60,22 +59,19 @@ drop policy if exists "socios escriben" on northpoint_estado;
 create policy "socios leen" on northpoint_estado
 for select to authenticated
 using (auth.jwt() ->> 'email' in (
-  'pablo@northpoint.mx','mateo@northpoint.mx',
-  'andre@northpoint.mx','goyo@northpoint.mx'));
+  'pablo@northpoint.mx','mateo@northpoint.mx','andre@northpoint.mx'));
 
 create policy "socios escriben" on northpoint_estado
 for update to authenticated
 using (auth.jwt() ->> 'email' in (
-  'pablo@northpoint.mx','mateo@northpoint.mx',
-  'andre@northpoint.mx','goyo@northpoint.mx'))
+  'pablo@northpoint.mx','mateo@northpoint.mx','andre@northpoint.mx'))
 with check (auth.jwt() ->> 'email' in (
-  'pablo@northpoint.mx','mateo@northpoint.mx',
-  'andre@northpoint.mx','goyo@northpoint.mx'));
+  'pablo@northpoint.mx','mateo@northpoint.mx','andre@northpoint.mx'));
 ```
 
 > Las políticas reales se llaman **`socios leen`** (SELECT) y **`socios escriben`**
-> (UPDATE) — son dos, no una. Antes aquí decía `solo socios northpoint`, que no existe:
-> ese SQL habría creado una tercera política suelta en vez de corregir las dos buenas.
+> (UPDATE) — son dos, no una. Si en algún momento se agregó `goyo@northpoint.mx`
+> a la lista, correr este SQL lo saca.
 
 Esa lista existe porque el proyecto `spotter-ai` es **compartido con SPOTTER**, que tiene
 alrededor de diez usuarios registrados. Si la política dijera nada más «cualquiera con
@@ -99,7 +95,7 @@ Cada vez que entre alguien nuevo a la mesa, hay que agregarlo aquí también.
 3. Propón una tesis de prueba. Pídele a alguien más que entre: le tiene que aparecer.
 4. Bórrala cuando confirmen.
 
-Ese indicador sólo le habla a los cuatro socios reales — a los invitados con acceso
+Ese indicador sólo le habla a los tres socios reales — a los invitados con acceso
 de prueba no les sale nada, porque ellos trabajan aislados a propósito. Si algún
 socio ve ámbar, su trabajo se está quedando en su equipo y hay que avisar.
 
@@ -109,9 +105,8 @@ socio ve ámbar, su trabajo se está quedando en su equipo y hay que avisar.
 
 En la carpeta `credenciales/` (fuera del repositorio, porque lleva contraseñas):
 
-- `Northpoint-Pablo.pdf`, `Northpoint-Mateo.pdf`, `Northpoint-André.pdf`,
-  `Northpoint-Gregorio.pdf` — una hoja cada uno: sus accesos, sus cargos, sus deberes y
-  las reglas que no se negocian.
+- `Northpoint-Pablo.pdf`, `Northpoint-Mateo.pdf`, `Northpoint-André.pdf` — una hoja
+  cada uno: sus accesos, sus cargos, sus deberes y las reglas que no se negocian.
 - `correos-para-mandar.txt` y `mensajes-whatsapp.txt` — los mensajes ya redactados.
 
 Manda a cada quien **sólo su hoja**: cada una lleva su contraseña escrita.
