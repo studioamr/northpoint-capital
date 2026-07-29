@@ -304,14 +304,14 @@ tbody tr:hover{background:var(--w02)}
   transition:background .15s,border-color .15s;
 }
 .chk .box svg{width:10px;height:10px;stroke:var(--bg);stroke-width:3;opacity:0}
-.chk.done{border-color:var(--line)}
-.chk.done .box{background:var(--accent);border-color:var(--accent)}
+/* Hecho = el cajón COMPLETO en verde, como cuando el trade se desbloquea. */
+.chk.done{border-color:rgba(87,199,155,.45);background:rgba(87,199,155,.10)}
+.chk.done:hover{background:rgba(87,199,155,.14)}
+.chk.done .box{background:var(--up);border-color:var(--up)}
 .chk.done .box svg{opacity:1}
 .chk b{font-size:13px;font-weight:600;display:block;line-height:1.3}
 .chk span{font-size:12px;color:var(--dim);display:block;margin-top:2px;line-height:1.45}
 .chk.done b{color:var(--dim);text-decoration:line-through;text-decoration-color:var(--w25)}
-.chk-quien{display:block;font-family:var(--mono);font-size:9px;letter-spacing:.12em;
-  color:var(--up);text-transform:uppercase;margin-top:3px}
 .chk .t{margin-left:auto;font-family:var(--mono);font-size:10px;color:var(--faint);flex:0 0 auto}
 
 /* veredicto de setup */
@@ -794,6 +794,13 @@ body.locked .app{visibility:hidden;pointer-events:none}
   background:var(--panel-bg);border:2px solid var(--accent);display:flex;align-items:center;justify-content:center;
   font-family:var(--mono);font-size:12px;font-weight:600;color:var(--txt);
   box-shadow:0 0 14px rgba(155,192,220,.45);transition:left .6s ease;z-index:2}
+/* ── registrar trade por capítulos ── */
+.cap{border:1px solid var(--line-soft);border-radius:12px;padding:14px 16px;margin-top:12px;background:var(--w015)}
+.cap-h{display:flex;align-items:baseline;gap:10px;margin-bottom:12px}
+.cap-h .n{font-family:var(--mono);font-size:9.5px;letter-spacing:.12em;color:var(--accent);
+  border:1px solid var(--accent-deep);border-radius:99px;padding:2px 9px;flex:none}
+.cap-h b{font-size:13px;letter-spacing:.01em}
+.cap-h .micro{margin-left:auto;color:var(--faint)}
 /* ── la cabina ONE BULLET (Rutina · en vivo) ── */
 .ob-top{display:flex;align-items:flex-start;gap:16px;flex-wrap:wrap}
 .ob-timer{font-size:clamp(32px,6vw,46px);font-weight:300;letter-spacing:.05em;line-height:1.1;margin-top:4px}
@@ -1920,39 +1927,55 @@ stop[stop-color="#9BC0DC"]{stop-color:var(--txt)}
 </div>
 
 <div class="overlay" id="ovTrade">
-  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="tmTitle">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="tmTitle" style="max-width:620px">
     <h3 id="tmTitle" data-i18n="tr.titulo">Registrar trade</h3>
-    <p class="sub">Screenshot, setup, resultado y análisis. Todo trade se documenta.</p>
-    <div class="f-row3">
-      <div><label>Fecha</label><input type="date" id="tFecha"></div>
-      <div><label>Hora entrada</label><input type="time" id="tHora" value="07:35"></div>
-      <div><label>Instrumento</label>
-        <select id="tSym">
-          <option>NQ</option><option>ES</option><option>YM</option><option>RTY</option>
-          <option>GC</option><option>CL</option><option>MNQ</option><option>MES</option>
-        </select>
+    <p class="sub">El disparo completo, en cuatro capítulos.</p>
+
+    <div class="cap">
+      <div class="cap-h"><span class="n">01</span><b>El disparo</b><span class="micro">qué y cuándo</span></div>
+      <div class="f-row3">
+        <div><label>Instrumento</label>
+          <select id="tSym">
+            <option>NQ</option><option>ES</option><option>YM</option><option>RTY</option>
+            <option>GC</option><option>CL</option><option>MNQ</option><option>MES</option>
+          </select>
+        </div>
+        <div><label>Dirección</label><select id="tDir"><option value="L">Long</option><option value="S">Short</option></select></div>
+        <div><label>Contratos</label><input type="number" id="tQty" value="1" min="1" step="1"></div>
+      </div>
+      <div class="f-row" style="margin-top:10px">
+        <div><label>Fecha</label><input type="date" id="tFecha"></div>
+        <div><label>Hora entrada</label><input type="time" id="tHora" value="07:35"></div>
       </div>
     </div>
-    <div class="f-row3">
-      <div><label>Dirección</label><select id="tDir"><option value="L">Long</option><option value="S">Short</option></select></div>
-      <div><label>Contratos</label><input type="number" id="tQty" value="1" min="1" step="1"></div>
-      <div><label>Setup del checklist</label><select id="tSetup"><option value="1">Válido · completo</option><option value="0">Incompleto</option></select></div>
+
+    <div class="cap">
+      <div class="cap-h"><span class="n">02</span><b>La ejecución</b><span class="micro">cómo salió</span></div>
+      <div class="f-row3">
+        <div><label>Entrada</label><input type="number" id="tIn" step="0.25" placeholder="0.00"></div>
+        <div><label>Salida</label><input type="number" id="tOut" step="0.25" placeholder="0.00"></div>
+        <div><label>P&L USD <span style="color:var(--faint)">(auto)</span></label><input type="number" id="tPnl" step="1" placeholder="auto"></div>
+      </div>
+      <div class="f-full" style="margin-top:10px">
+        <label>Setup del checklist</label>
+        <select id="tSetup"><option value="1">Válido · completo</option><option value="0">Incompleto</option></select>
+      </div>
     </div>
-    <div class="f-row3">
-      <div><label>Entrada</label><input type="number" id="tIn" step="0.25" placeholder="0.00"></div>
-      <div><label>Salida</label><input type="number" id="tOut" step="0.25" placeholder="0.00"></div>
-      <div><label>P&L USD <span style="color:var(--faint)">(auto)</span></label><input type="number" id="tPnl" step="1" placeholder="auto"></div>
-    </div>
-    <div class="f-full">
-      <label id="tAcctLbl" data-i18n="tr.cuentas">Cuentas donde cayó la orden</label>
+
+    <div class="cap">
+      <div class="cap-h"><span class="n">03</span><b id="tAcctLbl">Las cuentas</b><span class="micro">dónde cayó la orden</span></div>
       <div class="acct-chips" id="tAccts" role="group" aria-labelledby="tAcctLbl"></div>
     </div>
-    <div class="f-full"><label>Análisis / lección</label><textarea id="tNotas" rows="2" placeholder="Qué vio la mesa, qué se ejecutó, qué se aprende."></textarea></div>
-    <div class="f-full">
-      <label>Screenshot del trade</label>
-      <input type="file" id="tShotFile" accept="image/*" hidden>
-      <div id="tShotZona"></div>
+
+    <div class="cap">
+      <div class="cap-h"><span class="n">04</span><b>La lección</b><span class="micro">qué se aprende</span></div>
+      <div class="f-full"><textarea id="tNotas" rows="2" placeholder="Qué vio la mesa, qué se ejecutó, qué se aprende."></textarea></div>
+      <div class="f-full" style="margin-top:10px">
+        <input type="file" id="tShotFile" accept="image/*" hidden>
+        <div id="tShotZona"></div>
+      </div>
     </div>
+
     <div class="m-foot">
       <button class="btn" data-close>Cancelar</button>
       <button class="btn primary" id="tSave" data-i18n="tr.guardar">Guardar trade</button>
@@ -4642,23 +4665,14 @@ function getSession(iso){
   s.post  = normalizaChk(s.post,  POST_RAW.length);
   return s;
 }
-const quienConfirmo = v => {
-  if(!v) return '';
-  const nombre = v.u && USERS[v.u] ? USERS[v.u].nombre : (v.u || '');
-  if(!nombre && !v.ts) return '';
-  return (nombre || '—') + (v.ts ? ' · ' + v.ts : '');
-};
-
 function chkHTML(items, arr, key){
-  return items.map((it,i)=>{
-    const firma = quienConfirmo(arr[i]);
-    return `<button class="chk ${arr[i]?'done':''}" data-k="${key}" data-i="${i}">
+  /* Hecho = verde y ya. La firma (quién y a qué hora) se sigue guardando en
+     los datos por si la mesa la necesita, pero no se pinta: era ruido. */
+  return items.map((it,i)=>`<button class="chk ${arr[i]?'done':''}" data-k="${key}" data-i="${i}">
       <span class="box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M4 12l5 5L20 7"/></svg></span>
-      <span style="flex:1;min-width:0"><b>${esc(it[0])}</b><span>${esc(it[1])}</span>
-        ${firma?`<span class="chk-quien">✓ ${esc(firma)}</span>`:''}</span>
+      <span style="flex:1;min-width:0"><b>${esc(it[0])}</b><span>${esc(it[1])}</span></span>
       ${it[2]?`<span class="t">${it[2]}</span>`:''}
-    </button>`;
-  }).join('');
+    </button>`).join('');
 }
 
 /* ══ La voz de la rutina (JARVIS, es-MX) ══ */
