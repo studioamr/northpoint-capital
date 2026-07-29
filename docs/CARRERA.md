@@ -4,15 +4,18 @@ La sección **Progreso → La carrera** ya está en la app: cualquiera crea una
 carrera (o se une con un código) y comparte su progreso del mes — P&L,
 sesiones y win rate. La temporada es el mes en curso y se reinicia sola.
 
-**Estado: falta un paso de 2 minutos.** La app ya sabe leer y escribir la
-tabla, pero la tabla todavía no existe en Supabase. Mientras no exista, la
-carrera corre en **modo local** (solo ves tu fila) y la app lo avisa.
+**Estado: CONECTADA (29-jul-2026).** La tabla ya existe en Supabase, las
+políticas están puestas y se probó end-to-end: la app sube la fila del
+participante y lee la liga completa. No hay nada pendiente.
+
+> En la misma corrida se actualizó la política de `northpoint_estado` a los
+> **tres** socios (salió `goyo@northpoint.mx` de la lista). El usuario de
+> Goyo sigue existiendo en Authentication pero ya no puede leer ni escribir
+> la mesa; si quieres, bórralo desde Authentication → Users.
 
 ---
 
-## El paso que falta (lo hace André)
-
-Supabase → proyecto **spotter-ai** → **SQL Editor** → pega y ejecuta:
+## El SQL que se corrió (por si hay que reponerlo)
 
 ```sql
 create table if not exists northpoint_carrera (
@@ -40,8 +43,8 @@ create policy "carrera actualiza" on northpoint_carrera
   for update to anon, authenticated using (true) with check (true);
 ```
 
-Ya con eso, la próxima vez que alguien abra Progreso con una carrera activa,
-su fila sube y ve las de los demás. Nada que cambiar en la app.
+Con eso puesto, cualquiera que abra Progreso con una carrera activa sube su
+fila y ve las de los demás. Nada que cambiar en la app.
 
 ---
 
