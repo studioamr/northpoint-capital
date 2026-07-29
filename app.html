@@ -1039,6 +1039,26 @@ button.tag.quemada{text-decoration:line-through;text-decoration-color:var(--down
 .pj-m.lema{color:var(--txt);font-style:italic}
 @keyframes pjIn{ from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:none} }
 @media (prefers-reduced-motion:reduce){ .pj-m{animation:none} }
+/* ── La cinta del equipo: scroll infinito ──
+   La pista lleva las 6 tarjetas DOS veces; al llegar a −50% está mostrando la
+   copia idéntica y el regreso a 0 no se nota. El espaciado va como margen (no
+   gap) para que la mitad exacta incluya su separación y el loop cierre parejo. */
+.staff-strip{overflow:hidden;margin-bottom:16px;
+  -webkit-mask-image:linear-gradient(90deg,transparent,#000 5%,#000 95%,transparent);
+  mask-image:linear-gradient(90deg,transparent,#000 5%,#000 95%,transparent)}
+.staff-track{display:flex;width:max-content;animation:staffScroll 36s linear infinite}
+.staff-strip:hover .staff-track{animation-play-state:paused}
+@keyframes staffScroll{ to{transform:translateX(-50%)} }
+.staff{display:flex;align-items:center;gap:12px;text-align:left;font:inherit;color:inherit;
+  border:1px solid var(--line);border-radius:13px;background:var(--panel-bg);padding:13px;
+  cursor:pointer;width:252px;flex:none;margin-right:10px;transition:border-color .2s}
+.staff:hover{border-color:var(--accent)}
+.staff .pj-i{min-width:0;flex:1}
+.staff .pj-i i{display:block;font-style:normal;font-size:10.5px;line-height:1.4;color:var(--dim);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.staff-dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--up);
+  animation:pulse 2.2s ease-in-out infinite;vertical-align:middle}
+@media (prefers-reduced-motion:reduce){ .staff-track{animation:none} }
 /* ── La vida del negocio ── */
 .vida{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 .vida-lado{border:1px solid var(--line);border-radius:13px;background:var(--panel-bg);
@@ -1475,7 +1495,7 @@ stop[stop-color="#9BC0DC"]{stop-color:var(--txt)}
             <h2 class="firm-title" data-i18n="ag.t">El negocio</h2>
           </div>
         </div>
-        <div class="pj-grid" id="agGrid"></div>
+        <div class="staff-strip" id="agGrid"></div>
         <div class="ag-oficina-wrap">
           <canvas id="agOficina" width="1800" height="1160" aria-label="La oficina de Northpoint — piso 88, Nueva York"></canvas>
         </div>
@@ -1914,6 +1934,30 @@ stop[stop-color="#9BC0DC"]{stop-color:var(--txt)}
     <div class="m-foot">
       <button class="btn" data-close>Cancelar</button>
       <button class="btn primary" id="rjSave">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="ovStaff">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="stTitle" style="max-width:560px">
+    <div style="display:flex;align-items:center;gap:14px">
+      <img id="stCara" class="pj-cara" alt="" width="64" height="64" style="width:64px;height:64px">
+      <div style="min-width:0">
+        <h3 id="stTitle" style="margin:0">—</h3>
+        <p class="sub" id="stArea" style="margin:4px 0 0"></p>
+      </div>
+    </div>
+    <div class="micro" style="margin:16px 0 4px">Sus tareas en Northpoint</div>
+    <div id="stTareas"></div>
+    <div class="micro" style="margin:16px 0 6px">Su chamba de la última sesión</div>
+    <div id="stChamba" class="dia-ia" style="white-space:normal"></div>
+    <div class="f-full" style="margin-top:14px">
+      <label>Nota personalizable (sale en su tarjeta)</label>
+      <input id="stNota" maxlength="90" placeholder="ej. armando el reporte de la semana">
+    </div>
+    <div class="m-foot">
+      <button class="btn" data-close>Cerrar</button>
+      <button class="btn primary" id="stGuardar">Guardar nota</button>
     </div>
   </div>
 </div>
@@ -2839,32 +2883,43 @@ const ROLES = {
     'Envía el reporte del día al equipo y responde por su Score conductual.']},
 };
 
-/* ════════ LOS PERSONAJES DE LA OFICINA ════════
-   Cada cargo real tiene un personaje que lo encarna y lo dice con su voz. Lo que
-   hablan NO es invento: son los deberes de ROLES y las reglas de SISTEMA puestos en
-   boca de alguien, porque una regla que alguien te dice se obedece más que una que
-   lees en una lista.
-
-   Son arquetipos con nombre propio, no personas reales: ponerle palabras inventadas
-   a alguien que existe sería fabricar una cita. */
-/* Los tres socios reales, no arquetipos: Pablo, Mateo y André, cada uno con su
-   cargo real (ver ROLES/USERS). El "look" es sólo el dibujo pixel-art del
-   puesto — no es un retrato de nadie, es la silla que ocupa ese cargo. */
+/* ════════ EL EQUIPO DE LA OFICINA ════════
+   Seis empleados con las tareas de la firma repartidas entre ellos. Lo que
+   hablan NO es invento: son los deberes de ROLES y las reglas de SISTEMA puestos
+   en boca de alguien, porque una regla que alguien te dice se obedece más que
+   una que lees en una lista. Son personajes de la casa, no personas reales. */
 const PERSONAJES = [
-  { id:'pablo', nom:'PABLO', rol:'NP-010', lema:'Cada posición lleva su tesis escrita, antes de abrirla.',
-    voz:'CIO y Portfolio Manager. Decide el mandato, no improvisa la exposición.',
-    look:{ piel:'#EFC39B', pelo:'#2B2119', traje:'#1E2A3C', camisa:'#FFFFFF', ac:'#4A7FA8',
-           prop:'laptop', corbata:true, porte:'erguido', cara:'sereno' } },
-  { id:'mateo', nom:'MATEO', rol:'NP-030', lema:'El riesgo se vigila en tiempo real, no se revisa al cierre.',
-    voz:'CRO y Research. Seco, aritmético — el drawdown no negocia.',
-    look:{ piel:'#D09A6E', pelo:'#1C1A18', traje:'#4E545E', camisa:'#FFFFFF', ac:'#C4544A',
-           prop:'carpeta', chaleco:true, porte:'tenso', cara:'ceño' } },
-  { id:'andre', nom:'ANDRÉ', rol:'NP-050', ceo:true, lema:'Northpoint son dos cosas: sacar payouts y saber qué hacer con ellos.',
-    voz:'Quant y COO. Construye el Score, corre la operación diaria.',
-    look:{ piel:'#C08A5C', pelo:'#141414', traje:'#22282E', camisa:'#EFE8F6', ac:'#3EA97C',
-           prop:'taza', lentes:true, porte:'inclinado', cara:'concentrado' } },
+  { id:'kenji', nom:'KENJI', area:'Mesa de Futuros', roles:['NP-060'],
+    lema:'Ventana 7:00–8:30. Fuera de ahí, la pantalla no existe.',
+    voz:'El ejecutor. Opera el protocolo completo, trade por trade.',
+    look:{ piel:'#F0CDA2', pelo:'#14100C', traje:'#1E2A3C', camisa:'#FFFFFF', ac:'#4A7FA8',
+           prop:'headset', porte:'inclinado', cara:'concentrado' } },
+  { id:'mei', nom:'MEI', area:'Riesgo', roles:['NP-020'],
+    lema:'El drawdown no negocia. Yo tampoco.',
+    voz:'La que corta. Vigila líneas, colchones y límites diarios en vivo.',
+    look:{ piel:'#F2D3AC', pelo:'#181410', traje:'#4E545E', camisa:'#FFFFFF', ac:'#C4544A',
+           prop:'carpeta', greñas:true, chaleco:true, porte:'tenso', cara:'ceño' } },
+  { id:'jun', nom:'JUN', area:'Research', roles:['NP-030'],
+    lema:'Antes de la campana ya sé qué puede mover el día.',
+    voz:'El que investiga. Calendario, contexto y seguimiento de tesis.',
+    look:{ piel:'#E8C296', pelo:'#100E0C', traje:'#3A4A3E', camisa:'#EFE8D8', ac:'#3EA97C',
+           prop:'lupa', lentes:true, porte:'erguido', cara:'curioso' } },
+  { id:'haruka', nom:'HARUKA', area:'Quant', roles:['NP-040'],
+    lema:'Si un criterio es bueno, se vuelve aritmética.',
+    voz:'La de los números. Score, estadística y modelos de la mesa.',
+    look:{ piel:'#F5D8B4', pelo:'#1C1612', traje:'#22282E', camisa:'#EFE8F6', ac:'#8E6BC4',
+           prop:'laptop', greñas:true, lentes:true, porte:'inclinado', cara:'concentrado' } },
+  { id:'lin', nom:'LIN', area:'Operaciones', roles:['NP-050'],
+    lema:'Cuentas al día, payouts a tiempo, cero pendientes.',
+    voz:'La que administra. Cuentas, compliance y la operación diaria.',
+    look:{ piel:'#EDC9A0', pelo:'#161210', traje:'#5E4A3E', camisa:'#F2EDE0', ac:'#C79A3A',
+           prop:'taza', corbata:true, porte:'erguido', cara:'sereno' } },
+  { id:'sang', nom:'SANG', area:'Portafolio', roles:['NP-001','NP-010'],
+    lema:'Lo cobrado se reparte y una parte deja de depender de operar.',
+    voz:'El veterano. Mandato, reparto y patrimonio de largo plazo.',
+    look:{ piel:'#E6BE92', pelo:'#8A8F98', traje:'#2A3A4A', camisa:'#F2EDE0', ac:'#D9A441',
+           prop:'globo', barba:true, canas:true, porte:'erguido', cara:'sabio' } },
 ];
-const personajeDeRol = rol => PERSONAJES.find(p => p.rol === rol) || null;
 
 /* Un invitado no es socio de la firma (no tiene PERSONAJES propio), pero si
    entró a probar la mesa, su silla también aparece — un look neutro, sin
@@ -2878,17 +2933,8 @@ function invitadoActual(){
   return { n: usr.nombre.toUpperCase(), look: LOOK_INVITADO };
 }
 
-/* Sólo se sienta en la oficina quien de verdad tiene algo que hacer. André
-   siempre está — es su negocio. Los demás dependen de que exista la actividad
-   real detrás de su cargo: sin fondeadas no hay riesgo que vigilar, sin caja
-   no hay payouts que cobrar, sin posiciones no hay portafolio, sin cuenta
-   propia no hay quien la forje. Un escritorio vacío dice más que un personaje
-   hablando de un trabajo que todavía no empieza. */
-/* Antes esto apagaba a un personaje-arquetipo si su cargo no tenía actividad
-   todavía (sin cuenta live no se sentaba "El Herrero", etc.) — tenía sentido
-   para roles decorativos que representaban una función. Pablo, Mateo y André
-   son socios reales: están en la oficina porque son parte de la firma,
-   no porque su cargo ya tenga datos que mostrar. Los tres se sientan siempre. */
+/* Los seis del equipo se sientan siempre — son la plantilla de la oficina.
+   Si además entra un invitado a probar la mesa, se le suma su silla. */
 const sillasActivas = () => {
   const g = invitadoActual();
   return g ? [...OFI.sillas, { n:g.n, x:6.6, y:3.2, z:0, flip:true }] : OFI.sillas;
@@ -6471,9 +6517,12 @@ const OFI = {
     return o;
   },
   sillas: [
-    { n:'ANDRÉ',    x:6.2, y:5.8, z:0, flip:true,  jefe:true },
-    { n:'PABLO',    x:5.6, y:4.2, z:0, flip:false },
-    { n:'MATEO',    x:4.0, y:4.6, z:0, flip:false },
+    { n:'KENJI',  x:6.2, y:5.8, z:0, flip:true  },
+    { n:'MEI',    x:5.6, y:4.2, z:0, flip:false },
+    { n:'JUN',    x:4.0, y:4.6, z:0, flip:false },
+    { n:'HARUKA', x:3.0, y:6.0, z:0, flip:true  },
+    { n:'LIN',    x:4.7, y:6.4, z:0, flip:true  },
+    { n:'SANG',   x:2.5, y:4.4, z:0, flip:false },
   ],
   etapas: ['01 CONTEXTO','02 TESIS','03 RIESGO','04 FIRMA','05 EJECUTA','06 GESTIÓN','07 CIERRE','08 JOURNAL'],
 };
@@ -6550,45 +6599,52 @@ function guionOficina(){
   const M = SISTEMA.meta, F = SISTEMA.fases;
   const hhmm = m => String(Math.floor(m/60)).padStart(2,'0') + ':' + String(m%60).padStart(2,'0');
   const P = id => (PERSONAJES.find(x => x.id === id) || {}).nom;
+  const lema = id => (PERSONAJES.find(x => x.id === id) || {}).lema || '';
+  const deberes = (quien, id) => (PERSONAJES.find(x=>x.id===id).roles||[])
+    .flatMap(r => (ROLES[r] ? ROLES[r].d : [])).forEach(d => di(quien, d));
 
-  const ANDRE = P('andre'), PABLO = P('pablo'), MATEO = P('mateo');
+  const KENJI = P('kenji'), MEI = P('mei'), JUN = P('jun'),
+        HARUKA = P('haruka'), LIN = P('lin'), SANG = P('sang');
 
-  /* ── 1 · André, Quant + COO: el número y la operación diaria ── */
-  di(ANDRE, PERSONAJES.find(x=>x.id==='andre').lema);
-  di(ANDRE, `La meta es ${fmt$(M.anual)} al año: ${fmt$(M.mensual)} al mes, ${fmt$(M.quincenal)} la quincena.`);
-  di(ANDRE, `Eso son ${fmt$(M.semanal)} a la semana y ${fmt$(M.diaria)} al día. 0.6% diario, nada más.`);
-  (ROLES['NP-040'] ? ROLES['NP-040'].d : []).forEach(d => di(ANDRE, d));
-  (ROLES['NP-050'] ? ROLES['NP-050'].d : []).forEach(d => di(ANDRE, d));
-
-  /* ── 2 · la mesa: el protocolo diario (NP-060, sin socio asignado — lo relata
-        André porque como COO responde por la operación del día a día) ── */
+  /* ── 1 · Kenji, la mesa: el protocolo diario ── */
   const e = ESTRS[0];
-  di(ANDRE, `Operamos ${SISTEMA.instrumento} en ${SISTEMA.graficos.join(' y ')}. ${SISTEMA.estrategia}.`);
-  di(ANDRE, `Ventana ${hhmm(e.ventana.open)} a ${hhmm(e.ventana.close)}, lunes a viernes. El rango se forma ${hhmm(e.ventana.orb1)}–${hhmm(e.ventana.orb2)}.`);
-  di(ANDRE, e.entrada);
-  (ROLES['NP-060'] ? ROLES['NP-060'].d : []).forEach(d => di(ANDRE, d));
-  di(ANDRE, 'Si el checklist no da setup válido, el mejor trade del día es no operar.');
+  di(KENJI, lema('kenji'));
+  di(KENJI, `Operamos ${SISTEMA.instrumento} en ${SISTEMA.graficos.join(' y ')}. ${SISTEMA.estrategia}.`);
+  di(KENJI, `Ventana ${hhmm(e.ventana.open)} a ${hhmm(e.ventana.close)}, lunes a viernes. El rango se forma ${hhmm(e.ventana.orb1)}–${hhmm(e.ventana.orb2)}.`);
+  di(KENJI, e.entrada);
+  deberes(KENJI, 'kenji');
+  di(KENJI, 'Si el checklist no da setup válido, el mejor trade del día es no operar.');
 
-  /* ── 3 · Mateo, CRO + Research: riesgo y los topes de cada fase ── */
-  di(MATEO, PERSONAJES.find(x=>x.id==='mateo').lema);
+  /* ── 2 · Mei, riesgo: los topes de cada fase ── */
+  di(MEI, lema('mei'));
   Object.entries(F).forEach(([k, f]) => {
     const nom = k === 'eval' ? 'En evaluación' : (k === 'buffer' ? 'En colchón' : 'En retiros');
-    di(MATEO, `${nom}: riesgo ${fmt$(f.maxPerdidaDia)} al día, objetivo ${fmt$(f.objetivoDia)}, ${f.maxTrades} trades estrictos.`
-           + (f.topeDia ? ` Y ningún día mayor a ${fmt$(f.topeDia)}.` : ''));
+    di(MEI, `${nom}: riesgo ${fmt$(f.maxPerdidaDia)} al día, objetivo ${fmt$(f.objetivoDia)}, ${f.maxTrades} trades estrictos.`
+         + (f.topeDia ? ` Y ningún día mayor a ${fmt$(f.topeDia)}.` : ''));
   });
-  (ROLES['NP-020'] ? ROLES['NP-020'].d : []).forEach(d => di(MATEO, d));
-  (ROLES['NP-030'] ? ROLES['NP-030'].d : []).forEach(d => di(MATEO, d));
-  di(MATEO, 'Nunca minis. Sólo micros. Eso no se discute.');
+  deberes(MEI, 'mei');
+  di(MEI, 'Nunca minis. Sólo micros. Eso no se discute.');
 
-  /* ── 4 · Pablo, CIO + Portfolio Manager: el portafolio y el reparto ── */
-  di(PABLO, PERSONAJES.find(x=>x.id==='pablo').lema);
-  (ROLES['NP-001'] ? ROLES['NP-001'].d : []).forEach(d => di(PABLO, d));
-  (ROLES['NP-010'] ? ROLES['NP-010'].d : []).forEach(d => di(PABLO, d));
-  di(PABLO, 'Cada 15 días se parte así, y no se toca el orden:');
-  SISTEMA.reparto.forEach(r => di(PABLO, `${Math.round(r.pct*100)}% ${r.t} — ${r.d}`));
+  /* ── 3 · Jun, research ── */
+  di(JUN, lema('jun'));
+  deberes(JUN, 'jun');
 
-  /* ── cierre: André recuerda para qué es todo ── */
-  di(ANDRE, 'Nada queda abierto después de las 8:30. Ese es el trato.');
+  /* ── 4 · Haruka, quant: la meta hecha números ── */
+  di(HARUKA, lema('haruka'));
+  di(HARUKA, `La meta es ${fmt$(M.anual)} al año: ${fmt$(M.mensual)} al mes, ${fmt$(M.quincenal)} la quincena.`);
+  di(HARUKA, `Eso son ${fmt$(M.semanal)} a la semana y ${fmt$(M.diaria)} al día. 0.6% diario, nada más.`);
+  deberes(HARUKA, 'haruka');
+
+  /* ── 5 · Lin, operaciones ── */
+  di(LIN, lema('lin'));
+  deberes(LIN, 'lin');
+  di(LIN, 'Nada queda abierto después de las 8:30. Ese es el trato.');
+
+  /* ── 6 · Sang, portafolio: mandato y reparto ── */
+  di(SANG, lema('sang'));
+  deberes(SANG, 'sang');
+  di(SANG, 'Cada 15 días se parte así, y no se toca el orden:');
+  SISTEMA.reparto.forEach(r => di(SANG, `${Math.round(r.pct*100)}% ${r.t} — ${r.d}`));
 
   return g;
 }
@@ -7125,79 +7181,106 @@ function animaOficina(){
 
 /* El Quant Lab se eliminó: no medía nada. Con él se fueron el pre-vuelo, el
    protocolo de la mañana, el chat, el piloto automático y las tarjetas de
-   estrategia. Queda la oficina y los cuatro socios — nada más. */
-/* La vista del equipo se convirtió en la del operador: una sola persona, sus
-   cargos y el plan de la casa. El edificio se queda porque sigue siendo el mapa
-   de la operación, no un adorno del equipo. */
-/* Lo que ese socio trae puesto: sólo sus cuentas, no las de los otros tres.
-   Así "cada quien maneje sus cuentas" se ve, no nada más se dice. */
-function statsDeSocio(userId){
-  const todas = cuentasVivas().filter(a => a.owner === userId);
-  /* La práctica no cuenta como dinero real en ningún lado — tampoco aquí. */
-  const reales = todas.filter(a => !esSim(a));
-  const ids = new Set(reales.map(a=>a.id));
-  const balance = reales.reduce((x,a) => x + saludDe(a).balance, 0);
-  const mes = pnlRanges(ids, true).mes;
-  return {
-    n: reales.length, balance, mes,
-    prop: todas.filter(a=>!esLive(a)&&!esSim(a)).length,
-    live: todas.filter(esLive).length,
-    sim: todas.filter(esSim).length,
-  };
-}
-/* Cada tarjeta se abre para mostrar SUS cuentas — alias, tipo, balance. Un
-   solo clic, sin ir al gestor de cuentas nada más para ver quién trae qué. */
-function detalleDeSocio(uid){
-  const cuentas = cuentasVivas().filter(a => a.owner === uid);
-  if(!cuentas.length){
-    return `<p class="micro" style="color:var(--faint);padding:10px 2px">${bi('Todavía no da de alta ninguna cuenta.','Hasn’t registered any account yet.')}</p>`;
-  }
-  return `<div class="casa" style="margin-top:10px">${cuentas.map(a => {
-    const h = saludDe(a);
-    const tipoTxt = esLive(a) ? bi('Propia','Own') : esSim(a) ? bi('Práctica','Practice') : bi('Fondeada','Funded');
-    const faseTxt = (!esLive(a) && !esSim(a)) ? ' · ' + esc((FASES[a.fase]||FASES.eval).t) : '';
-    return `<div class="casa-row">
-      <span>${esc(a.alias)}</span>
-      <b>${fmt$(h.balance)}</b>
-      <i>${tipoTxt}${faseTxt}</i>
-    </div>`;
-  }).join('')}</div>`;
-}
+   estrategia. Queda la oficina y el equipo — nada más. */
+/* El equipo en cinta: los seis empleados en un carrusel infinito, cada uno con
+   su área y en qué anda. Se pica la foto y sale su resumen — su chamba de la
+   última sesión (calculada de los datos reales) más una nota personalizable. */
 function renderAgentes(){
   const grid = $('#agGrid'); if(!grid) return;
-  /* Ya no es la tarjeta de quien entró — son los cuatro, cada uno con SUS
-     cuentas. Antes esto mostraba nada más al que inició sesión; con cuentas
-     atribuidas a un dueño, tiene sentido ver de un vistazo quién trae qué. */
-  grid.className = 'pj-grid';
-  grid.innerHTML = SOCIOS_REALES.map(uid => {
-    const usr = USERS[uid] || {};
-    const cargo = (usr.roles || []).map(r => (ROLES[r] || {}).t).filter(Boolean).join(' + ') || 'Socio';
-    const p = PERSONAJES.find(x => x.id === uid.replace('.np',''));
-    const st = statsDeSocio(uid);
-    const tuyo = S.session.user === uid;
-    const linea = st.n
-      ? `${st.n} ${bi(st.n>1?'cuentas':'cuenta', st.n>1?'accounts':'account')} · ${fmt$(st.balance)} ${bi('en cuentas','in accounts')} · ${fmt$(st.mes,true)} ${bi('este mes','this month')}${st.sim?` · +${st.sim} ${bi('de práctica','practice')}`:''}`
-      : (st.sim ? `${bi('Sin cuentas reales','No real accounts')} · ${st.sim} ${bi('de práctica','practice')}` : bi('Sin cuentas todavía','No accounts yet'));
-    return `<div class="pj-wrap">
-      <button type="button" class="pj" data-uid="${uid}"${tuyo?' style="border-color:var(--accent)"':''}>
-        <img class="pj-cara" src="${caraAgente(p.nom)}" alt="" width="52" height="52">
-        <div class="pj-i">
-          <b>${esc(usr.nombre||'')}${tuyo?' · '+bi('TÚ','YOU'):''}</b>
-          <span>${esc(cargo)}</span>
-          <i>${linea}</i>
-        </div>
-      </button>
-      <div class="pj-detalle" hidden>${detalleDeSocio(uid)}</div>
-    </div>`;
-  }).join('');
-  $$('#agGrid .pj').forEach(btn => btn.onclick = () => {
-    const det = btn.nextElementSibling;
-    if(det) det.hidden = !det.hidden;
-  });
+  const notas = S.staffNotas || {};
+  const tarjeta = p => `
+    <button type="button" class="staff" data-staff="${p.id}">
+      <img class="pj-cara" src="${caraAgente(p.nom)}" alt="${esc(p.nom)}" width="52" height="52">
+      <div class="pj-i">
+        <b>${esc(p.nom)}</b>
+        <span>${esc(p.area)} · <i class="staff-dot"></i> trabajando</span>
+        <i>${esc(notas[p.id] || p.lema)}</i>
+      </div>
+    </button>`;
+  /* La cinta se duplica completa: cuando la animación llega a −50% está viendo
+     la segunda copia, idéntica, y el salto de vuelta a 0 es invisible. */
+  grid.className = 'staff-strip';
+  grid.innerHTML = `<div class="staff-track">${PERSONAJES.map(tarjeta).join('') + PERSONAJES.map(tarjeta).join('')}</div>`;
+  $$('#agGrid .staff').forEach(b => b.onclick = () => abrirStaff(b.dataset.staff));
   ofiJunta = guionOficina();
   if(typeof animaOficina === 'function') animaOficina();
   renderVida();
 }
+
+/* La chamba de la última sesión, por área — calculada de S, nada inventado. */
+function chambaDe(id){
+  const dias = Object.keys(tradesByDay()).sort();
+  const ult = dias[dias.length - 1] || null;
+  const trsUlt = ult ? tradesByDay()[ult] : [];
+  const sinDatos = 'Sin actividad registrada todavía.';
+  if(id === 'kenji'){
+    if(!ult) return sinDatos;
+    const pnl = trsUlt.reduce((a,t)=>a+(t.pnl||0),0);
+    const w = trsUlt.filter(t=>(t.pnl||0)>0).length;
+    return `Última sesión (${fmtFecha(ult)}): ${trsUlt.length} trade${trsUlt.length>1?'s':''} en ${[...new Set(trsUlt.map(t=>t.sym))].join(', ')} · ${w}W·${trsUlt.length-w-trsUlt.filter(t=>(t.pnl||0)===0).length}L · ${fmt$(pnl,true)}.`;
+  }
+  if(id === 'mei'){
+    const vivas = cuentasVivas().filter(a => reglasDe(a));
+    const vios = ult ? [...new Set(trsUlt.flatMap(t => violations(t, trsUlt)))] : [];
+    const min = vivas.map(a=>saludDe(a)).filter(h=>h.colchon!=null).sort((x,y)=>x.colchon-y.colchon)[0];
+    if(!vivas.length && !ult) return sinDatos;
+    return (ult ? (vios.length ? `Última sesión: marcó ${vios.length} violación${vios.length>1?'es':''} (${vios.join(', ')}). ` : 'Última sesión limpia: cero violaciones. ') : '')
+      + (min ? `Colchón más apretado ahora: ${fmt$(min.colchon)}.` : '');
+  }
+  if(id === 'jun'){
+    const tk = S.tickets || [];
+    if(!tk.length) return sinDatos;
+    const u = tk[tk.length-1];
+    return `${tk.length} tesis en el registro. La última: "${u.sym||''} ${u.dir==='L'?'LONG':'SHORT'}" — estado ${u.estado||'abierta'}.`;
+  }
+  if(id === 'haruka'){
+    const sc = computeScore();
+    if(!sc) return sinDatos;
+    if(sc.total == null) return `Muestra insuficiente para el Score: ${sc.n} de ${sc.min} trades mínimos.`;
+    return `Northpoint Score al día: ${sc.total}/1000 (${sc.grade}).`;
+  }
+  if(id === 'lin'){
+    const vivas = cuentasVivas();
+    if(!vivas.length) return sinDatos;
+    const porFase = ['eval','buffer','payout'].map(f => {
+      const n = vivas.filter(a => !esLive(a) && !esSim(a) && a.fase === f).length;
+      return n ? `${n} en ${FASES[f].t.toLowerCase()}` : null;
+    }).filter(Boolean).join(', ');
+    return `${vivas.length} cuenta${vivas.length>1?'s':''} viva${vivas.length>1?'s':''}${porFase ? ` (${porFase})` : ''}. Todo al corriente.`;
+  }
+  if(id === 'sang'){
+    const pos = S.positions || [];
+    const val = pos.reduce((x,p)=>x+(p.valor||p.capital||0),0);
+    const V = vidaDelNegocio();
+    if(!pos.length && !V.n) return sinDatos;
+    return `${pos.length ? `Portafolio: ${pos.length} posición${pos.length>1?'es':''} por ${fmt$(val)}. ` : ''}${V.n ? `Caja del negocio: ${fmt$(V.neto, true)}.` : ''}`.trim();
+  }
+  return sinDatos;
+}
+
+let staffAbierto = null;
+function abrirStaff(id){
+  const p = PERSONAJES.find(x => x.id === id); if(!p) return;
+  staffAbierto = id;
+  $('#stCara').src = caraAgente(p.nom);
+  $('#stTitle').textContent = p.nom;
+  $('#stArea').textContent = p.area + ' · ' + p.voz;
+  $('#stTareas').innerHTML = (p.roles||[]).flatMap(r => (ROLES[r] ? ROLES[r].d : []))
+    .map((d,i) => `<div style="display:flex;gap:10px;padding:7px 2px;border-bottom:1px solid var(--line-soft);font-size:12px;color:var(--dim)">
+      <span class="mono" style="color:var(--faint);font-size:10px;padding-top:2px">${String(i+1).padStart(2,'0')}</span><span>${esc(d)}</span>
+    </div>`).join('');
+  $('#stChamba').textContent = chambaDe(id);
+  $('#stNota').value = (S.staffNotas || {})[id] || '';
+  openOv('ovStaff');
+}
+$('#stGuardar').addEventListener('click', () => {
+  if(!staffAbierto) return;
+  S.staffNotas = S.staffNotas || {};
+  const v = $('#stNota').value.trim();
+  if(v) S.staffNotas[staffAbierto] = v; else delete S.staffNotas[staffAbierto];
+  save(); closeOv(); renderAgentes();
+  toast('Nota guardada');
+});
 
 /* ════════ LA VIDA DEL NEGOCIO ════════
    Debajo del edificio. No es el P&L de plataforma: al pasar una evaluación la
