@@ -1094,22 +1094,18 @@ button.tag.quemada{text-decoration:line-through;text-decoration-color:var(--down
    La pista lleva las 6 tarjetas DOS veces; al llegar a −50% está mostrando la
    copia idéntica y el regreso a 0 no se nota. El espaciado va como margen (no
    gap) para que la mitad exacta incluya su separación y el loop cierre parejo. */
-.staff-strip{overflow:hidden;margin-bottom:16px;
-  -webkit-mask-image:linear-gradient(90deg,transparent,#000 5%,#000 95%,transparent);
-  mask-image:linear-gradient(90deg,transparent,#000 5%,#000 95%,transparent)}
-.staff-track{display:flex;width:max-content;animation:staffScroll 36s linear infinite}
-.staff-strip:hover .staff-track{animation-play-state:paused}
-@keyframes staffScroll{ to{transform:translateX(-50%)} }
+.perfil-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:10px;
+  margin-bottom:16px}
 .staff{display:flex;align-items:center;gap:12px;text-align:left;font:inherit;color:inherit;
   border:1px solid var(--line);border-radius:13px;background:var(--panel-bg);padding:13px;
-  cursor:pointer;width:252px;flex:none;margin-right:10px;transition:border-color .2s}
+  cursor:pointer;min-width:0;transition:border-color .2s}
 .staff:hover{border-color:var(--accent)}
 .staff .pj-i{min-width:0;flex:1}
-.staff .pj-i i{display:block;font-style:normal;font-size:10.5px;line-height:1.4;color:var(--dim);
+.staff .pj-i i{display:block;font-style:normal;font-size:10.5px;line-height:1.5;color:var(--dim);
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* el puntito verde de "en vivo" — lo usa la cabina de sesión */
 .staff-dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--up);
   animation:pulse 2.2s ease-in-out infinite;vertical-align:middle}
-@media (prefers-reduced-motion:reduce){ .staff-track{animation:none} }
 /* ── La vida del negocio ── */
 .vida{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 .vida-lado{border:1px solid var(--line);border-radius:13px;background:var(--panel-bg);
@@ -2068,10 +2064,10 @@ stop[stop-color="#9BC0DC"]{stop-color:var(--txt)}
         <p class="sub" id="stArea" style="margin:4px 0 0"></p>
       </div>
     </div>
-    <div class="micro" style="margin:16px 0 4px">Sus tareas en Northpoint</div>
-    <div id="stTareas"></div>
-    <div class="micro" style="margin:16px 0 6px">Su chamba de la última sesión</div>
+    <div class="micro" style="margin:16px 0 6px">Sus stats en la mesa</div>
     <div id="stChamba" class="dia-ia" style="white-space:normal"></div>
+    <div class="micro" style="margin:16px 0 4px">Sus cargos en Northpoint</div>
+    <div id="stTareas"></div>
     <div class="f-full" style="margin-top:14px">
       <label>Nota personalizable (sale en su tarjeta)</label>
       <input id="stNota" maxlength="90" placeholder="ej. armando el reporte de la semana">
@@ -2989,41 +2985,26 @@ const ROLES = {
 };
 
 /* ════════ EL EQUIPO DE LA OFICINA ════════
-   Seis empleados con las tareas de la firma repartidas entre ellos. Lo que
-   hablan NO es invento: son los deberes de ROLES y las reglas de SISTEMA puestos
-   en boca de alguien, porque una regla que alguien te dice se obedece más que
-   una que lees en una lista. Son personajes de la casa, no personas reales. */
+   Los usuarios registrados de Northpoint — los tres socios reales, cada quien
+   con sus cargos de ROLES. Lo que hablan en la oficina NO es invento: son los
+   deberes de sus cargos y las reglas de SISTEMA puestos en su boca. Su carrera
+   (trades, P&L, sesiones) se calcula de los fills de la mesa, nada inventado. */
 const PERSONAJES = [
-  { id:'kenji', nom:'KENJI', area:'Mesa de Futuros', roles:['NP-060'],
-    lema:'Ventana 7:00–8:30. Fuera de ahí, la pantalla no existe.',
-    voz:'El ejecutor. Opera el protocolo completo, trade por trade.',
-    look:{ piel:'#F0CDA2', pelo:'#14100C', traje:'#1E2A3C', camisa:'#FFFFFF', ac:'#4A7FA8',
-           prop:'headset', porte:'inclinado', cara:'concentrado' } },
-  { id:'mei', nom:'MEI', area:'Riesgo', roles:['NP-020'],
+  { id:'pablo.np', nom:'PABLO', area:'CIO · Portfolio Manager', roles:['NP-001','NP-010'],
+    lema:'La estrategia es de la casa; la firma responde por ella.',
+    voz:'Dirección de inversión, mandato y reparto.',
+    look:{ piel:'#D9A377', pelo:'#14100C', traje:'#22303E', camisa:'#FFFFFF', ac:'#4A7FA8',
+           prop:'globo', porte:'erguido', cara:'sereno' } },
+  { id:'mateo.np', nom:'MATEO', area:'CRO · Research', roles:['NP-020','NP-030'],
     lema:'El drawdown no negocia. Yo tampoco.',
-    voz:'La que corta. Vigila líneas, colchones y límites diarios en vivo.',
-    look:{ piel:'#F2D3AC', pelo:'#181410', traje:'#4E545E', camisa:'#FFFFFF', ac:'#C4544A',
-           prop:'carpeta', greñas:true, chaleco:true, porte:'tenso', cara:'ceño' } },
-  { id:'jun', nom:'JUN', area:'Research', roles:['NP-030'],
-    lema:'Antes de la campana ya sé qué puede mover el día.',
-    voz:'El que investiga. Calendario, contexto y seguimiento de tesis.',
-    look:{ piel:'#E8C296', pelo:'#100E0C', traje:'#3A4A3E', camisa:'#EFE8D8', ac:'#3EA97C',
-           prop:'lupa', lentes:true, porte:'erguido', cara:'curioso' } },
-  { id:'haruka', nom:'HARUKA', area:'Quant', roles:['NP-040'],
+    voz:'Riesgo, límites y el contexto del día.',
+    look:{ piel:'#C98F63', pelo:'#181410', traje:'#4E545E', camisa:'#EFE8D8', ac:'#C4544A',
+           prop:'carpeta', chaleco:true, porte:'tenso', cara:'ceño' } },
+  { id:'andre.np', nom:'ANDRÉ', area:'Quant · COO', roles:['NP-040','NP-050'],
     lema:'Si un criterio es bueno, se vuelve aritmética.',
-    voz:'La de los números. Score, estadística y modelos de la mesa.',
-    look:{ piel:'#F5D8B4', pelo:'#1C1612', traje:'#22282E', camisa:'#EFE8F6', ac:'#8E6BC4',
-           prop:'laptop', greñas:true, lentes:true, porte:'inclinado', cara:'concentrado' } },
-  { id:'lin', nom:'LIN', area:'Operaciones', roles:['NP-050'],
-    lema:'Cuentas al día, payouts a tiempo, cero pendientes.',
-    voz:'La que administra. Cuentas, compliance y la operación diaria.',
-    look:{ piel:'#EDC9A0', pelo:'#161210', traje:'#5E4A3E', camisa:'#F2EDE0', ac:'#C79A3A',
-           prop:'taza', corbata:true, porte:'erguido', cara:'sereno' } },
-  { id:'sang', nom:'SANG', area:'Portafolio', roles:['NP-001','NP-010'],
-    lema:'Lo cobrado se reparte y una parte deja de depender de operar.',
-    voz:'El veterano. Mandato, reparto y patrimonio de largo plazo.',
-    look:{ piel:'#E6BE92', pelo:'#8A8F98', traje:'#2A3A4A', camisa:'#F2EDE0', ac:'#D9A441',
-           prop:'globo', barba:true, canas:true, porte:'erguido', cara:'sabio' } },
+    voz:'Números, cuentas y la operación diaria.',
+    look:{ piel:'#E8B48C', pelo:'#100E0C', traje:'#2A3A4A', camisa:'#EFE8F6', ac:'#8E6BC4',
+           prop:'laptop', lentes:true, porte:'inclinado', cara:'concentrado' } },
 ];
 
 /* Un invitado no es socio de la firma (no tiene PERSONAJES propio), pero si
@@ -6416,76 +6397,15 @@ const OFI = {
     return o;
   },
   sillas: [
-    { n:'KENJI',  x:6.2, y:5.8, z:0, flip:true  },
-    { n:'MEI',    x:5.6, y:4.2, z:0, flip:false },
-    { n:'JUN',    x:4.0, y:4.6, z:0, flip:false },
-    { n:'HARUKA', x:3.0, y:6.0, z:0, flip:true  },
-    { n:'LIN',    x:4.7, y:6.4, z:0, flip:true  },
-    { n:'SANG',   x:2.5, y:4.4, z:0, flip:false },
+    { n:'PABLO', x:5.6, y:4.2, z:0, flip:false },
+    { n:'MATEO', x:3.0, y:6.0, z:0, flip:true  },
+    { n:'ANDRÉ', x:6.2, y:5.8, z:0, flip:true  },
   ],
   etapas: ['01 CONTEXTO','02 TESIS','03 RIESGO','04 FIRMA','05 EJECUTA','06 GESTIÓN','07 CIERRE','08 JOURNAL'],
 };
 let ofiT = 0, ofiIdx = 0, ofiHablando = null, ofiRAF = null, ofiJunta = [];
 
-/* Analistas sentados en los puestos: la mesa se ve trabajando, no vacía. */
-const SENTADOS = [
-  { x:1.3,  y:1.15, col:'#42506A', piel:'#E8B48C', pelo:'#2A2118' },
-  { x:2.85, y:1.15, col:'#5E4258', piel:'#C08A5C', pelo:'#141414' },
-  { x:4.40, y:1.15, col:'#3E5A54', piel:'#F0C9A0', pelo:'#7A4020' },
-  { x:5.95, y:1.15, col:'#6A5238', piel:'#B57E52', pelo:'#241C14' },
-  { x:1.15, y:2.85, col:'#4A4664', piel:'#D9A377', pelo:'#3A2A1A' },
-  { x:1.15, y:4.40, col:'#5A4A3E', piel:'#EFC39B', pelo:'#8A8F98' },
-  { x:1.15, y:5.95, col:'#3E4C5E', piel:'#C98F63', pelo:'#1A1A1A' },
-  { x:2.20, y:2.90, col:'#65486A', piel:'#E0AE85', pelo:'#4A2E1A' },
-  { x:3.75, y:2.90, col:'#3A5A46', piel:'#A9714A', pelo:'#1C1A18' },
-];
-function dibujaSentado(c, p, t){
-  const bx = iX(p.x + .26, p.y + .25), by = iY(p.x + .26, p.y + .25, 0);
-  const tecla = Math.sin(t / 260 + p.x * 3) > .6 ? 1 : 0;
-  c.save(); c.translate(bx, by + 6); c.scale(1.55, 1.55);
-  const R = (dx, dy, w, h, col) => { c.fillStyle = col; c.fillRect(dx, dy, w, h); };
-  R(-6, -15, 12, 12, p.col);
-  R(-6, -15, 12, 1.4, mez(p.col, 22));
-  R(-7.4, -12 + tecla, 2, 6, mez(p.col, -16));      // brazos que teclean
-  R(5.4,  -12 + tecla, 2, 6, mez(p.col, -16));
-  R(-6.4, -25, 13, 11, p.piel);
-  R(-6.5, -25.6, 13.2, 3.4, p.pelo);
-  R(-3.6, -20.6, 1.8, 2.2, '#1B1B1B'); R(1.8, -20.6, 1.8, 2.2, '#1B1B1B');
-  c.restore();
-}
 let OFI_HIT = [];
-/* Analistas de piso: dan vida sin robar protagonismo. Caminan su ruta en bucle. */
-const NPCS = [
-  { ruta:[[6.8,2.2],[6.8,6.4],[8.2,6.4]],           v:0.00022, t0:0,    col:'#4A5A6E', piel:'#E4B189' },
-  { ruta:[[1.4,7.2],[1.4,8.8],[5.0,8.8]],           v:0.00030, t0:2200, col:'#5E4A62', piel:'#C89468' },
-  { ruta:[[8.6,1.8],[8.6,5.6]],                     v:0.00026, t0:5400, col:'#3E5A54', piel:'#F0C79E' },
-  { ruta:[[2.6,3.4],[2.6,7.0]],                     v:0.00034, t0:1200, col:'#6E5A46', piel:'#B98157' },
-];
-function posNPC(n, t){
-  const R = n.ruta, tt = (t + n.t0) * n.v;
-  const seg = Math.floor(tt) % R.length;
-  const f = tt % 1;
-  const a = R[seg], b = R[(seg + 1) % R.length];
-  return { x: a[0] + (b[0]-a[0]) * f, y: a[1] + (b[1]-a[1]) * f, z: n.z || 0,
-           flip: b[0] < a[0] || b[1] > a[1], paso: Math.sin(tt * Math.PI * 8) };
-}
-function dibujaNPC(c, n, t){
-  const P = posNPC(n, t);
-  const bx = iX(P.x, P.y), by = iY(P.x, P.y, P.z);
-  const salto = Math.abs(P.paso) * 1.6;
-  c.save(); c.translate(bx, by + 12);
-  c.fillStyle = 'rgba(20,26,38,.16)';
-  c.beginPath(); c.ellipse(0, 0, 11, 5, 0, 0, 7); c.fill();
-  c.scale(P.flip ? -1.25 : 1.25, 1.25);
-  const R = (dx,dy,w,h,col) => { c.fillStyle = col; c.fillRect(dx, dy - salto, w, h); };
-  R(-5, -13, 10, 10, n.col);
-  R(-5, -13, 10, 1.4, mez(n.col, 22));
-  R(-5.5, -21, 11, 9, n.piel);
-  R(-5.6, -21.6, 11.2, 3, '#2A2119');
-  R(-3, -17.6, 1.6, 2, '#1B1B1B'); R(1.4, -17.6, 1.6, 2, '#1B1B1B');
-  R(-6.6, -11, 1.6, 6.4, mez(n.col, -18)); R(5, -11, 1.6, 6.4, mez(n.col, -18));
-  c.restore();
-}
 
 
 /* El guion de la oficina: aquí vive TODO lo que antes eran tarjetas de info —
@@ -6502,48 +6422,37 @@ function guionOficina(){
   const deberes = (quien, id) => (PERSONAJES.find(x=>x.id===id).roles||[])
     .flatMap(r => (ROLES[r] ? ROLES[r].d : [])).forEach(d => di(quien, d));
 
-  const KENJI = P('kenji'), MEI = P('mei'), JUN = P('jun'),
-        HARUKA = P('haruka'), LIN = P('lin'), SANG = P('sang');
+  const PABLO = P('pablo.np'), MATEO = P('mateo.np'), ANDRE = P('andre.np');
 
-  /* ── 1 · Kenji, la mesa: el protocolo diario ── */
+  /* ── 1 · Pablo, CIO: la estrategia de la casa y el protocolo diario ── */
   const e = ESTRS[0];
-  di(KENJI, lema('kenji'));
-  di(KENJI, `Operamos ${SISTEMA.instrumento} en ${SISTEMA.graficos.join(' y ')}. ${SISTEMA.estrategia}.`);
-  di(KENJI, `Ventana ${hhmm(e.ventana.open)} a ${hhmm(e.ventana.close)}, lunes a viernes. El rango se forma ${hhmm(e.ventana.orb1)}–${hhmm(e.ventana.orb2)}.`);
-  di(KENJI, e.entrada);
-  deberes(KENJI, 'kenji');
-  di(KENJI, 'Si el checklist no da setup válido, el mejor trade del día es no operar.');
+  di(PABLO, lema('pablo.np'));
+  di(PABLO, `Operamos ${SISTEMA.instrumento} en ${SISTEMA.graficos.join(' y ')}. ${SISTEMA.estrategia}.`);
+  di(PABLO, `Ventana ${hhmm(e.ventana.open)} a ${hhmm(e.ventana.close)}, lunes a viernes. El rango se forma ${hhmm(e.ventana.orb1)}–${hhmm(e.ventana.orb2)}.`);
+  di(PABLO, e.entrada);
+  di(PABLO, 'Si el checklist no da setup válido, el mejor trade del día es no operar.');
 
-  /* ── 2 · Mei, riesgo: los topes de cada fase ── */
-  di(MEI, lema('mei'));
+  /* ── 2 · Mateo, CRO: los topes de cada fase ── */
+  di(MATEO, lema('mateo.np'));
   Object.entries(F).forEach(([k, f]) => {
     const nom = k === 'eval' ? 'En evaluación' : (k === 'buffer' ? 'En colchón' : 'En retiros');
-    di(MEI, `${nom}: riesgo ${fmt$(f.maxPerdidaDia)} al día, objetivo ${fmt$(f.objetivoDia)}, ${f.maxTrades} trades estrictos.`
+    di(MATEO, `${nom}: riesgo ${fmt$(f.maxPerdidaDia)} al día, objetivo ${fmt$(f.objetivoDia)}, ${f.maxTrades} trades estrictos.`
          + (f.topeDia ? ` Y ningún día mayor a ${fmt$(f.topeDia)}.` : ''));
   });
-  deberes(MEI, 'mei');
-  di(MEI, 'Nunca minis. Sólo micros. Eso no se discute.');
+  deberes(MATEO, 'mateo.np');
+  di(MATEO, 'Nunca minis. Sólo micros. Eso no se discute.');
 
-  /* ── 3 · Jun, research ── */
-  di(JUN, lema('jun'));
-  deberes(JUN, 'jun');
+  /* ── 3 · André, Quant + COO: la meta hecha números y la operación ── */
+  di(ANDRE, lema('andre.np'));
+  di(ANDRE, `La meta es ${fmt$(M.anual)} al año: ${fmt$(M.mensual)} al mes, ${fmt$(M.quincenal)} la quincena.`);
+  di(ANDRE, `Eso son ${fmt$(M.semanal)} a la semana y ${fmt$(M.diaria)} al día. 0.6% diario, nada más.`);
+  deberes(ANDRE, 'andre.np');
+  di(ANDRE, 'Nada queda abierto después de las 8:30. Ese es el trato.');
 
-  /* ── 4 · Haruka, quant: la meta hecha números ── */
-  di(HARUKA, lema('haruka'));
-  di(HARUKA, `La meta es ${fmt$(M.anual)} al año: ${fmt$(M.mensual)} al mes, ${fmt$(M.quincenal)} la quincena.`);
-  di(HARUKA, `Eso son ${fmt$(M.semanal)} a la semana y ${fmt$(M.diaria)} al día. 0.6% diario, nada más.`);
-  deberes(HARUKA, 'haruka');
-
-  /* ── 5 · Lin, operaciones ── */
-  di(LIN, lema('lin'));
-  deberes(LIN, 'lin');
-  di(LIN, 'Nada queda abierto después de las 8:30. Ese es el trato.');
-
-  /* ── 6 · Sang, portafolio: mandato y reparto ── */
-  di(SANG, lema('sang'));
-  deberes(SANG, 'sang');
-  di(SANG, 'Cada 15 días se parte así, y no se toca el orden:');
-  SISTEMA.reparto.forEach(r => di(SANG, `${Math.round(r.pct*100)}% ${r.t} — ${r.d}`));
+  /* ── 4 · Pablo, PM: mandato y reparto ── */
+  deberes(PABLO, 'pablo.np');
+  di(PABLO, 'Cada 15 días se parte así, y no se toca el orden:');
+  SISTEMA.reparto.forEach(r => di(PABLO, `${Math.round(r.pct*100)}% ${r.t} — ${r.d}`));
 
   return g;
 }
@@ -7036,11 +6945,10 @@ function dibujaOficina(t){
 
   /* ══ LA GENTE ══ */
   piezas.sort((a, b) => a.d - b.d).forEach(p => p.fn(c));
-  const gente = [
-    ...sillasActivas().map(s => ({ d:s.x + s.y, dib:() => figura(c, s, ofiHablando === s.n, t) })),
-    ...NPCS.map(n => { const P = posNPC(n, t); return { d:P.x + P.y, dib:() => dibujaNPC(c, n, t) }; }),
-    ...SENTADOS.map(p => ({ d:p.x + p.y + .05, dib:() => dibujaSentado(c, p, t) })),
-  ];
+  /* Sólo la gente real: los socios registrados (y el invitado si entró).
+     Los analistas de relleno se fueron — la oficina es de los usuarios. */
+  const gente = sillasActivas().map(s =>
+    ({ d:s.x + s.y, dib:() => figura(c, s, ofiHablando === s.n, t) }));
   gente.sort((a, b) => a.d - b.d).forEach(g => g.dib());
   OFI_HIT = sillasActivas().map(s => ({ n:s.n, x:iX(s.x, s.y), y:iY(s.x, s.y, s.z) }));
 
@@ -7081,82 +6989,56 @@ function animaOficina(){
 /* El Quant Lab se eliminó: no medía nada. Con él se fueron el pre-vuelo, el
    protocolo de la mañana, el chat, el piloto automático y las tarjetas de
    estrategia. Queda la oficina y el equipo — nada más. */
-/* El equipo en cinta: los seis empleados en un carrusel infinito, cada uno con
-   su área y en qué anda. Se pica la foto y sale su resumen — su chamba de la
-   última sesión (calculada de los datos reales) más una nota personalizable. */
+
+/* La carrera de un usuario registrado: todo calculado de los fills de la mesa
+   (t.por dice quién registró cada trade), nada inventado. */
+function carreraDe(uid){
+  const trs = (S.trades||[]).filter(t => t.por === uid);
+  if(!trs.length) return null;
+  const pnl = trs.reduce((a,t)=>a+(t.pnl||0),0);
+  const cerr = trs.filter(t=>(t.pnl||0)!==0);
+  const w = trs.filter(t=>(t.pnl||0)>0).length;
+  const dias = [...new Set(trs.map(t=>t.date))].sort();
+  const porDia = {};
+  trs.forEach(t=>{ porDia[t.date] = (porDia[t.date]||0) + (t.pnl||0); });
+  const ordDias = Object.entries(porDia).sort((a,b)=>a[1]-b[1]);
+  const gW = trs.filter(t=>(t.pnl||0)>0).reduce((a,t)=>a+t.pnl,0);
+  const gL = Math.abs(trs.filter(t=>(t.pnl||0)<0).reduce((a,t)=>a+t.pnl,0));
+  return { n:trs.length, pnl, wr: cerr.length ? Math.round(w/cerr.length*100) : 0,
+    pf: gL > 0 ? Math.round(gW/gL*100)/100 : (gW > 0 ? Infinity : 0),
+    sesiones: dias.length, desde: dias[0], ultimo: dias[dias.length-1],
+    mejor: ordDias[ordDias.length-1] || null, peor: ordDias[0] || null };
+}
+
+/* Los perfiles registrados: los tres socios y, si un invitado entró a probar
+   la mesa, también su silla. Cada tarjeta muestra su carrera; el clic, sus stats. */
 function renderAgentes(){
   const grid = $('#agGrid'); if(!grid) return;
   const notas = S.staffNotas || {};
-  const tarjeta = p => `
+  const tarjeta = p => {
+    const c = carreraDe(p.id);
+    const linea = c
+      ? `${c.sesiones} ${c.sesiones===1?'sesión':'sesiones'} · ${c.n} trade${c.n===1?'':'s'} · <b class="${c.pnl>0?'up':(c.pnl<0?'down':'')}" style="font-weight:600">${fmt$(c.pnl,true)}</b>`
+      : 'Sin actividad en la mesa todavía';
+    return `
     <button type="button" class="staff" data-staff="${p.id}">
       <img class="pj-cara" src="${caraAgente(p.nom)}" alt="${esc(p.nom)}" width="52" height="52">
       <div class="pj-i">
         <b>${esc(p.nom)}</b>
-        <span>${esc(p.area)} · <i class="staff-dot"></i> trabajando</span>
-        <i>${esc(notas[p.id] || p.lema)}</i>
+        <span>${esc(p.area)}</span>
+        <i>${linea}</i>
+        <i style="color:var(--faint)">${c ? 'En la mesa desde ' + fmtFecha(c.desde) : esc(notas[p.id] || p.lema)}</i>
       </div>
     </button>`;
-  /* La cinta se duplica completa: cuando la animación llega a −50% está viendo
-     la segunda copia, idéntica, y el salto de vuelta a 0 es invisible. */
-  grid.className = 'staff-strip';
-  grid.innerHTML = `<div class="staff-track">${PERSONAJES.map(tarjeta).join('') + PERSONAJES.map(tarjeta).join('')}</div>`;
+  };
+  grid.className = 'perfil-grid';
+  grid.innerHTML = PERSONAJES.map(tarjeta).join('');
   $$('#agGrid .staff').forEach(b => b.onclick = () => abrirStaff(b.dataset.staff));
   ofiJunta = guionOficina();
   if(typeof animaOficina === 'function') animaOficina();
   /* el tablero del negocio: camino y carrera (la caja y los objetivos viven en Mi dinero) */
   renderCamino();
   renderCarrera();
-}
-
-/* La chamba de la última sesión, por área — calculada de S, nada inventado. */
-function chambaDe(id){
-  const dias = Object.keys(tradesByDay()).sort();
-  const ult = dias[dias.length - 1] || null;
-  const trsUlt = ult ? tradesByDay()[ult] : [];
-  const sinDatos = 'Sin actividad registrada todavía.';
-  if(id === 'kenji'){
-    if(!ult) return sinDatos;
-    const pnl = trsUlt.reduce((a,t)=>a+(t.pnl||0),0);
-    const w = trsUlt.filter(t=>(t.pnl||0)>0).length;
-    return `Última sesión (${fmtFecha(ult)}): ${trsUlt.length} trade${trsUlt.length>1?'s':''} en ${[...new Set(trsUlt.map(t=>t.sym))].join(', ')} · ${w}W·${trsUlt.length-w-trsUlt.filter(t=>(t.pnl||0)===0).length}L · ${fmt$(pnl,true)}.`;
-  }
-  if(id === 'mei'){
-    const vivas = cuentasVivas().filter(a => reglasDe(a));
-    const vios = ult ? [...new Set(trsUlt.flatMap(t => violations(t, trsUlt)))] : [];
-    const min = vivas.map(a=>saludDe(a)).filter(h=>h.colchon!=null).sort((x,y)=>x.colchon-y.colchon)[0];
-    if(!vivas.length && !ult) return sinDatos;
-    return (ult ? (vios.length ? `Última sesión: marcó ${vios.length} violación${vios.length>1?'es':''} (${vios.join(', ')}). ` : 'Última sesión limpia: cero violaciones. ') : '')
-      + (min ? `Colchón más apretado ahora: ${fmt$(min.colchon)}.` : '');
-  }
-  if(id === 'jun'){
-    const tk = S.tickets || [];
-    if(!tk.length) return sinDatos;
-    const u = tk[tk.length-1];
-    return `${tk.length} tesis en el registro. La última: "${u.sym||''} ${u.dir==='L'?'LONG':'SHORT'}" — estado ${u.estado||'abierta'}.`;
-  }
-  if(id === 'haruka'){
-    const sc = computeScore();
-    if(!sc) return sinDatos;
-    if(sc.total == null) return `Muestra insuficiente para el Score: ${sc.n} de ${sc.min} trades mínimos.`;
-    return `Northpoint Score al día: ${sc.total}/1000 (${sc.grade}).`;
-  }
-  if(id === 'lin'){
-    const vivas = cuentasVivas();
-    if(!vivas.length) return sinDatos;
-    const porFase = ['eval','buffer','payout'].map(f => {
-      const n = vivas.filter(a => !esLive(a) && !esSim(a) && a.fase === f).length;
-      return n ? `${n} en ${FASES[f].t.toLowerCase()}` : null;
-    }).filter(Boolean).join(', ');
-    return `${vivas.length} cuenta${vivas.length>1?'s':''} viva${vivas.length>1?'s':''}${porFase ? ` (${porFase})` : ''}. Todo al corriente.`;
-  }
-  if(id === 'sang'){
-    const pos = S.positions || [];
-    const val = pos.reduce((x,p)=>x+(p.valor||p.capital||0),0);
-    const V = vidaDelNegocio();
-    if(!pos.length && !V.n) return sinDatos;
-    return `${pos.length ? `Portafolio: ${pos.length} posición${pos.length>1?'es':''} por ${fmt$(val)}. ` : ''}${V.n ? `Caja del negocio: ${fmt$(V.neto, true)}.` : ''}`.trim();
-  }
-  return sinDatos;
 }
 
 let staffAbierto = null;
@@ -7170,7 +7052,22 @@ function abrirStaff(id){
     .map((d,i) => `<div style="display:flex;gap:10px;padding:7px 2px;border-bottom:1px solid var(--line-soft);font-size:12px;color:var(--dim)">
       <span class="mono" style="color:var(--faint);font-size:10px;padding-top:2px">${String(i+1).padStart(2,'0')}</span><span>${esc(d)}</span>
     </div>`).join('');
-  $('#stChamba').textContent = chambaDe(id);
+  const c = carreraDe(id);
+  const kpi = (l,v,cls='') => `<div style="border:1px solid var(--line-soft);border-radius:10px;padding:10px 12px;min-width:0">
+    <div class="micro" style="color:var(--faint)">${l}</div>
+    <div class="mono ${cls}" style="font-size:16px;margin-top:3px;overflow-wrap:anywhere">${v}</div></div>`;
+  $('#stChamba').innerHTML = c
+    ? `<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px">
+        ${kpi('P&L TOTAL', fmt$(c.pnl,true), c.pnl>0?'up':(c.pnl<0?'down':''))}
+        ${kpi('TRADES', c.n)}
+        ${kpi('WIN RATE', c.wr + '%')}
+        ${kpi('PROFIT FACTOR', c.pf === Infinity ? '∞' : c.pf)}
+        ${kpi('SESIONES', c.sesiones)}
+        ${kpi('MEJOR DÍA', c.mejor ? fmt$(c.mejor[1],true) : '—', 'up')}
+        ${kpi('PEOR DÍA', c.peor ? fmt$(c.peor[1],true) : '—', c.peor && c.peor[1]<0 ? 'down' : '')}
+        ${kpi('ÚLTIMA SESIÓN', fmtFecha(c.ultimo))}
+      </div>`
+    : `<span style="color:var(--faint)">Sin actividad en la mesa todavía: cuando registre trades, aquí salen sus números.</span>`;
   $('#stNota').value = (S.staffNotas || {})[id] || '';
   openOv('ovStaff');
 }
