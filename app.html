@@ -193,6 +193,10 @@ label{font-family:var(--mono);font-size:10px;letter-spacing:.14em;text-transform
 .sess-pill.orb .dot{background:var(--accent);animation:pulse 1.4s ease-in-out infinite}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
 .top-clock{font-family:var(--mono);font-size:13px;color:var(--txt);letter-spacing:.08em;min-width:78px;text-align:right}
+/* El aviso de nube en una sola línea SIEMPRE: envuelto en columna reventaba
+   la barra en anchos medios (~700px), no sólo en el celular. */
+#cloudPillTop{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:240px;flex:0 1 auto;min-width:0}
+.top-right{min-width:0}
 
 /* ═══ Views ═══ */
 .content{flex:1;overflow-y:auto;padding:28px 26px 60px;scrollbar-width:thin;scrollbar-color:var(--w12) transparent}
@@ -760,6 +764,13 @@ body.locked .app{visibility:hidden;pointer-events:none}
 .acct-pop-foot{display:flex;gap:8px;margin-top:8px;padding-top:8px;border-top:1px solid var(--line-soft)}
 .acct-pop-foot .btn{flex:1;justify-content:center}
 .acct-chips{display:flex;flex-wrap:wrap;gap:8px}
+/* chips de opción única (firma, plan, tamaño, fase del alta de cuenta) */
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px}
+.chips button{font:inherit;font-size:12px;color:var(--dim);background:var(--glass);
+  border:1px solid var(--line);border-radius:10px;padding:8px 14px;cursor:pointer;
+  transition:border-color .15s,color .15s}
+.chips button:hover{border-color:var(--accent)}
+.chips button.on{color:var(--txt);border-color:var(--accent);background:var(--glass-2);font-weight:600}
 button.tag{cursor:pointer;background:transparent;display:inline-flex;align-items:center;gap:7px;
   transition:border-color .15s,color .15s,opacity .15s}
 button.tag .dot{width:6px;height:6px;border-radius:50%;border:1px solid var(--line);flex:0 0 auto}
@@ -842,6 +853,7 @@ button.tag.quemada{text-decoration:line-through;text-decoration-color:var(--down
 .tj-h b{display:block;font-size:14.5px;font-weight:600}
 .tj-h span{display:block;font-size:12px;color:var(--dim);margin-top:2px}
 .tj-h .cnt{font-family:var(--mono);font-size:10px;letter-spacing:.14em;color:var(--faint);white-space:nowrap}
+.tj-h .cnt.full{color:var(--up)}
 .tj-h .car{color:var(--faint);font-size:10px;transition:transform .2s}
 .tj-h[aria-expanded="true"] .car{transform:rotate(180deg)}
 .tj-body{border-top:1px solid var(--line-soft);padding:6px 10px 10px}
@@ -1423,7 +1435,7 @@ stop[stop-color="#9BC0DC"]{stop-color:var(--txt)}
       <div class="micro" data-i18n="nav.grupo.mesa">Operación diaria</div>
       <a class="item" href="#sesion" data-view="sesion">
         <svg viewBox="0 0 24 24" fill="none" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg>
-        <span data-i18n="nav.sesion">Hoy</span> <span class="bdg" id="bdgTrades"></span>
+        <span data-i18n="nav.sesion">Rutina</span> <span class="bdg" id="bdgTrades"></span>
       </a>
       <a class="item" href="#progreso" data-view="progreso">
         <svg viewBox="0 0 24 24" fill="none" stroke-width="1.6"><path d="M3 17.5 9 11l4 3.6L21 6"/><path d="M21 10.5V6h-4.5"/></svg>
@@ -1436,10 +1448,6 @@ stop[stop-color="#9BC0DC"]{stop-color:var(--txt)}
       <a class="item" href="#estudio" data-view="estudio">
         <svg viewBox="0 0 24 24" fill="none" stroke-width="1.6"><path d="M12 4 2 8.5 12 13l10-4.5L12 4z"/><path d="M6 10.5V16c0 1.5 2.7 3 6 3s6-1.5 6-3v-5.5"/></svg>
         <span data-i18n="nav.curso">Curso</span> <span class="bdg" id="bdgStudy"></span>
-      </a>
-      <a class="item" href="#reglas" data-view="reglas">
-        <svg viewBox="0 0 24 24" fill="none" stroke-width="1.6"><path d="M12 3l8 3v5c0 5-3.4 8.6-8 10-4.6-1.4-8-5-8-10V6l8-3z"/></svg>
-        <span data-i18n="nav.reglas">Reglas</span>
       </a>
     </nav>
 
@@ -1527,53 +1535,142 @@ stop[stop-color="#9BC0DC"]{stop-color:var(--txt)}
               <div class="mono" id="sesFecha" style="font-size:16px;margin-top:4px"></div>
             </div>
             <div style="margin-left:auto;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+              <button class="btn sm" id="rtVoz" title="Voz de la rutina">🔊 Voz</button>
               <span class="tag ac" id="sesVentana" data-i18n="se.ventana">VENTANA 7:00 – 8:30 AM</span>
-              <span class="tag" id="sesProgreso">0 / 13</span>
+              <span class="tag" id="sesProgreso">0 / 21</span>
             </div>
           </div>
         </div>
 
-        <!-- El día entero en una pantalla, en el orden en que ocurre.
-             Antes la tesis vivía en su propia sección y había que saltar entre dos. -->
-        <div class="grid g2 mt">
-          <div>
-            <div class="panel">
-              <div class="p-head"><h3 data-i18n="se.pre">01 · Pre-market</h3><span class="micro" data-i18n="se.desde">Desde 7:00 AM</span></div>
-              <div class="p-body" id="preList"></div>
-            </div>
-            <div class="panel mt">
-              <div class="p-head"><h3 data-i18n="se.tesis">03 · Tesis del día</h3><span class="micro" id="cloudPill" style="color:var(--faint)">NUBE · …</span></div>
-              <div class="p-body">
-                <p style="font-size:12.5px;color:var(--dim);line-height:1.7;margin:0 0 12px" data-i18n="se.tesisD">Escribes por qué vas a entrar antes de entrar, y después marcas si la tomaste. Eso separa una operación de una corazonada.</p>
-                <div id="tixList"></div>
-                <button class="btn primary mt" id="btnTix" data-i18n="ap.nueva">+ Nueva tesis</button>
+        <!-- La rutina va por fases, como una sesión de verdad:
+             preparas → operas → cierras. Las reglas viven aquí mismo. -->
+        <div class="seg mt" id="rtTabs">
+          <button type="button" data-rt="pre" class="on">Pre-market</button>
+          <button type="button" data-rt="live">En vivo</button>
+          <button type="button" data-rt="cierre">Cierre</button>
+          <button type="button" data-rt="reglas">Reglas</button>
+        </div>
+
+        <div id="rt-pre" class="mt">
+          <div class="grid g2">
+            <div>
+              <div class="panel">
+                <div class="p-head"><h3>Sesgo del día</h3><span class="micro" id="rtBiasTag"></span></div>
+                <div class="p-body">
+                  <div class="chips" id="rtBias" style="margin-top:0"></div>
+                  <textarea id="rtSesgo" rows="2" class="mt" style="width:100%" placeholder="¿Por qué? Daily bias, estructura HTF, niveles que defiendo hoy..."></textarea>
+                </div>
+              </div>
+              <div class="panel mt">
+                <div class="p-head"><h3>Niveles clave</h3><span class="micro">HTF S/R · POI · liquidez</span></div>
+                <div class="p-body">
+                  <textarea id="rtNiveles" rows="3" style="width:100%" placeholder="ej. PDH 21650 · liquidez de Asia 21580 · FVG 4h 21540..."></textarea>
+                </div>
+              </div>
+              <div class="panel mt">
+                <div class="p-head"><h3>Plan de sesión</h3><span class="micro">se respeta o no hay mesa</span></div>
+                <div class="p-body">
+                  <div class="f-row3">
+                    <div><label>Máx. trades</label><input type="number" id="rtMaxT" min="1" step="1"></div>
+                    <div><label>Stop sesión ($)</label><input type="number" id="rtStop" min="0" step="10"></div>
+                    <div><label>Objetivo ($)</label><input type="number" id="rtObj" min="0" step="10"></div>
+                  </div>
+                </div>
               </div>
             </div>
-            <div class="panel mt">
-              <div class="p-head"><h3 data-i18n="se.post">05 · Post-market</h3><span class="micro" data-i18n="se.cierre">Cierre operativo</span></div>
+            <div>
+              <div class="panel">
+                <div class="p-head"><h3>Compromisos de sesión</h3><span class="micro" id="rtCompCnt">0/8</span></div>
+                <div class="p-body" id="rtCompList"></div>
+              </div>
+              <div class="panel mt">
+                <div class="p-head"><h3 data-i18n="se.pre">Checklist pre-market</h3><span class="micro" data-i18n="se.desde">Desde 7:00 AM</span></div>
+                <div class="p-body" id="preList"></div>
+              </div>
+              <button class="btn primary mt" id="rtActivar" style="width:100%">Activar sesión →</button>
+            </div>
+          </div>
+        </div>
+
+        <div id="rt-live" class="mt" hidden>
+          <div class="grid g2">
+            <div>
+              <div class="panel">
+                <div class="p-head"><h3 data-i18n="se.setup">Validador de setup</h3><span class="micro" data-i18n="se.todas">Todas o no hay trade</span></div>
+                <div class="p-body">
+                  <div id="setupList"></div>
+                  <div id="setupVerdict"></div>
+                </div>
+              </div>
+              <div class="panel mt">
+                <div class="p-head"><h3 data-i18n="se.gestion">Gestión</h3><span class="micro" data-i18n="se.max">%n trades máx · estricto</span></div>
+                <div class="p-body">
+                  <div id="gestState"></div>
+                  <div id="rtPlanVivo"></div>
+                  <div class="mt" style="display:flex;gap:10px;flex-wrap:wrap">
+                    <button class="btn primary" id="btnTradeFromSes">+ Registrar trade</button>
+                    <button class="btn" data-goto="journal">Ver journal</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div>
+              <div class="panel">
+                <div class="p-head"><h3 data-i18n="se.tesis">Tesis del día</h3><span class="micro" id="cloudPill" style="color:var(--faint)">NUBE · …</span></div>
+                <div class="p-body">
+                  <p style="font-size:12.5px;color:var(--dim);line-height:1.7;margin:0 0 12px" data-i18n="se.tesisD">Escribes por qué vas a entrar antes de entrar, y después marcas si la tomaste. Eso separa una operación de una corazonada.</p>
+                  <div id="tixList"></div>
+                  <button class="btn primary mt" id="btnTix" data-i18n="ap.nueva">+ Nueva tesis</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div id="rt-cierre" class="mt" hidden>
+          <div class="grid g2">
+            <div class="panel">
+              <div class="p-head"><h3 data-i18n="se.post">Post-market</h3><span class="micro" data-i18n="se.cierre">Cierre operativo</span></div>
               <div class="p-body">
                 <div id="postList"></div>
                 <button class="btn mt" id="btnReport" data-i18n="se.generarRep">Escribir el cierre del día</button>
               </div>
             </div>
-          </div>
-          <div>
             <div class="panel">
-              <div class="p-head"><h3 data-i18n="se.setup">02 · Validador de setup</h3><span class="micro" data-i18n="se.todas">Todas o no hay trade</span></div>
+              <div class="p-head"><h3>Resumen de la sesión</h3><span class="micro">contra tu plan</span></div>
+              <div class="p-body" id="rtResumen"></div>
+            </div>
+          </div>
+        </div>
+
+        <div id="rt-reglas" class="mt" hidden>
+          <div class="panel">
+            <div class="p-body">
+              <div class="micro" data-i18n="re.principio">Principio rector</div>
+              <p class="rule-quote" data-i18n="re.quote">Ninguna regla de Northpoint tiene «excepción creativa». Cuando una regla parece inconveniente, probablemente es exactamente cuando más se necesita. La disciplina no se aplica cuando es cómodo. Se aplica siempre.</p>
+            </div>
+          </div>
+
+          <div class="mt2 micro" style="margin-bottom:10px" data-i18n="re.nn">No negociables</div>
+          <div class="grid g4">
+            <div class="panel nn"><span class="micro">NN — 01</span><b data-i18n="rg.00">Nunca minis</b><p data-i18n="rg.01">Operación en minis está prohibida. Sin excepciones. El Terminal la marca como violación.</p></div>
+            <div class="panel nn"><span class="micro">NN — 02</span><b data-i18n="rg.02">Solo la ventana 7:00 – 8:30</b><p data-i18n="rg.03">Lunes a viernes. Fuera de esta ventana no se opera. Punto.</p></div>
+            <div class="panel nn"><span class="micro">NN — 03</span><b data-i18n="rg.04">Nada abierto después de 8:30</b><p data-i18n="rg.05">Toda posición debe estar cerrada antes de las 8:30 AM.</p></div>
+            <div class="panel nn"><span class="micro">NN — 04</span><b data-i18n="rg.06">Sin setup, no se opera</b><p data-i18n="rg.07">Si el checklist no da setup válido, el mejor trade del día es no operar.</p></div>
+          </div>
+
+          <div class="grid g2 mt2">
+            <div class="panel">
+              <div class="p-head"><h3 data-i18n="re.gestion">Gestión de la sesión</h3><span class="micro" data-i18n="re.formato">Formato de ejecución</span></div>
               <div class="p-body">
-                <div id="setupList"></div>
-                <div id="setupVerdict"></div>
+                <div class="lesson"><div class="lx"><b data-i18n="re.dosMax">%n trades máximo, estricto</b><p data-i18n="rg.08">Máximo %n operaciones por sesión. Sin excepciones.</p></div></div>
+                <div class="lesson"><div class="lx"><b data-i18n="rg.09">Se gana el trade 1 → se cierra la plataforma</b><p data-i18n="rg.10">Día terminado. Al cerrar el primer trade en ganancia, se cierra la plataforma.</p></div></div>
+                <div class="lesson"><div class="lx"><b data-i18n="rg.11">Se pierde el trade 1 → un solo intento más</b><p data-i18n="re.unicamente">ÚNICAMENTE si aparece un setup válido nuevo y completo. Nunca revenge.</p></div></div>
               </div>
             </div>
-            <div class="panel mt">
-              <div class="p-head"><h3 data-i18n="se.gestion">04 · Gestión</h3><span class="micro" data-i18n="se.max">%n trades máx · estricto</span></div>
-              <div class="p-body">
-                <div id="gestState"></div>
-                <div class="mt" style="display:flex;gap:10px;flex-wrap:wrap">
-                  <button class="btn primary" id="btnTradeFromSes">+ Registrar trade</button>
-                  <button class="btn" data-goto="journal">Ver journal</button>
-                </div>
-              </div>
+            <div class="panel">
+              <div class="p-head"><h3 data-i18n="re.terminacion">Terminación inmediata</h3><span class="micro" data-i18n="re.codigo">Código de conducta</span></div>
+              <div class="p-body" id="termList"></div>
             </div>
           </div>
         </div>
@@ -1696,6 +1793,8 @@ stop[stop-color="#9BC0DC"]{stop-color:var(--txt)}
             <div id="jEmpty"></div>
           </div>
         </div>
+
+        <div id="coachBox"></div>
       </section>
 
       <!-- ════ MESA DE APROBACIONES ════ -->
@@ -1726,39 +1825,6 @@ stop[stop-color="#9BC0DC"]{stop-color:var(--txt)}
           <div id="mods"></div>
         </div>
         <div class="mt2" id="lessonView" hidden></div>
-      </section>
-
-      <!-- ════ REGLAS ════ -->
-      <section class="view" id="v-reglas">
-        <div class="panel">
-          <div class="p-body">
-            <div class="micro" data-i18n="re.principio">Principio rector</div>
-            <p class="rule-quote" data-i18n="re.quote">Ninguna regla de Northpoint tiene «excepción creativa». Cuando una regla parece inconveniente, probablemente es exactamente cuando más se necesita. La disciplina no se aplica cuando es cómodo. Se aplica siempre.</p>
-          </div>
-        </div>
-
-        <div class="mt2 micro" style="margin-bottom:10px" data-i18n="re.nn">No negociables</div>
-        <div class="grid g4">
-          <div class="panel nn"><span class="micro">NN — 01</span><b data-i18n="rg.00">Nunca minis</b><p data-i18n="rg.01">Operación en minis está prohibida. Sin excepciones. El Terminal la marca como violación.</p></div>
-          <div class="panel nn"><span class="micro">NN — 02</span><b data-i18n="rg.02">Solo la ventana 7:00 – 8:30</b><p data-i18n="rg.03">Lunes a viernes. Fuera de esta ventana no se opera. Punto.</p></div>
-          <div class="panel nn"><span class="micro">NN — 03</span><b data-i18n="rg.04">Nada abierto después de 8:30</b><p data-i18n="rg.05">Toda posición debe estar cerrada antes de las 8:30 AM.</p></div>
-          <div class="panel nn"><span class="micro">NN — 04</span><b data-i18n="rg.06">Sin setup, no se opera</b><p data-i18n="rg.07">Si el checklist no da setup válido, el mejor trade del día es no operar.</p></div>
-        </div>
-
-        <div class="grid g2 mt2">
-          <div class="panel">
-            <div class="p-head"><h3 data-i18n="re.gestion">Gestión de la sesión</h3><span class="micro" data-i18n="re.formato">Formato de ejecución</span></div>
-            <div class="p-body">
-              <div class="lesson"><div class="lx"><b data-i18n="re.dosMax">%n trades máximo, estricto</b><p data-i18n="rg.08">Máximo %n operaciones por sesión. Sin excepciones.</p></div></div>
-              <div class="lesson"><div class="lx"><b data-i18n="rg.09">Se gana el trade 1 → se cierra la plataforma</b><p data-i18n="rg.10">Día terminado. Al cerrar el primer trade en ganancia, se cierra la plataforma.</p></div></div>
-              <div class="lesson"><div class="lx"><b data-i18n="rg.11">Se pierde el trade 1 → un solo intento más</b><p data-i18n="re.unicamente">ÚNICAMENTE si aparece un setup válido nuevo y completo. Nunca revenge.</p></div></div>
-            </div>
-          </div>
-          <div class="panel">
-            <div class="p-head"><h3 data-i18n="re.terminacion">Terminación inmediata</h3><span class="micro" data-i18n="re.codigo">Código de conducta</span></div>
-            <div class="p-body" id="termList"></div>
-          </div>
-        </div>
       </section>
 
       <!-- ════ POSICIONES ════ -->
@@ -1876,33 +1942,43 @@ stop[stop-color="#9BC0DC"]{stop-color:var(--txt)}
 </div>
 
 <div class="overlay" id="ovNuevaCuenta">
-  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="ncTitle">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="ncTitle" style="max-width:560px">
     <h3 id="ncTitle">Nueva cuenta</h3>
-    <p class="sub">¿Qué tipo de cuenta es? El resto del formulario cambia según lo que elijas.</p>
-    <div class="seg" id="ncTipo" style="margin-bottom:16px">
+    <p class="sub">Elige y listo — sólo aparece lo que aplica.</p>
+    <div class="seg" id="ncTipo" style="margin-bottom:14px">
       <button type="button" data-t="prop" class="on">Fondeada</button>
       <button type="button" data-t="live">Cuenta propia</button>
       <button type="button" data-t="sim">Práctica</button>
     </div>
 
-    <div class="f-full"><label>Nombre de la cuenta</label><input id="ncAlias" placeholder="Ponle el nombre que quieras" maxlength="24"></div>
-
-    <div id="ncCamposProp">
-      <div class="f-row" style="margin-top:10px">
-        <div><label>Plan</label><select id="ncPlan"></select></div>
-        <div><label>Tamaño</label><select id="ncSize"></select></div>
-      </div>
+    <div id="ncFirmZona">
+      <label>Firma</label>
+      <div class="chips" id="ncFirm"></div>
     </div>
 
-    <div id="ncCamposSimple" hidden>
-      <div class="f-full" style="margin-top:10px">
+    <div class="f-full" style="margin-top:12px"><label>Nombre de la cuenta</label><input id="ncAlias" placeholder="Ponle el nombre que quieras" maxlength="24"></div>
+
+    <div id="ncPlanZona" style="margin-top:12px">
+      <label>Plan</label>
+      <div class="chips" id="ncPlanChips"></div>
+      <label style="display:block;margin-top:12px">Tamaño</label>
+      <div class="chips" id="ncSizeChips"></div>
+    </div>
+
+    <div id="ncCamposSimple" hidden style="margin-top:12px">
+      <div class="f-full">
         <label id="ncStartLbl">Balance de arranque USD</label>
         <input type="number" id="ncStart" min="0" step="100" placeholder="0">
       </div>
       <p class="micro" id="ncNota" style="color:var(--faint);margin-top:4px"></p>
     </div>
 
-    <p class="micro" id="ncErr" style="color:var(--down);min-height:14px;margin-top:8px"></p>
+    <div id="ncFaseZona" style="margin-top:12px">
+      <label>Fase</label>
+      <div class="chips" id="ncFase"></div>
+    </div>
+
+    <p class="micro" id="ncErr" style="color:var(--down);min-height:14px;margin-top:10px"></p>
     <div class="m-foot">
       <button class="btn" data-close>Cancelar</button>
       <button class="btn primary" id="ncSave">Dar de alta</button>
@@ -2211,7 +2287,7 @@ const I18N = {
   'ag.norechazada':    { es:'Decisión rechazada · nada cambia', en:'Decision rejected · nothing changes' },
   'ag.reconsiderar':   { es:'Reconsiderar',             en:'Reconsider' },
   'nav.firma':         { es:'Panorama',              en:'Overview' },
-  'nav.sesion':        { es:'Hoy',                   en:'Today' },
+  'nav.sesion':        { es:'Rutina',                en:'Routine' },
   'nav.aprob':         { es:'Tesis',                 en:'Theses' },
   'nav.progreso':      { es:'Progreso',                  en:'Progress' },
   'nav.journal':       { es:'Mi desempeño',               en:'My performance' },
@@ -2224,7 +2300,7 @@ const I18N = {
   'tit.firma.k':       { es:'Northpoint · panorama', en:'Northpoint · overview' },
   'tit.firma.t':       { es:'Panorama',              en:'Overview' },
   'tit.mesa.k':        { es:'Operación diaria',      en:'Daily trading' },
-  'tit.sesion.t':      { es:'Hoy',                   en:'Today' },
+  'tit.sesion.t':      { es:'Rutina',                en:'Routine' },
   'tit.progreso.t':    { es:'Progreso',                  en:'Progress' },
   'tit.journal.t':     { es:'Mi desempeño',               en:'My performance' },
   'tit.curso.t':       { es:'Curso',                 en:'Course' },
@@ -2548,9 +2624,11 @@ const I18N = {
   'cs.terminado.msg':  { es:'Los 30 días están vistos. Ahora se demuestra en el journal.',
                          en:'All 30 days are done. Now prove it in the journal.' },
   'cs.dia':            { es:'Día',                   en:'Day' },
+  'cs.modulo':         { es:'Módulo',                en:'Module' },
   'cs.ver':            { es:'Ver',                   en:'Watch' },
   'cs.primero':        { es:'primero',               en:'first' },
   'cs.docs':           { es:'Documentos de la mesa', en:'Desk documents' },
+  'cs.docsD':          { es:'El bootcamp escrito de la casa — se abre en orden', en:'The house written bootcamp — unlocks in order' },
   'cs.estudiados':     { es:'estudiados',            en:'studied' },
   'cs.leer':           { es:'Leer documento',        en:'Read document' },
   'cs.repasar':        { es:'Repasar',               en:'Review' },
@@ -3453,7 +3531,6 @@ const TITLES = {
   journal:     ['tit.mesa.k',  'tit.journal.t'],
   estudio:     ['tit.mesa.k',  'tit.curso.t'],
   agentes:     ['tit.np.k',    'tit.agentes.t'],
-  reglas:      ['tit.mesa.k',  'tit.reglas.t'],
   posiciones:  ['tit.snow.k',  'tit.pos.t'],
 };
 function show(view){
@@ -4003,7 +4080,38 @@ function renderCamino(){
       ${aqui.length ? `<span class="micro" style="display:block;margin-top:4px;color:var(--dim)">${aqui.join(' · ')}</span>` : ''}
     </div>`;
   }).join('');
-  $('#pgCaminoNota').textContent = '';
+
+  /* El avance en vivo: cada trade que se registra mueve estas barras. Cada
+     cuenta corre contra el hito de SU fase; al tocarlo, se avisa que toca
+     pasarla de fase en el gestor (el pase es decisión humana, no automática). */
+  $('#pgCaminoNota').innerHTML = sel.map(a => {
+    const h = saludDe(a);
+    if(a.fase === 'payout'){
+      const pct = h.maxDD ? Math.max(0, Math.min(100, (h.colchon||0) / h.maxDD * 100)) : 0;
+      return `<div class="pr-fila">
+        <span class="al">${esc(a.alias)}</span>
+        <div class="via">
+          <div class="pr-track"><i class="listo" style="width:${pct}%"></i></div>
+          <div class="micro" style="margin-top:4px;color:var(--faint)">${bi('En retiros','In payouts')} · ${bi('colchón','buffer')} ${fmt$(h.colchon)}</div>
+        </div>
+        <b class="mono up" style="font-size:13px">${fmt$(h.balance)}</b>
+      </div>`;
+    }
+    const meta = h.hito;
+    if(meta == null) return '';
+    const pct = meta > a.start ? Math.max(0, Math.min(100, (h.balance - a.start) / (meta - a.start) * 100)) : 0;
+    const tocado = h.balance >= meta;
+    return `<div class="pr-fila">
+      <span class="al">${esc(a.alias)}</span>
+      <div class="via">
+        <div class="pr-track"><i class="${tocado?'listo':''}" style="width:${pct}%"></i></div>
+        <div class="micro" style="margin-top:4px;color:var(--faint)">${fmt$(h.balance)} ${bi('de','of')} ${fmt$(meta)} · ${fmtPct(pct)}</div>
+      </div>
+      ${tocado
+        ? `<button class="btn sm primary" onclick="renderAcctMgr();openOv('ovAcct')">${bi('¡Hito tocado! Pásala de fase','Milestone hit! Advance the phase')}</button>`
+        : `<b class="mono" style="font-size:12px;color:var(--dim)">${bi('faltan','needs')} ${fmt$(meta - h.balance)}</b>`}
+    </div>`;
+  }).join('');
 }
 
 function renderProgreso(){
@@ -4389,15 +4497,112 @@ function chkHTML(items, arr, key){
   }).join('');
 }
 
+/* ══ La voz de la rutina (JARVIS, es-MX) ══ */
+let rtVoces = [];
+if(window.speechSynthesis){
+  const agarra = () => { rtVoces = window.speechSynthesis.getVoices(); };
+  window.speechSynthesis.onvoiceschanged = agarra; agarra();
+}
+function rtDi(txt){
+  if(S.ui.rtVozOff || !window.speechSynthesis) return;
+  window.speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(txt);
+  u.lang = 'es-MX'; u.rate = .9; u.pitch = .8;
+  const v = rtVoces.find(x => /es[-_]MX/i.test(x.lang) && /juan/i.test(x.name))
+    || rtVoces.find(x => /es[-_]MX/i.test(x.lang))
+    || rtVoces.find(x => x.lang.startsWith('es'));
+  if(v) u.voice = v;
+  window.speechSynthesis.speak(u);
+}
+
+/* Los compromisos de sesión: se confirman uno a uno antes de activar. */
+const RUTINA_RULES = [
+  'Solo opero la ventana 7:00 – 8:30',
+  'Stop es sagrado — no lo muevo ni un tick',
+  'Respeto el riesgo máximo del día de mi fase',
+  'Si pierdo el trade 1, un solo intento más — nunca revenge',
+  'No entro por FOMO ni por revancha',
+  'Solo entro con el checklist de setup completo',
+  'Sin trades 30 min antes de datos de alto impacto',
+  'Registro cada trade en el journal el mismo día',
+];
+function getRutina(iso){
+  const s = getSession(iso);
+  const r = s.rutina = s.rutina || {};
+  if(!Array.isArray(r.comp) || r.comp.length !== RUTINA_RULES.length)
+    r.comp = Array.from({length:RUTINA_RULES.length}, (_,i) => (r.comp||[])[i] || false);
+  if(r.bias === undefined) r.bias = null;
+  if(r.sesgo === undefined) r.sesgo = '';
+  if(r.niveles === undefined) r.niveles = '';
+  if(!r.maxT) r.maxT = SISTEMA.fases.eval.maxTrades;
+  if(r.stop === undefined) r.stop = SISTEMA.fases.eval.maxPerdidaDia;
+  if(r.obj === undefined) r.obj = SISTEMA.fases.eval.objetivoDia;
+  return r;
+}
+
 function renderSesion(){
   const iso = todayISO();
   const ses = getSession(iso);
+  const rt = getRutina(iso);
   $('#sesFecha').textContent = fmtFecha(iso);
+
+  /* tabs de fase */
+  const tab = (S.ui.rtTab && ['pre','live','cierre','reglas'].includes(S.ui.rtTab)) ? S.ui.rtTab : 'pre';
+  $$('#rtTabs button').forEach(b => {
+    b.classList.toggle('on', b.dataset.rt === tab);
+    b.onclick = () => { S.ui.rtTab = b.dataset.rt; save(); renderSesion(); };
+  });
+  ['pre','live','cierre','reglas'].forEach(t => { const el = $('#rt-'+t); if(el) el.hidden = t !== tab; });
+
+  /* voz on/off */
+  const vozBtn = $('#rtVoz');
+  vozBtn.textContent = S.ui.rtVozOff ? '🔇 Voz' : '🔊 Voz';
+  vozBtn.onclick = () => { S.ui.rtVozOff = !S.ui.rtVozOff; save(); renderSesion();
+    if(!S.ui.rtVozOff) rtDi('Co-piloto en línea.'); };
+
+  /* ── PRE · sesgo, niveles, plan, compromisos ── */
+  const BIAS = [['alcista','↑ ALCISTA'],['bajista','↓ BAJISTA'],['neutral','↔ NEUTRAL']];
+  $('#rtBias').innerHTML = BIAS.map(([v,l]) =>
+    `<button type="button" data-v="${v}" class="${rt.bias===v?'on':''}">${l}</button>`).join('');
+  $$('#rtBias button').forEach(b => b.onclick = () => {
+    rt.bias = b.dataset.v; save();
+    rtDi('Sesgo confirmado: ' + b.dataset.v + '. Ajustamos el plan.');
+    renderSesion();
+  });
+  $('#rtBiasTag').textContent = rt.bias ? rt.bias.toUpperCase() : 'SIN DEFINIR';
+  const liga = (id, k, num) => { const el = $('#'+id); if(!el) return;
+    if(document.activeElement !== el) el.value = rt[k] ?? '';
+    el.onchange = () => { rt[k] = num ? (parseFloat(el.value)||0) : el.value; save(); }; };
+  liga('rtSesgo','sesgo'); liga('rtNiveles','niveles');
+  liga('rtMaxT','maxT',true); liga('rtStop','stop',true); liga('rtObj','obj',true);
+
+  const compOk = rt.comp.filter(Boolean).length;
+  $('#rtCompCnt').textContent = compOk + '/' + RUTINA_RULES.length + ' confirmados';
+  $('#rtCompList').innerHTML = RUTINA_RULES.map((t,i) => `
+    <button class="chk ${rt.comp[i]?'done':''}" data-comp="${i}">
+      <span class="box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M4 12l5 5L20 7"/></svg></span>
+      <span style="flex:1;min-width:0"><b>${esc(t)}</b></span>
+    </button>`).join('');
+  $$('#rtCompList .chk').forEach(b => b.onclick = () => {
+    const i = +b.dataset.comp;
+    rt.comp[i] = !rt.comp[i]; save();
+    if(rt.comp.every(Boolean)) rtDi('Todos los compromisos confirmados. Listos para activar la sesión.');
+    renderSesion();
+  });
+  $('#rtActivar').onclick = () => {
+    if(!rt.bias){ toast('Define el sesgo del día primero'); return; }
+    if(!rt.comp.every(Boolean)){ toast('Confirma todos los compromisos'); return; }
+    S.ui.rtTab = 'live'; save();
+    rtDi('Sesión activa. Apertura de Nueva York. Sin prisa, sin ruido.');
+    renderSesion();
+  };
+
+  /* ── checklists (el Score lee ses.pre: no se toca su forma) ── */
   $('#preList').innerHTML   = chkHTML(PRE_ITEMS_(), ses.pre, 'pre');
   $('#setupList').innerHTML = chkHTML(SETUP_ITEMS_(), ses.setup, 'setup');
   $('#postList').innerHTML  = chkHTML(POST_ITEMS_(), ses.post, 'post');
-  const done = [...ses.pre, ...ses.setup, ...ses.post].filter(Boolean).length;
-  $('#sesProgreso').textContent = done + ' / 13';
+  const done = [...ses.pre, ...ses.setup, ...ses.post].filter(Boolean).length + compOk;
+  $('#sesProgreso').textContent = done + ' / ' + (13 + RUTINA_RULES.length);
 
   const okAll = ses.setup.every(Boolean);
   $('#setupVerdict').innerHTML = `
@@ -4411,11 +4616,34 @@ function renderSesion(){
       </div>
     </div>`;
 
+  /* ── EN VIVO · gestión contra el plan del día ── */
   const dayTr = tradesByDay()[iso] || [];
   const g = gestionState(dayTr);
   $('#gestState').innerHTML = `<div class="g-banner ${g.cls}" style="margin-top:0"><span>${g.msg}</span></div>`;
+  const pnlHoy = dayTr.reduce((a,t)=>a+(t.pnl||0),0);
+  const contra = pnlHoy <= -(rt.stop||0) && rt.stop > 0 ? `<b style="color:var(--down)">STOP DE SESIÓN TOCADO — se cierra la plataforma.</b>`
+    : pnlHoy >= (rt.obj||0) && rt.obj > 0 ? `<b style="color:var(--up)">Objetivo del día cubierto. Día terminado.</b>`
+    : '';
+  $('#rtPlanVivo').innerHTML = `<div class="micro" style="margin-top:10px;color:var(--dim);line-height:1.7">
+    Plan del día: máx ${rt.maxT} trade${rt.maxT>1?'s':''} · stop ${fmt$(rt.stop)} · objetivo ${fmt$(rt.obj)}.
+    Llevas ${dayTr.length} trade${dayTr.length===1?'':'s'} y ${fmt$(pnlHoy,true)}. ${contra}</div>`;
 
-  $$('#v-sesion .chk').forEach(b=>{
+  /* ── CIERRE · resumen contra el plan ── */
+  const vios = [...new Set(dayTr.flatMap(t => violations(t, dayTr)))];
+  $('#rtResumen').innerHTML = dayTr.length ? `
+    <div class="grid g2" style="gap:10px">
+      <div class="panel kpi" style="margin:0"><div class="k-l">P&L DEL DÍA</div><div class="k-v ${pnlHoy>0?'up':pnlHoy<0?'down':''}">${fmt$(pnlHoy,true)}</div><div class="k-s">objetivo ${fmt$(rt.obj)}</div></div>
+      <div class="panel kpi" style="margin:0"><div class="k-l">TRADES</div><div class="k-v">${dayTr.length}</div><div class="k-s">de ${rt.maxT} máx</div></div>
+    </div>
+    <div class="micro" style="margin-top:10px;color:${vios.length?'var(--warn)':'var(--up)'}">
+      ${vios.length ? '⚠ ' + vios.join(' · ') : '✓ Sesión limpia: cero violaciones.'}</div>
+    ${rt.bias ? `<div class="micro" style="margin-top:6px;color:var(--faint)">Sesgo del día: ${rt.bias.toUpperCase()}${rt.sesgo ? ' — ' + esc(rt.sesgo) : ''}</div>` : ''}`
+    : `<p class="micro" style="color:var(--faint)">Sin trades hoy. Si el checklist no dio setup, ese fue el trade correcto.</p>`;
+
+  /* ── REGLAS (la sección vive aquí adentro ahora) ── */
+  renderReglas();
+
+  $$('#v-sesion .chk[data-k]').forEach(b=>{
     b.onclick = () => {
       const s = getSession(todayISO());
       const k = b.dataset.k, i = +b.dataset.i;
@@ -4728,11 +4956,96 @@ const reglasEval = a => {
 };
 
 
+/* ══════════ EL COACH · la memoria de tu trading ══════════
+   Lee todos los trades en vista y saca patrones accionables: por hora, por
+   lado, por día y por setup. Nada inventado — puro agregado de tu registro. */
+function renderCoach(){
+  const box = $('#coachBox'); if(!box) return;
+  const todos = Object.values(tradesByDay()).flat();
+  const MINC = 8;
+  if(todos.length < MINC){
+    box.innerHTML = `<div class="panel mt2"><div class="p-body micro" style="color:var(--faint)">
+      El Coach necesita al menos ${MINC} trades para leer tu operación. Llevas ${todos.length} — registra y aquí aparecen tus patrones.</div></div>`;
+    return;
+  }
+  const st = computeStats(todos);
+  const exp = st.n ? st.pnl / st.n : 0;
+  const pfTxt = isFinite(st.pf) ? (Math.round(st.pf*100)/100) : '∞';
+  const cerr = todos.filter(t => (t.pnl||0) !== 0);
+  const grp = (arr, keyF, labF) => { const m = {};
+    arr.forEach(t => { const k = keyF(t); if(k === null || k === undefined) return; (m[k] = m[k]||[]).push(t); });
+    return Object.keys(m).map(k => { const s = computeStats(m[k]);
+      return { key:k, label:labF(k), n:s.n, net:s.pnl, wr:s.wr, exp:s.n ? s.pnl/s.n : 0 }; }); };
+  const horaDe = t => { const h = parseInt((t.time||'').slice(0,2),10); return isNaN(h) ? null : h; };
+  const wdDe = t => { const [y,m,d] = (t.date||'').split('-').map(Number); if(!y) return null; return new Date(y,m-1,d).getDay(); };
+  const DIA = DIASL[idi()];
+  const porHora = grp(cerr, horaDe, k => String(k).padStart(2,'0')+':00').sort((a,b)=>+a.key-+b.key);
+  const porLado = grp(cerr, t => t.dir, k => k==='L' ? 'Longs' : 'Shorts');
+  const porDia  = grp(cerr, wdDe, k => DIA[+k]).sort((a,b)=>+a.key-+b.key);
+  const porSetup= grp(cerr, t => t.setupOk===false ? 'no' : 'si', k => k==='si' ? 'Setup completo' : 'Setup incompleto');
+
+  const ins = [];
+  if(exp > 0) ins.push({ tone:'up', t:`Tienes ventaja real: ${fmt$(exp,true)} por trade`,
+    d:`En ${st.n} trades tu Profit Factor es ${pfTxt} y tu win rate ${fmtPct(st.wr)}. Esto es exactamente lo que hay que repetir.` });
+  else ins.push({ tone:'down', t:`Aún sin ventaja: ${fmt$(exp,true)} por trade`,
+    d:`Profit Factor ${pfTxt} en ${st.n} trades. La meta es pasar de 1.0 — abajo se ve dónde se fuga el dinero.` });
+  const hrs = porHora.filter(r => r.n >= 3);
+  if(hrs.length >= 2){
+    const best = [...hrs].sort((a,b)=>b.exp-a.exp)[0], worst = [...hrs].sort((a,b)=>a.exp-b.exp)[0];
+    if(best.key !== worst.key && best.exp > 0 && worst.exp < 0)
+      ins.push({ tone:'tip', t:`Tu mejor hora es ${best.label}`,
+        d:`A las ${best.label} tu expectancy es ${fmt$(best.exp,true)}/trade; a las ${worst.label} es ${fmt$(worst.exp,true)} — ahí sueles perder.` });
+  }
+  const lados = porLado.filter(r => r.n >= 4);
+  if(lados.length === 2){
+    const [a,b] = [...lados].sort((x,y)=>y.exp-x.exp);
+    if(a.exp > 0 && (a.exp - b.exp) > 12)
+      ins.push({ tone:'tip', t:`Ganas más en ${a.label.toLowerCase()} que en ${b.label.toLowerCase()}`,
+        d:`${a.label}: ${fmtPct(a.wr)} win, ${fmt$(a.exp,true)}/trade. ${b.label}: ${fmtPct(b.wr)} win, ${fmt$(b.exp,true)}/trade.` });
+  }
+  const setInc = porSetup.find(r => r.key === 'no');
+  if(setInc && setInc.n >= 3 && setInc.net < 0)
+    ins.push({ tone:'down', t:`Los trades sin setup completo te cuestan ${fmt$(Math.abs(setInc.net))}`,
+      d:`${setInc.n} trades con checklist incompleto y ${fmtPct(setInc.wr)} de acierto. La regla de "todas o no hay trade" existe por esto.` });
+  const dias = porDia.filter(r => r.n >= 3);
+  if(dias.length >= 3){
+    const w = [...dias].sort((a,b)=>a.net-b.net)[0];
+    if(w.net < 0) ins.push({ tone:'tip', t:`Cuidado los ${w.label.toLowerCase()}`,
+      d:`Acumulas ${fmt$(w.net,true)} en ${w.n} trades (${fmtPct(w.wr)} win) ese día de la semana.` });
+  }
+
+  const desglose = (titulo, rows) => {
+    if(!rows.length) return '';
+    const max = Math.max(...rows.map(r => Math.abs(r.net)), 1);
+    return `<div class="panel"><div class="p-head"><h3>${titulo}</h3></div><div class="p-body">` +
+      rows.map(r => `<div style="margin-bottom:12px">
+        <div style="display:flex;justify-content:space-between;gap:10px;font-size:12.5px"><span>${esc(r.label)}</span><b class="mono ${r.net>0?'up':r.net<0?'down':''}">${fmt$(r.net,true)}</b></div>
+        <div class="bar" style="margin-top:5px"><i style="width:${Math.round(Math.abs(r.net)/max*100)}%;background:${r.net>=0?'var(--up)':'var(--down)'}"></i></div>
+        <div class="micro" style="margin-top:3px;color:var(--faint)">${r.n} trades · ${fmtPct(r.wr)} win · exp ${fmt$(r.exp,true)}</div>
+      </div>`).join('') + `</div></div>`;
+  };
+
+  box.innerHTML = `
+    <div style="display:flex;align-items:center;gap:12px;margin:26px 0 12px">
+      <span class="micro">Coach · la memoria de tu trading</span>
+      <span class="micro" style="margin-left:auto;color:var(--faint)">${st.n} trades analizados</span>
+    </div>
+    <div class="panel"><div class="p-body" style="padding-top:4px;padding-bottom:4px">` +
+      ins.map(i => `<div style="display:flex;gap:12px;padding:11px 0;border-bottom:1px solid var(--line-soft)">
+        <span style="flex:none;width:8px;height:8px;border-radius:50%;margin-top:6px;background:${i.tone==='up'?'var(--up)':i.tone==='down'?'var(--down)':'var(--accent)'}"></span>
+        <div style="min-width:0"><b style="font-size:13px">${i.t}</b>
+          <p class="micro" style="margin-top:3px;color:var(--dim);line-height:1.6">${i.d}</p></div>
+      </div>`).join('') + `</div></div>
+    <div class="grid g2 mt">${desglose('Por hora del día', porHora)}${desglose('Por lado', porLado)}</div>
+    <div class="grid g2 mt">${desglose('Por día de la semana', porDia)}${desglose('Por setup', porSetup)}</div>`;
+}
+
 function renderJournal(){
   /* El Proceso (fases) vive en Progreso; el calendario y el registro, aquí. */
   const diasTodos = tradesByDay(idsTodas());   // para violaciones: el día completo
   renderPicker($('#pickJournal'));
   renderCal();
+  renderCoach();
   const byDay = tradesByDay();
   const now = new Date(); const ym = now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
   const days = Object.keys(byDay).sort().reverse().filter(d => jRange==='todo' || d.startsWith(ym));
@@ -5427,52 +5740,30 @@ function renderEstudio(){
      quedó marcado como estudiado. El primero siempre está abierto. */
   const candado = `<svg viewBox="0 0 24 24"><rect x="4.5" y="10.5" width="15" height="10" rx="2"/><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"/></svg>`;
 
-  $('#mods').innerHTML = `<div class="bc-wrap">
-    <button class="rail-arrow izq" id="bcPrev" aria-label="Anterior">‹</button>
-    <div class="bc-rail" id="bcRail" role="list" tabindex="0" aria-label="Módulos del bootcamp">` +
+  /* Estilo academia: los documentos también son un módulo con sus lecciones en
+     filas — el carrusel horizontal escondía dónde ibas. */
+  const hechosDocs = DOCS.filter(m => S.study.lessons[m.id]).length;
+  $('#mods').innerHTML = `<div class="tj-mod">
+    <div class="tj-h" style="cursor:default">
+      <span class="rom">✦</span>
+      <span class="tt"><b>${tr('cs.docs')}</b><span>${tr('cs.docsD')}</span></span>
+      <span class="cnt${hechosDocs===DOCS.length?' full':''}">${hechosDocs}/${DOCS.length}</span>
+    </div>
+    <div class="tj-body">` +
     DOCS.map((m,i)=>{
       const on = !!S.study.lessons[m.id];
       const abierto = i === 0 || !!S.study.lessons[DOCS[i-1].id];
       const previo = i > 0 ? DOCS[i-1] : null;
-      return `<div class="bc-card${abierto ? (on?' hecho':'') : ' bloq'}" role="listitem"
-                   aria-disabled="${!abierto}">
-        <span class="paso">${String(i+1).padStart(2,'0')}</span>
-        <span class="n">${loc(m.n)} · ${m.secs.length} ${tr('cs.secciones')}</span>
-        <h3>${esc(loc(m.t))}</h3>
-        <p>${esc(loc(m.d))}</p>
+      return `<div class="tj-dia${on?' visto':''}${abierto?'':' bloq'}">
+        <span class="num">${String(i+1).padStart(2,'0')}</span>
+        <span class="info"><b>${esc(loc(m.t))}</b><span>${esc(loc(m.d))} · ${m.secs.length} ${tr('cs.secciones')}</span></span>
         ${abierto
-          ? `<div class="foot">
-               <button class="btn primary" data-doc="${m.id}">${on?tr('cs.repasar'):tr('cs.leer')}</button>
-               <span class="bc-est ${on?'si':'no'}">${on?'✓ '+tr('cs.estudiado').toUpperCase():tr('cs.pendiente').toUpperCase()}</span>
-             </div>`
-          : `<div class="bc-lock">${candado}<span>${tr('cs.termina')} ${esc(loc(previo.n))} ${tr('cs.paraAbrir')}</span></div>`}
+          ? `<button class="btn sm ${on?'':'primary'}" data-doc="${m.id}">${on?tr('cs.repasar'):tr('cs.leer')}</button>`
+          : `<span class="cand">${candado}${tr('cs.termina')} ${esc(loc(previo.n))} ${tr('cs.paraAbrir')}</span>`}
       </div>`;
-    }).join('') + `</div>
-    <button class="rail-arrow der" id="bcNext" aria-label="Siguiente">›</button>
-  </div>`;
+    }).join('') + `</div></div>`;
 
   $$('#mods [data-doc]').forEach(b=> b.onclick = ()=>{ docAbierto = b.dataset.doc; renderEstudio(); $('#content').scrollTop = 0; });
-
-  const rail = $('#bcRail');
-  const paso = dir => { const c = rail.querySelector('.bc-card');
-    rail.scrollLeft += dir * ((c ? c.offsetWidth : 380) + 16); };
-  $('#bcPrev').onclick = ()=> paso(-1);
-  $('#bcNext').onclick = ()=> paso(1);
-  rail.onkeydown = e => {
-    if(e.key==='ArrowRight'){ e.preventDefault(); paso(1); }
-    if(e.key==='ArrowLeft'){ e.preventDefault(); paso(-1); }
-  };
-  rail.addEventListener('wheel', e=>{
-    if(Math.abs(e.deltaY) <= Math.abs(e.deltaX)) return;
-    e.preventDefault(); rail.scrollLeft += e.deltaY;
-  }, { passive:false });
-
-  /* deja a la vista el primero sin terminar: donde se quedó la mesa */
-  const siguiente = DOCS.findIndex(m => !S.study.lessons[m.id]);
-  if(siguiente > 0) requestAnimationFrame(()=>{
-    const c = rail.children[siguiente];
-    if(c) rail.scrollLeft = c.offsetLeft - 4;
-  });
 }
 
 /* El curso se abre día por día: el siguiente se destraba al marcar el anterior.
@@ -5518,14 +5809,15 @@ function renderTJR(){
     const hechos = m.dias.filter(d => p['d'+d[0]]).length;
     const abierto = S.ui.tjrAbierto === i;
     const cerrado = !tjrAbierto(m.dias[0][0]);
+    /* Estilo academia: el módulo es una tarjeta abierta con sus lecciones a la
+       vista — nada de acordeones que esconden dónde vas. */
     return `<div class="tj-mod${cerrado?' cerrado':''}">
-      <button type="button" class="tj-h" data-mod="${i}" aria-expanded="${abierto}" aria-controls="tjb${i}">
+      <div class="tj-h" style="cursor:default">
         <span class="rom">${m.r}</span>
-        <span class="tt"><b>${esc(loc(m.t))}</b><span>${esc(loc(m.d))}</span></span>
-        <span class="cnt">${hechos}/${m.dias.length}</span>
-        <span class="car">▼</span>
-      </button>
-      <div class="tj-body" id="tjb${i}" ${abierto?'':'hidden'}>
+        <span class="tt"><b>${tr('cs.modulo')} ${i+1} · ${esc(loc(m.t))}</b><span>${esc(loc(m.d))}</span></span>
+        <span class="cnt${hechos===m.dias.length?' full':''}">${hechos}/${m.dias.length}</span>
+      </div>
+      <div class="tj-body" id="tjb${i}">
         ${m.dias.map(([n,t,v,r])=>{
           const on = tjrVisto(n), libre = tjrAbierto(n);
           return `<div class="tj-dia${on?' visto':''}${libre?'':' bloq'}">
@@ -5546,11 +5838,6 @@ function renderTJR(){
     </div>`;
   }).join('');
 
-  $$('#tjrMods .tj-h').forEach(b => b.onclick = ()=>{
-    const i = +b.dataset.mod;
-    S.ui.tjrAbierto = (S.ui.tjrAbierto === i) ? null : i;
-    save(); renderTJR();
-  });
   $$('#tjrMods .tj-chk[data-dia]').forEach(c => {
     const marcar = ()=>{
       const k = 'd' + c.dataset.dia;
@@ -5728,33 +6015,68 @@ $('#pSave').addEventListener('click', ()=>{
    práctica sólo piden un balance de arranque. Cada cuenta que se da de alta
    queda etiquetada con quién la creó (S.session.user), para que en El
    negocio cada socio vea las suyas, no las de todos revueltas. */
-let ncTipoActual = 'prop';
-function ncPintaTipo(){
-  $$('#ncTipo button').forEach(b => b.classList.toggle('on', b.dataset.t === ncTipoActual));
-  $('#ncCamposProp').hidden = ncTipoActual !== 'prop';
-  $('#ncCamposSimple').hidden = ncTipoActual === 'prop';
-  if(ncTipoActual !== 'prop'){
-    $('#ncStartLbl').textContent = ncTipoActual === 'live' ? 'Capital inicial USD' : 'Balance de práctica USD';
-    $('#ncNota').textContent = ncTipoActual === 'live'
+/* Alta de cuenta a puros chips, como la app vieja: firma → plan → tamaño →
+   fase, y sólo aparece lo que aplica. Tradeify trae el catálogo verificado;
+   las demás firmas se dan de alta con su tamaño a mano (la app las marca
+   PLAN NO VERIFICADO y no les calcula drawdown, que es lo honesto). */
+const NC_FIRMAS = ['Tradeify','Apex','Lucid Trading','TakeProfitTrader','MyFundedFutures','Otra'];
+const nc = { tipo:'prop', firm:'Tradeify', plan:null, size:null, fase:'eval' };
+function ncChips(cont, lista, activo, onPick, fmt){
+  cont.innerHTML = lista.map(v =>
+    `<button type="button" data-v="${esc(String(v))}" class="${String(v)===String(activo)?'on':''}">${fmt?fmt(v):esc(String(v))}</button>`).join('');
+  cont.querySelectorAll('button').forEach(b => b.onclick = () => onPick(b.dataset.v));
+}
+function ncPinta(){
+  $$('#ncTipo button').forEach(b => b.classList.toggle('on', b.dataset.t === nc.tipo));
+  const esProp = nc.tipo === 'prop';
+  const conCatalogo = esProp && FIRM_CATALOG[nc.firm];
+  $('#ncFirmZona').hidden = !esProp;
+  $('#ncPlanZona').hidden = !conCatalogo;
+  $('#ncFaseZona').hidden = !esProp;
+  $('#ncCamposSimple').hidden = !!conCatalogo;
+
+  if(esProp){
+    ncChips($('#ncFirm'), NC_FIRMAS, nc.firm, v => {
+      nc.firm = v;
+      const planes = FIRM_CATALOG[v] ? Object.keys(FIRM_CATALOG[v].plans) : [];
+      nc.plan = planes[0] || null;
+      nc.size = nc.plan ? Object.keys(FIRM_CATALOG[v].plans[nc.plan].sizes)[0] : null;
+      ncPinta();
+    });
+  }
+  if(conCatalogo){
+    const planes = Object.keys(FIRM_CATALOG[nc.firm].plans);
+    if(!planes.includes(nc.plan)) nc.plan = planes[0];
+    ncChips($('#ncPlanChips'), planes, nc.plan, v => {
+      nc.plan = v;
+      nc.size = Object.keys(FIRM_CATALOG[nc.firm].plans[v].sizes)[0];
+      ncPinta();
+    });
+    const tallas = Object.keys(FIRM_CATALOG[nc.firm].plans[nc.plan].sizes);
+    if(!tallas.includes(String(nc.size))) nc.size = tallas[0];
+    ncChips($('#ncSizeChips'), tallas, nc.size, v => { nc.size = v; ncPinta(); }, t => fmt$(+t));
+  } else {
+    $('#ncStartLbl').textContent = nc.tipo === 'live' ? 'Capital inicial USD'
+      : nc.tipo === 'sim' ? 'Balance de práctica USD' : 'Tamaño de la cuenta USD';
+    $('#ncNota').textContent = nc.tipo === 'live'
       ? 'Capital tuyo, sin fases ni firma. Cuenta como dinero real en El negocio y en Objetivos del plan.'
-      : 'Dinero de práctica: no cuenta en El negocio, en Panorama ni en Objetivos del plan. Es sólo para llevar el journal.';
+      : nc.tipo === 'sim'
+      ? 'Dinero de práctica: no cuenta en El negocio, en Panorama ni en Objetivos del plan. Es sólo para llevar el journal.'
+      : 'Esa firma no está en el catálogo verificado: la cuenta se registra, pero sin drawdown ni colchón calculados.';
+  }
+  if(esProp){
+    ncChips($('#ncFase'), Object.keys(FASES), nc.fase, v => { nc.fase = v; ncPinta(); }, k => FASES[k].t);
   }
 }
 function ncAbrir(){
-  ncTipoActual = 'prop'; ncPintaTipo();
-  $('#ncAlias').value = ''; $('#ncStart').value = ''; $('#ncErr').textContent = '';
+  nc.tipo = 'prop'; nc.firm = 'Tradeify'; nc.fase = 'eval';
   const planes = Object.keys(FIRM_CATALOG.Tradeify.plans);
-  $('#ncPlan').innerHTML = planes.map(p=>`<option>${esc(p)}</option>`).join('');
-  ncPintaSizes();
+  nc.plan = planes[0]; nc.size = Object.keys(FIRM_CATALOG.Tradeify.plans[nc.plan].sizes)[0];
+  $('#ncAlias').value = ''; $('#ncStart').value = ''; $('#ncErr').textContent = '';
+  ncPinta();
   openOv('ovNuevaCuenta');
 }
-function ncPintaSizes(){
-  const plan = $('#ncPlan').value;
-  const tallas = Object.keys((FIRM_CATALOG.Tradeify.plans[plan]||{}).sizes||{});
-  $('#ncSize').innerHTML = tallas.map(t=>`<option value="${t}">${fmt$(+t)}</option>`).join('');
-}
-$$('#ncTipo button').forEach(b => b.onclick = () => { ncTipoActual = b.dataset.t; ncPintaTipo(); });
-$('#ncPlan').addEventListener('change', ncPintaSizes);
+$$('#ncTipo button').forEach(b => b.onclick = () => { nc.tipo = b.dataset.t; ncPinta(); });
 $('#ncSave').addEventListener('click', ()=>{
   /* El nombre lo pone quien la crea — sin autonombrar "T3" en silencio, que
      luego nadie sabe cuál cuenta es cuál. */
@@ -5763,13 +6085,16 @@ $('#ncSave').addEventListener('click', ()=>{
   const base = { id:'ac_'+uid(), alias, orden:(S.accounts.length+1),
                  desde:todayISO(), estado:'activa', owner:S.session.user };
   let cuenta;
-  if(ncTipoActual === 'prop'){
-    const plan = $('#ncPlan').value, size = parseFloat($('#ncSize').value)||0;
-    cuenta = { ...base, tipo:'prop', firm:'Tradeify', plan, size, start:size, fase:'eval' };
+  if(nc.tipo === 'prop' && FIRM_CATALOG[nc.firm]){
+    cuenta = { ...base, tipo:'prop', firm:nc.firm, plan:nc.plan, size:+nc.size, start:+nc.size, fase:nc.fase };
+  } else if(nc.tipo === 'prop'){
+    const cap = parseFloat($('#ncStart').value);
+    if(!isFinite(cap) || cap <= 0){ $('#ncErr').textContent = 'Escribe el tamaño de la cuenta, mayor a cero.'; return; }
+    cuenta = { ...base, tipo:'prop', firm:nc.firm, plan:'—', size:cap, start:cap, fase:nc.fase };
   } else {
     const cap = parseFloat($('#ncStart').value);
     if(!isFinite(cap) || cap <= 0){ $('#ncErr').textContent = 'Escribe un balance válido, mayor a cero.'; return; }
-    cuenta = { ...base, tipo:ncTipoActual, firm:'—', plan:'—', size:cap, start:cap, fase:'payout' };
+    cuenta = { ...base, tipo:nc.tipo, firm:'—', plan:'—', size:cap, start:cap, fase:'payout' };
   }
   S.accounts.push(cuenta);
   save(); closeOv(); renderAcctMgr(); renderDashboard(); renderAgentes();
@@ -6330,6 +6655,17 @@ function cloudPaint(){
      si sus trades estaban llegando a los demás o se quedaban en su equipo. */
   [$('#cloudPill'), $('#cloudPillTop')].forEach(p => p && pintaPill(p));
 }
+/* El pill se pica y te dice POR QUÉ estás trabajando solo y cómo arreglarlo.
+   La nube ya está viva (los tres usuarios existen en Supabase): el único motivo
+   común de "trabajando solo" es haber entrado con la clave local 1234 en vez de
+   la contraseña de la nube de tu hoja. */
+['cloudPill','cloudPillTop'].forEach(id => {
+  const p = document.getElementById(id);
+  if(p){ p.style.cursor = 'pointer'; p.onclick = () => {
+    if(cloudOn() && cloudTok && !cloudErr){ toast('La mesa está sincronizada: lo que hagas le llega a tu socio.'); return; }
+    toast('Estás en modo local. Cierra sesión y vuelve a entrar con tu contraseña de la NUBE (la de tu hoja), no con la clave local.');
+  }; }
+});
 function pintaPill(p){
   if(!p) return;
   /* Los 10 invitados nunca usan la nube — cada uno trabaja aislado a propósito,
@@ -7338,7 +7674,6 @@ function render(view){
   else if(view==='progreso') renderProgreso();
   else if(view==='journal'){ renderDashboard(); renderJournal(); }
   else if(view==='estudio') renderEstudio();
-  else if(view==='reglas') renderReglas();
   else if(view==='posiciones'){ renderPosiciones(); renderCalc(); }
   updateBadges();
 }
