@@ -1609,14 +1609,6 @@ stop[stop-color="#9BC0DC"]{stop-color:var(--txt)}
                   <div id="setupVerdict"></div>
                 </div>
               </div>
-              <div class="panel mt">
-                <div class="p-head"><h3 data-i18n="se.tesis">Tesis del día</h3><span class="micro" id="cloudPill" style="color:var(--faint)">NUBE · …</span></div>
-                <div class="p-body">
-                  <p style="font-size:12.5px;color:var(--dim);line-height:1.7;margin:0 0 12px" data-i18n="se.tesisD">Escribes por qué vas a entrar antes de entrar, y después marcas si la tomaste. Eso separa una operación de una corazonada.</p>
-                  <div id="tixList"></div>
-                  <button class="btn primary mt" id="btnTix" data-i18n="ap.nueva">+ Nueva tesis</button>
-                </div>
-              </div>
               <button class="btn primary mt" id="rtActivar" style="width:100%">Activar sesión →</button>
             </div>
           </div>
@@ -1649,17 +1641,11 @@ stop[stop-color="#9BC0DC"]{stop-color:var(--txt)}
         </div>
 
         <div id="rt-cierre" class="mt" hidden>
-          <div class="grid g2">
-            <div class="panel">
-              <div class="p-head"><h3 data-i18n="se.post">Post-market</h3><span class="micro" data-i18n="se.cierre">Cierre operativo</span></div>
-              <div class="p-body">
-                <div id="postList"></div>
-                <button class="btn mt" id="btnReport" data-i18n="se.generarRep">Escribir el cierre del día</button>
-              </div>
-            </div>
-            <div class="panel">
-              <div class="p-head"><h3>Resumen de la sesión</h3><span class="micro">contra tu plan</span></div>
-              <div class="p-body" id="rtResumen"></div>
+          <div class="panel">
+            <div class="p-head"><h3>Resumen de la sesión</h3><span class="micro">contra tu plan</span></div>
+            <div class="p-body">
+              <div id="rtResumen"></div>
+              <button class="btn mt" id="btnReport" data-i18n="se.generarRep">Escribir el cierre del día</button>
             </div>
           </div>
         </div>
@@ -4734,9 +4720,8 @@ function renderSesion(){
   /* ── checklists (el Score lee ses.pre: no se toca su forma) ── */
   $('#preList').innerHTML   = chkHTML(PRE_ITEMS_(), ses.pre, 'pre');
   $('#setupList').innerHTML = chkHTML(SETUP_ITEMS_(), ses.setup, 'setup');
-  $('#postList').innerHTML  = chkHTML(POST_ITEMS_(), ses.post, 'post');
-  const done = [...ses.pre, ...ses.setup, ...ses.post].filter(Boolean).length;
-  $('#sesProgreso').textContent = done + ' / 13';
+  const done = [...ses.pre, ...ses.setup].filter(Boolean).length;
+  $('#sesProgreso').textContent = done + ' / 10';
 
   const okAll = ses.setup.every(Boolean);
   $('#setupVerdict').innerHTML = `
@@ -4788,16 +4773,22 @@ function renderSesion(){
   clearInterval(obTimerInt);
   if(S.ui.rtTab === 'live'){ obTick(); obTimerInt = setInterval(obTick, 1000); }
 
-  /* ── CIERRE · resumen contra el plan ── */
+  /* ── CIERRE · el resumen de la sesión contra el plan ── */
   const vios = [...new Set(dayTr.flatMap(t => violations(t, dayTr)))];
+  const wHoy = dayTr.filter(t=>(t.pnl||0)>0).length, lHoy = dayTr.filter(t=>(t.pnl||0)<0).length;
+  const durMs = rt.startedAt ? Date.now() - rt.startedAt : 0;
+  const durTxt = durMs ? (Math.floor(durMs/3600000) ? Math.floor(durMs/3600000)+'h ' : '') + Math.floor((durMs%3600000)/60000) + 'm' : '—';
   $('#rtResumen').innerHTML = dayTr.length ? `
-    <div class="grid g2" style="gap:10px">
-      <div class="panel kpi" style="margin:0"><div class="k-l">P&L DEL DÍA</div><div class="k-v ${pnlHoy>0?'up':pnlHoy<0?'down':''}">${fmt$(pnlHoy,true)}</div><div class="k-s">objetivo ${fmt$(rt.obj)}</div></div>
-      <div class="panel kpi" style="margin:0"><div class="k-l">TRADES</div><div class="k-v">${dayTr.length}</div><div class="k-s">de ${rt.maxT} máx</div></div>
+    <div class="grid g4" style="gap:10px">
+      <div class="panel kpi" style="margin:0"><div class="k-l">P&L DE LA SESIÓN</div><div class="k-v ${pnlHoy>0?'up':pnlHoy<0?'down':''}">${fmt$(pnlHoy,true)}</div><div class="k-s">${objCubierto?'objetivo cubierto ✓':'objetivo '+fmt$(rt.obj)}</div></div>
+      <div class="panel kpi" style="margin:0"><div class="k-l">DISPAROS</div><div class="k-v">${dayTr.length}<span style="font-size:14px;color:var(--faint)"> / ${rt.maxT}</span></div><div class="k-s">${wHoy}W · ${lHoy}L</div></div>
+      <div class="panel kpi" style="margin:0"><div class="k-l">DURACIÓN</div><div class="k-v">${durTxt}</div><div class="k-s">dentro de la sesión</div></div>
+      <div class="panel kpi" style="margin:0"><div class="k-l">STOP</div><div class="k-v ${stopTocado?'down':'up'}">${stopTocado?'TOCADO':'RESPETADO'}</div><div class="k-s">límite ${fmt$(rt.stop)}</div></div>
     </div>
-    <div class="micro" style="margin-top:10px;color:${vios.length?'var(--warn)':'var(--up)'}">
+    <div class="micro" style="margin-top:12px;color:${vios.length?'var(--warn)':'var(--up)'}">
       ${vios.length ? '⚠ ' + vios.join(' · ') : '✓ Sesión limpia: cero violaciones.'}</div>
-    ${rt.bias ? `<div class="micro" style="margin-top:6px;color:var(--faint)">Sesgo del día: ${rt.bias.toUpperCase()}${rt.sesgo ? ' — ' + esc(rt.sesgo) : ''}</div>` : ''}`
+    ${rt.bias ? `<div class="micro" style="margin-top:6px;color:var(--faint)">Sesgo del día: ${rt.bias.toUpperCase()}${rt.sesgo ? ' — ' + esc(rt.sesgo) : ''}</div>` : ''}
+    ${rt.niveles ? `<div class="micro" style="margin-top:4px;color:var(--faint)">Niveles: ${esc(rt.niveles)}</div>` : ''}`
     : `<p class="micro" style="color:var(--faint)">Sin trades hoy. Si el checklist no dio setup, ese fue el trade correcto.</p>`;
 
   /* ── REGLAS (la sección vive aquí adentro ahora) ── */
@@ -6676,6 +6667,9 @@ function tixEstado(t){
   return ['ABIERTA','run'];
 }
 function renderTix(){
+  /* La tesis del día salió de la Rutina: sin su panel no hay dónde pintar.
+     El registro de tesis (S.tickets) queda intacto por si regresa. */
+  if(!$('#tixList')){ cloudPaint(); return; }
   const hoy = todayISO();
   const abierta = t => t.estado === 'abierta' || !t.estado;
 
@@ -6731,7 +6725,8 @@ function renderTix(){
   });
   cloudPaint();
 }
-$('#btnTix').addEventListener('click', ()=>{
+const _btnTix = $('#btnTix');
+if(_btnTix) _btnTix.addEventListener('click', ()=>{
   $('#xFecha').value = todayISO();
   $('#xTesis').value = '';
   openOv('ovTix');
