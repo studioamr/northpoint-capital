@@ -1,12 +1,14 @@
 # NORTHPOINT · La carrera (liga mensual de la comunidad)
 
-La sección **Progreso → La carrera** ya está en la app: cualquiera crea una
-carrera (o se une con un código) y comparte su progreso del mes — P&L,
-sesiones y win rate. La temporada es el mes en curso y se reinicia sola.
+**Estado: RETIRADA de la app (29-jul-2026).** La sección se quitó de El
+negocio ese mismo día por decisión de André; en su lugar, El camino a payout
+muestra el proceso de cada socio (un punto por persona sobre la banda). La
+tabla `northpoint_carrera` **sigue viva en Supabase** con sus políticas —
+si algún día vuelve la liga, es reconectar la UI, no rehacer el backend.
+El resto de este documento queda como referencia de cómo funcionaba.
 
-**Estado: CONECTADA (29-jul-2026).** La tabla ya existe en Supabase, las
-políticas están puestas y se probó end-to-end: la app sube la fila del
-participante y lee la liga completa. No hay nada pendiente.
+Antes de retirarla estaba conectada y probada end-to-end: la app subía la
+fila del participante y leía la liga completa.
 
 > En la misma corrida se actualizó la política de `northpoint_estado` a los
 > **tres** socios (salió `goyo@northpoint.mx` de la lista). El usuario de

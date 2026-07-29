@@ -771,17 +771,6 @@ body.locked .app{visibility:hidden;pointer-events:none}
   transition:border-color .15s,color .15s}
 .chips button:hover{border-color:var(--accent)}
 .chips button.on{color:var(--txt);border-color:var(--accent);background:var(--glass-2);font-weight:600}
-/* ── La carrera: liga mensual de la comunidad ── */
-.car-row{display:flex;align-items:center;gap:12px;padding:10px 14px;border:1px solid var(--line);
-  border-radius:11px;background:var(--panel-bg);margin-bottom:8px}
-.car-row.mia{border-color:var(--accent)}
-.car-row .pos{font-family:var(--mono);font-size:11px;color:var(--faint);min-width:16px;text-align:right}
-.car-row .ava{width:30px;height:30px;border-radius:50%;background:var(--glass-2);border:1px solid var(--line);
-  display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:12px;color:var(--txt);flex:none}
-.car-row .nom{font-size:13px;font-weight:600;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.car-row .pnl{margin-left:auto;font-family:var(--mono);font-size:13px;white-space:nowrap}
-.car-row .met{font-family:var(--mono);font-size:10px;color:var(--faint);white-space:nowrap}
-/* ── la banda de ascenso (El negocio · camino a payout) ── */
 .climb{position:relative;height:46px;border-radius:12px;overflow:hidden;border:1px solid var(--line);background:var(--w03)}
 .climb .climb-fill{position:absolute;inset:0 auto 0 0;border-radius:12px;
   background:linear-gradient(90deg, rgba(155,192,220,.06), rgba(155,192,220,.16) 60%, rgba(87,199,155,.22));
@@ -1543,8 +1532,8 @@ stop[stop-color="#9BC0DC"]{stop-color:var(--txt)}
           <canvas id="agOficina" width="1800" height="1160" aria-label="La oficina de Northpoint — piso 88, Nueva York"></canvas>
         </div>
 
-        <!-- El tablero del negocio: el ascenso a payout, los objetivos del
-             plan, la caja y la carrera — todo el progreso vive aquí. -->
+        <!-- El tablero del negocio: el camino a payout con el proceso de
+             cada socio sobre la banda. -->
         <div class="panel mt2" id="pgCamino">
           <div class="p-head"><h3 data-i18n="pg.caminoT">El camino a payout</h3><span class="micro" id="pgCaminoSub"></span></div>
           <div class="p-body">
@@ -1554,15 +1543,6 @@ stop[stop-color="#9BC0DC"]{stop-color:var(--txt)}
           </div>
         </div>
 
-        <!-- La caja y los objetivos del plan viven en Mi dinero:
-             son dinero y metas de dinero, no operación del negocio. -->
-        <div class="mt2">
-          <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px;flex-wrap:wrap">
-            <span class="micro">La carrera</span>
-            <span class="micro" id="carSub" style="margin-left:auto;color:var(--faint)"></span>
-          </div>
-          <div id="carreraBox"></div>
-        </div>
       </section>
 
       <section class="view" id="v-dashboard">
@@ -2066,8 +2046,6 @@ stop[stop-color="#9BC0DC"]{stop-color:var(--txt)}
     </div>
     <div class="micro" style="margin:16px 0 6px">Sus stats en la mesa</div>
     <div id="stChamba" class="dia-ia" style="white-space:normal"></div>
-    <div class="micro" style="margin:16px 0 4px">Sus cargos en Northpoint</div>
-    <div id="stTareas"></div>
     <div class="f-full" style="margin-top:14px">
       <label>Nota personalizable (sale en su tarjeta)</label>
       <input id="stNota" maxlength="90" placeholder="ej. armando el reporte de la semana">
@@ -4083,11 +4061,36 @@ function renderCamino(){
   else if(hA.hito != null && hA.hito > atras.start)
     dentro = Math.max(0, Math.min(1, (hA.balance - atras.start) / (hA.hito - atras.start)));
   const posPct = ((idxActual + dentro) / orden.length) * 100;
-  const inicial = ((USERS[S.session.user] || {}).nombre || 'N').charAt(0).toUpperCase();
+
+  /* El proceso de los demás: un punto por socio sobre la banda, calculado de
+     SUS cuentas (a.owner), sin depender del picker. Sin cuentas, sin punto. */
+  const puntoDe = uid => {
+    const suyas = S.accounts.filter(a => a.owner === uid && !esLive(a) && !esSim(a) && reglasDe(a));
+    if(!suyas.length) return null;
+    const idx = Math.min(...suyas.map(idxDe));
+    const atrasU = suyas.filter(a => idxDe(a) === idx)[0];
+    const hU = saludDe(atrasU);
+    let dU = 0;
+    if(atrasU.fase === 'payout') dU = 1;
+    else if(hU.hito != null && hU.hito > atrasU.start)
+      dU = Math.max(0, Math.min(1, (hU.balance - atrasU.start) / (hU.hito - atrasU.start)));
+    return ((idx + dU) / orden.length) * 100;
+  };
+  const puntos = SOCIOS_REALES
+    .map(u => ({ nom: USERS[u].nombre, pos: puntoDe(u) }))
+    .filter(d => d.pos != null).sort((a,b) => a.pos - b.pos);
+  /* dos socios en el mismo tramo no se enciman: se alternan arriba y abajo */
+  let prevPos = -99, alt = 0;
+  const puntosHTML = puntos.map(d => {
+    alt = (d.pos - prevPos < 6) ? alt + 1 : 0; prevPos = d.pos;
+    const top = alt === 0 ? '50%' : (alt % 2 ? '32%' : '68%');
+    return `<span class="dot" title="${esc(d.nom)} · ${Math.round(d.pos)}%"
+      style="left:${Math.min(96.5, Math.max(3.5, d.pos))}%;top:${top}">${esc(d.nom.charAt(0).toUpperCase())}</span>`;
+  }).join('');
   $('#pgClimb').innerHTML = `
     <i class="climb-fill" style="width:${posPct}%"></i>
     <div class="zonas"><span>${FASES.eval.t.toUpperCase()}</span><span>${FASES.buffer.t.toUpperCase()}</span><span>${FASES.payout.t.toUpperCase()}</span></div>
-    <span class="dot" style="left:${Math.min(96.5, Math.max(3.5, posPct))}%">${esc(inicial)}</span>`;
+    ${puntosHTML}`;
   const a0 = sel[0], Re = reglasEval(a0), Rf = reglasFondeadas(a0);
   const subs = {
     eval:   Re ? bi('llegar a ','reach ') + fmt$(a0.size + Re.target) : '',
@@ -4139,125 +4142,6 @@ function renderCamino(){
         : `<b class="mono" style="font-size:12px;color:var(--dim)">${bi('faltan','needs')} ${fmt$(meta - h.balance)}</b>`}
     </div>`;
   }).join('');
-}
-
-/* ══════════ LA CARRERA · la liga mensual de la comunidad ══════════
-   Cualquiera con la app se une con un código y comparte su progreso del mes:
-   P&L, sesiones y win rate. Vive en su propia tabla de Supabase, abierta a
-   la comunidad (no toca la mesa privada de los socios). Si la tabla no
-   existe todavía, la carrera corre en modo local — docs/CARRERA.md trae el
-   SQL de 2 minutos que la vuelve comunitaria. */
-let carreraUltimoPush = 0;
-function carreraStats(){
-  const mes = todayISO().slice(0,7);
-  const byDay = tradesByDay(idsTodas());
-  const dias = Object.keys(byDay).filter(d => d.startsWith(mes));
-  const trs = dias.flatMap(d => byDay[d]);
-  const st = computeStats(trs);
-  return { mes, pnl: Math.round(st.pnl), sesiones: dias.length, winrate: st.n ? Math.round(st.wr) : 0 };
-}
-const carreraHead = () => ({ 'apikey': CLOUD.anon, 'Authorization': 'Bearer ' + CLOUD.anon, 'content-type': 'application/json' });
-async function carreraPush(){
-  const c = S.carrera; if(!c || !c.codigo) return;
-  const st = carreraStats();
-  try{
-    await fetch(CLOUD.url + '/rest/v1/northpoint_carrera', {
-      method:'POST',
-      headers:{ ...carreraHead(), 'Prefer':'resolution=merge-duplicates' },
-      body: JSON.stringify({ id: c.dev + '_' + st.mes, codigo: c.codigo, nombre: c.nombre, mes: st.mes,
-        pnl: st.pnl, sesiones: st.sesiones, winrate: st.winrate, updated_at: new Date().toISOString() }),
-    });
-  }catch(e){ /* sin red: la carrera local sigue */ }
-}
-async function carreraFetch(){
-  const c = S.carrera; if(!c || !c.codigo) return null;
-  const mes = todayISO().slice(0,7);
-  try{
-    const r = await fetch(CLOUD.url + '/rest/v1/northpoint_carrera?codigo=eq.' + encodeURIComponent(c.codigo)
-      + '&mes=eq.' + mes + '&select=*&order=pnl.desc', { headers: carreraHead() });
-    if(!r.ok) return { error: r.status };
-    return { rows: await r.json() };
-  }catch(e){ return { error: 'red' }; }
-}
-function renderCarrera(){
-  const box = $('#carreraBox'); if(!box) return;
-  const mes = todayISO().slice(0,7);
-  const [y,m] = mes.split('-').map(Number);
-  const quedan = new Date(y, m, 0).getDate() - (+todayISO().slice(8));
-  $('#carSub').textContent = `TEMPORADA ${MESES3[idi()][m-1]} ${y} · ` +
-    (quedan > 0 ? `reinicia en ${quedan} día${quedan!==1?'s':''}` : 'último día');
-
-  if(!S.carrera || !S.carrera.codigo){
-    box.innerHTML = `<div class="panel"><div class="p-body">
-      <p style="font-size:12.5px;color:var(--dim);line-height:1.7;margin:0 0 12px">
-        Una liga mensual con más usuarios de Northpoint: cada quien comparte su P&L del mes,
-        sus sesiones y su win rate. Crea una carrera y pasa el código, o únete con el de tu comunidad.</p>
-      <div class="f-row">
-        <div><label>Tu nombre en la carrera</label><input id="carNombre" maxlength="18" placeholder="ej. amr"></div>
-        <div><label>Código de carrera</label><input id="carCodigo" maxlength="8" placeholder="ej. NP2026" style="text-transform:uppercase"></div>
-      </div>
-      <div class="mt" style="display:flex;gap:10px;flex-wrap:wrap">
-        <button class="btn primary" id="carUnir">Unirme con el código</button>
-        <button class="btn" id="carCrear">Crear carrera nueva</button>
-      </div>
-    </div></div>`;
-    const entra = codigo => {
-      const nombre = $('#carNombre').value.trim();
-      if(!nombre){ toast('Ponte un nombre para la carrera'); return; }
-      if(!codigo){ toast('Falta el código'); return; }
-      S.carrera = { codigo, nombre, dev: uid() };
-      save(); renderCarrera(); carreraPush();
-    };
-    $('#carUnir').onclick = () => entra($('#carCodigo').value.trim().toUpperCase());
-    $('#carCrear').onclick = () => {
-      const codigo = Array.from({length:6}, () => 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'[Math.floor(Math.random()*31)]).join('');
-      entra(codigo);
-      if(S.carrera) setTimeout(()=> toast('Carrera creada. Código: ' + codigo + ' — compártelo.'), 120);
-    };
-    return;
-  }
-
-  const st = carreraStats();
-  const mia = { id: S.carrera.dev + '_' + mes, nombre: S.carrera.nombre, pnl: st.pnl, sesiones: st.sesiones, winrate: st.winrate, mia: true };
-  const pinta = (rows, nota) => {
-    box.innerHTML = `
-      <div style="display:flex;gap:10px;align-items:center;margin-bottom:10px;flex-wrap:wrap">
-        <span class="tag ac">CÓDIGO ${esc(S.carrera.codigo)}</span>
-        <button class="btn sm" id="carCopiar">Compartir código</button>
-        <button class="btn sm" id="carSalir" style="margin-left:auto">Salir</button>
-      </div>` +
-      rows.map((r,i) => `<div class="car-row${r.mia?' mia':''}">
-        <span class="pos">${i+1}</span>
-        <span class="ava">${esc(String(r.nombre||'?').charAt(0).toUpperCase())}</span>
-        <span class="nom">${esc(r.nombre||'—')}${r.mia?' · tú':''}</span>
-        <span class="pnl ${r.pnl>0?'up':r.pnl<0?'down':''}">${fmt$(r.pnl,true)}</span>
-        <span class="met">${r.sesiones||0} ses · ${r.winrate||0}%</span>
-      </div>`).join('') +
-      (nota ? `<p class="micro" style="color:var(--warn);margin-top:8px;line-height:1.6">${nota}</p>` : '');
-    $('#carCopiar').onclick = async () => {
-      try{ await navigator.clipboard.writeText(S.carrera.codigo); toast('Código copiado: ' + S.carrera.codigo); }
-      catch(e){ toast('Código: ' + S.carrera.codigo); }
-    };
-    $('#carSalir').onclick = () => {
-      if(confirm('¿Salir de la carrera? El código se olvida en este equipo.')){ delete S.carrera; save(); renderCarrera(); }
-    };
-  };
-  pinta([mia], null);
-  const ahora = Date.now();
-  const listo = (ahora - carreraUltimoPush > 30000)
-    ? carreraPush().then(()=>{ carreraUltimoPush = Date.now(); return carreraFetch(); })
-    : carreraFetch();
-  listo.then(res => {
-    if(!res || !S.carrera) return;
-    if(res.error){
-      pinta([mia], res.error === 404
-        ? 'La carrera comunitaria necesita un paso de 2 minutos en Supabase (docs/CARRERA.md). Mientras, aquí va tu progreso local.'
-        : 'Sin conexión con la comunidad ahora — esto es tu progreso local.');
-      return;
-    }
-    const otros = (res.rows || []).filter(r => r.id !== mia.id);
-    pinta([...otros, mia].sort((a,b) => (b.pnl||0) - (a.pnl||0)), null);
-  });
 }
 
 function renderObjetivos(){
@@ -7036,9 +6920,9 @@ function renderAgentes(){
   $$('#agGrid .staff').forEach(b => b.onclick = () => abrirStaff(b.dataset.staff));
   ofiJunta = guionOficina();
   if(typeof animaOficina === 'function') animaOficina();
-  /* el tablero del negocio: camino y carrera (la caja y los objetivos viven en Mi dinero) */
+  /* el tablero del negocio: el camino a payout con el proceso de cada socio
+     (la caja y los objetivos viven en Mi dinero; la carrera se retiró) */
   renderCamino();
-  renderCarrera();
 }
 
 let staffAbierto = null;
@@ -7048,10 +6932,6 @@ function abrirStaff(id){
   $('#stCara').src = caraAgente(p.nom);
   $('#stTitle').textContent = p.nom;
   $('#stArea').textContent = p.area + ' · ' + p.voz;
-  $('#stTareas').innerHTML = (p.roles||[]).flatMap(r => (ROLES[r] ? ROLES[r].d : []))
-    .map((d,i) => `<div style="display:flex;gap:10px;padding:7px 2px;border-bottom:1px solid var(--line-soft);font-size:12px;color:var(--dim)">
-      <span class="mono" style="color:var(--faint);font-size:10px;padding-top:2px">${String(i+1).padStart(2,'0')}</span><span>${esc(d)}</span>
-    </div>`).join('');
   const c = carreraDe(id);
   const kpi = (l,v,cls='') => `<div style="border:1px solid var(--line-soft);border-radius:10px;padding:10px 12px;min-width:0">
     <div class="micro" style="color:var(--faint)">${l}</div>
