@@ -771,6 +771,25 @@ body.locked .app{visibility:hidden;pointer-events:none}
   transition:border-color .15s,color .15s}
 .chips button:hover{border-color:var(--accent)}
 .chips button.on{color:var(--txt);border-color:var(--accent);background:var(--glass-2);font-weight:600}
+/* ── La carrera: liga mensual de la comunidad ── */
+.car-row{display:flex;align-items:center;gap:12px;padding:10px 14px;border:1px solid var(--line);
+  border-radius:11px;background:var(--panel-bg);margin-bottom:8px}
+.car-row.mia{border-color:var(--accent)}
+.car-row .pos{font-family:var(--mono);font-size:11px;color:var(--faint);min-width:16px;text-align:right}
+.car-row .ava{width:30px;height:30px;border-radius:50%;background:var(--glass-2);border:1px solid var(--line);
+  display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:12px;color:var(--txt);flex:none}
+.car-row .nom{font-size:13px;font-weight:600;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.car-row .pnl{margin-left:auto;font-family:var(--mono);font-size:13px;white-space:nowrap}
+.car-row .met{font-family:var(--mono);font-size:10px;color:var(--faint);white-space:nowrap}
+/* ── la cabina ONE BULLET (Rutina · en vivo) ── */
+.ob-top{display:flex;align-items:flex-start;gap:16px;flex-wrap:wrap}
+.ob-timer{font-size:clamp(32px,6vw,46px);font-weight:300;letter-spacing:.05em;line-height:1.1;margin-top:4px}
+.ob-balas-w{margin-left:auto}
+.ob-balas{display:flex;gap:8px;align-items:center;margin-top:8px;justify-content:flex-end}
+.ob-bala{width:16px;height:16px;border-radius:50%;border:1.5px solid var(--accent);background:var(--accent);
+  box-shadow:0 0 8px rgba(155,192,220,.35)}
+.ob-bala.gastada{background:transparent;border-color:var(--line);box-shadow:none}
+.ob-bala.extra{background:var(--down);border-color:var(--down);box-shadow:none}
 button.tag{cursor:pointer;background:transparent;display:inline-flex;align-items:center;gap:7px;
   transition:border-color .15s,color .15s,opacity .15s}
 button.tag .dot{width:6px;height:6px;border-radius:50%;border:1px solid var(--line);flex:0 0 auto}
@@ -1580,22 +1599,10 @@ stop[stop-color="#9BC0DC"]{stop-color:var(--txt)}
             </div>
             <div>
               <div class="panel">
-                <div class="p-head"><h3>Compromisos de sesión</h3><span class="micro" id="rtCompCnt">0/8</span></div>
-                <div class="p-body" id="rtCompList"></div>
-              </div>
-              <div class="panel mt">
                 <div class="p-head"><h3 data-i18n="se.pre">Checklist pre-market</h3><span class="micro" data-i18n="se.desde">Desde 7:00 AM</span></div>
                 <div class="p-body" id="preList"></div>
               </div>
-              <button class="btn primary mt" id="rtActivar" style="width:100%">Activar sesión →</button>
-            </div>
-          </div>
-        </div>
-
-        <div id="rt-live" class="mt" hidden>
-          <div class="grid g2">
-            <div>
-              <div class="panel">
+              <div class="panel mt">
                 <div class="p-head"><h3 data-i18n="se.setup">Validador de setup</h3><span class="micro" data-i18n="se.todas">Todas o no hay trade</span></div>
                 <div class="p-body">
                   <div id="setupList"></div>
@@ -1603,25 +1610,39 @@ stop[stop-color="#9BC0DC"]{stop-color:var(--txt)}
                 </div>
               </div>
               <div class="panel mt">
-                <div class="p-head"><h3 data-i18n="se.gestion">Gestión</h3><span class="micro" data-i18n="se.max">%n trades máx · estricto</span></div>
-                <div class="p-body">
-                  <div id="gestState"></div>
-                  <div id="rtPlanVivo"></div>
-                  <div class="mt" style="display:flex;gap:10px;flex-wrap:wrap">
-                    <button class="btn primary" id="btnTradeFromSes">+ Registrar trade</button>
-                    <button class="btn" data-goto="journal">Ver journal</button>
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div>
-              <div class="panel">
                 <div class="p-head"><h3 data-i18n="se.tesis">Tesis del día</h3><span class="micro" id="cloudPill" style="color:var(--faint)">NUBE · …</span></div>
                 <div class="p-body">
                   <p style="font-size:12.5px;color:var(--dim);line-height:1.7;margin:0 0 12px" data-i18n="se.tesisD">Escribes por qué vas a entrar antes de entrar, y después marcas si la tomaste. Eso separa una operación de una corazonada.</p>
                   <div id="tixList"></div>
                   <button class="btn primary mt" id="btnTix" data-i18n="ap.nueva">+ Nueva tesis</button>
                 </div>
+              </div>
+              <button class="btn primary mt" id="rtActivar" style="width:100%">Activar sesión →</button>
+            </div>
+          </div>
+        </div>
+
+        <div id="rt-live" class="mt" hidden>
+          <!-- La cabina ONE BULLET: el tiempo dentro de la sesión, las balas
+               que te quedan (tus trades del plan), y el día contra tu stop y
+               tu objetivo. Disparas = registras el trade. -->
+          <div class="panel">
+            <div class="p-body">
+              <div class="ob-top">
+                <div>
+                  <div class="micro"><i class="staff-dot"></i> SESIÓN EN VIVO</div>
+                  <div class="ob-timer mono" id="obTimer">0:00</div>
+                </div>
+                <div class="ob-balas-w">
+                  <div class="micro" style="text-align:right">BALAS</div>
+                  <div class="ob-balas" id="obBalas"></div>
+                </div>
+              </div>
+              <div class="grid g4 mt" id="obKpis"></div>
+              <div id="gestState" class="mt"></div>
+              <div class="mt" style="display:flex;gap:10px;flex-wrap:wrap">
+                <button class="btn primary" id="btnTradeFromSes" style="flex:1;min-width:220px;padding:15px;font-size:14px;letter-spacing:.06em">◉ DISPARAR — registrar el trade</button>
+                <button class="btn" data-goto="journal">Ver journal</button>
               </div>
             </div>
           </div>
@@ -1693,6 +1714,12 @@ stop[stop-color="#9BC0DC"]{stop-color:var(--txt)}
           <div id="pickProgreso" style="margin-left:auto"></div>
         </div>
         <div class="grid g5" id="dashKpis" style="margin-top:8px"></div>
+
+        <div style="display:flex;align-items:center;gap:12px;margin:26px 0 10px;flex-wrap:wrap">
+          <span class="micro">La carrera · comunidad Northpoint</span>
+          <span class="micro" id="carSub" style="margin-left:auto;color:var(--faint)"></span>
+        </div>
+        <div id="carreraBox"></div>
       </section>
 
 <section class="view" id="v-journal">
@@ -4114,9 +4141,129 @@ function renderCamino(){
   }).join('');
 }
 
+/* ══════════ LA CARRERA · la liga mensual de la comunidad ══════════
+   Cualquiera con la app se une con un código y comparte su progreso del mes:
+   P&L, sesiones y win rate. Vive en su propia tabla de Supabase, abierta a
+   la comunidad (no toca la mesa privada de los socios). Si la tabla no
+   existe todavía, la carrera corre en modo local — docs/CARRERA.md trae el
+   SQL de 2 minutos que la vuelve comunitaria. */
+let carreraUltimoPush = 0;
+function carreraStats(){
+  const mes = todayISO().slice(0,7);
+  const byDay = tradesByDay(idsTodas());
+  const dias = Object.keys(byDay).filter(d => d.startsWith(mes));
+  const trs = dias.flatMap(d => byDay[d]);
+  const st = computeStats(trs);
+  return { mes, pnl: Math.round(st.pnl), sesiones: dias.length, winrate: st.n ? Math.round(st.wr) : 0 };
+}
+const carreraHead = () => ({ 'apikey': CLOUD.anon, 'Authorization': 'Bearer ' + CLOUD.anon, 'content-type': 'application/json' });
+async function carreraPush(){
+  const c = S.carrera; if(!c || !c.codigo) return;
+  const st = carreraStats();
+  try{
+    await fetch(CLOUD.url + '/rest/v1/northpoint_carrera', {
+      method:'POST',
+      headers:{ ...carreraHead(), 'Prefer':'resolution=merge-duplicates' },
+      body: JSON.stringify({ id: c.dev + '_' + st.mes, codigo: c.codigo, nombre: c.nombre, mes: st.mes,
+        pnl: st.pnl, sesiones: st.sesiones, winrate: st.winrate, updated_at: new Date().toISOString() }),
+    });
+  }catch(e){ /* sin red: la carrera local sigue */ }
+}
+async function carreraFetch(){
+  const c = S.carrera; if(!c || !c.codigo) return null;
+  const mes = todayISO().slice(0,7);
+  try{
+    const r = await fetch(CLOUD.url + '/rest/v1/northpoint_carrera?codigo=eq.' + encodeURIComponent(c.codigo)
+      + '&mes=eq.' + mes + '&select=*&order=pnl.desc', { headers: carreraHead() });
+    if(!r.ok) return { error: r.status };
+    return { rows: await r.json() };
+  }catch(e){ return { error: 'red' }; }
+}
+function renderCarrera(){
+  const box = $('#carreraBox'); if(!box) return;
+  const mes = todayISO().slice(0,7);
+  const [y,m] = mes.split('-').map(Number);
+  const quedan = new Date(y, m, 0).getDate() - (+todayISO().slice(8));
+  $('#carSub').textContent = `TEMPORADA ${MESES3[idi()][m-1]} ${y} · ` +
+    (quedan > 0 ? `reinicia en ${quedan} día${quedan!==1?'s':''}` : 'último día');
+
+  if(!S.carrera || !S.carrera.codigo){
+    box.innerHTML = `<div class="panel"><div class="p-body">
+      <p style="font-size:12.5px;color:var(--dim);line-height:1.7;margin:0 0 12px">
+        Una liga mensual con más usuarios de Northpoint: cada quien comparte su P&L del mes,
+        sus sesiones y su win rate. Crea una carrera y pasa el código, o únete con el de tu comunidad.</p>
+      <div class="f-row">
+        <div><label>Tu nombre en la carrera</label><input id="carNombre" maxlength="18" placeholder="ej. amr"></div>
+        <div><label>Código de carrera</label><input id="carCodigo" maxlength="8" placeholder="ej. NP2026" style="text-transform:uppercase"></div>
+      </div>
+      <div class="mt" style="display:flex;gap:10px;flex-wrap:wrap">
+        <button class="btn primary" id="carUnir">Unirme con el código</button>
+        <button class="btn" id="carCrear">Crear carrera nueva</button>
+      </div>
+    </div></div>`;
+    const entra = codigo => {
+      const nombre = $('#carNombre').value.trim();
+      if(!nombre){ toast('Ponte un nombre para la carrera'); return; }
+      if(!codigo){ toast('Falta el código'); return; }
+      S.carrera = { codigo, nombre, dev: uid() };
+      save(); renderCarrera(); carreraPush();
+    };
+    $('#carUnir').onclick = () => entra($('#carCodigo').value.trim().toUpperCase());
+    $('#carCrear').onclick = () => {
+      const codigo = Array.from({length:6}, () => 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'[Math.floor(Math.random()*31)]).join('');
+      entra(codigo);
+      if(S.carrera) setTimeout(()=> toast('Carrera creada. Código: ' + codigo + ' — compártelo.'), 120);
+    };
+    return;
+  }
+
+  const st = carreraStats();
+  const mia = { id: S.carrera.dev + '_' + mes, nombre: S.carrera.nombre, pnl: st.pnl, sesiones: st.sesiones, winrate: st.winrate, mia: true };
+  const pinta = (rows, nota) => {
+    box.innerHTML = `
+      <div style="display:flex;gap:10px;align-items:center;margin-bottom:10px;flex-wrap:wrap">
+        <span class="tag ac">CÓDIGO ${esc(S.carrera.codigo)}</span>
+        <button class="btn sm" id="carCopiar">Compartir código</button>
+        <button class="btn sm" id="carSalir" style="margin-left:auto">Salir</button>
+      </div>` +
+      rows.map((r,i) => `<div class="car-row${r.mia?' mia':''}">
+        <span class="pos">${i+1}</span>
+        <span class="ava">${esc(String(r.nombre||'?').charAt(0).toUpperCase())}</span>
+        <span class="nom">${esc(r.nombre||'—')}${r.mia?' · tú':''}</span>
+        <span class="pnl ${r.pnl>0?'up':r.pnl<0?'down':''}">${fmt$(r.pnl,true)}</span>
+        <span class="met">${r.sesiones||0} ses · ${r.winrate||0}%</span>
+      </div>`).join('') +
+      (nota ? `<p class="micro" style="color:var(--warn);margin-top:8px;line-height:1.6">${nota}</p>` : '');
+    $('#carCopiar').onclick = async () => {
+      try{ await navigator.clipboard.writeText(S.carrera.codigo); toast('Código copiado: ' + S.carrera.codigo); }
+      catch(e){ toast('Código: ' + S.carrera.codigo); }
+    };
+    $('#carSalir').onclick = () => {
+      if(confirm('¿Salir de la carrera? El código se olvida en este equipo.')){ delete S.carrera; save(); renderCarrera(); }
+    };
+  };
+  pinta([mia], null);
+  const ahora = Date.now();
+  const listo = (ahora - carreraUltimoPush > 30000)
+    ? carreraPush().then(()=>{ carreraUltimoPush = Date.now(); return carreraFetch(); })
+    : carreraFetch();
+  listo.then(res => {
+    if(!res || !S.carrera) return;
+    if(res.error){
+      pinta([mia], res.error === 404
+        ? 'La carrera comunitaria necesita un paso de 2 minutos en Supabase (docs/CARRERA.md). Mientras, aquí va tu progreso local.'
+        : 'Sin conexión con la comunidad ahora — esto es tu progreso local.');
+      return;
+    }
+    const otros = (res.rows || []).filter(r => r.id !== mia.id);
+    pinta([...otros, mia].sort((a,b) => (b.pnl||0) - (a.pnl||0)), null);
+  });
+}
+
 function renderProgreso(){
   renderPicker($('#pickProgreso'));
   renderCamino();
+  renderCarrera();
   const M = metas(), R = pnlRanges(idsSel(), true);
   const kpis = [
     [tr('me.pnlHoy').toUpperCase(), R.dia, M.dia],
@@ -4515,22 +4662,9 @@ function rtDi(txt){
   window.speechSynthesis.speak(u);
 }
 
-/* Los compromisos de sesión: se confirman uno a uno antes de activar. */
-const RUTINA_RULES = [
-  'Solo opero la ventana 7:00 – 8:30',
-  'Stop es sagrado — no lo muevo ni un tick',
-  'Respeto el riesgo máximo del día de mi fase',
-  'Si pierdo el trade 1, un solo intento más — nunca revenge',
-  'No entro por FOMO ni por revancha',
-  'Solo entro con el checklist de setup completo',
-  'Sin trades 30 min antes de datos de alto impacto',
-  'Registro cada trade en el journal el mismo día',
-];
 function getRutina(iso){
   const s = getSession(iso);
   const r = s.rutina = s.rutina || {};
-  if(!Array.isArray(r.comp) || r.comp.length !== RUTINA_RULES.length)
-    r.comp = Array.from({length:RUTINA_RULES.length}, (_,i) => (r.comp||[])[i] || false);
   if(r.bias === undefined) r.bias = null;
   if(r.sesgo === undefined) r.sesgo = '';
   if(r.niveles === undefined) r.niveles = '';
@@ -4538,6 +4672,19 @@ function getRutina(iso){
   if(r.stop === undefined) r.stop = SISTEMA.fases.eval.maxPerdidaDia;
   if(r.obj === undefined) r.obj = SISTEMA.fases.eval.objetivoDia;
   return r;
+}
+/* El cronómetro de la sesión: arranca al activar y vive en la rutina del día,
+   así sobrevive recargas. */
+let obTimerInt = null;
+function obTick(){
+  const el = document.getElementById('obTimer'); if(!el) return;
+  const rt = getRutina(todayISO());
+  if(!rt.startedAt){ el.textContent = '0:00'; return; }
+  const sec = Math.max(0, Math.floor((Date.now() - rt.startedAt) / 1000));
+  const h = Math.floor(sec/3600), m = Math.floor((sec%3600)/60), s = sec%60;
+  el.textContent = h > 0
+    ? `${h}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`
+    : `${m}:${String(s).padStart(2,'0')}`;
 }
 
 function renderSesion(){
@@ -4576,24 +4723,11 @@ function renderSesion(){
   liga('rtSesgo','sesgo'); liga('rtNiveles','niveles');
   liga('rtMaxT','maxT',true); liga('rtStop','stop',true); liga('rtObj','obj',true);
 
-  const compOk = rt.comp.filter(Boolean).length;
-  $('#rtCompCnt').textContent = compOk + '/' + RUTINA_RULES.length + ' confirmados';
-  $('#rtCompList').innerHTML = RUTINA_RULES.map((t,i) => `
-    <button class="chk ${rt.comp[i]?'done':''}" data-comp="${i}">
-      <span class="box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M4 12l5 5L20 7"/></svg></span>
-      <span style="flex:1;min-width:0"><b>${esc(t)}</b></span>
-    </button>`).join('');
-  $$('#rtCompList .chk').forEach(b => b.onclick = () => {
-    const i = +b.dataset.comp;
-    rt.comp[i] = !rt.comp[i]; save();
-    if(rt.comp.every(Boolean)) rtDi('Todos los compromisos confirmados. Listos para activar la sesión.');
-    renderSesion();
-  });
   $('#rtActivar').onclick = () => {
     if(!rt.bias){ toast('Define el sesgo del día primero'); return; }
-    if(!rt.comp.every(Boolean)){ toast('Confirma todos los compromisos'); return; }
+    if(!rt.startedAt) rt.startedAt = Date.now();
     S.ui.rtTab = 'live'; save();
-    rtDi('Sesión activa. Apertura de Nueva York. Sin prisa, sin ruido.');
+    rtDi('Sesión activa. Apertura de Nueva York. Sin prisa, sin ruido. Tienes ' + rt.maxT + (rt.maxT>1?' balas.':' bala.'));
     renderSesion();
   };
 
@@ -4601,8 +4735,8 @@ function renderSesion(){
   $('#preList').innerHTML   = chkHTML(PRE_ITEMS_(), ses.pre, 'pre');
   $('#setupList').innerHTML = chkHTML(SETUP_ITEMS_(), ses.setup, 'setup');
   $('#postList').innerHTML  = chkHTML(POST_ITEMS_(), ses.post, 'post');
-  const done = [...ses.pre, ...ses.setup, ...ses.post].filter(Boolean).length + compOk;
-  $('#sesProgreso').textContent = done + ' / ' + (13 + RUTINA_RULES.length);
+  const done = [...ses.pre, ...ses.setup, ...ses.post].filter(Boolean).length;
+  $('#sesProgreso').textContent = done + ' / 13';
 
   const okAll = ses.setup.every(Boolean);
   $('#setupVerdict').innerHTML = `
@@ -4616,17 +4750,43 @@ function renderSesion(){
       </div>
     </div>`;
 
-  /* ── EN VIVO · gestión contra el plan del día ── */
+  /* ── EN VIVO · la cabina one-bullet ── */
   const dayTr = tradesByDay()[iso] || [];
   const g = gestionState(dayTr);
-  $('#gestState').innerHTML = `<div class="g-banner ${g.cls}" style="margin-top:0"><span>${g.msg}</span></div>`;
   const pnlHoy = dayTr.reduce((a,t)=>a+(t.pnl||0),0);
-  const contra = pnlHoy <= -(rt.stop||0) && rt.stop > 0 ? `<b style="color:var(--down)">STOP DE SESIÓN TOCADO — se cierra la plataforma.</b>`
-    : pnlHoy >= (rt.obj||0) && rt.obj > 0 ? `<b style="color:var(--up)">Objetivo del día cubierto. Día terminado.</b>`
-    : '';
-  $('#rtPlanVivo').innerHTML = `<div class="micro" style="margin-top:10px;color:var(--dim);line-height:1.7">
-    Plan del día: máx ${rt.maxT} trade${rt.maxT>1?'s':''} · stop ${fmt$(rt.stop)} · objetivo ${fmt$(rt.obj)}.
-    Llevas ${dayTr.length} trade${dayTr.length===1?'':'s'} y ${fmt$(pnlHoy,true)}. ${contra}</div>`;
+  const stopTocado = rt.stop > 0 && pnlHoy <= -rt.stop;
+  const objCubierto = rt.obj > 0 && pnlHoy >= rt.obj;
+  $('#gestState').innerHTML = `<div class="g-banner ${stopTocado?'stop':g.cls}" style="margin-top:0"><span>${
+    stopTocado ? 'STOP DE SESIÓN TOCADO — se cierra la plataforma. Sin excepciones.'
+    : objCubierto ? 'Objetivo del día cubierto. El mejor trade que te queda es apagar.'
+    : g.msg}</span></div>`;
+
+  /* las balas: tus trades del plan. Se gastan al disparar; pasarse pinta rojo. */
+  const camaras = Math.max(rt.maxT, dayTr.length);
+  $('#obBalas').innerHTML = Array.from({length: camaras}, (_,i) =>
+    `<span class="ob-bala${i < dayTr.length ? (i < rt.maxT ? ' gastada' : ' extra') : ''}"
+           title="${i < dayTr.length ? 'disparada' : 'disponible'}"></span>`).join('');
+
+  const pctObj = rt.obj > 0 ? Math.max(0, Math.min(100, pnlHoy / rt.obj * 100)) : 0;
+  const margenStop = rt.stop > 0 ? rt.stop + Math.min(0, pnlHoy) : null;   // cuánto aguanta el día
+  const pctStop = rt.stop > 0 ? Math.max(0, Math.min(100, (margenStop / rt.stop) * 100)) : 100;
+  $('#obKpis').innerHTML = [
+    `<div class="panel kpi" style="margin:0"><div class="k-l">P&L SESIÓN</div>
+      <div class="k-v ${pnlHoy>0?'up':pnlHoy<0?'down':''}">${fmt$(pnlHoy,true)}</div>
+      <div class="k-s">${dayTr.length} disparo${dayTr.length===1?'':'s'}</div></div>`,
+    `<div class="panel kpi" style="margin:0"><div class="k-l">OBJETIVO</div>
+      <div class="k-v">${fmt$(rt.obj)}</div><div class="k-s">${objCubierto?'cubierto ✓':fmt$(Math.max(0,rt.obj-pnlHoy))+' por ganar'}</div>
+      <div class="bar"><i class="${objCubierto?'full':''}" style="width:${pctObj}%"></i></div></div>`,
+    `<div class="panel kpi" style="margin:0"><div class="k-l">STOP SESIÓN</div>
+      <div class="k-v ${stopTocado?'down':''}">${fmt$(rt.stop)}</div>
+      <div class="k-s">${stopTocado?'TOCADO — fuera':'aguanta '+fmt$(margenStop??0)+' más'}</div>
+      <div class="bar"><i class="${stopTocado?'neg':''}" style="width:${100-pctStop}%;background:var(--down)"></i></div></div>`,
+    `<div class="panel kpi" style="margin:0"><div class="k-l">BALAS</div>
+      <div class="k-v">${Math.max(0, rt.maxT - dayTr.length)}<span style="font-size:14px;color:var(--faint)"> / ${rt.maxT}</span></div>
+      <div class="k-s">${dayTr.length > rt.maxT ? 'te pasaste del plan' : 'quedan en el tambor'}</div></div>`,
+  ].join('');
+  clearInterval(obTimerInt);
+  if(S.ui.rtTab === 'live'){ obTick(); obTimerInt = setInterval(obTick, 1000); }
 
   /* ── CIERRE · resumen contra el plan ── */
   const vios = [...new Set(dayTr.flatMap(t => violations(t, dayTr)))];
@@ -6742,7 +6902,7 @@ function fusionarEstado(local, remoto){
 }
 /* lo que NO viaja: es de cada socio, no de la mesa */
 const soloMio = e => { const c = {...e}; delete c.session; delete c.profile; delete c.ui;
-                       delete c.rev; delete c.claves; return c; };
+                       delete c.rev; delete c.claves; delete c.carrera; return c; };
 
 
 async function cloudPull(){
@@ -6762,7 +6922,7 @@ async function cloudPull(){
          · claves — la contraseña cambiada volvía a la de fábrica tras cada sync. */
       S = migrar({ ...DEFAULTS(), ...fusionarEstado(soloMio(S), fila.data),
                    session:S.session, profile:S.profile, ui:S.ui,
-                   rev:S.rev, claves:S.claves });
+                   rev:S.rev, claves:S.claves, carrera:S.carrera });
       S.revNube = fila.rev || 0;
       localStorage.setItem(LS, JSON.stringify(S));
       renderAll();
