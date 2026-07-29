@@ -436,6 +436,26 @@ body.locked .app{visibility:hidden;pointer-events:none}
 /* meta del día dentro de la celda */
 .ts-goal{font-family:var(--mono);font-size:9px;color:var(--faint);margin-top:auto;line-height:1.3}
 .ts-cell.fut{border-style:dashed;border-color:var(--w07)}
+.ts-cell[data-iso]{cursor:pointer;transition:transform .15s}
+.ts-cell[data-iso]:hover{transform:translateY(-1px);border-color:var(--accent)}
+/* ── detalle del día + screenshot del trade ── */
+.shot-drop{border:1.5px dashed var(--line);border-radius:10px;padding:14px;text-align:center;
+  font-size:11.5px;color:var(--faint);cursor:pointer;background:var(--w02)}
+.shot-drop:hover{border-color:var(--accent);color:var(--dim)}
+.shot-prev{position:relative;border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.shot-prev img{display:block;width:100%;max-height:180px;object-fit:cover}
+.shot-prev button{position:absolute;top:8px;right:8px;background:rgba(10,14,22,.75);border:none;
+  color:#fff;font-size:10.5px;padding:4px 10px;border-radius:7px;cursor:pointer}
+.dia-t{border:1px solid var(--line-soft);border-radius:10px;padding:11px 13px;margin-bottom:8px;background:var(--w02)}
+.dia-t .dt-h{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.dia-t .dt-h b{font-family:var(--mono);font-size:13px}
+.dia-t .dt-h span{font-family:var(--mono);font-size:10px;color:var(--faint)}
+.dia-t .dt-n{font-size:11.5px;color:var(--dim);margin-top:5px;line-height:1.5}
+.dia-t img{display:block;width:100%;border-radius:8px;margin-top:8px;cursor:zoom-in;
+  max-height:120px;object-fit:cover;border:1px solid var(--line-soft)}
+.dia-t img.abierta{max-height:none;object-fit:contain;cursor:zoom-out}
+.dia-ia{border:1px solid var(--line-soft);border-left:2px solid var(--accent-deep);border-radius:10px;
+  padding:12px 14px;background:var(--glass);font-size:12.5px;color:var(--dim);line-height:1.7;white-space:pre-wrap}
 .ts-bar{height:2px;border-radius:2px;background:var(--w08);margin-top:4px;overflow:hidden}
 .ts-bar i{display:block;height:100%;border-radius:2px}
 .cal-resumen{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:16px}
@@ -1282,6 +1302,12 @@ canvas{display:block;width:100%}
   .sess-pill{font-size:9.5px;letter-spacing:.08em;padding:6px 10px}
   .topbar>div:not(.top-right){min-width:0;overflow:hidden}
   .topbar h1{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .crumb{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  /* El aviso de nube se apilaba en columna y reventaba la barra: en una línea,
+     recortado, y la barra ya no se desborda. */
+  .top-right{gap:8px;min-width:0}
+  #cloudPillTop{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:96px;flex:0 1 auto}
+  .sess-pill{flex:0 0 auto}
 }
 @media (prefers-reduced-motion:reduce){
   *,*::before,*::after{animation:none!important;transition:none!important}
@@ -1454,7 +1480,6 @@ stop[stop-color="#9BC0DC"]{stop-color:var(--txt)}
           <canvas id="agOficina" width="1800" height="1160" aria-label="La oficina de Northpoint — piso 88, Nueva York"></canvas>
         </div>
         <div id="agEquipo"></div>
-        <div id="agTrader"></div>
       </section>
 
       <section class="view" id="v-dashboard">
@@ -1539,6 +1564,13 @@ stop[stop-color="#9BC0DC"]{stop-color:var(--txt)}
            Dónde vas: la fase en curso, los objetivos del plan y el mes día por día.
            Antes esto estaba mezclado con el registro de trades y se perdía. -->
       <section class="view" id="v-progreso">
+        <div class="panel" id="pgCamino" style="margin-bottom:18px">
+          <div class="p-head"><h3 data-i18n="pg.caminoT">El camino a payout</h3><span class="micro" id="pgCaminoSub"></span></div>
+          <div class="p-body">
+            <div class="pr-pasos" id="pgPasos"></div>
+            <p class="micro" id="pgCaminoNota" style="color:var(--faint);margin:8px 0 0;line-height:1.6"></p>
+          </div>
+        </div>
         <div style="display:flex;align-items:center;gap:12px;margin:4px 0 4px;flex-wrap:wrap">
           <span class="micro" data-i18n="pg.targets">Objetivos del plan</span>
           <div id="pickProgreso" style="margin-left:auto"></div>
@@ -1800,6 +1832,11 @@ stop[stop-color="#9BC0DC"]{stop-color:var(--txt)}
       <div class="acct-chips" id="tAccts" role="group" aria-labelledby="tAcctLbl"></div>
     </div>
     <div class="f-full"><label>Análisis / lección</label><textarea id="tNotas" rows="2" placeholder="Qué vio la mesa, qué se ejecutó, qué se aprende."></textarea></div>
+    <div class="f-full">
+      <label>Screenshot del trade</label>
+      <input type="file" id="tShotFile" accept="image/*" hidden>
+      <div id="tShotZona"></div>
+    </div>
     <div class="m-foot">
       <button class="btn" data-close>Cancelar</button>
       <button class="btn primary" id="tSave" data-i18n="tr.guardar">Guardar trade</button>
@@ -1829,7 +1866,7 @@ stop[stop-color="#9BC0DC"]{stop-color:var(--txt)}
       <button type="button" data-t="sim">Práctica</button>
     </div>
 
-    <div class="f-full"><label>Alias</label><input id="ncAlias" placeholder="T1, Mi cuenta, Demo..."></div>
+    <div class="f-full"><label>Nombre de la cuenta</label><input id="ncAlias" placeholder="Ponle el nombre que quieras" maxlength="24"></div>
 
     <div id="ncCamposProp">
       <div class="f-row" style="margin-top:10px">
@@ -1878,6 +1915,24 @@ stop[stop-color="#9BC0DC"]{stop-color:var(--txt)}
     <div class="m-foot">
       <button class="btn" data-close>Cancelar</button>
       <button class="btn primary" id="rjSave">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="ovDia">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="diaTitle" style="max-width:640px">
+    <h3 id="diaTitle">Día</h3>
+    <p class="sub" id="diaSub"></p>
+    <div id="diaTrades"></div>
+    <div style="margin-top:16px">
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+        <span class="micro">Análisis del día</span>
+        <button class="btn sm" id="diaIA" style="margin-left:auto">Analizar con IA</button>
+      </div>
+      <div id="diaIACaja" style="margin-top:8px"></div>
+    </div>
+    <div class="m-foot">
+      <button class="btn" data-close>Cerrar</button>
     </div>
   </div>
 </div>
@@ -2166,6 +2221,7 @@ const I18N = {
   'sn.crecimiento': { es:'Crecimiento',       en:'Growth' },
 
   'pg.targets': { es:'Objetivos del plan', en:'Plan targets' },
+  'pg.caminoT': { es:'El camino a payout', en:'The road to payout' },
   'pg.targetsD': { es:'Cuenta lo que ganaste sólo desde que la cuenta pasó a retiros. En evaluación y en colchón el saldo puede subir, pero todavía se puede evaporar — no es tuyo hasta entonces.',
                    en:'Counts what you made only once the account reached payout status. In evaluation and buffer the balance can rise, but it can still evaporate — it is not yours until then.' },
   'md.avgWL':    { es:'Avg Win/Loss',           en:'Avg Win/Loss' },
@@ -2630,10 +2686,7 @@ const SISTEMA = {
   },
 
   /* Fase 3 · cada 15 días. 20% cuentas, 20% portafolio y 20% para cada uno de los
-     tres socios fundadores (Mateo, Pablo, André). Gregorio tiene cargo y voz —
-     Chief Strategy Officer— pero no entra en este reparto: se sumó después, como
-     cargo, no como socio con tramo propio. Si eso cambia, es este arreglo el que
-     hay que tocar. */
+     tres socios fundadores (Mateo, Pablo, André). */
   reparto: [
     { k:'cuentas',    pct:.20, t:'a las cuentas',   d:'engorda el colchón: sin cuenta viva no hay payout' },
     { k:'portafolio', pct:.20, t:'al portafolio',   d:'patrimonio que ya no depende de operar' },
@@ -2787,11 +2840,6 @@ const ROLES = {
     `Opera únicamente la ventana 7:00–8:30, máximo ${SISTEMA.fases.eval.maxTrades} trades por sesión.`,
     'Registra cada operación con screenshot, setup, resultado y análisis.',
     'Envía el reporte del día al equipo y responde por su Score conductual.']},
-  'NP-070': { t:'Chief Strategy Officer', d:[
-    'Define la estrategia de largo plazo de la casa, con horizonte de meses a años.',
-    'Investigación macro y sectorial que sostiene esa estrategia.',
-    'Da seguimiento a las tesis vivas y alerta cambios estructurales.',
-    'Traduce la visión de largo plazo en mandatos accionables para la mesa.']},
 };
 
 /* ════════ LOS PERSONAJES DE LA OFICINA ════════
@@ -2802,9 +2850,9 @@ const ROLES = {
 
    Son arquetipos con nombre propio, no personas reales: ponerle palabras inventadas
    a alguien que existe sería fabricar una cita. */
-/* Los cuatro socios reales, no arquetipos: Pablo, Mateo, André y Gregorio, cada
-   uno con su cargo real (ver ROLES/USERS). El "look" es sólo el dibujo pixel-art
-   del puesto — no es un retrato de nadie, es la silla que ocupa ese cargo. */
+/* Los tres socios reales, no arquetipos: Pablo, Mateo y André, cada uno con su
+   cargo real (ver ROLES/USERS). El "look" es sólo el dibujo pixel-art del
+   puesto — no es un retrato de nadie, es la silla que ocupa ese cargo. */
 const PERSONAJES = [
   { id:'pablo', nom:'PABLO', rol:'NP-010', lema:'Cada posición lleva su tesis escrita, antes de abrirla.',
     voz:'CIO y Portfolio Manager. Decide el mandato, no improvisa la exposición.',
@@ -2818,10 +2866,6 @@ const PERSONAJES = [
     voz:'Quant y COO. Construye el Score, corre la operación diaria.',
     look:{ piel:'#C08A5C', pelo:'#141414', traje:'#22282E', camisa:'#EFE8F6', ac:'#3EA97C',
            prop:'taza', lentes:true, porte:'inclinado', cara:'concentrado' } },
-  { id:'goyo', nom:'GREGORIO', rol:'NP-070', lema:'La estrategia se mide en meses, no en el trade de hoy.',
-    voz:'Chief Strategy Officer. Paciente, habla en horizontes largos.',
-    look:{ piel:'#E7B78E', pelo:'#9AA0A8', traje:'#5E5540', camisa:'#F2EDE0', ac:'#C79A3A',
-           prop:'globo', barba:true, porte:'erguido', cara:'sabio', canas:true } },
 ];
 const personajeDeRol = rol => PERSONAJES.find(p => p.rol === rol) || null;
 
@@ -2845,9 +2889,9 @@ function invitadoActual(){
    hablando de un trabajo que todavía no empieza. */
 /* Antes esto apagaba a un personaje-arquetipo si su cargo no tenía actividad
    todavía (sin cuenta live no se sentaba "El Herrero", etc.) — tenía sentido
-   para roles decorativos que representaban una función. Pablo, Mateo, André y
-   Gregorio son socios reales: están en la oficina porque son parte de la firma,
-   no porque su cargo ya tenga datos que mostrar. Los cuatro se sientan siempre. */
+   para roles decorativos que representaban una función. Pablo, Mateo y André
+   son socios reales: están en la oficina porque son parte de la firma,
+   no porque su cargo ya tenga datos que mostrar. Los tres se sientan siempre. */
 const sillasActivas = () => {
   const g = invitadoActual();
   return g ? [...OFI.sillas, { n:g.n, x:6.6, y:3.2, z:0, flip:true }] : OFI.sillas;
@@ -2861,13 +2905,11 @@ const sillasActivas = () => {
    individual —los payouts salieron a nombre de André— así que la firma es él.
    Carga los siete cargos porque no hay a quién delegarlos. */
 const USERS = {
-  /* Los cuatro socios reales, cada quien con su cargo — como se les mandó por
-     correo cuando se dio de alta a Gregorio. No es "socios parejos": cada uno
-     responde por un cargo distinto, igual que en el documento que se envió. */
+  /* Los tres socios reales, cada quien con su cargo. No es "socios parejos":
+     cada uno responde por un cargo distinto. */
   'pablo.np': { nombre:'Pablo',    roles:['NP-001','NP-010'], correo:'pablo@northpoint.mx' },
   'mateo.np': { nombre:'Mateo',    roles:['NP-020','NP-030'], correo:'mateo@northpoint.mx' },
   'andre.np': { nombre:'André',    roles:['NP-040','NP-050'], correo:'andre@northpoint.mx' },
-  'goyo.np':  { nombre:'Gregorio', roles:['NP-070'],          correo:'goyo@northpoint.mx' },
   /* 10 invitados para que André reparta acceso sin tocar código. Cada quien entra
      con 1234 la primera vez en SU propio navegador — como no hay nube conectada,
      cada uno arranca con su copia en blanco, sin ver los datos de los demás.
@@ -2883,9 +2925,9 @@ const USERS = {
   'invitado9':  { nombre:'Invitado 9',  roles:['NP-060'], correo:'invitado9@northpoint.local' },
   'invitado10': { nombre:'Invitado 10', roles:['NP-060'], correo:'invitado10@northpoint.local' },
 };
-/* Los únicos que pueden ser dueños de una cuenta real: los cuatro socios,
+/* Los únicos que pueden ser dueños de una cuenta real: los tres socios,
    nunca un invitado de acceso de prueba. */
-const SOCIOS_REALES = ['pablo.np','mateo.np','andre.np','goyo.np'];
+const SOCIOS_REALES = ['pablo.np','mateo.np','andre.np'];
 /* Todos entran con 1234 la primera vez y la cambian en Configuración.
    La clave local se guarda como hash SHA-256 en tu equipo: no impide
    nada a quien tenga acceso al navegador, pero evita que quede escrita en claro.
@@ -3880,8 +3922,55 @@ window.asignarHuerfanos = destino => {
 
 $('#btnAcctMgr').addEventListener('click', ()=>{ renderAcctMgr(); openOv('ovAcct'); });
 $('#acAdd').addEventListener('click', ncAbrir);
+/* El camino de 0 a payout: las tres fases de una fondeada y el paso en el que
+   vas. Con varias cuentas manda la más atrasada — al paso de la más lenta —
+   y debajo de cada fase se listan las cuentas que están paradas ahí. */
+function renderCamino(){
+  const panel = $('#pgCamino'); if(!panel) return;
+  const sel = acctsSel().filter(a => !esLive(a) && !esSim(a) && reglasDe(a));
+  if(!sel.length){
+    panel.hidden = false;
+    $('#pgCaminoSub').textContent = '';
+    $('#pgPasos').innerHTML = '';
+    $('#pgCaminoNota').textContent = bi(
+      'Sin cuentas fondeadas dadas de alta. El camino empieza cuando das de alta la primera.',
+      'No funded accounts yet. The road starts when you register the first one.');
+    return;
+  }
+  panel.hidden = false;
+  const orden = ['eval','buffer','payout'];
+  const idxDe = a => Math.max(0, orden.indexOf(a.fase));
+  const idxActual = Math.min(...sel.map(idxDe));
+  const a0 = sel[0], Re = reglasEval(a0), Rf = reglasFondeadas(a0);
+  const subs = {
+    eval:   Re ? bi('llegar a ','reach ') + fmt$(a0.size + Re.target) : '',
+    buffer: bi('reinicia a ','resets to ') + fmt$(a0.size),
+    payout: Rf ? bi('desde ','from ') + fmt$(a0.start + Rf.maxDD + (Rf.lockAtProfit||0)) : '',
+  };
+  const mixta = new Set(sel.map(a => a.fase + '|' + a.plan + '|' + a.size)).size > 1;
+  $('#pgCaminoSub').innerHTML = mixta
+    ? '<span class="tag wr">' + bi('FASES MIXTAS','MIXED PHASES') + '</span>'
+    : (FASES[a0.fase] || FASES.eval).t.toUpperCase();
+  $('#pgPasos').innerHTML = orden.map((k, i) => {
+    const cls = i < idxActual ? 'hecho' : i === idxActual ? 'activa' : '';
+    const aqui = sel.filter(a => idxDe(a) === i).map(a => esc(a.alias));
+    return `<div class="pr-paso ${cls}">
+      <b>${esc(FASES[k].t)}</b>
+      <span class="micro" style="display:block;color:var(--faint)">${subs[k]}</span>
+      ${aqui.length ? `<span class="micro" style="display:block;margin-top:4px;color:var(--dim)">${aqui.join(' · ')}</span>` : ''}
+    </div>`;
+  }).join('');
+  const enPay = sel.filter(a => a.fase === 'payout').length;
+  $('#pgCaminoNota').textContent = enPay === sel.length
+    ? bi('Todas las cuentas en vista ya están en retiros: lo que ganan ya se puede cobrar.',
+         'Every account in view is in payouts: what they earn can be withdrawn.')
+    : bi(`${enPay} de ${sel.length} en retiros. En evaluación y colchón el saldo todavía se puede evaporar — el camino termina cuando la cuenta cobra.`,
+         `${enPay} of ${sel.length} in payouts. In evaluation and buffer the balance can still evaporate — the road ends when the account gets paid.`);
+}
+
 function renderProgreso(){
   renderPicker($('#pickProgreso'));
+  renderCamino();
   const M = metas(), R = pnlRanges(idsSel(), true);
   const kpis = [
     [tr('me.pnlHoy').toUpperCase(), R.dia, M.dia],
@@ -4396,7 +4485,7 @@ function renderCal(){
       } else {
         cuerpo = '';
       }
-      html += `<div class="${cls}" title="${iso}"><span class="ts-d">${Number(iso.slice(8))}</span>${cuerpo}</div>`;
+      html += `<div class="${cls}"${tr.length ? ` data-iso="${iso}" role="button" tabindex="0"` : ''} title="${iso}"><span class="ts-d">${Number(iso.slice(8))}</span>${cuerpo}</div>`;
     }
     const wCls = wkPnl>0?'up':wkPnl<0?'down':'';
     html += `<div class="ts-week ${wCls}">
@@ -4405,6 +4494,12 @@ function renderCal(){
     </div>`;
   }
   $('#calGrid').innerHTML = html + '</div>';
+  /* Un día con trades se abre: sus trades, el screenshot de cada uno y el
+     análisis del día. */
+  $$('#calGrid .ts-cell[data-iso]').forEach(c => {
+    c.onclick = () => abrirDia(c.dataset.iso);
+    c.onkeydown = e => { if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); abrirDia(c.dataset.iso); } };
+  });
 
   /* Franja de totales del mes visible, al pie de la rejilla. El desglose largo
      (avance %, días operados, días verdes, el párrafo de ritmo) se quitó: ya
@@ -4433,6 +4528,125 @@ function calShift(n){
 $('#calPrev').addEventListener('click', ()=> calShift(-1));
 $('#calNext').addEventListener('click', ()=> calShift(1));
 $('#calHoy').addEventListener('click', ()=>{ calMes = todayISO().slice(0,7); renderCal(); });
+
+/* ══════════ EL DÍA, POR DENTRO ══════════
+   Al picar un día del calendario: cada trade con su screenshot y, si quieres,
+   un análisis del día hecho por IA (llave propia de Anthropic, BYOK). */
+let diaAbierto = null;
+const LLAVE_IA = 'northpoint_llave_ia';
+function abrirDia(iso){
+  const trs = tradesByDay()[iso] || [];
+  if(!trs.length) return;
+  diaAbierto = iso;
+  const pnl = trs.reduce((a,t)=>a+(t.pnl||0),0);
+  const wins = trs.filter(t=>(t.pnl||0)>0).length;
+  const loss = trs.filter(t=>(t.pnl||0)<0).length;
+  const vios = [...new Set(trs.flatMap(t => violations(t, trs)))];
+  $('#diaTitle').textContent = fmtFecha(iso);
+  $('#diaSub').innerHTML = `<b class="${pnl>0?'up':pnl<0?'down':''}">${fmt$(pnl,true)}</b> · ${trs.length} trade${trs.length>1?'s':''} · ${wins}W·${loss}L`
+    + (vios.length ? ` · <span class="tag wr">${vios.join(' · ')}</span>` : '');
+  $('#diaTrades').innerHTML = trs.map(t => `
+    <div class="dia-t">
+      <div class="dt-h">
+        <b class="${(t.pnl||0)>0?'up':(t.pnl||0)<0?'down':''}">${fmt$(t.pnl,true)}</b>
+        <span>${t.time||'—'} · ${esc(t.sym||'')} · ${t.dir==='L'?'LONG':'SHORT'} · ${t.qty||1} ct${t.nAcc>1?` · ×${t.nAcc} cuentas`:''}${t.setupOk===false?' · <i style="color:var(--warn)">setup incompleto</i>':''}</span>
+      </div>
+      ${t.notas ? `<div class="dt-n">${esc(t.notas)}</div>` : ''}
+      ${t.shot ? `<img src="${t.shot}" alt="Screenshot del trade" loading="lazy">`
+               : `<div class="dt-n" style="color:var(--faint)">Sin screenshot — se agrega editando el trade.</div>`}
+    </div>`).join('');
+  $$('#diaTrades img').forEach(im => im.onclick = () => im.classList.toggle('abierta'));
+  $('#diaIACaja').innerHTML = '';
+  openOv('ovDia');
+}
+
+/* La IA es con llave propia (BYOK): se guarda sólo en este navegador y el uso
+   se cobra en la cuenta de Anthropic de quien la pegó. Sin llave no hay
+   análisis — nada de fingir inteligencia con reglas fijas disfrazadas. */
+$('#diaIA').addEventListener('click', () => analizarDiaIA());
+function iaPideLlave(caja, mensajePrevio){
+  caja.innerHTML = `<div class="dia-ia" style="white-space:normal">
+    ${mensajePrevio ? `<div style="color:var(--down);margin-bottom:8px">${esc(mensajePrevio)}</div>` : ''}
+    Pega tu llave de Anthropic (empieza con <code>sk-ant-</code>). Se guarda sólo en este navegador y el uso se cobra en tu cuenta.
+    <div style="display:flex;gap:8px;margin-top:10px">
+      <input id="iaLlaveIn" type="password" placeholder="sk-ant-..." style="flex:1;min-width:0">
+      <button class="btn sm primary" id="iaLlaveOk">Guardar</button>
+    </div>
+    <a class="micro" href="https://console.anthropic.com" target="_blank" rel="noopener" style="display:inline-block;margin-top:8px">${tr('ag.llaveSacar')}</a>
+  </div>`;
+  $('#iaLlaveOk').onclick = () => {
+    const v = $('#iaLlaveIn').value.trim();
+    if(!v.startsWith('sk-ant-')){ toast(tr('ag.llaveMala')); return; }
+    localStorage.setItem(LLAVE_IA, v);
+    analizarDiaIA();
+  };
+}
+async function analizarDiaIA(){
+  const caja = $('#diaIACaja');
+  const llave = localStorage.getItem(LLAVE_IA) || '';
+  if(!llave){ iaPideLlave(caja); return; }
+  const iso = diaAbierto;
+  const trs = tradesByDay()[iso] || [];
+  if(!trs.length) return;
+
+  const M = metas();
+  const vios = [...new Set(trs.flatMap(t => violations(t, trs)))];
+  const resumen = trs.map((t,i) =>
+    `Trade ${i+1}: ${t.time||'?'} · ${t.sym} · ${t.dir==='L'?'LONG':'SHORT'} · ${t.qty||1} contratos`
+    + ` · entrada ${t.entry ?? '?'} · salida ${t.exit ?? '?'} · P&L ${fmt$(t.pnl1 ?? t.pnl, true)} por cuenta`
+    + ` · setup del checklist: ${t.setupOk===false?'INCOMPLETO':'completo'}`
+    + (t.notas ? ` · nota del trader: "${t.notas}"` : '')
+    + (t.shot ? ' · (screenshot adjunto)' : '')
+  ).join('\n');
+  const bloques = [];
+  trs.filter(t => t.shot).slice(0, 4).forEach(t => {
+    bloques.push({ type:'image', source:{ type:'base64', media_type:'image/jpeg', data: t.shot.split(',')[1] } });
+  });
+  bloques.push({ type:'text', text:
+`Día ${iso}. Meta diaria del plan: ${fmt$(M.dia)}. Instrumento de la casa: ${SISTEMA.instrumento}.
+${resumen}
+${vios.length ? 'Violaciones detectadas por el sistema: ' + vios.join(', ') + '.' : 'Sin violaciones detectadas.'}
+
+Analiza el día de este trader. Si hay screenshots, comenta lo que se ve en el gráfico (calidad de la entrada y la salida respecto a la estructura). Sé honesto y directo: qué se hizo bien, qué se hizo mal, y UN consejo concreto para mañana. Máximo 150 palabras, en español.` });
+
+  caja.innerHTML = `<div class="dia-ia">Analizando el día…</div>`;
+  $('#diaIA').disabled = true;
+  try{
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method:'POST',
+      headers:{
+        'content-type':'application/json',
+        'x-api-key': llave,
+        'anthropic-version':'2023-06-01',
+        'anthropic-dangerous-direct-browser-access':'true',
+      },
+      body: JSON.stringify({
+        model:'claude-opus-5',
+        max_tokens: 1024,
+        system:'Eres el analista de la mesa de NORTHPOINT, una mesa de futuros (MNQ/NQ) con cuentas de fondeo. Hablas claro y sin adornos, como un coach de trading serio. Nunca inventas datos que no estén en el registro.',
+        messages:[{ role:'user', content: bloques }],
+      }),
+    });
+    const j = await res.json();
+    if(!res.ok){
+      const msg = (j && j.error && j.error.message) || ('HTTP ' + res.status);
+      if(res.status === 401){ localStorage.removeItem(LLAVE_IA); iaPideLlave(caja, 'Esa llave no sirvió: ' + msg); return; }
+      throw new Error(msg);
+    }
+    if(j.stop_reason === 'refusal'){
+      caja.innerHTML = `<div class="dia-ia">La IA declinó analizar este contenido.</div>`;
+      return;
+    }
+    const texto = (j.content||[]).filter(b => b.type === 'text').map(b => b.text).join('\n').trim();
+    caja.innerHTML = `<div class="dia-ia">${esc(texto || 'La IA no devolvió texto.')}</div>
+      <button class="cja-x" id="iaLlaveBorrar" style="margin-top:6px">borrar la llave de este navegador</button>`;
+    $('#iaLlaveBorrar').onclick = () => { localStorage.removeItem(LLAVE_IA); toast(tr('ag.llaveFuera')); };
+  }catch(e){
+    caja.innerHTML = `<div class="dia-ia" style="white-space:normal;color:var(--down)">No se pudo analizar: ${esc(e.message||String(e))}</div>`;
+  }finally{
+    $('#diaIA').disabled = false;
+  }
+}
 
 /* franja de KPIs de Mi desempeño: arrastra o usa las flechas, igual que Precios en Inicio */
 $('#mdKpiPrev')?.addEventListener('click', ()=> $('#mdKpiRail').scrollBy({left:-200, behavior:'smooth'}));
@@ -4565,9 +4779,52 @@ function openTrade(id){
   $('#tOut').value = t.exit ?? '';
   $('#tPnl').value = t.pnl ?? '';
   $('#tNotas').value = t.notas || '';
+  tShot = t.shot || null; tShotPinta();
   renderTradeAccts(Array.isArray(t.accts) ? t.accts : acctsSel().map(a=>a.id));
   openOv('ovTrade');
 }
+
+/* ── Screenshot del trade ──
+   Se guarda como JPEG reducido (~1000px) dentro del propio trade: localStorage
+   aguanta ~5MB en total, así que un PNG completo de TradingView lo reventaría
+   en días. A ese tamaño el gráfico sigue legible. */
+let tShot = null;
+function tShotPinta(){
+  const z = $('#tShotZona'); if(!z) return;
+  z.innerHTML = tShot
+    ? `<div class="shot-prev"><img src="${tShot}" alt="Screenshot del trade"><button type="button" id="tShotQuitar">Quitar</button></div>`
+    : `<div class="shot-drop" id="tShotDrop">Haz clic para subir la captura — o pégala aquí con Ctrl/Cmd+V</div>`;
+  const d = $('#tShotDrop'); if(d) d.onclick = () => $('#tShotFile').click();
+  const q = $('#tShotQuitar'); if(q) q.onclick = () => { tShot = null; tShotPinta(); };
+}
+function encogeImagen(archivo, cb){
+  const img = new Image();
+  img.onload = () => {
+    const MAX = 1000;
+    const k = Math.min(1, MAX / Math.max(img.width, img.height));
+    const cv = document.createElement('canvas');
+    cv.width = Math.max(1, Math.round(img.width * k));
+    cv.height = Math.max(1, Math.round(img.height * k));
+    cv.getContext('2d').drawImage(img, 0, 0, cv.width, cv.height);
+    URL.revokeObjectURL(img.src);
+    cb(cv.toDataURL('image/jpeg', .75));
+  };
+  img.onerror = () => { URL.revokeObjectURL(img.src); toast('Esa imagen no se pudo leer'); };
+  img.src = URL.createObjectURL(archivo);
+}
+$('#tShotFile').addEventListener('change', e => {
+  const f = e.target.files[0];
+  if(f) encogeImagen(f, d => { tShot = d; tShotPinta(); });
+  e.target.value = '';
+});
+/* Pegar directo desde el portapapeles: así se captura de TradingView sin
+   guardar el archivo primero. Sólo actúa con el modal de trade abierto. */
+document.addEventListener('paste', e => {
+  const ov = document.getElementById('ovTrade');
+  if(!ov || !ov.classList.contains('on')) return;
+  const it = [...((e.clipboardData && e.clipboardData.items) || [])].find(i => i.type.startsWith('image/'));
+  if(it){ e.preventDefault(); encogeImagen(it.getAsFile(), d => { tShot = d; tShotPinta(); }); }
+});
 /* La orden se replica a varias cuentas (copiadora). Sin al menos una, el trade
    quedaría invisible para el journal, el score y los balances: por eso se exige. */
 let tradeAccts = [], pendienteTix = null;
@@ -4626,6 +4883,7 @@ $('#tSave').addEventListener('click', ()=>{
     pnl,
     setupOk: $('#tSetup').value==='1',
     notas: $('#tNotas').value.trim(),
+    shot: tShot || null,
     accts: tradeAccts.length ? [...tradeAccts] : [SIN_CUENTA],
     seq: (editingTrade && editingTrade.seq) || ++S.seqTrade,
     por: (editingTrade && editingTrade.por) || (S.session && S.session.user) || null,
@@ -5460,7 +5718,10 @@ function ncPintaSizes(){
 $$('#ncTipo button').forEach(b => b.onclick = () => { ncTipoActual = b.dataset.t; ncPintaTipo(); });
 $('#ncPlan').addEventListener('change', ncPintaSizes);
 $('#ncSave').addEventListener('click', ()=>{
-  const alias = $('#ncAlias').value.trim() || ('T' + (S.accounts.length+1));
+  /* El nombre lo pone quien la crea — sin autonombrar "T3" en silencio, que
+     luego nadie sabe cuál cuenta es cuál. */
+  const alias = $('#ncAlias').value.trim();
+  if(!alias){ $('#ncErr').textContent = 'Ponle un nombre a la cuenta.'; return; }
   const base = { id:'ac_'+uid(), alias, orden:(S.accounts.length+1),
                  desde:todayISO(), estado:'activa', owner:S.session.user };
   let cuenta;
@@ -6221,7 +6482,6 @@ const OFI = {
     { n:'ANDRÉ',    x:6.2, y:5.8, z:0, flip:true,  jefe:true },
     { n:'PABLO',    x:5.6, y:4.2, z:0, flip:false },
     { n:'MATEO',    x:4.0, y:4.6, z:0, flip:false },
-    { n:'GREGORIO', x:3.0, y:6.0, z:0, flip:true  },
   ],
   etapas: ['01 CONTEXTO','02 TESIS','03 RIESGO','04 FIRMA','05 EJECUTA','06 GESTIÓN','07 CIERRE','08 JOURNAL'],
 };
@@ -6299,7 +6559,7 @@ function guionOficina(){
   const hhmm = m => String(Math.floor(m/60)).padStart(2,'0') + ':' + String(m%60).padStart(2,'0');
   const P = id => (PERSONAJES.find(x => x.id === id) || {}).nom;
 
-  const ANDRE = P('andre'), PABLO = P('pablo'), MATEO = P('mateo'), GOYO = P('goyo');
+  const ANDRE = P('andre'), PABLO = P('pablo'), MATEO = P('mateo');
 
   /* ── 1 · André, Quant + COO: el número y la operación diaria ── */
   di(ANDRE, PERSONAJES.find(x=>x.id==='andre').lema);
@@ -6334,10 +6594,6 @@ function guionOficina(){
   (ROLES['NP-010'] ? ROLES['NP-010'].d : []).forEach(d => di(PABLO, d));
   di(PABLO, 'Cada 15 días se parte así, y no se toca el orden:');
   SISTEMA.reparto.forEach(r => di(PABLO, `${Math.round(r.pct*100)}% ${r.t} — ${r.d}`));
-
-  /* ── 5 · Gregorio, Chief Strategy Officer: la estrategia de largo plazo ── */
-  di(GOYO, PERSONAJES.find(x=>x.id==='goyo').lema);
-  (ROLES['NP-070'] ? ROLES['NP-070'].d : []).forEach(d => di(GOYO, d));
 
   /* ── cierre: André recuerda para qué es todo ── */
   di(ANDRE, 'Nada queda abierto después de las 8:30. Ese es el trato.');
@@ -6949,7 +7205,6 @@ function renderAgentes(){
   ofiJunta = guionOficina();
   if(typeof animaOficina === 'function') animaOficina();
   renderVida();
-  renderTraderPersonal();
 }
 
 /* ════════ LA VIDA DEL NEGOCIO ════════
@@ -6999,32 +7254,6 @@ function renderVida(){
       save(); renderVida();
     });
   };
-}
-
-/* Debajo de la caja: las stats de QUIEN entró, como trader. Todos sus trades,
-   sin importar si la cuenta ya pasó a retiros: el win rate y el profit factor
-   son de la habilidad, no del dinero. */
-function statsTraderDeUsuario(uid){
-  const ids = new Set(cuentasVivas().filter(a => a.owner === uid).map(a=>a.id));
-  const todos = Object.values(tradesByDay(ids)).flat();
-  return computeStats(todos);
-}
-function renderTraderPersonal(){
-  const box = $('#agTrader'); if(!box) return;
-  const uid = S.session.user;
-  const usr = USERS[uid] || {};
-  const st = statsTraderDeUsuario(uid);
-  const pf = !st.n ? '—' : isFinite(st.pf) ? (Math.round(st.pf*100)/100) : '∞';
-  box.innerHTML = `
-    <div style="display:flex;align-items:center;gap:10px;margin:18px 0 12px">
-      <span class="micro">${bi('Tus stats como trader','Your stats as a trader')}${usr.nombre ? ' · ' + esc(usr.nombre) : ''}</span>
-    </div>
-    <div class="grid g4">
-      <div class="panel kpi"><div class="k-l">TRADES</div><div class="k-v">${st.n}</div></div>
-      <div class="panel kpi"><div class="k-l">WIN RATE</div><div class="k-v">${st.n?fmtPct(st.wr):'—'}</div></div>
-      <div class="panel kpi"><div class="k-l">PROFIT FACTOR</div><div class="k-v">${pf}</div></div>
-      <div class="panel kpi"><div class="k-l">P&amp;L</div><div class="k-v ${st.pnl>0?'up':st.pnl<0?'down':''}">${st.n?fmt$(st.pnl,true):'—'}</div></div>
-    </div>`;
 }
 
 function render(view){
