@@ -780,6 +780,7 @@ body.locked .app{visibility:hidden;pointer-events:none}
   transition:width .6s ease}
 .climb .zonas{position:absolute;inset:0;display:grid;grid-template-columns:1fr 1fr 1fr}
 .climb .zonas span{border-right:1px dashed var(--w08);display:flex;align-items:center;padding-left:14px;
+  overflow:hidden;white-space:nowrap;
   font-family:var(--mono);font-size:9px;letter-spacing:.16em;color:var(--faint)}
 .climb .zonas span:last-child{border-right:0}
 .climb .dot{position:absolute;top:50%;transform:translate(-50%,-50%);width:28px;height:28px;border-radius:50%;
@@ -4036,12 +4037,49 @@ window.asignarHuerfanos = destino => {
 
 $('#btnAcctMgr').addEventListener('click', ()=>{ renderAcctMgr(); openOv('ovAcct'); });
 $('#acAdd').addEventListener('click', ncAbrir);
-/* ══ EL CAMINO A PAYOUT · las carreras ══
-   La aritmética de la casa: pasar la eval son $3,000 y el colchón son $2,100
-   más — la suma es el 100% de la carrera. Cada cuenta fondeada es un intento
-   que se mide contra ESA vara (con las cifras de su propio plan). Una carrera
-   quemada no se esconde: queda su barra congelada con el momento de la quema.
-   Y cada carrera dice desde cuándo está en movimiento (su primer fill). */
+/* ══ EL CAMINO A PAYOUT · las carreras (aritmética AUTOMÁTICA) ══
+   Los primeros $3,000 de profit son el examen: al juntarlos, SOLITO se da
+   por pasada la eval y el balance se cuenta reiniciado a $50,000. Luego
+   $2,100 para pasar el colchón (llegar a $52,100) y $1,000 más hasta el
+   pago máximo ($53,100). El 100% de la barra son $6,100 de profit:
+   $3,000 examen + $2,100 colchón + $1,000 pago. Los hitos se detectan del
+   acumulado de fills — nadie aprieta botones — y una vez pasados no se
+   despasan: manda el pico histórico. (Cifras del plan de cada cuenta.) */
+const TRAMO_PAGO = 1000;   // del colchón al pago máximo — regla de la casa
+function carreraCuenta(a){
+  const Re = reglasEval(a), Rf = reglasFondeadas(a);
+  const target = Re ? (Re.target || 0) : 0;
+  const buffer = Rf ? (Rf.maxDD || 0) + (Rf.lockAtProfit || 0) : 0;
+  const pago = TRAMO_PAGO;
+  const total = target + buffer + pago;
+
+  const porDia = {};
+  S.trades.forEach(t => { if(t.date >= a.desde && (t.accts||[]).includes(a.id))
+    porDia[t.date] = (porDia[t.date]||0) + (t.pnl||0); });
+  const dias = Object.keys(porDia).sort();
+  let p = 0, pico = 0, mEval = null, mBuffer = null, mPago = null;
+  dias.forEach(d => {
+    p += porDia[d]; pico = Math.max(pico, p);
+    if(!mEval   && target > 0 && pico >= target) mEval = d;
+    if(!mBuffer && buffer > 0 && pico >= target + buffer) mBuffer = d;
+    if(!mPago   && total  > 0 && pico >= total) mPago = d;
+  });
+  const pasoEval = !!mEval, pasoBuffer = !!mBuffer, pasoPago = !!mPago;
+
+  /* la barra no retrocede de un hito ya pasado */
+  const avance = !pasoEval
+    ? Math.max(0, Math.min(target, p))
+    : Math.min(total, target + Math.max(0, p - target));
+  const pct = total > 0 ? Math.max(0, Math.min(100, avance / total * 100)) : 0;
+
+  /* el balance con el reinicio de la eval ya aplicado */
+  const balance = a.start + p - (pasoEval ? target : 0);
+
+  return { target, buffer, pago, total, p, pico, avance, pct, balance,
+           pasoEval, pasoBuffer, pasoPago, mEval, mBuffer, mPago,
+           arranque: dias[0] || null };
+}
+
 function renderCamino(){
   const panel = $('#pgCamino'); if(!panel) return;
   /* Todas las carreras: las vivas Y las quemadas — una quemada cuenta su historia. */
@@ -4057,95 +4095,96 @@ function renderCamino(){
     return;
   }
 
-  /* La vara de una cuenta: target de eval + (maxDD + lock) del colchón. */
-  const varaDe = a => {
-    const Re = reglasEval(a), Rf = reglasFondeadas(a);
-    const target = Re ? (Re.target || 0) : 0;
-    const buffer = Rf ? (Rf.maxDD || 0) + (Rf.lockAtProfit || 0) : 0;
-    return { target, buffer, total: target + buffer };
-  };
-
   /* El momento de la quema: se recorre la cuenta día a día contra su línea
-     de drawdown; el primer día que el balance la toca es el día del funeral. */
+     de drawdown; el primer día que el balance la toca es el día del funeral.
+     Se regresa también el profit acumulado y su pico HASTA ese día, para
+     congelar la barra exactamente donde iba la carrera al morir. */
   const quemaDe = a => {
     const R = reglasDe(a); if(!R) return null;
     const porDia = {};
     S.trades.forEach(t => { if(t.date >= a.desde && (t.accts||[]).includes(a.id))
       porDia[t.date] = (porDia[t.date]||0) + (t.pnl||0); });
     const dias = Object.keys(porDia).sort();
-    let bal = a.start, pico = a.start;
+    let bal = a.start, pico = a.start, acum = 0, picoAc = 0;
     for(const d of dias){
       bal += porDia[d]; pico = Math.max(pico, bal);
+      acum += porDia[d]; picoAc = Math.max(picoAc, acum);
       let linea = pico - R.maxDD;
       if(R.lockAtProfit != null && linea >= a.start + R.lockAtProfit) linea = a.start + R.lockAtProfit;
-      if(bal <= linea) return { fecha: d, balance: bal };
+      if(bal <= linea) return { fecha: d, balance: bal, acum, picoAc };
     }
     return null;
   };
 
-  /* La ficha de una carrera: avance en dólares sobre la vara completa. */
+  /* La ficha de una carrera: la aritmética automática, o congelada en la quema. */
   const fichaDe = a => {
-    const V = varaDe(a), h = saludDe(a);
-    const avanceCon = bal =>
-      a.fase === 'payout' ? V.total
-      : a.fase === 'buffer' ? V.target + Math.max(0, Math.min(V.buffer, bal - a.start))
-      : Math.max(0, Math.min(V.target, bal - a.start));
-    const quema = a.estado === 'quemada' ? (quemaDe(a) || { fecha:null, balance:h.balance }) : null;
-    const avance = avanceCon(quema ? quema.balance : h.balance);
-    const pct = V.total > 0 ? Math.max(0, Math.min(100, avance / V.total * 100)) : 0;
-    const fills = S.trades.filter(t => t.date >= a.desde && (t.accts||[]).includes(a.id))
-      .map(t => t.date).sort();
-    return { a, V, h, quema, avance, pct, arranque: fills[0] || null };
+    const cc = carreraCuenta(a);
+    const quema = a.estado === 'quemada' ? (quemaDe(a) || { fecha:null, balance:cc.balance, acum:cc.p, picoAc:cc.pico }) : null;
+    let avance = cc.avance, pct = cc.pct;
+    if(quema){
+      const pasoEvalQ = cc.target > 0 && quema.picoAc >= cc.target;
+      avance = !pasoEvalQ
+        ? Math.max(0, Math.min(cc.target, quema.acum))
+        : Math.min(cc.total, cc.target + Math.max(0, quema.acum - cc.target));
+      pct = cc.total > 0 ? Math.max(0, Math.min(100, avance / cc.total * 100)) : 0;
+    }
+    return { a, cc, quema, avance, pct };
   };
   const fichas = carreras.map(fichaDe);
-  const vivas = fichas.filter(f => !f.quema);
+  const vivasF = fichas.filter(f => !f.quema);
 
   /* La banda: la carrera viva más avanzada marca el punto de la casa. Las
-     zonas van a escala — la eval pesa lo que pesa en dólares, no un tercio. */
-  const lider = vivas.slice().sort((x,y) => y.pct - x.pct)[0] || fichas[0];
-  const Vl = lider.V;
+     TRES zonas van a escala de dólares: examen, colchón y pago máximo. */
+  const lider = vivasF.slice().sort((x,y) => y.pct - x.pct)[0] || fichas[0];
+  const Vl = lider.cc;
   const zEval = Vl.total > 0 ? Vl.target / Vl.total * 100 : 50;
+  const zBuf  = Vl.total > 0 ? Vl.buffer / Vl.total * 100 : 34;
   const inicial = ((USERS[S.session && S.session.user] || {}).nombre || 'N').charAt(0).toUpperCase();
   $('#pgClimb').innerHTML = `
     <i class="climb-fill" style="width:${lider.pct}%"></i>
-    <div class="zonas" style="grid-template-columns:${zEval}% ${100 - zEval}%">
+    <div class="zonas" style="grid-template-columns:${zEval}% ${zBuf}% ${Math.max(0, 100 - zEval - zBuf)}%">
       <span>${FASES.eval.t.toUpperCase()} · ${fmt$(Vl.target)}</span>
       <span>${FASES.buffer.t.toUpperCase()} · ${fmt$(Vl.buffer)}</span>
+      <span>${bi('PAGO','PAYOUT')} · ${fmt$(Vl.pago)}</span>
     </div>
     <span class="dot" title="${esc(lider.a.alias)} · ${Math.round(lider.pct)}%"
       style="left:${Math.min(96.5, Math.max(3.5, lider.pct))}%">${esc(inicial)}</span>`;
   $('#pgCaminoSub').textContent =
-    `${fmt$(Vl.target)} + ${fmt$(Vl.buffer)} = ${fmt$(Vl.total)} · ${bi('el 100%','the 100%')}`;
+    `${fmt$(Vl.target)} + ${fmt$(Vl.buffer)} + ${fmt$(Vl.pago)} = ${fmt$(Vl.total)} ${bi('de profit · el 100%','profit · the 100%')}`;
   $('#pgPasos').innerHTML = '';
 
-  /* Las carreras, una por cuenta: barra a la vara, el corte eval|colchón,
-     desde cuándo se mueve, y si se quemó — en qué momento. */
+  /* Las carreras, una por cuenta: barra a la vara con sus dos cortes, los
+     hitos detectados solitos, desde cuándo se mueve, y la quema si la hubo. */
   $('#pgCaminoNota').innerHTML = fichas.map(f => {
-    const { a, V, h, quema, avance, pct, arranque } = f;
-    const corte = V.total > 0 ? V.target / V.total * 100 : 50;
-    const mov = arranque
-      ? bi('en movimiento desde ', 'moving since ') + fmtFecha(arranque)
+    const { a, cc, quema, avance, pct } = f;
+    const c1 = cc.total > 0 ? cc.target / cc.total * 100 : 50;
+    const c2 = cc.total > 0 ? (cc.target + cc.buffer) / cc.total * 100 : 84;
+    const mov = cc.arranque
+      ? bi('en movimiento desde ', 'moving since ') + fmtFecha(cc.arranque)
       : bi('sin movimiento todavía', 'no movement yet');
-    const tocado = !quema && a.fase !== 'payout' && h.hito != null && h.balance >= h.hito;
+    const hito = cc.pasoPago
+        ? `<b class="up">${bi('PAGO MÁXIMO','MAX PAYOUT')}</b> · ${fmtFecha(cc.mPago)}`
+      : cc.pasoBuffer
+        ? `<b class="up">${bi('colchón pasado el ','buffer cleared ')}${fmtFecha(cc.mBuffer)}</b>`
+      : cc.pasoEval
+        ? bi('eval pasada solita el ','eval auto-passed ') + fmtFecha(cc.mEval) + bi(' · reiniciada a ',' · reset to ') + fmt$(a.start)
+        : null;
     const estadoTxt = quema
       ? `<b style="color:var(--down)">🔥 ${bi('Se quemó al ','Burned at ')}${Math.round(pct)}%${quema.fecha ? ' · ' + fmtFecha(quema.fecha) : ''}</b>`
-      : a.fase === 'payout'
-        ? `<b class="up">${bi('EN RETIROS','IN PAYOUTS')}</b> · ${bi('colchón','buffer')} ${fmt$(h.colchon)}`
-        : `${fmt$(avance)} ${bi('de','of')} ${fmt$(V.total)} · ${Math.round(pct)}%`;
+      : `${fmt$(avance)} ${bi('de','of')} ${fmt$(cc.total)} ${bi('de profit','profit')} · ${Math.round(pct)}%`;
     return `<div class="pr-fila">
       <span class="al" ${quema ? 'style="text-decoration:line-through;text-decoration-color:var(--down)"' : ''}>${esc(a.alias)}</span>
       <div class="via">
         <div class="pr-track vara">
           <i class="${quema ? 'quema' : (pct >= 100 ? 'listo' : '')}" style="width:${pct}%"></i>
-          <span class="corte" style="left:${corte}%"></span>
+          <span class="corte" style="left:${c1}%"></span>
+          <span class="corte" style="left:${c2}%"></span>
         </div>
-        <div class="micro" style="margin-top:4px;color:var(--faint)">${estadoTxt} · ${mov}</div>
+        <div class="micro" style="margin-top:4px;color:var(--faint)">${estadoTxt}${hito && !quema ? ' · ' + hito : ''} · ${mov}</div>
       </div>
       ${quema
         ? `<b class="mono" style="font-size:12px;color:var(--down)">${fmt$(quema.balance)}</b>`
-        : tocado
-          ? `<button class="btn sm primary" onclick="renderAcctMgr();openOv('ovAcct')">${bi('¡Hito tocado! Pásala de fase','Milestone hit! Advance the phase')}</button>`
-          : `<b class="mono" style="font-size:13px;${a.fase==='payout'?'color:var(--up)':''}">${fmt$(h.balance)}</b>`}
+        : `<b class="mono" style="font-size:13px;${cc.pasoBuffer?'color:var(--up)':''}">${fmt$(cc.balance)}</b>`}
     </div>`;
   }).join('');
 }
@@ -6860,10 +6899,14 @@ function dibujaOficina(t){
    Capítulo 3 (pasado el colchón): se DESBLOQUEA el edificio NORTHPOINT.
    Manda la cuenta viva más avanzada — la historia se mueve contigo. */
 function etapaHistoria(){
-  const orden = ['eval','buffer','payout'];
+  /* las fases se detectan solitas del profit acumulado (carreraCuenta):
+     pasas la eval → oficina; pasas el colchón → se desbloquea NORTHPOINT */
   const vivas = S.accounts.filter(a => !esLive(a) && !esSim(a) && reglasDe(a) && esViva(a));
   if(!vivas.length) return 0;
-  return Math.max(...vivas.map(a => Math.max(0, orden.indexOf(a.fase))));
+  return Math.max(...vivas.map(a => {
+    const cc = carreraCuenta(a);
+    return cc.pasoBuffer ? 2 : (cc.pasoEval ? 1 : 0);
+  }));
 }
 
 /* la figura del principal para las escenas chicas */
@@ -7126,9 +7169,10 @@ function renderAgentes(){
     </button>`;
   };
   const yo = principalActual();
-  /* junto al perfil, el balance actual: la suma de las fondeadas vivas. */
+  /* junto al perfil, el balance actual: la suma de las fondeadas vivas,
+     con el reinicio de la eval ya aplicado (carreraCuenta). */
   const fondeadas = S.accounts.filter(a => !esLive(a) && !esSim(a) && reglasDe(a) && esViva(a));
-  const balTotal = fondeadas.reduce((x, a) => x + saludDe(a).balance, 0);
+  const balTotal = fondeadas.reduce((x, a) => x + carreraCuenta(a).balance, 0);
   const balCard = `
     <div class="staff" style="cursor:default">
       <div class="pj-i">
