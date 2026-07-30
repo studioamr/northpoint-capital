@@ -3972,6 +3972,28 @@ function sessionState(now = ahora()){
 function perdidaDia(dayTrades){
   return dayTrades.reduce((a,t)=> a + (t.pnl1 != null ? t.pnl1 : (t.pnl||0)), 0);
 }
+/* El límite diario de una fondeadora es POR CUENTA, no por el día entero. Sumar
+   todo junto se comía violaciones reales (una cuenta se revienta pero otra gana
+   más y el día sale «limpio») e inventaba falsas (dos cuentas dentro de su tope
+   que juntas lo pasan). Aquí se mira cuenta por cuenta. */
+function cuentaQueRompio(dayTrades){
+  const porCuenta = {};
+  dayTrades.forEach(t => (t.accts || []).forEach(id => {
+    porCuenta[id] = (porCuenta[id] || 0) + (t.pnl || 0);
+  }));
+  let peor = null;
+  Object.keys(porCuenta).forEach(id => {
+    const p = porCuenta[id];
+    if(p >= 0) return;
+    const a = S.accounts.find(x => x.id === id); if(!a) return;
+    const R = reglasDe(a); if(!R) return;
+    const F = FASES[a.fase] || FASES.eval;
+    const tope = R.dailyLoss || 0, rD = F.rDia(R) || 0;
+    if(tope && -p >= tope)      { if(!peor || peor.tipo !== 'FIRM_LIMIT') peor = { id, alias:a.alias, perdida:p, tipo:'FIRM_LIMIT', tope }; }
+    else if(rD && -p > rD)      { if(!peor)                               peor = { id, alias:a.alias, perdida:p, tipo:'DAY_RISK',  tope:rD }; }
+  });
+  return peor;
+}
 /* Límites que aplican al día: el propio de la fase y el duro de la fondeadora.
    Se toma el más estricto de las cuentas donde cayó la orden. */
 function limitesDia(trade){
@@ -4034,13 +4056,13 @@ function violationsRaw(trade, dayTrades){
      contra los límites. Se marca en el último trade del día para no repetirlo. */
   const ultimo = dayTrades[dayTrades.length-1];
   if(ultimo && ultimo.id === trade.id){
+    /* primero, cuenta por cuenta: así una cuenta reventada no se esconde detrás
+       de otra que ganó más ese mismo día */
+    const rota = cuentaQueRompio(dayTrades);
+    if(rota) v.push(rota.tipo);
+    /* y el stop del plan del día, que sí es del operador y va sobre el total */
     const perdida = perdidaDia(dayTrades);
-    if(perdida < 0){
-      const L = limitesDia(trade);
-      if(L.dailyLoss && -perdida >= L.dailyLoss) v.push('FIRM_LIMIT');
-      else if(P.stop && -perdida > P.stop)       v.push('DAY_RISK');
-      else if(L.rDia && -perdida > L.rDia)       v.push('DAY_RISK');
-    }
+    if(!rota && perdida < 0 && P.stop && -perdida > P.stop) v.push('DAY_RISK');
   }
   const idx = dayTrades.findIndex(t => t.id === trade.id);
   /* MNQ es EL instrumento de la casa, no una violación. Antes se marcaba cada trade
@@ -4504,9 +4526,14 @@ function renderAcctPanel(){
     renderPicker($('#pickMesa'));
     $('#btnAcctDet').hidden = true;
     $('#acctTable').hidden = false;
+    /* Antes esto era un callejón: decía «registra tus cuentas» y no había un solo
+       botón para hacerlo — había que adivinar que vivía en Ajustes. */
     $('#acctTable').innerHTML = `<div class="empty" style="padding:22px 10px">
-      <b>No accounts yet</b>
-      <p>Register your accounts to see each one's balance, cushion and road to payout.</p>
+      <b>${bi('Todavía no hay cuentas','No accounts yet')}</b>
+      <p>${bi('Registra tu primera cuenta y aquí verás su balance, su colchón y su camino a payout.',
+              'Register your first account and you will see its balance, cushion and road to payout here.')}</p>
+      <button class="btn primary" style="margin-top:12px" onclick="abreNuevaCuenta()">
+        ${bi('Registrar mi primera cuenta','Register my first account')}</button>
     </div>`;
     return;
   }
@@ -4672,6 +4699,8 @@ window.asignarHuerfanos = destino => {
 
 $('#btnAcctMgr').addEventListener('click', ()=> abreAjustes('cuentas'));
 $('#acAdd').addEventListener('click', ncAbrir);
+/* el estado vacío del Desk también necesita abrir el alta de cuenta */
+window.abreNuevaCuenta = ncAbrir;
 /* ══ EL CAMINO A PAYOUT · las carreras (aritmética AUTOMÁTICA) ══
    Los primeros $3,000 de profit son el examen: al juntarlos, SOLITO se da
    por pasada la eval y el balance se cuenta reiniciado a $50,000. Luego
@@ -4878,7 +4907,13 @@ function renderCamino(){
   /* La ficha de una carrera: la aritmética automática, o congelada en la quema. */
   const fichaDe = a => {
     const cc = carreraCuenta(a);
-    const quema = a.estado === 'quemada' ? (quemaDe(a) || { fecha:null, balance:cc.balance, acum:cc.p, picoAc:cc.pico }) : null;
+    /* La quema se DETECTA del acumulado de fills, como todo lo demás aquí: antes
+       sólo se miraba si el usuario había marcado la cuenta a mano, así que una
+       cuenta muerta seguía corriendo la carrera como si nada. */
+    const detectada = quemaDe(a);
+    const quema = (a.estado === 'quemada' || detectada)
+      ? (detectada || { fecha:null, balance:cc.balance, acum:cc.p, picoAc:cc.pico })
+      : null;
     let avance = cc.avance, pct = cc.pct;
     if(quema){
       const pasoEvalQ = cc.target > 0 && quema.picoAc >= cc.target;
