@@ -36,6 +36,26 @@ FUTUROS = [
     ('BTC', 'BTC=F', 'Bitcoin CME'),
 ]
 
+# ── Universo de inversión ──
+# Los instrumentos donde de verdad se pone el dinero de largo plazo. El
+# terminal casa por ticker: si tu posición es de este universo, el precio
+# llega solo cada 20 minutos; si no, se captura a mano. Agregar uno es
+# escribir su renglón aquí.
+ACCIONES = [
+    # ETFs de índice — la parte que no se toca
+    ('VT',   'Vanguard Total World'),   ('VOO',  'Vanguard S&P 500'),
+    ('VTI',  'Vanguard Total US'),      ('VXUS', 'Vanguard Internacional'),
+    ('QQQ',  'Invesco Nasdaq 100'),     ('SPY',  'SPDR S&P 500'),
+    ('BND',  'Vanguard Bonos US'),      ('SCHD', 'Schwab Dividendos'),
+    ('VNQ',  'Vanguard Inmobiliario'),  ('IEMG', 'iShares Emergentes'),
+    ('GLD',  'SPDR Oro'),               ('IBIT', 'iShares Bitcoin'),
+    # Nombres individuales de referencia
+    ('AAPL', 'Apple'),        ('MSFT', 'Microsoft'),   ('NVDA', 'Nvidia'),
+    ('GOOGL','Alphabet'),     ('AMZN', 'Amazon'),      ('META', 'Meta'),
+    ('TSLA', 'Tesla'),        ('BRK-B','Berkshire'),   ('COST', 'Costco'),
+    ('JPM',  'JPMorgan'),     ('V',    'Visa'),        ('UNH',  'UnitedHealth'),
+]
+
 NOTICIAS = [
     ('CNBC',        'https://www.cnbc.com/id/100003114/device/rss/rss.html'),
     ('MarketWatch', 'https://feeds.content.dowjones.io/public/rss/mw_topstories'),
@@ -126,6 +146,29 @@ def precios():
             'precio': round(p, 2),
             'cambio': round(p - prev, 2),
             'pct': round((p - prev) / prev * 100, 2),
+        })
+    return out
+
+
+def acciones():
+    """Precio y cambio del día de cada instrumento del universo de inversión."""
+    out = []
+    for tick, nombre in ACCIONES:
+        url = f'https://query1.finance.yahoo.com/v8/finance/chart/{tick}?range=5d&interval=1d'
+        try:
+            m = json.loads(baja(url))['chart']['result'][0]['meta']
+        except Exception as err:            # un símbolo caído no tumba a los demás
+            print(f'  ! {tick}: {err}', file=sys.stderr)
+            continue
+        p = m.get('regularMarketPrice')
+        prev = m.get('chartPreviousClose') or m.get('previousClose')
+        if p is None or not prev:
+            continue
+        out.append({
+            'tick': tick, 'nombre': nombre,
+            'precio': round(p, 2),
+            'pct': round((p - prev) / prev * 100, 2),
+            'moneda': m.get('currency', 'USD'),
         })
     return out
 
@@ -317,7 +360,7 @@ def main():
 
     datos, fallas = {}, []
     VACIO_OK = {'directos'}          # que nadie esté en vivo es un resultado válido
-    for clave, fn in (('calendario', calendario), ('precios', precios),
+    for clave, fn in (('calendario', calendario), ('precios', precios), ('acciones', acciones),
                       ('noticias', noticias), ('videos', videos),
                       ('directos', directos)):
         try:
