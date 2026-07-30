@@ -3586,8 +3586,11 @@ let S = load();
 function migrar(s){
   /* Esto va ANTES del corte por esquema: un trade sin cuentas es invisible para todo
      el aparato, así que se normaliza venga de donde venga. */
-  (s.trades||[]).forEach(t => {
+  (s.trades||[]).forEach((t, k) => {
     if(!Array.isArray(t.accts) || !t.accts.length) t.accts = [SIN_CUENTA];
+    /* los trades de las primeras semanas nacieron sin id; sin id la nube no
+       puede fusionarlos (ni el descarte de violaciones distinguirlos) */
+    if(!t.id) t.id = 't-mig-' + (t.seq != null ? t.seq : (t.date || 'x') + '-' + k);
   });
   if((s.schema||0) >= SCHEMA) return s;      // idempotente: sin esto se re-migra en cada carga
   s.accounts = s.accounts || [];
@@ -7408,9 +7411,15 @@ function pintaPill(p){
 
 /* ── fusión: nadie pierde lo que escribió ── */
 function fusionarListas(mias, suyas){
+  /* La llave es el id — y si un elemento viejo no trae id, su CONTENIDO hace de
+     llave en vez de tirarlo. La versión anterior descartaba todo lo sin id, y
+     como los trades de las primeras semanas nacieron sin id, la nube llegó a
+     rev 101 con 5 cuentas, 1 tesis y CERO trades: la carrera de los socios no
+     podía moverse nunca. Perder datos en silencio es lo único prohibido aquí. */
   const out = new Map();
-  (suyas || []).forEach(x => x && x.id && out.set(x.id, x));
-  (mias  || []).forEach(x => x && x.id && out.set(x.id, x));   // lo local gana el empate
+  const clave = x => x.id != null ? 'id:' + x.id : 'sin:' + JSON.stringify(x);
+  (suyas || []).forEach(x => { if(x) out.set(clave(x), x); });
+  (mias  || []).forEach(x => { if(x) out.set(clave(x), x); });   // lo local gana el empate
   return [...out.values()];
 }
 function fusionarEstado(local, remoto){
