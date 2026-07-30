@@ -54,7 +54,7 @@
   --line-soft:rgba(0,0,0,.08);
   --txt:#0C0C0C;
   --dim:#585858;
-  --faint:#8C8C8C;
+  --faint:#6E6E6E;
   --accent:#000000;
   --accent-deep:#404040;
   --up:#1B7A50;
@@ -120,7 +120,7 @@ label{font-family:var(--mono);font-size:10px;letter-spacing:.14em;text-transform
 /* ═══ Rail (sidebar) ═══ */
 .rail{
   position:relative;z-index:5;
-  width:236px;flex:0 0 auto;min-width:0;height:100%;overflow:hidden;
+  width:236px;flex:0 0 auto;min-width:0;height:100%;overflow-x:hidden;overflow-y:auto;
   display:flex;flex-direction:column;
   background:var(--rail-bg);
   -webkit-backdrop-filter:blur(22px) saturate(150%);
@@ -203,6 +203,7 @@ label{font-family:var(--mono);font-size:10px;letter-spacing:.14em;text-transform
 .top-date{font-family:var(--mono);font-size:11px;color:var(--dim);letter-spacing:.06em}
 /* Quién está en la mesa AHORITA, junto al reloj de la sesión: un punto verde
    por socio visto hace menos de 12 min. Verde = está; hueco = se fue. */
+.en-linea[hidden]{display:none}
 .en-linea{display:inline-flex;align-items:center;gap:6px;
   font-family:var(--mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;
   padding:7px 12px;border-radius:99px;color:var(--dim);
@@ -214,7 +215,29 @@ label{font-family:var(--mono);font-size:10px;letter-spacing:.14em;text-transform
 .en-linea b{font-weight:500}
 /* En pantalla chica NO se esconde el texto: un punto mudo no dice nada.
    Se acorta a «TÚ» / «3», que sí se lee. */
-@media(max-width:900px){ .en-linea{padding:7px 10px;font-size:9px;letter-spacing:.06em} }
+@media(max-width:900px){
+  .en-linea{padding:7px 9px;font-size:9px;letter-spacing:.06em}
+  /* En 375px el pill de sesión con «VENTANA ABIERTA · CIERRA 8:30» empujaba al
+     de presencia fuera de la pantalla, y como el body no scrollea, desaparecía.
+     Ahora el de sesión cede espacio y recorta con puntos suspensivos. */
+  /* La barra sólo dispone de ~205 px en un iPhone: el pill de sesión cede y
+     recorta con puntos suspensivos (el detalle está en la vista Rutina). */
+  .sess-pill{min-width:0;flex:1 1 auto;overflow:hidden;max-width:66px;padding:7px 8px}
+  .sess-pill #sessTxt{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:block}
+  .top-bar, .top-r, .topbar-right{gap:6px !important}
+  .top-clock{flex:0 0 auto}
+  /* En celular el indicador de nube se reduce a su punto: el color ya dice todo
+     (verde = sincronizada, ámbar = sola) y el texto cabía a costa de empujar la
+     barra 74 px fuera de la pantalla. Se sigue pudiendo picar para el detalle. */
+  /* pintaPill() reescribe el contenido como texto plano, así que el texto se
+     apaga con font-size:0 y el estado se lee en el punto, que hereda el color */
+  /* En 375px no caben seis cosas en la barra: la fecha larga se va (la vista ya
+     la muestra) y quedan tema, sesión, quién está, nube y reloj. */
+  .top-date{display:none}
+  #cloudPill{flex:0 0 auto;padding:9px;gap:0;font-size:0;line-height:0}
+  #cloudPill::before{content:'';width:8px;height:8px;border-radius:50%;
+    background:currentColor;display:block}
+}
 .avisoX{position:absolute;top:8px;right:8px;width:24px;height:24px;line-height:1;
   border:1px solid var(--line);background:var(--w05);color:var(--dim);
   border-radius:7px;font-size:15px;cursor:pointer;display:grid;place-items:center;padding:0}
@@ -243,7 +266,13 @@ label{font-family:var(--mono);font-size:10px;letter-spacing:.14em;text-transform
 .content::-webkit-scrollbar-thumb{background:var(--w09);border-radius:99px}
 .view{display:none;max-width:1180px;margin:0 auto;animation:vin .28s ease both}
 .view.on{display:block}
-@keyframes vin{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+/* OJO: este keyframe terminaba en `transform:none` y con `fill-mode:both` se
+   quedaba fijo pisando el transform del elemento — las animaciones ganan en la
+   cascada. Por eso el panel del tour perdía su `translateX(-50%)` y se salía de
+   la pantalla en cualquier ventana menor a ~1040px (el botón «Siguiente» quedaba
+   fuera), y el popup de cuentas ignoraba su reposicionamiento. Se anima sólo la
+   opacidad y el desplazamiento va por una variable propia. */
+@keyframes vin{from{opacity:0}to{opacity:1}}
 
 /* ═══ Panels & grids ═══ */
 .panel{
@@ -1820,6 +1849,12 @@ canvas{display:block;width:100%}
 #menuBtn{display:none}
 /* responsive */
 @media (max-width:960px){
+  /* El rail se dibujaba ENCIMA de su propio botón y no había forma de cerrarlo
+     salvo navegar a otra vista. Un velo detrás lo cierra con un toque. */
+  .rail-velo{position:fixed;top:0;left:0;width:100vw;height:100vh;z-index:49;background:rgba(6,8,12,.55);
+    opacity:0;pointer-events:none;transition:opacity .18s ease}
+  body.rail-abierto .rail-velo{opacity:1;pointer-events:auto}
+
   .g4,.g5{grid-template-columns:1fr 1fr}
   .g3{grid-template-columns:1fr}
   .g2{grid-template-columns:1fr}
@@ -1997,6 +2032,7 @@ stop[stop-color="#9BC0DC"]{stop-color:var(--txt)}
       <a class="rail-exit" href="index.html">← NORTHPOINT.IO</a>
     </div>
   </aside>
+<div class="rail-velo" id="railVelo" aria-hidden="true"></div>
 
   <!-- ══════════ MAIN ══════════ -->
   <div class="main">
@@ -2013,6 +2049,7 @@ stop[stop-color="#9BC0DC"]{stop-color:var(--txt)}
         <span class="top-date" id="topDate"></span>
         <span class="sess-pill" id="sessPill"><span class="dot"></span><span id="sessTxt">—</span></span>
         <span class="en-linea" id="enLinea" hidden></span>
+        <span class="sess-pill" id="cloudPill" title="Estado de la mesa compartida"><span class="dot"></span><span>—</span></span>
         <span class="top-clock" id="topClock">--:--:--</span>
       </div>
     </header>
@@ -4161,14 +4198,25 @@ function show(view){
   $$('.rail a.item').forEach(a=>a.classList.toggle('on', a.dataset.view===view));
   $('#crumb').textContent = tr(TITLES[view][0]).toUpperCase();
   $('#viewTitle').textContent = tr(TITLES[view][1]);
-  $('#rail').classList.remove('open');
+  cierraRail();
   $('#content').scrollTop = 0;
   render(view);
 }
 addEventListener('hashchange', ()=> show(location.hash.slice(1)));
 $$('.rail a.item').forEach(a=> a.addEventListener('click', ()=> setTimeout(()=>show(a.dataset.view))));
 $$('[data-goto]').forEach(b=> b.addEventListener('click', ()=> location.hash = b.dataset.goto));
-$('#menuBtn').addEventListener('click', ()=> $('#rail').classList.toggle('open'));
+$('#menuBtn').addEventListener('click', ()=> {
+  const abierto = $('#rail').classList.toggle('open');
+  document.body.classList.toggle('rail-abierto', abierto);
+});
+function cierraRail(){
+  const r = $('#rail'); if(r) r.classList.remove('open');
+  document.body.classList.remove('rail-abierto');
+}
+document.addEventListener('click', e => { if(e.target && e.target.id === 'railVelo') cierraRail(); });
+document.addEventListener('keydown', e => {
+  if(e.key === 'Escape' && document.body.classList.contains('rail-abierto')) cierraRail();
+});
 /* El menú se pliega a puros iconos y se acuerda de cómo lo dejaste. Los
    nombres se vuelven title, así que plegado sigue siendo navegable. */
 function pintaPlegado(){
@@ -4388,12 +4436,14 @@ addEventListener('keydown', e=>{ if(e.key==='Escape' && pickerAbierto) cerrarPic
 
 /* repinta todo lo que depende de la selección, sin perder el desplegable abierto */
 function refrescarSeleccion(){
-  const v = location.hash.slice(1) || 'agentes';
+  const v = vistaActual();
   if(v === 'journal'){ renderDashboard(); renderJournal(); renderObjetivos(); }
   else if(v === 'agentes') renderAgentes();
   else if(v === 'trades') renderTrades();
   else if(v === 'vida') renderVida();
   else if(v === 'plan') renderMetas();
+  else if(v === 'sesion'){ renderSesion(); renderCamino(); }
+  else if(v === 'posiciones') renderPosiciones();
   else { renderPicker($('#pickMesa')); renderPicker($('#pickJournal')); }
 }
 
@@ -7334,11 +7384,32 @@ $('#avFile')?.addEventListener('change', e => {
    mismo. Sale una sola vez por usuario; después vive en Ajustes. */
 function abreCreador(alCerrar){
   const ov = $('#ovAvatar'); if(!ov) return alCerrar && alCerrar();
+  /* Se abría a mano, saltándose el sistema de overlays: al cerrarlo con Escape
+     o con un clic afuera, el callback nunca corría, la marca de bienvenida no se
+     escribía y el modal volvía a salir EN CADA LOGIN, para siempre. Además el
+     terminal de atrás seguía clicable. Se cierre como se cierre, se marca. */
+  ov._alCerrar = alCerrar;
+  if(!ov._vigilado){
+    ov._vigilado = true;
+    new MutationObserver(() => {
+      if(!ov.classList.contains('on') && ov._alCerrar){
+        const cb = ov._alCerrar; ov._alCerrar = null;
+        try{ document.querySelector('.app').removeAttribute('inert'); }catch(e){}
+        /* La marca vivía sólo al final del tour: quien cerraba el creador con
+           Escape lo volvía a ver en CADA login. Se marca aquí, que es cuando
+           el socio ya eligió su monito. */
+        const yo = S.session && S.session.user;
+        if(yo){ S.bienvenida = S.bienvenida || {}; S.bienvenida[yo] = true; try{ save(); }catch(e){} }
+        cb();
+      }
+    }).observe(ov, { attributes:true, attributeFilter:['class'] });
+  }
+  try{ document.querySelector('.app').setAttribute('inert',''); }catch(e){}
   $('#avCrea').innerHTML = creadorHTML();
   pintaCreador($('#ovAvatar'));
   conectaCreador($('#ovAvatar'));
   ov.classList.add('on');
-  $('#avListo').onclick = () => { ov.classList.remove('on'); if(alCerrar) alCerrar(); };
+  $('#avListo').onclick = () => { ov.classList.remove('on'); };   // el observador dispara el callback
 }
 
 /* ══ EL MONITO · tu yo virtual ══
@@ -11256,7 +11327,16 @@ function render(view){
   else if(view==='plan') renderMetas();
   updateBadges();
 }
-function renderAll(){ applyProfile(); aplicarIdioma(); pintaPlegado(); render(location.hash.slice(1)||'agentes'); }
+/* Los alias del hash los traducía show() pero NO se reescribía la URL, así que
+   renderAll() le pasaba a render() el hash crudo ('dashboard', 'progreso'…) y
+   render() no lo reconocía: la vista se quedaba con números viejos sin un solo
+   error. Pega al guardar ajustes, al restaurar y en cada sync de la nube. */
+const ALIAS_VISTA = { dashboard:'vida', progreso:'agentes', estudio:'trades', coach:'trades' };
+function vistaActual(){
+  const v = location.hash.slice(1) || 'agentes';
+  return ALIAS_VISTA[v] || (TITLES[v] ? v : 'agentes');
+}
+function renderAll(){ applyProfile(); aplicarIdioma(); pintaPlegado(); render(vistaActual()); }
 
 addEventListener('resize', ()=>{
   if($('#v-journal').classList.contains('on')) drawEquity();
