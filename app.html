@@ -1303,6 +1303,9 @@ button.tag.quemada{text-decoration:line-through;text-decoration-color:var(--down
 .rd-centro span{font-family:var(--mono);font-size:9px;letter-spacing:.16em;text-transform:uppercase;color:var(--faint);margin-top:2px}
 .rd-filas{flex:1;min-width:250px}
 .rd-fila{display:flex;align-items:center;gap:11px;padding:8px 0;border-bottom:1px solid var(--line-soft)}
+.rd-grupo{font-family:var(--mono);font-size:9px;letter-spacing:.16em;text-transform:uppercase;
+  color:var(--accent);margin:16px 0 2px;padding-top:12px;border-top:1px solid var(--line)}
+.rd-grupo:first-child{margin-top:0;padding-top:0;border-top:0}
 .rd-fila3{padding:12px 0;border-bottom:1px solid var(--line-soft)}
 .rd-fila3:last-of-type{border-bottom:0}
 .rd-top{display:flex;align-items:baseline;gap:10px}
@@ -5498,28 +5501,35 @@ const MASTER_2040 = [
    Los porcentajes cambian con la fase del plan: al principio pesan cuentas
    y reserva porque eres frágil; al final pesa inversión porque ya no lo eres.
    Es el punto de partida, no una jaula — muévelo cuando quieras. */
+/* ══ LA RUEDA · a dónde va cada payout ══
+   Cinco destinos, y los tres primeros son inversión en cosas distintas —
+   los mismos tres balances que ves en la Torre de control. El cuarto es
+   vivir y el quinto es tuyo. */
 const FRASCOS = [
-  { id:'inv',   n:'Investing',      color:'#38BDF8', grows:true,
-    d:'The slice that grows. Buys the 2040 sheet below and never gets touched.' },
-  { id:'fijos', n:'Fixed expenses', color:'#8A93A0',
-    d:'Everything that must be paid: tax set-aside, evaluations and resets, rent, food, transport.' },
-  { id:'libre', n:'Free',           color:'#C79A3A',
-    d:'What is left after the two above. Yours, with no guilt.' },
+  { id:'port',  n:'Portfolio',      color:'#38BDF8', grows:true, grupo:'inv',
+    d:'Into the 2040 sheet below. This is the slice that compounds and never gets touched.' },
+  { id:'live',  n:'Live account',   color:'#57C79B', grupo:'inv',
+    d:'Your own trading capital. No phases, no prop firm — and nobody to replace it.' },
+  { id:'ctas',  n:'More accounts',  color:'#6C8CF5', grupo:'inv',
+    d:'Evaluations and resets. Buying more shots is how the futures side scales.' },
+  { id:'vida',  n:'Living',         color:'#C79A3A',
+    d:'Rent, food, transport — and the tax you owe on the payout. None of it is optional.' },
+  { id:'libre', n:'Free',           color:'#E8975A',
+    d:'What is left once the four above are covered. Yours, with no guilt.' },
 ];
-/* fase → [investing, fixed, free].
-   La forma no es capricho: al principio vives en casa y lo fijo es casi
-   puro costo de cuentas e impuesto, así que cabe invertir mucho. En la II
-   aparece la renta y lo fijo se dispara. De la IV en adelante lo fijo deja
-   de crecer y la inversión vuelve a mandar. */
+/* fase → [portfolio, live, more accounts, living, free].
+   Al principio pesa comprar más cuentas: es la palanca que más rápido sube
+   el ingreso. Conforme la vida cuesta de verdad, pesa vivir. Al final el
+   portafolio se lleva casi todo porque ya no hace falta escalar cuentas. */
 const RUEDA_POR_FASE = {
-  0: [50, 35, 15],
-  1: [45, 40, 15],
-  2: [30, 55, 15],
-  3: [35, 50, 15],
-  4: [40, 42, 18],
-  5: [42, 40, 18],
-  6: [42, 40, 18],
-  7: [40, 40, 20],
+  0: [35,  5, 25, 20, 15],
+  1: [35, 10, 20, 20, 15],
+  2: [30, 10, 12, 33, 15],
+  3: [35, 12,  8, 30, 15],
+  4: [42, 10,  5, 25, 18],
+  5: [45,  8,  3, 26, 18],
+  6: [45,  8,  2, 27, 18],
+  7: [45,  5,  0, 30, 20],
 };
 function ruedaDeFase(i){
   const p = RUEDA_POR_FASE[Math.max(0, Math.min(7, i))] || RUEDA_POR_FASE[0];
@@ -5572,10 +5582,12 @@ function renderRueda(monto){
     <div class="rd">
       <div class="rd-wheel">
         ${pieSVG(R)}
-        <div class="rd-centro"><b>${inv.pct}%</b><span>${bi('invierte','invests')}</span></div>
+        <div class="rd-centro"><b>${R.filter(x=>x.grupo==='inv').reduce((a,x)=>a+x.pct,0)}%</b><span>${bi('invested','invested')}</span></div>
       </div>
       <div class="rd-filas">
-        ${R.map(x => `
+        ${R.map((x, k) => `
+          ${k === 0 ? `<div class="rd-grupo">${bi('Investing','Investing')} · ${R.filter(y=>y.grupo==='inv').reduce((a,y)=>a+y.pct,0)}%</div>` : ''}
+          ${x.grupo !== 'inv' && (R[k-1]||{}).grupo === 'inv' ? `<div class="rd-grupo">${bi('The rest','The rest')} · ${R.filter(y=>y.grupo!=='inv').reduce((a,y)=>a+y.pct,0)}%</div>` : ''}
           <div class="rd-fila3">
             <div class="rd-top">
               <span class="rd-dot" style="background:${x.color}"></span>
@@ -5587,8 +5599,8 @@ function renderRueda(monto){
             <p class="rd-d">${esc(x.d || '')}</p>
           </div>`).join('')}
         <p class="micro" style="margin:14px 0 0;color:var(--faint);line-height:1.65">
-          Tax and account costs sit inside <b>Fixed</b> on purpose — they are not optional, and money
-          you owe was never yours to spend. That is the one idea worth keeping from Profit First.</p>
+          The first three all feed a balance you already track in the Control tower.
+          Tax sits inside <b>Living</b> on purpose: money you owe was never yours to spend.</p>
       </div>
     </div>`;
   const rst = $('#rdReset');
