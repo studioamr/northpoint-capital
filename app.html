@@ -2054,18 +2054,6 @@ stop[stop-color="#9BC0DC"]{stop-color:var(--txt)}
           </div>
         </div>
 
-        <!-- LA CURVA · proyección con ese monto reinvertido cada mes -->
-        <div class="panel mt2">
-          <div class="p-head"><h3 data-i18n="mi.curvaProy">La curva de proyección</h3><span class="micro" id="cFinal"></span></div>
-          <div class="p-body">
-            <div class="f-full">
-              <label><span data-i18n="mi.horizonte">Horizonte</span>: <span class="mono" id="cAniosLbl">20</span> <span data-i18n="mi.anios">años</span></label>
-              <input type="range" id="cAnios" min="3" max="30" value="20" style="padding:0">
-            </div>
-            <canvas id="cCanvas" height="190"></canvas>
-            <div id="cNivel" class="mt"></div>
-          </div>
-        </div>
       </section>
 
       <!-- ════ VIDA DEL NEGOCIO (la caja: dinero real que entró y salió) ════ -->
@@ -2704,7 +2692,6 @@ const I18N = {
 
   /* snowball */
   'sn.anio':      { es:'Año',                        en:'Year' },
-  'sn.anioN':     { es:'AÑO',                        en:'YEAR' },
 
   /* nube */
   'nu.local':     { es:'ESTADO LOCAL',               en:'LOCAL STATE' },
@@ -2751,12 +2738,10 @@ const I18N = {
   'vd.intro.d': { es:'No es el P&L de plataforma: al pasar una evaluación la cuenta reinicia y esa ganancia se evapora. Aquí sólo va dinero que se movió de verdad.', en:'This is not platform P&L: when you pass an evaluation the account resets and that gain evaporates. Only money that actually moved lives here.' },
   'mi.nueva':    { es:'+ Nueva compra', en:'+ New buy' },
   'mi.proy':     { es:'La bola de nieve · invirtiéndole cada mes', en:'The snowball · investing monthly' },
-  'mi.curvaProy': { es:'La curva de proyección', en:'The projection curve' },
   'mi.compuesto':{ es:'Interés compuesto', en:'Compound interest' },
   'mi.capIni':   { es:'Capital de hoy USD', en:"Today's capital USD" },
   'mi.tasa':     { es:'Retorno anual %', en:'Annual return %' },
   'mi.aporte':   { es:'Aporte anual USD', en:'Annual contribution USD' },
-  'mi.horizonte':{ es:'Horizonte', en:'Horizon' },
   'mi.anios':    { es:'años', en:'years' },
   'mi.bola':     { es:'La bola de nieve', en:'The snowball' },
   'mi.k.total':  { es:'Dinero que ya es tuyo', en:'Money already yours' },
@@ -5732,7 +5717,6 @@ function renderPosiciones(){
       <em class="mono">${mInv ? fmt$(Math.round(mInv * pc / 100)) : ''}</em>
     </div>`).join('');
 
-  renderCalc();
 }
 $('#pyCalc')?.addEventListener('click', () => {
   S.politica = S.politica || {};
@@ -5913,66 +5897,6 @@ $('#rjSave').addEventListener('click', ()=>{
    tienes invertido, y el aporte es tu RITMO REAL de aportación, medido
    sobre los días que llevas invirtiendo. El retorno no se adivina: se
    pintan tres escenarios y se dice de dónde salen. */
-const ESCENARIOS = [
-  { k:'bajo',  tasa:0.08, t:['prudente','conservative'] },
-  { k:'base',  tasa:0.10, t:['base','base'] },
-  { k:'alto',  tasa:0.12, t:['optimista','optimistic'] },
-];
-function renderCalc(){
-  if(!$('#cCanvas')) return;
-  const cap = (S.positions || []).reduce((a,p) => a + valuar(p).valor, 0)
-            + cuentasLive().reduce((a,x) => a + saludDe(x).balance, 0);
-  const monto = (S.politica && S.politica.montoPayout) || 0;
-  const inv = rueda().find(x => x.grows) || { pct: 50 };
-  const mes = Math.round(monto * inv.pct / 100);
-  const anios = parseInt($('#cAnios').value) || 20;
-  $('#cAniosLbl').textContent = anios;
-  pintaProyeccion(cap, mes, anios);
-}
-
-function pintaProyeccion(cap, mes, anios){
-  const series = ESCENARIOS.map(e => {
-    const s2 = [cap]; const rm = Math.pow(1 + e.tasa, 1/12) - 1;
-    let v = cap;
-    for(let y = 1; y <= anios; y++){
-      for(let m2 = 0; m2 < 12; m2++) v = v * (1 + rm) + mes;
-      s2.push(v);
-    }
-    return { ...e, serie: s2, fin: s2[anios] };
-  });
-  const [bajo, base, alto] = series;
-  $('#cFinal').textContent = tr('sn.anioN') + ' ' + anios + ' → ' + fmt$(base.fin);
-  $('#cNivel').innerHTML = (cap > 0 || mes > 0)
-    ? `<div class="g-banner" style="margin-top:4px"><span>${bi(
-        `${fmt$(mes)} (${bi('la rebanada ❄','the ❄ slice')}) reinvertidos cada mes por ${anios} años: entre <b>${fmt$(bajo.fin)}</b> y <b>${fmt$(alto.fin)}</b> · base <b>${fmt$(base.fin)}</b>`,
-        `${fmt$(mes)} reinvested monthly for ${anios} years: between <b>${fmt$(bajo.fin)}</b> and <b>${fmt$(alto.fin)}</b> · base <b>${fmt$(base.fin)}</b>`)}</span></div>
-      <p class="micro" style="margin-top:8px;color:var(--faint)">${bi('8 / 10 / 12% — los escenarios de la tesis 2040. El índice global histórico da 6–10: la diferencia es la apuesta.','8 / 10 / 12% — the 2040 thesis scenarios. A global index has done 6–10 historically: the gap is the bet.')}</p>`
-    : `<div class="g-banner" style="margin-top:4px"><span>${bi('Escribe la cantidad del payout y dale Calcular.','Type the payout amount and hit Calculate.')}</span></div>`;
-
-  const cv = $('#cCanvas'), wrap = cv.parentElement;
-  const W = Math.max(120, wrap.clientWidth - 36), H = 190, dpr = devicePixelRatio || 1;
-  cv.width = W*dpr; cv.height = H*dpr; cv.style.height = H+'px';
-  const ctx = cv.getContext('2d'); ctx.setTransform(dpr,0,0,dpr,0,0);
-  ctx.clearRect(0,0,W,H);
-  const max = Math.max(alto.fin, 1);
-  const X = i => 8 + i*(W-16)/anios;
-  const Y = v => 14 + (H-34)*(1 - v/max);
-  ctx.beginPath();
-  alto.serie.forEach((v,i) => i ? ctx.lineTo(X(i),Y(v)) : ctx.moveTo(X(i),Y(v)));
-  for(let i = anios; i >= 0; i--) ctx.lineTo(X(i), Y(bajo.serie[i]));
-  ctx.closePath();
-  ctx.fillStyle = 'rgba(56,189,248,.12)'; ctx.fill();
-  const css = getComputedStyle(document.documentElement);
-  [[bajo,'rgba(56,189,248,.45)',1.2],[alto,'rgba(87,199,155,.5)',1.2],
-   [base, (css.getPropertyValue('--txt')||'#F4F4F4').trim(), 1.9]].forEach(([S2,col,lw]) => {
-    ctx.beginPath();
-    S2.serie.forEach((v,i) => i ? ctx.lineTo(X(i),Y(v)) : ctx.moveTo(X(i),Y(v)));
-    ctx.strokeStyle = col; ctx.lineWidth = lw; ctx.stroke();
-  });
-  ctx.font = '11px "IBM Plex Mono"'; ctx.textAlign = 'right';
-  ctx.fillStyle = '#E9EDF2'; ctx.fillText(fmt$(base.fin), W-8, Y(base.fin)+14);
-}
-$('#cAnios')?.addEventListener('input', renderCalc);
 
 /* ════════ ACCESO (login de socios) ════════ */
 function currentUser(){ return userDe(S.session && S.session.user); }
@@ -7545,7 +7469,7 @@ function render(view){
   else if(view==='sesion'){ renderSesion(); renderTix(); }
   else if(view==='journal'){ renderDashboard(); renderJournal(); renderObjetivos(); }
   else if(view==='trades') renderTrades();
-  else if(view==='posiciones'){ renderPosiciones(); renderCalc(); }
+  else if(view==='posiciones') renderPosiciones();
   else if(view==='vida') renderVida();
   else if(view==='plan') renderMetas();
   updateBadges();
@@ -7554,7 +7478,6 @@ function renderAll(){ applyProfile(); aplicarIdioma(); render(location.hash.slic
 
 addEventListener('resize', ()=>{
   if($('#v-journal').classList.contains('on')) drawEquity();
-  if($('#v-posiciones').classList.contains('on')) renderCalc();
 });
 
 
