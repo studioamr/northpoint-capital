@@ -1464,10 +1464,6 @@ stop[stop-color="#9BC0DC"]{stop-color:var(--txt)}
 
     <nav class="rail-group">
       <div class="micro" data-i18n="nav.grupo.np">Northpoint</div>
-            <a class="item" href="#dashboard" data-view="dashboard">
-        <svg viewBox="0 0 24 24" fill="none" stroke-width="1.6"><path d="M3 20h18"/><rect x="4.5" y="10" width="4" height="10" rx="1"/><rect x="10" y="5.5" width="4" height="14.5" rx="1"/><rect x="15.5" y="13" width="4" height="7" rx="1"/></svg>
-        <span data-i18n="nav.firma">Panorama</span>
-      </a>
       <a class="item" href="#agentes" data-view="agentes">
         <svg viewBox="0 0 24 24" fill="none" stroke-width="1.6"><circle cx="12" cy="8" r="3.2"/><path d="M5 20c0-3.3 3.1-5.5 7-5.5s7 2.2 7 5.5"/><circle cx="19" cy="6" r="1.4"/><circle cx="5" cy="6" r="1.4"/></svg>
         <span data-i18n="nav.agentes">El negocio</span>
@@ -1566,22 +1562,8 @@ stop[stop-color="#9BC0DC"]{stop-color:var(--txt)}
 
       </section>
 
-      <section class="view" id="v-dashboard">
-        <div class="firm-head">
-          <div>
-            <div class="micro" data-i18n="fi.k">Northpoint Capital Management</div>
-            <h2 class="firm-title" data-i18n="fi.t">Panorama</h2>
-          </div>
-          <span class="micro" id="firmDate"></span>
-        </div>
-
-        <!-- Las tres patas del negocio y nada más. El P&L del día y las tesis
-             viven en Mi desempeño y en Hoy: repetirlos aquí era ruido. -->
-        <div class="tres" id="firmTres"></div>
-      </section>
-
       <!-- ════ MI MESA (desempeño del operador) ════ -->
-      
+
       <!-- ════ SESIÓN ════ -->
       <section class="view" id="v-sesion">
         <div class="panel">
@@ -1897,6 +1879,14 @@ stop[stop-color="#9BC0DC"]{stop-color:var(--txt)}
           <span data-i18n="vd.intro.d">No es el P&amp;L de plataforma: al pasar una evaluación la cuenta reinicia y esa ganancia se evapora. Aquí sólo va dinero que se movió de verdad.</span>
         </p>
         <div id="vidaBox"></div>
+
+        <!-- Las tres patas del negocio: el panorama vive aquí, junto al dinero
+             de verdad, en vez de en una vista propia. -->
+        <div style="display:flex;align-items:center;gap:12px;margin:30px 0 8px;flex-wrap:wrap">
+          <span class="micro" data-i18n="fi.t">Panorama</span>
+          <span class="micro" id="firmDate" style="margin-left:auto;color:var(--faint)"></span>
+        </div>
+        <div class="tres" id="firmTres"></div>
 
         <!-- La escalera: en qué se convierte el dinero cobrado. Los peldaños
              se marcan solos cuando el neto de la caja cruza su precio. -->
@@ -2346,7 +2336,7 @@ const I18N = {
   'nav.sesion':        { es:'Rutina',                en:'Routine' },
   'nav.aprob':         { es:'Tesis',                 en:'Theses' },
   'nav.progreso':      { es:'Progreso',                  en:'Progress' },
-  'nav.journal':       { es:'Mi desempeño',               en:'My performance' },
+  'nav.journal':       { es:'Journal',                    en:'Journal' },
   'nav.reglas':        { es:'Reglas',                en:'Rules' },
   'nav.pos':           { es:'Portafolio',            en:'Portfolio' },
   'nav.pie':           { es:'Terminal · interno',    en:'Terminal · internal' },
@@ -2357,7 +2347,7 @@ const I18N = {
   'tit.mesa.k':        { es:'Operación diaria',      en:'Daily trading' },
   'tit.sesion.t':      { es:'Rutina',                en:'Routine' },
   'tit.progreso.t':    { es:'Progreso',                  en:'Progress' },
-  'tit.journal.t':     { es:'Mi desempeño',               en:'My performance' },
+  'tit.journal.t':     { es:'Journal',                    en:'Journal' },
   'tit.reglas.t':      { es:'Reglas y protocolos',   en:'Rules & protocols' },
   'tit.snow.k':        { es:'Mi dinero',             en:'My money' },
   'tit.pos.t':         { es:'Portafolio',            en:'Portfolio' },
@@ -2520,6 +2510,8 @@ const I18N = {
   'me.mes':       { es:'Mes',                        en:'Month' },
   'me.anio':      { es:'Año',                        en:'Year' },
   'me.violaciones': { es:'violación(es) hoy:',       en:'violation(s) today:' },
+  'me.contraPlan': { es:'Se midieron contra tu plan de sesión de ese día.',
+                     en:'Measured against your session plan for that day.' },
   'me.croPuede':  { es:'El CRO tiene autoridad para detener operaciones.',
                     en:'The CRO has authority to stop trading.' },
   'me.atencion':  { es:'⚠ Atención:',                en:'⚠ Heads up:' },
@@ -2611,7 +2603,8 @@ const I18N = {
   'vio.OUT_OF_WINDOW': { es:'Fuera de ventana',      en:'Outside window' },
   /* Ya no es "3er trade": el plan permite 5 en evaluación y 2 en las otras fases. */
   'vio.THIRD_TRADE':   { es:'Trades de más',         en:'Over trade limit' },
-  'vio.AFTER_WIN':     { es:'Operó tras ganar',      en:'Traded after a win' },
+  'vio.AFTER_WIN':     { es:'Operó tras ganar',      en:'Traded after a win' },   // histórico: trades viejos
+  'vio.AFTER_TARGET':  { es:'Operó pasado el objetivo', en:'Traded past the target' },
   'vio.REVENGE':       { es:'Revenge',               en:'Revenge' },
   'vio.NO_SETUP':      { es:'Sin setup',             en:'No setup' },
   'vio.FIRM_LIMIT':    { es:'Límite de la firma',    en:'Firm limit' },
@@ -2721,7 +2714,7 @@ function cambiarIdioma(){
   IDIOMA = IDIOMA === 'es' ? 'en' : 'es';
   try{ localStorage.setItem('np_lang', IDIOMA); }catch(e){}
   aplicarIdioma();
-  try{ show(location.hash.slice(1) || 'dashboard'); }catch(e){}
+  try{ show(location.hash.slice(1) || 'agentes'); }catch(e){}
   /* La píldora de la nube se pinta a mano con tr(), no con data-i18n: sin esto
      se quedaba en el idioma viejo hasta el siguiente evento de nube. */
   try{ cloudPaint(); }catch(e){}
@@ -3383,15 +3376,24 @@ function metas(){
            techo, declarada, derivada:true, nCuentas:conReglas.length, capital:capitalVista() };
 }
 
+/* La sesión global en la que cae el reloj (hora local de la mesa, CT).
+   Fuera de nuestra ventana el terminal ya no dice "mesa cerrada": dice en qué
+   sesión anda el mundo, que es lo que de verdad mueve al índice. */
+function sesionMundial(now = ahora()){
+  const h = now.getHours() + now.getMinutes()/60;
+  if(h >= 2 && h < 7)  return 'LONDON SESSION';
+  if(h >= 7 && h < 16) return 'NY SESSION';
+  return 'ASIA SESSION';               // 16:00 → 02:00
+}
 function sessionState(now = ahora()){
   const mins = now.getHours()*60 + now.getMinutes();
   const wd = now.getDay();
   if(wd === 0 || wd === 6) return { k:'off', txt:'FIN DE SEMANA' };
-  if(mins <  VENTANA.open)  return { k:'pre',  txt:'PRE-MARKET · ABRE 7:00' };
+  if(mins <  VENTANA.open)  return { k:'pre',  txt:sesionMundial(now) + ' · ABRE 7:00' };
   if(mins <  VENTANA.orb1)  return { k:'live', txt:'VENTANA ABIERTA · PRE-ORB' };
   if(mins <= VENTANA.orb2)  return { k:'orb',  txt:'ORB 7:30 – 7:45' };
   if(mins <= VENTANA.close) return { k:'live', txt:'VENTANA ABIERTA · CIERRA 8:30' };
-  return { k:'off', txt:'MESA CERRADA' };
+  return { k:'off', txt:sesionMundial(now) };
 }
 
 /* violaciones por trade, dentro de su día (trades ordenados por hora) */
@@ -3415,8 +3417,21 @@ function limitesDia(trade){
   return { rDia, dailyLoss };
 }
 
+/* Las reglas del día las escribe el operador en el Plan de sesión (Rutina →
+   Pre-market): máx. trades, stop y objetivo. Eso manda; si ese día no se llenó,
+   se cae a los límites de la fase. */
+function planDelDia(iso){
+  const s = (S.sessions || {})[iso];
+  const r = s && s.rutina;
+  return {
+    maxT: (r && r.maxT) || maxTradesHoy(),
+    stop: (r && r.stop) || null,
+    obj:  (r && r.obj)  || null,
+  };
+}
 function violations(trade, dayTrades){
   const v = [];
+  const P = planDelDia(trade.date);
   /* Un día que mata la cuenta salía "limpio" porque nadie comparaba el P&L
      contra los límites. Se marca en el último trade del día para no repetirlo. */
   const ultimo = dayTrades[dayTrades.length-1];
@@ -3425,6 +3440,7 @@ function violations(trade, dayTrades){
     if(perdida < 0){
       const L = limitesDia(trade);
       if(L.dailyLoss && -perdida >= L.dailyLoss) v.push('FIRM_LIMIT');
+      else if(P.stop && -perdida > P.stop)       v.push('DAY_RISK');
       else if(L.rDia && -perdida > L.rDia)       v.push('DAY_RISK');
     }
   }
@@ -3432,16 +3448,19 @@ function violations(trade, dayTrades){
   /* MNQ es EL instrumento de la casa, no una violación. Antes se marcaba cada trade
      real como "minis" porque la regla estaba escrita para un sistema de NQ. */
   if(esInstrumentoAjeno(trade.sym)) v.push('OTRO_INSTRUMENTO');
-  /* Fuera de ventana es fuera de LAS DOS ventanas. Un trade de las 20:00 pertenece
-     a ASIA y está en su sitio; antes se marcaba porque sólo existía la de APERTURA. */
   if(trade.time && !estrDeTrade(trade)) v.push('OUT_OF_WINDOW');
-  /* El tope de trades es de la FASE: 5 en evaluación, 2 en colchón y retiros.
-     Estaba cableado en 2 y marcaba como violación el 3er trade que el plan permite. */
-  if(idx >= maxTradesHoy()) v.push('THIRD_TRADE');
+  /* El tope de trades sale del plan de ESE día, no de un número cableado. */
+  if(idx >= P.maxT) v.push('THIRD_TRADE');
+  /* "Operó tras ganar" se retira: era la vieja regla de 2 trades con cierre al
+     primer verde. Hoy el plan dice cuántos trades caben y el objetivo dice
+     cuándo parar — seguir después de tocarlo es lo que sí se marca. */
   if(idx > 0){
     const prev = dayTrades[idx-1];
-    if((prev.pnl||0) > 0) v.push('AFTER_WIN');
     if((prev.pnl||0) < 0 && !trade.setupOk) v.push('REVENGE');
+    if(P.obj){
+      const antes = dayTrades.slice(0, idx).reduce((a,t)=> a + (t.pnl1 != null ? t.pnl1 : (t.pnl||0)), 0);
+      if(antes >= P.obj) v.push('AFTER_TARGET');
+    }
   }
   if(!trade.setupOk && v.indexOf('REVENGE') === -1) v.push('NO_SETUP');
   return v;
@@ -3565,7 +3584,6 @@ function pnlRanges(ids = idsSel(), soloReal = false){
 
 /* ════════ Router ════════ */
 const TITLES = {
-  dashboard:   ['tit.firma.k', 'tit.firma.t'],
   sesion:      ['tit.mesa.k',  'tit.sesion.t'],
   journal:     ['tit.mesa.k',  'tit.journal.t'],
   trades:      ['tit.mesa.k',  'tit.trades.t'],
@@ -3576,7 +3594,8 @@ const TITLES = {
 function show(view){
   if(view === 'progreso') view = 'agentes';   // el progreso vive en El negocio ahora
   if(view === 'estudio' || view === 'coach') view = 'trades';  // curso y coach se fueron; aquí viven los trades
-  if(!TITLES[view]) view = 'dashboard';
+  if(view === 'dashboard') view = 'vida';     // el panorama se mudó a la Vida del negocio
+  if(!TITLES[view]) view = 'agentes';
   $$('.view').forEach(v=>v.classList.remove('on'));
   $('#v-'+view).classList.add('on');
   $$('.rail a.item').forEach(a=>a.classList.toggle('on', a.dataset.view===view));
@@ -3848,11 +3867,11 @@ addEventListener('keydown', e=>{ if(e.key==='Escape' && pickerAbierto) cerrarPic
 
 /* repinta todo lo que depende de la selección, sin perder el desplegable abierto */
 function refrescarSeleccion(){
-  const v = location.hash.slice(1) || 'dashboard';
+  const v = location.hash.slice(1) || 'agentes';
   if(v === 'journal'){ renderDashboard(); renderJournal(); renderObjetivos(); }
   else if(v === 'agentes') renderAgentes();
-  else if(v === 'dashboard') renderFirma();
   else if(v === 'trades') renderTrades();
+  else if(v === 'vida'){ renderVida(); renderFirma(); renderMetas(); }
   else { renderPicker($('#pickMesa')); renderPicker($('#pickJournal')); }
 }
 
@@ -4215,9 +4234,6 @@ function renderCamino(){
     const { a, cc, quema, avance, pct } = f;
     const c1 = cc.total > 0 ? cc.target / cc.total * 100 : 50;
     const c2 = cc.total > 0 ? (cc.target + cc.buffer) / cc.total * 100 : 84;
-    const mov = cc.arranque
-      ? bi('en movimiento desde ', 'moving since ') + fmtFecha(cc.arranque)
-      : bi('sin movimiento todavía', 'no movement yet');
     const hito = cc.pasoPago
         ? `<b class="up">${bi('PAGO MÁXIMO','MAX PAYOUT')}</b> · ${fmtFecha(cc.mPago)}`
       : cc.pasoBuffer
@@ -4225,9 +4241,9 @@ function renderCamino(){
       : cc.pasoEval
         ? bi('eval pasada solita el ','eval auto-passed ') + fmtFecha(cc.mEval) + bi(' · reiniciada a ',' · reset to ') + fmt$(a.start)
         : null;
-    const estadoTxt = quema
-      ? `<b style="color:var(--down)">🔥 ${bi('Se quemó al ','Burned at ')}${Math.round(pct)}%${quema.fecha ? ' · ' + fmtFecha(quema.fecha) : ''}</b>`
-      : `${fmt$(avance)} ${bi('de','of')} ${fmt$(cc.total)} ${bi('de profit','profit')} · ${Math.round(pct)}%`;
+    /* Debajo de la barra va lo único que se pregunta de un vistazo: el balance
+       actual. Lo demás (cuánto llevas de la vara, desde cuándo se mueve) era
+       ruido — el largo de la barra ya lo dice. */
     return `<div class="pr-fila">
       <span class="al" ${quema ? 'style="text-decoration:line-through;text-decoration-color:var(--down)"' : ''}>${esc(a.alias)}</span>
       <div class="via">
@@ -4236,11 +4252,12 @@ function renderCamino(){
           <span class="corte" style="left:${c1}%"></span>
           <span class="corte" style="left:${c2}%"></span>
         </div>
-        <div class="micro" style="margin-top:4px;color:var(--faint)">${estadoTxt}${hito && !quema ? ' · ' + hito : ''} · ${mov}</div>
+        <div class="mono" style="margin-top:6px;font-size:15px;${quema ? 'color:var(--down)' : (cc.pasoBuffer ? 'color:var(--up)' : '')}">
+          ${fmt$(quema ? quema.balance : cc.balance)}
+          ${quema ? `<span class="micro" style="color:var(--down);margin-left:8px">🔥 ${bi('se quemó el ','burned ')}${quema.fecha ? fmtFecha(quema.fecha) : ''}</span>`
+                  : (hito ? `<span class="micro" style="color:var(--faint);margin-left:8px">${hito}</span>` : '')}
+        </div>
       </div>
-      ${quema
-        ? `<b class="mono" style="font-size:12px;color:var(--down)">${fmt$(quema.balance)}</b>`
-        : `<b class="mono" style="font-size:13px;${cc.pasoBuffer?'color:var(--up)':''}">${fmt$(cc.balance)}</b>`}
     </div>`;
   }).join('');
 }
@@ -4352,7 +4369,7 @@ function renderDashboard(){
   const dayTr = tradesByDay()[todayISO()] || [];
   const todaysV = dayTr.flatMap(t => violations(t, dayTr));
   $('#dashAlert').innerHTML = todaysV.length
-    ? `<div class="g-banner stop" style="margin:0 0 16px"><b>⚠ ${todaysV.length} ${tr('me.violaciones')}</b> <span>${[...new Set(todaysV)].join(' · ')}. ${tr('me.croPuede')}</span></div>`
+    ? `<div class="g-banner stop" style="margin:0 0 16px"><b>⚠ ${todaysV.length} ${tr('me.violaciones')}</b> <span>${[...new Set(todaysV)].map(x=>tr('vio.'+x)).join(' · ')}. ${tr('me.contraPlan')}</span></div>`
     : '';
 }
 
@@ -5312,7 +5329,7 @@ $('#tSave').addEventListener('click', ()=>{
   if(editingTrade) Object.assign(editingTrade, data);
   else S.trades.push({ id: uid(), ...data });
   save(); closeOv();
-  render(location.hash.slice(1)||'dashboard'); updateBadges();
+  render(location.hash.slice(1)||'agentes'); updateBadges();
   toast(editingTrade ? 'Trade actualizado' : 'Trade documentado');
   editingTrade = null;
 });
@@ -6103,6 +6120,9 @@ function cloudLogout(){
   try{ localStorage.removeItem('np_tok'); }catch(e){}
 }
 
+/* el pill reacciona en el momento en que se cae o vuelve la red */
+addEventListener('online',  ()=> cloudPaint());
+addEventListener('offline', ()=> cloudPaint());
 function cloudPaint(){
   /* Se pinta en dos lugares: el de Tesis y el de la barra superior, que
      acompaña a todas las vistas. Sin el de arriba nadie sabía, estando en Journal,
@@ -6116,8 +6136,10 @@ function cloudPaint(){
 ['cloudPill','cloudPillTop'].forEach(id => {
   const p = document.getElementById(id);
   if(p){ p.style.cursor = 'pointer'; p.onclick = () => {
-    if(cloudOn() && cloudTok && !cloudErr){ toast('La mesa está sincronizada: lo que hagas le llega a tu socio.'); return; }
-    toast('Estás en modo local. Cierra sesión y vuelve a entrar con tu contraseña de la NUBE (la de tu hoja), no con la clave local.');
+    if(cloudOn() && cloudTok && !cloudErr){ toast('La mesa está sincronizada en la nube.'); return; }
+    toast(navigator.onLine !== false
+      ? 'En línea. Tus datos se guardan en este equipo; para sincronizarlos en la nube, entra con tu contraseña de Supabase.'
+      : 'Sin conexión: el terminal sigue operando y guarda todo en este equipo.');
   }; }
 });
 function pintaPill(p){
@@ -6128,11 +6150,14 @@ function pintaPill(p){
      la sesión de nube y no se entera, puede pasar el día entero sin que su
      trabajo le llegue al otro. Para ellos el aviso es la diferencia entre
      "estoy trabajando solo sin darme cuenta" y saberlo a tiempo. */
-  const socio = (USERS[S.session.user] || {}).correo || '';
-  const esSocioReal = /@northpoint\.mx$/.test(socio);
+  /* Sin sesión de nube el terminal NO está roto: guarda todo en este equipo y
+     opera igual. Lo que importa saber de un vistazo es si hay conexión, así que
+     el pill dice EN LÍNEA (o SIN CONEXIÓN cuando de verdad se cayó la red).
+     El detalle de la sincronización sigue a un clic de distancia. */
   if(!cloudOn() || !cloudTok){
-    p.textContent = esSocioReal ? tr('nu.soloLocal') : '';
-    p.style.color = esSocioReal ? 'var(--warn)' : '';
+    const online = navigator.onLine !== false;
+    p.textContent = online ? 'EN LÍNEA' : 'SIN CONEXIÓN';
+    p.style.color = online ? 'var(--up)' : 'var(--warn)';
     return;
   }
   if(cloudErr){
@@ -7116,15 +7141,14 @@ function renderVida(){
 
 function render(view){
   if(view==='agentes') renderAgentes();
-  else if(view==='dashboard') renderFirma();
   else if(view==='sesion'){ renderSesion(); renderTix(); }
   else if(view==='journal'){ renderDashboard(); renderJournal(); renderObjetivos(); }
   else if(view==='trades') renderTrades();
   else if(view==='posiciones'){ renderPosiciones(); renderCalc(); }
-  else if(view==='vida'){ renderVida(); renderMetas(); }
+  else if(view==='vida'){ renderVida(); renderFirma(); renderMetas(); }
   updateBadges();
 }
-function renderAll(){ applyProfile(); aplicarIdioma(); render(location.hash.slice(1)||'dashboard'); }
+function renderAll(){ applyProfile(); aplicarIdioma(); render(location.hash.slice(1)||'agentes'); }
 
 addEventListener('resize', ()=>{
   if($('#v-journal').classList.contains('on')) drawEquity();
@@ -7153,7 +7177,7 @@ if(__tb) __tb.addEventListener('click', function(){
 
 /* init */
 applyProfile();
-show(location.hash.slice(1) || 'dashboard');
+show(location.hash.slice(1) || 'agentes');
 
 /* portón de acceso: SIEMPRE se entra desde el login, sin sesión pegada.
    Se olvida la sesión y el token guardados; se recuerda sólo el usuario para
