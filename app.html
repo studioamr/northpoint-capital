@@ -203,11 +203,16 @@ label{font-family:var(--mono);font-size:10px;letter-spacing:.14em;text-transform
 .top-date{font-family:var(--mono);font-size:11px;color:var(--dim);letter-spacing:.06em}
 /* Quién está en la mesa AHORITA, junto al reloj de la sesión: un punto verde
    por socio visto hace menos de 12 min. Verde = está; hueco = se fue. */
+/* El pill de la nube dice lo mismo con un punto: verde sincronizada, ámbar
+   trabajando solo, rojo error. El texto y el reloj eran ruido en la barra. */
+#cloudPill{padding:9px;gap:0;font-size:0;line-height:0;cursor:pointer}
+#cloudPill::before{content:'';width:8px;height:8px;border-radius:50%;
+  background:currentColor;display:block}
+#cloudPill .dot{display:none}
 .en-linea[hidden]{display:none}
-.en-linea{display:inline-flex;align-items:center;gap:6px;
-  font-family:var(--mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;
-  padding:7px 12px;border-radius:99px;color:var(--dim);
-  background:var(--glass);border:1px solid var(--line);white-space:nowrap;cursor:default}
+.en-linea{display:inline-flex;align-items:center;gap:7px;
+  padding:9px 11px;border-radius:99px;
+  background:var(--glass);border:1px solid var(--line);white-space:nowrap;cursor:pointer}
 /* Verde fijo. El parpadeo distraía y encima hacía dudar de si estabas dentro:
    estar en línea es un estado, no una alarma. */
 .en-linea i{width:8px;height:8px;border-radius:50%;background:var(--up);
@@ -236,9 +241,7 @@ label{font-family:var(--mono);font-size:10px;letter-spacing:.14em;text-transform
   /* En 375px no caben seis cosas en la barra: la fecha larga se va (la vista ya
      la muestra) y quedan tema, sesión, quién está, nube y reloj. */
   .top-date{display:none}
-  #cloudPill{flex:0 0 auto;padding:9px;gap:0;font-size:0;line-height:0}
-  #cloudPill::before{content:'';width:8px;height:8px;border-radius:50%;
-    background:currentColor;display:block}
+  #cloudPill{flex:0 0 auto}
 }
 .avisoX{position:absolute;top:8px;right:8px;width:24px;height:24px;line-height:1;
   border:1px solid var(--line);background:var(--w05);color:var(--dim);
@@ -253,7 +256,7 @@ label{font-family:var(--mono);font-size:10px;letter-spacing:.14em;text-transform
 }
 .sess-pill .dot{width:6px;height:6px;border-radius:50%;background:var(--faint);flex:0 0 auto}
 .sess-pill.live{color:var(--txt);border-color:rgba(87,199,155,.35)}
-.sess-pill.live .dot{background:var(--up);animation:pulse 2.2s ease-in-out infinite}
+.sess-pill.live .dot{background:var(--up)}   /* sin parpadeo: es un estado, no una alarma */
 .sess-pill.orb{color:var(--txt);border-color:var(--line)}
 .sess-pill.orb .dot{background:var(--accent);animation:pulse 1.4s ease-in-out infinite}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
@@ -3794,16 +3797,24 @@ const cuentasLive = () => cuentasVivas().filter(esLive);
 const cuentasSim  = () => cuentasVivas().filter(esSim);
 function ordenar(xs){ return xs.slice().sort((a,b)=> (a.orden||0)-(b.orden||0)); }
 
+/* El dinero de práctica NO cuenta. La app lo prometía por escrito («does not
+   count on The Desk or your targets») y sin embargo «todas» incluía las sim:
+   un trade de +$500 asignado a una cuenta prop y a una sim se mostraba como
+   +$1,000 en el Desk, en la curva, en el calendario y en el Score. Las sim
+   siguen existiendo y se pueden ver — pero hay que pedirlas a propósito. */
+function deVeras(lista){ return lista.filter(a => !esSim(a)); }
 function acctsSel(){
   const sel = (S.ui && S.ui.acctSel) || { mode:'all', ids:[] };
   if(sel.mode === 'custom'){
+    /* aquí SÍ manda lo que el usuario eligió, sim incluidas: las pidió él */
     const set = new Set(sel.ids);
     const out = ordenar(S.accounts.filter(a => set.has(a.id)));
-    return out.length ? out : ordenar(cuentasVivas());   // ids muertos → nunca pantalla vacía
+    return out.length ? out : ordenar(deVeras(cuentasVivas()));
   }
-  if(sel.mode === 'eval')   return ordenar(cuentasVivas().filter(a => a.fase === 'eval'));
-  if(sel.mode === 'funded') return ordenar(cuentasVivas().filter(a => a.fase !== 'eval'));
-  return ordenar(cuentasVivas());
+  if(sel.mode === 'sim')    return ordenar(cuentasVivas().filter(esSim));
+  if(sel.mode === 'eval')   return ordenar(deVeras(cuentasVivas()).filter(a => a.fase === 'eval'));
+  if(sel.mode === 'funded') return ordenar(deVeras(cuentasVivas()).filter(a => a.fase !== 'eval'));
+  return ordenar(deVeras(cuentasVivas()));
 }
 function idsSel(){
   const s = new Set(acctsSel().map(a=>a.id));
@@ -3862,7 +3873,7 @@ function saludDe(a){
   return { ...base, linea, fija, colchon: bal - linea, maxDD:R.maxDD,
            hito: F.hito(R, a), rDia: F.rDia(R), oDia: F.oDia(R), tope: F.tope(R) };
 }
-const capitalVista = () => acctsSel().filter(esViva).reduce((x,a)=>x+(a.size||0),0);
+const capitalVista = () => acctsSel().filter(a => esViva(a) && !esSim(a)).reduce((x,a)=>x+(a.size||0),0);
 
 /* Consistencia: la fondeadora exige que ningún día concentre más de cierto % de lo
    ganado en la fase. Se mide contra el ACUMULADO vivo, que es como la revisan ellos. */
@@ -4304,12 +4315,10 @@ function pintaEnLinea(){
   caja.title = bi('EN LÍNEA AHORITA: ','ONLINE NOW: ') + [bi('tú','you'), ...otros].join(' · ')
              + bi('\n(cuenta quien haya tocado el terminal en los últimos 12 min)',
                   '\n(counts whoever touched the terminal in the last 12 min)');
-  const corto = window.matchMedia('(max-width:900px)').matches;
-  const etiqueta = corto
-    ? (dentro.length > 1 ? String(dentro.length) : bi('TÚ','YOU'))
-    : (dentro.length > 1 ? bi('EN LÍNEA · TÚ +','ONLINE · YOU +') + ' ' + (dentro.length - 1)
-                         : bi('EN LÍNEA · SÓLO TÚ','ONLINE · JUST YOU'));
-  caja.innerHTML = dentro.map(p => `<i class="${p.id === yo ? 'yo' : ''}"></i>`).join('') + `<b>${etiqueta}</b>`;
+  /* Sin palabras: un punto verde por quien esté en la mesa. Lo que hay que
+     saber se lee de un vistazo — cuántos puntos hay — y el detalle sale al
+     picarlo o al dejar el cursor encima. */
+  caja.innerHTML = dentro.map(p => `<i class="${p.id === yo ? 'yo' : ''}"></i>`).join('');
 }
 setInterval(tickClock, 1000); tickClock();
 
@@ -6129,7 +6138,8 @@ function renderTradeAccts(pre){
     cont.innerHTML = `<p class="micro" style="color:var(--faint)">Sin cuentas dadas de alta: el trade se guarda sin asignar.</p>`;
     return;
   }
-  if(!tradeAccts.length) tradeAccts = cuentasVivas().map(a=>a.id);
+  /* por defecto se marcan las cuentas de verdad; una sim se pica a propósito */
+  if(!tradeAccts.length) tradeAccts = cuentasVivas().filter(a => !esSim(a)).map(a=>a.id);
   cont.innerHTML = ordenar(S.accounts).map(a=>{
     const on = tradeAccts.includes(a.id);
     const F = FASES[a.fase] || FASES.eval;
@@ -6143,7 +6153,7 @@ function renderTradeAccts(pre){
     renderTradeAccts(tradeAccts);
   });
   const all = $('#tAcctsAll');
-  if(all) all.onclick = ()=> renderTradeAccts(cuentasVivas().map(a=>a.id));
+  if(all) all.onclick = ()=> renderTradeAccts(cuentasVivas().filter(a => !esSim(a)).map(a=>a.id));
 }
 
 window.openTrade = openTrade;
