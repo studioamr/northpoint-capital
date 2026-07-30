@@ -2054,6 +2054,16 @@ stop[stop-color="#9BC0DC"]{stop-color:var(--txt)}
           </div>
         </div>
 
+        <!-- MIS POSICIONES · lo que ya compraste, con precio en vivo -->
+        <div style="display:flex;align-items:baseline;gap:12px;margin:26px 0 12px;flex-wrap:wrap">
+          <span class="micro" data-i18n="mi.posiciones">Mis posiciones</span>
+          <span class="micro" id="pfPrecioSub" style="color:var(--faint)"></span>
+          <button class="btn primary sm" id="btnPos" style="margin-left:auto" data-i18n="mi.nueva">+ Nueva compra</button>
+        </div>
+        <div class="panel" style="padding:6px 6px;overflow-x:auto">
+          <table id="pfTabla"></table>
+          <div id="pfVacio"></div>
+        </div>
       </section>
 
       <!-- ════ VIDA DEL NEGOCIO (la caja: dinero real que entró y salió) ════ -->
@@ -5717,6 +5727,57 @@ function renderPosiciones(){
       <em class="mono">${mInv ? fmt$(Math.round(mInv * pc / 100)) : ''}</em>
     </div>`).join('');
 
+  renderPosTabla();
+}
+
+/* ── Mis posiciones: la tabla con precio en vivo del robot ── */
+function renderPosTabla(){
+  const tabla = $('#pfTabla'); if(!tabla) return;
+  const ps = S.positions || [];
+  const V = ps.map(p => ({ p, v: valuar(p) })).sort((a,b) => b.v.valor - a.v.valor);
+  const vivos = V.filter(x => x.v.vivo).length;
+  $('#pfPrecioSub').textContent = vivos
+    ? `· ${bi('precios en vivo de','live prices on')} ${vivos}${MKT && MKT.ts ? ' · ' + MKT.ts.slice(11,16) : ''}`
+    : '';
+  const dl = $('#pfTicks');
+  if(dl && MKT && Array.isArray(MKT.acciones))
+    dl.innerHTML = MKT.acciones.map(a => `<option value="${a.tick}">${esc(a.nombre)}</option>`).join('');
+  if(!ps.length){
+    tabla.innerHTML = '';
+    $('#pfVacio').innerHTML = `<div class="empty">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="1.4"><circle cx="12" cy="12" r="9"/><path d="M12 3v18M3.5 7.5l17 9M3.5 16.5l17-9"/></svg>
+      <b>${tr('mi.vacio.t')}</b><p>${tr('mi.vacio.d')}</p>
+      <button class="btn primary sm" onclick="openPos()">${tr('mi.vacio.b')}</button>
+    </div>`;
+    return;
+  }
+  $('#pfVacio').innerHTML = '';
+  tabla.innerHTML = `<thead><tr>
+      <th>${bi('Instrumento','Instrument')}</th>
+      <th class="r">${bi('Títulos','Shares')}</th>
+      <th class="r">${bi('Último','Last')}</th>
+      <th class="r">${bi('Día','Day')}</th>
+      <th class="r">${bi('Valor','Value')}</th>
+      <th class="r">P&L</th>
+      <th></th>
+    </tr></thead><tbody>` +
+    V.map(({p, v}) => {
+      const pl = v.valor - (p.capital||0);
+      return `<tr>
+        <td><b class="mono">${esc(p.tick ? String(p.tick).toUpperCase() : (v.nombre||'—'))}</b>
+          ${p.tick ? `<span class="pf-n">${esc(v.nombre)}</span>` : ''}
+          ${v.vivo ? '<span class="pf-live" title="precio en vivo"></span>' : `<span class="tag" style="margin-left:6px">manual</span>`}</td>
+        <td class="r mono">${p.qty ? (+p.qty).toLocaleString('en-US',{maximumFractionDigits:4}) : '—'}</td>
+        <td class="r mono">${v.precio ? fmt$(v.precio) : '—'}</td>
+        <td class="r mono ${v.pct>0?'up':v.pct<0?'down':''}">${v.pct != null ? fmtPct(v.pct) : '—'}</td>
+        <td class="r mono">${fmt$(v.valor)}</td>
+        <td class="r mono ${pl>0?'up':pl<0?'down':''}">${fmt$(pl,true)}</td>
+        <td class="r" style="white-space:nowrap">
+          <button class="btn-icon" onclick="editPos('${p.id}')" title="Editar">✎</button>
+          <button class="btn-icon" onclick="delPos('${p.id}')" title="Eliminar">✕</button>
+        </td>
+      </tr>`;
+    }).join('') + '</tbody>';
 }
 $('#pyCalc')?.addEventListener('click', () => {
   S.politica = S.politica || {};
@@ -7224,22 +7285,29 @@ function renderAgentes(){
     </button>`;
   };
   const yo = principalActual();
-  /* junto al perfil, el balance actual: la suma de las fondeadas vivas,
-     con el reinicio de la eval ya aplicado (carreraCuenta). */
+  /* junto al perfil, los tres balances: portafolio (posiciones al precio del
+     día), futuros (fondeadas con el reinicio de la eval aplicado) y live. */
   const fondeadas = S.accounts.filter(a => !esLive(a) && !esSim(a) && reglasDe(a) && esViva(a));
-  const balTotal = fondeadas.reduce((x, a) => x + carreraCuenta(a).balance, 0);
-  const balCard = `
+  const balFut  = fondeadas.reduce((x, a) => x + carreraCuenta(a).balance, 0);
+  const balPort = (S.positions || []).reduce((a, p) => a + valuar(p).valor, 0);
+  const balLive = cuentasLive().reduce((a, x) => a + saludDe(x).balance, 0);
+  const balCard = (titulo, monto, hay, nota) => `
     <div class="staff" style="cursor:default">
       <div class="pj-i">
-        <b class="micro" style="letter-spacing:.12em;color:var(--faint)">${bi('BALANCE ACTUAL','CURRENT BALANCE')}</b>
-        <span class="mono" style="display:block;font-size:26px;margin-top:3px;color:var(--txt)">${fondeadas.length ? fmt$(balTotal) : '—'}</span>
-        <i style="color:var(--faint)">${fondeadas.length
-          ? bi('en ','across ') + fondeadas.length + bi(fondeadas.length===1?' cuenta fondeada viva':' cuentas fondeadas vivas', fondeadas.length===1?' live funded account':' live funded accounts')
-          : bi('sin cuentas fondeadas vivas','no live funded accounts')}</i>
+        <b class="micro" style="letter-spacing:.12em;color:var(--faint)">${titulo}</b>
+        <span class="mono" style="display:block;font-size:24px;margin-top:3px;color:var(--txt)">${hay ? fmt$(monto) : '—'}</span>
+        <i style="color:var(--faint)">${nota}</i>
       </div>
     </div>`;
+  const balances =
+    balCard(bi('PORTAFOLIO','PORTFOLIO'), balPort, (S.positions||[]).length,
+      (S.positions||[]).length ? (S.positions.length + bi(' posiciones al precio del día',' positions at today\'s price')) : bi('sin posiciones todavía','no positions yet'))
+    + balCard(bi('FUTUROS','FUTURES'), balFut, fondeadas.length,
+      fondeadas.length ? (fondeadas.length + bi(fondeadas.length===1?' cuenta fondeada viva':' cuentas fondeadas vivas', fondeadas.length===1?' live funded account':' live funded accounts')) : bi('sin cuentas fondeadas','no funded accounts'))
+    + balCard('LIVE', balLive, cuentasLive().length,
+      cuentasLive().length ? bi('capital tuyo operando','your own capital trading') : bi('sin cuenta propia','no own account'));
   grid.className = 'perfil-grid';
-  grid.innerHTML = (yo ? tarjeta(yo) : '') + balCard;
+  grid.innerHTML = (yo ? tarjeta(yo) : '') + balances;
   $$('#agGrid .staff[data-staff]').forEach(b => b.onclick = () => $('#btnSettings').click());
   ofiJunta = guionOficina();
   if(typeof animaOficina === 'function') animaOficina();
