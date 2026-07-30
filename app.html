@@ -201,6 +201,20 @@ label{font-family:var(--mono);font-size:10px;letter-spacing:.14em;text-transform
 .topbar .crumb{font-family:var(--mono);font-size:9.5px;letter-spacing:.22em;color:var(--faint);text-transform:uppercase;display:block}
 .top-right{margin-left:auto;display:flex;align-items:center;gap:14px}
 .top-date{font-family:var(--mono);font-size:11px;color:var(--dim);letter-spacing:.06em}
+/* Quién está en la mesa AHORITA, junto al reloj de la sesión: un punto verde
+   por socio visto hace menos de 12 min. Verde = está; hueco = se fue. */
+.en-linea{display:inline-flex;align-items:center;gap:6px;
+  font-family:var(--mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;
+  padding:7px 12px;border-radius:99px;color:var(--dim);
+  background:var(--glass);border:1px solid var(--line);white-space:nowrap;cursor:default}
+.en-linea i{width:7px;height:7px;border-radius:50%;background:var(--up);
+  box-shadow:0 0 0 3px rgba(87,199,155,.16);animation:pulse 2.4s ease-in-out infinite}
+.en-linea i.yo{background:var(--txt);box-shadow:0 0 0 3px var(--w12)}
+@media(max-width:900px){ .en-linea b{display:none} }
+.avisoX{position:absolute;top:8px;right:8px;width:24px;height:24px;line-height:1;
+  border:1px solid var(--line);background:var(--w05);color:var(--dim);
+  border-radius:7px;font-size:15px;cursor:pointer;display:grid;place-items:center;padding:0}
+.avisoX:hover{color:var(--txt);border-color:var(--w20)}
 .sess-pill{
   display:inline-flex;align-items:center;gap:8px;
   font-family:var(--mono);font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;
@@ -1993,6 +2007,7 @@ stop[stop-color="#9BC0DC"]{stop-color:var(--txt)}
         <button class="btn-icon" id="themeBtn" title="Cambiar tema" aria-label="Cambiar tema">◐</button>
         <span class="top-date" id="topDate"></span>
         <span class="sess-pill" id="sessPill"><span class="dot"></span><span id="sessTxt">—</span></span>
+        <span class="en-linea" id="enLinea" hidden></span>
         <span class="top-clock" id="topClock">--:--:--</span>
       </div>
     </header>
@@ -3351,7 +3366,16 @@ const sillasActivas = () => {
   const yo = PERSONAJES.find(x => x.id === (S.session && S.session.user));
   if(yo) vivos.add(yo.nom);
   return PERSONAJES.filter(p => vivos.has(p.nom) && SILLAS_SOCIOS[p.id])
-    .map(p => ({ n:p.nom, ...SILLAS_SOCIOS[p.id] }));
+    .map(p => {
+      /* El que se sienta arriba es TU monito, el que armaste en Ajustes →
+         Perfil: mismo tono de piel, mismo pelo, mismo traje. Antes salía el
+         de fábrica del personaje y por eso «no se parecía». */
+      const m = (S.monitos || {})[p.id] || {};
+      const av = m.avatar || {};
+      return { n:p.nom, ...SILLAS_SOCIOS[p.id],
+               look: av.look || p.look,
+               foto: (av.tipo === 'foto' && av.valor) ? av.valor : null };
+    });
 };
 
 /* ── Equipo NORTHPOINT · credenciales y cargos ── */
@@ -4129,6 +4153,21 @@ function tickClock(){
   pill.className = 'sess-pill' + (viva ? ' live' : st.k === 'orb' ? ' orb' : '');
   $('#sessTxt').textContent = st.txt;
   $('#topDate').textContent = DIAS3[idi()][now.getDay()] + ' · ' + fmtFecha(todayISO());
+  pintaEnLinea();
+}
+/* El pill de presencia: un punto por socio que esté en la mesa ahorita. El
+   tuyo va en blanco (ese eres tú); los demás en verde. Si estás solo, dice
+   SOLO TÚ — sin mentir con «conectados» a quien lleva horas fuera. */
+function pintaEnLinea(){
+  const caja = $('#enLinea'); if(!caja) return;
+  const yo = S.session && S.session.user;
+  if(!yo){ caja.hidden = true; return; }
+  const P = S.presencia || {}, hoy = Date.now();
+  const dentro = PERSONAJES.filter(p => p.id === yo || (hoy - (P[p.id] || 0)) < PRESENCIA_MIN * 60000);
+  caja.hidden = false;
+  caja.title = dentro.map(p => p.id === yo ? p.nom + bi(' (tú)',' (you)') : p.nom).join(' · ');
+  caja.innerHTML = dentro.map(p => `<i class="${p.id === yo ? 'yo' : ''}"></i>`).join('') +
+    `<b>${dentro.length > 1 ? dentro.length + bi(' en la mesa',' at the desk') : bi('sólo tú','just you')}</b>`;
 }
 setInterval(tickClock, 1000); tickClock();
 
@@ -4629,18 +4668,13 @@ function renderFirmaCarrera(){
             </div>
             <span class="fc-info">
               <b>${esc(x.nom)}</b>
-              <em>${(x.sinDatos ? bi('sin cuentas en este equipo','no accounts on this device')
-                 : Math.round(x.pct) + '% · ' + x.cuentas + (x.cuentas === 1 ? bi(' cuenta',' account') : bi(' cuentas',' accounts'))
-                   + (x.pagos ? ' · ' + x.pagos + bi(' cobrada',' paid') + (x.pagos > 1 ? 's' : '') : '')) + sello(x.uid)}</em>
+              <em>${x.sinDatos ? '' :
+                 Math.round(x.pct) + '% · ' + x.cuentas + (x.cuentas === 1 ? bi(' cuenta',' account') : bi(' cuentas',' accounts'))
+                   + (x.pagos ? ' · ' + x.pagos + bi(' cobrada',' paid') + (x.pagos > 1 ? 's' : '') : '') + sello(x.uid)}</em>
             </span>
           </div>`).join('')}
       </div>
-      ${conDatos < PERSONAJES.length ? `<p class="micro" style="color:var(--faint);margin-top:14px;line-height:1.6">${
-        cloudOn()
-          ? bi('Los socios sin cuentas aquí aparecerán en cuanto registren las suyas en la mesa compartida.',
-               'Partners with no accounts here show up as soon as they register theirs on the shared desk.')
-          : bi('Esta máquina sólo conoce las cuentas registradas en ella. Con la nube conectada, la carrera se corre de verdad entre los tres.',
-               'This machine only knows the accounts registered on it. With the cloud connected, the three of you actually race.')}</p>` : ''}
+      
     </div>`;
 }
 
@@ -4905,11 +4939,23 @@ function renderDashboard(){
   const dayTr = tradesByDay()[todayISO()] || [];
   const todaysV = dayTr.flatMap(t => violations(t, dayTr));
   $('#dashAlert').innerHTML = todaysV.length
-    ? `<div class="g-banner stop" style="margin:0 0 16px"><b>⚠ ${todaysV.length} ${tr('me.violaciones')}</b> <span>${[...new Set(todaysV)].map(x=>tr('vio.'+x)).join(' · ')}. ${tr('me.contraPlan')}</span></div>`
+    ? ((S.ui || {}).avisoVioOut === todayISO() ? ''
+       : `<div class="g-banner stop" style="margin:0 0 16px;position:relative;padding-right:38px">
+            <b>⚠ ${todaysV.length} ${tr('me.violaciones')}</b>
+            <span>${[...new Set(todaysV)].map(x=>tr('vio.'+x)).join(' · ')}. ${tr('me.contraPlan')}</span>
+            <button class="avisoX" title="${bi('Quitar este aviso por hoy','Dismiss for today')}" onclick="ocultaAvisoVio()">×</button>
+          </div>`)
     : '';
 }
 
 
+/* El aviso se quita por HOY, no para siempre: mañana con una violación nueva
+   vuelve a salir. Se tacha el recordatorio, nunca la violación — esa sigue
+   contando en el Score, en el calendario y en el camino a payout. */
+window.ocultaAvisoVio = function(){
+  S.ui = S.ui || {}; S.ui.avisoVioOut = todayISO();
+  save(); renderAll();
+};
 function gestionState(dayTr){
   const P = planDelDia(todayISO());
   const hechos = dayTr.length;
@@ -5793,7 +5839,7 @@ function renderTrades(){
         <td class="mono">${t.time||'—'}</td>
         <td class="mono">${esc(t.sym)}</td>
         <td><span class="tag">${t.dir==='L'?'LONG':'SHORT'}</span></td>
-        <td class="r mono">${t.qty}</td>
+        <td class="r mono">${t.qty ?? '—'}</td>
         <td class="r mono" style="color:var(--dim)">${t.entry??'—'}</td>
         <td class="r mono" style="color:var(--dim)">${t.exit??'—'}</td>
         <td class="r mono ${t.pnl>0?'up':t.pnl<0?'down':''}">${fmt$(t.pnl,true)}</td>
@@ -8202,6 +8248,18 @@ const blancoOjo = () => '#F2F4F6';
 const fondoOjo = L => mez(L.piel, -6);
 
 /* ── avatar estilo Habbo: cabeza grande, cuerpo compacto, carácter propio ── */
+/* Caché de las fotos de perfil: el canvas no puede esperar a que carguen, así
+   que se piden una vez y se dibujan a partir del siguiente cuadro. */
+const FOTOS_AV = {};
+function fotoLista(url){
+  if(!url) return null;
+  if(FOTOS_AV[url]) return FOTOS_AV[url].completa ? FOTOS_AV[url].img : null;
+  const img = new Image();
+  FOTOS_AV[url] = { img, completa:false };
+  img.onload = () => { FOTOS_AV[url].completa = true; };
+  img.src = url;
+  return null;
+}
 function figura(c, s, habla, t){
   const L = s.look || OFI.look[s.n]; if(!L) return;
   const bx = iX(s.x, s.y), by = iY(s.x, s.y, s.z);
@@ -8247,6 +8305,19 @@ function figura(c, s, habla, t){
   const boca = habla ? 2.2 : (L.cara === 'ceño' ? .7 : 1);
   P(-1.8, hy + 9, 3.6, boca, habla ? '#5A2A30' : '#A87560');
   if(L.cara === 'curioso' && !habla) P(1, hy + 9, 2.4, 1, '#A87560');    // media sonrisa
+  /* Si el socio subió una foto en vez de armar monito, la foto MANDA: se
+     recorta sobre la cabeza para que el de la silla sea de verdad él. */
+  if(s.foto){
+    const img = fotoLista(s.foto);
+    if(img){
+      c.save();
+      c.beginPath(); c.rect(-6.5, hy - 1, 13, 13.5); c.clip();
+      c.scale(f, 1);                        // la foto no se voltea con el cuerpo
+      const lado = 15.5;
+      c.drawImage(img, -lado/2, hy - 2, lado, lado);
+      c.restore();
+    }
+  }
 
   // ── lo que trae en la mano ──
   const pr = L.prop;
