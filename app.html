@@ -2719,6 +2719,23 @@ stop[stop-color="#9BC0DC"]{stop-color:var(--txt)}
     <div class="f-full"><label data-i18n="c.clave">Key</label><input id="lgPass" type="password" autocomplete="off" placeholder=""></div>
     <div id="lgErr" class="login-err"></div>
     <button class="btn primary" id="lgGo" style="width:100%;margin-top:6px" data-i18n="c.entrar">Sign in</button>
+    <button class="btn" id="lgAlta" style="width:100%;margin-top:10px;font-size:11px">¿Primera vez? Crea tu acceso de nube</button>
+    <div id="altaNube" hidden style="margin-top:14px;border-top:1px solid var(--line);padding-top:14px">
+      <p class="micro" style="margin-bottom:10px;line-height:1.6">Tu correo REAL y una contraseña que solo tú sabrás.
+        Te llega un correo de confirmación: lo abres y luego entras aquí con tu usuario y esa contraseña.</p>
+      <div class="f-full"><label>Quién eres</label>
+        <select id="alSocio">
+          <option value="pablo.np">Pablo — CIO · Portfolio Manager</option>
+          <option value="mateo.np">Mateo — CRO · Research</option>
+          <option value="andre.np">André — Quant · COO</option>
+        </select>
+      </div>
+      <div class="f-full"><label>Tu correo real</label><input id="alCorreo" type="email" autocomplete="off" placeholder="tucorreo@gmail.com" autocapitalize="none" spellcheck="false"></div>
+      <div class="f-full"><label>Tu contraseña de nube (mínimo 6)</label><input id="alPass" type="password" autocomplete="new-password"></div>
+      <div class="f-full"><label>Repítela</label><input id="alPass2" type="password" autocomplete="new-password"></div>
+      <div id="alErr" class="login-err"></div>
+      <button class="btn primary" id="alGo" style="width:100%;margin-top:6px">Crear mi acceso</button>
+    </div>
     <p class="micro" style="margin-top:18px;text-align:center;font-size:9px;letter-spacing:.2em">CONFIDENCIAL · NORTHPOINT.IO</p>
   </div>
 </div>
@@ -6463,6 +6480,45 @@ function unlockUI(){
   $('#login').classList.remove('on');
 }
 $('#lgGo').addEventListener('click', doLogin);
+/* ── ALTA DE NUBE ── cada socio registra SU correo real y SU contraseña.
+   Nadie más la conoce: ni André, ni este terminal la guarda en texto. El correo
+   queda mapeado a su usuario para que el login siga siendo pablo.np + su clave. */
+$('#lgAlta').addEventListener('click', () => {
+  const p = $('#altaNube'); p.hidden = !p.hidden;
+});
+$('#alGo').addEventListener('click', async () => {
+  const uid2 = $('#alSocio').value;
+  const correo = $('#alCorreo').value.trim().toLowerCase();
+  const p1 = $('#alPass').value, p2 = $('#alPass2').value;
+  const err = m => { $('#alErr').textContent = m; };
+  if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(correo)) return err('Ese correo no se ve bien.');
+  if(p1.length < 6) return err('La contraseña necesita al menos 6 caracteres.');
+  if(p1 !== p2) return err('Las contraseñas no coinciden.');
+  err(''); $('#alGo').textContent = 'Creando…';
+  try{
+    const r = await fetch(CLOUD.url + '/auth/v1/signup', {
+      method:'POST', headers:{ apikey:CLOUD.anon, 'Content-Type':'application/json' },
+      body: JSON.stringify({ email:correo, password:p1 }),
+    });
+    const d = await r.json();
+    if(!r.ok) throw new Error(d.msg || d.error_description || ('HTTP ' + r.status));
+    /* Supabase disfraza el "ya existe" con identities vacías, para no regalar
+       qué correos tienen cuenta. Se detecta y se dice claro. */
+    if(d.identities && d.identities.length === 0)
+      throw new Error('Ese correo ya tiene cuenta. Usa Entrar con tu contraseña; si la perdiste, dile a André.');
+    S.correos = S.correos || {};
+    S.correos[uid2] = correo;
+    try{ save(); }catch(e){}
+    $('#altaNube').hidden = true;
+    $('#lgErr').textContent = '';
+    toast('Listo. Revisa ' + correo + ' y confirma; luego entra aquí como ' + uid2 + ' con tu contraseña.');
+    $('#lgUser').value = uid2;
+  }catch(e){
+    err((e && e.message) || 'No se pudo crear el acceso.');
+  }finally{
+    $('#alGo').textContent = 'Crear mi acceso';
+  }
+});
 $('#lgPass').addEventListener('keydown', e=>{ if(e.key==='Enter') doLogin(); });
 $('#lgUser').addEventListener('keydown', e=>{ if(e.key==='Enter') $('#lgPass').focus(); });
 async function doLogin(){
@@ -6481,7 +6537,7 @@ async function doLogin(){
        terminal: entra en local con su clave de siempre y el indicador lo dice. */
     $('#lgErr').textContent = tr('lg.entrando');
     try{
-      await cloudLogin(usr.correo || (u + '@northpoint.local'), p);
+      await cloudLogin(((S.correos || {})[u]) || usr.correo || (u + '@northpoint.local'), p);
       /* La clave que sirve con la nube queda guardada como respaldo local. Sin esto,
          quien entra con su clave de Supabase se queda FUERA el día que la nube falle:
          el respaldo sólo conocía el 1234 provisional. */
