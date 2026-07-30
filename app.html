@@ -7583,10 +7583,20 @@ function guionOficina(){
 }
 
 
+/* Acepta #hex Y su propio rgb(): anidar mez(mez(...)) parseaba NaN y
+   devolvía casi negro — de ahí salían manchas oscuras donde debía haber
+   piedra clara, y cejas grises en las caras con canas. */
 const mez = (h, d) => {
-  const n = parseInt(h.slice(1), 16);
+  let r, g, b;
+  if(h[0] === '#'){
+    const n = parseInt(h.slice(1), 16);
+    r = n >> 16; g = (n >> 8) & 255; b = n & 255;
+  } else {
+    const m = h.match(/\d+/g) || [0, 0, 0];
+    r = +m[0]; g = +m[1]; b = +m[2];
+  }
   const c = v => Math.max(0, Math.min(255, v + d));
-  return `rgb(${c(n>>16)},${c((n>>8)&255)},${c(n&255)})`;
+  return `rgb(${c(r)},${c(g)},${c(b)})`;
 };
 
 /* ── primitivas ── */
@@ -8278,7 +8288,7 @@ function skylineCiudad(c, W, H, ciudad, osc, rr){
         if(r1 < .3){                                   /* corona art déco */
           c.fillRect(bx + bw * .18, base - bh - 16, bw * .64, 16);
           c.fillRect(bx + bw * .34, base - bh - 28, bw * .32, 12);
-        } else if(r1 < .5){                            /* tinaco de agua */
+        } else if(r1 < .38){                           /* tinaco de agua (pocos: es un guiño, no una granja) */
           const wx = bx + bw * .3, wy = base - bh;
           c.fillStyle = `rgba(58,48,44,${Math.min(1, al + .2)})`;
           c.fillRect(wx + 2, wy - 12, 3, 12); c.fillRect(wx + 15, wy - 12, 3, 12);
@@ -8286,7 +8296,7 @@ function skylineCiudad(c, W, H, ciudad, osc, rr){
           c.beginPath(); c.moveTo(wx - 2, wy - 26); c.lineTo(wx + 10, wy - 35); c.lineTo(wx + 22, wy - 26);
           c.closePath(); c.fill();
           c.fillStyle = col;
-        } else if(r1 < .62){                           /* antena */
+        } else if(r1 < .52){                           /* antena */
           c.fillRect(bx + bw/2 - 2, base - bh - 36, 4, 36);
           c.fillStyle = `rgba(255,90,90,${.3 + osc * .5})`;
           c.fillRect(bx + bw/2 - 3, base - bh - 40, 6, 5);
@@ -8929,122 +8939,150 @@ function sueloDe(c, W, H, ciudad, osc, rr){
     }
   }
   else {
-    /* ══ LONDRES ══ Nada de parque: la ciudad al pie de la torre. El Támesis
-       cruzando, muelles de piedra, calle adoquinada con sus autobuses rojos,
-       cabinas telefónicas y farolas victorianas. */
-    const asfalto = mez('#4A4A52', -16 + luzDia * 26);
-    c.fillStyle = asfalto; c.fillRect(0, S0, W, H - S0);
-    /* el adoquín */
-    c.strokeStyle = `rgba(255,255,255,${.04 + luzDia * .05})`; c.lineWidth = 1.6;
-    for(let y = S0 + 20; y < H; y += 26){
+    /* ══ LONDRES · EL MALECÓN ══
+       La torre se planta en el Embankment: explanada de piedra clara con su
+       balaustrada, farolas victorianas, bancas mirando al río — y el TÁMESIS
+       ancho ocupando el frente, con su barco y el reflejo de las luces. */
+    const piedra = mez('#B9AE9C', -14 + luzDia * 22);
+    const piedra2 = mez('#A89D8A', -12 + luzDia * 20);
+    c.fillStyle = piedra; c.fillRect(0, S0, W, H - S0);
+    /* las losas grandes de la explanada */
+    c.strokeStyle = `rgba(60,52,44,${.10 + luzDia * .08})`; c.lineWidth = 2;
+    for(let y = S0 + 26; y < 940; y += 52){
       c.beginPath(); c.moveTo(0, y); c.lineTo(W, y); c.stroke();
-      for(let x = ((y / 26) % 2) * 26; x < W; x += 52){
-        c.beginPath(); c.moveTo(x, y); c.lineTo(x, y + 26); c.stroke();
+      for(let x = ((y / 52) % 2) * 60; x < W; x += 120){
+        c.beginPath(); c.moveTo(x, y); c.lineTo(x, y + 52); c.stroke();
       }
     }
-    /* EL TÁMESIS, en diagonal */
-    const rio = c.createLinearGradient(0, 900, 0, H);
-    rio.addColorStop(0, mez('#3A5E78', -14 + luzDia * 24));
-    rio.addColorStop(1, mez('#26425A', -10 + luzDia * 18));
-    c.fillStyle = rio;
+    /* franjas de desgaste, para que la piedra no sea plana */
+    for(let i = 0; i < 12; i++){
+      c.fillStyle = i % 2 ? piedra2 : mez(piedra, 6);
+      c.beginPath();
+      c.ellipse(rr(i + 700) * W, S0 + 60 + rr(i + 710) * 240, 130 + rr(i+720) * 130, 26 + rr(i+730) * 22, 0, 0, 7);
+      c.fill();
+    }
+
+    /* ── LA BALAUSTRADA ── el borde del río, de lado a lado */
+    const yB = 952;
+    c.fillStyle = mez('#C9BFA9', luzDia * 16);
+    c.fillRect(0, yB - 34, W, 12);                 // pasamanos
+    c.fillRect(0, yB + 2, W, 10);                  // zócalo
+    for(let x = 14; x < W; x += 34){               // balaustres torneados
+      c.fillStyle = mez('#B9AE9C', luzDia * 14);
+      c.fillRect(x, yB - 22, 9, 24);
+      c.fillRect(x - 2, yB - 24, 13, 5);
+      c.fillRect(x + 1.5, yB - 14, 6, 7);
+    }
+    /* pilastras cada tanto, con su esfera */
+    for(let x = 110; x < W; x += 300){
+      c.fillStyle = mez('#C9BFA9', luzDia * 18);
+      c.fillRect(x - 12, yB - 44, 24, 56);
+      c.beginPath(); c.arc(x, yB - 52, 10, 0, 7); c.fill();
+    }
+
+    /* ── EL TÁMESIS ── ancho, con corriente y reflejos */
+    const rio = c.createLinearGradient(0, yB + 12, 0, H);
+    rio.addColorStop(0, mez('#4A6E86', -14 + luzDia * 22));
+    rio.addColorStop(1, mez('#2E4A62', -10 + luzDia * 16));
+    c.fillStyle = rio; c.fillRect(0, yB + 12, W, H - yB - 12);
+    for(let i = 0; i < 14; i++){
+      c.fillStyle = `rgba(255,255,255,${.05 + luzDia * .1})`;
+      c.fillRect(60 + i * 132, yB + 40 + (i % 3) * 42, 60 + rr(i + 40) * 60, 3);
+    }
+    if(osc > .3){
+      /* de noche, las farolas se reflejan en el agua */
+      for(let i = 0; i < 7; i++){
+        const fx = 170 + i * 250;
+        const refl = c.createLinearGradient(fx, yB + 12, fx, yB + 130);
+        refl.addColorStop(0, 'rgba(255,233,174,.3)'); refl.addColorStop(1, 'rgba(255,233,174,0)');
+        c.fillStyle = refl; c.fillRect(fx - 6, yB + 12, 12, 120);
+      }
+    }
+    /* el barco del río, paseando */
+    const bx3 = 560, by3 = 1058;
+    c.fillStyle = mez('#3E3A36', luzDia * 10);
     c.beginPath();
-    c.moveTo(-60, 1040); c.bezierCurveTo(420, 950, 1180, 1090, W + 60, 980);
-    c.lineTo(W + 60, H + 20); c.lineTo(-60, H + 20); c.closePath(); c.fill();
-    /* el malecón de piedra */
-    c.strokeStyle = mez('#8E8478', luzDia * 20); c.lineWidth = 12;
-    c.beginPath(); c.moveTo(-60, 1040); c.bezierCurveTo(420, 950, 1180, 1090, W + 60, 980); c.stroke();
-    /* reflejos en el agua */
-    for(let i = 0; i < 9; i++){
-      c.fillStyle = `rgba(255,255,255,${.06 + luzDia * .13})`;
-      c.fillRect(120 + i * 190, 1090 + (i % 2) * 30, 76, 3);
+    c.moveTo(bx3 - 110, by3); c.lineTo(bx3 + 110, by3); c.lineTo(bx3 + 84, by3 + 26); c.lineTo(bx3 - 84, by3 + 26);
+    c.closePath(); c.fill();
+    c.fillStyle = mez('#E8E2D6', luzDia * 12);
+    c.fillRect(bx3 - 72, by3 - 26, 144, 26);
+    c.fillStyle = `rgba(190,214,236,${.45 + osc * .3})`;
+    for(let k = 0; k < 6; k++) c.fillRect(bx3 - 64 + k * 23, by3 - 20, 15, 13);
+    c.fillStyle = mez('#C0392B', luzDia * 10);
+    c.fillRect(bx3 - 10, by3 - 44, 20, 18);
+    /* la estela */
+    c.strokeStyle = `rgba(255,255,255,${.12 + luzDia * .12})`; c.lineWidth = 3;
+    c.beginPath(); c.moveTo(bx3 - 130, by3 + 16); c.lineTo(bx3 - 210, by3 + 22); c.stroke();
+    c.beginPath(); c.moveTo(bx3 - 130, by3 + 22); c.lineTo(bx3 - 190, by3 + 30); c.stroke();
+
+    /* ── FAROLAS VICTORIANAS sobre la balaustrada ── */
+    for(let i = 0; i < 7; i++){
+      const fx = 170 + i * 250, fy = yB - 34;
+      c.fillStyle = mez('#2E3038', luzDia * 12);
+      c.fillRect(fx - 4, fy - 96, 8, 96);
+      c.fillRect(fx - 13, fy - 4, 26, 8);
+      c.fillStyle = mez('#3A3D46', luzDia * 12);
+      c.beginPath();
+      c.moveTo(fx - 14, fy - 96); c.lineTo(fx + 14, fy - 96);
+      c.lineTo(fx + 8, fy - 124); c.lineTo(fx - 8, fy - 124); c.closePath(); c.fill();
+      c.fillStyle = osc > .3 ? '#FFE9AE' : mez('#9AA0AC', luzDia * 10);
+      c.fillRect(fx - 9, fy - 122, 18, 24);
+      if(osc > .3){
+        const h = c.createRadialGradient(fx, fy - 110, 4, fx, fy - 110, 60);
+        h.addColorStop(0, 'rgba(255,233,174,.3)'); h.addColorStop(1, 'rgba(255,233,174,0)');
+        c.fillStyle = h; c.beginPath(); c.arc(fx, fy - 110, 60, 0, 7); c.fill();
+      }
     }
-    /* el puente de piedra, con sus arcos */
-    c.fillStyle = mez('#9A9086', luzDia * 18);
-    c.fillRect(560, 986, 330, 30);
-    c.fillStyle = mez('#7C7368', luzDia * 14);
-    for(let k = 0; k < 4; k++){
-      c.beginPath(); c.arc(612 + k * 80, 1016, 30, Math.PI, 0); c.fill();
+
+    /* ── BANCAS de listones, mirando al río ── */
+    for(let i = 0; i < 4; i++){
+      const sx = 300 + i * 380, sy = 900;
+      c.fillStyle = 'rgba(10,12,20,.22)';
+      c.beginPath(); c.ellipse(sx, sy + 16, 52, 8, 0, 0, 7); c.fill();
+      c.fillStyle = mez('#6E5A42', luzDia * 16);
+      c.fillRect(sx - 46, sy - 4, 92, 7);
+      c.fillRect(sx - 46, sy - 16, 92, 7);
+      c.fillStyle = mez('#2E3038', luzDia * 10);
+      c.fillRect(sx - 42, sy + 3, 6, 13); c.fillRect(sx + 36, sy + 3, 6, 13);
     }
-    c.strokeStyle = mez('#B4AA9E', luzDia * 20); c.lineWidth = 4;
-    for(let k = 0; k <= 11; k++) { const bx = 566 + k * 30;
-      c.beginPath(); c.moveTo(bx, 986); c.lineTo(bx, 962); c.stroke(); }
-    c.beginPath(); c.moveTo(560, 962); c.lineTo(890, 962); c.stroke();
 
-    /* la banqueta */
-    c.fillStyle = mez('#6E6E76', luzDia * 22);
-    c.fillRect(0, 700, W, 22); c.fillRect(0, 880, W, 22);
-
-    /* AUTOBUSES ROJOS de dos pisos */
-    const bus = (bx, by, es) => {
-      c.fillStyle = 'rgba(10,12,20,.3)';
-      c.beginPath(); c.ellipse(bx, by + 46 * es, 92 * es, 12 * es, 0, 0, 7); c.fill();
-      c.fillStyle = mez('#C0392B', luzDia * 12);
-      c.fillRect(bx - 88 * es, by - 78 * es, 176 * es, 122 * es);
-      c.fillStyle = mez('#9E2A20', luzDia * 8);
-      c.fillRect(bx - 88 * es, by + 22 * es, 176 * es, 22 * es);
-      c.fillStyle = `rgba(190,214,236,${.55 + osc * .3})`;
-      for(let k = 0; k < 4; k++) c.fillRect(bx - 78 * es + k * 42 * es, by - 68 * es, 32 * es, 30 * es);
-      for(let k = 0; k < 4; k++) c.fillRect(bx - 78 * es + k * 42 * es, by - 22 * es, 32 * es, 28 * es);
-      c.fillStyle = '#1C1C22';
-      [[-52, 46],[52, 46]].forEach(([dx, dy]) => {
-        c.beginPath(); c.arc(bx + dx * es, by + dy * es, 17 * es, 0, 7); c.fill();
-        c.fillStyle = '#4A4A52';
-        c.beginPath(); c.arc(bx + dx * es, by + dy * es, 7 * es, 0, 7); c.fill();
-        c.fillStyle = '#1C1C22';
-      });
-      c.fillStyle = mez('#E8E4DA', luzDia * 10);
-      c.fillRect(bx - 40 * es, by - 88 * es, 80 * es, 12 * es);
-    };
-    bus(330, 806, .62); bus(1290, 782, .5);
-
-    /* CABINAS TELEFÓNICAS */
-    const cabina = (cx, cy, es) => {
-      c.fillStyle = 'rgba(10,12,20,.3)';
-      c.beginPath(); c.ellipse(cx, cy + 4 * es, 26 * es, 8 * es, 0, 0, 7); c.fill();
+    /* ── BUZÓN y CABINA ── los dos toques rojos, nada más */
+    const buz = (px3, py3) => {
       c.fillStyle = mez('#B0281B', luzDia * 12);
-      c.fillRect(cx - 24 * es, cy - 96 * es, 48 * es, 100 * es);
+      c.fillRect(px3 - 13, py3 - 52, 26, 52);
+      c.beginPath(); c.arc(px3, py3 - 52, 13, Math.PI, 0); c.fill();
+      c.fillStyle = 'rgba(20,16,16,.5)';
+      c.fillRect(px3 - 8, py3 - 46, 16, 4);
+      c.fillStyle = mez('#8E1F14', luzDia * 8);
+      c.fillRect(px3 - 13, py3 - 14, 26, 5);
+    };
+    buz(210, 872);
+    const cab = (cx3, cy3, es) => {
+      c.fillStyle = 'rgba(10,12,20,.25)';
+      c.beginPath(); c.ellipse(cx3, cy3 + 3, 26 * es, 7 * es, 0, 0, 7); c.fill();
+      c.fillStyle = mez('#B0281B', luzDia * 12);
+      c.fillRect(cx3 - 24*es, cy3 - 96*es, 48*es, 96*es);
       c.fillStyle = `rgba(200,222,240,${.4 + osc * .35})`;
       for(let r2 = 0; r2 < 3; r2++)
         for(let k = 0; k < 2; k++)
-          c.fillRect(cx - 18 * es + k * 20 * es, cy - 88 * es + r2 * 26 * es, 16 * es, 22 * es);
+          c.fillRect(cx3 - 18*es + k * 20*es, cy3 - 88*es + r2 * 26*es, 16*es, 22*es);
       c.fillStyle = mez('#8E1F14', luzDia * 8);
-      c.fillRect(cx - 28 * es, cy - 108 * es, 56 * es, 14 * es);
-      c.fillStyle = mez('#C9A96A', luzDia * 14);
-      c.fillRect(cx - 6 * es, cy - 118 * es, 12 * es, 10 * es);
+      c.fillRect(cx3 - 28*es, cy3 - 108*es, 56*es, 14*es);
     };
-    cabina(760, 878, .78); cabina(1560, 862, .62);
+    cab(1660, 886, .78);
 
-    /* FAROLAS VICTORIANAS */
+    /* ── PLÁTANOS DE SOMBRA en fila, cada uno en su alcorque ── */
     for(let i = 0; i < 9; i++){
-      const fx = 150 + i * 200, fy = 872 + (i % 2) * 14;
-      c.fillStyle = mez('#2E3038', luzDia * 12);
-      c.fillRect(fx - 4, fy - 118, 8, 118);
-      c.fillRect(fx - 12, fy - 4, 24, 8);
-      c.fillStyle = mez('#3A3D46', luzDia * 12);
-      c.beginPath();
-      c.moveTo(fx - 15, fy - 118); c.lineTo(fx + 15, fy - 118);
-      c.lineTo(fx + 9, fy - 148); c.lineTo(fx - 9, fy - 148); c.closePath(); c.fill();
-      c.fillStyle = osc > .3 ? '#FFE9AE' : mez('#9AA0AC', luzDia * 10);
-      c.fillRect(fx - 10, fy - 146, 20, 26);
-      if(osc > .3){
-        const h = c.createRadialGradient(fx, fy - 133, 4, fx, fy - 133, 66);
-        h.addColorStop(0, 'rgba(255,233,174,.28)'); h.addColorStop(1, 'rgba(255,233,174,0)');
-        c.fillStyle = h; c.beginPath(); c.arc(fx, fy - 133, 66, 0, 7); c.fill();
-      }
+      const tx2 = 150 + i * 195, ty2 = 742 + (i % 2) * 14;
+      c.fillStyle = mez('#8E8478', luzDia * 12);
+      c.fillRect(tx2 - 22, ty2 + 8, 44, 10);
+      arbol(tx2, ty2, .92, ['#2A5233','#356240','#24472C']);
     }
-
-    /* árboles de calle, en alcorques, pocos y alineados */
-    for(let i = 0; i < 10; i++){
-      const tx2 = 230 + i * 168, ty2 = 736 + (i % 2) * 10;
-      c.fillStyle = mez('#3A3A42', luzDia * 14);
-      c.fillRect(tx2 - 20, ty2 + 6, 40, 12);
-      arbol(tx2, ty2, .78, ['#2A4A30','#33593B','#22402A']);
-    }
-    /* la niebla de Londres, una capa baja */
-    const nieb = c.createLinearGradient(0, 640, 0, 900);
-    nieb.addColorStop(0, `rgba(200,210,224,${.16 + luzDia * .12})`);
+    /* la niebla baja, que es la firma del clima */
+    const nieb = c.createLinearGradient(0, 640, 0, 880);
+    nieb.addColorStop(0, `rgba(200,210,224,${.14 + luzDia * .1})`);
     nieb.addColorStop(1, 'rgba(200,210,224,0)');
-    c.fillStyle = nieb; c.fillRect(0, 640, W, 260);
+    c.fillStyle = nieb; c.fillRect(0, 640, W, 240);
   }
 }
 
@@ -9126,11 +9164,11 @@ function dibujaOficina(t){
     else               c.setTransform( ISO.TW/2, ISO.TH/2, 0, -ISO.TZ, iX(0, N), iY(0, N, 0));
     fn(c); c.restore();
   };
-  const fachada = (c2, base, vidrio) => {
+  const fachada = (c2, base, vidrio, banda) => {
     c2.fillStyle = base; c2.fillRect(0, -PISOS, N, PISOS);
     for(let f = 0; f < PISOS; f++){
-      // banda del entrepiso, ondulada como en la referencia
-      c2.fillStyle = 'rgba(222,228,244,.9)'; c2.fillRect(0, -f - .1, N, .16);
+      // banda del entrepiso: cada ciudad trae la suya
+      c2.fillStyle = banda || 'rgba(222,228,244,.9)'; c2.fillRect(0, -f - .1, N, .16);
       c2.fillStyle = 'rgba(180,190,220,.5)'; c2.fillRect(0, -f - .01, N, .05);
       // cristal del piso, con oficinas encendidas
       c2.fillStyle = vidrio; c2.fillRect(.12, -f - .88, N - .24, .74);
@@ -9146,13 +9184,22 @@ function dibujaOficina(t){
       }
     }
   };
-  caraTorre('der', c2 => fachada(c2, '#8E96C0', 'rgba(150,166,214,.55)'));
-  caraTorre('izq', c2 => fachada(c2, '#7A83AE', 'rgba(130,146,196,.5)'));
+  /* La torre se viste según la plaza: cristal azul en Manhattan, blanco con
+     acentos rojos en Tokio, piedra de Portland con marcos claros en Londres.
+     El rótulo cambia de tinta con ella. */
+  const TRAJE_TORRE = {
+    nyc:     { der:'#8E96C0', izq:'#7A83AE', vidrio:'rgba(150,166,214,.55)', vidrio2:'rgba(130,146,196,.5)', tinta:'#2C3560' },
+    tokio:   { der:'#E8E2D6', izq:'#D6CFC2', vidrio:'rgba(196,180,170,.4)',  vidrio2:'rgba(180,164,156,.38)', tinta:'#A83A30', banda:'#C4483C' },
+    londres: { der:'#B9A88E', izq:'#A6957C', vidrio:'rgba(150,150,140,.45)', vidrio2:'rgba(136,136,126,.42)', tinta:'#4A3B2E', banda:'#EDE6D8' },
+  };
+  const TT = TRAJE_TORRE[E.c] || TRAJE_TORRE.nyc;
+  caraTorre('der', c2 => fachada(c2, TT.der, TT.vidrio, TT.banda));
+  caraTorre('izq', c2 => fachada(c2, TT.izq, TT.vidrio2, TT.banda));
 
   /* rótulo en la fachada */
   const rotX = iX(N, 5.2), rotY = iY(N, 5.2, -3.4);
   c.save(); c.translate(rotX, rotY); c.transform(1, -.5, 0, 1, 0, 0);
-  c.textAlign = 'center'; c.fillStyle = '#2C3560';
+  c.textAlign = 'center'; c.fillStyle = TT.tinta;
   c.font = 'bold 46px "IBM Plex Mono", monospace'; c.fillText('NORTHPOINT', 0, 0);
   c.restore();
 
@@ -9349,8 +9396,8 @@ function dibujaOficina(t){
   gente.sort((a, b) => a.d - b.d).forEach(g => g.dib());
   OFI_HIT = sillasActivas().map(s => ({ n:s.n, x:iX(s.x, s.y), y:iY(s.x, s.y, s.z) }));
 
-  const hab = sillasActivas().find(s => s.n === ofiHablando);
-  if(hab && ofiJunta[ofiIdx]) globo(c, hab, ofiJunta[ofiIdx].txt, t);
+  /* Los globos de diálogo se retiraron: la escena habla sola. El guion
+     sigue vivo por si algún día vuelve, pero ya no se pinta. */
 
   /* El cartel es de la ciudad en la que estás — antes decía NEW YORK
      estuvieras donde estuvieras, que era justo el error que se veía en Tokio. */
