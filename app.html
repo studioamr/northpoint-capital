@@ -1755,6 +1755,13 @@ button.tag.quemada{text-decoration:line-through;text-decoration-color:var(--down
   border-color:var(--line-soft);color:var(--faint)}
 .vio-nota{color:var(--faint);line-height:1.5;padding:2px 0 8px 46px;font-style:italic}
 @media(max-width:620px){ .vio-nota{padding-left:0} }
+/* El camino a payout en chico: vive pegado al Session plan, no de panel estelar */
+#pgCamino.chico .climb{height:32px;border-radius:9px}
+#pgCamino.chico .zonas span{font-size:8.5px;letter-spacing:.4px}
+#pgCamino.chico .pr-fila{padding:7px 0;gap:9px}
+#pgCamino.chico .mono{font-size:12.5px !important}
+#pgCamino.chico .pr-pasos{margin:4px 0 6px}
+#pgCamino.chico .pr-aviso{padding:6px 9px}
 .pr-aviso{margin-top:8px;padding:8px 11px;border-radius:9px;line-height:1.55;
   border:1px solid rgba(217,164,65,.4);background:rgba(217,164,65,.07);color:var(--dim)}
 .pr-aviso b{color:var(--warn,#D9A441)}
@@ -2063,7 +2070,19 @@ stop[stop-color="#9BC0DC"]{stop-color:var(--txt)}
                   </div>
                 </div>
               </div>
-
+              <!-- Antes de abrir: en qué punto de su carrera está cada cuenta.
+               No es adorno — decide cuánto riesgo aguanta hoy cada una.
+               Vive aquí y en ningún otro lado: el camino a payout se mira
+               cuando se va a operar, no de adorno en el escritorio. -->
+          <div class="panel mt chico" id="pgCamino">
+            <div class="p-head"><h3 data-i18n="pg.caminoT">The road to payout</h3><span class="micro" id="pgCaminoSub"></span></div>
+            <div class="p-body">
+              <div id="pickCamino" style="margin-bottom:14px"></div>
+              <div class="climb" id="pgClimb"></div>
+              <div class="pr-pasos" id="pgPasos" style="margin-top:16px"></div>
+              <p class="micro" id="pgCaminoNota" style="color:var(--faint);margin:8px 0 0;line-height:1.6"></p>
+            </div>
+          </div>
             </div>
             <div>
               <div class="panel">
@@ -2081,19 +2100,7 @@ stop[stop-color="#9BC0DC"]{stop-color:var(--txt)}
             </div>
           </div>
 
-              <!-- Antes de abrir: en qué punto de su carrera está cada cuenta.
-               No es adorno — decide cuánto riesgo aguanta hoy cada una.
-               Vive aquí y en ningún otro lado: el camino a payout se mira
-               cuando se va a operar, no de adorno en el escritorio. -->
-          <div class="panel mt2" id="pgCamino">
-            <div class="p-head"><h3 data-i18n="pg.caminoT">The road to payout</h3><span class="micro" id="pgCaminoSub"></span></div>
-            <div class="p-body">
-              <div id="pickCamino" style="margin-bottom:14px"></div>
-              <div class="climb" id="pgClimb"></div>
-              <div class="pr-pasos" id="pgPasos" style="margin-top:16px"></div>
-              <p class="micro" id="pgCaminoNota" style="color:var(--faint);margin:8px 0 0;line-height:1.6"></p>
-            </div>
-          </div>
+
         </div>
 
         <div id="rt-live" class="mt" hidden>
@@ -3311,16 +3318,23 @@ function enLaMesa(){
                    .map(p => ({ id:p.id, nom:p.nom, hace: Math.round((hoy - P[p.id]) / 60000) }));
 }
 const SILLA_CEO = { x:1.28, y:7.62, z:0, flip:false };
+/* Las tres oficinas principales viven ARRIBA, en el mezzanine: cada socio la
+   suya, de izquierda a derecha. La de cristal de abajo quedó de sala de juntas. */
+const SILLAS_SOCIOS = {
+  'pablo.np': { x:1.62, y:.62, z:2.76, flip:false, sinNombre:true },
+  'mateo.np': { x:4.77, y:.62, z:2.76, flip:false, sinNombre:true },
+  'andre.np': { x:7.92, y:.62, z:2.76, flip:false, sinNombre:true },
+};
 const sillasActivas = () => {
   const g = invitadoActual();
   if(g) return [{ n:g.n, x:5.6, y:4.2, z:0, flip:false }];
-  /* los socios vistos hace poco ocupan su silla; el que ESTÁ en sesión no se
-     sienta en un puesto más: preside desde su oficina de cristal */
+  /* los socios vistos hace poco (presencia sincronizada por la nube) aparecen
+     en SU oficina del segundo piso; el que está en sesión también */
   const vivos = new Set(enLaMesa().map(x => x.nom));
   const yo = PERSONAJES.find(x => x.id === (S.session && S.session.user));
   if(yo) vivos.add(yo.nom);
-  return OFI.sillas.filter(s => vivos.has(s.n))
-    .map(s => (yo && s.n === yo.nom) ? { ...s, ...SILLA_CEO } : s);
+  return PERSONAJES.filter(p => vivos.has(p.nom) && SILLAS_SOCIOS[p.id])
+    .map(p => ({ n:p.nom, ...SILLAS_SOCIOS[p.id] }));
 };
 
 /* ── Equipo NORTHPOINT · credenciales y cargos ── */
@@ -4481,6 +4495,15 @@ $('#acAdd').addEventListener('click', ncAbrir);
    acumulado de fills — nadie aprieta botones — y una vez pasados no se
    despasan: manda el pico histórico. (Cifras del plan de cada cuenta.) */
 const TRAMO_PAGO = 1000;   // del colchón al pago máximo — regla de la casa
+/* El arreglo de un clic para el aviso «N trades no cuentan»: mueve la línea de
+   salida de la cuenta a la fecha de su PRIMER trade asignado. Aritmética, no
+   excursión a Ajustes. */
+window.desdePrimerTrade = function(id){
+  const a = S.accounts.find(x => x.id === id); if(!a) return;
+  const fechas = (S.trades || []).filter(t => (t.accts || []).includes(id)).map(t => t.date).sort();
+  if(!fechas.length) return;
+  a.desde = fechas[0]; save(); renderAll();
+};
 function carreraCuenta(a){
   const Re = reglasEval(a), Rf = reglasFondeadas(a);
   const target = Re ? (Re.target || 0) : 0;
@@ -4710,6 +4733,7 @@ function renderCamino(){
           ${fuera ? `<div class="pr-aviso micro">
             <b>${fuera} ${fuera === 1 ? bi('trade no cuenta','trade is not counting') : bi('trades no cuentan','trades are not counting')}</b>
             — ${bi('son anteriores al','they are older than')} ${fmtFecha(a.desde)}.
+            <button class="btn sm" style="margin-top:6px" onclick="desdePrimerTrade('${a.id}')">${bi('Contar desde su primer trade','Count from its first trade')}</button>
           </div>` : ''}
         </div>
       </div>`;
@@ -4730,7 +4754,7 @@ function renderCamino(){
         ${fuera ? `<div class="pr-aviso micro">
           <b>${fuera} ${fuera === 1 ? bi('trade no cuenta','trade is not counting') : bi('trades no cuentan','trades are not counting')}</b>
           — ${bi('son anteriores al','they are older than')} ${fmtFecha(a.desde)}, ${bi('la fecha desde la que corre esta cuenta.','the date this account starts counting from.')}
-          ${bi('Cámbiala en Ajustes → Cuentas y la barra se mueve.','Change it in Settings → Accounts and the bar moves.')}
+          <button class="btn sm" style="margin-top:6px" onclick="desdePrimerTrade('${a.id}')">${bi('Contar desde su primer trade','Count from its first trade')}</button>
         </div>` : ''}
       </div>
     </div>`;
@@ -7407,6 +7431,20 @@ function fusionarEstado(local, remoto){
     if(!r) return t;
     return { ...t, firmas: { ...(r.firmas||{}), ...(t.firmas||{}) } };
   });
+  /* presencia es un reloj por usuario: el spread se quedaba con el mapa local
+     completo y BORRABA el "visto hace 2 min" que el otro socio acababa de subir
+     — por eso nunca aparecía nadie sentado en el edificio. Gana el sello MÁS
+     RECIENTE de cada quien, venga de donde venga. */
+  f.presencia = {};
+  const pl = local.presencia || {}, pr = remoto.presencia || {};
+  new Set([...Object.keys(pl), ...Object.keys(pr)]).forEach(u => {
+    f.presencia[u] = Math.max(pl[u] || 0, pr[u] || 0);
+  });
+  /* monitos: el look de cada socio lo manda SU máquina. Para los demás vale lo
+     que llegue de la nube; para el usuario en sesión, lo local. */
+  f.monitos = { ...(local.monitos||{}), ...(remoto.monitos||{}) };
+  const yo = S.session && S.session.user;
+  if(yo && (local.monitos||{})[yo]) f.monitos[yo] = local.monitos[yo];
   return f;
 }
 /* lo que NO viaja: es de cada socio, no de la mesa */
@@ -7469,6 +7507,10 @@ async function cloudPush(reintento){
   finally{ cloudBusy = false; }
 }
 if(cloudOn()) setInterval(cloudPull, 8000);
+/* al volver a la pestaña se jala al instante — sin esperar el tick de 8s */
+document.addEventListener('visibilitychange', () => {
+  if(!document.hidden && cloudOn() && cloudTok) cloudPull();
+});
 if(cloudOn()) cloudPaint();
 
 /* NO se queda logueado entre aperturas (decisión de André). Cada vez que se abre
@@ -8098,7 +8140,8 @@ function figura(c, s, habla, t){
   // nombre
   c.font = '11px "IBM Plex Mono", monospace'; c.textAlign = 'center';
   c.fillStyle = habla ? L.ac : 'rgba(40,50,66,.42)';
-  c.fillText(s.n, bx, by + 34);
+  /* arriba en el mezzanine la placa ya dice el nombre: sin doble rótulo */
+  if(!s.sinNombre) c.fillText(s.n, bx, by + 34);
   if(habla){ c.fillStyle = L.ac; c.globalAlpha = .18;
              c.beginPath(); c.ellipse(bx, by + 14, 24, 11, 0, 0, 7); c.fill(); c.globalAlpha = 1; }
 
@@ -8151,9 +8194,19 @@ const VUELO_MIN = 25;                     // lo que dura el traslado en pantalla
 function escenaAhora(now = new Date()){
   const wd = now.getDay();
   const m = now.getHours() * 60 + now.getMinutes() + now.getSeconds() / 60;
-  /* fin de semana: no hay mercado que seguir, así que el jet no aterriza */
-  if(wd === 0 || wd === 6)
-    return { tipo:'vuelo', de:'nyc', a:'tokio', prog:(m / 1440), finde:true };
+  /* El mercado cierra de verdad el viernes a las 16:00 y reabre el domingo a
+     las 16:00 (hora CDMX). Ese hueco es SUYO: la vida 5G. La agenda va por
+     hora del día, como un fin de semana de verdad — gym en la mañana, golf
+     al mediodía, shopping en la tarde, estadio, restaurante y el jet de noche. */
+  const finde = (wd === 5 && m >= 960) || wd === 6 || (wd === 0 && m < 960);
+  if(finde){
+    const esc = m < 360 ? 'vuelo' : m < 600 ? 'gym' : m < 780 ? 'golf'
+              : m < 960 ? 'shopping' : m < 1140 ? 'estadio'
+              : m < 1380 ? 'restaurante' : 'vuelo';
+    if(esc === 'vuelo')
+      return { tipo:'vuelo', de:'nyc', a:'tokio', prog:((m % 180) / 180), finde:true };
+    return { tipo:'finde', esc, c:'nyc', finde:true };
+  }
   for(const tr of TRAMOS){
     const mm = (tr.de > tr.a || tr.a > 1440) && m < tr.de ? m + 1440 : m;
     if(mm >= tr.de && mm < tr.a){
@@ -8709,11 +8762,11 @@ function escenaVuelo(c, W, H, t, E, rr){
   c.textAlign = 'center';
   c.font = '600 30px -apple-system, "Segoe UI", sans-serif';
   c.fillStyle = 'rgba(255,255,255,.92)';
-  c.fillText(E.finde ? bi('FIN DE SEMANA · EL JET NO ATERRIZA','WEEKEND · THE JET DOES NOT LAND')
+  c.fillText(E.finde ? bi('FIN DE SEMANA · VIAJANDO','WEEKEND · TRAVELING')
                      : `${loc([A.n, A.en])}  →  ${loc([B.n, B.en])}`, W/2, 150);
   c.font = '15px "IBM Plex Mono", monospace';
   c.fillStyle = 'rgba(255,255,255,.5)';
-  c.fillText(E.finde ? bi('el mercado abre el lunes','the market opens on Monday')
+  c.fillText(E.finde ? bi('mercado cerrado · reabre el domingo 16:00','market closed · reopens Sunday 4 PM')
                      : bi('EN VUELO · ' + Math.round(E.prog * 100) + '%','IN FLIGHT · ' + Math.round(E.prog * 100) + '%'), W/2, 184);
   /* la barra del trayecto */
   const bw = 460, bx = W/2 - bw/2, by = 212;
@@ -8722,6 +8775,419 @@ function escenaVuelo(c, W, H, t, E, rr){
   c.beginPath(); c.arc(bx + bw * (E.finde ? .5 : E.prog), by + 2, 7, 0, 7); c.fill();
   c.textAlign = 'left';
 }
+
+/* ════════ LA VIDA 5G · el fin de semana del equipo ════════
+   El mercado está cerrado y los tres socios salen a vivirlo: gym al amanecer,
+   golf al mediodía, shopping en la tarde, estadio, restaurante y el jet de
+   noche. Mismo pixel-art del edificio, cero librerías. */
+
+/* el look real de cada socio (su monito personalizado, o el de fábrica) */
+function lookDe(uid){
+  const m = (S.monitos || {})[uid];
+  if(m && m.avatar && m.avatar.look) return m.avatar.look;
+  const p = PERSONAJES.find(x => x.id === uid);
+  return (p && p.look) || { piel:'#D9A377', pelo:'#14100C', traje:'#22303E' };
+}
+
+/* un monito de cuerpo entero en pantalla plana (no isométrico).
+   opts: ropa, pantalon, brazoIzq/brazoDer (ángulo rad, 0 = colgado),
+   paso (oscilación de piernas), sentado, nombre */
+function monitoPlano(c, x, y, look, esc, opts){
+  opts = opts || {};
+  c.save(); c.translate(x, y); c.scale(esc || 1, esc || 1);
+  const ropa = opts.ropa || look.traje || '#22303E';
+  const pant = opts.pantalon || '#1A2028';
+  const paso = opts.paso || 0;
+  if(!opts.sentado){
+    c.fillStyle = pant;
+    c.fillRect(-9 - paso * 4, -24, 8, 24);
+    c.fillRect(1 + paso * 4, -24, 8, 24);
+    c.fillStyle = '#0E1116';
+    c.fillRect(-11 - paso * 4, -3, 11, 3); c.fillRect(0 + paso * 4, -3, 11, 3);
+  } else {
+    c.fillStyle = pant; c.fillRect(-9, -30, 20, 9);
+    c.fillRect(-9, -30, 8, 18); c.fillRect(3, -30, 8, 18);
+  }
+  const yT = opts.sentado ? -54 : -50;
+  c.fillStyle = ropa; c.fillRect(-12, yT, 24, opts.sentado ? 25 : 27);
+  const brazo = (lado, ang) => {
+    c.save(); c.translate(lado * 13, yT + 4); c.rotate(lado * (ang || 0));
+    c.fillStyle = ropa; c.fillRect(-2.5, 0, 5, 17);
+    c.fillStyle = look.piel; c.fillRect(-2.5, 17, 5, 5);
+    c.restore();
+  };
+  brazo(-1, opts.brazoIzq); brazo(1, opts.brazoDer);
+  c.fillStyle = look.piel; c.fillRect(-10, yT - 22, 20, 21);
+  c.fillStyle = look.pelo || '#14100C';
+  c.fillRect(-10, yT - 25, 20, 8); c.fillRect(-10, yT - 22, 3, 9); c.fillRect(7, yT - 22, 3, 9);
+  c.fillStyle = '#14100C';
+  c.fillRect(-5, yT - 12, 3, 3); c.fillRect(3, yT - 12, 3, 3);
+  if(opts.nombre){
+    c.font = '9px "IBM Plex Mono", monospace'; c.textAlign = 'center';
+    c.fillStyle = 'rgba(255,255,255,.55)';
+    c.fillText(opts.nombre, 0, 14); c.textAlign = 'left';
+  }
+  c.restore();
+}
+
+function escenaFinde(c, W, H, t, E, rr, PC){
+  const osc = PC ? PC.oscuridad : 0;
+  const cartel = (tit, sub) => {
+    c.textAlign = 'center';
+    c.font = '600 30px -apple-system, "Segoe UI", sans-serif';
+    c.fillStyle = 'rgba(255,255,255,.92)';
+    c.fillText(tit, W / 2, 150);
+    c.font = '15px "IBM Plex Mono", monospace';
+    c.fillStyle = 'rgba(255,255,255,.5)';
+    c.fillText(sub, W / 2, 184);
+    c.font = '12px "IBM Plex Mono", monospace';
+    c.fillStyle = 'rgba(255,255,255,.32)';
+    c.fillText(bi('mercado cerrado · reabre el domingo 16:00', 'market closed · reopens Sunday 4 PM'), W / 2, 210);
+    c.textAlign = 'left';
+  };
+  const SOC = SOCIOS_REALES.map(u => ({ uid: u, look: lookDe(u), nom: (USERS[u] || {}).nombre || u }));
+
+  /* ── GOLF · lomas, bandera y el swing en loop ── */
+  if(E.esc === 'golf'){
+    c.fillStyle = '#3F7D46'; c.fillRect(0, 560, W, H - 560);
+    c.fillStyle = '#46934F';
+    c.beginPath(); c.ellipse(420, 640, 640, 130, 0, 0, 7); c.fill();
+    c.beginPath(); c.ellipse(1460, 700, 720, 160, 0, 0, 7); c.fill();
+    c.fillStyle = '#52A75B';
+    c.beginPath(); c.ellipse(950, 900, 950, 300, 0, 0, 7); c.fill();
+    /* franjas de podado */
+    c.fillStyle = 'rgba(255,255,255,.05)';
+    for(let i = 0; i < 8; i++) c.fillRect(0, 640 + i * 64, W, 30);
+    /* lago y bunker */
+    c.fillStyle = '#3E6E9E'; c.beginPath(); c.ellipse(320, 1010, 230, 74, 0, 0, 7); c.fill();
+    c.fillStyle = '#E4D4A4'; c.beginPath(); c.ellipse(1420, 860, 150, 44, 0, 0, 7); c.fill();
+    /* árboles */
+    for(let i = 0; i < 7; i++){
+      const ax = 90 + i * 270 + rr(i) * 90, ay = 600 + rr(i + 3) * 60;
+      c.fillStyle = '#5E4630'; c.fillRect(ax - 5, ay - 34, 10, 36);
+      c.fillStyle = i % 2 ? '#2E6238' : '#356E40';
+      c.beginPath(); c.arc(ax, ay - 52, 30, 0, 7); c.fill();
+      c.beginPath(); c.arc(ax - 20, ay - 36, 22, 0, 7); c.fill();
+      c.beginPath(); c.arc(ax + 20, ay - 36, 22, 0, 7); c.fill();
+    }
+    /* el green con su bandera ondeando */
+    c.fillStyle = '#66BE72'; c.beginPath(); c.ellipse(1360, 1010, 260, 84, 0, 0, 7); c.fill();
+    c.fillStyle = '#14100C'; c.beginPath(); c.ellipse(1360, 1016, 12, 5, 0, 0, 7); c.fill();
+    c.fillStyle = '#D8DCE2'; c.fillRect(1358, 880, 4, 136);
+    c.fillStyle = '#C4302B';
+    c.beginPath(); c.moveTo(1362, 882);
+    c.lineTo(1362 + 52 + Math.sin(t / 260) * 6, 896 + Math.sin(t / 200) * 4);
+    c.lineTo(1362, 912); c.closePath(); c.fill();
+    /* carrito de golf */
+    c.fillStyle = '#EDEFF2'; c.fillRect(240, 830, 150, 54);
+    c.fillRect(250, 790, 12, 44); c.fillRect(368, 790, 12, 44);
+    c.fillRect(240, 782, 150, 12);
+    c.fillStyle = '#22303E'; c.fillRect(300, 842, 80, 30);
+    c.fillStyle = '#14100C';
+    c.beginPath(); c.arc(272, 890, 15, 0, 7); c.fill();
+    c.beginPath(); c.arc(362, 890, 15, 0, 7); c.fill();
+    /* el swing: ciclo de 3 s — backswing, golpe y la bola vuela al green */
+    const u = (t % 3000) / 3000;
+    const gx = 700, gy = 920;
+    const ang = u < .35 ? (-2.2 + (u / .35) * 3.1) : .9;
+    monitoPlano(c, gx, gy, SOC[2].look, 1.5, { ropa:'#F2F4F6', pantalon:'#8E5C46', brazoDer: ang, nombre: SOC[2].nom });
+    c.save(); c.translate(gx + 19, gy - 69); c.rotate(ang);
+    c.strokeStyle = '#B9BEC6'; c.lineWidth = 4;
+    c.beginPath(); c.moveTo(0, 20); c.lineTo(0, 74); c.stroke();
+    c.fillStyle = '#8A9098'; c.fillRect(-3, 74, 10, 7);
+    c.restore();
+    if(u >= .35 && u < .95){
+      const v = (u - .35) / .6;
+      const bx2 = gx + 30 + v * (1360 - gx - 30);
+      const by2 = gy - 10 - Math.sin(Math.PI * v) * 300;
+      c.fillStyle = '#FFFFFF'; c.beginPath(); c.arc(bx2, by2, 6, 0, 7); c.fill();
+    }
+    monitoPlano(c, 980, 940, SOC[0].look, 1.4, { ropa:'#4A7FA8', pantalon:'#EDEFF2', nombre: SOC[0].nom });
+    monitoPlano(c, 1090, 960, SOC[1].look, 1.4, { ropa:'#7E4A38', pantalon:'#1A2028', nombre: SOC[1].nom });
+    /* bolsa de palos */
+    c.fillStyle = '#7E241E'; c.fillRect(1150, 900, 26, 58);
+    c.strokeStyle = '#B9BEC6'; c.lineWidth = 3;
+    for(let i = 0; i < 3; i++){ c.beginPath(); c.moveTo(1156 + i * 7, 902); c.lineTo(1160 + i * 7, 872); c.stroke(); }
+    cartel(bi('FIN DE SEMANA · GOLF', 'WEEKEND · GOLF'), bi('par 5 · nadie habla del mercado', 'par 5 · nobody talks about the market'));
+    return;
+  }
+
+  /* ── ESTADIO · la porra de la firma ── */
+  if(E.esc === 'estadio'){
+    /* gradería: dos anillos con multitud de puntitos */
+    c.fillStyle = '#3A3E4A'; c.beginPath(); c.ellipse(W/2, 700, 860, 330, 0, 0, 7); c.fill();
+    c.fillStyle = '#2A2E38'; c.beginPath(); c.ellipse(W/2, 720, 740, 270, 0, 0, 7); c.fill();
+    for(let i = 0; i < 420; i++){
+      const a = rr(i) * Math.PI * 2, rad = .78 + rr(i + 7) * .2;
+      const px2 = W/2 + Math.cos(a) * 800 * rad, py2 = 706 + Math.sin(a) * 300 * rad;
+      if(py2 < 560) continue;
+      const salto = Math.sin(t / 300 + i) > .93 ? -4 : 0;
+      c.fillStyle = ['#C9A96A','#57C79B','#D9D9E0','#4A7FA8','#C4645A'][i % 5];
+      c.fillRect(px2, py2 + salto, 4, 4);
+    }
+    /* cancha */
+    c.fillStyle = '#2E7E3E'; c.beginPath(); c.ellipse(W/2, 760, 560, 190, 0, 0, 7); c.fill();
+    c.fillStyle = 'rgba(255,255,255,.06)';
+    for(let i = 0; i < 6; i++) c.fillRect(W/2 - 560 + i * 190, 600, 95, 330);
+    c.strokeStyle = 'rgba(255,255,255,.55)'; c.lineWidth = 3;
+    c.beginPath(); c.ellipse(W/2, 760, 90, 34, 0, 0, 7); c.stroke();
+    c.beginPath(); c.moveTo(W/2, 600); c.lineTo(W/2, 920); c.stroke();
+    /* porterías: dos postes y travesaño, abiertas hacia abajo, con su red */
+    [W/2 - 512, W/2 + 512].forEach(gx2 => {
+      c.strokeStyle = '#FFFFFF'; c.lineWidth = 4;
+      c.beginPath();
+      c.moveTo(gx2 - 26, 796); c.lineTo(gx2 - 26, 730);
+      c.lineTo(gx2 + 26, 730); c.lineTo(gx2 + 26, 796);
+      c.stroke();
+      c.strokeStyle = 'rgba(255,255,255,.28)'; c.lineWidth = 1.5;
+      for(let k = 1; k < 4; k++){
+        c.beginPath(); c.moveTo(gx2 - 26 + k * 13, 730); c.lineTo(gx2 - 26 + k * 13, 794); c.stroke();
+        c.beginPath(); c.moveTo(gx2 - 26, 730 + k * 16); c.lineTo(gx2 + 26, 730 + k * 16); c.stroke();
+      }
+    });
+    /* jugadores: once contra once, y la bola que viaja */
+    for(let i = 0; i < 10; i++){
+      const jx = W/2 - 440 + rr(i) * 880 + Math.sin(t / 700 + i) * 34;
+      const jy = 640 + rr(i + 20) * 240 + Math.cos(t / 800 + i) * 14;
+      c.fillStyle = i % 2 ? '#57C79B' : '#E8EAEE';
+      c.fillRect(jx, jy, 8, 14);
+      c.fillStyle = '#D9A377'; c.fillRect(jx + 1, jy - 6, 6, 6);
+    }
+    const bx2 = W/2 + Math.sin(t / 900) * 320, by2 = 760 + Math.cos(t / 640) * 90;
+    c.fillStyle = '#FFFFFF'; c.beginPath(); c.arc(bx2, by2, 6, 0, 7); c.fill();
+    /* torres de luz */
+    [[260, 300], [W - 260, 300]].forEach(p => {
+      c.fillStyle = '#4A4E58'; c.fillRect(p[0] - 6, p[1], 12, 260);
+      c.fillStyle = osc > .2 ? '#FFF3C4' : '#B9BEC6';
+      c.fillRect(p[0] - 42, p[1] - 26, 84, 28);
+      if(osc > .2){
+        c.fillStyle = 'rgba(255,243,196,.08)';
+        c.beginPath(); c.moveTo(p[0] - 42, p[1]); c.lineTo(p[0] + 42, p[1]);
+        c.lineTo(p[0] + 260, 900); c.lineTo(p[0] - 260, 900); c.closePath(); c.fill();
+      }
+    });
+    /* marcador */
+    c.fillStyle = '#14171E'; c.fillRect(W/2 - 170, 250, 340, 74);
+    c.strokeStyle = 'rgba(255,255,255,.2)'; c.lineWidth = 2; c.strokeRect(W/2 - 170, 250, 340, 74);
+    c.font = 'bold 30px "IBM Plex Mono", monospace'; c.textAlign = 'center';
+    c.fillStyle = '#57C79B';
+    c.fillText('NP  2 - 1  CITY', W/2, 288);
+    c.font = '13px "IBM Plex Mono", monospace'; c.fillStyle = 'rgba(255,255,255,.45)';
+    const minJuego = 60 + Math.floor((t / 1000) % 30);
+    c.fillText(String(minJuego) + "'", W/2, 312); c.textAlign = 'left';
+    /* los socios en primera fila, con bufanda de la casa */
+    SOC.forEach((sc, i) => {
+      const sx = W/2 - 150 + i * 150;
+      const brinco = Math.sin(t / 300 + i * 1.3) > .86 ? -8 : 0;
+      monitoPlano(c, sx, 1074 + brinco, sc.look, 1.5, { ropa:'#173A2C', brazoIzq: 2.6, brazoDer: 2.6, nombre: sc.nom });
+      c.fillStyle = '#57C79B'; c.fillRect(sx - 19, 1074 + brinco - 79, 38, 7);
+    });
+    cartel(bi('FIN DE SEMANA · ESTADIO', 'WEEKEND · MATCHDAY'), bi('la porra de la casa', "the firm's ultras"));
+    return;
+  }
+
+  /* ── RESTAURANTE · cena de socios ── */
+  if(E.esc === 'restaurante'){
+    /* sala cálida en penumbra */
+    const g = c.createLinearGradient(0, 240, 0, H);
+    g.addColorStop(0, '#241A16'); g.addColorStop(1, '#181110');
+    c.fillStyle = g; c.fillRect(0, 240, W, H - 240);
+    c.fillStyle = '#2E211B'; c.fillRect(0, 900, W, H - 900);
+    c.fillStyle = 'rgba(255,255,255,.03)';
+    for(let i = 0; i < 12; i++) c.fillRect(i * 160, 900, 78, H - 900);
+    /* ventanal con la ciudad de noche */
+    c.fillStyle = '#10131E'; c.fillRect(1290, 330, 400, 480);
+    for(let i = 0; i < 6; i++){
+      const bw2 = 46 + rr(i) * 30, bh2 = 150 + rr(i + 4) * 260;
+      c.fillStyle = '#1A2030';
+      c.fillRect(1300 + i * 64, 810 - bh2, bw2, bh2);
+      c.fillStyle = 'rgba(255,230,170,.55)';
+      for(let k = 0; k < 8; k++){
+        if(rr(i * 9 + k) > .45)
+          c.fillRect(1306 + i * 64 + (k % 2) * 16, 810 - bh2 + 14 + Math.floor(k / 2) * 26, 5, 7);
+      }
+    }
+    c.fillStyle = '#F4F0E4'; c.beginPath(); c.arc(1600, 400, 26, 0, 7); c.fill();
+    c.strokeStyle = '#4A3A2E'; c.lineWidth = 10; c.strokeRect(1290, 330, 400, 480);
+    /* candil de latón con velas */
+    c.strokeStyle = '#C9A96A'; c.lineWidth = 5;
+    c.beginPath(); c.moveTo(760, 240); c.lineTo(760, 330); c.stroke();
+    c.beginPath(); c.arc(760, 360, 90, Math.PI * .1, Math.PI * .9); c.stroke();
+    for(let i = -1; i <= 1; i++){
+      const vx = 760 + i * 84, vy = i === 0 ? 452 : 420;
+      c.fillStyle = '#EDE6D8'; c.fillRect(vx - 4, vy - 22, 8, 22);
+      const fl = Math.sin(t / 90 + i * 2.1) * 2;
+      c.fillStyle = '#FFB44A';
+      c.beginPath(); c.ellipse(vx + fl * .4, vy - 30, 4, 8 + fl, 0, 0, 7); c.fill();
+      c.fillStyle = 'rgba(255,180,74,.10)';
+      c.beginPath(); c.arc(vx, vy - 28, 40, 0, 7); c.fill();
+    }
+    /* cuadro de la casa */
+    c.strokeStyle = '#C9A96A'; c.lineWidth = 6; c.strokeRect(180, 380, 200, 150);
+    c.fillStyle = '#1C2430'; c.fillRect(186, 386, 188, 138);
+    c.strokeStyle = '#57C79B'; c.lineWidth = 3; c.beginPath();
+    for(let i = 0; i <= 12; i++){
+      const px2 = 200 + i * 13, py2 = 490 - Math.abs(Math.sin(i * 1.1)) * 70 - i * 1.5;
+      i ? c.lineTo(px2, py2) : c.moveTo(px2, py2);
+    }
+    c.stroke();
+    /* la mesa larga: primero el tablero, luego los socios sentados DETRÁS,
+       y al final el mantel les tapa las piernas — como en una mesa de verdad */
+    c.fillStyle = '#F4EFE6'; c.fillRect(500, 800, 760, 26);
+    SOC.forEach((sc, i) => {
+      monitoPlano(c, 640 + i * 220, 856, sc.look, 1.5, { sentado:true, ropa: sc.look.traje });
+    });
+    c.fillStyle = '#E4DCCC'; c.fillRect(500, 826, 760, 90);
+    c.fillStyle = '#5E4630'; c.fillRect(540, 916, 18, 80); c.fillRect(1202, 916, 18, 80);
+    /* los nombres, sobre el mantel para que se lean */
+    c.font = '12px "IBM Plex Mono", monospace'; c.textAlign = 'center';
+    c.fillStyle = 'rgba(255,255,255,.5)';
+    SOC.forEach((sc, i) => c.fillText(sc.nom, 640 + i * 220, 902));
+    c.textAlign = 'left';
+    /* platos, copas y vela, ya puestos en la mesa */
+    for(let i = 0; i < 3; i++){
+      const px2 = 640 + i * 220;
+      c.fillStyle = '#FFFFFF'; c.beginPath(); c.ellipse(px2, 812, 34, 9, 0, 0, 7); c.fill();
+      c.fillStyle = '#8E2E38'; c.fillRect(px2 + 56, 786, 4, 18);
+      c.beginPath(); c.ellipse(px2 + 58, 784, 8, 11, 0, 0, 7); c.fill();
+    }
+    const fl2 = Math.sin(t / 80) * 2;
+    c.fillStyle = '#EDE6D8'; c.fillRect(876, 770, 8, 30);
+    c.fillStyle = '#FFB44A';
+    c.beginPath(); c.ellipse(880 + fl2 * .5, 762, 4, 9 + fl2, 0, 0, 7); c.fill();
+    const bandeja = Math.sin(t / 500) * 3;
+    monitoPlano(c, 1380, 960, { piel:'#C98F63', pelo:'#14100C', traje:'#14171C' }, 1.5, { ropa:'#14171C', brazoIzq: 2.9 });
+    c.fillStyle = '#C9A96A'; c.beginPath(); c.ellipse(1352, 838 + bandeja, 30, 7, 0, 0, 7); c.fill();
+    c.fillStyle = '#D8D2C2'; c.fillRect(1342, 820 + bandeja, 20, 14);
+    cartel(bi('FIN DE SEMANA · LA CENA', 'WEEKEND · DINNER'), bi('mesa para tres · cortesía del payout', 'table for three · courtesy of the payout'));
+    return;
+  }
+
+  /* ── SHOPPING · las tres boutiques de la casa ── */
+  if(E.esc === 'shopping'){
+    c.fillStyle = '#8E8A92'; c.fillRect(0, 880, W, H - 880);
+    c.fillStyle = 'rgba(255,255,255,.08)';
+    for(let i = 0; i < 24; i++) c.fillRect(i * 80, 880, 2, H - 880);
+    c.fillStyle = '#55515C'; c.fillRect(0, 1060, W, 30);
+    /* tres fachadas: las mismas casas que las torres */
+    const tiendas = [
+      { x: 130, base:'#1A1D24', tolda:'#C9A96A', rot:'OBSIDIAN',  ropa:'#E8EAEE' },
+      { x: 700, base:'#992E26', tolda:'#E8B4AC', rot:'KURENAI',   ropa:'#F4EFE6' },
+      { x: 1270, base:'#253E68', tolda:'#E9EFF9', rot:'MAYFAIR',  ropa:'#D9C9A0' },
+    ];
+    tiendas.forEach((td, k) => {
+      c.fillStyle = td.base; c.fillRect(td.x, 420, 420, 460);
+      /* vitrina iluminada con maniquíes */
+      c.fillStyle = 'rgba(255,240,200,.16)'; c.fillRect(td.x + 30, 560, 360, 280);
+      c.fillStyle = 'rgba(255,255,255,.06)'; c.fillRect(td.x + 30, 560, 360, 40);
+      for(let i = 0; i < 3; i++){
+        const mx = td.x + 90 + i * 120;
+        c.fillStyle = '#0E1116';
+        c.fillRect(mx - 12, 660, 24, 110);
+        c.beginPath(); c.arc(mx, 648, 13, 0, 7); c.fill();
+        c.fillStyle = td.ropa; c.fillRect(mx - 12, 672, 24, 46);
+      }
+      /* tolda a rayas */
+      c.fillStyle = td.tolda;
+      for(let i = 0; i < 7; i++){
+        c.globalAlpha = i % 2 ? .6 : 1;
+        c.fillRect(td.x + i * 60, 520, 60, 34);
+      }
+      c.globalAlpha = 1;
+      c.fillStyle = 'rgba(0,0,0,.25)'; c.fillRect(td.x, 548, 420, 8);
+      /* rótulo */
+      c.font = '600 24px -apple-system, "Segoe UI", sans-serif'; c.textAlign = 'center';
+      c.fillStyle = 'rgba(255,255,255,.9)';
+      c.fillText(td.rot, td.x + 210, 490); c.textAlign = 'left';
+    });
+    /* faroles */
+    [560, 1130, 1720].forEach(fx => {
+      c.fillStyle = '#2A2E36'; c.fillRect(fx - 4, 700, 8, 190);
+      c.fillStyle = osc > .25 ? '#FFE9A4' : '#D8DCE2';
+      c.fillRect(fx - 12, 680, 24, 26);
+    });
+    /* los socios paseando con sus bolsas */
+    SOC.forEach((sc, i) => {
+      const paso = Math.sin(t / 220 + i * 2.2) * .8;
+      const sx = 420 + i * 480 + Math.sin(t / 3200 + i) * 40;
+      monitoPlano(c, sx, 1030, sc.look, 1.6, { paso, nombre: sc.nom });
+      c.fillStyle = ['#C9A96A', '#7E241E', '#253E68'][i];
+      c.fillRect(sx + 20, 990, 26, 32);
+      c.strokeStyle = 'rgba(255,255,255,.6)'; c.lineWidth = 3;
+      c.beginPath(); c.arc(sx + 33, 990, 8, Math.PI, 0); c.stroke();
+    });
+    cartel(bi('FIN DE SEMANA · SHOPPING', 'WEEKEND · SHOPPING'), bi('una bolsa por ciudad', 'one bag per city'));
+    return;
+  }
+
+  /* ── GYM · NP ATHLETIC CLUB al amanecer ── */
+  if(E.esc === 'gym'){
+    c.fillStyle = '#1E222A'; c.fillRect(0, 240, W, H - 240);
+    /* duela */
+    c.fillStyle = '#8E6B46'; c.fillRect(0, 880, W, H - 880);
+    c.fillStyle = 'rgba(0,0,0,.14)';
+    for(let i = 0; i < 24; i++) c.fillRect(i * 80, 880, 2, H - 880);
+    /* ventanal con el amanecer */
+    c.fillStyle = '#3E4A6E'; c.fillRect(120, 320, 620, 480);
+    const g2 = c.createLinearGradient(0, 320, 0, 800);
+    g2.addColorStop(0, '#2E4A7A'); g2.addColorStop(.7, '#D98E62'); g2.addColorStop(1, '#F0B074');
+    c.fillStyle = g2; c.fillRect(132, 332, 596, 456);
+    c.fillStyle = 'rgba(20,23,30,.85)';
+    for(let i = 0; i < 9; i++){
+      const bh2 = 120 + rr(i) * 190;
+      c.fillRect(150 + i * 64, 788 - bh2, 48, bh2);
+    }
+    c.strokeStyle = '#14171E'; c.lineWidth = 8;
+    c.beginPath(); c.moveTo(430, 320); c.lineTo(430, 800); c.stroke();
+    c.beginPath(); c.moveTo(120, 560); c.lineTo(740, 560); c.stroke();
+    /* letrero y espejo */
+    c.font = '600 26px -apple-system, "Segoe UI", sans-serif';
+    c.fillStyle = 'rgba(255,255,255,.85)';
+    c.fillText('NP ATHLETIC CLUB', 1180, 380);
+    c.fillStyle = '#57C79B'; c.fillRect(1180, 394, 240, 4);
+    c.fillStyle = 'rgba(210,224,238,.09)'; c.fillRect(900, 420, 780, 380);
+    c.strokeStyle = 'rgba(255,255,255,.18)'; c.lineWidth = 4; c.strokeRect(900, 420, 780, 380);
+    /* el brillo diagonal que hace que un rectángulo se lea como espejo */
+    c.save(); c.beginPath(); c.rect(900, 420, 780, 380); c.clip();
+    c.fillStyle = 'rgba(255,255,255,.06)';
+    c.beginPath(); c.moveTo(980, 420); c.lineTo(1120, 420); c.lineTo(940, 800); c.lineTo(900, 800); c.closePath(); c.fill();
+    c.beginPath(); c.moveTo(1180, 420); c.lineTo(1240, 420); c.lineTo(1060, 800); c.lineTo(1000, 800); c.closePath(); c.fill();
+    c.restore();
+    /* rack de pesas */
+    c.fillStyle = '#2A2E36'; c.fillRect(940, 760, 320, 16);
+    c.fillRect(950, 776, 12, 100); c.fillRect(1238, 776, 12, 100);
+    for(let i = 0; i < 4; i++){
+      c.strokeStyle = '#B9BEC6'; c.lineWidth = 4;
+      c.beginPath(); c.moveTo(970 + i * 76, 752); c.lineTo(1022 + i * 76, 752); c.stroke();
+      c.fillStyle = '#14171C';
+      c.fillRect(966 + i * 76, 742, 10, 20); c.fillRect(1018 + i * 76, 742, 10, 20);
+    }
+    /* PABLO en la caminadora */
+    c.fillStyle = '#2A2E36'; c.fillRect(360, 1000, 220, 18);
+    c.fillStyle = '#14171C'; c.fillRect(370, 1006, 200, 8);
+    c.fillStyle = '#2A2E36'; c.fillRect(560, 900, 12, 106);
+    c.fillRect(540, 894, 52, 10);
+    monitoPlano(c, 452, 1000, SOC[0].look, 1.6,
+      { ropa:'#3E4A56', pantalon:'#22262E', paso: Math.sin(t / 90) * 1.2, brazoIzq: .9, brazoDer: -.9, nombre: SOC[0].nom });
+    /* MATEO con la barra: sube y baja */
+    const lift = (Math.sin(t / 420) + 1) / 2;
+    const ly = 940 - lift * 60;
+    monitoPlano(c, 1100, 1040, SOC[1].look, 1.6,
+      { ropa:'#57C79B', pantalon:'#22262E', brazoIzq: 2.6 + lift * .5, brazoDer: 2.6 + lift * .5, nombre: SOC[1].nom });
+    c.strokeStyle = '#B9BEC6'; c.lineWidth = 6;
+    c.beginPath(); c.moveTo(1030, ly); c.lineTo(1170, ly); c.stroke();
+    c.fillStyle = '#14171C';
+    c.fillRect(1022, ly - 20, 16, 40); c.fillRect(1162, ly - 20, 16, 40);
+    /* ANDRÉ estirando */
+    monitoPlano(c, 1480, 1040, SOC[2].look, 1.6,
+      { ropa:'#C9A96A', pantalon:'#22262E', brazoIzq: 3 + Math.sin(t / 600) * .2, brazoDer: 3 - Math.sin(t / 600) * .2, nombre: SOC[2].nom });
+    /* botella de agua */
+    c.fillStyle = '#4A9EC4'; c.fillRect(1560, 1006, 12, 30);
+    cartel(bi('FIN DE SEMANA · GYM', 'WEEKEND · GYM'), bi('el drawdown también se entrena', 'drawdown training, literally'));
+    return;
+  }
+}
+
 
 /* ══ EL SUELO ══
    Cada ciudad se planta en lo suyo: Nueva York sobre Central Park, Tokio
@@ -9142,6 +9608,7 @@ function dibujaOficina(t){
   c.textAlign = 'left';
 
   if(E.tipo === 'vuelo'){ escenaVuelo(c, W, H, t, E, rr); return; }
+  if(E.tipo === 'finde'){ escenaFinde(c, W, H, t, E, rr, PC); return; }
 
   skylineCiudad(c, W, H, E.c, oscuridad, rr);
 
@@ -9724,6 +10191,91 @@ function dibujaOficina(t){
       }
     });
   });
+
+
+  /* ══ EL SEGUNDO PISO · el mezzanine de los socios ══
+     Una banda elevada a lo largo del muro del fondo: arriba las tres oficinas
+     principales — PABLO, MATEO y ANDRÉ, cada una con su placa — y abajo sigue
+     la mesa de los trabajadores. z = 2.6 calculado para que las cabezas del
+     staff pasen limpias bajo la losa. */
+  {
+    const MZ = 2.6, FONDO = 2.35;
+    const MEZA = ({
+      nyc:     { baranda:'#C9A96A', placa:'#14171C', tinta:'#E8EAEE' },
+      tokio:   { baranda:'#5E3A2A', placa:'#F6F1E4', tinta:'#7E241E' },
+      londres: { baranda:'#C9B48C', placa:'#1A2438', tinta:'#E9EFF9' },
+    })[E.c] || { baranda:'#C9A96A', placa:'#14171C', tinta:'#E8EAEE' };
+    /* columnas que la cargan */
+    [1.2, 3.7, 6.2].forEach(cx2 => add(cx2 + FONDO - .1, c2 => {
+      caja(c2, cx2, FONDO - .42, 0, .3, .3, MZ, DECO.muroDer, 8, -24);
+    }));
+    /* la losa, en franjas de a metro para que la profundidad case */
+    for(let fx = 0; fx < N; fx++){
+      add(fx + FONDO + .01, c2 => {
+        caja(c2, fx, 0, MZ, 1.001, FONDO, .16, DECO.isla, 10, -18);
+      });
+    }
+    /* piso del mezzanine: mismo ajedrez del piso de abajo, más tenue */
+    add(FONDO + .02, c2 => {
+      for(let fx = 0; fx < N; fx++) for(let fy = 0; fy < 3; fy++){
+        c2.globalAlpha = .5;
+        losa(c2, fx, fy * .78, MZ + .16, (fx + fy) % 2 ? DECO.piso1 : DECO.piso2, 1, .78);
+        c2.globalAlpha = 1;
+      }
+    });
+    /* las tres oficinas: escritorio al frente, silla al fondo, mampara de
+       cristal entre una y otra, y su placa en el barandal */
+    const NOMS = [['pablo.np','PABLO'], ['mateo.np','MATEO'], ['andre.np','ANDRÉ']];
+    NOMS.forEach((par, k) => {
+      const x0 = .5 + k * 3.15;
+      add(x0 + FONDO + .5, c2 => {
+        /* alfombra del despacho */
+        c2.globalAlpha = .8;
+        losa(c2, x0 + .2, .25, MZ + .17, DECO.ceoAlfombra, 2.4, 1.7);
+        c2.globalAlpha = 1;
+        /* escritorio mirando a la mesa */
+        caja(c2, x0 + .55, 1.15, MZ + .16, 1.6, .58, .5, DECO.ceoDesk, 10, -22);
+        caja(c2, x0 + 1.02, 1.22, MZ + .66, .55, .1, .38, '#10141C', 8, -20);
+        /* lamparita de latón */
+        caja(c2, x0 + .65, 1.2, MZ + .66, .09, .09, .3, MEZA.baranda, 10, -14);
+        /* la silla del socio, contra el muro */
+        caja(c2, x0 + .95, .38, MZ + .16, .52, .5, .4, DECO.ceoSilla, 14, -22);
+        caja(c2, x0 + .95, .3, MZ + .16, .52, .1, .96, DECO.ceoSilla, 8, -26);
+      });
+      /* mamparas de cristal entre despachos */
+      if(k < 2) add(x0 + 2.9 + FONDO + .3, c2 => {
+        c2.globalAlpha = .28;
+        caja(c2, x0 + 2.92, .1, MZ + .16, .07, 2.0, 1.4, '#AECAE0', 16, -6);
+        c2.globalAlpha = 1;
+      });
+      /* placa con el nombre, colgada del barandal */
+      add(x0 + FONDO + .8, c2 => {
+        caja(c2, x0 + .85, 2.16, MZ + .16, 1.0, .07, .36, MEZA.placa, 8, -16);
+        c2.font = 'bold 11px "IBM Plex Mono", monospace'; c2.textAlign = 'center';
+        c2.fillStyle = MEZA.tinta;
+        c2.fillText(par[1], iX(x0 + 1.35, 2.2), iY(x0 + 1.35, 2.2, MZ + .38));
+        c2.textAlign = 'left';
+      });
+    });
+    /* barandal con hueco para la escalera */
+    for(let bx2 = .15; bx2 < N - .1; bx2 += .55){
+      if(bx2 > 8.25 && bx2 < 9.75) continue;
+      add(bx2 + FONDO + .6, c2 => {
+        caja(c2, bx2, 2.24, MZ + .16, .07, .07, .5, MEZA.baranda, 12, -14);
+      });
+    }
+    add(FONDO + 8.6, c2 => {
+      caja(c2, 0, 2.24, MZ + .66, 8.3, .09, .09, MEZA.baranda, 14, -12);
+      caja(c2, 9.72, 2.24, MZ + .66, N - 9.72, .09, .09, MEZA.baranda, 14, -12);
+    });
+    /* la escalera: ocho peldaños macizos hasta el hueco */
+    for(let j = 0; j < 8; j++){
+      const sy = FONDO + (7 - j) * .32;
+      add(8.55 + sy + .32, c2 => {
+        caja(c2, 8.55, sy, 0, 1.15, .33, (j + 1) * .345, DECO.isla, 10, -18);
+      });
+    }
+  }
 
   /* ══ LA GENTE ══ */
   piezas.sort((a, b) => a.d - b.d).forEach(p => p.fn(c));
