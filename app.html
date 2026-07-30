@@ -8942,88 +8942,137 @@ function sueloDe(c, W, H, ciudad, osc, rr){
     }
   }
   else {
-    /* ══ LONDRES · EL MALECÓN ══
-       La torre se planta en el Embankment: explanada de piedra clara con su
-       balaustrada, farolas victorianas, bancas mirando al río — y el TÁMESIS
-       ancho ocupando el frente, con su barco y el reflejo de las luces. */
-    const piedra = mez('#B9AE9C', -14 + luzDia * 22);
-    const piedra2 = mez('#A89D8A', -12 + luzDia * 20);
-    c.fillStyle = piedra; c.fillRect(0, S0, W, H - S0);
-    /* las losas grandes de la explanada */
-    c.strokeStyle = `rgba(60,52,44,${.10 + luzDia * .08})`; c.lineWidth = 2;
-    for(let y = S0 + 26; y < 940; y += 52){
-      c.beginPath(); c.moveTo(0, y); c.lineTo(W, y); c.stroke();
-      for(let x = ((y / 52) % 2) * 60; x < W; x += 120){
-        c.beginPath(); c.moveTo(x, y); c.lineTo(x, y + 52); c.stroke();
-      }
-    }
-    /* franjas de desgaste, para que la piedra no sea plana */
-    for(let i = 0; i < 12; i++){
-      c.fillStyle = i % 2 ? piedra2 : mez(piedra, 6);
+    /* ══ LONDRES · EL PARQUE REAL ══
+       Fuera la explanada: la torre se planta en un royal park — césped con
+       franjas de podado, parterres geométricos de tulipanes, el quiosco de
+       música, sillas de lona a rayas, reja de hierro forjado y el lago al
+       frente con sus cisnes. Una cabina roja de acento, porque es Londres. */
+    const verde  = mez('#33633E', -8 + luzDia * 24);
+    const verde2 = mez('#3E7549', -6 + luzDia * 22);
+    c.fillStyle = verde; c.fillRect(0, S0, W, H - S0);
+    /* franjas de podado alternadas: la firma del césped inglés */
+    for(let k = 0; k < 9; k++){
+      if(k % 2) continue;
+      c.fillStyle = `rgba(255,255,255,${.035 + luzDia * .04})`;
       c.beginPath();
-      c.ellipse(rr(i + 700) * W, S0 + 60 + rr(i + 710) * 240, 130 + rr(i+720) * 130, 26 + rr(i+730) * 22, 0, 0, 7);
-      c.fill();
+      c.moveTo(-40, S0 + 30 + k * 46); c.lineTo(W + 40, S0 + 62 + k * 46);
+      c.lineTo(W + 40, S0 + 108 + k * 46); c.lineTo(-40, S0 + 76 + k * 46);
+      c.closePath(); c.fill();
+    }
+    /* manchas de césped más claro */
+    for(let i = 0; i < 16; i++){
+      c.fillStyle = verde2;
+      c.beginPath();
+      c.ellipse(rr(i + 700) * W, 660 + rr(i + 710) * 260,
+                110 + rr(i+720) * 150, 34 + rr(i+730) * 42, 0, 0, 7); c.fill();
     }
 
-    /* ── LA BALAUSTRADA ── el borde del río, de lado a lado */
-    const yB = 952;
-    c.fillStyle = mez('#C9BFA9', luzDia * 16);
-    c.fillRect(0, yB - 34, W, 12);                 // pasamanos
-    c.fillRect(0, yB + 2, W, 10);                  // zócalo
-    for(let x = 14; x < W; x += 34){               // balaustres torneados
-      c.fillStyle = mez('#B9AE9C', luzDia * 14);
-      c.fillRect(x, yB - 22, 9, 24);
-      c.fillRect(x - 2, yB - 24, 13, 5);
-      c.fillRect(x + 1.5, yB - 14, 6, 7);
-    }
-    /* pilastras cada tanto, con su esfera */
-    for(let x = 110; x < W; x += 300){
-      c.fillStyle = mez('#C9BFA9', luzDia * 18);
-      c.fillRect(x - 12, yB - 44, 24, 56);
-      c.beginPath(); c.arc(x, yB - 52, 10, 0, 7); c.fill();
-    }
-
-    /* ── EL TÁMESIS ── ancho, con corriente y reflejos */
-    const rio = c.createLinearGradient(0, yB + 12, 0, H);
-    rio.addColorStop(0, mez('#4A6E86', -14 + luzDia * 22));
-    rio.addColorStop(1, mez('#2E4A62', -10 + luzDia * 16));
-    c.fillStyle = rio; c.fillRect(0, yB + 12, W, H - yB - 12);
-    for(let i = 0; i < 14; i++){
-      c.fillStyle = `rgba(255,255,255,${.05 + luzDia * .1})`;
-      c.fillRect(60 + i * 132, yB + 40 + (i % 3) * 42, 60 + rr(i + 40) * 60, 3);
-    }
-    if(osc > .3){
-      /* de noche, las farolas se reflejan en el agua */
-      for(let i = 0; i < 7; i++){
-        const fx = 170 + i * 250;
-        const refl = c.createLinearGradient(fx, yB + 12, fx, yB + 130);
-        refl.addColorStop(0, 'rgba(255,233,174,.3)'); refl.addColorStop(1, 'rgba(255,233,174,0)');
-        c.fillStyle = refl; c.fillRect(fx - 6, yB + 12, 12, 120);
+    /* ── PARTERRES GEOMÉTRICOS ── tulipanes en rojo y amarillo */
+    const parterre = (px3, py3, rx, ry, colFlor) => {
+      c.fillStyle = mez('#5A4632', luzDia * 12);
+      c.beginPath(); c.ellipse(px3, py3, rx + 8, ry + 5, 0, 0, 7); c.fill();
+      c.fillStyle = mez('#4A5A36', luzDia * 16);
+      c.beginPath(); c.ellipse(px3, py3, rx, ry, 0, 0, 7); c.fill();
+      for(let k = 0; k < 24; k++){
+        const an = k / 24 * Math.PI * 2, u = .35 + rr(k + px3) * .55;
+        const fx = px3 + Math.cos(an) * rx * u, fy = py3 + Math.sin(an) * ry * u;
+        c.fillStyle = k % 3 ? colFlor : '#E8C23C';
+        c.fillRect(fx - 2.5, fy - 5, 5, 6);
+        c.fillStyle = mez('#3E7549', luzDia * 16);
+        c.fillRect(fx - 1, fy + 1, 2, 5);
       }
-    }
-    /* el barco del río, paseando */
-    const bx3 = 560, by3 = 1058;
-    c.fillStyle = mez('#3E3A36', luzDia * 10);
-    c.beginPath();
-    c.moveTo(bx3 - 110, by3); c.lineTo(bx3 + 110, by3); c.lineTo(bx3 + 84, by3 + 26); c.lineTo(bx3 - 84, by3 + 26);
-    c.closePath(); c.fill();
-    c.fillStyle = mez('#E8E2D6', luzDia * 12);
-    c.fillRect(bx3 - 72, by3 - 26, 144, 26);
-    c.fillStyle = `rgba(190,214,236,${.45 + osc * .3})`;
-    for(let k = 0; k < 6; k++) c.fillRect(bx3 - 64 + k * 23, by3 - 20, 15, 13);
-    c.fillStyle = mez('#C0392B', luzDia * 10);
-    c.fillRect(bx3 - 10, by3 - 44, 20, 18);
-    /* la estela */
-    c.strokeStyle = `rgba(255,255,255,${.12 + luzDia * .12})`; c.lineWidth = 3;
-    c.beginPath(); c.moveTo(bx3 - 130, by3 + 16); c.lineTo(bx3 - 210, by3 + 22); c.stroke();
-    c.beginPath(); c.moveTo(bx3 - 130, by3 + 22); c.lineTo(bx3 - 190, by3 + 30); c.stroke();
+    };
+    parterre(250, 780, 90, 32, '#C4302B');
+    parterre(1560, 760, 96, 34, '#C4302B');
+    parterre(180, 1120, 76, 28, '#D95A8A');
 
-    /* ── FAROLAS VICTORIANAS sobre la balaustrada ── */
+    /* ── EL QUIOSCO DE MÚSICA ── base de piedra, columnas y techo verde */
+    const qx = 1420, qy = 1020;
+    c.fillStyle = 'rgba(10,14,24,.22)';
+    c.beginPath(); c.ellipse(qx, qy + 26, 120, 26, 0, 0, 7); c.fill();
+    c.fillStyle = mez('#B4AA9A', luzDia * 16);
+    c.beginPath(); c.ellipse(qx, qy + 14, 108, 30, 0, 0, 7); c.fill();
+    c.fillStyle = mez('#9A9080', luzDia * 12);
+    c.beginPath(); c.ellipse(qx, qy + 20, 108, 30, 0, Math.PI * .04, Math.PI * .96); c.fill();
+    c.strokeStyle = mez('#3E5E48', luzDia * 14); c.lineWidth = 5;
+    for(let k = 0; k < 6; k++){
+      const an = Math.PI * (k / 5), bx = qx + Math.cos(an) * 92, br = qy + 8 - Math.sin(an) * 16;
+      c.beginPath(); c.moveTo(bx, br); c.lineTo(bx, br - 74); c.stroke();
+    }
+    c.fillStyle = mez('#3E5E48', luzDia * 16);
+    c.beginPath();
+    c.moveTo(qx - 116, qy - 66); c.lineTo(qx, qy - 122); c.lineTo(qx + 116, qy - 66);
+    c.closePath(); c.fill();
+    c.fillStyle = mez('#4E7058', luzDia * 18);
+    c.beginPath();
+    c.moveTo(qx - 116, qy - 66); c.lineTo(qx, qy - 100); c.lineTo(qx + 116, qy - 66);
+    c.lineTo(qx, qy - 88); c.closePath(); c.fill();
+    c.fillStyle = mez('#C9B48C', luzDia * 16);
+    c.fillRect(qx - 3, qy - 138, 6, 18);
+    /* barandal del quiosco */
+    c.strokeStyle = mez('#2E3038', luzDia * 12); c.lineWidth = 2.4;
+    for(let k = 0; k <= 12; k++){
+      const u = k / 12, bx = qx - 100 + u * 200;
+      c.beginPath(); c.moveTo(bx, qy + 12 - Math.sin(u * Math.PI) * 4); c.lineTo(bx, qy - 16); c.stroke();
+    }
+
+    /* ── SILLAS DE LONA a rayas verdes, regadas por el césped ── */
+    const tumbona = (sx, sy, flip) => {
+      const f = flip ? -1 : 1;
+      c.fillStyle = 'rgba(10,14,24,.2)';
+      c.beginPath(); c.ellipse(sx, sy + 12, 30, 7, 0, 0, 7); c.fill();
+      c.strokeStyle = mez('#6E5A42', luzDia * 14); c.lineWidth = 4;
+      c.beginPath(); c.moveTo(sx - 22 * f, sy + 10); c.lineTo(sx + 8 * f, sy - 26); c.stroke();
+      c.beginPath(); c.moveTo(sx + 20 * f, sy + 10); c.lineTo(sx - 4 * f, sy - 18); c.stroke();
+      for(let k = 0; k < 5; k++){
+        c.fillStyle = k % 2 ? '#E8E4DA' : mez('#3E7549', luzDia * 20);
+        const u = k / 5;
+        c.fillRect(sx - 16 * f + (24 * f) * u - 4, sy - 24 + u * 30, 9, 8);
+      }
+    };
+    tumbona(560, 840, false); tumbona(660, 880, true);
+    tumbona(1200, 800, false); tumbona(1690, 900, true);
+
+    /* ── LA REJA DE HIERRO ── separa el césped del lago */
+    const yR = 968;
+    c.strokeStyle = mez('#2A2C34', luzDia * 10); c.lineWidth = 3;
+    c.beginPath(); c.moveTo(0, yR - 26); c.lineTo(W, yR - 26); c.stroke();
+    c.beginPath(); c.moveTo(0, yR); c.lineTo(W, yR); c.stroke();
+    for(let x = 10; x < W; x += 26){
+      c.beginPath(); c.moveTo(x, yR + 2); c.lineTo(x, yR - 34); c.stroke();
+      c.fillStyle = mez('#2A2C34', luzDia * 10);
+      c.beginPath(); c.moveTo(x - 3, yR - 32); c.lineTo(x, yR - 42); c.lineTo(x + 3, yR - 32);
+      c.closePath(); c.fill();
+    }
+
+    /* ── EL LAGO (la Serpentine) con sus CISNES ── */
+    const ag = c.createLinearGradient(0, yR + 10, 0, H);
+    ag.addColorStop(0, mez('#3A6A88', -14 + luzDia * 24));
+    ag.addColorStop(1, mez('#274C66', -10 + luzDia * 18));
+    c.fillStyle = ag; c.fillRect(0, yR + 6, W, H - yR - 6);
+    for(let i = 0; i < 10; i++){
+      c.fillStyle = `rgba(255,255,255,${.05 + luzDia * .1})`;
+      c.fillRect(90 + i * 180, yR + 60 + (i % 3) * 40, 66, 3);
+    }
+    const cisne = (cx3, cy3, f) => {
+      c.fillStyle = '#F4F6F8';
+      c.beginPath(); c.ellipse(cx3, cy3, 20, 10, 0, 0, 7); c.fill();
+      c.strokeStyle = '#F4F6F8'; c.lineWidth = 5; c.lineCap = 'round';
+      c.beginPath(); c.moveTo(cx3 + 14 * f, cy3 - 2);
+      c.quadraticCurveTo(cx3 + 26 * f, cy3 - 22, cx3 + 20 * f, cy3 - 28); c.stroke();
+      c.fillStyle = '#E8913C';
+      c.beginPath(); c.moveTo(cx3 + 20 * f, cy3 - 30); c.lineTo(cx3 + 29 * f, cy3 - 27);
+      c.lineTo(cx3 + 20 * f, cy3 - 25); c.closePath(); c.fill();
+      c.strokeStyle = `rgba(255,255,255,${.2 + luzDia * .2})`; c.lineWidth = 2;
+      c.beginPath(); c.moveTo(cx3 - 24, cy3 + 8); c.lineTo(cx3 - 44, cy3 + 11); c.stroke();
+    };
+    cisne(360, 1060, 1); cisne(470, 1092, -1); cisne(1240, 1070, 1);
+
+    /* ── FAROLAS VICTORIANAS junto a la reja ── */
     for(let i = 0; i < 7; i++){
-      const fx = 170 + i * 250, fy = yB - 34;
+      const fx = 170 + i * 250, fy = yR - 40;
       c.fillStyle = mez('#2E3038', luzDia * 12);
       c.fillRect(fx - 4, fy - 96, 8, 96);
-      c.fillRect(fx - 13, fy - 4, 26, 8);
       c.fillStyle = mez('#3A3D46', luzDia * 12);
       c.beginPath();
       c.moveTo(fx - 14, fy - 96); c.lineTo(fx + 14, fy - 96);
@@ -9037,29 +9086,7 @@ function sueloDe(c, W, H, ciudad, osc, rr){
       }
     }
 
-    /* ── BANCAS de listones, mirando al río ── */
-    for(let i = 0; i < 4; i++){
-      const sx = 300 + i * 380, sy = 900;
-      c.fillStyle = 'rgba(10,12,20,.22)';
-      c.beginPath(); c.ellipse(sx, sy + 16, 52, 8, 0, 0, 7); c.fill();
-      c.fillStyle = mez('#6E5A42', luzDia * 16);
-      c.fillRect(sx - 46, sy - 4, 92, 7);
-      c.fillRect(sx - 46, sy - 16, 92, 7);
-      c.fillStyle = mez('#2E3038', luzDia * 10);
-      c.fillRect(sx - 42, sy + 3, 6, 13); c.fillRect(sx + 36, sy + 3, 6, 13);
-    }
-
-    /* ── BUZÓN y CABINA ── los dos toques rojos, nada más */
-    const buz = (px3, py3) => {
-      c.fillStyle = mez('#B0281B', luzDia * 12);
-      c.fillRect(px3 - 13, py3 - 52, 26, 52);
-      c.beginPath(); c.arc(px3, py3 - 52, 13, Math.PI, 0); c.fill();
-      c.fillStyle = 'rgba(20,16,16,.5)';
-      c.fillRect(px3 - 8, py3 - 46, 16, 4);
-      c.fillStyle = mez('#8E1F14', luzDia * 8);
-      c.fillRect(px3 - 13, py3 - 14, 26, 5);
-    };
-    buz(210, 872);
+    /* ── LA CABINA ROJA, una sola, porque es Londres ── */
     const cab = (cx3, cy3, es) => {
       c.fillStyle = 'rgba(10,12,20,.25)';
       c.beginPath(); c.ellipse(cx3, cy3 + 3, 26 * es, 7 * es, 0, 0, 7); c.fill();
@@ -9072,14 +9099,13 @@ function sueloDe(c, W, H, ciudad, osc, rr){
       c.fillStyle = mez('#8E1F14', luzDia * 8);
       c.fillRect(cx3 - 28*es, cy3 - 108*es, 56*es, 14*es);
     };
-    cab(1660, 886, .78);
+    cab(120, 900, .72);
 
-    /* ── PLÁTANOS DE SOMBRA en fila, cada uno en su alcorque ── */
-    for(let i = 0; i < 9; i++){
-      const tx2 = 150 + i * 195, ty2 = 742 + (i % 2) * 14;
-      c.fillStyle = mez('#8E8478', luzDia * 12);
-      c.fillRect(tx2 - 22, ty2 + 8, 44, 10);
-      arbol(tx2, ty2, .92, ['#2A5233','#356240','#24472C']);
+    /* ── PLÁTANOS DE SOMBRA, la arboleda del parque ── */
+    for(let i = 0; i < 30; i++){
+      const lado = i % 2 ? 1 : -1;
+      arbol(900 + lado * (270 + rr(i + 40) * 620), 690 + rr(i + 43) * 240,
+            .85 + rr(i + 45) * .7, ['#2A5233','#356240','#24472C']);
     }
     /* la niebla baja, que es la firma del clima */
     const nieb = c.createLinearGradient(0, 640, 0, 880);
