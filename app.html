@@ -1184,6 +1184,43 @@ button.tag.quemada{text-decoration:line-through;text-decoration-color:var(--down
   font-size:12.5px;line-height:1.65;color:var(--dim)}
 .fase-regla span{display:block;font-family:var(--mono);font-size:9px;letter-spacing:.14em;
   text-transform:uppercase;color:var(--faint);margin-bottom:5px}
+.pat-top{display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap}
+.ruta{display:block;width:100%;height:auto;margin:16px 0 4px;overflow:visible}
+.ruta-l{fill:none;stroke:var(--w08);stroke-width:2;stroke-linecap:round}
+.ruta-r{fill:none;stroke:var(--up);stroke-width:2.5;stroke-linecap:round}
+.ruta-n circle{fill:var(--panel-bg);stroke:var(--line);stroke-width:1.5}
+.ruta-n text{font-family:var(--mono);font-size:10px;fill:var(--faint);text-anchor:middle}
+.ruta-n .ruta-t{font-size:9px;fill:var(--faint);opacity:.75}
+.ruta-n.ok circle{fill:rgba(87,199,155,.16);stroke:var(--up)}
+.ruta-n.ok text{fill:var(--up)}
+.ruta-n.on circle{stroke:var(--accent);stroke-width:2.5;fill:var(--glass-2)}
+.ruta-n.on text{fill:var(--txt);font-weight:600}
+.ruta-yo{fill:var(--up);stroke:var(--bg);stroke-width:2.5}
+/* en pantalla chica los montos se encimarían: manda el número romano */
+@media(max-width:560px){ .ruta-n .ruta-t{display:none} }
+.fase-ico,.fm-ico{width:34px;height:34px;border-radius:10px;border:1px solid var(--line);flex:none;
+  display:flex;align-items:center;justify-content:center}
+.fase-ico svg,.fm-ico svg{width:19px;height:19px;stroke:var(--accent);fill:none}
+.fase-min{display:flex;align-items:center;gap:13px;padding:13px 16px;margin-bottom:8px;
+  border:1px solid var(--line-soft);border-radius:13px;background:var(--w015)}
+.fase-min .fm-ico{width:30px;height:30px;border-style:dashed}
+.fase-min .fm-ico svg{width:15px;height:15px;stroke:var(--faint);stroke-width:1.6}
+.fase-min .fm-i{flex:1;min-width:0}
+.fase-min .fm-i b{display:block;font-size:13px;font-weight:500;color:var(--dim)}
+.fase-min .fm-i span{display:block;font-family:var(--mono);font-size:10px;letter-spacing:.05em;
+  color:var(--faint);margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fase-min .fm-c{font-family:var(--mono);font-size:11px;color:var(--faint);white-space:nowrap}
+.fase-min .fm-ok{color:var(--up);font-size:14px}
+.fase-min.ok{border-color:rgba(87,199,155,.32);background:rgba(87,199,155,.07)}
+.fase-min.ok .fm-ico{border-style:solid;border-color:rgba(87,199,155,.4)}
+.fase-min.ok .fm-ico svg{stroke:var(--up)}
+.fase-min.ok .fm-i b{color:var(--txt)}
+.cv-btn{display:flex;align-items:center;gap:14px;width:100%;padding:16px 20px;background:none;
+  border:0;cursor:pointer;font:inherit;color:inherit;text-align:left}
+.cv-btn:hover{background:var(--glass)}
+.cv-btn span{font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--faint)}
+.cv-btn b{margin-left:auto;font-family:var(--mono);font-size:16px;font-weight:400}
+.cv-btn[aria-expanded="true"]{border-bottom:1px solid var(--line)}
 .cv-grid{display:grid;gap:2px}
 .cv-row{display:flex;gap:14px;align-items:baseline;padding:9px 0;border-bottom:1px solid var(--line-soft)}
 .cv-row span{font-size:12.5px;color:var(--dim)}
@@ -1927,10 +1964,7 @@ stop[stop-color="#9BC0DC"]{stop-color:var(--txt)}
         <div class="panel pat" id="patrimonioHoy"></div>
         <div id="metasMods" class="mt"></div>
 
-        <div style="display:flex;align-items:center;gap:12px;margin:30px 0 12px">
-          <span class="micro" data-i18n="vd.costo">Lo que cuesta esa vida, al mes</span>
-        </div>
-        <div class="panel" id="costoVida" style="padding:18px 20px"></div>
+        <div class="panel mt2" id="costoVida" style="padding:0;overflow:hidden"></div>
       </section>
 
     </main>
@@ -3134,40 +3168,45 @@ const SCHEMA = 4;
 const PRECIOS = { g63: 185000, sf90: 550000, casa: 12000000, yate: 40000000 };
 const PLAN_FASES = [
   { r:'0', id:'f0', t:'La base', de:0, a:10000, años:'2026 – 2027', edad:'17 – 19',
-    que:'Existir financieramente. No se trata del dinero todavía: se trata de que exista el sistema — cuenta propia, impuestos en orden y el primer dinero que nadie toca.',
-    hitos:['Fondo de emergencia de 3 meses de gastos','Cuenta de inversión abierta (índice global)','Impuestos en orden (RESICO) y cuenta bancaria propia','90 días seguidos de journal sin saltarse uno'],
+    ico:'semilla',
+    que:'Que exista el sistema, no el dinero.',
+    hitos:['Fondo de 3 meses guardado','Cuenta de inversión abierta','Impuestos y banco en orden','90 días de journal seguidos'],
     ingreso:'$0 – 1,500 al mes, irregular',
     pasivo:0,
     vida:'La de hoy. Por fuera no cambia nada, y ése es el punto.',
     regla:'El 50% de cada payout se invierte el MISMO día y no se toca en 10 años. El otro 50% es tuyo.' },
 
   { r:'I', id:'f1', t:'El colchón', de:10000, a:50000, años:'2027 – 2029', edad:'19 – 21',
-    que:'Dejar de ser frágil. Con seis meses guardados, una mala racha deja de ser una emergencia y se vuelve un mal mes.',
-    hitos:['Fondo de emergencia de 6 meses','Primera posición seria en índice global','Cuentas fondeadas escaladas con el mismo protocolo','Universidad empezada sin deuda'],
+    ico:'escudo',
+    que:'Dejar de ser frágil: una mala racha ya no es emergencia.',
+    hitos:['Fondo de 6 meses','Primera posición seria en índice','Cuentas escaladas, mismo protocolo','Universidad sin deuda'],
     ingreso:'$1,500 – 4,000 al mes',
     pasivo:150,
     vida:'Te pagas tus cosas. Nadie te mantiene.',
     regla:'Los gastos suben MÁXIMO la mitad de lo que suben los ingresos. Siempre.' },
 
   { r:'II', id:'f2', t:'El primer sueldo', de:50000, a:250000, años:'2029 – 2032', edad:'21 – 24',
-    que:'Que el negocio pague tu vida y el trading deje de ser el ingreso. Aquí nace el primer activo que produce sin ti: un inmueble rentado.',
-    hitos:['El negocio cubre el 100% de tus gastos','Primer inmueble para rentar (enganche pagado en efectivo)','Portafolio de índices arriba de $100,000','Cero deuda de consumo, para siempre'],
+    ico:'puerta',
+    que:'El negocio paga tu vida. Nace el primer activo que produce sin ti.',
+    hitos:['El negocio cubre el 100% de tus gastos','Primer inmueble rentado','Portafolio arriba de $100,000','Cero deuda de consumo'],
     ingreso:'$4,000 – 12,000 al mes',
     pasivo:800,
     vida:'Depa propio o rentado sin apretarte. Coche usado pagado en efectivo.',
     regla:'El trading NUNCA paga la renta. Si el mes depende de un trade, no tienes negocio: tienes un empleo peligroso.' },
 
   { r:'III', id:'f3', t:'El primer millón', de:250000, a:1000000, años:'2032 – 2036', edad:'24 – 28',
-    que:'El punto donde el dinero empieza a trabajar más que tú. Tres o cuatro inmuebles, o el equity del negocio valuado en serio.',
-    hitos:['Patrimonio de siete cifras','El portafolio genera $40,000 al año solo','3–4 inmuebles rentados o equity equivalente','Un año entero sin tocar el principal'],
+    ico:'monte',
+    que:'El dinero empieza a trabajar más que tú.',
+    hitos:['Siete cifras','$40,000 al año que llegan solos','3–4 inmuebles o equity','Un año sin tocar el principal'],
     ingreso:'$12,000 – 30,000 al mes',
     pasivo:3300,
     vida:'Viajas sin ver el precio del vuelo. La familia queda cubierta.',
     regla:'Ningún coche que cueste más del 5% del patrimonio. Aquí eso son $50,000 — y no, la G no cabe todavía.' },
 
   { r:'IV', id:'f4', t:'La libertad', de:1000000, a:5000000, años:'2036 – 2041', edad:'28 – 33',
-    que:'Trabajas porque quieres. El portafolio cubre tu vida completa sin que muevas un dedo, y eso cambia todas las decisiones que tomas después.',
-    hitos:['Patrimonio de $5M','El portafolio genera $200,000 al año','Ingreso pasivo mayor que tus gastos: eres libre','Seguro de gastos médicos mayores y testamento'],
+    ico:'ave',
+    que:'Trabajas porque quieres: lo pasivo ya cubre tu vida.',
+    hitos:['$5M de patrimonio','$200,000 al año de rendimientos','Pasivo mayor que tus gastos','Seguro médico y testamento'],
     ingreso:'pasivo $16,600 al mes',
     pasivo:16600,
     desbloquea:[{ k:'g63', t:'Mercedes-AMG G 63', p:PRECIOS.g63, gate:3700000 }],
@@ -3175,8 +3214,9 @@ const PLAN_FASES = [
     regla:'La casa donde vives no puede pasar del 25% del patrimonio. Nunca.' },
 
   { r:'V', id:'f5', t:'El patrimonio', de:5000000, a:15000000, años:'2041 – 2048', edad:'33 – 40',
-    que:'Ya no se trata de ganar más: se trata de no perderlo. Aquí el trabajo es estructura — fiscal, legal, sucesoria — y diversificación de verdad.',
-    hitos:['Patrimonio de $15M','El portafolio genera $600,000 al año','Estructura fiscal y fideicomiso armados','Nada concentrado: ningún activo pasa del 20% del total'],
+    ico:'columnas',
+    que:'Ya no es ganar más: es no perderlo.',
+    hitos:['$15M de patrimonio','$600,000 al año','Fideicomiso y estructura fiscal','Nada concentrado arriba del 20%'],
     ingreso:'pasivo $50,000 al mes',
     pasivo:50000,
     desbloquea:[{ k:'sf90', t:'Ferrari SF90 Stradale', p:PRECIOS.sf90, gate:11000000 }],
@@ -3184,8 +3224,9 @@ const PLAN_FASES = [
     regla:'Ningún activo concentrado arriba del 20%. Lo que te hizo rico no es lo que te mantiene rico.' },
 
   { r:'VI', id:'f6', t:'La casa', de:15000000, a:50000000, años:'2048 – 2056', edad:'40 – 48',
-    que:'La casa del acantilado sobre el campo de golf. No se compra con el patrimonio: se compra con lo que el patrimonio PRODUCE, y por eso hace falta llegar a $48M antes de firmar.',
-    hitos:['Patrimonio de $48M — la casa es el 25%','El portafolio genera $2,000,000 al año','Los $70,000 al mes que cuesta esa vida salen de rendimientos, no de capital','La casa se compra en efectivo o con hipoteca menor al 30%'],
+    ico:'casa',
+    que:'La casa no se compra con el patrimonio: con lo que produce.',
+    hitos:['$48M — la casa es el 25%','$2,000,000 al año','Los $70,000 al mes salen de rendimientos','Se firma en efectivo'],
     ingreso:'pasivo $166,000 al mes',
     pasivo:166000,
     desbloquea:[{ k:'casa', t:'La casa del acantilado', p:PRECIOS.casa, gate:48000000 }],
@@ -3193,8 +3234,9 @@ const PLAN_FASES = [
     regla:'La casa se firma cuando cuesta menos del 25% de lo que tienes. Ni un dólar antes.' },
 
   { r:'VII', id:'f7', t:'La cumbre', de:50000000, a:150000000, años:'2056 en adelante', edad:'48+',
-    que:'Aquí el dinero ya no es para ti: es para lo que dejas. El yate es el último de la lista a propósito — cuesta el 10% de su valor CADA AÑO en mantenerlo.',
-    hitos:['Patrimonio de $150M','El yate se RENTA primero (~$150,000 la semana) antes de siquiera pensarlo','Fundación o vehículo de legado operando','La siguiente generación educada para no destruirlo'],
+    ico:'yate',
+    que:'El dinero ya no es para ti: es para lo que dejas.',
+    hitos:['$150M de patrimonio','El yate se renta antes de comprarse','Fundación o legado operando','La siguiente generación preparada'],
     ingreso:'pasivo $500,000 al mes',
     pasivo:500000,
     desbloquea:[{ k:'yate', t:'El yate (50 m)', p:PRECIOS.yate, gate:150000000 }],
@@ -7126,42 +7168,113 @@ function patrimonio(){
   return { pos, live, caja, total: pos + live + caja };
 }
 
+/* Un dibujo por fase: línea simple, del mismo trazo que el resto del terminal. */
+const ICO_FASE = {
+  semilla:'<path d="M12 21V11"/><path d="M12 11c0-3.3-2.7-6-6-6 0 3.3 2.7 6 6 6z"/><path d="M12 13c0-2.8 2.2-5 5-5 0 2.8-2.2 5-5 5z"/>',
+  escudo: '<path d="M12 3l7 3v5.5c0 4.3-2.9 8.2-7 9.5-4.1-1.3-7-5.2-7-9.5V6l7-3z"/><path d="M9 12l2 2 4-4"/>',
+  puerta: '<path d="M4 21V6l8-3 8 3v15"/><path d="M4 21h16"/><rect x="9.5" y="13" width="5" height="8"/><path d="M9 8.5h2M13 8.5h2"/>',
+  monte:  '<path d="M3 19h18L14 6l-3.5 6.5L8.5 10 3 19z"/><path d="M11.4 9.6l2.6-3.6"/>',
+  ave:    '<path d="M3 13c4 0 6-2 8-5 1.6 2.6 4.2 4 7 4-1 4.5-4.6 7.5-9 7.5-3 0-6-1.8-6-6.5z"/><path d="M16 8.5h.01"/>',
+  columnas:'<path d="M3 9l9-5 9 5"/><path d="M3 20h18"/><path d="M6 9v8M10 9v8M14 9v8M18 9v8"/>',
+  casa:   '<path d="M3 11.5L12 4l9 7.5"/><path d="M5.5 10v10h13V10"/><path d="M10 20v-5.5h4V20"/>',
+  yate:   '<path d="M3 18h18l-2 3H5l-2-3z"/><path d="M6 18V9h9l-3 4h-6"/><path d="M13 9V3l5 6"/>',
+};
+const icoSVG = k => `<svg viewBox="0 0 24 24" fill="none" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">${ICO_FASE[k]||''}</svg>`;
+const CANDADO = '<svg viewBox="0 0 24 24" fill="none"><rect x="5" y="10.5" width="14" height="9.5" rx="2"/><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"/></svg>';
+
+/* La ruta: el dibujo de las ocho fases subiendo, con dónde vas. */
+function rutaSVG(idxActual, N){
+  const W = 800, H = 150, n = PLAN_FASES.length;
+  const px = i => 48 + i * ((W - 96) / (n - 1));
+  const py = i => H - 26 - Math.pow(i / (n - 1), 1.45) * (H - 62);
+  const linea = PLAN_FASES.map((f,i) => `${i ? 'L' : 'M'}${px(i).toFixed(1)},${py(i).toFixed(1)}`).join(' ');
+  /* el tramo recorrido se pinta encima, cortado en tu posición exacta */
+  const f = PLAN_FASES[idxActual];
+  const dentro = Math.max(0, Math.min(1, (N - f.de) / (f.a - f.de)));
+  const hasta = idxActual + (idxActual < n - 1 ? dentro : 0);
+  const cx = px(Math.floor(hasta)) + (px(Math.ceil(hasta)) - px(Math.floor(hasta))) * (hasta % 1);
+  const cy = py(Math.floor(hasta)) + (py(Math.ceil(hasta)) - py(Math.floor(hasta))) * (hasta % 1);
+  const recorrido = PLAN_FASES.slice(0, Math.floor(hasta) + 1)
+    .map((_,i) => `${i ? 'L' : 'M'}${px(i).toFixed(1)},${py(i).toFixed(1)}`).join(' ') + ` L${cx.toFixed(1)},${cy.toFixed(1)}`;
+  return `<svg class="ruta" viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
+    <path class="ruta-l" d="${linea}"/>
+    <path class="ruta-r" d="${recorrido}"/>
+    ${PLAN_FASES.map((f,i) => {
+      const est = N >= f.a ? 'ok' : (i === idxActual ? 'on' : 'off');
+      return `<g class="ruta-n ${est}" transform="translate(${px(i).toFixed(1)},${py(i).toFixed(1)})">
+        <circle r="13"/>
+        <text y="4">${f.r}</text>
+        <text class="ruta-t" y="30">${fmtCorto(f.a)}</text>
+      </g>`;
+    }).join('')}
+    <circle class="ruta-yo" cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="6"/>
+  </svg>`;
+}
+const fmtCorto = v => v >= 1000000 ? '$' + (v/1000000) + 'M' : '$' + Math.round(v/1000) + 'k';
+
+/* ══ EL PLAN · dónde vas contra el mapa de 20 años ══
+   El patrimonio no es el P&L: es lo que ya es tuyo. Portafolio + cuenta
+   propia + lo cobrado que sigue en caja. Si ya invertiste un payout,
+   regístralo como gasto de caja («a portafolio») para no contarlo dos veces. */
+function patrimonio(){
+  const pos  = (S.positions || []).reduce((a,p) => a + (p.valor ?? p.capital ?? 0), 0);
+  const live = cuentasLive().reduce((a,x) => a + saludDe(x).balance, 0);
+  const caja = Math.max(0, vidaDelNegocio().neto);
+  return { pos, live, caja, total: pos + live + caja };
+}
+
 function renderMetas(){
   const host = $('#metasMods'); if(!host) return;
   const P = patrimonio();
   const N = P.total;
-  const faseActual = PLAN_FASES.find(f => N < f.a) || PLAN_FASES[PLAN_FASES.length - 1];
+  const idx = Math.max(0, PLAN_FASES.findIndex(f => N < f.a));
+  const iActual = idx === -1 ? PLAN_FASES.length - 1 : idx;
+  const fa = PLAN_FASES[iActual];
+  const dentro = Math.max(0, Math.min(1, (N - fa.de) / (fa.a - fa.de)));
 
-  /* la cabecera: dónde estás hoy y qué falta para el siguiente peldaño */
-  const dentro = Math.max(0, Math.min(1, (N - faseActual.de) / (faseActual.a - faseActual.de)));
-  $('#metaSub').innerHTML =
-    `<b style="color:var(--txt)">FASE ${faseActual.r} · ${esc(faseActual.t).toUpperCase()}</b>`
-    + ` · ${bi('faltan','needs')} ${fmt$(Math.max(0, faseActual.a - N))} ${bi('para la siguiente','for the next one')}`;
+  $('#metaSub').innerHTML = `<b style="color:var(--txt)">FASE ${fa.r}</b> · ${bi('faltan','needs')} ${fmt$(Math.max(0, fa.a - N))}`;
   $('#patrimonioHoy').innerHTML =
-    `<div class="pat-v">${fmt$(N)}</div>
-     <div class="pat-d">${bi('patrimonio hoy','net worth today')} · ${fmt$(P.pos)} ${bi('en portafolio','in portfolio')}
-       · ${fmt$(P.live)} ${bi('en cuenta propia','in own account')} · ${fmt$(P.caja)} ${bi('en caja','in cash')}</div>
+    `<div class="pat-top">
+       <div>
+         <div class="pat-v">${fmt$(N)}</div>
+         <div class="pat-d">${bi('patrimonio hoy','net worth today')} · ${fmt$(P.pos)} ${bi('portafolio','portfolio')} · ${fmt$(P.live)} ${bi('cuenta propia','own account')} · ${fmt$(P.caja)} ${bi('caja','cash')}</div>
+       </div>
+     </div>
+     ${rutaSVG(iActual, N)}
      <div class="pat-bar"><i style="width:${(dentro*100).toFixed(1)}%"></i></div>`;
 
-  host.innerHTML = PLAN_FASES.map(f => {
+  /* Sólo la fase en curso se abre. Las de adelante van con candado y una sola
+     línea: qué son y a cuánto se abren. Menos texto, más camino. */
+  host.innerHTML = PLAN_FASES.map((f,i) => {
     const hecha = N >= f.a;
-    const activa = f === faseActual;
+    const activa = i === iActual;
     const pct = hecha ? 100 : Math.max(0, Math.min(100, (N - f.de) / (f.a - f.de) * 100));
-    const estado = hecha ? bi('CUMPLIDA','DONE') : activa ? bi('EN CURSO','IN PROGRESS') : bi('POR DELANTE','AHEAD');
-    const cls = hecha ? ' fase-ok' : (activa ? ' fase-on' : '');
-    return `<div class="tj-mod fase${cls}">
+    const llave = (f.desbloquea || [])[0];
+
+    if(!activa){
+      return `<div class="fase-min${hecha ? ' ok' : ''}">
+        <span class="fm-ico">${hecha ? icoSVG(f.ico) : CANDADO}</span>
+        <span class="fm-i">
+          <b>${bi('Fase','Phase')} ${f.r} · ${esc(f.t)}</b>
+          <span>${hecha ? bi('cumplida','done') + ' · ' + fmt$(f.a)
+                        : bi('se abre en','opens at') + ' ' + fmt$(f.de)}${llave ? ' · ' + esc(llave.t) : ''}</span>
+        </span>
+        ${hecha ? '<span class="fm-ok">✓</span>' : `<span class="fm-c">${fmtCorto(f.a)}</span>`}
+      </div>`;
+    }
+
+    return `<div class="tj-mod fase fase-on">
       <div class="tj-h" style="cursor:default">
-        <span class="rom">${f.r}</span>
+        <span class="fase-ico">${icoSVG(f.ico)}</span>
         <span class="tt">
           <b>${bi('Fase','Phase')} ${f.r} · ${esc(f.t)}</b>
           <span>${fmt$(f.de)} → ${fmt$(f.a)} · ${f.años} · ${f.edad} ${bi('años','yrs')}</span>
         </span>
-        <span class="cnt${hecha ? ' full' : ''}">${estado}</span>
+        <span class="cnt">${bi('EN CURSO','IN PROGRESS')}</span>
       </div>
       <div class="tj-body">
         <p class="fase-que">${esc(f.que)}</p>
-        <div class="bar" style="margin:0 8px 14px"><i class="${hecha ? 'full' : ''}" style="width:${pct}%"></i></div>
-
+        <div class="bar" style="margin:0 8px 16px"><i style="width:${pct}%"></i></div>
         <div class="fase-grid">
           <div>
             <span class="fl">${bi('Qué se construye','What gets built')}</span>
@@ -7171,35 +7284,42 @@ function renderMetas(){
             <span class="fl">${bi('Lo que produce','What it produces')}</span>
             <div class="fase-dato"><span>${bi('Ingreso','Income')}</span><b>${esc(f.ingreso)}</b></div>
             <div class="fase-dato"><span>${bi('Pasivo al mes','Passive monthly')}</span><b class="${f.pasivo?'up':''}">${f.pasivo ? fmt$(f.pasivo) : '—'}</b></div>
-            <div class="fase-dato"><span>${bi('Cómo se vive','How you live')}</span><b style="font-weight:400;font-size:12.5px;line-height:1.5">${esc(f.vida)}</b></div>
+            <div class="fase-dato"><span>${bi('Cómo se vive','How you live')}</span><b>${esc(f.vida)}</b></div>
           </div>
         </div>
-
-        ${(f.desbloquea || []).map(d => {
-          const listo = N >= d.gate;
-          return `<div class="fase-llave${listo ? ' on' : ''}">
-            <span class="k">${listo ? bi('DESBLOQUEADO','UNLOCKED') : bi('SE DESBLOQUEA EN','UNLOCKS AT') + ' ' + fmt$(d.gate)}</span>
-            <b>${esc(d.t)}</b>
-            <span class="p">${fmt$(d.p)} · ${bi('el','the')} ${(d.p / d.gate * 100).toFixed(1)}% ${bi('de tu patrimonio ahí','of your net worth there')}</span>
-          </div>`;
-        }).join('')}
-
-        <div class="fase-regla"><span>${bi('La regla que la sostiene','The rule that holds it')}</span>${esc(f.regla)}</div>
+        ${llave ? `<div class="fase-llave${N >= llave.gate ? ' on' : ''}">
+          <span class="k">${N >= llave.gate ? bi('DESBLOQUEADO','UNLOCKED') : bi('SE ABRE EN','OPENS AT') + ' ' + fmt$(llave.gate)}</span>
+          <b>${esc(llave.t)}</b>
+          <span class="p">${fmt$(llave.p)} · ${(llave.p / llave.gate * 100).toFixed(0)}% ${bi('de tu patrimonio ahí','of net worth there')}</span>
+        </div>` : ''}
+        <div class="fase-regla"><span>${bi('La regla','The rule')}</span>${esc(f.regla)}</div>
       </div>
     </div>`;
   }).join('');
 
-  /* Lo que cuesta la vida de la última foto — el número que decide si se conserva */
+  /* el costo de la vida final vive detrás de un botón: es el remate, no el plato */
   const totMes = COSTO_VIDA.reduce((a,[,v]) => a + v, 0);
-  const capitalNecesario = totMes * 12 / 0.04;
-  $('#costoVida').innerHTML = `
-    <div class="cv-grid">
-      ${COSTO_VIDA.map(([t,v]) => `<div class="cv-row"><span>${esc(t)}</span><b>${fmt$(v)}</b></div>`).join('')}
-      <div class="cv-row tot"><span>${bi('Total al mes','Monthly total')}</span><b>${fmt$(totMes)}</b></div>
-    </div>
-    <p class="fase-regla" style="margin-top:14px"><span>${bi('Lo que casi nadie calcula','What almost nobody calculates')}</span>
-      ${bi('Sostener eso son','That costs')} ${fmt$(totMes * 12)} ${bi('al año. Al 4% de retiro seguro, hacen falta','a year. At a safe 4% withdrawal you need')}
-      <b style="color:var(--txt)">${fmt$(capitalNecesario)}</b> ${bi('invertidos SÓLO para los gastos — aparte de la casa y los coches. Por eso la compuerta de la casa está en $48M: no es exageración, es la cuenta.','invested JUST for the running costs — on top of the house and the cars. That is why the house gate sits at $48M: not caution, arithmetic.')}</p>`;
+  const cap = totMes * 12 / 0.04;
+  const cv = $('#costoVida');
+  cv.innerHTML = `
+    <button class="cv-btn" id="cvToggle" aria-expanded="false">
+      <span>${bi('Lo que cuesta esa vida, al mes','What that life costs per month')}</span>
+      <b>${fmt$(totMes)}</b>
+    </button>
+    <div id="cvDet" hidden style="padding:16px 20px 18px">
+      <div class="cv-grid">
+        ${COSTO_VIDA.map(([t,v]) => `<div class="cv-row"><span>${esc(t)}</span><b>${fmt$(v)}</b></div>`).join('')}
+        <div class="cv-row tot"><span>${bi('Total al mes','Monthly total')}</span><b>${fmt$(totMes)}</b></div>
+      </div>
+      <p class="fase-regla" style="margin:16px 0 0">
+        <span>${bi('Lo que casi nadie calcula','What almost nobody calculates')}</span>
+        ${bi('Son','That is')} ${fmt$(totMes*12)} ${bi('al año. Al 4% seguro, hacen falta','a year. At a safe 4%, you need')}
+        <b style="color:var(--txt)">${fmt$(cap)}</b> ${bi('invertidos SÓLO para los gastos — aparte de la casa y los coches. Por eso la compuerta está en $48M: no es exageración, es la cuenta.','invested JUST for running costs — on top of the house and cars. That is why the gate sits at $48M: arithmetic, not caution.')}</p>
+    </div>`;
+  $('#cvToggle').onclick = () => {
+    const d = $('#cvDet'), ab = d.hidden;
+    d.hidden = !ab; $('#cvToggle').setAttribute('aria-expanded', String(ab));
+  };
 }
 
 function renderVida(){
