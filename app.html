@@ -4573,11 +4573,28 @@ function renderFirmaCarrera(){
   const orden = socios.slice().sort((a, b) => b.pct - a.pct);
   const yo = S.session && S.session.user;
   const conDatos = socios.filter(x => !x.sinDatos).length;
+  /* Sin sesión de nube este panel es una foto vieja: ni lo tuyo sube ni lo de
+     los socios baja. Eso no se dice en un pill chiquito — se dice AQUÍ. */
+  const sinNube = cloudOn() && !cloudTok;
+  const SY = S.sync || {};
+  const sello = uid => {
+    if(uid === yo) return '';
+    const ts = SY[uid] || 0;
+    if(!ts) return ' · ' + bi('nunca ha subido desde su equipo','never uploaded from their device');
+    const min = Math.round((hoy - ts) / 60000);
+    return ' · ↑ ' + (min < 1 ? bi('ahorita','just now') : min < 60 ? bi('hace ','')+ min + bi(' min',' min ago')
+           : bi('hace ','') + Math.round(min / 60) + ' h' + bi('','ago'));
+  };
 
   host.innerHTML = `
     <div class="p-head"><h3>${bi('La carrera de la firma','The firm\'s race')}</h3>
       <span class="micro">${bi('primero en llegar al 100%','first to 100%')}</span></div>
     <div class="p-body">
+      ${sinNube ? `<div class="pr-aviso micro" style="margin:0 0 14px;border-color:rgba(228,110,98,.5);background:rgba(228,110,98,.08)">
+        <b style="color:var(--down)">${bi('ESTÁS TRABAJANDO SOLO','YOU ARE WORKING SOLO')}</b> —
+        ${bi('entraste con la clave local, así que NADA viaja: tu avance no sube y el de los socios no baja aunque le des refresh. Sal y vuelve a entrar con tu contraseña de nube.',
+             'you signed in with the local key, so NOTHING travels: your progress does not upload and your partners\' does not come down no matter how much you refresh. Sign out and back in with your cloud password.')}
+      </div>` : ''}
       <div class="fc-pista">
         <div class="fc-meta"><span>0%</span><span>${bi('META','FINISH')} · 100%</span></div>
         ${orden.map((x, i) => `
@@ -4592,9 +4609,9 @@ function renderFirmaCarrera(){
             </div>
             <span class="fc-info">
               <b>${esc(x.nom)}</b>
-              <em>${x.sinDatos ? bi('sin cuentas en este equipo','no accounts on this device')
+              <em>${(x.sinDatos ? bi('sin cuentas en este equipo','no accounts on this device')
                  : Math.round(x.pct) + '% · ' + x.cuentas + (x.cuentas === 1 ? bi(' cuenta',' account') : bi(' cuentas',' accounts'))
-                   + (x.pagos ? ' · ' + x.pagos + bi(' cobrada',' paid') + (x.pagos > 1 ? 's' : '') : '')}</em>
+                   + (x.pagos ? ' · ' + x.pagos + bi(' cobrada',' paid') + (x.pagos > 1 ? 's' : '') : '')) + sello(x.uid)}</em>
             </span>
           </div>`).join('')}
       </div>
@@ -6470,17 +6487,21 @@ async function doLogin(){
         S.claves[u] = await hashClave(p);
       }
     }catch(err){
-      /* Nadie en este terminal usa la nube todavía (nunca se conectó Supabase de
-         verdad): decirle a quien se equivocó de clave "revísala en Supabase" es
-         mandarlo a un panel que no puede abrir. El intento de nube queda —por si
-         algún día sí se conecta— pero el mensaje al usuario es el mismo de
-         siempre: la clave no sirvió, sin mencionar infraestructura que no le
-         toca administrar. */
+      /* La nube no aceptó. Se deja entrar en local para no dejar a nadie fuera,
+         pero YA NO en silencio: entrar en local significa que nada viaja entre
+         socios, y callarlo fue justo lo que tuvo a la mesa ciega — cada quien
+         veía su isla y creía que el otro no avanzaba. */
       if(!(await claveLocalOk(u, p))){
         $('#lgErr').textContent = tr('lg.malas');
         $('#lgPass').value = '';
         return;
       }
+      const razon = (err && err.message) || '';
+      setTimeout(() => toast(/confirm/i.test(razon)
+        ? bi('Tu usuario de nube existe pero el correo no está confirmado. En Supabase: Authentication → Users → ⋯ → Confirm email.',
+             'Your cloud user exists but the email is unconfirmed. In Supabase: Authentication → Users → ⋯ → Confirm email.')
+        : bi('OJO: entraste EN LOCAL (la clave de nube no sirvió). Nada viaja entre socios hasta que entres con tu contraseña de nube.',
+             'HEADS UP: you signed in LOCALLY (the cloud password did not work). Nothing travels between partners until you sign in with your cloud password.')), 600);
     }
   } else if(!(await claveLocalOk(u, p))){
     $('#lgErr').textContent = tr('lg.malas');
@@ -7440,6 +7461,12 @@ function fusionarEstado(local, remoto){
   new Set([...Object.keys(pl), ...Object.keys(pr)]).forEach(u => {
     f.presencia[u] = Math.max(pl[u] || 0, pr[u] || 0);
   });
+  /* mismo trato para el sello de subidas */
+  f.sync = {};
+  const sl = local.sync || {}, sr = remoto.sync || {};
+  new Set([...Object.keys(sl), ...Object.keys(sr)]).forEach(u => {
+    f.sync[u] = Math.max(sl[u] || 0, sr[u] || 0);
+  });
   /* monitos: el look de cada socio lo manda SU máquina. Para los demás vale lo
      que llegue de la nube; para el usuario en sesión, lo local. */
   f.monitos = { ...(local.monitos||{}), ...(remoto.monitos||{}) };
@@ -7484,6 +7511,10 @@ async function cloudPush(reintento){
   try{
     if(cloudTok.exp && Date.now() > cloudTok.exp - 60000) await cloudRefresh();
     const esperada = S.revNube || 0;
+    /* el sello de ESTA máquina: quién subió y cuándo — es lo que deja decir
+       "Pablo subió hace 2 min" o "Pablo NUNCA ha subido" sin adivinar */
+    const quien = S.session && S.session.user;
+    if(quien) S.sync = { ...(S.sync || {}), [quien]: Date.now() };
     /* concurrencia optimista: sólo escribe si nadie tocó la fila desde mi última lectura */
     const r = await fetch(CLOUD.url + `/rest/v1/northpoint_estado?id=eq.1&rev=eq.${esperada}`, {
       method:'PATCH',
