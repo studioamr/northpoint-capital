@@ -1123,16 +1123,47 @@ button.tag.quemada{text-decoration:line-through;text-decoration-color:var(--down
 .cja-x{background:none;border:none;color:var(--faint);font-size:9.5px;cursor:pointer;
   text-decoration:underline;padding:0 0 0 6px;font-family:inherit}
 .cja-x:hover{color:#DE6A5F}
-/* ── La escalera: objetivos y logros del negocio ── */
-.meta-card{flex:0 0 218px;border:1px solid var(--line-soft);border-radius:14px;background:var(--glass);
-  padding:15px 17px;box-shadow:inset 0 1px 0 var(--edge);position:relative}
-.meta-card b{display:block;font-size:14px;margin-top:9px;line-height:1.3;overflow-wrap:anywhere}
-.meta-card .bar{margin-top:12px}
-.meta-card .cja-x{position:absolute;top:12px;right:12px;padding:0;opacity:0;transition:opacity .15s}
-.meta-card:hover .cja-x{opacity:1}
-.meta-card.logrado{border-color:rgba(87,199,155,.45);background:rgba(87,199,155,.10)}
-.meta-card.logrado .mdk-l{color:var(--up)}
-@media(max-width:620px){ .meta-card{flex-basis:196px} }
+/* ── La hoja de sesión: el parte que se archiva al cerrar la mesa ── */
+.hoja{overflow:hidden}
+.hoja-h{display:flex;align-items:flex-start;gap:14px;flex-wrap:wrap;
+  padding:18px 20px;border-bottom:1px solid var(--line)}
+.hoja-veredicto{margin-left:auto;font-family:var(--mono);font-size:10px;letter-spacing:.14em;
+  border:1px solid var(--line);border-radius:99px;padding:6px 13px;color:var(--faint);align-self:center}
+.hoja-veredicto.bien{color:var(--up);border-color:rgba(87,199,155,.45);background:rgba(87,199,155,.10)}
+.hoja-veredicto.mal{color:var(--down);border-color:rgba(222,106,95,.45);background:rgba(222,106,95,.10)}
+.hoja-sec{display:flex;align-items:baseline;gap:10px;margin:26px 0 12px}
+.hoja-sec:first-child{margin-top:0}
+.hoja-sec .n{font-family:var(--mono);font-size:9.5px;letter-spacing:.12em;color:var(--accent);
+  border:1px solid var(--accent-deep);border-radius:99px;padding:2px 9px}
+.hoja-sec b{font-size:13px;letter-spacing:.01em}
+.hoja-tr{border:1px solid var(--line-soft);border-radius:12px;overflow:hidden}
+.hoja-fila{display:flex;align-items:center;gap:12px;padding:11px 14px;flex-wrap:wrap;
+  border-bottom:1px solid var(--line-soft)}
+.hoja-fila:last-child{border-bottom:0}
+.hoja-fila .n{color:var(--faint);font-size:10px}
+.hoja-fila .h{font-size:11.5px;color:var(--dim);min-width:44px}
+.hoja-fila .ins{font-size:12.5px;flex:1;min-width:120px}
+.hoja-fila .dis{display:flex;gap:4px;flex-wrap:wrap}
+.hoja-plan{display:grid;grid-template-columns:repeat(auto-fit,minmax(232px,1fr));gap:10px}
+.hoja-plan > div{border:1px solid var(--line-soft);border-radius:12px;padding:12px 14px;min-width:0}
+.hoja-plan span{display:block;font-family:var(--mono);font-size:9.5px;letter-spacing:.11em;
+  text-transform:uppercase;color:var(--faint)}
+.hoja-plan b{display:block;font-size:13px;margin-top:5px;font-weight:500;overflow-wrap:anywhere}
+.hoja-plan i{display:block;font-style:normal;font-size:11.5px;color:var(--dim);margin-top:5px;line-height:1.5}
+.hoja-cierre{font-size:13px;line-height:1.75;color:var(--dim);max-width:76ch;margin:0;
+  border-left:2px solid var(--accent-deep);padding-left:14px}
+/* ── La escalera: objetivos y logros, por capítulos ── */
+.meta-fila{align-items:flex-start}
+.meta-fila.visto{background:rgba(87,199,155,.08)}
+.meta-fila .info span{overflow-wrap:anywhere}
+.meta-fila.visto .info b{color:var(--up)}
+.meta-tic{width:22px;height:22px;border-radius:50%;border:1px solid var(--line);flex:0 0 auto;
+  display:flex;align-items:center;justify-content:center;margin-top:2px}
+.meta-tic.on{border-color:var(--up);background:rgba(87,199,155,.18)}
+.meta-tic svg{width:11px;height:11px;stroke:var(--up);stroke-width:2.6;fill:none;
+  stroke-linecap:round;stroke-linejoin:round}
+.meta-fila .cja-x{opacity:0;transition:opacity .15s;align-self:center}
+.meta-fila:hover .cja-x{opacity:1}
 .eqd-sec{font-family:var(--mono);font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;
   color:var(--faint);margin:26px 2px 12px}
 .eqd-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(268px,1fr));gap:12px}
@@ -1586,7 +1617,6 @@ stop[stop-color="#9BC0DC"]{stop-color:var(--txt)}
           <button type="button" data-rt="pre" class="on">Pre-market</button>
           <button type="button" data-rt="live">En vivo</button>
           <button type="button" data-rt="cierre">Cierre</button>
-          <button type="button" data-rt="reglas">Reglas</button>
         </div>
 
         <div id="rt-pre" class="mt">
@@ -1659,47 +1689,27 @@ stop[stop-color="#9BC0DC"]{stop-color:var(--txt)}
           </div>
         </div>
 
+        <!-- La hoja de la sesión: una sola página con todo lo que pasó hoy,
+             como el parte que se archiva al cerrar la mesa. -->
         <div id="rt-cierre" class="mt" hidden>
-          <div class="panel">
-            <div class="p-head"><h3>Resumen de la sesión</h3><span class="micro">contra tu plan</span></div>
+          <div class="panel hoja">
+            <div class="hoja-h">
+              <div>
+                <div class="micro">NORTHPOINT CAPITAL · HOJA DE SESIÓN</div>
+                <h3 id="hojaFecha" style="margin:4px 0 0">—</h3>
+              </div>
+              <div class="hoja-veredicto" id="hojaVeredicto">—</div>
+            </div>
             <div class="p-body">
               <div id="rtResumen"></div>
-              <button class="btn mt" id="btnReport" data-i18n="se.generarRep">Escribir el cierre del día</button>
-            </div>
-          </div>
-        </div>
-
-        <div id="rt-reglas" class="mt" hidden>
-          <div class="panel">
-            <div class="p-body">
-              <div class="micro" data-i18n="re.principio">Principio rector</div>
-              <p class="rule-quote" data-i18n="re.quote">Ninguna regla de Northpoint tiene «excepción creativa». Cuando una regla parece inconveniente, probablemente es exactamente cuando más se necesita. La disciplina no se aplica cuando es cómodo. Se aplica siempre.</p>
-            </div>
-          </div>
-
-          <div class="mt2 micro" style="margin-bottom:10px" data-i18n="re.nn">No negociables</div>
-          <div class="grid g4">
-            <div class="panel nn"><span class="micro">NN — 01</span><b data-i18n="rg.00">Nunca minis</b><p data-i18n="rg.01">Operación en minis está prohibida. Sin excepciones. El Terminal la marca como violación.</p></div>
-            <div class="panel nn"><span class="micro">NN — 02</span><b data-i18n="rg.02">Solo la ventana 7:00 – 8:30</b><p data-i18n="rg.03">Lunes a viernes. Fuera de esta ventana no se opera. Punto.</p></div>
-            <div class="panel nn"><span class="micro">NN — 03</span><b data-i18n="rg.04">Nada abierto después de 8:30</b><p data-i18n="rg.05">Toda posición debe estar cerrada antes de las 8:30 AM.</p></div>
-            <div class="panel nn"><span class="micro">NN — 04</span><b data-i18n="rg.06">Sin setup, no se opera</b><p data-i18n="rg.07">Si el checklist no da setup válido, el mejor trade del día es no operar.</p></div>
-          </div>
-
-          <div class="grid g2 mt2">
-            <div class="panel">
-              <div class="p-head"><h3 data-i18n="re.gestion">Gestión de la sesión</h3><span class="micro" data-i18n="re.formato">Formato de ejecución</span></div>
-              <div class="p-body">
-                <div class="lesson"><div class="lx"><b data-i18n="re.dosMax">%n trades máximo, estricto</b><p data-i18n="rg.08">Máximo %n operaciones por sesión. Sin excepciones.</p></div></div>
-                <div class="lesson"><div class="lx"><b data-i18n="rg.09">Se gana el trade 1 → se cierra la plataforma</b><p data-i18n="rg.10">Día terminado. Al cerrar el primer trade en ganancia, se cierra la plataforma.</p></div></div>
-                <div class="lesson"><div class="lx"><b data-i18n="rg.11">Se pierde el trade 1 → un solo intento más</b><p data-i18n="re.unicamente">ÚNICAMENTE si aparece un setup válido nuevo y completo. Nunca revenge.</p></div></div>
+              <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:18px">
+                <button class="btn primary" id="btnReport" data-i18n="se.generarRep">Escribir el cierre del día</button>
+                <button class="btn" data-goto="trades">Ver los trades</button>
               </div>
             </div>
-            <div class="panel">
-              <div class="p-head"><h3 data-i18n="re.terminacion">Terminación inmediata</h3><span class="micro" data-i18n="re.codigo">Código de conducta</span></div>
-              <div class="p-body" id="termList"></div>
-            </div>
           </div>
         </div>
+
       </section>
 
       <!-- ════ JOURNAL ════ -->
@@ -1880,26 +1890,14 @@ stop[stop-color="#9BC0DC"]{stop-color:var(--txt)}
         </p>
         <div id="vidaBox"></div>
 
-        <!-- Las tres patas del negocio: el panorama vive aquí, junto al dinero
-             de verdad, en vez de en una vista propia. -->
-        <div style="display:flex;align-items:center;gap:12px;margin:30px 0 8px;flex-wrap:wrap">
-          <span class="micro" data-i18n="fi.t">Panorama</span>
-          <span class="micro" id="firmDate" style="margin-left:auto;color:var(--faint)"></span>
-        </div>
-        <div class="tres" id="firmTres"></div>
-
         <!-- La escalera: en qué se convierte el dinero cobrado. Los peldaños
              se marcan solos cuando el neto de la caja cruza su precio. -->
-        <div style="display:flex;align-items:center;gap:12px;margin:30px 0 8px;flex-wrap:wrap">
+        <div style="display:flex;align-items:center;gap:12px;margin:30px 0 12px;flex-wrap:wrap">
           <span class="micro" data-i18n="vd.escalera">Objetivos y logros</span>
           <span class="micro" id="metaSub" style="margin-left:auto;color:var(--faint)"></span>
           <button class="btn sm" id="metaAdd">+ Objetivo</button>
         </div>
-        <div class="mdk-wrap">
-          <button class="mdk-nav prev" id="metaPrev" aria-label="Anterior">&lsaquo;</button>
-          <div class="px-rail mdk-rail" id="metasRail"></div>
-          <button class="mdk-nav next" id="metaNext" aria-label="Siguiente">&rsaquo;</button>
-        </div>
+        <div id="metasMods"></div>
       </section>
 
     </main>
@@ -3632,104 +3630,6 @@ const idsTodas = () => new Set([...S.accounts.map(a=>a.id), SIN_CUENTA]);
      · Fondeadas → el hito de la fase (evaluación, colchón o retiros)
      · Portafolio → el 20% de lo cobrado que el plan manda a acciones
      · Cuenta propia → igualar a una fondeada; ahí dejas de necesitarlas */
-function renderFirma(){
-  /* Una rueda dice tres cosas o no dice nada: dónde vas, cuánto es eso en dinero,
-     y CONTRA QUÉ se mide. Lo último era lo que faltaba: un porcentaje suelto no
-     se puede juzgar si no sabes cuál es el 100%. */
-  const aro = (o) => {
-    const R = 52, C = 2 * Math.PI * R;
-    const hay = o.pct != null;
-    const pct = Math.max(0, Math.min(100, o.pct || 0));
-    const off = C * (1 - pct / 100);
-    const lleno = hay && pct >= 99.5;
-    return `<div class="pata ${o.k}${hay ? '' : ' apagada'}${lleno ? ' llena' : ''}">
-      <div class="pata-top">
-        <span class="pata-t">${esc(o.t)}</span>
-        ${o.badge ? `<span class="pata-badge">${esc(o.badge)}</span>` : ''}
-      </div>
-
-      <div class="pata-aro">
-        <svg viewBox="0 0 120 120" aria-hidden="true">
-          <circle class="fondo" cx="60" cy="60" r="${R}"></circle>
-          ${hay ? `<circle class="arco" cx="60" cy="60" r="${R}"
-            stroke-dasharray="${C.toFixed(1)}" stroke-dashoffset="${off.toFixed(1)}"></circle>` : ''}
-        </svg>
-        <b>${hay ? Math.round(pct) + '<i>%</i>' : '<span class="sinDato">—</span>'}</b>
-      </div>
-
-      <div class="pata-v">${esc(o.v)}</div>
-      <div class="pata-meta">${o.meta ? esc(o.meta) : '&nbsp;'}</div>
-      <div class="pata-n">${esc(o.n)}</div>
-    </div>`;
-  };
-
-  /* ── 1 · las fondeadas ── */
-  const prop = cuentasProp().filter(a => reglasDe(a));
-  let p1;
-  if(prop.length){
-    const ganado = prop.reduce((x,a) => x + (saludDe(a).balance - a.start), 0);
-    const meta = prop.reduce((x,a) => { const h = saludDe(a);
-      return x + (h.hito != null ? Math.max(0, h.hito - a.start) : 0); }, 0);
-    /* La fase que manda: la de la primera cuenta. Si están mezcladas se dice. */
-    const fases = [...new Set(prop.map(a => a.fase))];
-    const faseTxt = fases.length === 1
-      ? (FASES[fases[0]] || FASES.eval).t
-      : 'Fases mezcladas';
-    const falta = Math.max(0, meta - ganado);
-    p1 = { k:'prop', t:'Cuenta fondeada', badge: faseTxt.toUpperCase(),
-           pct: meta ? (ganado / meta * 100) : null,
-           v: fmt$(prop.reduce((x,a) => x + saludDe(a).balance, 0)),
-           meta: meta ? `objetivo de la fase · ${fmt$(meta)}` : 'sin hito definido',
-           n: !meta ? `${prop.length} cuenta${prop.length>1?'s':''} · el plan no fija hito`
-              : falta ? `faltan ${fmt$(falta)} · ${prop.length} cuenta${prop.length>1?'s':''}`
-              : `objetivo cubierto · ${prop.length} cuenta${prop.length>1?'s':''}` };
-  } else {
-    p1 = { k:'prop', t:'Cuenta fondeada', pct:null, v:'—', meta:'',
-           n:'Sin fondeadas dadas de alta. Se agregan en el gestor de cuentas.' };
-  }
-
-  /* ── 2 · el portafolio ──
-     No hay un mínimo externo que cumplir: el destino del portafolio es su propia
-     regla de reparto. Si el plan manda 20% de cada payout a acciones, el aro mide
-     cuánto de lo que YA cobraste llegó ahí. Un objetivo que crece cuando cobras,
-     no una cifra inventada. */
-  const pos = S.positions || [];
-  const aum = pos.reduce((x,p) => x + (p.valor || p.capital || 0), 0);
-  const invertido = pos.reduce((x,p) => x + (p.capital || 0), 0);
-  const cobrado = (S.caja||[]).filter(m => m.tipo === 'ingreso').reduce((x,m) => x + (m.monto||0), 0);
-  const cuota = (SISTEMA.reparto.find(r => r.k === 'portafolio')?.pct || .20);
-  const pc = Math.round(cuota * 100);
-  const debe = cobrado * cuota;
-  const p2 = debe > 0
-    ? { k:'port', t:'Portafolio', badge:`REGLA ${pc}%`,
-        pct: Math.min(100, invertido / debe * 100), v: fmt$(aum),
-        meta: `${pc}% de lo cobrado · ${fmt$(debe)}`,
-        n: invertido >= debe
-           ? `Al corriente. ${pos.length} posición${pos.length===1?'':'es'} en acciones.`
-           : `faltan ${fmt$(debe - invertido)} por invertir de tus payouts` }
-    : { k:'port', t:'Portafolio', pct: null, v: aum ? fmt$(aum) : '—', meta:'',
-        n:'Sin payouts cobrados todavía. De ahí sale el portafolio.' };
-
-  /* ── 3 · la cuenta propia ── */
-  const live = cuentasLive();
-  const saldoLive = live.reduce((x,a) => x + saludDe(a).balance, 0);
-  const metaLive = SISTEMA.metaLive || 50000;
-  const p3 = live.length
-    ? { k:'live', t:'Cuenta propia', badge:'TUYA',
-        pct: Math.min(100, saldoLive / metaLive * 100), v: fmt$(saldoLive),
-        meta: `igualar una fondeada · ${fmt$(metaLive)}`,
-        n: saldoLive >= metaLive
-           ? 'Ya iguala a una fondeada. Aquí dejas de necesitarlas.'
-           : `faltan ${fmt$(metaLive - saldoLive)} para dejar de depender de ellas` }
-    : { k:'live', t:'Cuenta propia', pct:null, v:'—', meta:'',
-        n:'Sin cuenta propia. Se da de alta en el gestor de cuentas.' };
-
-  $('#firmTres').innerHTML = [p1, p2, p3].map(aro).join('');
-  $('#firmDate').textContent = fmtFecha(todayISO());
-}
-
-
-/* ════════ Cuentas · interfaz ════════ */
 function faseTag(a){
   const F = FASES[a.fase] || FASES.eval;
   return `<span class="tag">${F.corto}</span>`;
@@ -3871,7 +3771,7 @@ function refrescarSeleccion(){
   if(v === 'journal'){ renderDashboard(); renderJournal(); renderObjetivos(); }
   else if(v === 'agentes') renderAgentes();
   else if(v === 'trades') renderTrades();
-  else if(v === 'vida'){ renderVida(); renderFirma(); renderMetas(); }
+  else if(v === 'vida'){ renderVida(); renderMetas(); }
   else { renderPicker($('#pickMesa')); renderPicker($('#pickJournal')); }
 }
 
@@ -4782,21 +4682,85 @@ function renderSesion(){
   const wHoy = dayTr.filter(t=>(t.pnl||0)>0).length, lHoy = dayTr.filter(t=>(t.pnl||0)<0).length;
   const durMs = rt.startedAt ? Date.now() - rt.startedAt : 0;
   const durTxt = durMs ? (Math.floor(durMs/3600000) ? Math.floor(durMs/3600000)+'h ' : '') + Math.floor((durMs%3600000)/60000) + 'm' : '—';
-  $('#rtResumen').innerHTML = dayTr.length ? `
-    <div class="grid g4" style="gap:10px">
-      <div class="panel kpi" style="margin:0"><div class="k-l">P&L DE LA SESIÓN</div><div class="k-v ${pnlHoy>0?'up':pnlHoy<0?'down':''}">${fmt$(pnlHoy,true)}</div><div class="k-s">${objCubierto?'objetivo cubierto ✓':'objetivo '+fmt$(rt.obj)}</div></div>
-      <div class="panel kpi" style="margin:0"><div class="k-l">DISPAROS</div><div class="k-v">${dayTr.length}<span style="font-size:14px;color:var(--faint)"> / ${rt.maxT}</span></div><div class="k-s">${wHoy}W · ${lHoy}L</div></div>
-      <div class="panel kpi" style="margin:0"><div class="k-l">DURACIÓN</div><div class="k-v">${durTxt}</div><div class="k-s">dentro de la sesión</div></div>
-      <div class="panel kpi" style="margin:0"><div class="k-l">STOP</div><div class="k-v ${stopTocado?'down':'up'}">${stopTocado?'TOCADO':'RESPETADO'}</div><div class="k-s">límite ${fmt$(rt.stop)}</div></div>
-    </div>
-    <div class="micro" style="margin-top:12px;color:${vios.length?'var(--warn)':'var(--up)'}">
-      ${vios.length ? '⚠ ' + vios.join(' · ') : '✓ Sesión limpia: cero violaciones.'}</div>
-    ${rt.bias ? `<div class="micro" style="margin-top:6px;color:var(--faint)">Sesgo del día: ${rt.bias.toUpperCase()}${rt.sesgo ? ' — ' + esc(rt.sesgo) : ''}</div>` : ''}
-    ${rt.niveles ? `<div class="micro" style="margin-top:4px;color:var(--faint)">Niveles: ${esc(rt.niveles)}</div>` : ''}`
-    : `<p class="micro" style="color:var(--faint)">Sin trades hoy. Si el checklist no dio setup, ese fue el trade correcto.</p>`;
+  /* La hoja de sesión: el parte completo del día en una sola página —
+     los números, cada disparo con su disciplina, el plan contra lo que
+     de verdad pasó, y lo que la mesa se lleva de aprendizaje. */
+  $('#hojaFecha').textContent = fmtFecha(iso) + (dayTr.length ? ' · ' + dayTr.length + ' disparo' + (dayTr.length>1?'s':'') : ' · sin disparos');
+  const vd = $('#hojaVeredicto');
+  if(!dayTr.length){ vd.textContent = 'SIN OPERAR'; vd.className = 'hoja-veredicto'; }
+  else if(vios.length){ vd.textContent = 'FUERA DE PROTOCOLO'; vd.className = 'hoja-veredicto mal'; }
+  else { vd.textContent = 'DÍA PROFESIONAL'; vd.className = 'hoja-veredicto bien'; }
 
-  /* ── REGLAS (la sección vive aquí adentro ahora) ── */
-  renderReglas();
+  const cumplido = getSession(iso).pre.filter(Boolean).length;
+  const totalPre = PRE_RAW.length;
+  const gan = dayTr.filter(t=>(t.pnl||0)>0).reduce((a,t)=>a+t.pnl,0);
+  const perd = Math.abs(dayTr.filter(t=>(t.pnl||0)<0).reduce((a,t)=>a+t.pnl,0));
+  const pf = perd > 0 ? Math.round(gan/perd*100)/100 : (gan > 0 ? '∞' : '—');
+  const mejor = dayTr.slice().sort((a,b)=>(b.pnl||0)-(a.pnl||0))[0];
+  const peor  = dayTr.slice().sort((a,b)=>(a.pnl||0)-(b.pnl||0))[0];
+  const conSetup = dayTr.filter(t=>t.setupOk).length;
+  /* el pico del día: si el objetivo se tocó y se devolvió, la hoja lo dice */
+  let corr = 0, picoDia = 0;
+  dayTr.forEach(t => { corr += (t.pnl1 != null ? t.pnl1 : (t.pnl||0)); picoDia = Math.max(picoDia, corr); });
+  const kpi = (l,v,cls,s) => `<div class="panel kpi" style="margin:0"><div class="k-l">${l}</div>
+    <div class="k-v ${cls||''}">${v}</div><div class="k-s">${s||''}</div></div>`;
+  const seccion = (n,t) => `<div class="hoja-sec"><span class="n">${n}</span><b>${t}</b></div>`;
+
+  $('#rtResumen').innerHTML = dayTr.length ? `
+    ${seccion('01','El resultado')}
+    <div class="grid g4" style="gap:10px">
+      ${kpi('P&L DE LA SESIÓN', fmt$(pnlHoy,true), pnlHoy>0?'up':pnlHoy<0?'down':'', objCubierto?'objetivo cubierto ✓':'objetivo '+fmt$(rt.obj))}
+      ${kpi('DISPAROS', `${dayTr.length}<span style="font-size:14px;color:var(--faint)"> / ${rt.maxT}</span>`, '', `${wHoy}W · ${lHoy}L`)}
+      ${kpi('PROFIT FACTOR', pf, '', `ganó ${fmt$(gan)} · perdió ${fmt$(perd)}`)}
+      ${kpi('DURACIÓN', durTxt, '', 'dentro de la sesión')}
+    </div>
+
+    ${seccion('02','La disciplina')}
+    <div class="grid g4" style="gap:10px">
+      ${kpi('STOP', stopTocado?'TOCADO':'RESPETADO', stopTocado?'down':'up', 'límite ' + fmt$(rt.stop))}
+      ${kpi('PRE-MARKET', `${cumplido}<span style="font-size:14px;color:var(--faint)"> / ${totalPre}</span>`, cumplido>=totalPre?'up':'', cumplido>=totalPre?'checklist completo ✓':'quedó a medias')}
+      ${kpi('SETUP VÁLIDO', `${conSetup}<span style="font-size:14px;color:var(--faint)"> / ${dayTr.length}</span>`, conSetup===dayTr.length?'up':'down', conSetup===dayTr.length?'todos con checklist':'hubo entradas sin setup')}
+      ${kpi('VIOLACIONES', vios.length || '0', vios.length?'down':'up', vios.length ? vios.map(x=>tr('vio.'+x)).join(' · ') : 'sesión limpia')}
+    </div>
+
+    ${seccion('03','Disparo por disparo')}
+    <div class="hoja-tr">
+      ${dayTr.map((t,i) => {
+        const v = violations(t, dayTr);
+        return `<div class="hoja-fila">
+          <span class="mono n">${String(i+1).padStart(2,'0')}</span>
+          <span class="mono h">${t.time||'—'}</span>
+          <span class="ins">${esc(t.sym)} <span class="tag">${t.dir==='L'?'LONG':'SHORT'}</span> ×${t.qty}</span>
+          <b class="mono ${(t.pnl||0)>0?'up':(t.pnl||0)<0?'down':''}">${fmt$(t.pnl,true)}</b>
+          <span class="dis">${v.length
+            ? v.map(x=>`<span class="tag bad">${tr('vio.'+x).toUpperCase()}</span>`).join('')
+            : `<span class="tag ok">LIMPIO</span>`}</span>
+        </div>`;
+      }).join('')}
+    </div>
+
+    ${seccion('04','El plan contra lo que pasó')}
+    <div class="hoja-plan">
+      <div><span>Sesgo del día</span><b>${rt.bias ? rt.bias.toUpperCase() : '— sin definir'}</b>${rt.sesgo ? `<i>${esc(rt.sesgo)}</i>` : ''}</div>
+      <div><span>Niveles clave</span><b>${rt.niveles ? esc(rt.niveles) : '— no se escribieron'}</b></div>
+      <div><span>Objetivo</span><b class="${objCubierto?'up':(picoDia >= rt.obj ? 'down' : '')}">${fmt$(rt.obj)} · ${
+        objCubierto ? 'cubierto'
+        : (picoDia >= rt.obj ? `tocado (${fmt$(picoDia,true)}) y devuelto` : 'no se alcanzó')}</b></div>
+      <div><span>Mejor disparo</span><b class="up">${mejor ? fmt$(mejor.pnl,true) + ' · ' + (mejor.time||'') : '—'}</b></div>
+      <div><span>Peor disparo</span><b class="${peor && peor.pnl<0?'down':''}">${peor ? fmt$(peor.pnl,true) + ' · ' + (peor.time||'') : '—'}</b></div>
+      <div><span>Notas de los trades</span><b>${dayTr.filter(t=>t.notas).length || 'ninguna'}</b>${
+        dayTr.filter(t=>t.notas).length ? `<i>${esc(dayTr.filter(t=>t.notas).map(t=>t.notas).join(' · ').slice(0,160))}</i>` : ''}</div>
+    </div>
+
+    ${seccion('05','Lo que se lleva la mesa')}
+    <p class="hoja-cierre">${
+      vios.length
+        ? 'Hoy se salió del protocolo: ' + vios.map(x=>tr('vio.'+x).toLowerCase()).join(', ') + '. Un día ganador que rompió las reglas es un pasivo — lo que se corrige mañana es la conducta, no el P&L.'
+        : (pnlHoy >= 0
+            ? 'Sesión dentro del protocolo y en verde. Así se ve el negocio cuando el proceso manda: se repite el proceso, no el resultado.'
+            : 'Sesión en rojo pero operada por el libro. Un día perdedor bien operado es un día profesional: la curva se defiende con días así.')
+    }</p>`
+    : `<p class="micro" style="color:var(--faint);line-height:1.7">Sin trades hoy. Si el checklist no dio setup válido, ése fue el trade correcto — y esta hoja lo deja por escrito.</p>`;
 
   $$('#v-sesion .chk[data-k]').forEach(b=>{
     b.onclick = () => {
@@ -5073,8 +5037,7 @@ Analiza el día de este trader. Si hay screenshots, comenta lo que se ve en el g
 /* las tres hileras se mueven igual: flechas, arrastre y rueda */
 [['#mdKpiPrev','#mdKpiRail',-200], ['#mdKpiNext','#mdKpiRail',200],
  ['#objPrev','#dashKpis',-210],    ['#objNext','#dashKpis',210],
- ['#mdChPrev','#mdCharts',-352],   ['#mdChNext','#mdCharts',352],
- ['#metaPrev','#metasRail',-232],  ['#metaNext','#metasRail',232]
+ ['#mdChPrev','#mdCharts',-352],   ['#mdChNext','#mdCharts',352]
 ].forEach(([btn, rail, dx]) =>
   $(btn)?.addEventListener('click', ()=> $(rail).scrollBy({left:dx, behavior:'smooth'})));
 
@@ -5357,19 +5320,6 @@ $('#btnExport').addEventListener('click', ()=>{
 });
 
 /* ════════ REGLAS ════════ */
-function renderReglas(){
-  $('#termList').innerHTML = [
-    bi('Compartir posiciones o estrategias del fondo externamente','Sharing the fund\'s positions or strategies outside'),
-    bi('Falsificar registros, reportes o documentación interna','Falsifying records, reports or internal documentation'),
-    bi('Operaciones personales en conflicto de interés no declarado','Personal trades in undeclared conflict of interest'),
-    bi('Hostigamiento, discriminación o conducta abusiva','Harassment, discrimination or abusive conduct'),
-    bi('Fraude, robo o malversación de activos','Fraud, theft or misappropriation of assets'),
-    bi('Incumplimiento reiterado de las reglas de riesgo','Repeated breach of the risk rules'),
-  ].map((t,i)=>`<div style="display:flex;gap:10px;padding:8px 2px;border-bottom:1px solid var(--line-soft);font-size:12.5px;color:var(--dim)">
-      <span class="mono" style="color:var(--down);font-size:10px;padding-top:2px">${String(i+1).padStart(2,'0')}</span><span>${t}</span>
-    </div>`).join('');
-}
-
 /* ════════ MI DINERO · PORTAFOLIO ════════ */
 function renderPosiciones(){
   const ps = S.positions;
@@ -7053,8 +7003,15 @@ function vidaDelNegocio(){
 /* La escalera: cada peldaño se logra solo. Se recorre la caja en orden y el
    primer día en que el neto acumulado cruza el precio es la fecha del logro
    — igual que los hitos de la carrera: aritmética, no botones. */
+/* Los capítulos de la escalera: el precio decide en cuál cae cada objetivo.
+   No es scroll infinito — es un libro con tres capítulos que se abren. */
+const CAPS_META = [
+  { r:'I',   t:['El arranque','The start'],      d:['Lo que se compra con los primeros payouts','What the first payouts buy'],        max:10000 },
+  { r:'II',  t:['La base','The base'],           d:['Cuando el negocio ya paga tu vida','When the business starts paying your life'], max:100000 },
+  { r:'III', t:['El patrimonio','The estate'],   d:['Lo que ya no depende de operar','What no longer depends on trading'],            max:Infinity },
+];
 function renderMetas(){
-  const rail = $('#metasRail'); if(!rail) return;
+  const host = $('#metasMods'); if(!host) return;
   const metas = [...(S.metas || [])].sort((a,b) => a.precio - b.precio);
   const movs = [...(S.caja || [])].sort((a,b) => (a.fecha||'').localeCompare(b.fecha||''));
   const V = vidaDelNegocio();
@@ -7075,22 +7032,43 @@ function renderMetas(){
       + (sig ? ` · ${bi('siguiente','next')}: ${sig.t} (${bi('faltan','needs')} ${fmt$(Math.max(0, sig.precio - V.neto))})` : '')
     : '';
 
-  rail.innerHTML = fichas.map(f => {
-    const pct = f.precio > 0 ? Math.max(0, Math.min(100, V.neto / f.precio * 100)) : 0;
-    return `<div class="meta-card${f.fecha ? ' logrado' : ''}">
-      <div class="mdk-l">${f.fecha ? bi('LOGRADO','UNLOCKED') + ' · ' + fmtFecha(f.fecha) : fmt$(f.precio)}</div>
-      <b>${esc(f.t)}</b>
-      <div class="bar"><i class="${f.fecha ? 'full' : ''}" style="width:${f.fecha ? 100 : pct}%"></i></div>
-      <div class="mdk-s">${f.fecha
-        ? bi('pagado con lo cobrado','paid from what you collected')
-        : `${fmt$(Math.max(0, V.neto))} ${bi('de','of')} ${fmt$(f.precio)} · ${Math.round(pct)}%`}</div>
-      <button class="cja-x" data-meta="${f.id}">${bi('quitar','remove')}</button>
+  /* cada objetivo cae en su capítulo por precio; un capítulo sin objetivos no se pinta */
+  let piso = 0;
+  host.innerHTML = CAPS_META.map((cap, ci) => {
+    const dentro = fichas.filter(f => f.precio > piso && f.precio <= cap.max);
+    const desde = piso; piso = cap.max;
+    if(!dentro.length) return '';
+    const listos = dentro.filter(f => f.fecha).length;
+    const techo = cap.max === Infinity ? bi('en adelante','and up') : fmt$(cap.max);
+    return `<div class="tj-mod">
+      <div class="tj-h" style="cursor:default">
+        <span class="rom">${cap.r}</span>
+        <span class="tt"><b>${bi('Capítulo','Chapter')} ${ci+1} · ${loc(cap.t)}</b><span>${loc(cap.d)} · ${fmt$(desde)} – ${techo}</span></span>
+        <span class="cnt${listos === dentro.length ? ' full' : ''}">${listos}/${dentro.length}</span>
+      </div>
+      <div class="tj-body">
+        ${dentro.map(f => {
+          const pct = f.precio > 0 ? Math.max(0, Math.min(100, V.neto / f.precio * 100)) : 0;
+          return `<div class="tj-dia meta-fila${f.fecha ? ' visto' : ''}">
+            <span class="meta-tic${f.fecha ? ' on' : ''}">${f.fecha
+              ? '<svg viewBox="0 0 24 24"><path d="M4 12.5 9.5 18 20 6.5"/></svg>' : ''}</span>
+            <span class="info">
+              <b>${esc(f.t)}</b>
+              <span>${f.fecha
+                ? bi('logrado el ','unlocked ') + fmtFecha(f.fecha) + ' · ' + fmt$(f.precio)
+                : `${fmt$(Math.max(0, V.neto))} ${bi('de','of')} ${fmt$(f.precio)} · ${Math.round(pct)}%`}</span>
+              <span class="bar" style="margin-top:7px"><i class="${f.fecha ? 'full' : ''}" style="width:${f.fecha ? 100 : pct}%"></i></span>
+            </span>
+            <button class="cja-x" data-meta="${f.id}">${bi('quitar','remove')}</button>
+          </div>`;
+        }).join('')}
+      </div>
     </div>`;
   }).join('') || `<div class="mdk-s" style="color:var(--faint);padding:8px 2px">${
     bi('Sin objetivos. Agrega el primero: en qué se va a convertir lo que cobres.',
        'No goals yet. Add the first one: what the money you collect turns into.')}</div>`;
 
-  $$('#metasRail [data-meta]').forEach(b => b.onclick = () => {
+  $$('#metasMods [data-meta]').forEach(b => b.onclick = () => {
     S.metas = (S.metas || []).filter(m => m.id !== b.dataset.meta);
     save(); renderMetas();
   });
@@ -7145,7 +7123,7 @@ function render(view){
   else if(view==='journal'){ renderDashboard(); renderJournal(); renderObjetivos(); }
   else if(view==='trades') renderTrades();
   else if(view==='posiciones'){ renderPosiciones(); renderCalc(); }
-  else if(view==='vida'){ renderVida(); renderFirma(); renderMetas(); }
+  else if(view==='vida'){ renderVida(); renderMetas(); }
   updateBadges();
 }
 function renderAll(){ applyProfile(); aplicarIdioma(); render(location.hash.slice(1)||'agentes'); }
