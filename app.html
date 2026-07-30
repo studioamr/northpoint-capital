@@ -710,6 +710,11 @@ body.locked .app{visibility:hidden;pointer-events:none}
   font-family:var(--mono);font-size:11px;color:var(--faint)}
 .mdk-ls b{font-weight:400;margin-left:4px}
 @media(max-width:620px){ .mdk-card{flex-basis:160px} }
+/* En hilera, cada tarjeta manda su propio ancho: los objetivos del plan
+   y los gráficos van en la misma cinta arrastrable que las tasas. */
+#dashKpis > .kpi{flex:0 0 196px}
+#mdCharts > .md-ch{flex:0 0 340px;margin:0}
+@media(max-width:620px){ #dashKpis > .kpi{flex-basis:172px} #mdCharts > .md-ch{flex-basis:276px} }
 .md-ext{padding:18px 20px}
 .md-ext-h{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
 .md-ext-f{font-family:var(--mono);font-size:9.5px;letter-spacing:.08em;color:var(--faint)}
@@ -1118,6 +1123,16 @@ button.tag.quemada{text-decoration:line-through;text-decoration-color:var(--down
 .cja-x{background:none;border:none;color:var(--faint);font-size:9.5px;cursor:pointer;
   text-decoration:underline;padding:0 0 0 6px;font-family:inherit}
 .cja-x:hover{color:#DE6A5F}
+/* ── La escalera: objetivos y logros del negocio ── */
+.meta-card{flex:0 0 218px;border:1px solid var(--line-soft);border-radius:14px;background:var(--glass);
+  padding:15px 17px;box-shadow:inset 0 1px 0 var(--edge);position:relative}
+.meta-card b{display:block;font-size:14px;margin-top:9px;line-height:1.3;overflow-wrap:anywhere}
+.meta-card .bar{margin-top:12px}
+.meta-card .cja-x{position:absolute;top:12px;right:12px;padding:0;opacity:0;transition:opacity .15s}
+.meta-card:hover .cja-x{opacity:1}
+.meta-card.logrado{border-color:rgba(87,199,155,.45);background:rgba(87,199,155,.10)}
+.meta-card.logrado .mdk-l{color:var(--up)}
+@media(max-width:620px){ .meta-card{flex-basis:196px} }
 .eqd-sec{font-family:var(--mono);font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;
   color:var(--faint);margin:26px 2px 12px}
 .eqd-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(268px,1fr));gap:12px}
@@ -1228,13 +1243,6 @@ button.tag.quemada{text-decoration:line-through;text-decoration-color:var(--down
 .ag-form-s{font-size:10.5px;color:var(--faint);margin-top:4px;line-height:1.45}
 .ag-oficina-wrap{border:1px solid var(--line);border-radius:14px;overflow:hidden;margin-bottom:18px;background:#0E1018;line-height:0}
 #agOficina{display:block;width:100%;height:auto}
-/* la historia en imágenes: entera, sin recortes — el alto lo da la imagen.
-   [hidden] tiene que ganarle al display:block, si no salen las dos escenas. */
-#agHistoriaImg{display:block;width:100%;height:auto}
-#agOficina[hidden], #agHistoriaImg[hidden], .hist-cap[hidden]{display:none}
-.hist-cap{position:absolute;left:14px;bottom:12px;font-family:var(--mono);font-size:10px;
-  letter-spacing:.08em;line-height:1.5;color:rgba(255,255,255,.78);background:rgba(10,12,20,.55);
-  border:1px solid rgba(255,255,255,.12);border-radius:8px;padding:6px 10px;max-width:calc(100% - 28px)}
 
 .duties{
   border:1px solid var(--line-soft);border-radius:10px;background:var(--glass);
@@ -1539,12 +1547,8 @@ stop[stop-color="#9BC0DC"]{stop-color:var(--txt)}
           </div>
         </div>
         <div class="staff-strip" id="agGrid"></div>
-        <!-- La historia de 0 a héroe: capítulos 1 y 2 son arte generado
-             (img/historia); el capítulo 3 desbloquea el edificio vivo. -->
         <div class="ag-oficina-wrap">
-          <img id="agHistoriaImg" alt="La historia: de un cuarto a NORTHPOINT, según tu progreso" hidden>
-          <div class="hist-cap" id="agHistoriaCap" hidden></div>
-          <canvas id="agOficina" width="1800" height="1160" aria-label="El edificio NORTHPOINT — piso 88, desbloqueado al pasar el colchón"></canvas>
+          <canvas id="agOficina" width="1800" height="1160" aria-label="La oficina de Northpoint — piso 88, Nueva York"></canvas>
         </div>
 
         <!-- El tablero del negocio: el camino a payout con el proceso de
@@ -1737,22 +1741,32 @@ stop[stop-color="#9BC0DC"]{stop-color:var(--txt)}
 
         <div id="dashAlert"></div>
 
-        <!-- Los objetivos del plan, hasta arriba: la meta del día, la semana,
-             la quincena, el mes y el año, cada una con su barra llenándose. -->
+        <!-- Cada sección es UNA hilera que se arrastra: los objetivos del plan,
+             las tasas y los gráficos. Nada apilado, nada de rejillas. -->
         <div style="display:flex;align-items:center;gap:12px;margin:18px 0 8px">
           <span class="micro" data-i18n="pg.targets">Objetivos del plan</span>
         </div>
-        <div class="grid g5" id="dashKpis"></div>
+        <div class="mdk-wrap">
+          <button class="mdk-nav prev" id="objPrev" aria-label="Anterior">&lsaquo;</button>
+          <div class="px-rail mdk-rail" id="dashKpis"></div>
+          <button class="mdk-nav next" id="objNext" aria-label="Siguiente">&rsaquo;</button>
+        </div>
 
-        <!-- franja de KPIs, con scroll horizontal como el resto de la mesa -->
-        <div class="mdk-wrap mt">
+        <div style="display:flex;align-items:center;gap:12px;margin:22px 0 8px">
+          <span class="micro" data-i18n="md.tasas">Win rate y tasas de la mesa</span>
+        </div>
+        <div class="mdk-wrap">
           <button class="mdk-nav prev" id="mdKpiPrev" aria-label="Anterior">&lsaquo;</button>
           <div class="px-rail mdk-rail" id="mdKpiRail"></div>
           <button class="mdk-nav next" id="mdKpiNext" aria-label="Siguiente">&rsaquo;</button>
         </div>
 
-        <!-- los cuatro gráficos -->
-        <div class="grid g4 mt" id="mdCharts">
+        <div style="display:flex;align-items:center;gap:12px;margin:22px 0 8px">
+          <span class="micro" data-i18n="md.graficos">Northpoint Score y curvas</span>
+        </div>
+        <div class="mdk-wrap">
+          <button class="mdk-nav prev" id="mdChPrev" aria-label="Anterior">&lsaquo;</button>
+          <div class="px-rail mdk-rail" id="mdCharts">
           <div class="panel md-ch">
             <div class="p-head"><h3 data-i18n="me.score">Northpoint Score</h3><span class="micro" id="mdScoreSub"></span></div>
             <div class="p-body">
@@ -1781,6 +1795,8 @@ stop[stop-color="#9BC0DC"]{stop-color:var(--txt)}
               <div id="dayEmpty"></div>
             </div>
           </div>
+          </div>
+          <button class="mdk-nav next" id="mdChNext" aria-label="Siguiente">&rsaquo;</button>
         </div>
 
         <!-- calendario -->
@@ -1881,6 +1897,19 @@ stop[stop-color="#9BC0DC"]{stop-color:var(--txt)}
           <span data-i18n="vd.intro.d">No es el P&amp;L de plataforma: al pasar una evaluación la cuenta reinicia y esa ganancia se evapora. Aquí sólo va dinero que se movió de verdad.</span>
         </p>
         <div id="vidaBox"></div>
+
+        <!-- La escalera: en qué se convierte el dinero cobrado. Los peldaños
+             se marcan solos cuando el neto de la caja cruza su precio. -->
+        <div style="display:flex;align-items:center;gap:12px;margin:30px 0 8px;flex-wrap:wrap">
+          <span class="micro" data-i18n="vd.escalera">Objetivos y logros</span>
+          <span class="micro" id="metaSub" style="margin-left:auto;color:var(--faint)"></span>
+          <button class="btn sm" id="metaAdd">+ Objetivo</button>
+        </div>
+        <div class="mdk-wrap">
+          <button class="mdk-nav prev" id="metaPrev" aria-label="Anterior">&lsaquo;</button>
+          <div class="px-rail mdk-rail" id="metasRail"></div>
+          <button class="mdk-nav next" id="metaNext" aria-label="Siguiente">&rsaquo;</button>
+        </div>
       </section>
 
     </main>
@@ -2369,6 +2398,8 @@ const I18N = {
   'md.avgWL':    { es:'Avg Win/Loss',           en:'Avg Win/Loss' },
   'md.porTrade': { es:'Por trade',              en:'Per trade' },
   'md.longShort':{ es:'Long vs Short',          en:'Long vs Short' },
+  'md.tasas':    { es:'Win rate y tasas de la mesa', en:'Win rate and desk ratios' },
+  'md.graficos': { es:'Northpoint Score y curvas',   en:'Northpoint Score and curves' },
   'md.winRate':  { es:'Win rate · por trade',   en:'Win rate · per trade' },
   'md.diaWin':   { es:'Días ganados',           en:'Winning days' },
   'md.gana':     { es:'gana',                   en:'win' },
@@ -2537,6 +2568,7 @@ const I18N = {
   'mi.intro.d': { es:'Lo que está en las fondeadas no es tuyo hasta que lo cobras. Lo que está aquí sí.', en:'What sits in the funded accounts is not yours until you withdraw it. What sits here is.' },
   'mi.acciones': { es:'Acciones · lo que compraste con los payouts', en:'Stocks · what you bought with the payouts' },
   'nav.vida': { es:'Vida del negocio', en:'Business ledger' },
+  'vd.escalera': { es:'Objetivos y logros', en:'Goals and unlocks' },
   'tit.vida.t': { es:'Vida del negocio', en:'Business ledger' },
   'nav.trades': { es:'Trades', en:'Trades' },
   'tit.trades.t': { es:'Trades', en:'Trades' },
@@ -3066,6 +3098,18 @@ const userDe = u => USERS[u] || null;
 const rolDeUsuario = (u, rol) => !!(USERS[u] && USERS[u].roles.includes(rol));
 
 const SCHEMA = 4;
+/* ══ LA ESCALERA · qué compra el negocio ══
+   Los peldaños que convierten el dinero cobrado en algo que se ve. Se logran
+   solos: cuando el neto de la caja cruza el precio, el peldaño queda marcado
+   con la fecha en que se cruzó. Cada quien edita su lista. */
+const METAS_DEFAULT = () => [
+  { id:'me1', t:'Primer payout cobrado',  precio:1000 },
+  { id:'me2', t:'La mesa completa',       precio:4000 },
+  { id:'me3', t:'Un año de renta del depa', precio:36000 },
+  { id:'me4', t:'Enganche del depa',      precio:90000 },
+  { id:'me5', t:'Clase G',                precio:180000 },
+  { id:'me6', t:'La casa',                precio:600000 },
+];
 const DEFAULTS = () => ({
   schema: SCHEMA,
   profile: { nombre:'', rol:'NP-060', metaMes:30000 },    // el capital se deriva de las cuentas
@@ -3080,6 +3124,7 @@ const DEFAULTS = () => ({
      al pasar una evaluación la cuenta reinicia y esa ganancia se evapora. Aquí sólo
      va dinero que se movió de verdad: payouts cobrados y lo que costó conseguirlos. */
   caja: [],              // {id,fecha,tipo:'ingreso'|'gasto',concepto,monto,nota}
+  metas: METAS_DEFAULT(), // la escalera: {id,t,precio} — se logran con dinero cobrado
   /* tipo: 'prop' = fondeadora (con fases, drawdown y payouts) · 'live' = tuya
      (capital propio, sin fases ni corte: si la pierdes, la pierdes de verdad). */
   accounts: [],          // {id,alias,orden,tipo,firm,plan,size,start,desde,fase,estado}
@@ -3136,6 +3181,7 @@ function migrar(s){
   if((s.schema||0) >= SCHEMA) return s;      // idempotente: sin esto se re-migra en cada carga
   s.accounts = s.accounts || [];
   s.claves = s.claves || {};
+  if(!Array.isArray(s.metas) || !s.metas.length) s.metas = METAS_DEFAULT();
   if(typeof s.seqTrade !== 'number') s.seqTrade = (s.trades||[]).length;
   if(s.profile) delete s.profile.cuenta;      // el capital se deriva de las cuentas
   s.ui = { ...(s.ui||{}), acctSel: { mode:'all', ids:[], ...((s.ui||{}).acctSel||{}) } };
@@ -5007,8 +5053,13 @@ Analiza el día de este trader. Si hay screenshots, comenta lo que se ve en el g
 }
 
 /* franja de KPIs de Mi desempeño: arrastra o usa las flechas, igual que Precios en Inicio */
-$('#mdKpiPrev')?.addEventListener('click', ()=> $('#mdKpiRail').scrollBy({left:-200, behavior:'smooth'}));
-$('#mdKpiNext')?.addEventListener('click', ()=> $('#mdKpiRail').scrollBy({left:200, behavior:'smooth'}));
+/* las tres hileras se mueven igual: flechas, arrastre y rueda */
+[['#mdKpiPrev','#mdKpiRail',-200], ['#mdKpiNext','#mdKpiRail',200],
+ ['#objPrev','#dashKpis',-210],    ['#objNext','#dashKpis',210],
+ ['#mdChPrev','#mdCharts',-352],   ['#mdChNext','#mdCharts',352],
+ ['#metaPrev','#metasRail',-232],  ['#metaNext','#metasRail',232]
+].forEach(([btn, rail, dx]) =>
+  $(btn)?.addEventListener('click', ()=> $(rail).scrollBy({left:dx, behavior:'smooth'})));
 
 /* ════════ Proceso: evaluación → colchón → retiros ════════
    Al aprobar la evaluación en 53,000 la cuenta se REINICIA a 50,000 y arranca la
@@ -5519,7 +5570,8 @@ $('#cjSave').addEventListener('click', ()=>{
   S.caja = S.caja || [];
   S.caja.push({ id:uid(), fecha:todayISO(), tipo:cajaTipo, concepto, monto:Math.abs(monto) });
   /* la caja alimenta el "cobrado" de los KPIs del portafolio: refrescar ambos */
-  save(); closeOv(); renderVida(); renderPosiciones();
+  /* la caja mueve el portafolio y también la escalera de objetivos */
+  save(); closeOv(); renderVida(); renderMetas(); renderPosiciones();
   toast(cajaTipo === 'ingreso' ? 'Ingreso registrado' : 'Gasto registrado');
 });
 
@@ -6262,8 +6314,6 @@ const OFI = {
   etapas: ['01 CONTEXTO','02 TESIS','03 RIESGO','04 FIRMA','05 EJECUTA','06 GESTIÓN','07 CIERRE','08 JOURNAL'],
 };
 let ofiT = 0, ofiIdx = 0, ofiHablando = null, ofiRAF = null, ofiJunta = [];
-/* en el capítulo 3, el clic alterna entre la postal y el edificio vivo */
-let historiaVivo = false;
 
 let OFI_HIT = [];
 
@@ -6824,21 +6874,6 @@ function dibujaOficina(t){
 
 }
 
-/* ══ LA HISTORIA · el escenario crece con tu progreso ══
-   Capítulo 1 (eval): un chavo en su cuarto con un monitor prestado.
-   Capítulo 2 (fondeado): una oficina rentada, sencilla.
-   Capítulo 3 (pasado el colchón): se DESBLOQUEA el edificio NORTHPOINT.
-   Manda la cuenta viva más avanzada — la historia se mueve contigo. */
-function etapaHistoria(){
-  /* las fases se detectan solitas del profit acumulado (carreraCuenta):
-     pasas la eval → oficina; pasas el colchón → se desbloquea NORTHPOINT */
-  const vivas = S.accounts.filter(a => !esLive(a) && !esSim(a) && reglasDe(a) && esViva(a));
-  if(!vivas.length) return 0;
-  return Math.max(...vivas.map(a => {
-    const cc = carreraCuenta(a);
-    return cc.pasoBuffer ? 2 : (cc.pasoEval ? 1 : 0);
-  }));
-}
 function animaOficina(){
   const cv = $('#agOficina'); if(!cv) return;
   cancelAnimationFrame(ofiRAF);
@@ -6852,45 +6887,17 @@ function animaOficina(){
        ofiJunta[−1] tronaba la oficina. El error moría dentro del rAF sin llegar
        a la consola, por eso pasó desapercibido. */
     const t = Math.max(0, now - t0);
-    /* La historia de 0 a héroe en tres imágenes completas (sin recortes).
-       En el capítulo 3, un clic entra al edificio VIVO (el canvas animado
-       con el guion) y otro clic regresa a la postal. */
-    const etapa = etapaHistoria();
-    const img = $('#agHistoriaImg'), cap = $('#agHistoriaCap');
-    const enVivo = etapa >= 2 && historiaVivo;
-    if(!enVivo){
-      ofiHablando = null;
-      const src = etapa >= 2 ? 'img/historia/cap3.jpg'
-                : etapa === 1 ? 'img/historia/cap2.jpg' : 'img/historia/cap1.jpg';
-      if(img.getAttribute('src') !== src) img.src = src;
-      img.hidden = false; cap.hidden = false; cv.hidden = true;
-      img.style.cursor = etapa >= 2 ? 'pointer' : '';
-      cap.textContent = etapa >= 2
-        ? bi('CAPÍTULO 3 · NORTHPOINT DESBLOQUEADO — clic para entrar al edificio en vivo',
-             'CHAPTER 3 · NORTHPOINT UNLOCKED — click to enter the live building')
-        : etapa === 1
-          ? bi('CAPÍTULO 2 · FONDEADO — pasa el colchón y se desbloquea NORTHPOINT',
-               'CHAPTER 2 · FUNDED — clear the buffer and NORTHPOINT unlocks')
-          : bi('CAPÍTULO 1 · LA EVALUACIÓN — pasa la eval y sales del cuarto',
-               'CHAPTER 1 · THE EVAL — pass it and you leave the bedroom');
-    } else {
-      img.hidden = true; cap.hidden = true; cv.hidden = false;
-      if(ofiJunta.length){
-        const i = Math.floor(t / paso) % ofiJunta.length;
-        if(i !== ofiIdx){ ofiIdx = i; }
-        const linea = ofiJunta[ofiIdx];
-        if(linea) ofiHablando = linea.de;
-      }
-      dibujaOficina(t);
+    if(ofiJunta.length){
+      const i = Math.floor(t / paso) % ofiJunta.length;
+      if(i !== ofiIdx){ ofiIdx = i; }
+      const linea = ofiJunta[ofiIdx];
+      if(linea) ofiHablando = linea.de;
     }
+    dibujaOficina(t);
     ofiRAF = requestAnimationFrame(loop);
   };
   ofiRAF = requestAnimationFrame(loop);
 }
-$('#agHistoriaImg').addEventListener('click', () => {
-  if(etapaHistoria() >= 2) historiaVivo = true;
-});
-$('#agOficina').addEventListener('click', () => { historiaVivo = false; });
 
 /* El Quant Lab se eliminó: no medía nada. Con él se fueron el pre-vuelo, el
    protocolo de la mañana, el chat, el piloto automático y las tarjetas de
@@ -7018,6 +7025,61 @@ function vidaDelNegocio(){
   return { ingresos, gastos, neto: ingresos - gastos, n: c.length };
 }
 
+/* La escalera: cada peldaño se logra solo. Se recorre la caja en orden y el
+   primer día en que el neto acumulado cruza el precio es la fecha del logro
+   — igual que los hitos de la carrera: aritmética, no botones. */
+function renderMetas(){
+  const rail = $('#metasRail'); if(!rail) return;
+  const metas = [...(S.metas || [])].sort((a,b) => a.precio - b.precio);
+  const movs = [...(S.caja || [])].sort((a,b) => (a.fecha||'').localeCompare(b.fecha||''));
+  const V = vidaDelNegocio();
+
+  const logroDe = precio => {
+    let acum = 0;
+    for(const m of movs){
+      acum += (m.tipo === 'ingreso' ? 1 : -1) * (m.monto || 0);
+      if(acum >= precio) return m.fecha;
+    }
+    return null;
+  };
+  const fichas = metas.map(m => ({ ...m, fecha: logroDe(m.precio) }));
+  const hechas = fichas.filter(f => f.fecha).length;
+  const sig = fichas.find(f => !f.fecha);
+  $('#metaSub').textContent = metas.length
+    ? `${hechas} ${bi('de','of')} ${metas.length} ${bi('logrados','unlocked')}`
+      + (sig ? ` · ${bi('siguiente','next')}: ${sig.t} (${bi('faltan','needs')} ${fmt$(Math.max(0, sig.precio - V.neto))})` : '')
+    : '';
+
+  rail.innerHTML = fichas.map(f => {
+    const pct = f.precio > 0 ? Math.max(0, Math.min(100, V.neto / f.precio * 100)) : 0;
+    return `<div class="meta-card${f.fecha ? ' logrado' : ''}">
+      <div class="mdk-l">${f.fecha ? bi('LOGRADO','UNLOCKED') + ' · ' + fmtFecha(f.fecha) : fmt$(f.precio)}</div>
+      <b>${esc(f.t)}</b>
+      <div class="bar"><i class="${f.fecha ? 'full' : ''}" style="width:${f.fecha ? 100 : pct}%"></i></div>
+      <div class="mdk-s">${f.fecha
+        ? bi('pagado con lo cobrado','paid from what you collected')
+        : `${fmt$(Math.max(0, V.neto))} ${bi('de','of')} ${fmt$(f.precio)} · ${Math.round(pct)}%`}</div>
+      <button class="cja-x" data-meta="${f.id}">${bi('quitar','remove')}</button>
+    </div>`;
+  }).join('') || `<div class="mdk-s" style="color:var(--faint);padding:8px 2px">${
+    bi('Sin objetivos. Agrega el primero: en qué se va a convertir lo que cobres.',
+       'No goals yet. Add the first one: what the money you collect turns into.')}</div>`;
+
+  $$('#metasRail [data-meta]').forEach(b => b.onclick = () => {
+    S.metas = (S.metas || []).filter(m => m.id !== b.dataset.meta);
+    save(); renderMetas();
+  });
+}
+$('#metaAdd')?.addEventListener('click', () => {
+  const t = prompt(bi('¿Qué quieres lograr? (ej. Clase G, depa, casa)',
+                      'What do you want to unlock? (e.g. G-Class, apartment, house)'));
+  if(!t || !t.trim()) return;
+  const p = parseFloat((prompt(bi('¿Cuánto cuesta en USD?','How much does it cost in USD?')) || '').replace(/[^0-9.]/g,''));
+  if(!isFinite(p) || p <= 0){ toast(bi('Escribe un precio válido','Enter a valid price')); return; }
+  S.metas = [...(S.metas || []), { id: uid(), t: t.trim().slice(0,40), precio: Math.round(p) }];
+  save(); renderMetas(); toast(bi('Objetivo agregado','Goal added'));
+});
+
 function renderVida(){
   const box = $('#vidaBox'); if(!box) return;
   const V = vidaDelNegocio();
@@ -7048,7 +7110,7 @@ function renderVida(){
   if($('#cajaOut')) $('#cajaOut').onclick = () => abrirCaja('gasto');
   $$('#vidaBox [data-del]').forEach(b => b.onclick = () => {
     S.caja = (S.caja||[]).filter(x => x.id !== b.dataset.del);
-    save(); renderVida();
+    save(); renderVida(); renderMetas();
   });
 }
 
@@ -7059,7 +7121,7 @@ function render(view){
   else if(view==='journal'){ renderDashboard(); renderJournal(); renderObjetivos(); }
   else if(view==='trades') renderTrades();
   else if(view==='posiciones'){ renderPosiciones(); renderCalc(); }
-  else if(view==='vida') renderVida();
+  else if(view==='vida'){ renderVida(); renderMetas(); }
   updateBadges();
 }
 function renderAll(){ applyProfile(); aplicarIdioma(); render(location.hash.slice(1)||'dashboard'); }
