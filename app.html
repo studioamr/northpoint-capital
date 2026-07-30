@@ -1303,6 +1303,14 @@ button.tag.quemada{text-decoration:line-through;text-decoration-color:var(--down
 .rd-centro span{font-family:var(--mono);font-size:9px;letter-spacing:.16em;text-transform:uppercase;color:var(--faint);margin-top:2px}
 .rd-filas{flex:1;min-width:250px}
 .rd-fila{display:flex;align-items:center;gap:11px;padding:8px 0;border-bottom:1px solid var(--line-soft)}
+.rd-fila3{padding:12px 0;border-bottom:1px solid var(--line-soft)}
+.rd-fila3:last-of-type{border-bottom:0}
+.rd-top{display:flex;align-items:baseline;gap:10px}
+.rd-top .rd-n{flex:1;font-size:14px;font-weight:600;min-width:0}
+.rd-top > b{font-family:var(--mono);font-size:15px;font-weight:400}
+.rd-top .rd-m{min-width:66px}
+.rd-fila3 input[type=range]{width:100%;margin-top:9px;padding:0;accent-color:var(--c)}
+.rd-d{font-size:11.5px;line-height:1.55;color:var(--faint);margin:7px 0 0}
 .rd-fila:last-of-type{border-bottom:0}
 .rd-dot{width:9px;height:9px;border-radius:3px;flex:none}
 .rd-n{font-size:12.5px;min-width:76px}
@@ -5491,24 +5499,27 @@ const MASTER_2040 = [
    y reserva porque eres frágil; al final pesa inversión porque ya no lo eres.
    Es el punto de partida, no una jaula — muévelo cuando quieras. */
 const FRASCOS = [
-  { id:'tax',   n:'Taxes',              color:'#8A93A0' },
-  { id:'ctas',  n:'Accounts',           color:'#6C8CF5' },
-  { id:'inv',   n:'Investing',          color:'#38BDF8', grows:true },
-  { id:'res',   n:'Reserve',            color:'#57C79B' },
-  { id:'vida',  n:'Living',             color:'#C79A3A' },
-  { id:'edu',   n:'Growth',             color:'#8E6BC4' },
-  { id:'play',  n:'Play',               color:'#E8975A' },
+  { id:'inv',   n:'Investing',      color:'#38BDF8', grows:true,
+    d:'The slice that grows. Buys the 2040 sheet below and never gets touched.' },
+  { id:'fijos', n:'Fixed expenses', color:'#8A93A0',
+    d:'Everything that must be paid: tax set-aside, evaluations and resets, rent, food, transport.' },
+  { id:'libre', n:'Free',           color:'#C79A3A',
+    d:'What is left after the two above. Yours, with no guilt.' },
 ];
-/* fase → [tax, ctas, inv, res, vida, edu, play] */
+/* fase → [investing, fixed, free].
+   La forma no es capricho: al principio vives en casa y lo fijo es casi
+   puro costo de cuentas e impuesto, así que cabe invertir mucho. En la II
+   aparece la renta y lo fijo se dispara. De la IV en adelante lo fijo deja
+   de crecer y la inversión vuelve a mandar. */
 const RUEDA_POR_FASE = {
-  0: [15, 20, 35, 15,  5,  5,  5],   // en casa, sin gastos reales: se construye el sistema
-  1: [15, 15, 30, 20, 10,  5,  5],   // el colchón manda
-  2: [18, 12, 30, 10, 20,  5,  5],   // ya te pagas la vida
-  3: [20,  8, 35,  7, 20,  5,  5],   // el dinero empieza a trabajar
-  4: [20,  5, 40,  5, 18,  4,  8],   // libre: pesa inversión, se puede disfrutar
-  5: [20,  3, 42,  5, 18,  4,  8],
-  6: [20,  3, 42,  5, 18,  4,  8],
-  7: [20,  2, 40,  5, 18,  5, 10],
+  0: [50, 35, 15],
+  1: [45, 40, 15],
+  2: [30, 55, 15],
+  3: [35, 50, 15],
+  4: [40, 42, 18],
+  5: [42, 40, 18],
+  6: [42, 40, 18],
+  7: [40, 40, 20],
 };
 function ruedaDeFase(i){
   const p = RUEDA_POR_FASE[Math.max(0, Math.min(7, i))] || RUEDA_POR_FASE[0];
@@ -5565,16 +5576,19 @@ function renderRueda(monto){
       </div>
       <div class="rd-filas">
         ${R.map(x => `
-          <div class="rd-fila">
-            <span class="rd-dot" style="background:${x.color}"></span>
-            <span class="rd-n">${esc(x.n)}${x.grows ? ' <i>❄</i>' : ''}</span>
+          <div class="rd-fila3">
+            <div class="rd-top">
+              <span class="rd-dot" style="background:${x.color}"></span>
+              <span class="rd-n">${esc(x.n)}${x.grows ? ' <i>❄</i>' : ''}</span>
+              <b class="mono">${x.pct}%</b>
+              <span class="rd-m mono">${fmt$(Math.round(monto * x.pct / 100))}</span>
+            </div>
             <input type="range" min="0" max="100" step="1" value="${x.pct}" data-rd="${x.id}" style="--c:${x.color}">
-            <b class="mono">${x.pct}%</b>
-            <span class="rd-m mono">${fmt$(Math.round(monto * x.pct / 100))}</span>
+            <p class="rd-d">${esc(x.d || '')}</p>
           </div>`).join('')}
-        <p class="micro" style="margin:12px 0 0;color:var(--faint);line-height:1.6">
-          ${bi('❄ The investing slice runs the 2040 sheet below.','❄ The investing slice runs the 2040 sheet below.')}<br>
-          ${bi('Built on the 6 Jars (Eker) and Profit First (Michalowicz): tax and account costs come off the top, never out of what is left.','Built on the 6 Jars (Eker) and Profit First (Michalowicz): tax and account costs come off the top, never out of what is left.')}</p>
+        <p class="micro" style="margin:14px 0 0;color:var(--faint);line-height:1.65">
+          Tax and account costs sit inside <b>Fixed</b> on purpose — they are not optional, and money
+          you owe was never yours to spend. That is the one idea worth keeping from Profit First.</p>
       </div>
     </div>`;
   const rst = $('#rdReset');
