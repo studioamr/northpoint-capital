@@ -209,8 +209,12 @@ label{font-family:var(--mono);font-size:10px;letter-spacing:.14em;text-transform
   background:var(--glass);border:1px solid var(--line);white-space:nowrap;cursor:default}
 .en-linea i{width:7px;height:7px;border-radius:50%;background:var(--up);
   box-shadow:0 0 0 3px rgba(87,199,155,.16);animation:pulse 2.4s ease-in-out infinite}
-.en-linea i.yo{background:var(--txt);box-shadow:0 0 0 3px var(--w12)}
-@media(max-width:900px){ .en-linea b{display:none} }
+.en-linea i.yo{background:var(--up);box-shadow:0 0 0 2px var(--bg),0 0 0 4px var(--up)}
+.en-linea.solo{color:var(--dim)}
+.en-linea b{font-weight:500}
+/* En pantalla chica NO se esconde el texto: un punto mudo no dice nada.
+   Se acorta a «TÚ» / «3», que sí se lee. */
+@media(max-width:900px){ .en-linea{padding:7px 10px;font-size:9px;letter-spacing:.06em} }
 .avisoX{position:absolute;top:8px;right:8px;width:24px;height:24px;line-height:1;
   border:1px solid var(--line);background:var(--w05);color:var(--dim);
   border-radius:7px;font-size:15px;cursor:pointer;display:grid;place-items:center;padding:0}
@@ -420,14 +424,14 @@ body.tour-on #toast{bottom:calc(40px + var(--tour-h,190px))}
   background:
     radial-gradient(900px 560px at 70% -10%, var(--glow1), transparent 60%),
     linear-gradient(180deg,var(--bg),var(--bg) 45%,var(--bg-2));
-}
+;overflow-y:auto;padding-top:32px;padding-bottom:32px}
 .login.on{display:flex}
 .login-card{
   width:100%;max-width:400px;border-radius:18px;padding:34px 32px 28px;
   background:var(--bg-2);
   border:1px solid var(--line);
   box-shadow:0 30px 80px rgba(0,0,0,.28), inset 0 1px 0 var(--edge);
-}
+;margin:auto;flex:0 0 auto}
 .login-brand{display:flex;align-items:center;gap:12px;margin-bottom:18px}
 .login-brand svg{width:30px;height:30px;color:var(--accent)}
 .login-brand b{font-size:17px;font-weight:600;letter-spacing:.1em;display:block}
@@ -1699,7 +1703,8 @@ button.tag.quemada{text-decoration:line-through;text-decoration-color:var(--down
 /* toast */
 #toast{
   position:fixed;bottom:26px;left:50%;transform:translateX(-50%) translateY(20px);
-  z-index:80;opacity:0;pointer-events:none;
+  z-index:1200;opacity:0;pointer-events:none;   /* por ENCIMA del login (900): ahí
+    vive el aviso «confirma tu correo», y quedaba tapado justo cuando más importa */
   background:var(--toast-bg);color:var(--toast-txt);border:1px solid var(--line);border-radius:10px;
   padding:11px 18px;font-family:var(--mono);font-size:12px;letter-spacing:.04em;
   transition:opacity .25s,transform .25s;
@@ -2385,7 +2390,7 @@ stop[stop-color="#9BC0DC"]{stop-color:var(--txt)}
         <div><label>Contracts</label><input type="number" id="tQty" value="1" min="1" step="1"></div>
       </div>
       <div class="f-row" style="margin-top:10px">
-        <div><label>Date</label><input type="date" id="tFecha"></div>
+        <div><label>Date</label><input type="date" id="tFecha" max="2099-12-31"></div>
         <div><label>Entry time</label><input type="time" id="tHora" value="07:35"></div>
       </div>
     </div>
@@ -3677,21 +3682,50 @@ function save(){
     if(raw){
       const disco = JSON.parse(raw);
       if((disco.rev || 0) > (S.rev || 0)){
-        S = migrar({ ...DEFAULTS(), ...disco, session: S.session });
+        /* FUSIONAR, no reemplazar. Antes se hacía `S = {...DEFAULTS(), ...disco}`
+           y eso TIRABA lo que el usuario acababa de capturar: con dos pestañas
+           abiertas (o dos ventanas), el trade recién guardado desaparecía y el
+           aviso decía tan campante «se recargaron cambios de otra pestaña».
+           fusionarEstado ya sabe unir por id y por día; se reusa. */
+        S = migrar({ ...DEFAULTS(), ...fusionarEstado(S, disco),
+                     session: S.session, ui: S.ui });
         try{ renderAll(); }catch(e){}
-        toast('Se recargaron cambios de otra pestaña');
+        toast(bi('Se unieron los cambios de otra pestaña','Merged changes from another tab'));
       }
     }
   }catch(e){}
   S.rev = (S.rev || 0) + 1;
-  localStorage.setItem(LS, JSON.stringify(S));
+  guardaEnDisco();
+}
+/* El disco puede llenarse (los screenshots de los trades pesan). Antes el
+   setItem estaba FUERA del try: al reventar la cuota, la excepción subía y se
+   llevaba por delante el cloudPush() del wrapper — ni disco ni nube, y sin una
+   sola palabra al usuario. Ahora falla RUIDOSO y la nube se intenta igual. */
+let _avisoCuota = 0;
+function guardaEnDisco(){
+  try{
+    localStorage.setItem(LS, JSON.stringify(S));
+    return true;
+  }catch(e){
+    const lleno = /quota|exceeded|storage/i.test((e && e.name) + ' ' + (e && e.message));
+    if(Date.now() - _avisoCuota > 30000){
+      _avisoCuota = Date.now();
+      try{ toast(lleno
+        ? bi('NO SE PUDO GUARDAR EN ESTE EQUIPO: la memoria del navegador está llena. Borra capturas de pantalla viejas en Trades (son lo que más pesa). Tus datos siguen subiendo a la nube.',
+             'COULD NOT SAVE ON THIS DEVICE: browser storage is full. Delete old trade screenshots (they weigh the most). Your data still uploads to the cloud.')
+        : bi('No se pudo guardar en este equipo: ' + (e && e.message), 'Could not save on this device: ' + (e && e.message))); }catch(_){}
+    }
+    return false;
+  }
 }
 addEventListener('storage', e => {
   if(e.key !== LS || !e.newValue) return;
   try{
     const disco = JSON.parse(e.newValue);
     if((disco.rev || 0) <= (S.rev || 0)) return;
-    S = migrar({ ...DEFAULTS(), ...disco, session: S.session });
+    /* mismo criterio que save(): unir, nunca reemplazar */
+    S = migrar({ ...DEFAULTS(), ...fusionarEstado(S, disco),
+                 session: S.session, ui: S.ui });
     renderAll();
   }catch(err){}
 });
@@ -3758,12 +3792,26 @@ function saludDe(a){
   const R = reglasDe(a);
   const porDia = {};
   S.trades.forEach(t => {
-    if(t.date >= a.desde && (t.accts||[]).includes(a.id))
+    /* mismo criterio que carreraCuenta: nada fechado en el futuro mueve un
+       número de hoy — un dedazo en el año no puede pasarte la evaluación */
+    if(t.date >= a.desde && t.date <= todayISO() && (t.accts||[]).includes(a.id))
       porDia[t.date] = (porDia[t.date]||0) + (t.pnl||0);
   });
   const dias = Object.keys(porDia).sort();
-  let bal = a.start, pico = a.start;
-  dias.forEach(d => { bal += porDia[d]; pico = Math.max(pico, bal); });
+  /* El balance lo manda carreraCuenta: es la MISMA cuenta y no puede valer una
+     cosa en Ajustes y otra en el camino a payout. Antes cada pantalla hacía su
+     propia suma y la de aquí ignoraba el reinicio de la evaluación: la misma
+     cuenta aparecía con $50,500 en un lado y $47,500 en otro. */
+  const cc = carreraCuenta(a);
+  let bal = cc.balance, pico = a.start;
+  /* el pico también se mide en la etapa que corresponde: ya fondeada, desde el
+     reinicio; en evaluación, sobre el acumulado */
+  let corrido = cc.pasoEval ? a.start : a.start;
+  dias.forEach(d => {
+    if(cc.pasoEval && d <= cc.mEval) return;
+    corrido += porDia[d]; pico = Math.max(pico, corrido);
+  });
+  pico = Math.max(pico, a.start);
   const hoy = todayISO();
   const base = { balance:bal, pico, dias:dias.length, hoy:porDia[hoy]||0, reglas:R };
   if(!R) return { ...base, linea:null, fija:false, colchon:null, maxDD:null, hito:null };
@@ -3784,7 +3832,9 @@ function consistenciaDe(a){
   if(!R || !R.consistency) return null;
   const porDia = {};
   S.trades.forEach(t => {
-    if(t.date >= a.desde && (t.accts||[]).includes(a.id))
+    /* mismo criterio que carreraCuenta: nada fechado en el futuro mueve un
+       número de hoy — un dedazo en el año no puede pasarte la evaluación */
+    if(t.date >= a.desde && t.date <= todayISO() && (t.accts||[]).includes(a.id))
       porDia[t.date] = (porDia[t.date]||0) + (t.pnl||0);
   });
   const dias = Object.values(porDia);
@@ -4160,14 +4210,34 @@ function tickClock(){
    SOLO TÚ — sin mentir con «conectados» a quien lleva horas fuera. */
 function pintaEnLinea(){
   const caja = $('#enLinea'); if(!caja) return;
+  if(!caja._clic){
+    caja._clic = true; caja.style.cursor = 'pointer';
+    caja.onclick = () => {
+      const P2 = S.presencia || {}, ahora2 = Date.now();
+      const yo2 = S.session && S.session.user;
+      const otros2 = PERSONAJES.filter(p => p.id !== yo2 && (ahora2 - (P2[p.id] || 0)) < PRESENCIA_MIN * 60000);
+      toast(otros2.length
+        ? bi('Estás en línea. También en la mesa: ','You are online. Also at the desk: ') + otros2.map(p => p.nom).join(', ')
+        : bi('Estás en línea. Los otros dos no han tocado el terminal en los últimos 12 minutos.',
+             'You are online. The other two have not touched the terminal in the last 12 minutes.'));
+    };
+  }
   const yo = S.session && S.session.user;
   if(!yo){ caja.hidden = true; return; }
   const P = S.presencia || {}, hoy = Date.now();
   const dentro = PERSONAJES.filter(p => p.id === yo || (hoy - (P[p.id] || 0)) < PRESENCIA_MIN * 60000);
   caja.hidden = false;
-  caja.title = dentro.map(p => p.id === yo ? p.nom + bi(' (tú)',' (you)') : p.nom).join(' · ');
-  caja.innerHTML = dentro.map(p => `<i class="${p.id === yo ? 'yo' : ''}"></i>`).join('') +
-    `<b>${dentro.length > 1 ? dentro.length + bi(' en la mesa',' at the desk') : bi('sólo tú','just you')}</b>`;
+  caja.classList.toggle('solo', dentro.length === 1);
+  const otros = dentro.filter(p => p.id !== yo).map(p => p.nom);
+  caja.title = bi('EN LÍNEA AHORITA: ','ONLINE NOW: ') + [bi('tú','you'), ...otros].join(' · ')
+             + bi('\n(cuenta quien haya tocado el terminal en los últimos 12 min)',
+                  '\n(counts whoever touched the terminal in the last 12 min)');
+  const corto = window.matchMedia('(max-width:900px)').matches;
+  const etiqueta = corto
+    ? (dentro.length > 1 ? String(dentro.length) : bi('TÚ','YOU'))
+    : (dentro.length > 1 ? bi('EN LÍNEA · TÚ +','ONLINE · YOU +') + ' ' + (dentro.length - 1)
+                         : bi('EN LÍNEA · SÓLO TÚ','ONLINE · JUST YOU'));
+  caja.innerHTML = dentro.map(p => `<i class="${p.id === yo ? 'yo' : ''}"></i>`).join('') + `<b>${etiqueta}</b>`;
 }
 setInterval(tickClock, 1000); tickClock();
 
@@ -4512,6 +4582,11 @@ window.corregirPlan = id => {
 };
 window.reiniciarCuenta = id => {
   const a = S.accounts.find(x=>x.id===id); if(!a) return;
+  /* Borra el historial de la carrera de esa cuenta y no se puede deshacer:
+     merece la misma pregunta que borrar. Estaba justo al lado del botón rojo. */
+  if(!confirm(bi(
+      'Reiniciar «' + a.alias + '» mueve su línea de salida a HOY: todo lo que lleva contado en el camino a payout se descarta y no se puede deshacer.\n\n¿Reiniciar?',
+      'Resetting "' + a.alias + '" moves its start line to TODAY: everything counted so far on the road to payout is discarded and cannot be undone.\n\nReset?'))) return;
   /* El filtro de saldo es t.date >= desde, así que los trades de HOY —los que
      hicieron tocar el objetivo— se volvían a sumar sobre el nuevo arranque.
      Se descuentan para que la cuenta empiece exactamente en su tamaño. */
@@ -4527,7 +4602,7 @@ window.reiniciarCuenta = id => {
 window.borrarCuenta = id => {
   const a = S.accounts.find(x=>x.id===id); if(!a) return;
   if(!confirm(`Delete account ${a.alias}? The trades keep their record.`)) return;
-  S.accounts = S.accounts.filter(x=>x.id!==id);
+  marcaBorrado(id); S.accounts = S.accounts.filter(x=>x.id!==id);
   S.trades.forEach(t=>{
     t.accts = (t.accts||[]).filter(x=>x!==id);
     if(!t.accts.length) t.accts = [SIN_CUENTA];
@@ -4571,28 +4646,47 @@ function carreraCuenta(a){
   const total = target + buffer + pago;
 
   const porDia = {};
-  S.trades.forEach(t => { if(t.date >= a.desde && (t.accts||[]).includes(a.id))
+  const hoyISO = todayISO();
+  /* Un trade fechado en el futuro no puede mover una barra de hoy: se ignora
+     aquí y se avisa en la ficha, igual que los anteriores a la línea de salida. */
+  S.trades.forEach(t => { if(t.date >= a.desde && t.date <= hoyISO && (t.accts||[]).includes(a.id))
     porDia[t.date] = (porDia[t.date]||0) + (t.pnl||0); });
   const dias = Object.keys(porDia).sort();
-  let p = 0, pico = 0, mEval = null, mBuffer = null, mPago = null;
+  /* ── DOS ETAPAS, NO UNA SUMA CORRIDA ──
+     Pasar la evaluación REINICIA la cuenta a su tamaño: el excedente del día del
+     pase NO es colchón, se queda en la fondeadora. Antes se arrastraba todo en
+     una sola suma y un día bueno de +$6,200 pintaba «PAGO MÁXIMO» sobre una
+     cuenta de la que no se podía retirar un peso. El colchón y el tramo de pago
+     se construyen con lo ganado DESPUÉS del día del pase. */
+  let p = 0, pico = 0, mEval = null;
   dias.forEach(d => {
     p += porDia[d]; pico = Math.max(pico, p);
-    if(!mEval   && target > 0 && pico >= target) mEval = d;
-    if(!mBuffer && buffer > 0 && pico >= target + buffer) mBuffer = d;
-    if(!mPago   && total  > 0 && pico >= total) mPago = d;
+    if(!mEval && target > 0 && pico >= target) mEval = d;
   });
-  const pasoEval = !!mEval, pasoBuffer = !!mBuffer, pasoPago = !!mPago;
+  const pasoEval = !!mEval;
+  /* lo ganado ya fondeado: desde el día siguiente al pase */
+  let pDesp = 0, picoDesp = 0, mBuffer = null, mPago = null;
+  if(pasoEval){
+    dias.forEach(d => {
+      if(d <= mEval) return;
+      pDesp += porDia[d]; picoDesp = Math.max(picoDesp, pDesp);
+      if(!mBuffer && buffer > 0 && picoDesp >= buffer) mBuffer = d;
+      if(!mPago   && pago   > 0 && picoDesp >= buffer + pago) mPago = d;
+    });
+  }
+  const pasoBuffer = !!mBuffer, pasoPago = !!mPago;
 
   /* la barra no retrocede de un hito ya pasado */
   const avance = !pasoEval
     ? Math.max(0, Math.min(target, p))
-    : Math.min(total, target + Math.max(0, p - target));
+    : Math.min(total, target + Math.max(0, Math.min(buffer + pago, picoDesp)));
   const pct = total > 0 ? Math.max(0, Math.min(100, avance / total * 100)) : 0;
 
-  /* el balance con el reinicio de la eval ya aplicado */
-  const balance = a.start + p - (pasoEval ? target : 0);
+  /* el balance: antes del pase corre sobre el acumulado; ya fondeada, arranca
+     de nuevo en el tamaño de la cuenta */
+  const balance = pasoEval ? a.start + pDesp : a.start + p;
 
-  return { target, buffer, pago, total, p, pico, avance, pct, balance,
+  return { target, buffer, pago, total, p, pico, pDesp, picoDesp, avance, pct, balance,
            pasoEval, pasoBuffer, pasoPago, mEval, mBuffer, mPago,
            arranque: dias[0] || null };
 }
@@ -4634,7 +4728,10 @@ function renderFirmaCarrera(){
   const conDatos = socios.filter(x => !x.sinDatos).length;
   /* Sin sesión de nube este panel es una foto vieja: ni lo tuyo sube ni lo de
      los socios baja. Eso no se dice en un pill chiquito — se dice AQUÍ. */
-  const sinNube = cloudOn() && !cloudTok;
+  /* Los 10 invitados trabajan aislados A PROPÓSITO y no pueden crear acceso de
+     nube: decirles «sal y vuelve a entrar con tu contraseña de nube» los manda a
+     una puerta que no existe. El aviso es sólo para los tres socios. */
+  const sinNube = cloudOn() && !cloudTok && SOCIOS_REALES.includes(S.session && S.session.user);
   const SY = S.sync || {};
   const sello = uid => {
     if(uid === yo) return '';
@@ -4712,7 +4809,7 @@ function renderCamino(){
   const quemaDe = a => {
     const R = reglasDe(a); if(!R) return null;
     const porDia = {};
-    S.trades.forEach(t => { if(t.date >= a.desde && (t.accts||[]).includes(a.id))
+    S.trades.forEach(t => { if(t.date >= a.desde && t.date <= todayISO() && (t.accts||[]).includes(a.id))
       porDia[t.date] = (porDia[t.date]||0) + (t.pnl||0); });
     const dias = Object.keys(porDia).sort();
     let bal = a.start, pico = a.start, acum = 0, picoAc = 0;
@@ -4773,6 +4870,7 @@ function renderCamino(){
        cuenta con fecha anterior a su línea de salida. En vez de callarlo, se
        dice cuántos son y cómo arreglarlo. */
     const fuera = (S.trades || []).filter(t => (t.accts || []).includes(a.id) && t.date < a.desde).length;
+    const futuros = (S.trades || []).filter(t => (t.accts || []).includes(a.id) && t.date > todayISO()).length;
     const c1 = cc.total > 0 ? cc.target / cc.total * 100 : 50;
     const c2 = cc.total > 0 ? (cc.target + cc.buffer) / cc.total * 100 : 84;
     const hito = cc.pasoPago
@@ -4806,6 +4904,11 @@ function renderCamino(){
             — ${bi('son anteriores al','they are older than')} ${fmtFecha(a.desde)}.
             <button class="btn sm" style="margin-top:6px" onclick="desdePrimerTrade('${a.id}')">${bi('Contar desde su primer trade','Count from its first trade')}</button>
           </div>` : ''}
+          ${futuros ? `<div class="pr-aviso micro">
+            <b>${futuros} ${futuros === 1 ? bi('trade tiene fecha futura','trade is dated in the future') : bi('trades tienen fecha futura','trades are dated in the future')}</b>
+            — ${bi('no cuentan hasta que llegue ese día. Casi siempre es el año mal tecleado.',
+                   'they do not count until that day arrives. Almost always a mistyped year.')}
+          </div>` : ''}
         </div>
       </div>`;
     }
@@ -4826,6 +4929,11 @@ function renderCamino(){
           <b>${fuera} ${fuera === 1 ? bi('trade no cuenta','trade is not counting') : bi('trades no cuentan','trades are not counting')}</b>
           — ${bi('son anteriores al','they are older than')} ${fmtFecha(a.desde)}, ${bi('la fecha desde la que corre esta cuenta.','the date this account starts counting from.')}
           <button class="btn sm" style="margin-top:6px" onclick="desdePrimerTrade('${a.id}')">${bi('Contar desde su primer trade','Count from its first trade')}</button>
+        </div>` : ''}
+        ${futuros ? `<div class="pr-aviso micro">
+          <b>${futuros} ${futuros === 1 ? bi('trade tiene fecha futura','trade is dated in the future') : bi('trades tienen fecha futura','trades are dated in the future')}</b>
+          — ${bi('no cuentan hasta que llegue ese día. Casi siempre es el año mal tecleado: revísalos en Trades.',
+                 'they do not count until that day arrives. Almost always a mistyped year: check them in Trades.')}
         </div>` : ''}
       </div>
     </div>`;
@@ -5954,7 +6062,7 @@ function renderTradeAccts(pre){
 window.openTrade = openTrade;
 window.delTrade = id => {
   if(!confirm('Delete this trade from the journal?')) return;
-  S.trades = S.trades.filter(t=>t.id!==id); save();
+  marcaBorrado(id); S.trades = S.trades.filter(t=>t.id!==id); save();
   renderJournal(); renderTrades(); updateBadges(); toast('Trade deleted');
 };
 
@@ -5989,14 +6097,22 @@ $('#tSave').addEventListener('click', ()=>{
   if(S.accounts.length && !tradeAccts.length){
     toast('Pick at least one account'); return;
   }
+  /* Un dedazo en el año (2027 por 2026) metía un trade en el futuro que SÍ
+     contaba: inflaba el P&L, las estadísticas y el camino a payout, y te decía
+     que ya pasaste la evaluación. El mercado no ha abierto ese día todavía. */
+  if(data.date > todayISO()){
+    toast(bi('Esa fecha todavía no llega: ' + fmtFecha(data.date) + '. Revisa el año.',
+             'That date has not happened yet: ' + fmtFecha(data.date) + '. Check the year.'));
+    return;
+  }
   if(pendienteTix && !editingTrade){
     data.tixId = pendienteTix;
     const tk = S.tickets.find(x => x.id === pendienteTix);
     if(tk) tk.estado = 'ejecutada';
     pendienteTix = null;
   }
-  if(editingTrade) Object.assign(editingTrade, data);
-  else S.trades.push({ id: uid(), ...data });
+  if(editingTrade) sellaCambio(Object.assign(editingTrade, data));
+  else S.trades.push(sellaCambio({ id: uid(), ...data }));
   save(); closeOv();
   render(location.hash.slice(1)||'agentes'); updateBadges();
   toast(editingTrade ? 'Trade updated' : 'Trade documentado');
@@ -6525,6 +6641,18 @@ function unlockUI(){
   document.querySelector('.app').removeAttribute('inert');
   $('#login').classList.remove('on');
 }
+
+/* El calendario del navegador tampoco debe ofrecer días que no han llegado. */
+document.addEventListener('focusin', e => {
+  if(e.target && e.target.id === 'tFecha') e.target.max = todayISO();
+});
+document.addEventListener('change', e => {
+  if(e.target && e.target.id === 'tFecha' && e.target.value > todayISO()){
+    e.target.value = todayISO();
+    toast(bi('Esa fecha aún no llega — la puse en hoy.','That date has not happened yet — set to today.'));
+  }
+});
+
 $('#lgGo').addEventListener('click', doLogin);
 /* ── ALTA DE NUBE ── cada socio registra SU correo real y SU contraseña.
    Nadie más la conoce: ni André, ni este terminal la guarda en texto. El correo
@@ -6540,6 +6668,16 @@ $('#alGo').addEventListener('click', async () => {
   if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(correo)) return err('Ese correo no se ve bien.');
   if(p1.length < 6) return err('La contraseña necesita al menos 6 caracteres.');
   if(p1 !== p2) return err('Las contraseñas no coinciden.');
+  /* La silla ya ocupada: si este equipo (o la mesa) ya sabe que ese puesto es de
+     otro correo, se avisa. Antes se podía registrar «André» con el correo de
+     Mateo y el mapeo equivocado viajaba a los tres equipos. */
+  const yaEs = (S.correos || {})[uid2];
+  if(yaEs && yaEs !== correo){
+    const seguir = confirm(bi(
+      'Ese puesto ya está a nombre de ' + yaEs + '.\n¿De verdad quieres cambiarlo a ' + correo + '?',
+      'That seat already belongs to ' + yaEs + '.\nReally change it to ' + correo + '?'));
+    if(!seguir) return err(bi('Elige tu propio nombre en la lista.','Pick your own name from the list.'));
+  }
   err(''); $('#alGo').textContent = 'Creando…';
   try{
     const r = await fetch(CLOUD.url + '/auth/v1/signup', {
@@ -6594,10 +6732,47 @@ function resuelveUsuario(txt){
     .find(k => (USERS[k].correo || '').toLowerCase() === q); // correo @northpoint.mx
   return porFabrica || null;
 }
+/* La nube dijo que sí pero este equipo no sabe de quién es ese correo: se
+   pregunta una vez y se recuerda. Sin esto habría que adivinar. */
+function preguntaQuienEres(correo){
+  return new Promise(res => {
+    const quien = prompt(bi(
+      'Primera vez en este equipo con ' + correo + '.\n¿Quién eres? Escribe: pablo, mateo o andre',
+      'First time on this device with ' + correo + '.\nWho are you? Type: pablo, mateo or andre'));
+    if(!quien) return res(null);
+    res(resuelveUsuario(String(quien).trim().toLowerCase()));
+  });
+}
 async function doLogin(){
   const escrito = $('#lgUser').value.trim().toLowerCase();
-  const u = resuelveUsuario(escrito);
+  let u = resuelveUsuario(escrito);
   const p = $('#lgPass').value;
+  /* EL EQUIPO NUEVO. `S.correos` vive en cada máquina, así que quien se registró
+     en su laptop y abre el terminal en el celular escribía su correo y el
+     terminal contestaba «no te reconozco» — y con su usuario corto intentaba
+     entrar con el correo de fábrica, que no es el suyo. Círculo cerrado:
+     necesitabas la nube para bajar el mapeo y el mapeo para entrar a la nube.
+     Se rompe aquí: si parece correo y no lo conocemos, se le pregunta a la nube
+     directamente; si la nube lo acepta, se aprende a quién pertenece. */
+  if(!u && /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(escrito) && cloudOn()){
+    $('#lgErr').textContent = tr('lg.entrando');
+    try{
+      await cloudLogin(escrito, p);
+      const dueño = (cloudTok && cloudTok.uid_terminal) || null;
+      u = dueño || await preguntaQuienEres(escrito);
+      if(!u){ $('#lgErr').textContent = ''; return; }
+      S.correos = S.correos || {}; S.correos[u] = escrito;
+      S.claves = S.claves || {}; S.claves[u] = await hashClave(p);
+    }catch(e){
+      $('#lgErr').textContent = /confirm/i.test((e&&e.message)||'')
+        ? bi('Ese correo aún no está confirmado. Abre la liga que te mandó el correo y vuelve.',
+             'That email is not confirmed yet. Open the link we emailed you and come back.')
+        : bi('Ese correo y esa contraseña no abren la mesa. Si te registraste con otro correo, prueba con ése.',
+             'That email and password do not open the desk. If you signed up with another email, try that one.');
+      $('#lgPass').value = '';
+      return;
+    }
+  }
   const usr = u && USERS[u];
   if(!usr){
     $('#lgErr').textContent = bi('No reconozco a «' + escrito + '». Escribe tu usuario (pablo.np · mateo.np · andre.np) o el correo con el que te registraste.',
@@ -6972,6 +7147,11 @@ function caraLook(look, px = 96){
   if(CARAS_AV[k0]) return CARAS_AV[k0];
   const L = { camisa:'#FFFFFF', ac:'#9BC0DC', ...look };
   const url = caraAgente('__av', px, L, 27);
+  /* Cada retoque en el creador dejaba una imagen nueva aquí para siempre:
+     jugando un rato con los colores se acumulaban decenas de MB. Se guardan
+     las últimas 40 y las viejas se sueltan. */
+  const claves = Object.keys(CARAS_AV);
+  if(claves.length > 40) delete CARAS_AV[claves[0]];
   CARAS_AV[k0] = url;
   return url;
 }
@@ -7108,7 +7288,7 @@ function renderAvatarSel(){
     conectaCreador(cont, () => { if($('#v-agentes').classList.contains('on')) renderAgentes(); });
   } else {
     cont.innerHTML = `<p class="micro" style="color:var(--faint);line-height:1.6;margin:12px 0 0">
-      A square image works best. It stays on this device — it is never uploaded anywhere.</p>
+      A square image works best. It lives in your profile and syncs to the shared desk, so your partners see your avatar.</p>
       <div style="display:flex;gap:10px;margin-top:12px;flex-wrap:wrap">
         <button class="btn sm primary" id="avSubir">Choose a photo</button>
         ${a.tipo === 'foto' ? '<button class="btn sm" id="avQuita">Back to my character</button>' : ''}
@@ -7549,7 +7729,18 @@ function pintaPill(p){
 }
 
 /* ── fusión: nadie pierde lo que escribió ── */
-function fusionarListas(mias, suyas){
+/* El sello de la última edición. Sin él, «lo local gana el empate» hacía que la
+   copia VIEJA del otro equipo revirtiera tu corrección en cuanto él guardara. */
+function sellaCambio(x){ if(x && typeof x === 'object') x.upd = Date.now(); return x; }
+/* Registro de borrados (lápidas). Sin esto, borrar era imposible entre equipos:
+   la fusión es una unión, así que el otro equipo devolvía el elemento y hasta lo
+   volvía a subir. Se guarda id → cuándo se borró. */
+function marcaBorrado(id){
+  if(id == null) return;
+  S.borrados = S.borrados || {};
+  S.borrados[String(id)] = Date.now();
+}
+function fusionarListas(mias, suyas, borrados){
   /* La llave es el id — y si un elemento viejo no trae id, su CONTENIDO hace de
      llave en vez de tirarlo. La versión anterior descartaba todo lo sin id, y
      como los trades de las primeras semanas nacieron sin id, la nube llegó a
@@ -7557,9 +7748,23 @@ function fusionarListas(mias, suyas){
      podía moverse nunca. Perder datos en silencio es lo único prohibido aquí. */
   const out = new Map();
   const clave = x => x.id != null ? 'id:' + x.id : 'sin:' + JSON.stringify(x);
-  (suyas || []).forEach(x => { if(x) out.set(clave(x), x); });
-  (mias  || []).forEach(x => { if(x) out.set(clave(x), x); });   // lo local gana el empate
-  return [...out.values()];
+  const poner = x => {
+    if(!x) return;
+    const k = clave(x), ya = out.get(k);
+    if(!ya){ out.set(k, x); return; }
+    /* con los dos sellados manda el MÁS RECIENTE; si ninguno trae sello se
+       conserva el que ya estaba (lo remoto entró primero, lo local pisa) */
+    const a = +ya.upd || 0, b = +x.upd || 0;
+    if(b >= a) out.set(k, x);
+  };
+  (suyas || []).forEach(poner);
+  (mias  || []).forEach(poner);
+  const B = borrados || {};
+  return [...out.values()].filter(x => {
+    const ts = B[String(x && x.id)];
+    if(!ts) return true;
+    return (+x.upd || 0) > ts;      // se editó DESPUÉS de borrarlo: revive a propósito
+  });
 }
 function fusionarEstado(local, remoto){
   if(!remoto) return local;
@@ -7568,8 +7773,16 @@ function fusionarEstado(local, remoto){
      con el arreglo local completo y BORRABA en silencio los movimientos que el
      otro socio hubiera registrado en su equipo — justo el dato que más importa
      entre dos personas cobrando payouts por separado. */
+  /* las lápidas de los dos lados mandan sobre las cinco listas */
+  const tumbas = {};
+  [remoto.borrados || {}, local.borrados || {}].forEach(src =>
+    Object.keys(src).forEach(id => { tumbas[id] = Math.max(tumbas[id] || 0, src[id]); }));
+  /* se olvidan a los 90 días para que el registro no crezca sin fin */
+  const corte = Date.now() - 90 * 86400000;
+  Object.keys(tumbas).forEach(id => { if(tumbas[id] < corte) delete tumbas[id]; });
+  f.borrados = tumbas;
   ['trades','tickets','accounts','positions','caja'].forEach(k => {
-    f[k] = fusionarListas(local[k], remoto[k]);
+    f[k] = fusionarListas(local[k], remoto[k], tumbas);
   });
   /* bienvenida (quién ya vio el recorrido) es un objeto por usuario, no una lista
      con id — el spread tampoco lo fusionaba: el socio que sincroniza último le
@@ -7620,6 +7833,19 @@ function fusionarEstado(local, remoto){
   f.monitos = { ...(local.monitos||{}), ...(remoto.monitos||{}) };
   const yo = S.session && S.session.user;
   if(yo && (local.monitos||{})[yo]) f.monitos[yo] = local.monitos[yo];
+  /* Mapas que el spread `{...remoto, ...local}` se llevaba enteros porque
+     SIEMPRE existen en local (DEFAULTS los crea vacíos): el que sincronizaba
+     con el mapa vacío borraba el del otro. Van uno por uno, remoto primero.
+     · viosOut  — las violaciones descartadas (con motivo y autor). Se perdían
+       siempre: es el caso más grave porque mueve el Score.
+     · correos  — usuario→correo real; sin él, el login de nube del otro socio
+       cae al correo de fábrica y se queda trabajando solo sin saberlo.
+     · salidas  — las palomitas de salida de fase, con su fecha.
+     · politica — la rueda de reparto calibrada a mano. */
+  ['viosOut','correos','salidas','politica'].forEach(k => {
+    if(typeof (local[k]) === 'object' || typeof (remoto[k]) === 'object')
+      f[k] = { ...(remoto[k]||{}), ...(local[k]||{}) };
+  });
   return f;
 }
 /* lo que NO viaja: es de cada socio, no de la mesa */
@@ -7812,6 +8038,11 @@ function guionOficina(){
    piedra clara, y cejas grises en las caras con canas. */
 const mez = (h, d) => {
   let r, g, b;
+  /* Trampas latentes: un color vacío reventaba dentro del bucle de animación
+     (la escena se congelaba sin error visible) y un '#abc' de tres dígitos se
+     leía como número y salía azul eléctrico. */
+  if(!h) return 'rgb(0,0,0)';
+  if(h.length === 4 && h[0] === '#') h = '#' + h[1] + h[1] + h[2] + h[2] + h[3] + h[3];
   if(h[0] === '#'){
     const n = parseInt(h.slice(1), 16);
     r = n >> 16; g = (n >> 8) & 255; b = n & 255;
@@ -8402,7 +8633,11 @@ function escenaAhora(now = new Date()){
      las 16:00 (hora CDMX). Ese hueco es SUYO: la vida 5G. La agenda va por
      hora del día, como un fin de semana de verdad — gym en la mañana, golf
      al mediodía, shopping en la tarde, estadio, restaurante y el jet de noche. */
-  const finde = (wd === 5 && m >= 960) || wd === 6 || (wd === 0 && m < 960);
+  /* El viernes la última sesión de NY termina a las 15:35 con un vuelo de 25 min
+     hacia Tokio… que a las 16:00 se convertía en el estadio del fin de semana:
+     el avión despegaba y nunca aterrizaba. El viernes el fin de semana empieza
+     cuando arranca ese tramo, no 25 minutos después. */
+  const finde = (wd === 5 && m >= 935) || wd === 6 || (wd === 0 && m < 960);
   if(finde){
     const esc = m < 360 ? 'vuelo' : m < 600 ? 'gym' : m < 780 ? 'golf'
               : m < 960 ? 'shopping' : m < 1140 ? 'estadio'
@@ -10372,8 +10607,11 @@ function dibujaOficina(t){
       });
     });
   });
-  // paneles solares y aerogeneradores al fondo
-  add(.4, c2 => {
+  /* Paneles y molinos viven FUERA del cuarto, detrás del edificio. Con d=.4
+     cualquier pieza del piso los tapaba… pero el muro de monitores se pinta
+     fuera de la lista, así que eran ELLOS los que atravesaban el muro. Con un
+     d muy negativo se pintan primero y el muro los cubre, que es lo natural. */
+  add(-99, c2 => {
     for(let k = 0; k < 3; k++){
       const sx = .4 + k * 1.5;
       caja(c2, sx, -1.5, 0, 1.3, 1.0, .5, '#39406A', 14, -22);
@@ -10382,7 +10620,7 @@ function dibujaOficina(t){
     }
   });
   [[-1.2, 2.2],[-1.2, 6.4]].forEach(([tx, ty], i) => {
-    add(tx + ty, c2 => {
+    add(-98 + i * .01, c2 => {
       const bx = iX(tx, ty), by = iY(tx, ty, 0);
       c2.strokeStyle = '#C6CEDA'; c2.lineWidth = 3;
       c2.beginPath(); c2.moveTo(bx, by); c2.lineTo(bx, by - 96); c2.stroke();
@@ -10452,8 +10690,10 @@ function dibujaOficina(t){
         caja(c2, x0 + 2.92, .1, MZ + .16, .07, 2.0, 1.4, '#AECAE0', 16, -6);
         c2.globalAlpha = 1;
       });
-      /* placa con el nombre, colgada del barandal */
-      add(x0 + FONDO + .8, c2 => {
+      /* placa con el nombre, colgada del barandal. La profundidad va por encima
+         de TODAS las franjas de la losa (la última es N + FONDO): si no, la losa
+         se comía media placa y los nombres salían «PABL…», «MATE», «…NDRÉ». */
+      add(N + FONDO + 2 + k * .01, c2 => {
         caja(c2, x0 + .85, 2.16, MZ + .16, 1.0, .07, .36, MEZA.placa, 8, -16);
         c2.font = 'bold 11px "IBM Plex Mono", monospace'; c2.textAlign = 'center';
         c2.fillStyle = MEZA.tinta;
@@ -10528,7 +10768,10 @@ function animaOficina(){
   const paso = 4200;                      // cada mensaje dura ~4.2s
   const t0 = performance.now();
   const loop = (now) => {
-    if(!document.getElementById('v-agentes').classList.contains('on')) return;  // se detiene fuera de la vista
+    if(!document.getElementById('v-agentes').classList.contains('on')) return;
+    /* Detrás del login la app está oculta (body.locked) pero el canvas seguía
+       repintando 1800×1160 a 60 fps para nadie: pura batería. */
+    if(document.body.classList.contains('locked')) return;  // se detiene fuera de la vista
     /* El primer cuadro puede traer un `now` ANTERIOR a t0: requestAnimationFrame
        entrega la marca de tiempo del inicio del cuadro, y animaOficina() suele
        llamarse ya empezado. Con t negativo, Math.floor(t/paso) % n daba −1 y
