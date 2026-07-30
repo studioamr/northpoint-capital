@@ -8255,19 +8255,238 @@ function ventanitas(c, x, y, w, h, osc, rr, semilla, calido = '#FFE9AE'){
 }
 function skylineCiudad(c, W, H, ciudad, osc, rr){
   const suelo = 640;
-  /* tres capas de fondo comunes, con el tinte de la ciudad */
   const tinte = ciudad === 'tokio' ? [52,44,74] : ciudad === 'londres' ? [46,50,72] : [44,48,88];
-  for(let capa = 0; capa < 3; capa++){
-    const base = 470 + capa * 34, al = .3 + capa * .24;
-    for(let i = 0; i < 30; i++){
-      const bx = i * (W / 30) - 24 + rr(i + capa * 40) * 26;
-      const bw = W / 30 * (.62 + rr(i + capa * 7) * .5);
-      const bh = 90 + rr(i + capa * 13) * (190 + capa * 70);
-      c.fillStyle = `rgba(${tinte[0] + capa*14},${tinte[1] + capa*16},${tinte[2] + capa*14},${al})`;
-      c.fillRect(bx, base - bh, bw, bh + 200);
-      ventanitas(c, bx, base - bh, bw, bh, osc * (.5 + capa * .25), rr, capa * 91);
+  const luzDia = 1 - osc;
+  const capaCol = (capa, al) => `rgba(${tinte[0] + capa*14},${tinte[1] + capa*16},${tinte[2] + capa*14},${al})`;
+
+  /* ── CADA CIUDAD ARMA SU HORIZONTE ──
+     Nada de repetir la misma tira de rectángulos con otro tinte: Manhattan
+     es vertical y art déco, Tokio tiene al Fuji detrás con templos y neón,
+     Londres es bajito, de ladrillo, con cúpulas y su Tower Bridge. */
+  if(ciudad === 'nyc'){
+    /* torres altas y flacas: coronas escalonadas, tinacos de agua, antenas */
+    for(let capa = 0; capa < 3; capa++){
+      const base = 470 + capa * 34, al = .3 + capa * .24;
+      for(let i = 0; i < 26; i++){
+        const bx = i * (W / 26) - 24 + rr(i + capa * 40) * 30;
+        const bw = W / 26 * (.55 + rr(i + capa * 7) * .5);
+        const bh = 110 + rr(i + capa * 13) * (210 + capa * 70);
+        const col = capaCol(capa, al);
+        c.fillStyle = col;
+        c.fillRect(bx, base - bh, bw, bh + 200);
+        const r1 = rr(i * 3 + capa * 17);
+        if(r1 < .3){                                   /* corona art déco */
+          c.fillRect(bx + bw * .18, base - bh - 16, bw * .64, 16);
+          c.fillRect(bx + bw * .34, base - bh - 28, bw * .32, 12);
+        } else if(r1 < .5){                            /* tinaco de agua */
+          const wx = bx + bw * .3, wy = base - bh;
+          c.fillStyle = `rgba(58,48,44,${Math.min(1, al + .2)})`;
+          c.fillRect(wx + 2, wy - 12, 3, 12); c.fillRect(wx + 15, wy - 12, 3, 12);
+          c.fillRect(wx, wy - 26, 20, 15);
+          c.beginPath(); c.moveTo(wx - 2, wy - 26); c.lineTo(wx + 10, wy - 35); c.lineTo(wx + 22, wy - 26);
+          c.closePath(); c.fill();
+          c.fillStyle = col;
+        } else if(r1 < .62){                           /* antena */
+          c.fillRect(bx + bw/2 - 2, base - bh - 36, 4, 36);
+          c.fillStyle = `rgba(255,90,90,${.3 + osc * .5})`;
+          c.fillRect(bx + bw/2 - 3, base - bh - 40, 6, 5);
+          c.fillStyle = col;
+        }
+        ventanitas(c, bx, base - bh, bw, bh, osc * (.5 + capa * .25), rr, capa * 91);
+      }
     }
   }
+  else if(ciudad === 'tokio'){
+    /* ══ EL MONTE FUJI ══ enorme, al fondo de todo, con su nieve dentada */
+    const fx = 880, fpy = 248, fb = 648, fw = 600;
+    c.fillStyle = `rgba(94,107,142,${.5 + luzDia * .3})`;
+    c.beginPath();
+    c.moveTo(fx - fw, fb);
+    c.lineTo(fx - 62, fpy + 12); c.lineTo(fx - 28, fpy);
+    c.lineTo(fx + 6, fpy + 7); c.lineTo(fx + 42, fpy + 3);
+    c.lineTo(fx + fw, fb);
+    c.closePath(); c.fill();
+    c.fillStyle = `rgba(244,246,250,${.72 + luzDia * .22})`;
+    c.beginPath();
+    c.moveTo(fx - 152, fpy + 122);
+    c.lineTo(fx - 62, fpy + 12); c.lineTo(fx - 28, fpy);
+    c.lineTo(fx + 6, fpy + 7); c.lineTo(fx + 42, fpy + 3);
+    c.lineTo(fx + 138, fpy + 118);
+    for(let k = 0; k <= 7; k++){
+      const xx = (fx + 138) - (k / 7) * 290;
+      c.lineTo(xx, fpy + 118 + ((k % 2) ? 30 : 4));
+    }
+    c.closePath(); c.fill();
+
+    /* capa lejana de edificios, baja, para no tapar al Fuji */
+    for(let i = 0; i < 24; i++){
+      const bx = i * (W / 24) - 20 + rr(i + 900) * 24;
+      const bw = W / 24 * (.6 + rr(i + 905) * .5);
+      const bh = 70 + rr(i + 910) * 130;
+      c.fillStyle = capaCol(0, .34);
+      c.fillRect(bx, 560 - bh, bw, bh + 240);
+      ventanitas(c, bx, 560 - bh, bw, bh, osc * .45, rr, 700 + i);
+    }
+
+    /* ── TEMPLOS ── techos curvos con las puntas alzadas, entre los edificios */
+    const templo = (tx2, ty2, es, al) => {
+      c.fillStyle = `rgba(42,34,54,${al})`;
+      c.fillRect(tx2 - 44*es, ty2 - 42*es, 88*es, 42*es);
+      c.beginPath();
+      c.moveTo(tx2 - 72*es, ty2 - 40*es);
+      c.quadraticCurveTo(tx2, ty2 - 64*es, tx2 + 72*es, ty2 - 40*es);
+      c.lineTo(tx2 + 58*es, ty2 - 54*es);
+      c.quadraticCurveTo(tx2, ty2 - 72*es, tx2 - 58*es, ty2 - 54*es);
+      c.closePath(); c.fill();
+      c.fillRect(tx2 - 28*es, ty2 - 76*es, 56*es, 24*es);
+      c.beginPath();
+      c.moveTo(tx2 - 52*es, ty2 - 74*es);
+      c.quadraticCurveTo(tx2, ty2 - 96*es, tx2 + 52*es, ty2 - 74*es);
+      c.lineTo(tx2 + 40*es, ty2 - 86*es);
+      c.quadraticCurveTo(tx2, ty2 - 102*es, tx2 - 40*es, ty2 - 86*es);
+      c.closePath(); c.fill();
+      c.fillRect(tx2 - 2.5*es, ty2 - 108*es, 5*es, 10*es);
+      if(osc > .3){
+        c.fillStyle = 'rgba(255,214,138,.5)';
+        c.fillRect(tx2 - 30*es, ty2 - 30*es, 12*es, 14*es);
+        c.fillRect(tx2 + 18*es, ty2 - 30*es, 12*es, 14*es);
+      }
+    };
+    templo(190, 636, 1.05, .72);
+    templo(700, 630, .8, .6);
+    templo(1620, 634, .92, .68);
+
+    /* ── LA CAPA DE NEÓN ── edificios medianos con letreros verticales */
+    const NEON = ['#FF5A6E','#3EC9FF','#FFD34A','#7CFF6E','#FF8A3E','#D96EFF'];
+    for(let i = 0; i < 22; i++){
+      const bx = i * (W / 22) - 18 + rr(i + 930) * 26;
+      const bw = W / 22 * (.58 + rr(i + 935) * .5);
+      const bh = 90 + rr(i + 940) * 220;
+      c.fillStyle = capaCol(2, .56);
+      c.fillRect(bx, 620 - bh, bw, bh + 180);
+      ventanitas(c, bx, 620 - bh, bw, bh, osc * .7, rr, 800 + i);
+      if(rr(i + 950) < .55){
+        const nc = NEON[Math.floor(rr(i + 955) * NEON.length)];
+        const sx = bx + bw - 13, sy = 620 - bh + 12;
+        const sh = 46 + rr(i + 960) * 46;
+        c.fillStyle = osc > .25 ? nc : 'rgba(225,230,238,.55)';
+        c.fillRect(sx, sy, 9, sh);
+        if(osc > .25){
+          const h2 = c.createRadialGradient(sx + 4, sy + sh/2, 3, sx + 4, sy + sh/2, 34);
+          h2.addColorStop(0, nc + '55'); h2.addColorStop(1, nc + '00');
+          c.fillStyle = h2; c.fillRect(sx - 30, sy - 20, 68, sh + 40);
+        }
+        c.fillStyle = 'rgba(20,16,28,.5)';
+        for(let k = 0; k * 12 + 8 < sh; k++) c.fillRect(sx + 2, sy + 5 + k * 12, 5, 4);
+      }
+    }
+  }
+  else {
+    /* ══ LONDRES ══ perfil bajo: hileras de casas de ladrillo con chimeneas,
+       agujas de iglesia, la cúpula de St Paul y el Tower Bridge. */
+    /* capa lejana, bajita */
+    for(let i = 0; i < 26; i++){
+      const bx = i * (W / 26) - 18 + rr(i + 600) * 22;
+      const bw = W / 26 * (.62 + rr(i + 605) * .45);
+      const bh = 60 + rr(i + 610) * 120;
+      c.fillStyle = capaCol(0, .32);
+      c.fillRect(bx, 540 - bh, bw, bh + 260);
+      ventanitas(c, bx, 540 - bh, bw, bh, osc * .4, rr, 500 + i);
+    }
+
+    /* ── ST PAUL'S ── el tambor con columnas, la cúpula y su linterna */
+    const px2 = 180, py2 = 560;
+    c.fillStyle = 'rgba(158,150,138,.85)';
+    c.fillRect(px2 - 95, py2 - 60, 190, 60);
+    c.fillRect(px2 - 58, py2 - 106, 116, 48);
+    c.fillStyle = 'rgba(120,112,100,.85)';
+    for(let k = 0; k < 7; k++) c.fillRect(px2 - 50 + k * 16, py2 - 102, 5, 42);
+    c.fillStyle = 'rgba(112,118,110,.9)';
+    c.beginPath(); c.arc(px2, py2 - 106, 62, Math.PI, 0); c.closePath(); c.fill();
+    c.strokeStyle = 'rgba(90,96,90,.7)'; c.lineWidth = 2.4;
+    for(let k = -2; k <= 2; k++){
+      c.beginPath(); c.moveTo(px2 + k * 22, py2 - 106);
+      c.quadraticCurveTo(px2 + k * 13, py2 - 150, px2, py2 - 167); c.stroke();
+    }
+    c.fillStyle = 'rgba(158,150,138,.9)';
+    c.fillRect(px2 - 9, py2 - 186, 18, 20);
+    c.fillStyle = mez('#C9A96A', luzDia * 14);
+    c.beginPath(); c.arc(px2, py2 - 192, 5, 0, 7); c.fill();
+    c.fillRect(px2 - 1.5, py2 - 206, 3, 12); c.fillRect(px2 - 6, py2 - 201, 12, 3);
+    /* dos torres del frente */
+    [-82, 82].forEach(dx => {
+      c.fillStyle = 'rgba(148,140,128,.85)';
+      c.fillRect(px2 + dx - 12, py2 - 128, 24, 68);
+      c.beginPath(); c.arc(px2 + dx, py2 - 128, 12, Math.PI, 0); c.fill();
+    });
+
+    /* ── TOWER BRIDGE ── dos torres góticas y sus pasarelas */
+    const bx2 = 1650, by2 = 640;
+    c.strokeStyle = 'rgba(120,126,140,.8)'; c.lineWidth = 4;
+    c.beginPath(); c.moveTo(bx2 - 210, by2 - 36); c.quadraticCurveTo(bx2 - 140, by2 - 96, bx2 - 66, by2 - 100); c.stroke();
+    c.beginPath(); c.moveTo(bx2 + 210, by2 - 36); c.quadraticCurveTo(bx2 + 140, by2 - 96, bx2 + 66, by2 - 100); c.stroke();
+    [-66, 66].forEach(dx => {
+      const tx3 = bx2 + dx;
+      c.fillStyle = 'rgba(150,144,132,.92)';
+      c.fillRect(tx3 - 24, by2 - 150, 48, 150);
+      c.fillStyle = 'rgba(126,120,108,.92)';
+      c.beginPath(); c.moveTo(tx3 - 26, by2 - 150); c.lineTo(tx3, by2 - 186); c.lineTo(tx3 + 26, by2 - 150);
+      c.closePath(); c.fill();
+      [[-24,-150],[24,-150]].forEach(([ddx, ddy]) => {
+        c.fillStyle = 'rgba(126,120,108,.92)';
+        c.fillRect(tx3 + ddx - 5, by2 + ddy - 10, 10, 12);
+        c.beginPath(); c.moveTo(tx3 + ddx - 6, by2 + ddy - 10); c.lineTo(tx3 + ddx, by2 + ddy - 24);
+        c.lineTo(tx3 + ddx + 6, by2 + ddy - 10); c.closePath(); c.fill();
+      });
+      c.fillStyle = `rgba(200,222,240,${.35 + osc * .35})`;
+      for(let k = 0; k < 4; k++) c.fillRect(tx3 - 10, by2 - 138 + k * 30, 20, 16);
+    });
+    c.fillStyle = 'rgba(150,144,132,.9)';
+    c.fillRect(bx2 - 66, by2 - 128, 132, 10);
+    c.fillRect(bx2 - 66, by2 - 96, 132, 10);
+    c.fillStyle = mez('#4A7FA8', luzDia * 10);
+    c.fillRect(bx2 - 42, by2 - 56, 84, 34);
+
+    /* ── AGUJAS DE IGLESIA ── */
+    [520, 1080, 1360].forEach((ax, k) => {
+      const ay = 610, es = .8 + rr(k + 60) * .3;
+      c.fillStyle = 'rgba(132,126,116,.8)';
+      c.fillRect(ax - 10*es, ay - 74*es, 20*es, 74*es);
+      c.beginPath(); c.moveTo(ax - 12*es, ay - 74*es); c.lineTo(ax, ay - 130*es); c.lineTo(ax + 12*es, ay - 74*es);
+      c.closePath(); c.fill();
+      c.fillStyle = mez('#C9A96A', luzDia * 10);
+      c.fillRect(ax - 1.5, ay - 138*es, 3, 10);
+    });
+
+    /* ── LAS HILERAS DE CASAS ── ladrillo, techos a dos aguas y chimeneas */
+    for(let fila = 0; fila < 2; fila++){
+      const base = 600 + fila * 42;
+      for(let i = 0; i < 26; i++){
+        const hw = 74, hx = i * hw - 20 + fila * 30;
+        const hh = 46 + rr(i + fila * 50) * 26;
+        const ladrillo = [(146 + (i % 3) * 12), (94 + (i % 3) * 8), (82 + (i % 3) * 6)];
+        c.fillStyle = `rgba(${ladrillo[0]},${ladrillo[1]},${ladrillo[2]},${.5 + fila * .3})`;
+        c.fillRect(hx, base - hh, hw - 6, hh + 120);
+        /* techo a dos aguas */
+        c.fillStyle = `rgba(72,64,72,${.55 + fila * .3})`;
+        c.beginPath();
+        c.moveTo(hx - 3, base - hh); c.lineTo(hx + (hw - 6)/2, base - hh - 22);
+        c.lineTo(hx + hw - 3, base - hh); c.closePath(); c.fill();
+        /* chimenea con sus dos tubos */
+        const cx2 = hx + (hw - 6) * (.25 + rr(i + 77) * .5);
+        c.fillStyle = `rgba(96,72,64,${.6 + fila * .3})`;
+        c.fillRect(cx2 - 6, base - hh - 34, 12, 18);
+        c.fillRect(cx2 - 7, base - hh - 38, 5, 6); c.fillRect(cx2 + 2, base - hh - 38, 5, 6);
+        /* ventanitas georgianas */
+        c.fillStyle = `rgba(255,233,174,${(.24 + osc * .5) * (rr(i * 7 + fila) > .4 ? 1 : .3)})`;
+        c.fillRect(hx + 10, base - hh + 10, 12, 15);
+        c.fillRect(hx + 40, base - hh + 10, 12, 15);
+        c.fillStyle = `rgba(60,44,48,${.5 + fila * .3})`;
+        c.fillRect(hx + 26, base - hh + 8, 10, 26);
+      }
+    }
+  }
+
   const T = (x, y, w, h, col) => { c.fillStyle = col; c.fillRect(x, y, w, h); };
   const gris = '#4E4C6E', gris2 = '#63608A', claro = '#7C7AA4';
 
