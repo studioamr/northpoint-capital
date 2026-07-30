@@ -1703,6 +1703,17 @@ button.tag.quemada{text-decoration:line-through;text-decoration-color:var(--down
 .g-banner.risk{border-color:rgba(217,164,65,.4);background:rgba(217,164,65,.05)}
 .g-banner.stop{border-color:rgba(222,106,95,.4);background:rgba(222,106,95,.05)}
 
+/* En pantallas cortas el botón de confirmar quedaba fuera de vista y había
+   que adivinar que el modal scrollea. Ahora el pie va pegado abajo. */
+.m-foot,.modal-f{position:sticky;bottom:-24px;z-index:3;
+  background:var(--modal-bg);padding-top:14px;padding-bottom:10px;
+  margin-left:-24px;margin-right:-24px;padding-left:24px;padding-right:24px;
+  border-top:1px solid var(--line-soft);box-shadow:0 -14px 24px -8px var(--modal-bg)}
+@media(max-width:560px){ .m-foot,.modal-f{margin-left:-18px;margin-right:-18px;
+  padding-left:18px;padding-right:18px;bottom:-18px} }
+.pr-aviso{margin-top:8px;padding:8px 11px;border-radius:9px;line-height:1.55;
+  border:1px solid rgba(217,164,65,.4);background:rgba(217,164,65,.07);color:var(--dim)}
+.pr-aviso b{color:var(--warn,#D9A441)}
 canvas{display:block;width:100%}
 
 /* ── TABLAS QUE CABEN ──
@@ -2408,6 +2419,14 @@ stop[stop-color="#9BC0DC"]{stop-color:var(--txt)}
     <div id="ncFaseZona" style="margin-top:12px">
       <label>Phase</label>
       <div class="chips" id="ncFase"></div>
+    </div>
+
+    <div class="f-full" style="margin-top:12px">
+      <label>Counts trades from</label>
+      <input type="date" id="ncDesde">
+      <p class="micro" style="color:var(--faint);margin-top:5px;line-height:1.5">
+        The road to payout only counts trades from this date on. If the account
+        has been running for a while, put the day it actually started.</p>
     </div>
 
     <p class="micro" id="ncErr" style="color:var(--down);min-height:14px;margin-top:10px"></p>
@@ -4206,6 +4225,7 @@ function renderAcctMgr(){
     return `<div class="panel" style="margin-bottom:10px"><div class="p-body">
       <div class="acct-row">
         <div><label>Alias</label><input data-f="alias" data-id="${a.id}" value="${esc(a.alias)}"></div>
+        <div><label>Counts from</label><input type="date" data-f="desde" data-id="${a.id}" value="${esc(a.desde||'')}"></div>
         <div><label>Type</label><select data-f="tipo" data-id="${a.id}">
           <option value="prop"${(!esLive(a)&&!esSim(a))?' selected':''}>Funded</option>
           <option value="live"${esLive(a)?' selected':''}>Propia (capital tuyo)</option>
@@ -4374,14 +4394,18 @@ function renderCamino(){
      una quemada cuenta su historia; con otro filtro manda tu selección. */
   const modo = (S.ui.acctSel || {}).mode || 'all';
   const enSel = new Set(acctsSel().map(a => a.id));
-  const carreras = S.accounts.filter(a => !esLive(a) && !esSim(a) && reglasDe(a)
+  /* Entran TODAS las fondeadas, tengan o no plan verificado. Antes una cuenta
+     de una firma fuera del catálogo (Apex, por ejemplo) simplemente no
+     aparecía: registrabas trades y la cuenta no existía en el camino. Ahora
+     aparece con su profit real y se dice que su vara no está verificada. */
+  const carreras = S.accounts.filter(a => !esLive(a) && !esSim(a)
     && (modo === 'all' || enSel.has(a.id)));
   panel.hidden = false;
   if(!carreras.length){
     $('#pgCaminoSub').textContent = '';
     $('#pgClimb').innerHTML = '';
     $('#pgPasos').innerHTML = '';
-    const hayFondeadas = S.accounts.some(a => !esLive(a) && !esSim(a) && reglasDe(a));
+    const hayFondeadas = S.accounts.some(a => !esLive(a) && !esSim(a));
     $('#pgCaminoNota').textContent = hayFondeadas
       ? bi('No account matches this filter. Change the selection above.',
            'No account matches this filter. Change the selection above.')
@@ -4430,7 +4454,9 @@ function renderCamino(){
 
   /* La banda: la carrera viva más avanzada marca el punto de la casa. Las
      TRES zonas van a escala de dólares: examen, colchón y pago máximo. */
-  const lider = vivasF.slice().sort((x,y) => y.pct - x.pct)[0] || fichas[0];
+  const conVara = fichas.filter(f => f.cc.target > 0 && reglasDe(f.a));
+  const lider = conVara.filter(f => !f.quema).sort((x,y) => y.pct - x.pct)[0]
+             || conVara[0] || fichas[0];
   const Vl = lider.cc;
   const zEval = Vl.total > 0 ? Vl.target / Vl.total * 100 : 50;
   const zBuf  = Vl.total > 0 ? Vl.buffer / Vl.total * 100 : 34;
@@ -4452,6 +4478,10 @@ function renderCamino(){
      hitos detectados solitos, desde cuándo se mueve, y la quema si la hubo. */
   $('#pgCaminoNota').innerHTML = fichas.map(f => {
     const { a, cc, quema, avance, pct } = f;
+    /* La causa número uno de «mi barra no se mueve»: trades asignados a la
+       cuenta con fecha anterior a su línea de salida. En vez de callarlo, se
+       dice cuántos son y cómo arreglarlo. */
+    const fuera = (S.trades || []).filter(t => (t.accts || []).includes(a.id) && t.date < a.desde).length;
     const c1 = cc.total > 0 ? cc.target / cc.total * 100 : 50;
     const c2 = cc.total > 0 ? (cc.target + cc.buffer) / cc.total * 100 : 84;
     const hito = cc.pasoPago
@@ -4464,6 +4494,29 @@ function renderCamino(){
     /* Debajo de la barra va lo único que se pregunta de un vistazo: el balance
        actual. Lo demás (cuánto llevas de la vara, desde cuándo se mueve) era
        ruido — el largo de la barra ya lo dice. */
+    if(!cc.target || !reglasDe(a)){
+      /* sin catálogo no hay vara: se muestra lo que sí se sabe — el profit
+         acumulado — y se dice por qué no hay barra. */
+      const bal = a.start + cc.p;
+      return `<div class="pr-fila">
+        <span class="al">${esc(a.alias)}</span>
+        <div class="via">
+          <div class="mono" style="font-size:15px;${cc.p > 0 ? 'color:var(--up)' : (cc.p < 0 ? 'color:var(--down)' : '')}">
+            ${fmt$(bal)}
+            <span class="micro" style="color:var(--faint);margin-left:8px">${fmt$(cc.p, true)} ${bi('desde el','since')} ${fmtFecha(a.desde)}</span>
+          </div>
+          <div class="pr-aviso micro" style="border-color:var(--line);background:var(--w03)">
+            <b style="color:var(--dim)">${bi('Plan no verificado','Plan not verified')}</b> —
+            ${bi('esta firma no está en el catálogo, así que no se calculan ni la vara ni el drawdown. El profit sí es real.',
+                 'this firm is not in the catalogue, so neither the bar nor the drawdown are computed. The profit is real.')}
+          </div>
+          ${fuera ? `<div class="pr-aviso micro">
+            <b>${fuera} ${fuera === 1 ? bi('trade no cuenta','trade is not counting') : bi('trades no cuentan','trades are not counting')}</b>
+            — ${bi('son anteriores al','they are older than')} ${fmtFecha(a.desde)}.
+          </div>` : ''}
+        </div>
+      </div>`;
+    }
     return `<div class="pr-fila">
       <span class="al" ${quema ? 'style="text-decoration:line-through;text-decoration-color:var(--down)"' : ''}>${esc(a.alias)}</span>
       <div class="via">
@@ -4477,6 +4530,11 @@ function renderCamino(){
           ${quema ? `<span class="micro" style="color:var(--down);margin-left:8px">🔥 ${bi('se quemó el ','burned ')}${quema.fecha ? fmtFecha(quema.fecha) : ''}</span>`
                   : (hito ? `<span class="micro" style="color:var(--faint);margin-left:8px">${hito}</span>` : '')}
         </div>
+        ${fuera ? `<div class="pr-aviso micro">
+          <b>${fuera} ${fuera === 1 ? bi('trade no cuenta','trade is not counting') : bi('trades no cuentan','trades are not counting')}</b>
+          — ${bi('son anteriores al','they are older than')} ${fmtFecha(a.desde)}, ${bi('la fecha desde la que corre esta cuenta.','the date this account starts counting from.')}
+          ${bi('Cámbiala en Ajustes → Cuentas y la barra se mueve.','Change it in Settings → Accounts and the bar moves.')}
+        </div>` : ''}
       </div>
     </div>`;
   }).join('');
@@ -6048,6 +6106,7 @@ function ncAbrir(){
   nc.plan = planes[0]; nc.size = Object.keys(FIRM_CATALOG.Tradeify.plans[nc.plan].sizes)[0];
   $('#ncAlias').value = ''; $('#ncStart').value = ''; $('#ncErr').textContent = '';
   ncPinta();
+  $('#ncDesde').value = todayISO();
   openOv('ovNuevaCuenta');
 }
 $$('#ncTipo button').forEach(b => b.onclick = () => { nc.tipo = b.dataset.t; ncPinta(); });
@@ -6056,8 +6115,11 @@ $('#ncSave').addEventListener('click', ()=>{
      luego nadie sabe cuál cuenta es cuál. */
   const alias = $('#ncAlias').value.trim();
   if(!alias){ $('#ncErr').textContent = 'Give the account a name.'; return; }
+  /* `desde` es la línea de salida de la carrera: sólo cuentan los trades de
+     esa fecha en adelante. Si el usuario no la toca, es hoy. */
+  const desde = ($('#ncDesde') && $('#ncDesde').value) || todayISO();
   const base = { id:'ac_'+uid(), alias, orden:(S.accounts.length+1),
-                 desde:todayISO(), estado:'active', owner:S.session.user };
+                 desde, estado:'active', owner:S.session.user };
   let cuenta;
   if(nc.tipo === 'prop' && FIRM_CATALOG[nc.firm]){
     cuenta = { ...base, tipo:'prop', firm:nc.firm, plan:nc.plan, size:+nc.size, start:+nc.size, fase:nc.fase };
@@ -6785,20 +6847,44 @@ $('#btnWipe').addEventListener('click', ()=>{
 
 /* ════════ Overlays genéricos ════════ */
 let _ovFoco = null;
+/* Los overlays se APILAN. Antes todos compartían z-index 60, así que el que
+   estuviera más abajo en el HTML tapaba al que abrías encima: dabas «Add
+   account» desde Ajustes y el modal nuevo nacía DEBAJO de Ajustes — la
+   pantalla parecía muerta. Ahora cada apertura sube un piso, y cerrar baja
+   uno solo: el de abajo sigue vivo donde lo dejaste. */
+const _pila = [];
 function openOv(id){
   const ov = $('#'+id);
-  _ovFoco = document.activeElement;
+  if(_pila.includes(id)) return;
+  if(!_pila.length) _ovFoco = document.activeElement;
+  _pila.push(id);
+  ov.style.zIndex = 60 + _pila.length * 2;
   ov.classList.add('on');
+  /* el overlay de abajo no debe recibir clics ni tabulación */
+  _pila.slice(0, -1).forEach(x => $('#'+x).setAttribute('inert',''));
   document.querySelector('.app').setAttribute('inert','');
   const f = ov.querySelector('input,select,textarea,button');
   if(f) setTimeout(()=> f.focus(), 40);
 }
-function closeOv(){
+/* cierra sólo el de encima; con `todos` en true, baja el telón completo */
+function closeOv(todos){
   pendienteTix = null;      // cancelar el modal no debe dejar la tesis ejecutada
-  $$('.overlay').forEach(o=>o.classList.remove('on'));
-  if(!document.body.classList.contains('locked')) document.querySelector('.app').removeAttribute('inert');
-  if(_ovFoco && _ovFoco.focus) try{ _ovFoco.focus(); }catch(e){}
-  _ovFoco = null;
+  if(todos === true || _pila.length <= 1){
+    _pila.forEach(x => { const o = $('#'+x); if(o){ o.classList.remove('on'); o.removeAttribute('inert'); o.style.zIndex = ''; } });
+    _pila.length = 0;
+    $$('.overlay').forEach(o => { o.classList.remove('on'); o.removeAttribute('inert'); });
+    if(!document.body.classList.contains('locked')) document.querySelector('.app').removeAttribute('inert');
+    if(_ovFoco && _ovFoco.focus) try{ _ovFoco.focus(); }catch(e){}
+    _ovFoco = null;
+    return;
+  }
+  const id = _pila.pop();
+  const ov = $('#'+id);
+  if(ov){ ov.classList.remove('on'); ov.style.zIndex = ''; }
+  const abajo = $('#'+_pila[_pila.length - 1]);
+  if(abajo){ abajo.removeAttribute('inert');
+    const f = abajo.querySelector('input,select,textarea,button');
+    if(f) setTimeout(()=> f.focus(), 40); }
 }
 $$('.overlay').forEach(o=> o.addEventListener('click', e=>{ if(e.target===o) closeOv(); }));
 $$('[data-close]').forEach(b=> b.addEventListener('click', closeOv));
