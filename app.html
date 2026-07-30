@@ -8737,31 +8737,33 @@ const CIUDADES = {
   tokio:   { n:'TOKIO',   en:'TOKYO',    tz:'Asia/Tokyo',      sub:'MARUNOUCHI' },
 };
 /* [inicio, fin) en minutos de la hora local del usuario, y a dónde vuela después */
+/* Los horarios REALES del indicador de la casa (1BULLET), en hora de NUEVA
+   YORK — no en la hora del que mira la pantalla. Entre una sesión y otra el
+   mercado está CERRADO de verdad, y ese hueco no se rellena con una ciudad
+   falsa: se va uno a su casa. */
 const TRAMOS = [
-  { c:'londres', de:120,  a:420,  sig:'nyc'     },   // 02:00 – 07:00
-  { c:'nyc',     de:420,  a:960,  sig:'tokio'   },   // 07:00 – 16:00
-  { c:'tokio',   de:960,  a:1560, sig:'londres' },   // 16:00 – 02:00 (cruza medianoche)
+  { c:'londres', de:120,  a:510,  sig:'nyc'     },   // 02:00 – 08:30 NY
+  { c:'nyc',     de:570,  a:960,  sig:'tokio'   },   // 09:30 – 16:00 NY
+  { c:'tokio',   de:1200, a:1500, sig:'londres' },   // 20:00 – 01:00 NY (cruza medianoche)
 ];
+const TZ_MERCADO = 'America/New_York';
 const VUELO_MIN = 25;                     // lo que dura el traslado en pantalla
 
 function escenaAhora(now = new Date()){
-  const wd = now.getDay();
-  const m = now.getHours() * 60 + now.getMinutes() + now.getSeconds() / 60;
-  /* El mercado cierra de verdad el viernes a las 16:00 y reabre el domingo a
-     las 16:00 (hora CDMX). Ese hueco es SUYO: la vida 5G. La agenda va por
-     hora del día, como un fin de semana de verdad — gym en la mañana, golf
-     al mediodía, shopping en la tarde, estadio, restaurante y el jet de noche. */
-  /* El viernes la última sesión de NY termina a las 15:35 con un vuelo de 25 min
-     hacia Tokio… que a las 16:00 se convertía en el estadio del fin de semana:
-     el avión despegaba y nunca aterrizaba. El viernes el fin de semana empieza
-     cuando arranca ese tramo, no 25 minutos después. */
-  const finde = (wd === 5 && m >= 935) || wd === 6 || (wd === 0 && m < 960);
+  /* El reloj que manda es el de Nueva York: las sesiones son del mercado, no de
+     donde esté sentado quien mira. Antes se usaba la hora local del equipo y en
+     cuanto alguien abriera el terminal desde otro huso, las «sesiones» dejaban
+     de coincidir con los mercados de verdad. */
+  const m = minutosEn(TZ_MERCADO, now) + now.getSeconds() / 60;
+  const wd = diaSemanaEn(TZ_MERCADO, now);
+  /* El fin de semana del mercado: del cierre de NY el viernes (16:00) hasta que
+     Asia abre el domingo (20:00 NY). Ese hueco es suyo: casa, gym, golf,
+     shopping, estadio y cena, según la hora del día. */
+  const finde = (wd === 5 && m >= 960) || wd === 6 || (wd === 0 && m < 1200);
   if(finde){
-    const esc = m < 360 ? 'vuelo' : m < 600 ? 'gym' : m < 780 ? 'golf'
+    const esc = m < 420 ? 'casa' : m < 600 ? 'gym' : m < 780 ? 'golf'
               : m < 960 ? 'shopping' : m < 1140 ? 'estadio'
-              : m < 1380 ? 'restaurante' : 'vuelo';
-    if(esc === 'vuelo')
-      return { tipo:'vuelo', de:'nyc', a:'tokio', prog:((m % 180) / 180), finde:true };
+              : m < 1320 ? 'restaurante' : 'casa';
     return { tipo:'finde', esc, c:'nyc', finde:true };
   }
   for(const tr of TRAMOS){
@@ -8773,7 +8775,23 @@ function escenaAhora(now = new Date()){
       return { tipo:'ciudad', c:tr.c, sig:tr.sig, restan };
     }
   }
-  return { tipo:'ciudad', c:'nyc', sig:'tokio', restan:0 };
+  /* Ninguna sesión abierta: el mercado está CERRADO. Antes se caía a «Nueva
+     York» y la pantalla mentía; ahora se está en casa hasta la próxima
+     apertura, y se dice cuál es y cuánto falta. */
+  let prox = null, faltan = 1e9;
+  TRAMOS.forEach(tr => {
+    const d = (tr.de - m + 1440) % 1440;
+    if(d < faltan){ faltan = d; prox = tr; }
+  });
+  return { tipo:'finde', esc:'casa', c:'nyc', cerrado:true,
+           abre: prox ? prox.c : 'londres', faltan };
+}
+/* qué día es allá: el viernes de Nueva York puede ser sábado en Tokio */
+function diaSemanaEn(tz, now = new Date()){
+  try{
+    const d = new Intl.DateTimeFormat('en-US', { timeZone:tz, weekday:'short' }).format(now);
+    return ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].indexOf(d.slice(0,3));
+  }catch(e){ return now.getDay(); }
 }
 /* la hora que de verdad es en esa ciudad */
 function minutosEn(tz, now = new Date()){
@@ -9399,10 +9417,260 @@ function escenaFinde(c, W, H, t, E, rr, PC){
     c.fillText(sub, W / 2, 184);
     c.font = '12px "IBM Plex Mono", monospace';
     c.fillStyle = 'rgba(255,255,255,.32)';
-    c.fillText(bi('mercado cerrado · reabre el domingo 16:00', 'market closed · reopens Sunday 4 PM'), W / 2, 210);
+    c.fillText(bi('mercado cerrado · Asia abre el domingo 20:00 NY',
+                  'market closed · Asia opens Sunday 8 PM NY'), W / 2, 210);
     c.textAlign = 'left';
   };
   const SOC = SOCIOS_REALES.map(u => ({ uid: u, look: lookDe(u), nom: (USERS[u] || {}).nombre || u }));
+
+
+
+  /* ── LA CASA ── donde se está cuando el mercado está cerrado.
+     Casa de piedra y madera encajada en la roca, con la alberca infinita
+     asomada al campo de golf y el mar al fondo. Los coches en la entrada.
+     La escena es la misma a cualquier hora: sólo cambia el cielo. */
+  if(E.esc === 'casa'){
+    const osc2 = PC ? PC.oscuridad : 0;
+    const noche = osc2 > .35;
+    const T = (dia, noc) => noche ? noc : dia;
+
+    /* ── MONTAÑAS Y MAR ── */
+    const monte = (mx, my, mw, mh, col) => {
+      c.fillStyle = col;
+      c.beginPath(); c.moveTo(mx, my);
+      c.lineTo(mx + mw * .38, my - mh);
+      c.lineTo(mx + mw * .56, my - mh * .78);
+      c.lineTo(mx + mw, my); c.closePath(); c.fill();
+    };
+    monte(-120, 545, 700, 300, T('#5A7A66', '#232F44'));
+    monte(300, 545, 560, 215, T('#688A70', '#1C2840'));
+    c.fillStyle = T('#3E86AE', '#16233A');
+    c.fillRect(760, 470, W - 760, 110);
+    for(let k = 0; k < 22; k++){
+      c.fillStyle = `rgba(255,255,255,${noche ? .05 : .14})`;
+      c.fillRect(780 + rr(k) * (W - 800), 484 + rr(k + 7) * 88, 30 + rr(k + 3) * 70, 2);
+    }
+    monte(W - 460, 552, 560, 175, T('#607F6A', '#1E2A40'));
+
+    /* ── EL CAMPO DE GOLF, en terrazas hacia el mar ── */
+    c.fillStyle = T('#4E9E52', '#1E3A2A');
+    c.beginPath(); c.moveTo(0, 600); c.lineTo(W, 556); c.lineTo(W, H); c.lineTo(0, H); c.closePath(); c.fill();
+    c.fillStyle = T('#5CB35E', '#24462F');
+    c.beginPath(); c.ellipse(1330, 780, 520, 165, -.04, 0, 7); c.fill();
+    c.fillStyle = T('#69C46B', '#2A5238');
+    c.beginPath(); c.ellipse(1470, 706, 250, 74, -.04, 0, 7); c.fill();
+    c.fillStyle = `rgba(255,255,255,${noche ? .028 : .06})`;
+    for(let k = 0; k < 10; k++) c.fillRect(0, 620 + k * 56, W, 22);
+    c.fillStyle = T('#E8DCB0', '#8E8468');
+    [[1250, 748, 118, 30], [1620, 830, 150, 38], [1400, 906, 104, 26]].forEach(([bx, by, brx, bry]) => {
+      c.beginPath(); c.ellipse(bx, by, brx, bry, .08, 0, 7); c.fill();
+      c.fillStyle = `rgba(0,0,0,${noche ? .12 : .07})`;
+      c.beginPath(); c.ellipse(bx, by + bry * .35, brx * .82, bry * .5, .08, 0, 7); c.fill();
+      c.fillStyle = T('#E8DCB0', '#8E8468');
+    });
+    c.fillStyle = '#14100C';
+    c.beginPath(); c.ellipse(1470, 712, 9, 4, 0, 0, 7); c.fill();
+    c.fillStyle = '#E8ECF0'; c.fillRect(1468, 622, 4, 90);
+    c.fillStyle = '#C4302B';
+    c.beginPath(); c.moveTo(1472, 624);
+    c.lineTo(1472 + 44 + Math.sin(t / 320) * 5, 638 + Math.sin(t / 260) * 3);
+    c.lineTo(1472, 654); c.closePath(); c.fill();
+
+    /* ── LA ROCA sobre la que se planta todo ── */
+    const roca = (px, py, pw, ph, col, sombra) => {
+      c.fillStyle = col;
+      c.beginPath();
+      c.moveTo(px, py + 12); c.lineTo(px + pw * .18, py - 6);
+      c.lineTo(px + pw * .62, py); c.lineTo(px + pw, py + 16);
+      c.lineTo(px + pw * .94, py + ph); c.lineTo(px + pw * .08, py + ph * .92);
+      c.closePath(); c.fill();
+      c.fillStyle = sombra;
+      c.beginPath();
+      c.moveTo(px + pw * .62, py); c.lineTo(px + pw, py + 16);
+      c.lineTo(px + pw * .94, py + ph); c.lineTo(px + pw * .66, py + ph * .96);
+      c.closePath(); c.fill();
+    };
+    roca(150, 690, 1000, 330, T('#B3A17C', '#4A4238'), T('#95845F', '#3A342C'));
+    /* bloques de piedra sin retícula perfecta */
+    for(let f = 0; f < 7; f++){
+      for(let q = 0; q < 11; q++){
+        const bx = 175 + q * 88 + rr(f * 11 + q) * 26;
+        const by = 712 + f * 44 + rr(q * 7 + f) * 8;
+        if(bx > 1090) continue;
+        c.fillStyle = `rgba(${noche ? '20,18,14' : '255,250,235'},${.05 + rr(f + q) * .09})`;
+        c.fillRect(bx, by, 62 + rr(q) * 26, 30);
+        c.fillStyle = `rgba(0,0,0,${.05 + rr(q + f * 3) * .06})`;
+        c.fillRect(bx, by + 30, 62 + rr(q) * 26, 3);
+      }
+    }
+
+    /* ── LA CASA ── tres volúmenes con techos volados ── */
+    const techo = (tx, ty, tw, th, alto) => {
+      c.fillStyle = T('#4A4642', '#26262A');
+      c.beginPath();
+      c.moveTo(tx - 26, ty + alto); c.lineTo(tx + tw + 26, ty);
+      c.lineTo(tx + tw + 26, ty + 22); c.lineTo(tx - 26, ty + alto + 22);
+      c.closePath(); c.fill();
+      c.fillStyle = T('#5E5A54', '#32323A');
+      c.fillRect(tx - 26, ty + alto + 20, tw + 52, 4);
+    };
+    const ventanal = (vx, vy, vw, vh, cortes) => {
+      c.fillStyle = noche ? 'rgba(255,212,146,.92)' : 'rgba(196,224,240,.82)';
+      c.fillRect(vx, vy, vw, vh);
+      c.fillStyle = noche ? 'rgba(255,236,190,.35)' : 'rgba(255,255,255,.28)';
+      c.fillRect(vx, vy, vw, vh * .32);
+      c.fillStyle = T('#4A4642', '#26262A');
+      for(let k = 1; k < cortes; k++) c.fillRect(vx + (vw / cortes) * k - 4, vy, 8, vh);
+    };
+    /* ala izquierda, baja */
+    c.fillStyle = T('#7E6E58', '#3E3A34'); c.fillRect(300, 500, 250, 190);
+    techo(300, 476, 250, 26, 26);
+    ventanal(324, 528, 202, 132, 3);
+    /* cuerpo central, dos pisos */
+    c.fillStyle = T('#8E7C62', '#46413A'); c.fillRect(548, 404, 330, 290);
+    techo(548, 376, 330, 30, 30);
+    ventanal(572, 434, 282, 108, 4);
+    c.fillStyle = T('#6E6152', '#36322C'); c.fillRect(572, 548, 282, 12);
+    ventanal(572, 566, 282, 104, 4);
+    /* chimenea de piedra pasante */
+    c.fillStyle = T('#A9976F', '#4A4238'); c.fillRect(806, 330, 62, 110);
+    c.fillStyle = `rgba(0,0,0,${noche ? .2 : .1})`; c.fillRect(806, 330, 10, 110);
+    if(noche){
+      c.fillStyle = 'rgba(206,216,228,.22)';
+      for(let k = 0; k < 3; k++){
+        const hy2 = 322 - k * 24 - ((t / 46) % 24);
+        c.beginPath(); c.ellipse(837 + Math.sin(t / 520 + k) * 9, hy2, 13 + k * 5, 8 + k * 2, 0, 0, 7); c.fill();
+      }
+    }
+    /* ala derecha en voladizo sobre la roca */
+    c.fillStyle = T('#7E6E58', '#3E3A34'); c.fillRect(876, 486, 250, 160);
+    techo(876, 462, 250, 24, 24);
+    ventanal(900, 512, 202, 112, 3);
+    c.fillStyle = T('#5E5448', '#2E2A26');
+    c.fillRect(986, 646, 14, 96); c.fillRect(1082, 646, 14, 84);
+
+    /* ── LA ALBERCA INFINITA, al frente, asomada al golf ── */
+    c.fillStyle = T('#C4B48C', '#544A3E');
+    c.beginPath(); c.moveTo(560, 700); c.lineTo(1090, 664); c.lineTo(1104, 790); c.lineTo(566, 828); c.closePath(); c.fill();
+    c.fillStyle = T('#2E9CC4', '#1E4A5E');
+    c.beginPath(); c.moveTo(596, 712); c.lineTo(1062, 680); c.lineTo(1072, 770); c.lineTo(602, 806); c.closePath(); c.fill();
+    c.fillStyle = T('#4EB4D8', '#255A70');
+    c.beginPath(); c.moveTo(596, 712); c.lineTo(1062, 680); c.lineTo(1066, 708); c.lineTo(598, 740); c.closePath(); c.fill();
+    c.fillStyle = noche ? 'rgba(140,200,228,.3)' : 'rgba(255,255,255,.34)';
+    for(let k = 0; k < 6; k++){
+      const oy = 726 + k * 13 + Math.sin(t / 760 + k) * 2;
+      c.fillRect(640 + Math.sin(t / 980 + k * 2) * 20, oy, 400 - k * 46, 3);
+    }
+    /* el borde infinito y la cascada que cae a la roca */
+    c.fillStyle = T('#DCEFF6', '#7EA8BE');
+    c.fillRect(600, 800, 490, 8);
+    for(let k = 0; k < 10; k++){
+      const wx = 620 + k * 46, largo = 90 + ((t / 7 + k * 30) % 55);
+      c.fillStyle = noche ? 'rgba(150,195,220,.5)' : 'rgba(226,244,252,.8)';
+      c.fillRect(wx, 806, 16, largo);
+    }
+    c.fillStyle = noche ? 'rgba(170,205,230,.3)' : 'rgba(255,255,255,.55)';
+    c.beginPath(); c.ellipse(880, 930, 220, 26, 0, 0, 7); c.fill();
+
+    /* ── DECK con tumbonas y sombrilla ── */
+    c.fillStyle = T('#B08A5E', '#4A3E30');
+    c.beginPath(); c.moveTo(1090, 664); c.lineTo(1372, 642); c.lineTo(1388, 760); c.lineTo(1104, 786); c.closePath(); c.fill();
+    c.fillStyle = `rgba(0,0,0,${noche ? .18 : .08})`;
+    for(let k = 0; k < 10; k++) c.fillRect(1102 + k * 29, 650, 3, 126);
+    [[1140, 706], [1240, 696]].forEach(([tx, ty]) => {
+      c.fillStyle = T('#F2EDE2', '#5E564A'); c.fillRect(tx, ty, 66, 13);
+      c.fillStyle = T('#E2DACB', '#4A4238');
+      c.beginPath(); c.moveTo(tx, ty); c.lineTo(tx + 22, ty - 26); c.lineTo(tx + 38, ty - 26); c.lineTo(tx + 24, ty); c.closePath(); c.fill();
+    });
+    c.fillStyle = T('#8E8578', '#3E3A34'); c.fillRect(1330, 618, 6, 66);
+    c.fillStyle = '#C4302B';
+    c.beginPath(); c.moveTo(1333, 612); c.lineTo(1276, 640); c.lineTo(1390, 640); c.closePath(); c.fill();
+
+    /* ── PALMERAS ── */
+    const palma = (px, py, esc2) => {
+      c.save(); c.translate(px, py); c.scale(esc2, esc2);
+      c.fillStyle = T('#7E6242', '#3E3428');
+      c.beginPath(); c.moveTo(-6, 0); c.quadraticCurveTo(5, -66, -2, -128); c.lineTo(7, -128);
+      c.quadraticCurveTo(16, -66, 6, 0); c.closePath(); c.fill();
+      for(let k = 0; k < 7; k++){
+        const a = -Math.PI / 2 + (k - 3) * .46 + Math.sin(t / 1500 + k) * .035;
+        c.fillStyle = k % 2 ? T('#2F8B4A', '#1E4630') : T('#3AA057', '#245238');
+        c.beginPath(); c.moveTo(2, -128);
+        c.quadraticCurveTo(Math.cos(a) * 50, -128 + Math.sin(a) * 36, Math.cos(a) * 86, -116 + Math.sin(a) * 56);
+        c.quadraticCurveTo(Math.cos(a) * 48, -128 + Math.sin(a) * 18, 2, -121);
+        c.closePath(); c.fill();
+      }
+      c.restore();
+    };
+    [[212, 706, 1.05], [1210, 686, .9], [148, 812, .8], [1330, 792, .66], [1042, 646, .55]].forEach(([px, py, e2]) => palma(px, py, e2));
+    /* los arbustos van en el PASTO, no encima de la roca ni de la cascada */
+    for(let k = 0; k < 26; k++){
+      const ax = 60 + rr(k) * (W - 120), ay = 690 + rr(k + 5) * 330;
+      const sobreRoca = ax > 140 && ax < 1180 && ay > 680 && ay < 1030;
+      if(sobreRoca) continue;
+      c.fillStyle = T(['#3E8E4A', '#4E9E52', '#2F7B44'][k % 3], '#1E4028');
+      c.beginPath(); c.ellipse(ax, ay, 15 + rr(k + 2) * 13, 8 + rr(k + 9) * 6, 0, 0, 7); c.fill();
+    }
+
+    /* ── LA ENTRADA y los dos coches ── */
+    c.fillStyle = T('#BAB3A6', '#484440');
+    c.beginPath(); c.moveTo(120, 902); c.lineTo(600, 858); c.lineTo(640, 986); c.lineTo(140, 1030); c.closePath(); c.fill();
+    c.strokeStyle = `rgba(255,255,255,${noche ? .05 : .18})`; c.lineWidth = 2;
+    for(let k = 1; k < 7; k++){
+      c.beginPath(); c.moveTo(120 + k * 72, 902 - k * 6); c.lineTo(148 + k * 72, 1026 - k * 7); c.stroke();
+    }
+    const deportivo = (ax, ay, L2) => {
+      const A2 = L2 * .30;
+      c.fillStyle = '#C4302B';
+      c.beginPath();
+      c.moveTo(ax, ay); c.quadraticCurveTo(ax + L2 * .12, ay - A2 * .5, ax + L2 * .34, ay - A2 * .55);
+      c.lineTo(ax + L2 * .66, ay - A2 * .62);
+      c.quadraticCurveTo(ax + L2 * .92, ay - A2 * .5, ax + L2, ay - A2 * .1);
+      c.lineTo(ax + L2, ay + A2 * .34); c.lineTo(ax, ay + A2 * .4); c.closePath(); c.fill();
+      c.fillStyle = 'rgba(24,30,42,.9)';
+      c.beginPath();
+      c.moveTo(ax + L2 * .34, ay - A2 * .52); c.lineTo(ax + L2 * .44, ay - A2 * .95);
+      c.lineTo(ax + L2 * .66, ay - A2); c.lineTo(ax + L2 * .7, ay - A2 * .58);
+      c.closePath(); c.fill();
+      c.fillStyle = '#14100C';
+      [ax + L2 * .2, ax + L2 * .8].forEach(wx => {
+        c.beginPath(); c.ellipse(wx, ay + A2 * .38, A2 * .3, A2 * .27, 0, 0, 7); c.fill();
+      });
+      if(noche){ c.fillStyle = 'rgba(255,242,196,.9)'; c.fillRect(ax + L2 - 9, ay - A2 * .16, 10, 6); }
+    };
+    const camioneta = (ax, ay, L2) => {
+      const A2 = L2 * .46;
+      c.fillStyle = T('#26282E', '#1E2026');
+      c.fillRect(ax, ay - A2 * .5, L2, A2 * .82);
+      c.fillRect(ax + L2 * .06, ay - A2 * 1.02, L2 * .88, A2 * .54);
+      c.fillStyle = noche ? 'rgba(255,214,150,.5)' : 'rgba(150,180,205,.75)';
+      c.fillRect(ax + L2 * .12, ay - A2 * .94, L2 * .3, A2 * .38);
+      c.fillRect(ax + L2 * .5, ay - A2 * .94, L2 * .3, A2 * .38);
+      c.fillStyle = '#14100C';
+      [ax + L2 * .21, ax + L2 * .79].forEach(wx => {
+        c.beginPath(); c.ellipse(wx, ay + A2 * .34, A2 * .27, A2 * .25, 0, 0, 7); c.fill();
+      });
+    };
+    deportivo(206, 962, 190);
+    camioneta(438, 930, 196);
+
+    /* ── LA GENTE DE LA CASA ── */
+    const SOC2 = SOCIOS_REALES.map(u => ({ uid:u, look: lookDe(u), nom: (USERS[u] || {}).nombre || u }));
+    monitoPlano(c, 1196, 700, SOC2[2].look, 1.5, { sentado:true, ropa:'#EFE9DC', pantalon:'#3E6E9E', nombre: SOC2[2].nom });
+    monitoPlano(c, 1090, 806, SOC2[0].look, 1.5, { ropa:'#F4F6F8', pantalon:'#8E6B46', brazoIzq:.45, brazoDer:.45, nombre: SOC2[0].nom });
+    monitoPlano(c, 372, 1000, SOC2[1].look, 1.6, { ropa:'#2A3A4A', pantalon:'#1A2028',
+      paso: Math.sin(t / 280) * .7, nombre: SOC2[1].nom });
+
+    /* ── EL CARTEL ── */
+    const dest = CIUDADES[E.abre] || CIUDADES.nyc;
+    const hF = Math.floor((E.faltan || 0) / 60), mF = Math.round((E.faltan || 0) % 60);
+    cartel(bi('MERCADO CERRADO · EN CASA', 'MARKET CLOSED · AT HOME'),
+           E.cerrado
+             ? bi('abre ' + loc([dest.n, dest.en]) + ' en ' + (hF ? hF + 'h ' : '') + mF + 'm',
+                  loc([dest.n, dest.en]) + ' opens in ' + (hF ? hF + 'h ' : '') + mF + 'm')
+             : bi('el trabajo de la semana, cobrado', "the week's work, collected"));
+    return;
+  }
 
   /* ── GOLF · lomas, bandera y el swing en loop ── */
   if(E.esc === 'golf'){
