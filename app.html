@@ -120,7 +120,7 @@ label{font-family:var(--mono);font-size:10px;letter-spacing:.14em;text-transform
 /* ═══ Rail (sidebar) ═══ */
 .rail{
   position:relative;z-index:5;
-  width:236px;flex:0 0 236px;height:100%;
+  width:236px;flex:0 0 auto;min-width:0;height:100%;overflow:hidden;
   display:flex;flex-direction:column;
   background:var(--rail-bg);
   -webkit-backdrop-filter:blur(22px) saturate(150%);
@@ -129,6 +129,27 @@ label{font-family:var(--mono);font-size:10px;letter-spacing:.14em;text-transform
   padding:22px 14px 14px;
 }
 .rail-brand{display:flex;align-items:center;gap:10px;padding:0 8px 20px}
+/* ── el menú se pliega a puros iconos: el ancho lo manda una variable ── */
+.rail{transition:width .22s ease}
+.rail-plegar{margin-left:auto;flex:none;width:26px;height:26px;display:flex;align-items:center;
+  justify-content:center;border:1px solid transparent;border-radius:8px;background:transparent;
+  color:var(--faint);cursor:pointer;transition:color .15s,border-color .15s,transform .22s}
+.rail-plegar svg{width:15px;height:15px}
+.rail-plegar:hover{color:var(--txt);border-color:var(--line-soft)}
+.app.plegado .rail{width:62px;max-width:62px;padding-left:9px;padding-right:9px}
+.app.plegado .rail-plegar{transform:rotate(180deg)}
+.app.plegado .rail-brand{padding:0 0 20px;justify-content:center}
+.app.plegado .rail-brand>div:not(.rail-plegar),
+.app.plegado .rail-group .micro,
+.app.plegado .rail a.item span:not(.bdg),
+.app.plegado .rail-user>div,
+.app.plegado .rail-exit{display:none}
+.app.plegado .rail-plegar{margin:0}
+.app.plegado .rail a.item{justify-content:center;padding:11px 0}
+.app.plegado .rail a.item .bdg{position:absolute;top:3px;right:6px;min-width:0;padding:1px 4px;font-size:8px}
+.app.plegado .rail a.item{position:relative}
+.app.plegado .rail-user{justify-content:center;padding:8px 0}
+.app.plegado .rail-group{margin-top:10px}
 .rail-brand svg{width:20px;height:20px;stroke:var(--accent);flex:0 0 auto}
 .rail-brand b{font-size:13px;font-weight:600;letter-spacing:.09em}
 .rail-brand span{display:block;font-family:var(--mono);font-size:9px;letter-spacing:.28em;color:var(--dim)}
@@ -1680,8 +1701,18 @@ canvas{display:block;width:100%}
   .g3{grid-template-columns:1fr}
   .g2{grid-template-columns:1fr}
   .score-wrap{flex-direction:column;align-items:flex-start}
-  .rail{position:fixed;left:0;top:0;bottom:0;z-index:50;transform:translateX(-100%);transition:transform .25s}
-  .rail.open{transform:none}
+  .rail,.app.plegado .rail{position:fixed;left:0;top:0;bottom:0;z-index:50;transform:translateX(-100%);
+    transition:transform .25s;width:236px;max-width:none;padding:22px 14px 14px}
+  .rail.open,.app.plegado .rail.open{transform:none}
+  /* en móvil el menú se abre entero: el plegado es cosa de escritorio */
+  .app.plegado .rail-brand>div:not(.rail-plegar),
+  .app.plegado .rail-group .micro,
+  .app.plegado .rail a.item span:not(.bdg),
+  .app.plegado .rail-user>div,
+  .app.plegado .rail-exit{display:block}
+  .app.plegado .rail a.item{justify-content:flex-start;padding:9px 10px}
+  .app.plegado .rail-brand{padding:0 8px 20px;justify-content:flex-start}
+  .railPlegar,.rail-plegar{display:none}
   #menuBtn{display:inline-flex}
   .topbar{padding:0 16px}
   .content{padding:20px 16px 60px}
@@ -1787,6 +1818,9 @@ stop[stop-color="#9BC0DC"]{stop-color:var(--txt)}
         <b>NORTHPOINT</b>
         <span>TERMINAL · INTERNAL</span>
       </div>
+      <button class="rail-plegar" id="railPlegar" aria-label="Collapse menu" aria-expanded="true" title="Collapse menu">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 6.5 9 12l5.5 5.5"/></svg>
+      </button>
     </div>
 
     <nav class="rail-group">
@@ -3840,6 +3874,26 @@ addEventListener('hashchange', ()=> show(location.hash.slice(1)));
 $$('.rail a.item').forEach(a=> a.addEventListener('click', ()=> setTimeout(()=>show(a.dataset.view))));
 $$('[data-goto]').forEach(b=> b.addEventListener('click', ()=> location.hash = b.dataset.goto));
 $('#menuBtn').addEventListener('click', ()=> $('#rail').classList.toggle('open'));
+/* El menú se pliega a puros iconos y se acuerda de cómo lo dejaste. Los
+   nombres se vuelven title, así que plegado sigue siendo navegable. */
+function pintaPlegado(){
+  const on = !!(S.ui && S.ui.railPlegado);
+  document.querySelector('.app').classList.toggle('plegado', on);
+  const b = $('#railPlegar');
+  if(b){
+    b.setAttribute('aria-expanded', String(!on));
+    b.setAttribute('aria-label', on ? 'Expand menu' : 'Collapse menu');
+    b.title = on ? 'Expand menu' : 'Collapse menu';
+  }
+  $$('.rail a.item').forEach(a => {
+    const t = a.querySelector('span:not(.bdg)');
+    if(t) a.title = on ? t.textContent.trim() : '';
+  });
+}
+$('#railPlegar')?.addEventListener('click', () => {
+  S.ui = S.ui || {}; S.ui.railPlegado = !S.ui.railPlegado;
+  save(); pintaPlegado();
+});
 
 /* ════════ Reloj / pill de sesión ════════ */
 function tickClock(){
@@ -8071,7 +8125,7 @@ function render(view){
   else if(view==='plan') renderMetas();
   updateBadges();
 }
-function renderAll(){ applyProfile(); aplicarIdioma(); render(location.hash.slice(1)||'agentes'); }
+function renderAll(){ applyProfile(); aplicarIdioma(); pintaPlegado(); render(location.hash.slice(1)||'agentes'); }
 
 addEventListener('resize', ()=>{
   if($('#v-journal').classList.contains('on')) drawEquity();
