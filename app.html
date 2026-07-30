@@ -1228,6 +1228,13 @@ button.tag.quemada{text-decoration:line-through;text-decoration-color:var(--down
 .ag-form-s{font-size:10.5px;color:var(--faint);margin-top:4px;line-height:1.45}
 .ag-oficina-wrap{border:1px solid var(--line);border-radius:14px;overflow:hidden;margin-bottom:18px;background:#0E1018;line-height:0}
 #agOficina{display:block;width:100%;height:auto}
+/* la historia en imágenes: entera, sin recortes — el alto lo da la imagen.
+   [hidden] tiene que ganarle al display:block, si no salen las dos escenas. */
+#agHistoriaImg{display:block;width:100%;height:auto}
+#agOficina[hidden], #agHistoriaImg[hidden], .hist-cap[hidden]{display:none}
+.hist-cap{position:absolute;left:14px;bottom:12px;font-family:var(--mono);font-size:10px;
+  letter-spacing:.08em;line-height:1.5;color:rgba(255,255,255,.78);background:rgba(10,12,20,.55);
+  border:1px solid rgba(255,255,255,.12);border-radius:8px;padding:6px 10px;max-width:calc(100% - 28px)}
 
 .duties{
   border:1px solid var(--line-soft);border-radius:10px;background:var(--glass);
@@ -1532,8 +1539,12 @@ stop[stop-color="#9BC0DC"]{stop-color:var(--txt)}
           </div>
         </div>
         <div class="staff-strip" id="agGrid"></div>
+        <!-- La historia de 0 a héroe: capítulos 1 y 2 son arte generado
+             (img/historia); el capítulo 3 desbloquea el edificio vivo. -->
         <div class="ag-oficina-wrap">
-          <canvas id="agOficina" width="1800" height="1160" aria-label="La historia de la casa: del cuarto del niño a NORTHPOINT, según tu progreso"></canvas>
+          <img id="agHistoriaImg" alt="La historia: de un cuarto a NORTHPOINT, según tu progreso" hidden>
+          <div class="hist-cap" id="agHistoriaCap" hidden></div>
+          <canvas id="agOficina" width="1800" height="1160" aria-label="El edificio NORTHPOINT — piso 88, desbloqueado al pasar el colchón"></canvas>
         </div>
 
         <!-- El tablero del negocio: el camino a payout con el proceso de
@@ -6343,6 +6354,8 @@ const OFI = {
   etapas: ['01 CONTEXTO','02 TESIS','03 RIESGO','04 FIRMA','05 EJECUTA','06 GESTIÓN','07 CIERRE','08 JOURNAL'],
 };
 let ofiT = 0, ofiIdx = 0, ofiHablando = null, ofiRAF = null, ofiJunta = [];
+/* en el capítulo 3, el clic alterna entre la postal y el edificio vivo */
+let historiaVivo = false;
 
 let OFI_HIT = [];
 
@@ -6918,183 +6931,6 @@ function etapaHistoria(){
     return cc.pasoBuffer ? 2 : (cc.pasoEval ? 1 : 0);
   }));
 }
-
-/* la figura del principal para las escenas chicas */
-function protagonista(c, x, y, flip, t){
-  const g = invitadoActual();
-  const nom = g ? g.n
-    : ((PERSONAJES.find(p => p.id === (S.session && S.session.user)) || PERSONAJES[2]).nom);
-  figura(c, { n: nom, x, y, z: 0, flip }, false, t);
-}
-
-/* Capítulo 1 · el cuarto: noche, litera, un escritorio y la gráfica verde. */
-function dibujaCuarto(t){
-  const cv = $('#agOficina'); if(!cv) return;
-  const c = cv.getContext('2d');
-  c.setTransform(1,0,0,1,0,0); c.imageSmoothingEnabled = false;
-  const W = 1800, H = 1160;
-  c.clearRect(0,0,W,H);
-  const rr = i => ((Math.sin(i * 12.9898) * 43758.5453) % 1 + 1) % 1;
-
-  /* noche de barrio */
-  const cielo = c.createLinearGradient(0,0,0,H);
-  cielo.addColorStop(0,'#110F1E'); cielo.addColorStop(.55,'#1E1A33'); cielo.addColorStop(1,'#2A2440');
-  c.fillStyle = cielo; c.fillRect(0,0,W,H);
-  for(let i=0;i<90;i++){ c.fillStyle=`rgba(255,255,255,${.15+rr(i)*.5})`;
-    c.fillRect(rr(i)*W, rr(i+50)*420, 1.7, 1.7); }
-  c.fillStyle='#EFEBD8'; c.beginPath(); c.arc(1580,120,34,0,7); c.fill();
-  c.fillStyle='#141126'; c.beginPath(); c.arc(1563,108,32,0,7); c.fill();
-
-  /* el cuarto, escalado para llenar el lienzo */
-  const oxV = ISO.ox, oyV = ISO.oy;
-  c.save(); c.scale(1.6, 1.6);
-  ISO.ox = 562; ISO.oy = 200;
-  const NR = 6, MURO = 3.1;
-  caja(c, -0.35, -0.35, 0, NR + .7, .35, MURO, '#473956', 10, -26);
-  caja(c, -0.35, -0.35, 0, .35, NR + .7, MURO, '#3F3050', 8, -30);
-  for(let x=0;x<NR;x++) for(let y=0;y<NR;y++)
-    losa(c, x, y, 0, (x+y)%2 ? '#6E5138' : '#7A5A40');
-
-  /* ventana con la noche, en el muro que corre en y */
-  enMuro(c,'izq', cc => {
-    cc.fillStyle='#161230'; cc.fillRect(1.4, 1.2, 1.9, 1.5);
-    cc.fillStyle='rgba(240,235,216,.85)'; cc.fillRect(2.9, 2.35, .12, .12);
-    cc.fillStyle='rgba(255,255,255,.35)'; cc.fillRect(1.9, 2.1, .07, .07); cc.fillRect(2.4, 1.7, .07, .07);
-    cc.strokeStyle='#2C2347'; cc.lineWidth=.09; cc.strokeRect(1.4, 1.2, 1.9, 1.5);
-    cc.beginPath(); cc.moveTo(2.35, 1.2); cc.lineTo(2.35, 2.7); cc.stroke();
-  });
-  /* póster de un cohete en el muro que corre en x */
-  enMuro(c,'der', cc => {
-    cc.fillStyle='#1E2C46'; cc.fillRect(3.5, 1.25, 1.05, 1.45);
-    cc.fillStyle='#E8E2D2'; cc.fillRect(3.94, 1.55, .18, .6);
-    cc.beginPath(); cc.moveTo(3.94,1.55); cc.lineTo(4.03,1.38); cc.lineTo(4.12,1.55); cc.fill();
-    cc.fillStyle='#C4544A'; cc.fillRect(3.9, 2.12, .1, .18); cc.fillRect(4.06, 2.12, .1, .18);
-    cc.fillStyle='rgba(255,214,140,.8)'; cc.fillRect(3.98, 2.15, .1, .22);
-    cc.strokeStyle='#2C3A56'; cc.lineWidth=.08; cc.strokeRect(3.5, 1.25, 1.05, 1.45);
-  });
-
-  /* la litera, contra el muro del fondo */
-  caja(c, 4.2, .25, 0, 1.5, 2.6, .42, '#6E4E36');
-  caja(c, 4.3, .35, .42, 1.3, 2.4, .26, '#E8E0CE');
-  caja(c, 4.32, 1.35, .68, 1.26, 1.45, .15, '#B0493F');
-  caja(c, 4.36, .45, .68, 1.18, .7, .17, '#F2EFE2');
-
-  /* tapete */
-  c.globalAlpha=.45; losa(c, 1.7, 2.2, 0.01, '#8E6BC4', 2.1, 1.5); c.globalAlpha=1;
-
-  /* el escritorio con su monitor */
-  caja(c, .5, 3.5, 0, 1.05, 2.0, .74, '#5E4636');
-  caja(c, .64, 4.05, .74, .5, .95, .5, '#20242C');
-  const mx = iX(.92, 4.55), my = iY(.92, 4.55, 1.36);
-  c.fillStyle = '#0C1713'; c.fillRect(mx-44, my-28, 88, 54);
-  c.strokeStyle = '#57C79B'; c.lineWidth = 2.2; c.beginPath();
-  let px = mx - 38; c.moveTo(px, my + 16);
-  for(let i=1;i<=7;i++){ px += 10.5; c.lineTo(px, my + 16 - i*4.6 - Math.sin(t/420 + i)*3); }
-  c.stroke();
-  c.strokeStyle = '#24332C'; c.lineWidth = 2; c.strokeRect(mx-44, my-28, 88, 54);
-
-  /* lámpara calientita */
-  caja(c, .7, .5, 0, .34, .34, 1.05, '#6A5238');
-  const lx = iX(.87, .67), ly = iY(.87, .67, 1.3);
-  const glow = c.createRadialGradient(lx, ly, 4, lx, ly, 88);
-  glow.addColorStop(0,'rgba(255,214,140,.42)'); glow.addColorStop(1,'rgba(255,214,140,0)');
-  c.fillStyle = glow; c.beginPath(); c.arc(lx, ly, 88, 0, 7); c.fill();
-
-  /* el protagonista, pegado a su pantalla */
-  protagonista(c, 1.75, 4.45, true, t);
-
-  ISO.ox = oxV; ISO.oy = oyV;
-  c.restore();
-
-  c.font = '12px "IBM Plex Mono", monospace'; c.textAlign = 'left';
-  c.fillStyle = 'rgba(255,255,255,.42)';
-  c.fillText(bi('CAPÍTULO 1 · LA EVALUACIÓN — pasa la eval y sales del cuarto',
-                'CHAPTER 1 · THE EVAL — pass it and you leave the bedroom'), 24, H - 22);
-}
-
-/* Capítulo 2 · fondeado: una oficina rentada — sencilla, de día. */
-function dibujaOficinaChica(t){
-  const cv = $('#agOficina'); if(!cv) return;
-  const c = cv.getContext('2d');
-  c.setTransform(1,0,0,1,0,0); c.imageSmoothingEnabled = false;
-  const W = 1800, H = 1160;
-  c.clearRect(0,0,W,H);
-  const rr = i => ((Math.sin(i * 12.9898) * 43758.5453) % 1 + 1) % 1;
-
-  /* día nublado de ciudad */
-  const cielo = c.createLinearGradient(0,0,0,H);
-  cielo.addColorStop(0,'#8FA6BC'); cielo.addColorStop(.5,'#A9BCCC'); cielo.addColorStop(1,'#8C9CAC');
-  c.fillStyle = cielo; c.fillRect(0,0,W,H);
-  for(let i=0;i<26;i++){
-    const bx = i*(W/26) - 20 + rr(i)*22, bw = W/26*(.6+rr(i+3)*.5), bh = 120+rr(i+9)*260;
-    c.fillStyle = `rgba(94,110,128,${.35+rr(i+5)*.3})`;
-    c.fillRect(bx, 520-bh, bw, bh+640);
-  }
-
-  const oxV = ISO.ox, oyV = ISO.oy;
-  c.save(); c.scale(1.38, 1.38);
-  ISO.ox = 652; ISO.oy = 250;
-  const NR = 8, MURO = 3.3;
-  caja(c, -0.35, -0.35, 0, NR + .7, .35, MURO, '#D9DCE0', -6, -34);
-  caja(c, -0.35, -0.35, 0, .35, NR + .7, MURO, '#CDD2D8', -8, -38);
-  for(let x=0;x<NR;x++) for(let y=0;y<NR;y++)
-    losa(c, x, y, 0, (x+y)%2 ? '#9AA2AC' : '#A5ADB6');
-
-  /* ventanal corrido con el día */
-  enMuro(c,'izq', cc => {
-    cc.fillStyle='#B8CCDA'; cc.fillRect(.8, 1.15, 6.4, 1.6);
-    cc.fillStyle='rgba(255,255,255,.5)'; cc.fillRect(.8, 1.15, 6.4, .22);
-    cc.strokeStyle='#8C99A6'; cc.lineWidth=.09;
-    for(let u=.8; u<=7.2; u+=1.6){ cc.beginPath(); cc.moveTo(u,1.15); cc.lineTo(u,2.75); cc.stroke(); }
-    cc.strokeRect(.8, 1.15, 6.4, 1.6);
-  });
-  /* pizarrón blanco con la curva que sube */
-  enMuro(c,'der', cc => {
-    cc.fillStyle='#F2F2EE'; cc.fillRect(3.2, 1.2, 2.3, 1.5);
-    cc.strokeStyle='#57A97C'; cc.lineWidth=.1;
-    cc.beginPath(); cc.moveTo(3.4, 1.45);
-    cc.lineTo(3.9, 1.75); cc.lineTo(4.3, 1.62); cc.lineTo(4.8, 2.1); cc.lineTo(5.3, 2.45); cc.stroke();
-    cc.strokeStyle='#B8BCC2'; cc.lineWidth=.09; cc.strokeRect(3.2, 1.2, 2.3, 1.5);
-  });
-
-  /* escritorio principal con dos monitores */
-  const escr = (x, y) => {
-    caja(c, x, y, 0, 1.1, 2.0, .74, '#E4E7EA', -4, -30);
-    caja(c, x + .14, y + .35, .74, .5, .6, .48, '#22262E');
-    caja(c, x + .14, y + 1.1, .74, .5, .6, .48, '#22262E');
-  };
-  escr(.7, 3.2);
-  const m1 = [iX(1.05, 3.95), iY(1.05, 3.95, 1.34)], m2 = [iX(1.05, 4.7), iY(1.05, 4.7, 1.34)];
-  [[m1,'#57C79B'],[m2,'#9BC0DC']].forEach(([[sx,sy],col],k)=>{
-    c.fillStyle='#0D1414'; c.fillRect(sx-36, sy-24, 72, 44);
-    c.strokeStyle=col; c.lineWidth=2; c.beginPath();
-    let qx = sx-30; c.moveTo(qx, sy+12);
-    for(let i=1;i<=6;i++){ qx += 10; c.lineTo(qx, sy+12 - i*3.6 - Math.sin(t/400+i+k*2)*2.6); }
-    c.stroke();
-    c.strokeStyle='#2A3236'; c.strokeRect(sx-36, sy-24, 72, 44);
-  });
-
-  /* segundo puesto (vacío, listo para crecer) + archivero + planta */
-  escr(4.6, 3.2);
-  caja(c, 6.9, .5, 0, .8, .9, 1.2, '#B8BDC4', -6, -30);
-  caja(c, .6, 6.6, 0, .5, .5, .42, '#8A6A4A');
-  const plx = iX(.85, 6.85), ply = iY(.85, 6.85, .8);
-  c.fillStyle = '#4E8A5E';
-  [[0,-14],[-9,-7],[9,-7],[-5,-18],[5,-18]].forEach(([dx,dy])=>{
-    c.beginPath(); c.ellipse(plx+dx, ply+dy, 7, 10, dx*.06, 0, 7); c.fill(); });
-
-  /* el protagonista en su puesto */
-  protagonista(c, 2.0, 4.15, true, t);
-
-  ISO.ox = oxV; ISO.oy = oyV;
-  c.restore();
-
-  c.font = '12px "IBM Plex Mono", monospace'; c.textAlign = 'left';
-  c.fillStyle = 'rgba(20,28,40,.55)';
-  c.fillText(bi('CAPÍTULO 2 · FONDEADO — pasa el colchón y se desbloquea NORTHPOINT',
-                'CHAPTER 2 · FUNDED — clear the buffer and NORTHPOINT unlocks'), 24, H - 22);
-}
-
 function animaOficina(){
   const cv = $('#agOficina'); if(!cv) return;
   cancelAnimationFrame(ofiRAF);
@@ -7108,22 +6944,45 @@ function animaOficina(){
        ofiJunta[−1] tronaba la oficina. El error moría dentro del rAF sin llegar
        a la consola, por eso pasó desapercibido. */
     const t = Math.max(0, now - t0);
-    /* la historia: el capítulo lo decide tu progreso. Los globos del guion
-       sólo existen en NORTHPOINT — en el cuarto y la oficina se trabaja. */
+    /* La historia de 0 a héroe en tres imágenes completas (sin recortes).
+       En el capítulo 3, un clic entra al edificio VIVO (el canvas animado
+       con el guion) y otro clic regresa a la postal. */
     const etapa = etapaHistoria();
-    if(etapa >= 2 && ofiJunta.length){
-      const i = Math.floor(t / paso) % ofiJunta.length;
-      if(i !== ofiIdx){ ofiIdx = i; }
-      const linea = ofiJunta[ofiIdx];
-      if(linea) ofiHablando = linea.de;
-    } else { ofiHablando = null; }
-    if(etapa >= 2) dibujaOficina(t);
-    else if(etapa === 1) dibujaOficinaChica(t);
-    else dibujaCuarto(t);
+    const img = $('#agHistoriaImg'), cap = $('#agHistoriaCap');
+    const enVivo = etapa >= 2 && historiaVivo;
+    if(!enVivo){
+      ofiHablando = null;
+      const src = etapa >= 2 ? 'img/historia/cap3.jpg'
+                : etapa === 1 ? 'img/historia/cap2.jpg' : 'img/historia/cap1.jpg';
+      if(img.getAttribute('src') !== src) img.src = src;
+      img.hidden = false; cap.hidden = false; cv.hidden = true;
+      img.style.cursor = etapa >= 2 ? 'pointer' : '';
+      cap.textContent = etapa >= 2
+        ? bi('CAPÍTULO 3 · NORTHPOINT DESBLOQUEADO — clic para entrar al edificio en vivo',
+             'CHAPTER 3 · NORTHPOINT UNLOCKED — click to enter the live building')
+        : etapa === 1
+          ? bi('CAPÍTULO 2 · FONDEADO — pasa el colchón y se desbloquea NORTHPOINT',
+               'CHAPTER 2 · FUNDED — clear the buffer and NORTHPOINT unlocks')
+          : bi('CAPÍTULO 1 · LA EVALUACIÓN — pasa la eval y sales del cuarto',
+               'CHAPTER 1 · THE EVAL — pass it and you leave the bedroom');
+    } else {
+      img.hidden = true; cap.hidden = true; cv.hidden = false;
+      if(ofiJunta.length){
+        const i = Math.floor(t / paso) % ofiJunta.length;
+        if(i !== ofiIdx){ ofiIdx = i; }
+        const linea = ofiJunta[ofiIdx];
+        if(linea) ofiHablando = linea.de;
+      }
+      dibujaOficina(t);
+    }
     ofiRAF = requestAnimationFrame(loop);
   };
   ofiRAF = requestAnimationFrame(loop);
 }
+$('#agHistoriaImg').addEventListener('click', () => {
+  if(etapaHistoria() >= 2) historiaVivo = true;
+});
+$('#agOficina').addEventListener('click', () => { historiaVivo = false; });
 
 /* El Quant Lab se eliminó: no medía nada. Con él se fueron el pre-vuelo, el
    protocolo de la mañana, el chat, el piloto automático y las tarjetas de
