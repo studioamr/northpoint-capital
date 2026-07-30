@@ -1753,6 +1753,15 @@ button.tag.quemada{text-decoration:line-through;text-decoration-color:var(--down
   .fc-track{height:30px}
   .fc-cara{width:34px;height:34px}
 }
+/* la ✕ de una marca: discreta, dentro de la propia etiqueta */
+.vio-tag,.vio-off{display:inline-flex;align-items:center;gap:5px}
+.vio-x{background:none;border:0;color:inherit;opacity:.55;cursor:pointer;padding:0 1px;
+  font-size:11px;line-height:1;font-family:var(--mono)}
+.vio-x:hover{opacity:1}
+.vio-off{text-decoration:line-through;text-decoration-color:currentColor;opacity:.6;
+  border-color:var(--line-soft);color:var(--faint)}
+.vio-nota{color:var(--faint);line-height:1.5;padding:2px 0 8px 46px;font-style:italic}
+@media(max-width:620px){ .vio-nota{padding-left:0} }
 .pr-aviso{margin-top:8px;padding:8px 11px;border-radius:9px;line-height:1.55;
   border:1px solid rgba(217,164,65,.4);background:rgba(217,164,65,.07);color:var(--dim)}
 .pr-aviso b{color:var(--warn,#D9A441)}
@@ -2396,6 +2405,28 @@ stop[stop-color="#9BC0DC"]{stop-color:var(--txt)}
     <div class="m-foot">
       <button class="btn" data-close>Cancel</button>
       <button class="btn primary" id="tSave" data-i18n="tr.guardar">Save trade</button>
+    </div>
+  </div>
+</div>
+
+<!-- Descartar una marca: se pide el motivo y queda escrito, no se borra. -->
+<div class="overlay" id="ovVio">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="voTit" style="max-width:480px">
+    <h3 id="voTit">Dismiss this breach</h3>
+    <p class="sub" id="voSub"></p>
+    <div class="f-full" style="margin-top:14px">
+      <label>Why is it wrong?</label>
+      <textarea id="voMotivo" rows="3" style="width:100%"
+        placeholder="e.g. I logged the time wrong · the day's plan was empty · the trade was a duplicate"></textarea>
+      <p class="micro" style="color:var(--faint);margin-top:7px;line-height:1.55">
+        It leaves the count and the Score, but not the record: it stays crossed out
+        in the day with your reason. Dismissing a breach that did happen only
+        breaks the one journal that was telling you the truth.</p>
+    </div>
+    <p class="micro" id="voErr" style="color:var(--down);min-height:14px;margin-top:8px"></p>
+    <div class="m-foot">
+      <button class="btn" onclick="closeOv()">Cancel</button>
+      <button class="btn primary" id="voGo">Dismiss it</button>
     </div>
   </div>
 </div>
@@ -3506,6 +3537,7 @@ const DEFAULTS = () => ({
   claves: {},          // usuario -> hash SHA-256 de su clave local
   monitos: {},           // usuario -> { avatar }: cada quien su cara
   presencia: {},         // usuario -> última vez que usó la app (ms)
+  viosOut: {},           // 'tradeId|COD' -> { fecha, motivo, por }: marcas descartadas, con razón
   ui: { acctSel: { mode:'all', ids:[] } }
 });
 
@@ -3552,6 +3584,7 @@ function migrar(s){
   s.claves = s.claves || {};
   s.monitos = s.monitos || {};
   s.presencia = s.presencia || {};
+  s.viosOut = s.viosOut || {};
   delete s.metas;                 // la escalera vieja la reemplazó el plan por fases
   /* el terminal pasó a inglés: las rebanadas guardadas con nombre en español
      se renombran una vez, conservando los porcentajes que el usuario fijó. */
@@ -3824,7 +3857,34 @@ function planDelDia(iso){
     obj:  (r && r.obj)  || null,
   };
 }
+/* ── DESCARTAR UNA MARCA ──
+   Las violaciones se detectan solas, y ésa es la gracia. Pero a veces la marca
+   es falsa: capturaste mal la hora, el plan del día estaba en blanco, borraste
+   el trade equivocado. Para eso está el descarte — y no es un borrado: pide un
+   motivo, sale del conteo y del Score, y queda tachada en el detalle del día
+   con quién la quitó y por qué. Un journal que se puede limpiar en silencio no
+   sirve para nada; uno que no se puede corregir, tampoco. */
+let _vioPend = null;
+function abreDescarte(tradeId, cod){
+  const t = (S.trades || []).find(x => x.id === tradeId); if(!t) return;
+  _vioPend = { t, cod };
+  $('#voSub').textContent = `${tr('vio.' + cod)} · ${esc(t.sym)} ${t.dir === 'L' ? 'LONG' : 'SHORT'} · ${fmtFecha(t.date)} ${t.time || ''}`;
+  $('#voMotivo').value = ''; $('#voErr').textContent = '';
+  openOv('ovVio');
+}
+window.abreDescarte = abreDescarte;
+window.revierteDescarte = (tradeId, cod) => {
+  const t = (S.trades || []).find(x => x.id === tradeId); if(!t) return;
+  delete S.viosOut[claveVio(t, cod)];
+  save(); renderAll();
+  toast(bi('La marca vuelve al registro.','The breach is back on the record.'));
+};
+const claveVio = (t, cod) => t.id + '|' + cod;
+function vioDescartada(t, cod){ return (S.viosOut || {})[claveVio(t, cod)] || null; }
 function violations(trade, dayTrades){
+  return violationsRaw(trade, dayTrades).filter(c => !vioDescartada(trade, c));
+}
+function violationsRaw(trade, dayTrades){
   const v = [];
   const P = planDelDia(trade.date);
   /* Un día que mata la cuenta salía "limpio" porque nadie comparaba el P&L
@@ -5304,16 +5364,28 @@ function renderSesion(){
     ${seccion('03','Shot by shot')}
     <div class="hoja-tr">
       ${dayTr.map((t,i) => {
-        const v = violations(t, dayTr);
+        const todas = violationsRaw(t, dayTr);
+        const v = todas.filter(x => !vioDescartada(t, x));
+        const fuera = todas.filter(x => vioDescartada(t, x));
         return `<div class="hoja-fila">
           <span class="mono n">${String(i+1).padStart(2,'0')}</span>
           <span class="mono h">${t.time||'—'}</span>
           <span class="ins">${esc(t.sym)} <span class="tag">${t.dir==='L'?'LONG':'SHORT'}</span> ×${t.qty}</span>
           <b class="mono ${(t.pnl||0)>0?'up':(t.pnl||0)<0?'down':''}">${fmt$(t.pnl,true)}</b>
           <span class="dis">${v.length
-            ? v.map(x=>`<span class="tag bad">${tr('vio.'+x).toUpperCase()}</span>`).join('')
-            : `<span class="tag ok">LIMPIO</span>`}</span>
-        </div>`;
+            ? v.map(x=>`<span class="tag bad vio-tag">${tr('vio.'+x).toUpperCase()}<button type="button" class="vio-x"
+                title="${bi('Descartar esta marca','Dismiss this breach')}"
+                onclick="abreDescarte('${t.id}','${x}')">✕</button></span>`).join('')
+            : (fuera.length ? '' : `<span class="tag ok">LIMPIO</span>`)}
+            ${fuera.map(x => { const d = vioDescartada(t, x);
+              return `<span class="tag vio-off" title="${esc(d.motivo)}">${tr('vio.'+x).toUpperCase()}
+                <button type="button" class="vio-x" title="${bi('Devolverla al registro','Put it back on the record')}"
+                  onclick="revierteDescarte('${t.id}','${x}')">↺</button></span>`; }).join('')}
+          </span>
+        </div>
+        ${fuera.map(x => { const d = vioDescartada(t, x);
+          return `<div class="vio-nota micro">${bi('Descartada','Dismissed')} ${fmtFecha(d.fecha)}${
+            d.por && USERS[d.por] ? ' · ' + esc(USERS[d.por].nombre) : ''} — “${esc(d.motivo)}”</div>`; }).join('')}`;
       }).join('')}
     </div>
 
@@ -6487,8 +6559,8 @@ const TOUR = [
     'El protocolo del día en orden: preparar antes de las 7:25, decidir cuando el rango ya se formó, ejecutar y cerrar antes de las 8:30. Fuera de esa ventana no se opera.',
     'The daily protocol in order: prepare before 7:25, decide once the range has formed, execute, and be flat before 8:30. Outside that window nobody trades.'] },
   { vista:'journal', t:['El journal','The journal'], p:[
-    'Tu P&L contra la meta del día, la semana y el mes, la curva de capital y el calendario. Las violaciones se marcan solas contra el plan del día y no se pueden borrar: un día perdedor bien operado es profesional; uno ganador que rompió las reglas es un pasivo.',
-    'Your P&L against the day, week and month targets, the equity curve and the calendar. Breaches are flagged automatically against that day\u2019s plan and cannot be deleted: a losing day traded by the book is professional; a winning day that broke the rules is a liability.'] },
+    'Tu P&L contra la meta del día, la semana y el mes, la curva de capital y el calendario. Las violaciones se marcan solas contra el plan del día. Si una es falsa la puedes descartar, pero pidiendo motivo y queda tachada en el día: un día perdedor bien operado es profesional; uno ganador que rompió las reglas es un pasivo.',
+    'Your P&L against the day, week and month targets, the equity curve and the calendar. Breaches are flagged automatically against that day\u2019s plan. A wrong one can be dismissed — with a reason, and it stays crossed out in the day: a losing day traded by the book is professional; a winning day that broke the rules is a liability.'] },
   { vista:'trades', t:['Los trades','The trades'], p:[
     'Cada operación con su hora, su setup y su disciplina. Se registran, se editan y se exportan. Si no está escrito, la sesión no existió.',
     'Every trade with its time, its setup and its discipline. Register, edit and export them here. If it isn\u2019t written down, the session never happened.'] },
@@ -6604,6 +6676,18 @@ function renderAjustes(){
       .map(([n,l]) => `<div><b class="mono">${n}</b><span>${l}</span></div>`).join('')}</div>`;
   }
 }
+$('#voGo')?.addEventListener('click', () => {
+  if(!_vioPend) return;
+  const motivo = $('#voMotivo').value.trim();
+  if(motivo.length < 4){ $('#voErr').textContent = 'Write why — one line is enough.'; return; }
+  S.viosOut = S.viosOut || {};
+  S.viosOut[claveVio(_vioPend.t, _vioPend.cod)] =
+    { fecha: todayISO(), motivo, por: (S.session && S.session.user) || '—' };
+  save(); closeOv(); renderAll();
+  toast(bi('Descartada. Queda escrita en el día.','Dismissed. It stays written in the day.'));
+  _vioPend = null;
+});
+
 $('#btnSettings').addEventListener('click', ()=> abreAjustes(S.ui.setTab || 'cuentas'));
 $('#setMesaSave')?.addEventListener('click', ()=>{
   const m = parseFloat($('#setMeta').value);
