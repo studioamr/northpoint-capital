@@ -619,10 +619,13 @@ body.locked .app{visibility:hidden;pointer-events:none}
 .pr-fila:last-child{border-bottom:0}
 .pr-fila .al{font-weight:600;font-size:13px;min-width:34px}
 .pr-fila .via{flex:1;min-width:90px}
-.pr-track{height:6px;border-radius:99px;background:var(--w07);overflow:hidden}
+.pr-track{height:6px;border-radius:99px;background:var(--w07);overflow:hidden;position:relative}
 .pr-track i{display:block;height:100%;border-radius:99px;background:var(--txt);
   transition:width .6s cubic-bezier(.645,.045,.355,1)}
 .pr-track i.listo{background:var(--up)}
+/* la vara de la carrera: el corte marca dónde termina la eval y empieza el colchón */
+.pr-track i.quema{background:var(--down)}
+.pr-track .corte{position:absolute;top:0;bottom:0;width:2px;background:var(--w15,rgba(255,255,255,.18))}
 .pr-fila .cifras{font-family:var(--mono);font-size:10px;color:var(--faint);margin-top:5px;
   display:flex;justify-content:space-between;gap:10px}
 .pr-fila .falta{font-family:var(--mono);font-size:12px;text-align:right;min-width:96px}
@@ -2997,11 +3000,13 @@ function invitadoActual(){
   return { n: usr.nombre.toUpperCase(), look: LOOK_INVITADO };
 }
 
-/* Los seis del equipo se sientan siempre — son la plantilla de la oficina.
-   Si además entra un invitado a probar la mesa, se le suma su silla. */
+/* Sólo el principal se sienta: la oficina es del usuario en sesión. Si el que
+   entró es un invitado, la silla es la suya con su look neutro. */
 const sillasActivas = () => {
   const g = invitadoActual();
-  return g ? [...OFI.sillas, { n:g.n, x:6.6, y:3.2, z:0, flip:true }] : OFI.sillas;
+  if(g) return [{ n:g.n, x:5.6, y:4.2, z:0, flip:false }];
+  const p = PERSONAJES.find(x => x.id === (S.session && S.session.user));
+  return p ? OFI.sillas.filter(s => s.n === p.nom) : [];
 };
 
 /* ── Equipo NORTHPOINT · credenciales y cargos ── */
@@ -4031,14 +4036,18 @@ window.asignarHuerfanos = destino => {
 
 $('#btnAcctMgr').addEventListener('click', ()=>{ renderAcctMgr(); openOv('ovAcct'); });
 $('#acAdd').addEventListener('click', ncAbrir);
-/* El camino de 0 a payout: las tres fases de una fondeada y el paso en el que
-   vas. Con varias cuentas manda la más atrasada — al paso de la más lenta —
-   y debajo de cada fase se listan las cuentas que están paradas ahí. */
+/* ══ EL CAMINO A PAYOUT · las carreras ══
+   La aritmética de la casa: pasar la eval son $3,000 y el colchón son $2,100
+   más — la suma es el 100% de la carrera. Cada cuenta fondeada es un intento
+   que se mide contra ESA vara (con las cifras de su propio plan). Una carrera
+   quemada no se esconde: queda su barra congelada con el momento de la quema.
+   Y cada carrera dice desde cuándo está en movimiento (su primer fill). */
 function renderCamino(){
   const panel = $('#pgCamino'); if(!panel) return;
-  const sel = acctsSel().filter(a => !esLive(a) && !esSim(a) && reglasDe(a));
-  if(!sel.length){
-    panel.hidden = false;
+  /* Todas las carreras: las vivas Y las quemadas — una quemada cuenta su historia. */
+  const carreras = S.accounts.filter(a => !esLive(a) && !esSim(a) && reglasDe(a));
+  panel.hidden = false;
+  if(!carreras.length){
     $('#pgCaminoSub').textContent = '';
     $('#pgClimb').innerHTML = '';
     $('#pgPasos').innerHTML = '';
@@ -4047,99 +4056,96 @@ function renderCamino(){
       'No funded accounts yet. The road starts when you register the first one.');
     return;
   }
-  panel.hidden = false;
-  const orden = ['eval','buffer','payout'];
-  const idxDe = a => Math.max(0, orden.indexOf(a.fase));
-  const idxActual = Math.min(...sel.map(idxDe));
 
-  /* La banda de ascenso: dónde va la mesa dentro del camino completo. Manda
-     la cuenta más atrasada, con su avance interno hacia el hito de su fase. */
-  const atras = sel.filter(a => idxDe(a) === idxActual)[0];
-  const hA = saludDe(atras);
-  let dentro = 0;
-  if(atras.fase === 'payout') dentro = 1;
-  else if(hA.hito != null && hA.hito > atras.start)
-    dentro = Math.max(0, Math.min(1, (hA.balance - atras.start) / (hA.hito - atras.start)));
-  const posPct = ((idxActual + dentro) / orden.length) * 100;
-
-  /* El proceso de los demás: un punto por socio sobre la banda, calculado de
-     SUS cuentas (a.owner), sin depender del picker. Sin cuentas, sin punto. */
-  const puntoDe = uid => {
-    const suyas = S.accounts.filter(a => a.owner === uid && !esLive(a) && !esSim(a) && reglasDe(a));
-    if(!suyas.length) return null;
-    const idx = Math.min(...suyas.map(idxDe));
-    const atrasU = suyas.filter(a => idxDe(a) === idx)[0];
-    const hU = saludDe(atrasU);
-    let dU = 0;
-    if(atrasU.fase === 'payout') dU = 1;
-    else if(hU.hito != null && hU.hito > atrasU.start)
-      dU = Math.max(0, Math.min(1, (hU.balance - atrasU.start) / (hU.hito - atrasU.start)));
-    return ((idx + dU) / orden.length) * 100;
+  /* La vara de una cuenta: target de eval + (maxDD + lock) del colchón. */
+  const varaDe = a => {
+    const Re = reglasEval(a), Rf = reglasFondeadas(a);
+    const target = Re ? (Re.target || 0) : 0;
+    const buffer = Rf ? (Rf.maxDD || 0) + (Rf.lockAtProfit || 0) : 0;
+    return { target, buffer, total: target + buffer };
   };
-  const puntos = SOCIOS_REALES
-    .map(u => ({ nom: USERS[u].nombre, pos: puntoDe(u) }))
-    .filter(d => d.pos != null).sort((a,b) => a.pos - b.pos);
-  /* dos socios en el mismo tramo no se enciman: se alternan arriba y abajo */
-  let prevPos = -99, alt = 0;
-  const puntosHTML = puntos.map(d => {
-    alt = (d.pos - prevPos < 6) ? alt + 1 : 0; prevPos = d.pos;
-    const top = alt === 0 ? '50%' : (alt % 2 ? '32%' : '68%');
-    return `<span class="dot" title="${esc(d.nom)} · ${Math.round(d.pos)}%"
-      style="left:${Math.min(96.5, Math.max(3.5, d.pos))}%;top:${top}">${esc(d.nom.charAt(0).toUpperCase())}</span>`;
-  }).join('');
-  $('#pgClimb').innerHTML = `
-    <i class="climb-fill" style="width:${posPct}%"></i>
-    <div class="zonas"><span>${FASES.eval.t.toUpperCase()}</span><span>${FASES.buffer.t.toUpperCase()}</span><span>${FASES.payout.t.toUpperCase()}</span></div>
-    ${puntosHTML}`;
-  const a0 = sel[0], Re = reglasEval(a0), Rf = reglasFondeadas(a0);
-  const subs = {
-    eval:   Re ? bi('llegar a ','reach ') + fmt$(a0.size + Re.target) : '',
-    buffer: bi('reinicia a ','resets to ') + fmt$(a0.size),
-    payout: Rf ? bi('desde ','from ') + fmt$(a0.start + Rf.maxDD + (Rf.lockAtProfit||0)) : '',
-  };
-  const mixta = new Set(sel.map(a => a.fase + '|' + a.plan + '|' + a.size)).size > 1;
-  $('#pgCaminoSub').innerHTML = mixta
-    ? '<span class="tag wr">' + bi('FASES MIXTAS','MIXED PHASES') + '</span>'
-    : (FASES[a0.fase] || FASES.eval).t.toUpperCase();
-  $('#pgPasos').innerHTML = orden.map((k, i) => {
-    const cls = i < idxActual ? 'hecho' : i === idxActual ? 'activa' : '';
-    const aqui = sel.filter(a => idxDe(a) === i).map(a => esc(a.alias));
-    return `<div class="pr-paso ${cls}">
-      <b>${esc(FASES[k].t)}</b>
-      <span class="micro" style="display:block;color:var(--faint)">${subs[k]}</span>
-      ${aqui.length ? `<span class="micro" style="display:block;margin-top:4px;color:var(--dim)">${aqui.join(' · ')}</span>` : ''}
-    </div>`;
-  }).join('');
 
-  /* El avance en vivo: cada trade que se registra mueve estas barras. Cada
-     cuenta corre contra el hito de SU fase; al tocarlo, se avisa que toca
-     pasarla de fase en el gestor (el pase es decisión humana, no automática). */
-  $('#pgCaminoNota').innerHTML = sel.map(a => {
-    const h = saludDe(a);
-    if(a.fase === 'payout'){
-      const pct = h.maxDD ? Math.max(0, Math.min(100, (h.colchon||0) / h.maxDD * 100)) : 0;
-      return `<div class="pr-fila">
-        <span class="al">${esc(a.alias)}</span>
-        <div class="via">
-          <div class="pr-track"><i class="listo" style="width:${pct}%"></i></div>
-          <div class="micro" style="margin-top:4px;color:var(--faint)">${bi('En retiros','In payouts')} · ${bi('colchón','buffer')} ${fmt$(h.colchon)}</div>
-        </div>
-        <b class="mono up" style="font-size:13px">${fmt$(h.balance)}</b>
-      </div>`;
+  /* El momento de la quema: se recorre la cuenta día a día contra su línea
+     de drawdown; el primer día que el balance la toca es el día del funeral. */
+  const quemaDe = a => {
+    const R = reglasDe(a); if(!R) return null;
+    const porDia = {};
+    S.trades.forEach(t => { if(t.date >= a.desde && (t.accts||[]).includes(a.id))
+      porDia[t.date] = (porDia[t.date]||0) + (t.pnl||0); });
+    const dias = Object.keys(porDia).sort();
+    let bal = a.start, pico = a.start;
+    for(const d of dias){
+      bal += porDia[d]; pico = Math.max(pico, bal);
+      let linea = pico - R.maxDD;
+      if(R.lockAtProfit != null && linea >= a.start + R.lockAtProfit) linea = a.start + R.lockAtProfit;
+      if(bal <= linea) return { fecha: d, balance: bal };
     }
-    const meta = h.hito;
-    if(meta == null) return '';
-    const pct = meta > a.start ? Math.max(0, Math.min(100, (h.balance - a.start) / (meta - a.start) * 100)) : 0;
-    const tocado = h.balance >= meta;
+    return null;
+  };
+
+  /* La ficha de una carrera: avance en dólares sobre la vara completa. */
+  const fichaDe = a => {
+    const V = varaDe(a), h = saludDe(a);
+    const avanceCon = bal =>
+      a.fase === 'payout' ? V.total
+      : a.fase === 'buffer' ? V.target + Math.max(0, Math.min(V.buffer, bal - a.start))
+      : Math.max(0, Math.min(V.target, bal - a.start));
+    const quema = a.estado === 'quemada' ? (quemaDe(a) || { fecha:null, balance:h.balance }) : null;
+    const avance = avanceCon(quema ? quema.balance : h.balance);
+    const pct = V.total > 0 ? Math.max(0, Math.min(100, avance / V.total * 100)) : 0;
+    const fills = S.trades.filter(t => t.date >= a.desde && (t.accts||[]).includes(a.id))
+      .map(t => t.date).sort();
+    return { a, V, h, quema, avance, pct, arranque: fills[0] || null };
+  };
+  const fichas = carreras.map(fichaDe);
+  const vivas = fichas.filter(f => !f.quema);
+
+  /* La banda: la carrera viva más avanzada marca el punto de la casa. Las
+     zonas van a escala — la eval pesa lo que pesa en dólares, no un tercio. */
+  const lider = vivas.slice().sort((x,y) => y.pct - x.pct)[0] || fichas[0];
+  const Vl = lider.V;
+  const zEval = Vl.total > 0 ? Vl.target / Vl.total * 100 : 50;
+  const inicial = ((USERS[S.session && S.session.user] || {}).nombre || 'N').charAt(0).toUpperCase();
+  $('#pgClimb').innerHTML = `
+    <i class="climb-fill" style="width:${lider.pct}%"></i>
+    <div class="zonas" style="grid-template-columns:${zEval}% ${100 - zEval}%">
+      <span>${FASES.eval.t.toUpperCase()} · ${fmt$(Vl.target)}</span>
+      <span>${FASES.buffer.t.toUpperCase()} · ${fmt$(Vl.buffer)}</span>
+    </div>
+    <span class="dot" title="${esc(lider.a.alias)} · ${Math.round(lider.pct)}%"
+      style="left:${Math.min(96.5, Math.max(3.5, lider.pct))}%">${esc(inicial)}</span>`;
+  $('#pgCaminoSub').textContent =
+    `${fmt$(Vl.target)} + ${fmt$(Vl.buffer)} = ${fmt$(Vl.total)} · ${bi('el 100%','the 100%')}`;
+  $('#pgPasos').innerHTML = '';
+
+  /* Las carreras, una por cuenta: barra a la vara, el corte eval|colchón,
+     desde cuándo se mueve, y si se quemó — en qué momento. */
+  $('#pgCaminoNota').innerHTML = fichas.map(f => {
+    const { a, V, h, quema, avance, pct, arranque } = f;
+    const corte = V.total > 0 ? V.target / V.total * 100 : 50;
+    const mov = arranque
+      ? bi('en movimiento desde ', 'moving since ') + fmtFecha(arranque)
+      : bi('sin movimiento todavía', 'no movement yet');
+    const tocado = !quema && a.fase !== 'payout' && h.hito != null && h.balance >= h.hito;
+    const estadoTxt = quema
+      ? `<b style="color:var(--down)">🔥 ${bi('Se quemó al ','Burned at ')}${Math.round(pct)}%${quema.fecha ? ' · ' + fmtFecha(quema.fecha) : ''}</b>`
+      : a.fase === 'payout'
+        ? `<b class="up">${bi('EN RETIROS','IN PAYOUTS')}</b> · ${bi('colchón','buffer')} ${fmt$(h.colchon)}`
+        : `${fmt$(avance)} ${bi('de','of')} ${fmt$(V.total)} · ${Math.round(pct)}%`;
     return `<div class="pr-fila">
-      <span class="al">${esc(a.alias)}</span>
+      <span class="al" ${quema ? 'style="text-decoration:line-through;text-decoration-color:var(--down)"' : ''}>${esc(a.alias)}</span>
       <div class="via">
-        <div class="pr-track"><i class="${tocado?'listo':''}" style="width:${pct}%"></i></div>
-        <div class="micro" style="margin-top:4px;color:var(--faint)">${fmt$(h.balance)} ${bi('de','of')} ${fmt$(meta)} · ${fmtPct(pct)}</div>
+        <div class="pr-track vara">
+          <i class="${quema ? 'quema' : (pct >= 100 ? 'listo' : '')}" style="width:${pct}%"></i>
+          <span class="corte" style="left:${corte}%"></span>
+        </div>
+        <div class="micro" style="margin-top:4px;color:var(--faint)">${estadoTxt} · ${mov}</div>
       </div>
-      ${tocado
-        ? `<button class="btn sm primary" onclick="renderAcctMgr();openOv('ovAcct')">${bi('¡Hito tocado! Pásala de fase','Milestone hit! Advance the phase')}</button>`
-        : `<b class="mono" style="font-size:12px;color:var(--dim)">${bi('faltan','needs')} ${fmt$(meta - h.balance)}</b>`}
+      ${quema
+        ? `<b class="mono" style="font-size:12px;color:var(--down)">${fmt$(quema.balance)}</b>`
+        : tocado
+          ? `<button class="btn sm primary" onclick="renderAcctMgr();openOv('ovAcct')">${bi('¡Hito tocado! Pásala de fase','Milestone hit! Advance the phase')}</button>`
+          : `<b class="mono" style="font-size:13px;${a.fase==='payout'?'color:var(--up)':''}">${fmt$(h.balance)}</b>`}
     </div>`;
   }).join('');
 }
@@ -6338,7 +6344,10 @@ function guionOficina(){
   di(PABLO, 'Cada 15 días se parte así, y no se toca el orden:');
   SISTEMA.reparto.forEach(r => di(PABLO, `${Math.round(r.pct*100)}% ${r.t} — ${r.d}`));
 
-  return g;
+  /* En la oficina sólo está el principal: se queda con SUS líneas. Un invitado
+     no tiene guion propio — trabaja en silencio. */
+  const mio = (PERSONAJES.find(x => x.id === (S.session && S.session.user)) || {}).nom;
+  return mio ? g.filter(d => d.de === mio) : [];
 }
 
 
@@ -6894,8 +6903,16 @@ function carreraDe(uid){
     mejor: ordDias[ordDias.length-1] || null, peor: ordDias[0] || null };
 }
 
-/* Los perfiles registrados: los tres socios y, si un invitado entró a probar
-   la mesa, también su silla. Cada tarjeta muestra su carrera; el clic, sus stats. */
+/* El perfil del principal: sólo el usuario en sesión — su tarjeta muestra su
+   carrera y el clic abre sus stats. Los demás socios ya no se pintan. */
+function principalActual(){
+  const uid = S.session && S.session.user;
+  const p = PERSONAJES.find(x => x.id === uid);
+  if(p) return p;
+  const g = invitadoActual();
+  return g ? { id: uid, nom: g.n, area: bi('Acceso de prueba','Trial access'),
+               lema: bi('Mesa de práctica local','Local practice desk'), voz: '', roles: [] } : null;
+}
 function renderAgentes(){
   const grid = $('#agGrid'); if(!grid) return;
   const notas = S.staffNotas || {};
@@ -6915,8 +6932,9 @@ function renderAgentes(){
       </div>
     </button>`;
   };
+  const yo = principalActual();
   grid.className = 'perfil-grid';
-  grid.innerHTML = PERSONAJES.map(tarjeta).join('');
+  grid.innerHTML = yo ? tarjeta(yo) : '';
   $$('#agGrid .staff').forEach(b => b.onclick = () => abrirStaff(b.dataset.staff));
   ofiJunta = guionOficina();
   if(typeof animaOficina === 'function') animaOficina();
@@ -6927,7 +6945,9 @@ function renderAgentes(){
 
 let staffAbierto = null;
 function abrirStaff(id){
-  const p = PERSONAJES.find(x => x.id === id); if(!p) return;
+  const yo = principalActual();
+  const p = PERSONAJES.find(x => x.id === id) || (yo && yo.id === id ? yo : null);
+  if(!p) return;
   staffAbierto = id;
   $('#stCara').src = caraAgente(p.nom);
   $('#stTitle').textContent = p.nom;
