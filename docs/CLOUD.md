@@ -50,33 +50,47 @@ PATCH northpoint_estado → []        (0 filas: no deja escribir)
 
 ---
 
-## El SQL que se corrió
+## El SQL que rige hoy (30-jul-2026)
+
+La lista de socios dejó de estar **escrita dentro de la política**. Ahora vive en
+su propia tabla: dar de alta a alguien es un `insert` de un renglón, no editar
+reglas de Postgres. Cada quien se registra con **su correo real y su contraseña**
+desde el propio terminal (botón «¿Primera vez? Crea tu acceso de nube»), y André
+sólo agrega ese correo a la lista.
 
 ```sql
-create table if not exists northpoint_estado (
-  id         int primary key,
-  data       jsonb not null default '{}'::jsonb,
-  rev        int  not null default 0,
-  updated_at timestamptz default now()
+create table if not exists northpoint_socios (
+  email  text primary key,
+  nombre text,
+  alta   timestamptz default now()
 );
-insert into northpoint_estado (id, data, rev) values (1, '{}'::jsonb, 0)
-on conflict (id) do nothing;
+alter table northpoint_socios enable row level security;
 
-alter table northpoint_estado enable row level security;
+-- cada quien ve SÓLO su propia fila (ni siquiera los correos de los otros)
+create policy "socio ve su fila" on northpoint_socios
+  for select to authenticated using (email = auth.jwt() ->> 'email');
 
--- Sólo los tres socios. No basta con tener sesión en el proyecto.
+-- la mesa: quien esté en la lista, sin importar de qué dominio sea su correo
 create policy "socios leen" on northpoint_estado
   for select to authenticated
-  using (auth.jwt() ->> 'email' in
-    ('pablo@northpoint.mx','mateo@northpoint.mx','andre@northpoint.mx'));
+  using (exists (select 1 from northpoint_socios s where s.email = auth.jwt() ->> 'email'));
 
 create policy "socios escriben" on northpoint_estado
   for update to authenticated
-  using (auth.jwt() ->> 'email' in
-    ('pablo@northpoint.mx','mateo@northpoint.mx','andre@northpoint.mx'))
-  with check (auth.jwt() ->> 'email' in
-    ('pablo@northpoint.mx','mateo@northpoint.mx','andre@northpoint.mx'));
+  using      (exists (select 1 from northpoint_socios s where s.email = auth.jwt() ->> 'email'))
+  with check (exists (select 1 from northpoint_socios s where s.email = auth.jwt() ->> 'email'));
 ```
+
+**Para dar de alta a un socio nuevo** (SQL Editor del proyecto `spotter-ai`):
+
+```sql
+insert into northpoint_socios (email, nombre)
+values ('sucorreo@gmail.com', 'Pablo')
+on conflict (email) do nothing;
+```
+
+Comprobado simulando el JWT de cada quien: el correo en la lista ve la fila
+(`1`), un correo cualquiera del proyecto NO ve nada (`0`).
 
 ---
 
