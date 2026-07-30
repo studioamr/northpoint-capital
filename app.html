@@ -8087,6 +8087,450 @@ function globo(c, s, txt, t){
   vis.forEach((l, i) => c.fillText(l, bx + 15, by + 26 + i*21));
 }
 
+/* ══ EL VIAJE ══
+   La mesa sigue al mercado: Londres de madrugada, Nueva York por la mañana,
+   Tokio por la tarde-noche. Los últimos 25 minutos de cada sesión el monito
+   ya va en el jet rumbo a la siguiente ciudad, y el fin de semana se queda
+   volando. Cada ciudad trae su propia hora —la de verdad, con su huso— así
+   que el cielo de Tokio amanece cuando en Tokio amanece. */
+const CIUDADES = {
+  londres: { n:'LONDRES', en:'LONDON',   tz:'Europe/London',   sub:'CITY OF LONDON' },
+  nyc:     { n:'NUEVA YORK', en:'NEW YORK', tz:'America/New_York', sub:'PISO 88 · MANHATTAN' },
+  tokio:   { n:'TOKIO',   en:'TOKYO',    tz:'Asia/Tokyo',      sub:'MARUNOUCHI' },
+};
+/* [inicio, fin) en minutos de la hora local del usuario, y a dónde vuela después */
+const TRAMOS = [
+  { c:'londres', de:120,  a:420,  sig:'nyc'     },   // 02:00 – 07:00
+  { c:'nyc',     de:420,  a:960,  sig:'tokio'   },   // 07:00 – 16:00
+  { c:'tokio',   de:960,  a:1560, sig:'londres' },   // 16:00 – 02:00 (cruza medianoche)
+];
+const VUELO_MIN = 25;                     // lo que dura el traslado en pantalla
+
+function escenaAhora(now = new Date()){
+  const wd = now.getDay();
+  const m = now.getHours() * 60 + now.getMinutes() + now.getSeconds() / 60;
+  /* fin de semana: no hay mercado que seguir, así que el jet no aterriza */
+  if(wd === 0 || wd === 6)
+    return { tipo:'vuelo', de:'nyc', a:'tokio', prog:(m / 1440), finde:true };
+  for(const tr of TRAMOS){
+    const mm = (tr.de > tr.a || tr.a > 1440) && m < tr.de ? m + 1440 : m;
+    if(mm >= tr.de && mm < tr.a){
+      const restan = tr.a - mm;
+      if(restan <= VUELO_MIN)
+        return { tipo:'vuelo', de:tr.c, a:tr.sig, prog:1 - restan / VUELO_MIN };
+      return { tipo:'ciudad', c:tr.c, sig:tr.sig, restan };
+    }
+  }
+  return { tipo:'ciudad', c:'nyc', sig:'tokio', restan:0 };
+}
+/* la hora que de verdad es en esa ciudad */
+function minutosEn(tz, now = new Date()){
+  try{
+    const p = new Intl.DateTimeFormat('en-GB', { timeZone:tz, hour:'2-digit', minute:'2-digit', hour12:false })
+      .formatToParts(now);
+    const h = +p.find(x => x.type === 'hour').value, mi = +p.find(x => x.type === 'minute').value;
+    return h * 60 + mi;
+  }catch(e){ return now.getHours() * 60 + now.getMinutes(); }
+}
+
+/* ── EL CIELO ── siete momentos que se interpolan minuto a minuto ── */
+const MOMENTOS_CIELO = [
+  { m:0,    k:'noche',     cielo:['#0A0D1E','#141733','#232A52','#2E3358'] },
+  { m:330,  k:'alba',      cielo:['#1B2148','#3E3B6E','#7A5A78','#B87A6A'] },
+  { m:400,  k:'amanecer',  cielo:['#2E4A7A','#7A6A96','#D98E62','#F0B074'] },
+  { m:470,  k:'mañana',    cielo:['#3E7ABC','#6FA6D8','#A9CCE8','#D6E6F2'] },
+  { m:720,  k:'mediodía',  cielo:['#2E7FD4','#5CA5E4','#9CC9EE','#CFE4F5'] },
+  { m:1020, k:'tarde',     cielo:['#3A72B4','#7A94C4','#C0A48E','#E0B482'] },
+  { m:1140, k:'atardecer', cielo:['#2A3A72','#6E4A82','#C4643E','#E8934A'] },
+  { m:1250, k:'anochecer', cielo:['#141733','#232A52','#4A3A62','#6E4A5E'] },
+  { m:1380, k:'noche',     cielo:['#0A0D1E','#141733','#232A52','#2E3358'] },
+  { m:1441, k:'noche',     cielo:['#0A0D1E','#141733','#232A52','#2E3358'] },
+];
+const lerpHex = (c1, c2, u) => {
+  const h = x => [parseInt(x.slice(1,3),16), parseInt(x.slice(3,5),16), parseInt(x.slice(5,7),16)];
+  const [r1,g1,b1] = h(c1), [r2,g2,b2] = h(c2);
+  return `rgb(${Math.round(r1+(r2-r1)*u)},${Math.round(g1+(g2-g1)*u)},${Math.round(b1+(b2-b1)*u)})`;
+};
+/* devuelve { grad, momento, oscuridad, base } para unos minutos locales dados */
+function paletaCielo(c, minLocal, alto = 620){
+  let i0 = 0;
+  for(let i = 0; i < MOMENTOS_CIELO.length - 1; i++) if(minLocal >= MOMENTOS_CIELO[i].m) i0 = i;
+  const A = MOMENTOS_CIELO[i0], B = MOMENTOS_CIELO[i0 + 1] || A;
+  const u = B.m > A.m ? Math.max(0, Math.min(1, (minLocal - A.m) / (B.m - A.m))) : 0;
+  const grad = c.createLinearGradient(0, 0, 0, alto);
+  [0, .45, .8, 1].forEach((stop, k) => grad.addColorStop(stop, lerpHex(A.cielo[k], B.cielo[k], u)));
+  const momento = u < .5 ? A.k : B.k;
+  const oscuridad = ['noche','anochecer','alba'].includes(momento)
+    ? (momento === 'noche' ? 1 : .55) : (momento === 'atardecer' ? .25 : 0);
+  return { grad, momento, oscuridad, base: lerpHex(A.cielo[0], B.cielo[0], u) };
+}
+/* pinta cielo + astro + estrellas */
+function pintaCielo(c, W, H, minLocal, rr){
+  const P = paletaCielo(c, minLocal);
+  c.fillStyle = P.grad; c.fillRect(0, 0, W, H);
+  if(P.oscuridad > 0){
+    for(let i = 0; i < 140; i++){
+      const sx = rr(i) * W, sy = rr(i + 300) * 440;
+      c.fillStyle = `rgba(255,255,255,${(.2 + rr(i+7) * .6) * P.oscuridad})`;
+      const t = rr(i+9) > .8 ? 2.4 : 1.6;
+      c.fillRect(sx, sy, t, t);
+    }
+  }
+  const SALE = 370, SEPONE = 1150;
+  const esDia = minLocal >= SALE && minLocal <= SEPONE;
+  const u = esDia ? (minLocal - SALE) / (SEPONE - SALE)
+                  : ((minLocal > SEPONE ? minLocal - SEPONE : minLocal + 1440 - SEPONE) / (1440 - (SEPONE - SALE)));
+  const ax = 180 + u * (W - 360), ay = 300 - Math.sin(u * Math.PI) * 230;
+  if(esDia){
+    const alto = Math.sin(u * Math.PI);
+    const sol = alto > .55 ? '#FFF6D8' : (alto > .25 ? '#FFD98A' : '#FF9E5A');
+    const halo = c.createRadialGradient(ax, ay, 10, ax, ay, 155);
+    halo.addColorStop(0, `rgba(255,224,150,${.34 + alto * .2})`);
+    halo.addColorStop(1, 'rgba(255,224,150,0)');
+    c.fillStyle = halo; c.beginPath(); c.arc(ax, ay, 155, 0, 7); c.fill();
+    c.fillStyle = sol; c.beginPath(); c.arc(ax, ay, 46, 0, 7); c.fill();
+    c.fillStyle = mez(sol, 18); c.beginPath(); c.arc(ax - 8, ay - 8, 30, 0, 7); c.fill();
+  } else {
+    const halo = c.createRadialGradient(ax, ay, 8, ax, ay, 125);
+    halo.addColorStop(0, 'rgba(226,230,240,.22)'); halo.addColorStop(1, 'rgba(226,230,240,0)');
+    c.fillStyle = halo; c.beginPath(); c.arc(ax, ay, 125, 0, 7); c.fill();
+    c.fillStyle = '#F2F1E4'; c.beginPath(); c.arc(ax, ay, 42, 0, 7); c.fill();
+    c.fillStyle = 'rgba(190,188,176,.55)';
+    [[-14,-8,9],[10,6,7],[-4,14,5],[16,-12,5]].forEach(([dx,dy,r]) => {
+      c.beginPath(); c.arc(ax+dx, ay+dy, r, 0, 7); c.fill(); });
+    const dias = (Date.now() - new Date(2026,0,18).getTime()) / 86400000;
+    const fase = ((dias % 29.53) + 29.53) % 29.53 / 29.53;
+    const corte = Math.cos(fase * Math.PI * 2) * 46;
+    if(Math.abs(corte) > 3){
+      c.fillStyle = P.base;
+      c.beginPath(); c.arc(ax + corte, ay, 43, 0, 7); c.fill();
+    }
+  }
+  return P;
+}
+
+/* ── LOS SKYLINES ──
+   Cada ciudad por su silueta: no hace falta detalle, hace falta que se
+   reconozca de un vistazo. Nueva York por sus agujas art déco, Londres por
+   la rueda y el Big Ben, Tokio por la torre roja y el Skytree. */
+function ventanitas(c, x, y, w, h, osc, rr, semilla, calido = '#FFE9AE'){
+  for(let wy = y + 10; wy < y + h - 8; wy += 16){
+    for(let wx = x + 6; wx < x + w - 8; wx += 12){
+      if(rr(wx * 3 + wy * 7 + semilla) < .45){
+        const on = rr(wx + wy + semilla) > .5;
+        c.fillStyle = on ? `rgba(255,233,174,${.28 + osc * .62})` : `rgba(150,170,220,${.14 + osc * .1})`;
+        c.fillRect(wx, wy, 6, 8);
+      }
+    }
+  }
+}
+function skylineCiudad(c, W, H, ciudad, osc, rr){
+  const suelo = 640;
+  /* tres capas de fondo comunes, con el tinte de la ciudad */
+  const tinte = ciudad === 'tokio' ? [52,44,74] : ciudad === 'londres' ? [46,50,72] : [44,48,88];
+  for(let capa = 0; capa < 3; capa++){
+    const base = 470 + capa * 34, al = .3 + capa * .24;
+    for(let i = 0; i < 30; i++){
+      const bx = i * (W / 30) - 24 + rr(i + capa * 40) * 26;
+      const bw = W / 30 * (.62 + rr(i + capa * 7) * .5);
+      const bh = 90 + rr(i + capa * 13) * (190 + capa * 70);
+      c.fillStyle = `rgba(${tinte[0] + capa*14},${tinte[1] + capa*16},${tinte[2] + capa*14},${al})`;
+      c.fillRect(bx, base - bh, bw, bh + 200);
+      ventanitas(c, bx, base - bh, bw, bh, osc * (.5 + capa * .25), rr, capa * 91);
+    }
+  }
+  const T = (x, y, w, h, col) => { c.fillStyle = col; c.fillRect(x, y, w, h); };
+  const gris = '#4E4C6E', gris2 = '#63608A', claro = '#7C7AA4';
+
+  if(ciudad === 'nyc'){
+    /* Empire State: cuerpo escalonado y aguja */
+    const ex = 300;
+    T(ex, 300, 118, 340, gris2); T(ex + 16, 240, 86, 62, gris2); T(ex + 34, 190, 50, 52, claro);
+    T(ex + 54, 130, 10, 62, claro); T(ex + 56, 96, 6, 36, '#8E8CB4');
+    ventanitas(c, ex, 300, 118, 340, osc, rr, 11);
+    /* Chrysler: corona de arcos */
+    const cx2 = 1300;
+    T(cx2, 340, 96, 300, gris2);
+    for(let k = 0; k < 5; k++){ const w = 96 - k * 17;
+      T(cx2 + (96 - w) / 2, 340 - 34 - k * 30, w, 30, k % 2 ? claro : '#8E8CB4'); }
+    T(cx2 + 45, 150, 6, 44, '#A9A7CC');
+    ventanitas(c, cx2, 340, 96, 300, osc, rr, 23);
+    /* One WTC: prisma que se afina */
+    const wx2 = 1520;
+    c.fillStyle = claro; c.beginPath();
+    c.moveTo(wx2, 640); c.lineTo(wx2 + 12, 250); c.lineTo(wx2 + 74, 250); c.lineTo(wx2 + 86, 640);
+    c.closePath(); c.fill();
+    T(wx2 + 40, 170, 5, 82, '#A9A7CC');
+    ventanitas(c, wx2 + 14, 260, 58, 370, osc, rr, 37);
+  }
+  else if(ciudad === 'londres'){
+    /* The Shard: pirámide de vidrio */
+    const sx = 1330;
+    c.fillStyle = 'rgba(150,168,196,.85)'; c.beginPath();
+    c.moveTo(sx, 640); c.lineTo(sx + 26, 200); c.lineTo(sx + 44, 200); c.lineTo(sx + 70, 640);
+    c.closePath(); c.fill();
+    for(let k = 0; k < 12; k++) T(sx + 8 + k * .8, 250 + k * 32, 54 - k * 1.4, 2.4, 'rgba(255,255,255,.16)');
+    /* Gherkin: la bala */
+    const gx = 1180;
+    c.fillStyle = '#5E6B84'; c.beginPath();
+    c.ellipse(gx, 470, 42, 130, 0, 0, 7); c.fill();
+    T(gx - 42, 470, 84, 170, '#5E6B84');
+    c.strokeStyle = 'rgba(255,233,174,' + (.2 + osc * .4) + ')'; c.lineWidth = 2;
+    for(let k = 0; k < 7; k++){ c.beginPath(); c.moveTo(gx - 40, 380 + k * 36); c.lineTo(gx + 40, 356 + k * 36); c.stroke(); }
+    /* Big Ben */
+    const bx = 360;
+    T(bx, 330, 62, 310, '#6E6242'); T(bx - 6, 316, 74, 16, '#7E7250');
+    c.fillStyle = '#F0E6C8'; c.beginPath(); c.arc(bx + 31, 356, 20, 0, 7); c.fill();
+    c.strokeStyle = '#2E2A20'; c.lineWidth = 3;
+    c.beginPath(); c.moveTo(bx + 31, 356); c.lineTo(bx + 31, 342); c.stroke();
+    c.beginPath(); c.moveTo(bx + 31, 356); c.lineTo(bx + 43, 360); c.stroke();
+    c.fillStyle = '#6E6242'; c.beginPath();
+    c.moveTo(bx - 4, 316); c.lineTo(bx + 31, 244); c.lineTo(bx + 66, 316); c.closePath(); c.fill();
+    T(bx + 28, 218, 6, 28, '#8E8264');
+    ventanitas(c, bx, 400, 62, 240, osc, rr, 51, '#FFE3A0');
+    /* London Eye */
+    const ex = 620, ey = 430, R = 108;
+    c.strokeStyle = 'rgba(190,206,230,.9)'; c.lineWidth = 5;
+    c.beginPath(); c.arc(ex, ey, R, 0, 7); c.stroke();
+    c.lineWidth = 1.6; c.strokeStyle = 'rgba(190,206,230,.55)';
+    for(let k = 0; k < 16; k++){ const an = k / 16 * Math.PI * 2;
+      c.beginPath(); c.moveTo(ex, ey); c.lineTo(ex + Math.cos(an) * R, ey + Math.sin(an) * R); c.stroke(); }
+    for(let k = 0; k < 16; k++){ const an = k / 16 * Math.PI * 2;
+      c.fillStyle = `rgba(255,233,174,${.35 + osc * .5})`;
+      c.beginPath(); c.arc(ex + Math.cos(an) * R, ey + Math.sin(an) * R, 5, 0, 7); c.fill(); }
+    c.strokeStyle = 'rgba(160,176,200,.9)'; c.lineWidth = 7;
+    c.beginPath(); c.moveTo(ex - 26, 640); c.lineTo(ex, ey); c.lineTo(ex + 26, 640); c.stroke();
+  }
+  else {
+    /* Tokio · la torre roja a franjas */
+    const tx = 400;
+    c.strokeStyle = '#C4483C'; c.lineWidth = 9;
+    c.beginPath(); c.moveTo(tx - 62, 640); c.lineTo(tx, 226); c.stroke();
+    c.beginPath(); c.moveTo(tx + 62, 640); c.lineTo(tx, 226); c.stroke();
+    c.lineWidth = 6;
+    for(let k = 0; k < 7; k++){ const yy = 640 - k * 58, an = (640 - yy) / 414;
+      const half = 62 * (1 - an);
+      c.strokeStyle = k % 2 ? '#E8E4DA' : '#C4483C';
+      c.beginPath(); c.moveTo(tx - half, yy); c.lineTo(tx + half, yy); c.stroke(); }
+    c.fillStyle = '#C4483C'; c.fillRect(tx - 34, 430, 68, 34);
+    c.fillStyle = '#8E3028'; c.fillRect(tx - 3, 150, 6, 78);
+    c.fillStyle = `rgba(255,120,90,${.4 + osc * .5})`;
+    c.beginPath(); c.arc(tx, 148, 6, 0, 7); c.fill();
+    /* Skytree: aguja larguísima */
+    const kx = 1420;
+    c.fillStyle = '#7A83A0'; c.beginPath();
+    c.moveTo(kx - 40, 640); c.lineTo(kx - 11, 250); c.lineTo(kx + 11, 250); c.lineTo(kx + 40, 640);
+    c.closePath(); c.fill();
+    c.fillStyle = '#8E96B4'; c.fillRect(kx - 26, 268, 52, 30);
+    c.fillStyle = '#7A83A0'; c.fillRect(kx - 3, 120, 6, 132);
+    c.fillStyle = `rgba(140,200,255,${.35 + osc * .5})`;
+    c.beginPath(); c.arc(kx, 118, 6, 0, 7); c.fill();
+    /* torres de Marunouchi, apretadas */
+    for(let k = 0; k < 5; k++){ const bx = 900 + k * 92;
+      const bh = 210 + rr(k + 71) * 190;
+      T(bx, 640 - bh, 76, bh, k % 2 ? gris2 : claro);
+      ventanitas(c, bx, 640 - bh, 76, bh, osc, rr, 60 + k);
+      c.fillStyle = `rgba(255,90,90,${.3 + osc * .5})`;
+      c.beginPath(); c.arc(bx + 38, 640 - bh - 5, 4, 0, 7); c.fill();
+    }
+  }
+  /* la calle */
+  c.fillStyle = 'rgba(20,22,38,.5)'; c.fillRect(0, suelo, W, H - suelo);
+}
+
+/* ── EL JET ──
+   Entre sesiones el monito va en el aire: se le ve asomado por la ventanilla
+   ovalada, con la ciudad de destino escrita en el ala. Las nubes pasan. */
+function escenaVuelo(c, W, H, t, E, rr){
+  const oscil = Math.sin(t / 900) * 14;
+  /* nubes que cruzan */
+  for(let i = 0; i < 9; i++){
+    const v = 26 + rr(i) * 40;
+    const nx = (W + 340) - ((t / 26 * (v / 30) + rr(i + 3) * 2400) % (W + 700));
+    const ny = 120 + rr(i + 11) * 640;
+    const es = .5 + rr(i + 5) * 1.3;
+    c.fillStyle = `rgba(255,255,255,${.07 + rr(i + 9) * .12})`;
+    [[0,0,150,44],[52,-26,110,44],[112,-6,90,40],[26,18,140,34]].forEach(([dx,dy,w,h]) => {
+      c.beginPath(); c.ellipse(nx + dx*es, ny + dy*es, w*es/2, h*es/2, 0, 0, 7); c.fill(); });
+  }
+  const cx = W / 2, cy = H / 2 + oscil;
+  c.save(); c.translate(cx, cy); c.rotate(Math.sin(t / 1400) * .012);
+
+  /* fuselaje */
+  const L = 760, R = 128;
+  c.fillStyle = '#E8EAEE';
+  c.beginPath();
+  c.moveTo(-L/2, -R + 30); c.quadraticCurveTo(-L/2 - 130, 0, -L/2, R - 30);
+  c.lineTo(L/2 - 60, R); c.quadraticCurveTo(L/2 + 90, 0, L/2 - 60, -R);
+  c.closePath(); c.fill();
+  c.fillStyle = '#CBD0D8';
+  c.beginPath(); c.moveTo(-L/2, R - 30); c.quadraticCurveTo(0, R + 26, L/2 - 60, R);
+  c.lineTo(L/2 - 60, R - 22); c.quadraticCurveTo(0, R - 4, -L/2, R - 46); c.closePath(); c.fill();
+  /* franja de la casa */
+  c.fillStyle = '#57C79B'; c.fillRect(-L/2 + 20, -22, L - 100, 13);
+  c.fillStyle = '#22303E'; c.fillRect(-L/2 + 20, -6, L - 100, 6);
+  /* cola */
+  c.fillStyle = '#DDE1E7';
+  c.beginPath(); c.moveTo(-L/2 + 30, -R + 34); c.lineTo(-L/2 - 40, -R - 128);
+  c.lineTo(-L/2 + 60, -R - 128); c.lineTo(-L/2 + 140, -R + 34); c.closePath(); c.fill();
+  c.fillStyle = '#57C79B';
+  c.beginPath(); c.moveTo(-L/2 + 4, -R - 60); c.lineTo(-L/2 + 52, -R - 128);
+  c.lineTo(-L/2 + 60, -R - 128); c.lineTo(-L/2 + 34, -R - 46); c.closePath(); c.fill();
+  /* ala y motor */
+  c.fillStyle = '#C6CBD4';
+  c.beginPath(); c.moveTo(-60, R - 20); c.lineTo(120, R + 96); c.lineTo(230, R + 96);
+  c.lineTo(120, R - 24); c.closePath(); c.fill();
+  c.fillStyle = '#9AA2AE';
+  c.beginPath(); c.ellipse(60, R + 34, 54, 26, -.06, 0, 7); c.fill();
+  c.fillStyle = '#2E343E';
+  c.beginPath(); c.ellipse(12, R + 34, 12, 22, 0, 0, 7); c.fill();
+  /* ventanillas */
+  for(let i = 0; i < 9; i++){
+    const wx = -L/2 + 96 + i * 62;
+    if(i === 3) continue;                     // ésa es la del monito
+    c.fillStyle = '#5A6472';
+    c.beginPath(); c.ellipse(wx, -58, 15, 20, 0, 0, 7); c.fill();
+    c.fillStyle = 'rgba(180,206,232,.45)';
+    c.beginPath(); c.ellipse(wx - 3, -62, 10, 14, 0, 0, 7); c.fill();
+  }
+  /* LA VENTANILLA DEL MONITO: el retrato asomado, recortado en el óvalo */
+  const vx = -L/2 + 96 + 3 * 62, vy = -58, vw = 42, vh = 54;
+  c.save();
+  c.beginPath(); c.ellipse(vx, vy, vw, vh, 0, 0, 7); c.clip();
+  c.fillStyle = '#20262F'; c.fillRect(vx - vw, vy - vh, vw * 2, vh * 2);
+  const im = caraCanvas();
+  if(im){
+    const s2 = (vw * 2.6);
+    c.imageSmoothingEnabled = false;
+    c.drawImage(im, vx - s2/2, vy - s2/2 + 14, s2, s2);
+  }
+  c.restore();
+  c.strokeStyle = '#8E97A4'; c.lineWidth = 7;
+  c.beginPath(); c.ellipse(vx, vy, vw, vh, 0, 0, 7); c.stroke();
+  c.strokeStyle = 'rgba(255,255,255,.35)'; c.lineWidth = 3;
+  c.beginPath(); c.ellipse(vx - 10, vy - 14, 16, 22, -.4, 0, 3.2); c.stroke();
+  /* morro y matrícula */
+  c.fillStyle = '#2E343E';
+  c.beginPath(); c.ellipse(L/2 - 12, -30, 30, 22, .2, 0, 7); c.fill();
+  c.font = 'bold 26px "IBM Plex Mono", monospace'; c.fillStyle = '#22303E'; c.textAlign = 'left';
+  c.fillText('N-NP88', -L/2 + 130, 22);
+  c.restore();
+
+  /* el cartel del viaje */
+  const A = CIUDADES[E.de], B = CIUDADES[E.a];
+  c.textAlign = 'center';
+  c.font = '600 30px -apple-system, "Segoe UI", sans-serif';
+  c.fillStyle = 'rgba(255,255,255,.92)';
+  c.fillText(E.finde ? bi('FIN DE SEMANA · EL JET NO ATERRIZA','WEEKEND · THE JET DOES NOT LAND')
+                     : `${loc([A.n, A.en])}  →  ${loc([B.n, B.en])}`, W/2, 150);
+  c.font = '15px "IBM Plex Mono", monospace';
+  c.fillStyle = 'rgba(255,255,255,.5)';
+  c.fillText(E.finde ? bi('el mercado abre el lunes','the market opens on Monday')
+                     : bi('EN VUELO · ' + Math.round(E.prog * 100) + '%','IN FLIGHT · ' + Math.round(E.prog * 100) + '%'), W/2, 184);
+  /* la barra del trayecto */
+  const bw = 460, bx = W/2 - bw/2, by = 212;
+  c.fillStyle = 'rgba(255,255,255,.16)'; c.fillRect(bx, by, bw, 4);
+  c.fillStyle = '#57C79B'; c.fillRect(bx, by, bw * (E.finde ? .5 : E.prog), 4);
+  c.beginPath(); c.arc(bx + bw * (E.finde ? .5 : E.prog), by + 2, 7, 0, 7); c.fill();
+  c.textAlign = 'left';
+}
+
+/* La cara del monito como Image lista para el canvas. Se precarga una vez y
+   se regenera sólo si cambias el look; cuando termina de cargar repinta, que
+   si no la primera vez sale el hueco. */
+let _caraImg = null, _caraSrc = '';
+function caraCanvas(){
+  const url = caraLook(lookActual(), 260);
+  if(_caraSrc !== url){
+    _caraSrc = url;
+    const im = new Image();
+    im.onload = () => { if($('#v-agentes') && $('#v-agentes').classList.contains('on')) dibujaOficina(performance.now()); };
+    im.src = url;
+    _caraImg = im;
+  }
+  return (_caraImg && _caraImg.complete && _caraImg.naturalWidth) ? _caraImg : null;
+}
+
+/* ── LA MESA SATÉLITE ──
+   En Londres y Tokio no hay torre propia: hay una terraza, una laptop y el
+   monito trabajando con la ciudad de fondo. La misma disciplina, otro huso. */
+function escenaSatelite(c, W, H, t, E, osc){
+  const CI = CIUDADES[E.c];
+  const px = W / 2, py = 900;
+  const flot = Math.sin(t / 1100) * 5;
+
+  /* la terraza */
+  c.fillStyle = 'rgba(28,32,50,.82)';
+  c.beginPath();
+  c.moveTo(px - 470, py + 60); c.lineTo(px, py - 106); c.lineTo(px + 470, py + 60);
+  c.lineTo(px, py + 226); c.closePath(); c.fill();
+  c.fillStyle = 'rgba(44,50,74,.9)';
+  c.beginPath();
+  c.moveTo(px - 470, py + 60); c.lineTo(px, py + 226); c.lineTo(px, py + 268);
+  c.lineTo(px - 470, py + 102); c.closePath(); c.fill();
+  c.fillStyle = 'rgba(34,38,58,.9)';
+  c.beginPath();
+  c.moveTo(px + 470, py + 60); c.lineTo(px, py + 226); c.lineTo(px, py + 268);
+  c.lineTo(px + 470, py + 102); c.closePath(); c.fill();
+  /* barandal */
+  c.strokeStyle = 'rgba(150,168,200,.45)'; c.lineWidth = 3;
+  for(let k = 0; k <= 14; k++){
+    const u = k / 14, bx = px - 470 + u * 470, by = py + 60 - u * 166;
+    c.beginPath(); c.moveTo(bx, by); c.lineTo(bx, by - 52); c.stroke();
+    const bx2 = px + u * 470, by2 = py - 106 + u * 166;
+    c.beginPath(); c.moveTo(bx2, by2); c.lineTo(bx2, by2 - 52); c.stroke();
+  }
+  c.beginPath(); c.moveTo(px - 470, py + 8); c.lineTo(px, py - 158); c.lineTo(px + 470, py + 8); c.stroke();
+
+  /* mesa y laptop */
+  const mx = px, my = py + 30;
+  c.fillStyle = '#E4E7EC';
+  c.beginPath(); c.moveTo(mx - 130, my); c.lineTo(mx, my - 46); c.lineTo(mx + 130, my);
+  c.lineTo(mx, my + 46); c.closePath(); c.fill();
+  c.fillStyle = '#B9BEC8';
+  c.beginPath(); c.moveTo(mx - 130, my); c.lineTo(mx, my + 46); c.lineTo(mx, my + 62);
+  c.lineTo(mx - 130, my + 16); c.closePath(); c.fill();
+  c.fillStyle = '#2E343E';
+  c.beginPath(); c.moveTo(mx - 6, my - 14); c.lineTo(mx + 52, my + 6); c.lineTo(mx + 52, my - 44);
+  c.lineTo(mx - 6, my - 62); c.closePath(); c.fill();
+  c.fillStyle = `rgba(90,190,255,${.5 + osc * .35})`;
+  c.beginPath(); c.moveTo(mx - 2, my - 18); c.lineTo(mx + 47, my + 1); c.lineTo(mx + 47, my - 42);
+  c.lineTo(mx - 2, my - 58); c.closePath(); c.fill();
+  /* taza */
+  c.fillStyle = '#E8E4DA';
+  c.beginPath(); c.ellipse(mx - 62, my - 4, 15, 8, 0, 0, 7); c.fill();
+  c.fillRect(mx - 77, my - 12, 30, 9);
+
+  /* el monito, de pie junto a la mesa, con su cara real */
+  const im = caraCanvas();
+  const hx = px - 118, hy = py - 62 + flot, lado = 132;
+  c.fillStyle = 'rgba(14,16,26,.34)';
+  c.beginPath(); c.ellipse(hx, py + 34, 52, 17, 0, 0, 7); c.fill();
+  if(im){
+    c.save();
+    c.beginPath(); c.arc(hx, hy, lado / 2, 0, 7); c.clip();
+    c.imageSmoothingEnabled = false;
+    c.drawImage(im, hx - lado/2, hy - lado/2, lado, lado);
+    c.restore();
+    c.strokeStyle = 'rgba(255,255,255,.22)'; c.lineWidth = 3;
+    c.beginPath(); c.arc(hx, hy, lado / 2, 0, 7); c.stroke();
+  }
+
+  /* el cartel de dónde está y cuánto le queda ahí */
+  c.textAlign = 'center';
+  c.font = '600 34px -apple-system, "Segoe UI", sans-serif';
+  c.fillStyle = 'rgba(255,255,255,.94)';
+  c.fillText(loc([CI.n, CI.en]), W/2, 150);
+  c.font = '14px "IBM Plex Mono", monospace';
+  c.fillStyle = 'rgba(255,255,255,.5)';
+  const h = Math.floor(E.restan / 60), m = Math.round(E.restan % 60);
+  c.fillText(`${CI.sub}  ·  ${bi('vuela a','flies to')} ${loc([CIUDADES[E.sig].n, CIUDADES[E.sig].en])} ${bi('en','in')} ${h ? h + 'h ' : ''}${m}m`, W/2, 184);
+  c.textAlign = 'left';
+  c.font = '12px "IBM Plex Mono", monospace';
+  c.fillStyle = 'rgba(255,255,255,.4)';
+  c.fillText('NORTHPOINT CAPITAL · ' + loc([CI.n, CI.en]), 24, H - 22);
+}
+
 function dibujaOficina(t){
   const cv = $('#agOficina'); if(!cv) return;
   const c = cv.getContext('2d');
@@ -8096,115 +8540,30 @@ function dibujaOficina(t){
   c.clearRect(0, 0, W, H);
   const N = ISO.N, rr = i => ((Math.sin(i * 12.9898) * 43758.5453) % 1 + 1) % 1;
 
-  /* ══ EL CIELO, A LA HORA QUE DE VERDAD ES ══
-     Siete momentos del día con su paleta, y el sol o la luna en el arco que
-     les toca. La oficina abre a las 7 y la ventana de operación es de 7:00
-     a 8:30 — eso se ve: a esa hora el cielo está amaneciendo. */
-  const ahora = new Date();
-  const minDia = ahora.getHours() * 60 + ahora.getMinutes();
-  const MOMENTOS = [
-    { m:0,    k:'noche',      cielo:['#0A0D1E','#141733','#232A52','#2E3358'] },
-    { m:330,  k:'alba',       cielo:['#1B2148','#3E3B6E','#7A5A78','#B87A6A'] },
-    { m:400,  k:'amanecer',   cielo:['#2E4A7A','#7A6A96','#D98E62','#F0B074'] },
-    { m:470,  k:'mañana',     cielo:['#3E7ABC','#6FA6D8','#A9CCE8','#D6E6F2'] },
-    { m:720,  k:'mediodía',   cielo:['#2E7FD4','#5CA5E4','#9CC9EE','#CFE4F5'] },
-    { m:1020, k:'tarde',      cielo:['#3A72B4','#7A94C4','#C0A48E','#E0B482'] },
-    { m:1140, k:'atardecer',  cielo:['#2A3A72','#6E4A82','#C4643E','#E8934A'] },
-    { m:1250, k:'anochecer',  cielo:['#141733','#232A52','#4A3A62','#6E4A5E'] },
-    { m:1380, k:'noche',      cielo:['#0A0D1E','#141733','#232A52','#2E3358'] },
-    { m:1441, k:'noche',      cielo:['#0A0D1E','#141733','#232A52','#2E3358'] },
-  ];
-  let i0 = 0;
-  for(let i = 0; i < MOMENTOS.length - 1; i++) if(minDia >= MOMENTOS[i].m) i0 = i;
-  const A = MOMENTOS[i0], B = MOMENTOS[i0 + 1] || A;
-  const tt = B.m > A.m ? Math.max(0, Math.min(1, (minDia - A.m) / (B.m - A.m))) : 0;
-  const lerpC = (c1, c2, u) => {
-    const h = x => [parseInt(x.slice(1,3),16), parseInt(x.slice(3,5),16), parseInt(x.slice(5,7),16)];
-    const [r1,g1,b1] = h(c1), [r2,g2,b2] = h(c2);
-    return `rgb(${Math.round(r1+(r2-r1)*u)},${Math.round(g1+(g2-g1)*u)},${Math.round(b1+(b2-b1)*u)})`;
-  };
-  const momento = tt < .5 ? A.k : B.k;
-  const cielo = c.createLinearGradient(0, 0, 0, 620);
-  [0, .45, .8, 1].forEach((stop, k) => cielo.addColorStop(stop, lerpC(A.cielo[k], B.cielo[k], tt)));
-  c.fillStyle = cielo; c.fillRect(0, 0, W, H);
+  /* ── DÓNDE ESTAMOS ──
+     La escena la manda el mercado: la ciudad de la sesión en curso, o el jet
+     si vamos en camino. El cielo es el de la hora LOCAL de esa ciudad. */
+  const E = escenaAhora();
+  const ciudadFoco = E.tipo === 'vuelo' ? E.a : E.c;
+  const CI = CIUDADES[ciudadFoco];
+  const minLocal = minutosEn(CI.tz);
+  const PC = pintaCielo(c, W, H, minLocal, rr);
+  const oscuridad = PC.oscuridad, momento = PC.momento;
 
-  /* de noche hay estrellas, y se van apagando conforme amanece */
-  const oscuridad = ['noche','anochecer','alba'].includes(momento)
-    ? (momento === 'noche' ? 1 : .55) : (momento === 'atardecer' ? .25 : 0);
-  if(oscuridad > 0){
-    for(let i = 0; i < 130; i++){
-      const sx = rr(i) * W, sy = rr(i + 300) * 420;
-      c.fillStyle = `rgba(255,255,255,${(.2 + rr(i+7) * .6) * oscuridad})`;
-      c.fillRect(sx, sy, rr(i+9) > .8 ? 2.4 : 1.6, rr(i+9) > .8 ? 2.4 : 1.6);
-    }
-  }
-
-  /* El astro recorre un arco: sale por la izquierda, culmina arriba y se pone
-     por la derecha. El sol de 6:00 a 19:00; la luna el resto. */
-  const SALE = 370, SEPONE = 1150;             // 6:10 y 19:10
-  const esDia = minDia >= SALE && minDia <= SEPONE;
-  const u = esDia ? (minDia - SALE) / (SEPONE - SALE)
-                  : ((minDia > SEPONE ? minDia - SEPONE : minDia + 1440 - SEPONE) / (1440 - (SEPONE - SALE)));
-  const ax = 180 + u * (W - 360);
-  const ay = 300 - Math.sin(u * Math.PI) * 230;
-  if(esDia){
-    const alto = Math.sin(u * Math.PI);        // 0 en el horizonte, 1 al mediodía
-    const solCol = alto > .55 ? '#FFF6D8' : (alto > .25 ? '#FFD98A' : '#FF9E5A');
-    const halo = c.createRadialGradient(ax, ay, 10, ax, ay, 150);
-    halo.addColorStop(0, `rgba(255,224,150,${.34 + alto * .2})`);
-    halo.addColorStop(1, 'rgba(255,224,150,0)');
-    c.fillStyle = halo; c.beginPath(); c.arc(ax, ay, 150, 0, 7); c.fill();
-    c.fillStyle = solCol; c.beginPath(); c.arc(ax, ay, 46, 0, 7); c.fill();
-    c.fillStyle = mez(solCol, 18); c.beginPath(); c.arc(ax - 8, ay - 8, 30, 0, 7); c.fill();
-  } else {
-    /* la luna, con su fase real: se recorta con un círculo del color del cielo */
-    const halo = c.createRadialGradient(ax, ay, 8, ax, ay, 120);
-    halo.addColorStop(0, 'rgba(226,230,240,.22)'); halo.addColorStop(1, 'rgba(226,230,240,0)');
-    c.fillStyle = halo; c.beginPath(); c.arc(ax, ay, 120, 0, 7); c.fill();
-    c.fillStyle = '#F2F1E4'; c.beginPath(); c.arc(ax, ay, 42, 0, 7); c.fill();
-    /* cráteres */
-    c.fillStyle = 'rgba(190,188,176,.55)';
-    [[-14,-8,9],[10,6,7],[-4,14,5],[16,-12,5]].forEach(([dx,dy,r]) => {
-      c.beginPath(); c.arc(ax+dx, ay+dy, r, 0, 7); c.fill(); });
-    /* fase lunar aproximada: ciclo de 29.53 días desde una luna nueva conocida */
-    const dias = (ahora - new Date(2026,0,18)) / 86400000;
-    const fase = ((dias % 29.53) + 29.53) % 29.53 / 29.53;   // 0 nueva, .5 llena
-    const corte = Math.cos(fase * Math.PI * 2) * 46;
-    if(Math.abs(corte) > 3){
-      c.fillStyle = lerpC(A.cielo[0], B.cielo[0], tt);
-      c.beginPath(); c.arc(ax + corte, ay, 43, 0, 7); c.fill();
-    }
-  }
-
-  /* el rótulo del momento, discreto */
+  /* rótulo: ciudad, hora local y momento del día */
   c.font = '13px "IBM Plex Mono", monospace'; c.textAlign = 'right';
-  c.fillStyle = 'rgba(255,255,255,.4)';
-  const hhmm2 = String(ahora.getHours()).padStart(2,'0') + ':' + String(ahora.getMinutes()).padStart(2,'0');
-  c.fillText(hhmm2 + '  ·  ' + momento.toUpperCase(), W - 24, 40);
+  c.fillStyle = 'rgba(255,255,255,.42)';
+  const relojLocal = String(Math.floor(minLocal / 60)).padStart(2,'0') + ':' + String(minLocal % 60).padStart(2,'0');
+  c.fillText(`${loc([CI.n, CI.en])}  ·  ${relojLocal}  ·  ${momento.toUpperCase()}`, W - 24, 40);
   c.textAlign = 'left';
 
-  /* ══ CIUDAD DE FONDO ══ */
-  for(let capa = 0; capa < 3; capa++){
-    const base = 470 + capa * 34, al = .3 + capa * .24;
-    for(let i = 0; i < 30; i++){
-      const bx = i * (W / 30) - 24 + rr(i + capa*40) * 26;
-      const bw = W / 30 * (.62 + rr(i + capa*7) * .5);
-      const bh = 90 + rr(i + capa*13) * (190 + capa * 70);
-      c.fillStyle = `rgba(${44 + capa*14},${48 + capa*16},${88 + capa*14},${al})`;
-      c.fillRect(bx, base - bh, bw, bh + 200);
-      for(let wy = base - bh + 12; wy < base + 30; wy += 15){
-        for(let wx = bx + 6; wx < bx + bw - 7; wx += 11){
-          if(rr(wx*3 + wy*7 + capa) < .4){
-            /* de día las ventanas reflejan cielo; de noche están encendidas */
-            c.fillStyle = rr(wx+wy) > .78
-              ? `rgba(255,238,182,${(.3 + capa*.2) * (.25 + oscuridad * .75)})`
-              : `rgba(150,170,220,${.18 + capa*.12})`;
-            c.fillRect(wx, wy, 5, 7);
-          }
-        }
-      }
-    }
-  }
+  if(E.tipo === 'vuelo'){ escenaVuelo(c, W, H, t, E, rr); return; }
+
+  skylineCiudad(c, W, H, E.c, oscuridad, rr);
+
+  /* Fuera de Nueva York no hay torre: el monito trabaja desde donde cayó, con
+     la ciudad de fondo. La oficina del piso 88 es de Manhattan y de nadie más. */
+  if(E.c !== 'nyc'){ escenaSatelite(c, W, H, t, E, oscuridad); return; }
 
   /* ══ MANZANAS LATERALES · edificios bajos, árboles y avenida ══ */
   const manzana = (ox0, oy0, lado) => {
