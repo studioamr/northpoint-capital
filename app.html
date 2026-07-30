@@ -9193,24 +9193,94 @@ function dibujaOficina(t){
     else               c.setTransform( ISO.TW/2, ISO.TH/2, 0, -ISO.TZ, iX(0, N), iY(0, N, 0));
     fn(c); c.restore();
   };
+  /* Tres arquitecturas, no tres tintes: THE OBSIDIAN (ladrillo negro con
+     arcos y cornisa dentada), KURENAI (laca roja con celosía de madera) y
+     THE EXCHANGE CLUB (georgiana con balcones de hierro y ventana de
+     guillotina). El estilo manda cómo se dibuja cada piso. */
   const fachada = (c2, base, vidrio, banda) => {
+    const estilo = E.c;
     c2.fillStyle = base; c2.fillRect(0, -PISOS, N, PISOS);
+    if(estilo === 'nyc'){
+      /* el aparejo del ladrillo: hiladas y juntas alternadas */
+      c2.fillStyle = 'rgba(0,0,0,.22)';
+      for(let f2 = 0; f2 < PISOS * 3; f2++) c2.fillRect(0, -f2 * .333 - .02, N, .022);
+      for(let f2 = 0; f2 < PISOS * 3; f2++)
+        for(let u = (f2 % 2) * .27; u < N; u += .54)
+          c2.fillRect(u, -f2 * .333 - .3, .02, .3);
+    }
     for(let f = 0; f < PISOS; f++){
-      // banda del entrepiso: cada ciudad trae la suya
       c2.fillStyle = banda || 'rgba(222,228,244,.9)'; c2.fillRect(0, -f - .1, N, .16);
-      c2.fillStyle = 'rgba(180,190,220,.5)'; c2.fillRect(0, -f - .01, N, .05);
-      // cristal del piso, con oficinas encendidas
-      c2.fillStyle = vidrio; c2.fillRect(.12, -f - .88, N - .24, .74);
+      if(estilo !== 'nyc'){ c2.fillStyle = 'rgba(255,255,255,.25)'; c2.fillRect(0, -f - .01, N, .05); }
+      if(estilo === 'londres'){
+        /* el balcón de hierro de cada nivel, con sus geranios */
+        c2.fillStyle = '#1A2438'; c2.fillRect(-.06, -f - .2, N + .12, .1);
+        c2.fillStyle = 'rgba(206,216,232,.75)';
+        for(let u = .05; u < N; u += .26) c2.fillRect(u, -f - .5, .045, .3);
+        c2.fillRect(-.06, -f - .52, N + .12, .05);
+        for(let u = .5; u < N; u += 1.7){
+          c2.fillStyle = '#3E6B44'; c2.fillRect(u, -f - .3, .3, .1);
+          c2.fillStyle = '#C4302B'; c2.fillRect(u + .04, -f - .36, .07, .07);
+          c2.fillRect(u + .17, -f - .37, .07, .07);
+        }
+      }
       for(let u = .3; u < N - .5; u += .82){
         const on = rr(u * 27 + f * 19) < .62;
-        c2.fillStyle = on ? (rr(u+f) > .74 ? 'rgba(255,240,196,.62)' : 'rgba(228,232,248,.4)')
-                          : 'rgba(70,80,120,.34)';
-        c2.fillRect(u, -f - .8, .6, .58);
-        // silueta de mobiliario dentro
+        const luzV = on ? (rr(u+f) > .74 ? 'rgba(255,240,196,.62)' : 'rgba(228,232,248,.4)')
+                        : 'rgba(70,80,120,.34)';
+        if(estilo === 'nyc'){
+          /* arco de medio punto: marco de piedra oscura y solo el PERFIL en
+             claro — que mande el ladrillo negro, no el marco */
+          c2.fillStyle = '#33373E';
+          c2.fillRect(u - .02, -f - .82, .64, .62);
+          c2.beginPath(); c2.arc(u + .3, -f - .8, .32, Math.PI, 0); c2.fill();
+          c2.fillStyle = luzV;
+          c2.fillRect(u + .02, -f - .78, .56, .56);
+          c2.beginPath(); c2.arc(u + .3, -f - .77, .27, Math.PI, 0); c2.fill();
+          c2.strokeStyle = 'rgba(214,218,224,.55)'; c2.lineWidth = .03;
+          c2.beginPath(); c2.arc(u + .3, -f - .8, .325, Math.PI, 0); c2.stroke();
+          c2.fillStyle = '#C9CDD4'; c2.fillRect(u + .265, -f - 1.16, .07, .06);
+        } else if(estilo === 'tokio'){
+          c2.fillStyle = vidrio; c2.fillRect(u - .04, -f - .84, .68, .64);
+          c2.fillStyle = luzV; c2.fillRect(u, -f - .8, .6, .58);
+          /* la celosía de madera encima del cristal */
+          c2.fillStyle = 'rgba(94,58,42,.85)';
+          for(let k = 0; k < 4; k++) c2.fillRect(u + .05 + k * .15, -f - .8, .035, .58);
+          c2.fillRect(u, -f - .53, .6, .035);
+        } else {
+          /* guillotina georgiana: marco blanco y parteluz en cruz */
+          c2.fillStyle = '#EDE6D8'; c2.fillRect(u - .05, -f - .86, .7, .68);
+          c2.fillStyle = luzV; c2.fillRect(u, -f - .8, .6, .58);
+          c2.fillStyle = '#EDE6D8';
+          c2.fillRect(u + .27, -f - .8, .06, .58); c2.fillRect(u, -f - .54, .6, .05);
+        }
         if(on && rr(u*5+f*3) > .5){
           c2.fillStyle = 'rgba(60,66,102,.5)'; c2.fillRect(u + .12, -f - .48, .32, .22);
         }
       }
+    }
+    /* remates del estilo */
+    if(estilo === 'nyc'){
+      c2.fillStyle = '#E8EAEC'; c2.fillRect(-.1, -PISOS - .2, N + .2, .22);
+      for(let u = 0; u < N; u += .3) c2.fillRect(u, -PISOS + .02, .16, .1);   // dentículos
+      /* hiedra colgando de la cornisa */
+      for(let u = .6; u < N; u += 1.9){
+        const largo = .5 + rr(u * 7) * .9;
+        c2.fillStyle = 'rgba(47,107,68,.9)';
+        c2.fillRect(u, -PISOS + .1, .06, largo);
+        for(let k = 0; k < 4; k++)
+          c2.fillRect(u - .07 + (k % 2) * .14, -PISOS + .2 + k * largo / 4, .1, .08);
+      }
+    } else if(estilo === 'tokio'){
+      /* el doble alero de teja, con sus esquinas */
+      c2.fillStyle = '#2E2A28'; c2.fillRect(-.28, -PISOS - .2, N + .56, .26);
+      c2.fillStyle = '#3E3834'; c2.fillRect(-.28, -PISOS - .2, N + .56, .07);
+      c2.fillStyle = '#26221F'; c2.fillRect(-.14, -PISOS - .44, N + .28, .2);
+      for(let u = -.2; u < N + .2; u += .22){
+        c2.fillStyle = 'rgba(255,255,255,.09)'; c2.fillRect(u, -PISOS - .02, .09, .05);
+      }
+    } else {
+      c2.fillStyle = '#EDE6D8'; c2.fillRect(-.12, -PISOS - .18, N + .24, .2);   // cornisa
+      c2.fillStyle = '#1A2438'; c2.fillRect(-.12, -PISOS - .3, N + .24, .1);
     }
   };
   /* La torre se viste según la plaza: cristal azul en Manhattan, blanco con
@@ -9224,6 +9294,20 @@ function dibujaOficina(t){
   const TT = TRAJE_TORRE[E.c] || TRAJE_TORRE.nyc;
   caraTorre('der', c2 => fachada(c2, TT.der, TT.vidrio, TT.banda));
   caraTorre('izq', c2 => fachada(c2, TT.izq, TT.vidrio2, TT.banda));
+
+  if(E.c === 'tokio'){
+    /* el letrero vertical de neón, como en Dotonbori */
+    caraTorre('der', c2 => {
+      c2.fillStyle = '#7E241E'; c2.fillRect(N - .78, -PISOS + .5, .62, 4.4);
+      c2.fillStyle = oscuridad > .25 ? '#FF6A5A' : '#E8B4AC';
+      for(let k = 0; k < 6; k++){
+        c2.fillRect(N - .66, -PISOS + .75 + k * .68, .38, .34);
+        c2.fillStyle = '#7E241E';
+        c2.fillRect(N - .58, -PISOS + .84 + k * .68, .22, .06);
+        c2.fillStyle = oscuridad > .25 ? '#FF6A5A' : '#E8B4AC';
+      }
+    });
+  }
 
   /* rótulo en la fachada */
   const rotX = iX(N, 5.2), rotY = iY(N, 5.2, -3.4);
@@ -9334,6 +9418,19 @@ function dibujaOficina(t){
   };
   enPared('der', c2 => paredPantallas(c2, DECO.muroDer, 0));
   enPared('izq', c2 => paredPantallas(c2, DECO.muroIzq, 2));
+  if(E.c === 'nyc'){
+    /* la hiedra del Obsidian: cae del canto superior de los dos muros */
+    const hiedra = c2 => {
+      for(let u = .8; u < N; u += 1.6){
+        const largo = .35 + rr(u * 13) * .5;
+        c2.fillStyle = 'rgba(47,107,68,.92)';
+        c2.fillRect(u, MURO - largo, .07, largo);
+        for(let k = 0; k < 3; k++)
+          c2.fillRect(u - .08 + (k % 2) * .16, MURO - largo * (k + 1) / 3.4, .12, .09);
+      }
+    };
+    enPared('der', hiedra); enPared('izq', hiedra);
+  }
   /* puerta y reloj en el muro izquierdo */
   enPared('izq', c2 => {
     c2.fillStyle = '#8A5E3C'; c2.fillRect(8.4, 0, 1.2, 2.1);
@@ -9406,14 +9503,84 @@ function dibujaOficina(t){
   for(let i = 0; i < 5; i++) silla(1.3 + i * 1.55, 1.15);
   for(let i = 0; i < 3; i++) silla(1.15, 1.3 + i * 1.55);
   for(let i = 0; i < 4; i++) silla(2.2 + i * 1.55, 2.9);
-  // isla central
-  add(11, c2 => {
-    caja(c2, 4.6, 4.6, 0, 3.0, 2.2, .86, DECO.isla, 10, -22);
-    losa(c2, 4.66, 4.66, .87, DECO.islaTop, 2.88, 2.08);
-    c2.fillStyle = '#FFFFFF'; c2.beginPath();
-    c2.ellipse(iX(5.4, 5.2), iY(5.4, 5.2, .88), 7, 4, 0, 0, 7); c2.fill();
-    losa(c2, 6.2, 5.3, .88, '#E8EEF4', .4, .3);
-  });
+  // el centro: isla de trabajo — salvo en Tokio, donde es el tsuboniwa
+  if(E.c === 'tokio'){
+    add(11, c2 => {
+      /* pasarela de madera alrededor */
+      caja(c2, 4.35, 4.35, 0, 3.5, 2.7, .14, '#8E6B46', 12, -20);
+      /* la grava, rastrillada */
+      losa(c2, 4.65, 4.65, .15, '#D8D2C2', 2.9, 2.1);
+      c2.strokeStyle = 'rgba(150,140,120,.5)'; c2.lineWidth = 1.2;
+      for(let k = 0; k < 6; k++){
+        c2.beginPath();
+        c2.moveTo(iX(4.75, 4.85 + k * .32), iY(4.75, 4.85 + k * .32, .16));
+        c2.lineTo(iX(7.45, 4.85 + k * .32), iY(7.45, 4.85 + k * .32, .16));
+        c2.stroke();
+      }
+      /* las tres rocas */
+      [[5.1, 5.0, .34],[6.6, 5.9, .42],[6.9, 4.95, .26]].forEach(([rx, ry, rs]) => {
+        caja(c2, rx, ry, .15, rs, rs * .85, rs * .9, '#78716A', 14, -18);
+        losa(c2, rx + .04, ry + .04, .15 + rs * .9, '#8E877E', rs - .08, rs * .85 - .08);
+      });
+      /* el farol de piedra */
+      caja(c2, 6.85, 6.35, .15, .3, .3, .5, '#8E8C84', 12, -18);
+      caja(c2, 6.8, 6.3, .65, .4, .4, .14, '#78766E', 12, -18);
+      /* el arce rojo */
+      const ax2 = iX(5.6, 6.15), ay2 = iY(5.6, 6.15, .16);
+      c2.fillStyle = '#4A3428'; c2.fillRect(ax2 - 3, ay2 - 30, 6, 30);
+      [['#C4483C',0,-38,20,12],['#D95A4A',-14,-30,14,9],['#B23A30',14,-30,14,9],['#D95A4A',0,-48,13,8]]
+        .forEach(([col,dx,dy,rx2,ry2]) => {
+          c2.fillStyle = col; c2.beginPath(); c2.ellipse(ax2 + dx, ay2 + dy, rx2, ry2, 0, 0, 7); c2.fill();
+        });
+      /* pétalos cayendo al patio, en loop */
+      for(let k = 0; k < 8; k++){
+        const fase2 = ((t / 900 + k * .37) % 1);
+        const px4 = ax2 - 18 + ((k * 53) % 60), py4 = ay2 - 44 + fase2 * 52;
+        c2.fillStyle = `rgba(217,90,74,${.85 - fase2 * .5})`;
+        c2.fillRect(px4 + Math.sin(fase2 * 9 + k) * 5, py4, 3.4, 2.6);
+      }
+    });
+  } else {
+    add(11, c2 => {
+      caja(c2, 4.6, 4.6, 0, 3.0, 2.2, .86, DECO.isla, 10, -22);
+      losa(c2, 4.66, 4.66, .87, DECO.islaTop, 2.88, 2.08);
+      c2.fillStyle = '#FFFFFF'; c2.beginPath();
+      c2.ellipse(iX(5.4, 5.2), iY(5.4, 5.2, .88), 7, 4, 0, 0, 7); c2.fill();
+      losa(c2, 6.2, 5.3, .88, '#E8EEF4', .4, .3);
+    });
+  }
+
+  /* ── LAS PIEZAS FIRMA DE LONDRES: chimenea encendida y mesa de ajedrez ── */
+  if(E.c === 'londres'){
+    add(12.9, c2 => {
+      /* la chimenea de piedra, con repisa */
+      caja(c2, 6.35, 6.3, 0, 1.15, .5, 1.35, '#8E8478', 12, -22);
+      caja(c2, 6.3, 6.25, 1.35, 1.25, .6, .12, '#A69A8A', 12, -18);
+      /* el hogar y el fuego vivo */
+      const hx2 = iX(6.92, 6.62), hy2 = iY(6.92, 6.62, .62);
+      c2.fillStyle = '#1A1512'; c2.fillRect(hx2 - 13, hy2 - 16, 26, 20);
+      for(let k = 0; k < 4; k++){
+        const fl = (Math.sin(t / 110 + k * 1.9) + 1) / 2;
+        c2.fillStyle = k % 2 ? `rgba(232,145,60,${.6 + fl * .4})` : `rgba(255,200,90,${.5 + fl * .5})`;
+        c2.beginPath();
+        c2.ellipse(hx2 - 6 + k * 4, hy2 - 2 - fl * 6, 3.2, 5 + fl * 4, 0, 0, 7); c2.fill();
+      }
+      const glow = c2.createRadialGradient(hx2, hy2, 3, hx2, hy2, 34);
+      glow.addColorStop(0, 'rgba(255,170,80,.28)'); glow.addColorStop(1, 'rgba(255,170,80,0)');
+      c2.fillStyle = glow; c2.beginPath(); c2.arc(hx2, hy2, 34, 0, 7); c2.fill();
+      /* leños */
+      c2.fillStyle = '#4A3428'; c2.fillRect(hx2 - 10, hy2 + 1, 20, 3);
+    });
+    add(17.9, c2 => {
+      /* la mesa de ajedrez con sus dos sillas */
+      caja(c2, 9.05, 8.6, 0, .56, .56, .4, '#6E5438', 12, -20);
+      losa(c2, 9.09, 8.64, .41, '#EDE6D8', .48, .48);
+      for(let cx4 = 0; cx4 < 4; cx4++) for(let cy4 = 0; cy4 < 4; cy4++)
+        if((cx4 + cy4) % 2) losa(c2, 9.09 + cx4 * .12, 8.64 + cy4 * .12, .415, '#26406A', .12, .12);
+      caja(c2, 8.55, 8.62, 0, .4, .4, .34, DECO.silla, 12, -20);
+      caja(c2, 9.68, 8.62, 0, .4, .4, .34, DECO.silla, 12, -20);
+    });
+  }
   /* cocineta: barra, alacenas y una cafetera */
   add(9.2, c2 => {
     caja(c2, 7.4, .35, 0, 2.2, 1.0, .95, DECO.barra, 10, -22);
@@ -9458,12 +9625,36 @@ function dibujaOficina(t){
   });
   /* mamparas de cristal: el frente y el costado */
   add(9.7, c2 => {
-    c2.globalAlpha = .3;
-    caja(c2, 2.72, 5.95, 0, .08, 2.5, 1.5, '#AECAE0', 20, -8);
-    caja(c2, .45, 5.88, 0, 2.35, .08, 1.5, '#AECAE0', 20, -8);
-    c2.globalAlpha = 1;
-    caja(c2, 2.72, 5.95, 1.5, .08, 2.5, .06, '#C6CEDA', 18, -14);
-    caja(c2, .45, 5.88, 1.5, 2.35, .08, .06, '#C6CEDA', 18, -14);
+    if(E.c === 'tokio'){
+      /* mamparas shoji: papel retroiluminado y retícula de madera */
+      caja(c2, 2.72, 5.95, 0, .08, 2.5, 1.5, '#F6F1E4', 8, -6);
+      caja(c2, .45, 5.88, 0, 2.35, .08, 1.5, '#F6F1E4', 8, -6);
+      c2.strokeStyle = 'rgba(94,58,42,.8)'; c2.lineWidth = 2;
+      for(let k = 0; k <= 5; k++){
+        const yy = 5.95 + k * .5;
+        c2.beginPath();
+        c2.moveTo(iX(2.76, yy), iY(2.76, yy, 0)); c2.lineTo(iX(2.76, yy), iY(2.76, yy, 1.5));
+        c2.stroke();
+      }
+      for(let k = 0; k <= 4; k++){
+        c2.beginPath();
+        c2.moveTo(iX(2.76, 5.95), iY(2.76, 5.95, k * .38));
+        c2.lineTo(iX(2.76, 8.45), iY(2.76, 8.45, k * .38)); c2.stroke();
+      }
+      for(let k = 0; k <= 5; k++){
+        const xx = .45 + k * .47;
+        c2.beginPath();
+        c2.moveTo(iX(xx, 5.92), iY(xx, 5.92, 0)); c2.lineTo(iX(xx, 5.92), iY(xx, 5.92, 1.5));
+        c2.stroke();
+      }
+    } else {
+      c2.globalAlpha = .3;
+      caja(c2, 2.72, 5.95, 0, .08, 2.5, 1.5, '#AECAE0', 20, -8);
+      caja(c2, .45, 5.88, 0, 2.35, .08, 1.5, '#AECAE0', 20, -8);
+      c2.globalAlpha = 1;
+      caja(c2, 2.72, 5.95, 1.5, .08, 2.5, .06, '#C6CEDA', 18, -14);
+      caja(c2, .45, 5.88, 1.5, 2.35, .08, .06, '#C6CEDA', 18, -14);
+    }
   });
   add(13.9, c2 => {
     /* el escritorio ejecutivo, más grande que los demás */
