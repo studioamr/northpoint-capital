@@ -3310,14 +3310,17 @@ function enLaMesa(){
   return PERSONAJES.filter(p => (hoy - (P[p.id] || 0)) < PRESENCIA_MIN * 60000)
                    .map(p => ({ id:p.id, nom:p.nom, hace: Math.round((hoy - P[p.id]) / 60000) }));
 }
+const SILLA_CEO = { x:1.28, y:7.62, z:0, flip:false };
 const sillasActivas = () => {
   const g = invitadoActual();
   if(g) return [{ n:g.n, x:5.6, y:4.2, z:0, flip:false }];
-  /* se sientan todos los socios vistos hace poco, cada uno en SU silla */
+  /* los socios vistos hace poco ocupan su silla; el que ESTÁ en sesión no se
+     sienta en un puesto más: preside desde su oficina de cristal */
   const vivos = new Set(enLaMesa().map(x => x.nom));
   const yo = PERSONAJES.find(x => x.id === (S.session && S.session.user));
   if(yo) vivos.add(yo.nom);
-  return OFI.sillas.filter(s => vivos.has(s.n));
+  return OFI.sillas.filter(s => vivos.has(s.n))
+    .map(s => (yo && s.n === yo.nom) ? { ...s, ...SILLA_CEO } : s);
 };
 
 /* ── Equipo NORTHPOINT · credenciales y cargos ── */
@@ -8025,7 +8028,7 @@ const fondoOjo = L => mez(L.piel, -6);
 
 /* ── avatar estilo Habbo: cabeza grande, cuerpo compacto, carácter propio ── */
 function figura(c, s, habla, t){
-  const L = OFI.look[s.n]; if(!L) return;
+  const L = s.look || OFI.look[s.n]; if(!L) return;
   const bx = iX(s.x, s.y), by = iY(s.x, s.y, s.z);
   const f = s.flip ? -1 : 1;
   const bob = habla ? Math.round(Math.sin(t/170) * 2.2) : 0;
@@ -9188,9 +9191,9 @@ function dibujaOficina(t){
      acentos rojos en Tokio, piedra de Portland con marcos claros en Londres.
      El rótulo cambia de tinta con ella. */
   const TRAJE_TORRE = {
-    nyc:     { der:'#8E96C0', izq:'#7A83AE', vidrio:'rgba(150,166,214,.55)', vidrio2:'rgba(130,146,196,.5)', tinta:'#2C3560' },
-    tokio:   { der:'#E8E2D6', izq:'#D6CFC2', vidrio:'rgba(196,180,170,.4)',  vidrio2:'rgba(180,164,156,.38)', tinta:'#A83A30', banda:'#C4483C' },
-    londres: { der:'#B9A88E', izq:'#A6957C', vidrio:'rgba(150,150,140,.45)', vidrio2:'rgba(136,136,126,.42)', tinta:'#4A3B2E', banda:'#EDE6D8' },
+    nyc:     { der:'#23262E', izq:'#1A1D24', vidrio:'rgba(110,124,148,.4)',  vidrio2:'rgba(96,110,134,.36)',  tinta:'#E8EAEE', banda:'rgba(201,169,106,.85)' },
+    tokio:   { der:'#B23A30', izq:'#992E26', vidrio:'rgba(255,214,200,.3)',  vidrio2:'rgba(255,200,186,.26)', tinta:'#FFEFE9', banda:'#7E241E' },
+    londres: { der:'#2E4A78', izq:'#253E68', vidrio:'rgba(178,200,230,.36)', vidrio2:'rgba(160,184,218,.32)', tinta:'#E9EFF9', banda:'rgba(233,239,249,.8)' },
   };
   const TT = TRAJE_TORRE[E.c] || TRAJE_TORRE.nyc;
   caraTorre('der', c2 => fachada(c2, TT.der, TT.vidrio, TT.banda));
@@ -9203,10 +9206,55 @@ function dibujaOficina(t){
   c.font = 'bold 46px "IBM Plex Mono", monospace'; c.fillText('NORTHPOINT', 0, 0);
   c.restore();
 
+  /* ── LA DECORACIÓN ── cada oficina con su interiorismo completo:
+     piso, muros, escritorios, sillas, isla, barra, sala y elevador. */
+  const DECOS = {
+    nyc: {      /* negro y latón: la mesa de Manhattan */
+      piso1:'#2B2F38', piso2:'#242830', pisoLinea:'rgba(201,169,106,.16)',
+      muroDer:'#3A4048', muroIzq:'#31363E',
+      escritorio:'#33383F', silla:'#1C2026', silla2:'#262B32',
+      isla:'#22262E', islaTop:'#2E333C',
+      barra:'#2A2E36', barraTop:'#C9A96A', alacena:'#33383F',
+      sofa1:'#8C6A3E', sofa2:'#9A7648', cojin:'#B08A54',
+      mesa1:'#2A2E36', mesa2:'#C9A96A',
+      alfombra:'#4A3A28', macetero:'#2E333C',
+      elevMarco:'#C9A96A', elevPuerta:'#8E7A50',
+      ceoAlfombra:'#3A2F20', ceoDesk:'#1C2026', ceoSilla:'#C9A96A',
+      staffTraje:'#2A303A',
+    },
+    tokio: {    /* blanco, madera clara y laca roja */
+      piso1:'#F2EEE6', piso2:'#E9E4D8', pisoLinea:'rgba(178,58,48,.2)',
+      muroDer:'#F6F1E8', muroIzq:'#EDE7DA',
+      escritorio:'#FAF7F1', silla:'#B23A30', silla2:'#C4483C',
+      isla:'#F4F0E8', islaTop:'#FFFFFF',
+      barra:'#E9E3D6', barraTop:'#B23A30', alacena:'#F4EFE6',
+      sofa1:'#C4483C', sofa2:'#D05648', cojin:'#E8E0D0',
+      mesa1:'#D8CFBC', mesa2:'#8E2F27',
+      alfombra:'#D8C89A', macetero:'#EDE7DA',
+      elevMarco:'#8E2F27', elevPuerta:'#B23A30',
+      ceoAlfombra:'#C9B584', ceoDesk:'#8E6B46', ceoSilla:'#B23A30',
+      staffTraje:'#4A4038',
+    },
+    londres: {  /* azul marino, roble y bronce */
+      piso1:'#2E3E5E', piso2:'#283656', pisoLinea:'rgba(201,180,140,.18)',
+      muroDer:'#3A4A6E', muroIzq:'#324264',
+      escritorio:'#8E6B46', silla:'#26406A', silla2:'#2E4A78',
+      isla:'#7A5C3E', islaTop:'#9A7850',
+      barra:'#6E5438', barraTop:'#C9B48C', alacena:'#3A4A6E',
+      sofa1:'#3E5E48', sofa2:'#487054', cojin:'#C9B48C',
+      mesa1:'#6E5438', mesa2:'#C9B48C',
+      alfombra:'#7E2F35', macetero:'#3A4A6E',
+      elevMarco:'#8E7A50', elevPuerta:'#A6906A',
+      ceoAlfombra:'#6E2A30', ceoDesk:'#5E4630', ceoSilla:'#2E4A78',
+      staffTraje:'#33436A',
+    },
+  };
+  const DECO = DECOS[E.c] || DECOS.nyc;
+
   /* ══ AZOTEA ══ */
   for(let x = 0; x < N; x++) for(let y = 0; y < N; y++){
-    losa(c, x, y, 0, (x + y) % 2 ? '#D8DCE6' : '#CED3DF');
-    c.strokeStyle = 'rgba(110,122,150,.22)'; c.lineWidth = 1;
+    losa(c, x, y, 0, (x + y) % 2 ? DECO.piso1 : DECO.piso2);
+    c.strokeStyle = DECO.pisoLinea; c.lineWidth = 1;
     c.beginPath();
     c.moveTo(iX(x, y), iY(x, y, 0)); c.lineTo(iX(x+1, y), iY(x+1, y, 0));
     c.lineTo(iX(x+1, y+1), iY(x+1, y+1, 0)); c.lineTo(iX(x, y+1), iY(x, y+1, 0));
@@ -9258,13 +9306,24 @@ function dibujaOficina(t){
       }
     }
   };
-  enPared('der', c2 => paredPantallas(c2, '#E4E8F0', 0));
-  enPared('izq', c2 => paredPantallas(c2, '#D8DDE8', 2));
+  enPared('der', c2 => paredPantallas(c2, DECO.muroDer, 0));
+  enPared('izq', c2 => paredPantallas(c2, DECO.muroIzq, 2));
   /* puerta y reloj en el muro izquierdo */
   enPared('izq', c2 => {
     c2.fillStyle = '#8A5E3C'; c2.fillRect(8.4, 0, 1.2, 2.1);
     c2.fillStyle = '#754E30'; c2.fillRect(8.5, .08, 1.0, 1.94);
     c2.fillStyle = '#D8C08A'; c2.fillRect(9.35, 1.0, .1, .16);
+    /* el elevador: marco del tema, dos hojas metálicas y su indicador */
+    c2.fillStyle = DECO.elevMarco; c2.fillRect(6.45, 0, 1.7, 2.35);
+    c2.fillStyle = DECO.elevPuerta;
+    c2.fillRect(6.58, 0, .69, 2.2); c2.fillRect(7.33, 0, .69, 2.2);
+    c2.fillStyle = 'rgba(255,255,255,.25)';
+    c2.fillRect(6.62, 0, .08, 2.2); c2.fillRect(7.37, 0, .08, 2.2);
+    c2.fillStyle = 'rgba(10,12,16,.6)'; c2.fillRect(7.27, 0, .06, 2.2);
+    /* el número del piso, siempre 88 */
+    c2.fillStyle = '#12161E'; c2.fillRect(7.02, 2.45, .56, .3);
+    c2.fillStyle = '#5FD3A6';
+    [[0,0],[.1,0],[.2,0]].forEach(([dx]) => c2.fillRect(7.08 + dx * 2, 2.52, .07, .16));
   });
   const relX = iX(0, 7.2), relY = iY(0, 7.2, 2.75);
   c.save(); c.translate(relX, relY); c.transform(1, .5, 0, 1, 0, 0);
@@ -9292,7 +9351,7 @@ function dibujaOficina(t){
   const piezas = []; const add = (d, fn) => piezas.push({ d, fn });
   const puesto = (x, y, sem, giro) => {
     add(x + y, c2 => {
-      caja(c2, x, y, 0, giro ? .8 : 1.5, giro ? 1.5 : .8, .82, '#F4F6FA', 10, -22);
+      caja(c2, x, y, 0, giro ? .8 : 1.5, giro ? 1.5 : .8, .82, DECO.escritorio, 10, -22);
       const mw = giro ? .12 : .62, mh = giro ? .62 : .12;
       const mx = x + (giro ? .1 : .42), my = y + (giro ? .42 : .1);
       caja(c2, mx, my, .82, mw, mh, .52, '#1C222C');
@@ -9310,29 +9369,29 @@ function dibujaOficina(t){
   };
   // hileras pegadas a los dos muros, más una isla de puestos al centro
   for(let i = 0; i < 5; i++) puesto(1.1 + i * 1.55, .35, i * 3, false);
-  for(let i = 0; i < 5; i++) puesto(.35, 1.1 + i * 1.55, i * 3 + 1, true);
+  for(let i = 0; i < 3; i++) puesto(.35, 1.1 + i * 1.55, i * 3 + 1, true);
   for(let i = 0; i < 4; i++) puesto(2.0 + i * 1.55, 2.1, i * 5 + 2, false);
-  for(let i = 0; i < 3; i++) puesto(2.1, 3.6 + i * 1.55, i * 5 + 4, true);
+  for(let i = 0; i < 2; i++) puesto(2.1, 3.6 + i * 1.55, i * 5 + 4, true);
   /* sillas de cada puesto */
   const silla = (x, y) => add(x + y + .1, c2 => {
-    caja(c2, x, y, 0, .52, .5, .38, '#3A4150', 14, -22);
-    caja(c2, x, y + .36, 0, .52, .1, .92, '#454D5E', 16, -24);
+    caja(c2, x, y, 0, .52, .5, .38, DECO.silla, 14, -22);
+    caja(c2, x, y + .36, 0, .52, .1, .92, DECO.silla2, 16, -24);
   });
   for(let i = 0; i < 5; i++) silla(1.3 + i * 1.55, 1.15);
-  for(let i = 0; i < 5; i++) silla(1.15, 1.3 + i * 1.55);
+  for(let i = 0; i < 3; i++) silla(1.15, 1.3 + i * 1.55);
   for(let i = 0; i < 4; i++) silla(2.2 + i * 1.55, 2.9);
   // isla central
   add(11, c2 => {
-    caja(c2, 4.6, 4.6, 0, 3.0, 2.2, .86, '#F8FAFC', 10, -22);
-    losa(c2, 4.66, 4.66, .87, '#FFFFFF', 2.88, 2.08);
+    caja(c2, 4.6, 4.6, 0, 3.0, 2.2, .86, DECO.isla, 10, -22);
+    losa(c2, 4.66, 4.66, .87, DECO.islaTop, 2.88, 2.08);
     c2.fillStyle = '#FFFFFF'; c2.beginPath();
     c2.ellipse(iX(5.4, 5.2), iY(5.4, 5.2, .88), 7, 4, 0, 0, 7); c2.fill();
     losa(c2, 6.2, 5.3, .88, '#E8EEF4', .4, .3);
   });
   /* cocineta: barra, alacenas y una cafetera */
   add(9.2, c2 => {
-    caja(c2, 7.4, .35, 0, 2.2, 1.0, .95, '#F2F4F8', 10, -22);
-    losa(c2, 7.46, .41, .96, '#DCE2EA', 2.08, .88);
+    caja(c2, 7.4, .35, 0, 2.2, 1.0, .95, DECO.barra, 10, -22);
+    losa(c2, 7.46, .41, .96, DECO.barraTop, 2.08, .88);
     caja(c2, 7.7, .55, .96, .35, .3, .5, '#2E3540', 14, -22);   // cafetera
     losa(c2, 7.74, .59, 1.47, '#C4544A', .27, .22);
     [0, .42, .84].forEach(d => {                                 // tazas
@@ -9340,21 +9399,83 @@ function dibujaOficina(t){
       c2.beginPath(); c2.ellipse(iX(8.5 + d*.3, .6), iY(8.5 + d*.3, .6, .97), 5, 3, 0, 0, 7); c2.fill();
     });
     // alacenas colgadas
-    caja(c2, 7.4, -.35, 1.9, 2.2, .35, .9, '#E8ECF2', 10, -20);
+    caja(c2, 7.4, -.35, 1.9, 2.2, .35, .9, DECO.alacena, 10, -20);
   });
-  /* sofá y mesita de la zona de descanso */
+  /* sala de espera: alfombra, sofá, dos sillones y la mesita */
+  add(14.9, c2 => {
+    losa(c2, 7.15, 6.85, .01, DECO.alfombra, 2.75, 2.45);
+    losa(c2, 7.27, 6.97, .02, mez(DECO.alfombra, 14), 2.51, 2.21);
+  });
+  const sillon = (x, y, giro) => add(x + y + .15, c2 => {
+    caja(c2, x, y, 0, .62, .62, .4, DECO.sofa1, 14, -22);
+    if(giro) caja(c2, x, y, .4, .18, .62, .42, DECO.sofa2, 16, -24);
+    else     caja(c2, x, y, .4, .62, .18, .42, DECO.sofa2, 16, -24);
+    caja(c2, x + (giro ? .2 : .1), y + (giro ? .1 : .2), .41, .4, .4, .1, DECO.cojin, 12, -18);
+  });
+  sillon(7.25, 8.35, true);
+  sillon(9.0, 7.3, false);
   add(15.4, c2 => {
-    caja(c2, 7.6, 7.2, 0, 2.0, .8, .42, '#5E6B86', 16, -24);
-    caja(c2, 7.6, 7.2, .42, 2.0, .22, .5, '#6B7894', 16, -24);
-    [.3, .9, 1.5].forEach(d => caja(c2, 7.65 + d, 7.34, .43, .42, .42, .12, '#8C9AB4', 14, -20));
-    caja(c2, 7.9, 8.3, 0, 1.0, .7, .34, '#E8ECF2', 12, -20);
-    losa(c2, 8.05, 8.42, .35, '#C8D2DE', .7, .46);
+    caja(c2, 7.6, 7.2, 0, 2.0, .8, .42, DECO.sofa1, 16, -24);
+    caja(c2, 7.6, 7.2, .42, 2.0, .22, .5, DECO.sofa2, 16, -24);
+    [.3, .9, 1.5].forEach(d => caja(c2, 7.65 + d, 7.34, .43, .42, .42, .12, DECO.cojin, 14, -20));
+    caja(c2, 7.9, 8.3, 0, 1.0, .7, .34, DECO.mesa1, 12, -20);
+    losa(c2, 8.05, 8.42, .35, DECO.mesa2, .7, .46);
+  });
+
+  /* ── LA OFICINA DEL CEO ──
+     La esquina izquierda es del jefe: mamparas de cristal, alfombra propia,
+     escritorio ejecutivo con su lámpara y silla de respaldo alto. Quien esté
+     en sesión se sienta AQUÍ, no en un puesto más. */
+  add(9.6, c2 => {
+    losa(c2, .45, 5.95, .01, DECO.ceoAlfombra, 2.3, 2.5);
+    losa(c2, .57, 6.07, .02, mez(DECO.ceoAlfombra, 12), 2.06, 2.26);
+  });
+  /* mamparas de cristal: el frente y el costado */
+  add(9.7, c2 => {
+    c2.globalAlpha = .3;
+    caja(c2, 2.72, 5.95, 0, .08, 2.5, 1.5, '#AECAE0', 20, -8);
+    caja(c2, .45, 5.88, 0, 2.35, .08, 1.5, '#AECAE0', 20, -8);
+    c2.globalAlpha = 1;
+    caja(c2, 2.72, 5.95, 1.5, .08, 2.5, .06, '#C6CEDA', 18, -14);
+    caja(c2, .45, 5.88, 1.5, 2.35, .08, .06, '#C6CEDA', 18, -14);
+  });
+  add(13.9, c2 => {
+    /* el escritorio ejecutivo, más grande que los demás */
+    caja(c2, .75, 6.8, 0, 1.7, .8, .9, DECO.ceoDesk, 12, -24);
+    losa(c2, .81, 6.86, .91, mez(DECO.ceoDesk, 18), 1.58, .68);
+    /* doble monitor */
+    caja(c2, 1.0, 6.95, .9, .55, .1, .45, '#12161E');
+    caja(c2, 1.65, 6.95, .9, .55, .1, .45, '#12161E');
+    const gx = iX(1.28, 7.0), gy = iY(1.28, 7.0, 1.4);
+    c2.fillStyle = 'rgba(96,214,164,.9)';
+    for(let k = 0; k < 4; k++) c2.fillRect(gx - 8 + k * 5, gy - 4 - (k % 2) * 4, 2.4, 6 + (k % 2) * 4);
+    const gx2 = iX(1.93, 7.0), gy2 = iY(1.93, 7.0, 1.4);
+    c2.strokeStyle = 'rgba(120,196,246,.9)'; c2.lineWidth = 1.6;
+    c2.beginPath();
+    for(let q = 0; q <= 8; q++){
+      const px2 = gx2 - 10 + q * 2.6, py2 = gy2 - 2 - Math.sin(q * .9 + t / 900) * 4;
+      q ? c2.lineTo(px2, py2) : c2.moveTo(px2, py2);
+    }
+    c2.stroke();
+    /* la lámpara de banquero */
+    caja(c2, 2.15, 7.35, .9, .12, .12, .3, '#2E3038');
+    c2.fillStyle = '#3E8E5A';
+    c2.beginPath(); c2.ellipse(iX(2.21, 7.41), iY(2.21, 7.41, 1.36), 7, 3.4, 0, 0, 7); c2.fill();
+    /* la silla del CEO: respaldo alto del color del tema */
+    caja(c2, 1.15, 7.85, 0, .6, .55, .42, DECO.ceoSilla, 14, -24);
+    caja(c2, 1.15, 8.28, 0, .6, .12, 1.05, mez(DECO.ceoSilla, -14), 16, -26);
+    /* planta propia */
+    caja(c2, .55, 8.15, 0, .45, .45, .35, DECO.macetero, 12, -20);
+    const px3 = iX(.77, 8.37), py3 = iY(.77, 8.37, .35);
+    [['#2F6B44',0,-12,9,6],['#3B8354',-7,-7,7,5],['#489A63',7,-7,7,5]].forEach(([col,dx,dy,rx,ry]) => {
+      c2.fillStyle = col; c2.beginPath(); c2.ellipse(px3 + dx, py3 + dy, rx, ry, 0, 0, 7); c2.fill();
+    });
   });
 
   // jardineras y palmeras del borde
   [[8.4, 2.2],[8.4, 6.0],[2.2, 8.4],[6.2, 8.4],[8.6, 8.6]].forEach(([px, py], i) => {
     add(px + py + .2, c2 => {
-      caja(c2, px, py, 0, .8, .8, .42, '#E4E8EE', 12, -20);
+      caja(c2, px, py, 0, .8, .8, .42, DECO.macetero, 12, -20);
       const cx = iX(px + .4, py + .4), cy = iY(px + .4, py + .4, .42);
       [['#2F6B44', 0, -14, 13, 8],['#3B8354', -11, -8, 11, 7],['#3B8354', 11, -8, 11, 7],
        ['#489A63', 0, -26, 10, 6],['#2F6B44', -8, -21, 9, 6],['#489A63', 8, -21, 9, 6]]
@@ -9389,6 +9510,16 @@ function dibujaOficina(t){
 
   /* ══ LA GENTE ══ */
   piezas.sort((a, b) => a.d - b.d).forEach(p => p.fn(c));
+  /* el personal de la casa: cinco analistas en los puestos, con el traje del
+     tema de la ciudad. Son plantilla, no socios: no hablan ni tienen perfil. */
+  const STAFF = [
+    { n:'', x:1.32, y:1.12, flip:true,  look:{ piel:'#E8B48C', pelo:'#14100C', traje:DECO.staffTraje, camisa:'#E9EDF2', ac:'#7A88A0', porte:'erguido',  cara:'sereno' } },
+    { n:'', x:2.86, y:1.12, flip:true,  look:{ piel:'#8D5A3B', pelo:'#0E0C0A', traje:DECO.staffTraje, camisa:'#EFE8D8', ac:'#7A88A0', porte:'inclinado', cara:'concentrado' } },
+    { n:'', x:4.42, y:1.12, flip:true,  look:{ piel:'#F5D8B4', pelo:'#7A4020', traje:DECO.staffTraje, camisa:'#FFFFFF', ac:'#7A88A0', porte:'erguido',  cara:'curioso', greñas:true } },
+    { n:'', x:1.12, y:2.86, flip:false, look:{ piel:'#C98F63', pelo:'#181410', traje:DECO.staffTraje, camisa:'#E8F2EE', ac:'#7A88A0', porte:'tenso',    cara:'ceño', lentes:true } },
+    { n:'', x:3.78, y:2.86, flip:true,  look:{ piel:'#D9A377', pelo:'#8A8F98', traje:DECO.staffTraje, camisa:'#F2EDE0', ac:'#7A88A0', porte:'encorvado', cara:'sabio', canas:true } },
+  ];
+  STAFF.forEach(s2 => figura(c, s2, false, t));
   /* Sólo la gente real: los socios registrados (y el invitado si entró).
      Los analistas de relleno se fueron — la oficina es de los usuarios. */
   const gente = sillasActivas().map(s =>
