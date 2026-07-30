@@ -3661,7 +3661,13 @@ const DIASL  = { es:['DOMINGO','LUNES','MARTES','MIÉRCOLES','JUEVES','VIERNES',
 const idi = () => (typeof IDIOMA !== 'undefined' && IDIOMA === 'en') ? 'en' : 'es';
 /* Para contenido largo que no vale la pena meter al diccionario por clave. */
 const bi = (es, en) => en;
-const fmtFecha = iso => { const [y,m,d] = iso.split('-'); return `${d} ${MESES3[idi()][+m-1]} ${y}`; };
+/* Blindada: un trade malformado (un respaldo viejo, una edición a mano) no
+   debe tirar el render entero por una fecha que no existe. */
+const fmtFecha = iso => {
+  if(!iso || typeof iso !== 'string' || iso.split('-').length < 3) return '—';
+  const [y,m,d] = iso.split('-');
+  return `${d} ${MESES3[idi()][+m-1] || '?'} ${y}`;
+};
 
 function toast(msg){
   const t = $('#toast'); t.textContent = msg; t.classList.add('on');
@@ -6387,9 +6393,15 @@ const LOOK_BASE = () => ({ ...AV_PRESETS[0] });
 /* Cada usuario del escritorio tiene SU monito: cara, vitrina y lo que trae
    puesto. Lo que había antes (un solo avatar por dispositivo) se adopta una
    vez para quien esté firmado. */
+let _monHuesped = null;   // sin sesión no se persiste nada: vive en memoria
 function miMon(){
   S.monitos = S.monitos || {};
-  const k = (S.session && S.session.user) || '__solo';
+  delete S.monitos['__solo'];      // basura de una versión anterior
+  const k = S.session && S.session.user;
+  if(!k){
+    if(!_monHuesped) _monHuesped = { avatar:null, owned:{}, puesto:{} };
+    return _monHuesped;
+  }
   if(!S.monitos[k]){
     const primerito = !Object.keys(S.monitos).length;
     S.monitos[k] = {
