@@ -1201,6 +1201,13 @@ button.tag.quemada{text-decoration:line-through;text-decoration-color:var(--down
 .pf-n{display:block;font-family:var(--mono);font-size:9.5px;color:var(--faint);margin-top:2px}
 .pf-live{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--up);
   margin-left:7px;vertical-align:middle;animation:pulse 2.4s ease-in-out infinite}
+.der{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px}
+.der > div{border:1px solid var(--line-soft);border-radius:12px;padding:13px 15px;min-width:0}
+.der span{display:block;font-family:var(--mono);font-size:9.5px;letter-spacing:.11em;
+  text-transform:uppercase;color:var(--faint)}
+.der b{display:block;font-family:var(--mono);font-size:21px;font-weight:300;margin-top:6px;letter-spacing:-.01em}
+.der b em{font-style:normal;font-size:11px;color:var(--faint);letter-spacing:.04em}
+.der i{display:block;font-style:normal;font-size:10.5px;color:var(--dim);margin-top:6px;line-height:1.5}
 .asg{display:flex;align-items:center;gap:12px;padding:8px 0}
 .asg-t{min-width:104px;max-width:150px}
 .asg-t b{display:block;font-family:var(--mono);font-size:12px}
@@ -1980,12 +1987,9 @@ stop[stop-color="#9BC0DC"]{stop-color:var(--txt)}
           <div class="panel">
             <div class="p-head"><h3 data-i18n="mi.compuesto">Interés compuesto</h3><span class="micro" id="cDesde"></span></div>
             <div class="p-body">
-              <div class="f-row3">
-                <div><label data-i18n="mi.capIni">Capital de hoy USD</label><input type="number" id="cCap" value="0" min="0" step="1000"></div>
-                <div><label data-i18n="mi.tasa">Retorno anual %</label><input type="number" id="cTasa" value="10" min="0" max="60" step="0.5"></div>
-                <div><label data-i18n="mi.aporte">Aporte anual USD</label><input type="number" id="cAporte" value="0" min="0" step="1000"></div>
-              </div>
-              <div class="f-full">
+              <!-- Nada que teclear: los dos números salen de tus posiciones. -->
+              <div id="cDerivado"></div>
+              <div class="f-full mt">
                 <label><span data-i18n="mi.horizonte">Horizonte</span>: <span class="mono" id="cAniosLbl">20</span> <span data-i18n="mi.anios">años</span></label>
                 <input type="range" id="cAnios" min="3" max="30" value="20" style="padding:0">
               </div>
@@ -5662,8 +5666,6 @@ function renderPosiciones(){
     k(bi('COBRADO','WITHDRAWN'), fmt$(cobrado), '', bi('payouts a la fecha','payouts to date')),
   ].join('');
 
-  const cc = $('#cCap');
-  if(cc && !cc.dataset.tocado) cc.value = Math.round(total);
   const cd = $('#cDesde');
   if(cd) cd.textContent = cobrado>0 ? tr('mi.desde').replace('%s', fmt$(cobrado)) : '';
 
@@ -5943,55 +5945,102 @@ $('#rjSave').addEventListener('click', ()=>{
 });
 
 /* ════════ CALCULADORA ════════ */
+/* ══ LA BOLA DE NIEVE · sin teclear nada ══
+   Los dos números que mandan salen de tus datos: el capital es lo que ya
+   tienes invertido, y el aporte es tu RITMO REAL de aportación, medido
+   sobre los días que llevas invirtiendo. El retorno no se adivina: se
+   pintan tres escenarios y se dice de dónde salen. */
+const ESCENARIOS = [
+  { k:'bajo',  tasa:0.06, t:['prudente','conservative'] },
+  { k:'base',  tasa:0.08, t:['base','base'] },
+  { k:'alto',  tasa:0.10, t:['optimista','optimistic'] },
+];
+function ritmoAporte(){
+  const ps = (S.positions || []).filter(p => p.fecha && (p.capital||0) > 0);
+  if(!ps.length) return { anual:0, dias:0, total:0, base:0 };
+  const desde = ps.map(p => p.fecha).sort()[0];
+  const dias  = Math.max(1, Math.round((Date.parse(todayISO()) - Date.parse(desde)) / 86400000));
+  const total = ps.reduce((a,p) => a + (p.capital||0), 0);
+  /* piso de 90 días: anualizar dos semanas de historia sería inventar un ritmo */
+  const base = Math.max(90, dias);
+  return { anual: Math.round(total / base * 365), dias, total, base };
+}
+
 function renderCalc(){
-  const cap = parseFloat($('#cCap').value)||0;
-  const tasa = (parseFloat($('#cTasa').value)||0)/100;
-  const aporte = parseFloat($('#cAporte').value)||0;
-  const anios = parseInt($('#cAnios').value)||20;
+  if(!$('#cDerivado')) return;
+  const pos  = (S.positions || []).reduce((a,p) => a + valuar(p).valor, 0);
+  const live = cuentasLive().reduce((a,x) => a + saludDe(x).balance, 0);
+  const cap  = pos + live;
+  const R    = ritmoAporte();
+  const anios = parseInt($('#cAnios').value) || 20;
   $('#cAniosLbl').textContent = anios;
 
-  const serie = [cap];
-  for(let y=1;y<=anios;y++) serie.push(serie[y-1]*(1+tasa)+aporte);
-  const fin = serie[anios];
-  $('#cFinal').textContent = tr('sn.anioN')+' ' + anios + ' → ' + fmt$(fin);
+  $('#cDerivado').innerHTML = `
+    <div class="der">
+      <div><span>${bi('Capital de hoy','Capital today')}</span><b>${fmt$(cap)}</b>
+        <i>${bi('lo que ya está invertido','already invested')}</i></div>
+      <div><span>${bi('Tu ritmo de aporte','Your contribution pace')}</span><b class="${R.anual?'up':''}">${R.anual ? fmt$(R.anual) : '—'}<em>${R.anual?bi(' al año',' a year'):''}</em></b>
+        <i>${R.dias
+            ? fmt$(R.total) + bi(' en ',' over ') + R.dias + bi(' días','d') + (R.dias < 90 ? bi(' · anualizado sobre 90 para no inventar',' · annualized over 90d to stay honest') : '')
+            : bi('registra una compra y aparece','log a buy and it shows')}</i></div>
+    </div>`;
 
-  /* Sin capital no hay proyección: decirlo es más honesto que pintar una curva de ceros. */
-  const mult = cap>0 ? Math.round(fin/cap*10)/10 : 0;
+  const series = ESCENARIOS.map(e => {
+    const s2 = [cap];
+    for(let y=1; y<=anios; y++) s2.push(s2[y-1]*(1+e.tasa) + R.anual);
+    return { ...e, serie:s2, fin:s2[anios] };
+  });
+  const base = series[1], bajo = series[0], alto = series[2];
+  $('#cFinal').textContent = tr('sn.anioN') + ' ' + anios + ' → ' + fmt$(base.fin);
+
+  const mult = cap > 0 ? Math.round(base.fin/cap*10)/10 : 0;
   $('#cNivel').innerHTML = `<div class="g-banner" style="margin-top:4px"><span>${
-    cap>0
-      ? tr('mi.proyOk').replace('%a',anios).replace('%m','<b>×'+mult+'</b>').replace('%f','<b>'+fmt$(fin)+'</b>')
+    (cap > 0 || R.anual > 0)
+      ? bi(`En ${anios} años, aportando a tu ritmo actual: entre <b>${fmt$(bajo.fin)}</b> y <b>${fmt$(alto.fin)}</b>. El escenario base son <b>${fmt$(base.fin)}</b>${cap>0?` — <b>×${mult}</b> lo de hoy`:''}.`,
+         `In ${anios} years at your current pace: between <b>${fmt$(bajo.fin)}</b> and <b>${fmt$(alto.fin)}</b>. Base case is <b>${fmt$(base.fin)}</b>${cap>0?` — <b>×${mult}</b> today's`:''}.`)
       : tr('mi.proyVacio')
-  }</span></div>`;
+  }</span></div>
+  <p class="micro" style="margin-top:9px;color:var(--faint);line-height:1.6">${bi(
+    'El 6 / 8 / 10% no se inventa: es el rango histórico de un índice global a largo plazo. Nadie sabe cuál toca — por eso van los tres.',
+    'The 6 / 8 / 10% is not made up: it is the long-run historical range of a global index. Nobody knows which one lands — that is why all three are drawn.')}</p>`;
 
-  /* tabla hitos */
-  const hitos = [1,5,10,15,20,25,30].filter(y=>y<=anios);
-  $('#cTable').innerHTML = `<thead><tr><th>${tr('sn.anio')}</th><th class="r">${tr('sn.capProy')}</th><th class="r">${tr('sn.crecimiento')}</th></tr></thead><tbody>`
-    + hitos.map(y=>`<tr>
+  /* tabla de hitos, con la banda */
+  const hitos = [1,5,10,15,20,25,30].filter(y => y <= anios);
+  $('#cTable').innerHTML = `<thead><tr><th>${tr('sn.anio')}</th><th class="r">${bi('Prudente','Conservative')}</th><th class="r">${bi('Base','Base')}</th><th class="r">${bi('Optimista','Optimistic')}</th></tr></thead><tbody>`
+    + hitos.map(y => `<tr>
         <td class="mono">${y}</td>
-        <td class="r mono">${fmt$(serie[y])}</td>
-        <td class="r mono ${serie[y]>=cap?'up':''}">${cap>0?'×'+(Math.round(serie[y]/cap*100)/100):'—'}</td>
+        <td class="r mono" style="color:var(--dim)">${fmt$(bajo.serie[y])}</td>
+        <td class="r mono">${fmt$(base.serie[y])}</td>
+        <td class="r mono up">${fmt$(alto.serie[y])}</td>
       </tr>`).join('') + '</tbody>';
 
-  /* curva */
+  /* la curva: banda entre prudente y optimista, con la base encima */
   const cv = $('#cCanvas'), wrap = cv.parentElement;
-  const W = wrap.clientWidth - 36, H = 190, dpr = devicePixelRatio||1;
+  const W = Math.max(120, wrap.clientWidth - 36), H = 190, dpr = devicePixelRatio || 1;
   cv.width = W*dpr; cv.height = H*dpr; cv.style.height = H+'px';
-  const ctx = cv.getContext('2d'); ctx.scale(dpr,dpr);
-  const max = Math.max(...serie)||1;
+  const ctx = cv.getContext('2d'); ctx.setTransform(dpr,0,0,dpr,0,0);
+  ctx.clearRect(0,0,W,H);
+  const max = Math.max(alto.fin, 1);
   const X = i => 8 + i*(W-16)/anios;
-  const Y = v => 14 + (H-34)*(1-v/max);
-  const grad = ctx.createLinearGradient(0,0,0,H);
-  grad.addColorStop(0,'rgba(155,192,220,.18)'); grad.addColorStop(1,'rgba(155,192,220,0)');
-  ctx.beginPath(); ctx.moveTo(X(0),Y(serie[0]));
-  serie.forEach((v,i)=>ctx.lineTo(X(i),Y(v)));
-  ctx.lineTo(X(anios),H-8); ctx.lineTo(X(0),H-8); ctx.closePath();
-  ctx.fillStyle = grad; ctx.fill();
-  ctx.beginPath(); serie.forEach((v,i)=> i?ctx.lineTo(X(i),Y(v)):ctx.moveTo(X(i),Y(v)));
-  ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--txt').trim() || '#F4F4F4'; ctx.lineWidth = 1.6; ctx.stroke();
-  ctx.font = '11px "IBM Plex Mono"'; ctx.fillStyle = '#E9EDF2'; ctx.textAlign='right';
-  ctx.fillText(fmt$(fin), W-8, Y(fin)+14);
+  const Y = v => 14 + (H-34)*(1 - v/max);
+  /* banda */
+  ctx.beginPath();
+  alto.serie.forEach((v,i) => i ? ctx.lineTo(X(i),Y(v)) : ctx.moveTo(X(i),Y(v)));
+  for(let i = anios; i >= 0; i--) ctx.lineTo(X(i), Y(bajo.serie[i]));
+  ctx.closePath();
+  ctx.fillStyle = 'rgba(155,192,220,.14)'; ctx.fill();
+  /* líneas */
+  const css = getComputedStyle(document.documentElement);
+  [[bajo,'rgba(155,192,220,.45)',1.2],[alto,'rgba(87,199,155,.5)',1.2],
+   [base, (css.getPropertyValue('--txt')||'#F4F4F4').trim(), 1.9]].forEach(([S2,col,lw]) => {
+    ctx.beginPath();
+    S2.serie.forEach((v,i) => i ? ctx.lineTo(X(i),Y(v)) : ctx.moveTo(X(i),Y(v)));
+    ctx.strokeStyle = col; ctx.lineWidth = lw; ctx.stroke();
+  });
+  ctx.font = '11px "IBM Plex Mono"'; ctx.textAlign = 'right';
+  ctx.fillStyle = '#E9EDF2'; ctx.fillText(fmt$(base.fin), W-8, Y(base.fin)+14);
 }
-['cCap','cTasa','cAporte','cAnios'].forEach(id => $('#'+id).addEventListener('input', renderCalc));
+$('#cAnios')?.addEventListener('input', renderCalc);
 
 /* ════════ ACCESO (login de socios) ════════ */
 function currentUser(){ return userDe(S.session && S.session.user); }
