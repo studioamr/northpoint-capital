@@ -1209,6 +1209,8 @@ button.tag.quemada{text-decoration:line-through;text-decoration-color:var(--down
 .pf-leg span{display:flex;align-items:center;gap:5px}
 .pf-leg i{width:7px;height:7px;border-radius:2px}
 .pf-leg .ap{background:var(--accent-deep)} .pf-leg .gn{background:var(--up)} .pf-leg .lv{background:#C79A3A}
+.bal-r{display:flex;align-items:baseline;gap:8px;font-size:13px;margin-top:5px}
+.bal-r em{font-style:normal;font-size:11px;color:var(--faint)}
 .pf-n{display:block;font-family:var(--mono);font-size:9.5px;color:var(--faint);margin-top:2px}
 .pf-live{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--up);
   margin-left:7px;vertical-align:middle;animation:pulse 2.4s ease-in-out infinite}
@@ -7285,27 +7287,39 @@ function renderAgentes(){
     </button>`;
   };
   const yo = principalActual();
-  /* junto al perfil, los tres balances: portafolio (posiciones al precio del
-     día), futuros (fondeadas con el reinicio de la eval aplicado) y live. */
+  /* junto al perfil, los tres balances con su rendimiento: portafolio
+     (posiciones contra lo aportado), futuros (profit contra el arranque de
+     cada cuenta) y live (contra el capital que metiste). */
   const fondeadas = S.accounts.filter(a => !esLive(a) && !esSim(a) && reglasDe(a) && esViva(a));
   const balFut  = fondeadas.reduce((x, a) => x + carreraCuenta(a).balance, 0);
+  const baseFut = fondeadas.reduce((x, a) => x + (a.start || 0), 0);
   const balPort = (S.positions || []).reduce((a, p) => a + valuar(p).valor, 0);
-  const balLive = cuentasLive().reduce((a, x) => a + saludDe(x).balance, 0);
-  const balCard = (titulo, monto, hay, nota) => `
-    <div class="staff" style="cursor:default">
+  const basePort = (S.positions || []).reduce((a, p) => a + (p.capital || 0), 0);
+  const lives   = cuentasLive();
+  const balLive = lives.reduce((a, x) => a + saludDe(x).balance, 0);
+  const baseLive = lives.reduce((a, x) => a + (x.start || 0), 0);
+  const rend = (v, base) => base > 0 ? (v - base) / base * 100 : NaN;
+
+  const balCard = (titulo, monto, base, hay, nota) => {
+    const g = monto - base, r = rend(monto, base);
+    return `<div class="staff" style="cursor:default">
       <div class="pj-i">
         <b class="micro" style="letter-spacing:.12em;color:var(--faint)">${titulo}</b>
         <span class="mono" style="display:block;font-size:24px;margin-top:3px;color:var(--txt)">${hay ? fmt$(monto) : '—'}</span>
+        ${hay && isFinite(r)
+          ? `<span class="bal-r mono ${g>0?'up':g<0?'down':''}">${fmtPct(r)}<em>${fmt$(g,true)}</em></span>`
+          : ''}
         <i style="color:var(--faint)">${nota}</i>
       </div>
     </div>`;
+  };
   const balances =
-    balCard(bi('PORTAFOLIO','PORTFOLIO'), balPort, (S.positions||[]).length,
-      (S.positions||[]).length ? (S.positions.length + bi(' posiciones al precio del día',' positions at today\'s price')) : bi('sin posiciones todavía','no positions yet'))
-    + balCard(bi('FUTUROS','FUTURES'), balFut, fondeadas.length,
+    balCard(bi('PORTAFOLIO','PORTFOLIO'), balPort, basePort, (S.positions||[]).length,
+      (S.positions||[]).length ? bi('sobre ','on ') + fmt$(basePort) + bi(' aportados',' contributed') : bi('sin posiciones todavía','no positions yet'))
+    + balCard(bi('FUTUROS','FUTURES'), balFut, baseFut, fondeadas.length,
       fondeadas.length ? (fondeadas.length + bi(fondeadas.length===1?' cuenta fondeada viva':' cuentas fondeadas vivas', fondeadas.length===1?' live funded account':' live funded accounts')) : bi('sin cuentas fondeadas','no funded accounts'))
-    + balCard('LIVE', balLive, cuentasLive().length,
-      cuentasLive().length ? bi('capital tuyo operando','your own capital trading') : bi('sin cuenta propia','no own account'));
+    + balCard('LIVE', balLive, baseLive, lives.length,
+      lives.length ? bi('sobre ','on ') + fmt$(baseLive) + bi(' de capital propio',' of own capital') : bi('sin cuenta propia','no own account'));
   grid.className = 'perfil-grid';
   grid.innerHTML = (yo ? tarjeta(yo) : '') + balances;
   $$('#agGrid .staff[data-staff]').forEach(b => b.onclick = () => $('#btnSettings').click());
