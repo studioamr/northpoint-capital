@@ -2029,6 +2029,9 @@ stop[stop-color="#9BC0DC"]{stop-color:var(--txt)}
           <button class="btn primary" id="pyCalc">Calcular</button>
         </div>
 
+        <!-- LA RUEDA · a qué destino va cada porcentaje del payout -->
+        <div class="panel mt2" id="ruedaBox" style="padding:20px 22px" hidden></div>
+
         <!-- LA LÁMINA · Generational AI Portfolio 2040, como en la presentación -->
         <div class="sl">
           <div class="sl-head">
@@ -5648,10 +5651,69 @@ const MASTER_2040 = [
   ['TSLA','AI robotics',2],           ['Bonds/Other','Defense & liquidity',5],
 ];
 
+/* ── LA RUEDA · a qué se destina el payout ──
+   Aparece al calcular: cuentas (evaluaciones y resets), ahorro/inversión,
+   reserva y vida. Sliders en vivo que redistribuyen y cierran en 100.
+   La rebanada de inversión ❄ es la que corre la lámina 2040 y la curva. */
+const RUEDA_DEFAULT = () => [
+  { id:'inv',  n:'Ahorro / Inversión', pct:50, color:'#38BDF8', grows:true },
+  { id:'ctas', n:'Cuentas',            pct:15, color:'#6C8CF5' },
+  { id:'res',  n:'Reserva',            pct:15, color:'#57C79B' },
+  { id:'vida', n:'Vida / Gusto',       pct:20, color:'#C79A3A' },
+];
+function rueda(){
+  S.politica = S.politica || {};
+  if(!Array.isArray(S.politica.rueda) || !S.politica.rueda.length) S.politica.rueda = RUEDA_DEFAULT();
+  return S.politica.rueda;
+}
+function ajustaRueda(id, val){
+  const R = rueda();
+  const yo = R.find(x => x.id === id); if(!yo) return;
+  val = Math.max(0, Math.min(100, Math.round(val)));
+  const otros = R.filter(x => x.id !== id);
+  const resto = 100 - val;
+  const suma = otros.reduce((a,x) => a + x.pct, 0);
+  otros.forEach(x => x.pct = suma > 0 ? Math.round(resto * x.pct / suma) : Math.round(resto / otros.length));
+  yo.pct = 100 - otros.reduce((a,x) => a + x.pct, 0);
+}
+function renderRueda(monto){
+  const box = $('#ruedaBox'); if(!box) return 0;
+  const R = rueda();
+  const inv = R.find(x => x.grows) || R[0];
+  box.hidden = !(monto > 0);
+  if(!(monto > 0)) return 0;
+  box.innerHTML = `
+    <div class="fl" style="margin-bottom:12px">${bi('El destino · % de cada cosa','The split · % to each destination')}</div>
+    <div class="rd">
+      <div class="rd-wheel">
+        ${pieSVG(R)}
+        <div class="rd-centro"><b>${inv.pct}%</b><span>${bi('invierte','invests')}</span></div>
+      </div>
+      <div class="rd-filas">
+        ${R.map(x => `
+          <div class="rd-fila">
+            <span class="rd-dot" style="background:${x.color}"></span>
+            <span class="rd-n">${esc(x.n)}${x.grows ? ' <i>❄</i>' : ''}</span>
+            <input type="range" min="0" max="100" step="1" value="${x.pct}" data-rd="${x.id}" style="--c:${x.color}">
+            <b class="mono">${x.pct}%</b>
+            <span class="rd-m mono">${fmt$(Math.round(monto * x.pct / 100))}</span>
+          </div>`).join('')}
+        <p class="micro" style="margin:10px 0 0;color:var(--faint)">${bi(
+          '❄ La rebanada de inversión es la que corre la lámina 2040 y la curva de abajo.',
+          '❄ The investing slice is what runs the 2040 sheet and the curve below.')}</p>
+      </div>
+    </div>`;
+  $$('#ruedaBox [data-rd]').forEach(sl => {
+    sl.oninput = () => { ajustaRueda(sl.dataset.rd, +sl.value); save(); renderPosiciones(); };
+  });
+  return Math.round(monto * inv.pct / 100);
+}
+
 function renderPosiciones(){
   const monto = (S.politica && S.politica.montoPayout) || 0;
   const inp = $('#pyMonto');
   if(inp && !inp.value && monto) inp.value = monto;
+  const mInv = renderRueda(monto);
 
   $('#slDonut').innerHTML = pieSVG(TESIS_2040, 220) +
     `<div class="rd-centro"><b>2040</b><span>thesis</span></div>`;
@@ -5660,14 +5722,14 @@ function renderPosiciones(){
       <span class="rd-dot" style="background:${t.color}"></span>
       <span class="sl-ley-n">${esc(t.n)}</span>
       <b class="mono">${t.pct}%</b>
-      <em class="mono">${monto ? fmt$(Math.round(monto * t.pct / 100)) : ''}</em>
+      <em class="mono">${mInv ? fmt$(Math.round(mInv * t.pct / 100)) : ''}</em>
     </div>`).join('');
 
   $('#slMaster').innerHTML = MASTER_2040.map(([tk, d, pc]) => `
     <div class="sl-m">
       <b class="mono">${tk}</b><i>${esc(d)}</i>
       <span class="mono">${pc}%</span>
-      <em class="mono">${monto ? fmt$(Math.round(monto * pc / 100)) : ''}</em>
+      <em class="mono">${mInv ? fmt$(Math.round(mInv * pc / 100)) : ''}</em>
     </div>`).join('');
 
   renderCalc();
@@ -5860,7 +5922,9 @@ function renderCalc(){
   if(!$('#cCanvas')) return;
   const cap = (S.positions || []).reduce((a,p) => a + valuar(p).valor, 0)
             + cuentasLive().reduce((a,x) => a + saludDe(x).balance, 0);
-  const mes = (S.politica && S.politica.montoPayout) || 0;
+  const monto = (S.politica && S.politica.montoPayout) || 0;
+  const inv = rueda().find(x => x.grows) || { pct: 50 };
+  const mes = Math.round(monto * inv.pct / 100);
   const anios = parseInt($('#cAnios').value) || 20;
   $('#cAniosLbl').textContent = anios;
   pintaProyeccion(cap, mes, anios);
@@ -5880,7 +5944,7 @@ function pintaProyeccion(cap, mes, anios){
   $('#cFinal').textContent = tr('sn.anioN') + ' ' + anios + ' → ' + fmt$(base.fin);
   $('#cNivel').innerHTML = (cap > 0 || mes > 0)
     ? `<div class="g-banner" style="margin-top:4px"><span>${bi(
-        `${fmt$(mes)} reinvertidos cada mes por ${anios} años: entre <b>${fmt$(bajo.fin)}</b> y <b>${fmt$(alto.fin)}</b> · base <b>${fmt$(base.fin)}</b>`,
+        `${fmt$(mes)} (${bi('la rebanada ❄','the ❄ slice')}) reinvertidos cada mes por ${anios} años: entre <b>${fmt$(bajo.fin)}</b> y <b>${fmt$(alto.fin)}</b> · base <b>${fmt$(base.fin)}</b>`,
         `${fmt$(mes)} reinvested monthly for ${anios} years: between <b>${fmt$(bajo.fin)}</b> and <b>${fmt$(alto.fin)}</b> · base <b>${fmt$(base.fin)}</b>`)}</span></div>
       <p class="micro" style="margin-top:8px;color:var(--faint)">${bi('8 / 10 / 12% — los escenarios de la tesis 2040. El índice global histórico da 6–10: la diferencia es la apuesta.','8 / 10 / 12% — the 2040 thesis scenarios. A global index has done 6–10 historically: the gap is the bet.')}</p>`
     : `<div class="g-banner" style="margin-top:4px"><span>${bi('Escribe la cantidad del payout y dale Calcular.','Type the payout amount and hit Calculate.')}</span></div>`;
