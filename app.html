@@ -1541,6 +1541,8 @@ stop[stop-color="#9BC0DC"]{stop-color:var(--txt)}
         <div class="panel mt2" id="pgCamino">
           <div class="p-head"><h3 data-i18n="pg.caminoT">El camino a payout</h3><span class="micro" id="pgCaminoSub"></span></div>
           <div class="p-body">
+            <!-- eliges qué cuentas ver: las carreras de abajo obedecen esta selección -->
+            <div id="pickCamino" style="margin-bottom:14px"></div>
             <div class="climb" id="pgClimb"></div>
             <div class="pr-pasos" id="pgPasos" style="margin-top:16px"></div>
             <p class="micro" id="pgCaminoNota" style="color:var(--faint);margin:8px 0 0;line-height:1.6"></p>
@@ -4082,16 +4084,24 @@ function carreraCuenta(a){
 
 function renderCamino(){
   const panel = $('#pgCamino'); if(!panel) return;
-  /* Todas las carreras: las vivas Y las quemadas — una quemada cuenta su historia. */
-  const carreras = S.accounts.filter(a => !esLive(a) && !esSim(a) && reglasDe(a));
+  renderPicker($('#pickCamino'));
+  /* Las carreras que pediste ver. Con «Todas» entran también las quemadas —
+     una quemada cuenta su historia; con otro filtro manda tu selección. */
+  const modo = (S.ui.acctSel || {}).mode || 'all';
+  const enSel = new Set(acctsSel().map(a => a.id));
+  const carreras = S.accounts.filter(a => !esLive(a) && !esSim(a) && reglasDe(a)
+    && (modo === 'all' || enSel.has(a.id)));
   panel.hidden = false;
   if(!carreras.length){
     $('#pgCaminoSub').textContent = '';
     $('#pgClimb').innerHTML = '';
     $('#pgPasos').innerHTML = '';
-    $('#pgCaminoNota').textContent = bi(
-      'Sin cuentas fondeadas dadas de alta. El camino empieza cuando das de alta la primera.',
-      'No funded accounts yet. The road starts when you register the first one.');
+    const hayFondeadas = S.accounts.some(a => !esLive(a) && !esSim(a) && reglasDe(a));
+    $('#pgCaminoNota').textContent = hayFondeadas
+      ? bi('Ninguna cuenta cae en este filtro. Cambia la selección de arriba.',
+           'No account matches this filter. Change the selection above.')
+      : bi('Sin cuentas fondeadas dadas de alta. El camino empieza cuando das de alta la primera.',
+           'No funded accounts yet. The road starts when you register the first one.');
     return;
   }
 
