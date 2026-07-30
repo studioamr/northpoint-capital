@@ -1089,7 +1089,7 @@ button.tag.quemada{text-decoration:line-through;text-decoration-color:var(--down
 .av-panel{margin-top:16px;border:1px solid var(--line-soft);border-radius:13px;padding:16px}
 .av-h{display:flex;align-items:center;gap:14px;margin-bottom:14px}
 .av-h b{font-size:13.5px}
-.av-prev{width:72px;height:72px;border-radius:50%;overflow:hidden;flex:none;border:1px solid var(--line);
+.av-prev{width:88px;height:88px;border-radius:50%;overflow:hidden;flex:none;border:1px solid var(--line);
   background:var(--glass-2);display:flex;align-items:center;justify-content:center}
 .av-img{width:100%;height:100%;object-fit:cover;image-rendering:pixelated;display:block}
 .av-op{width:52px;height:52px;flex:none;border-radius:50%;border:1px solid var(--line);overflow:hidden;
@@ -1121,10 +1121,16 @@ button.tag.quemada{text-decoration:line-through;text-decoration-color:var(--down
   color:var(--dim);cursor:pointer;transition:all .15s}
 .chp:hover{border-color:var(--accent);color:var(--txt)}
 .chp.on{border-color:var(--up);color:var(--txt);background:rgba(87,199,155,.12)}
-/* la primera vez: preview grande arriba, todo lo demás debajo */
+/* El monito se queda a la vista mientras lo armas: en el overlay la
+   cabecera no scrollea, y en Ajustes el retrato se pega arriba del panel
+   —así no hay que subir y bajar para ver qué cambió. */
 .av-ov .modal{max-height:88vh;display:flex;flex-direction:column}
 .av-ov .creador{overflow-y:auto;flex:1;min-height:0;padding-right:4px}
 .av-crea-h{display:flex;gap:18px;align-items:center;flex:none}
+.av-h{position:sticky;top:-1px;z-index:4;padding:12px 0 14px;margin-bottom:0;
+  background:var(--modal-bg);
+  backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+.av-panel{position:relative}
 .av-crea-p{width:104px;height:104px;border-radius:50%;overflow:hidden;flex:none;
   border:1px solid var(--line);background:var(--glass-2)}
 .av-crea-p img{width:100%;height:100%;object-fit:cover;image-rendering:pixelated;display:block}
@@ -2521,7 +2527,7 @@ stop[stop-color="#9BC0DC"]{stop-color:var(--txt)}
 
       <div class="av-panel">
         <div class="av-h">
-          <div class="av-prev" data-avatar="72"></div>
+          <div class="av-prev" data-avatar="96"></div>
           <div>
             <b>Your character</b>
             <p class="micro" style="color:var(--faint);margin:4px 0 0">Build the one that looks like you — or put your own photo on it.</p>
@@ -6354,7 +6360,12 @@ $('#setVoz')?.addEventListener('change', e => { S.ui.rtVozOff = !e.target.checke
    quien entra aquí se hace un monito, no elige una calcomanía.
    El look vive en S.profile.avatar.look y se pinta donde se pida. */
 const AV_PAL = {
-  piel:  ['#FBE3CB','#F7DCBA','#EDC9A0','#E8B48C','#D9A377','#C08A5C','#A9714A','#8D5A3B','#6B4630','#4A2E20','#3A2318'],
+  /* 24 tonos: cuatro subtonos (rosado, neutro, dorado, oliva) recorriendo
+     toda la escala, de la más clara a la más oscura. */
+  piel:  ['#FFEADB','#FCE0C8','#F8D9BC','#FBE3CB','#F7DCBA','#F2CDA8','#EFD3AE','#EDC9A0',
+          '#E8B48C','#E0B98E','#D9A377','#D3A26B','#C89B72','#C08A5C','#B8845A','#A9714A',
+          '#9C6B48','#8D5A3B','#7C5136','#6B4630','#5B3A28','#4A2E20','#3E2619','#2E1C12'],
+  ojoCol:['#4A3020','#2E1E12','#6B4A22','#8A6A3A','#3E5A6E','#4A7FA8','#3E6B4A','#5A6B7C','#7A5A8E','#1B1B1B'],
   pelo:  ['#0E0C0A','#14100C','#2A1D14','#4A2C18','#6B3E1E','#7A4020','#A9642E','#C98F3A','#D8A93A','#8A8F98','#E4E8EC','#4A2A5A','#7A2E3E','#2E4A6E'],
   traje: ['#22303E','#1E2A3C','#2A3A4A','#33384A','#4E545E','#20242C','#3A4A3E','#2F4A46','#4A3B5E','#5A2E32','#5E4A3E','#7A7F88','#8E6B3E','#1B2430'],
   camisa:['#FFFFFF','#EFE8D8','#E9EDF2','#EFE8F6','#E8F2EE','#FFF0F0','#1B1F26','#D8A93A','#3A6B5A','#8E2F2B','#2E4A6E','#E8975A'],
@@ -6507,11 +6518,12 @@ function creadorHTML(){
     `)}
 
     ${grupo('Rasgos', `
-      ${chips(['ojos','Ojos'], AV_OJOS)}
+      ${chips(['ojos','Forma de ojos'], AV_OJOS)}
+      ${col(['ojoCol','Color de ojos'], AV_PAL.ojoCol)}
       ${chips(['cejas','Cejas'], AV_CEJAS)}
       ${chips(['nariz','Nariz'], AV_NARIZ)}
       ${chips(['boca','Boca'], AV_BOCA)}
-      ${togs('Detalles', [['lentes','Lentes'],['dientes','Dientes'],['arete','Arete'],['septum','Septum']])}
+      ${togs('Detalles', [['lentes','Lentes'],['dientes','Dientes'],['arete','Arete'],['septum','Septum'],['ojeras','Ojeras'],['arrugas','Arrugas']])}
     `)}
 
     ${grupo('Cabello y barba', `
@@ -6538,7 +6550,7 @@ function creadorHTML(){
     `)}`;
 }
 /* marca lo elegido y conecta cada control del creador que viva en `host` */
-const AV_DEF = { rostro:'ovalo', ojos:'almendra', cejas:'rectas', nariz:'recta', boca:'neutra',
+const AV_DEF = { rostro:'ovalo', ojos:'almendra', ojoCol:'#4A3020', cejas:'rectas', nariz:'recta', boca:'neutra',
                  pelost:'lacio', barbast:'rasurado', tocado:'ninguno', cuello:'camisa',
                  tocadoCol:'#E8E4DA' };
 function pintaCreador(host){
@@ -6579,12 +6591,13 @@ function conectaCreador(host, alCambiar){
     miMon().avatar = { tipo:'look', look: {
       piel: el(AV_PAL.piel), pelo: el(AV_PAL.pelo), traje: el(AV_PAL.traje),
       camisa: el(AV_PAL.camisa), ac: el(AV_PAL.ac), fondo: el(AV_PAL.fondo),
-      rostro: el(AV_ROSTROS)[0], ojos: el(AV_OJOS)[0], cejas: el(AV_CEJAS)[0],
+      rostro: el(AV_ROSTROS)[0], ojos: el(AV_OJOS)[0], ojoCol: el(AV_PAL.ojoCol), cejas: el(AV_CEJAS)[0],
       nariz: el(AV_NARIZ)[0], boca: el(AV_BOCA)[0], pelost: el(AV_PELOS)[0],
       barbast: el(AV_BARBAS)[0], cuello: el(AV_CUELLOS)[0],
       tocado: q(.35) ? el(AV_TOCADOS.slice(1))[0] : 'ninguno', tocadoCol: el(AV_PAL.tocadoCol),
       lentes: q(.25), canas: q(.15), corbata: q(.3), chaleco: q(.2), fuerte: q(.35),
-      pecas: q(.2), lunar: q(.15), hoyuelos: q(.15), arete: q(.2), dientes: q(.3) } };
+      pecas: q(.2), lunar: q(.15), hoyuelos: q(.15), arete: q(.2), dientes: q(.3),
+      ojeras: q(.15), arrugas: q(.15) } };
     save(); pintaAvatares(); refresca();
   };
 }
@@ -7311,217 +7324,365 @@ function caraAgente(nom, px = 96, lookDado = null, aire = 22){
    vertical. Se usa igual en el retrato del avatar y en la tarjeta del Desk. */
 function pintaRostro(c, L){
   const P = (x, y, w, h, col) => { c.fillStyle = col; c.fillRect(x, y, w, h); };
-  const piel = L.piel, som = mez(piel, -12), luz = mez(piel, 10);
-  const pelo = L.pelo, peloSom = mez(pelo, -14), peloLuz = mez(pelo, 14);
-  const canas = L.canas;
+  const piel = L.piel;
+  const som  = mez(piel, -13), som2 = mez(piel, -24), som3 = mez(piel, -34);
+  const luz  = mez(piel, 11),  luz2 = mez(piel, 20);
+  const pelo = L.pelo, canas = L.canas;
   const colPelo = canas ? mez(pelo, 46) : pelo;
-  const tinta = '#17181C';
+  const tinta = '#141519';
+  const iris  = L.ojoCol || '#4A3020';
 
-  /* ── 1 · la forma del rostro ── */
+  /* ── 1 · la forma de la cabeza ──
+     Se arma en ocho bandas horizontales: así la silueta tiene sienes,
+     pómulos y mandíbula en vez de ser un rectángulo con pelo. */
   const F = L.rostro || 'ovalo';
-  let aC = 14, aM = 14;                       // ancho arriba / ancho a la mandíbula
-  if(F === 'cuadrado'){ aC = 14.4; aM = 14.4; }
-  if(F === 'redondo'){ aC = 13.4; aM = 13.2; }
-  if(F === 'corazon'){ aC = 14.6; aM = 11.4; }
-  if(F === 'alargado'){ aC = 12.8; aM = 12.2; }
-  if(F === 'anguloso'){ aC = 14.2; aM = 12; }
-  const altoC = F === 'alargado' ? 14.6 : (F === 'redondo' ? 12.8 : 13.5);
-  const yTop = -10, yBot = yTop + altoC;
-  /* la cabeza se dibuja en tres bandas para insinuar la mandíbula */
-  P(-aC/2, yTop, aC, altoC * .55, piel);
-  const aMed = (aC + aM) / 2;
-  P(-aMed/2, yTop + altoC * .55, aMed, altoC * .26, piel);
-  P(-aM/2, yTop + altoC * .81, aM, altoC * .19, piel);
-  if(F === 'redondo'){ P(-aC/2 - .5, yTop + 2.5, .5, altoC * .5, piel); P(aC/2, yTop + 2.5, .5, altoC * .5, piel); }
-  if(F === 'anguloso'){ P(-aM/2, yBot - 1.2, 1.4, 1.2, som); P(aM/2 - 1.4, yBot - 1.2, 1.4, 1.2, som); }
-  P(-aC/2 - .9, yTop + 3.4, .9, 4.2, piel); P(aC/2, yTop + 3.4, .9, 4.2, piel);   // orejas
-  if(L.arete){ P(-aC/2 - .8, yTop + 7.2, 1, 1, L.ac); }
-  P(-aM/2 + 1.4, yBot - .9, aM - 2.8, .9, som);                                    // sombra del mentón
+  const P_ROSTRO = {
+    ovalo:    { sien:13.2, pomulo:14, mand:12.4, menton:8.4, alto:13.6 },
+    redondo:  { sien:13.4, pomulo:14.2, mand:13.4, menton:10.4, alto:12.9 },
+    cuadrado: { sien:14,   pomulo:14.2, mand:14,   menton:11.6, alto:13.4 },
+    corazon:  { sien:14.4, pomulo:14.2, mand:11.2, menton:6.4,  alto:13.5 },
+    alargado: { sien:12.4, pomulo:12.8, mand:11.6, menton:8,    alto:15 },
+    anguloso: { sien:13.8, pomulo:14.2, mand:12,   menton:7.6,  alto:13.8 },
+  };
+  const R = P_ROSTRO[F] || P_ROSTRO.ovalo;
+  const yTop = -10, altoC = R.alto, yBot = yTop + altoC;
+  /* Lo que cae por detrás de la cabeza —melenas, trenzas, rastas, cola— se
+     pinta ANTES que el rostro. Si no, las mechas cruzan por encima de los
+     ojos y el monito parece detrás de una reja. */
+  const PLp = L.pelost || (L.greñas ? 'grenas' : (L.capucha ? 'capucha' : 'lacio'));
+  const cPeloAtras = L.canas ? mez(L.pelo, 46) : L.pelo;
+  const aCp = R.sien + .4, xPp = -aCp/2, yPp = yTop - 1.4;
+  /* el manto de atrás se dibuja MÁS ANCHO que la cara: si no, la cabeza lo
+     tapa entero y el peinado desaparece */
+  const anchoAtras = aCp + 5.2, xA = -anchoAtras / 2;
+  if(PLp === 'trenzas'){
+    P(xA, yPp + 1, anchoAtras, 3, cPeloAtras);
+    for(let i = 0; i < 8; i++){ const x = xA + .25 + i * (anchoAtras - .5) / 8;
+      P(x, yPp + 3.6, 1.7, 11.5 + (i % 2) * 1.4, cPeloAtras);
+      P(x, yPp + 5.8, 1.7, .45, mez(cPeloAtras, -26));
+      P(x, yPp + 8.2, 1.7, .45, mez(cPeloAtras, -26));
+      P(x, yPp + 11.4, 1.7, .45, mez(cPeloAtras, -26)); }
+  } else if(PLp === 'rastas'){
+    P(xA, yPp + .6, anchoAtras, 3.4, cPeloAtras);
+    for(let i = 0; i < 9; i++){ const x = xA + i * (anchoAtras - 1.7) / 8;
+      const h = 11.5 + (i % 3) * 2.4;
+      P(x, yPp + 3.4, 1.7, h, cPeloAtras);
+      P(x, yPp + 3.4 + h - .55, 1.7, .55, mez(cPeloAtras, -30)); }
+  } else if(PLp === 'largo'){
+    P(xA, yPp + .8, anchoAtras, 15.4, cPeloAtras);
+    P(xA, yPp + 15.2, anchoAtras, 1.2, mez(cPeloAtras, -22));
+    P(xA + 1, yPp + 2.4, 1.6, 7, mez(cPeloAtras, 16));
+  } else if(PLp === 'cola'){
+    P(aCp/2 - .6, yPp + 2.2, 3.2, 11, cPeloAtras);
+    P(aCp/2 + 1.6, yPp + 8.4, 2.2, 3.6, cPeloAtras);
+    P(aCp/2 - .2, yPp + 3.4, 1.2, 3, mez(cPeloAtras, 16));
+  } else if(PLp === 'chongo'){
+    P(-2.8, yPp - 4, 5.6, 4, cPeloAtras);
+    P(-1.7, yPp - 3.4, 2.2, .9, mez(cPeloAtras, 22));
+  } else if(PLp === 'afro'){
+    P(xA - 1.2, yPp - 3.4, anchoAtras + 2.4, 9.4, cPeloAtras);
+  } else if(PLp === 'grenas'){
+    P(xA + .6, yPp - .4, anchoAtras - 1.2, 4.6, cPeloAtras);
+  } else if(PLp === 'ondulado' || PLp === 'rizado'){
+    P(xA + 1, yPp + 1, anchoAtras - 2, 5.4, cPeloAtras);
+  }
+  /* interpola el ancho a lo largo de la cara */
+  const anchoEn = t => {                      // t de 0 (frente) a 1 (mentón)
+    if(t < .18) return R.sien + (R.pomulo - R.sien) * (t / .18);
+    if(t < .52) return R.pomulo;
+    if(t < .84) return R.pomulo + (R.mand - R.pomulo) * ((t - .52) / .32);
+    return R.mand + (R.menton - R.mand) * ((t - .84) / .16);
+  };
+  const BANDAS = 16;
+  for(let i = 0; i < BANDAS; i++){
+    const t = i / BANDAS, h = altoC / BANDAS;
+    const a = anchoEn(t + .5 / BANDAS);
+    /* la piel se aclara arriba y se oscurece hacia la mandíbula: volumen */
+    const col = t < .2 ? luz : (t < .62 ? piel : (t < .86 ? mez(piel, -4) : som));
+    P(-a/2, yTop + i * h, a, h + .02, col);
+  }
+  /* orejas con su hélix */
+  const aOreja = anchoEn(.42) / 2;
+  P(-aOreja - 1, yTop + 4.4, 1.1, 4.2, piel);
+  P(aOreja - .1, yTop + 4.4, 1.1, 4.2, piel);
+  P(-aOreja - .7, yTop + 5.2, .5, 2.4, som2);
+  P(aOreja + .2, yTop + 5.2, .5, 2.4, som2);
+  if(L.arete){ P(-aOreja - .8, yTop + 8.4, 1, 1, L.ac); P(aOreja, yTop + 8.4, 1, 1, L.ac); }
 
-  /* ── 2 · marcas de la piel ── */
-  if(L.pecas){ [[-4.2,-2.4],[-2.6,-1.8],[3.4,-2.4],[2.2,-1.6],[-3.4,-1.2],[4,-1.4]]
-    .forEach(([x,y]) => P(x, y, .7, .7, mez(piel, -26))); }
-  if(L.lunar) P(2.9, .4, .8, .8, mez(piel, -40));
-  if(L.hoyuelos){ P(-5.2, .2, .9, .9, som); P(4.3, .2, .9, .9, som); }
+  /* ── 2 · volumen del rostro ── */
+  const aP = anchoEn(.45);                    // ancho a la altura de los pómulos
+  P(-aP/2, yTop + 1.2, 1.1, 4.4, som);        // sienes
+  P(aP/2 - 1.1, yTop + 1.2, 1.1, 4.4, som);
+  P(-aP/2 + .6, yTop + 6.4, 1.6, 2.2, som);   // pómulos
+  P(aP/2 - 2.2, yTop + 6.4, 1.6, 2.2, som);
+  P(-2.6, yTop + 1.1, 5.2, 1.1, luz2);        // brillo de la frente
+  P(-aP/2 + 1.6, yBot - 1.1, aP - 3.2, 1.1, som2);   // sombra bajo el mentón
+  if(F === 'anguloso'){ P(-R.mand/2, yBot - 2.4, 1.5, 2.4, som2); P(R.mand/2 - 1.5, yBot - 2.4, 1.5, 2.4, som2); }
 
-  /* ── 3 · los ojos ── */
+  /* ── 3 · marcas de la piel ── */
+  if(L.pecas){ [[-4.4,-2.2],[-3,-1.5],[-2,-2.6],[3.6,-2.2],[2.4,-1.5],[1.6,-2.7],[-4.8,-.8],[4.2,-.9]]
+    .forEach(([x,y]) => P(x, y, .55, .55, mez(piel, -30))); }
+  if(L.lunar) P(3.1, .5, .7, .7, mez(piel, -46));
+  if(L.hoyuelos){ P(-4.6, 1.5, .8, 1.1, som2); P(3.8, 1.5, .8, 1.1, som2); }
+  if(L.arrugas){                                // patas de gallo y entrecejo
+    P(-6.3, -5.2, 1.2, .35, som2); P(-6.3, -4.4, 1, .35, som2);
+    P(5.1, -5.2, 1.2, .35, som2); P(5.1, -4.4, 1, .35, som2);
+    P(-.6, -6.6, .35, 1.3, som2); P(.3, -6.6, .35, 1.3, som2);
+  }
+
+  /* ── 4 · los ojos ──
+     Coordenadas explícitas y DENTRO de la cara: el ojo izquierdo ocupa de
+     x=-5.6 a -1.8 y el derecho su espejo. Cada ojo lleva cuenca, párpado,
+     esclerótica, iris, pupila, brillo y pestañas. */
   const O = L.ojos || 'almendra';
-  const xo = 2.4, yo = -4.9;                   // separación y altura
-  const parO = (dx, dy, w, h, col) => { P(-xo - w + dx, yo + dy, w, h, col); P(xo - dx, yo + dy, w, h, col); };
-  if(L.lentes){
-    const arm = L.lenteCol || '#15191F';
-    parO(-2.9, -.4, 4.9, 3.7, arm);
-    parO(-2.4, .1, 3.9, 2.7, mez(fondoOjo(L), 0));
-    P(-1.2, -3.5, 2.4, .8, arm);
-  }
-  if(O === 'monolid'){                          // párpado sin pliegue marcado
-    parO(-2.5, .5, 4.3, 1.7, tinta);
-    parO(-2.5, -.1, 4.3, .5, mez(piel, -18));
-  } else if(O === 'almendra'){
-    parO(-2.4, .2, 4, 2.4, blancoOjo());
-    P(-xo - 2.9, yo + .6, 1.9, 1.9, tinta); P(xo + 1, yo + .6, 1.9, 1.9, tinta);
-  } else if(O === 'redondos'){
-    parO(-2.5, 0, 4.2, 3, blancoOjo());
-    P(-xo - 3, yo + .5, 2.2, 2.2, tinta); P(xo + .8, yo + .5, 2.2, 2.2, tinta);
-  } else if(O === 'caidos'){
-    parO(-2.4, .2, 4, 2.3, blancoOjo());
-    P(-xo - 2.9, yo + .8, 1.9, 1.7, tinta); P(xo + 1, yo + .8, 1.9, 1.7, tinta);
-    parO(-2.4, 0, 4, .7, mez(piel, -16));
-  } else if(O === 'rasgados'){
-    parO(-2.7, .6, 4.6, 1.5, tinta);
-  } else if(O === 'hundidos'){
-    parO(-2.5, -.5, 4.3, .8, mez(piel, -22));
-    parO(-2.3, .4, 3.8, 2.1, blancoOjo());
-    P(-xo - 2.8, yo + .7, 1.8, 1.7, tinta); P(xo + 1, yo + .7, 1.8, 1.7, tinta);
-  } else {                                      // grandes
-    parO(-2.6, -.1, 4.5, 3.2, blancoOjo());
-    P(-xo - 3.1, yo + .5, 2.3, 2.4, tinta); P(xo + .8, yo + .5, 2.3, 2.4, tinta);
-  }
-  /* brillo: un pixel y la cara se vuelve persona */
-  if(O !== 'rasgados' && O !== 'monolid'){
-    P(-xo - 2.5, yo + .8, .7, .7, '#FFFFFF'); P(xo + 1.9, yo + .8, .7, .7, '#FFFFFF');
-  }
+  const yo = -5.1;                             // línea de los ojos
+  const G = {                                  // geometría por forma
+    almendra: { w:3.6, h:2.3, dy:0,   tapa:.55, iris:1.7, baja:0 },
+    monolid:  { w:3.8, h:1.9, dy:.25, tapa:.85, iris:1.5, baja:0 },
+    redondos: { w:3.4, h:3,   dy:-.2, tapa:.35, iris:2,   baja:0 },
+    grandes:  { w:3.9, h:3.2, dy:-.3, tapa:.4,  iris:2.2, baja:0 },
+    caidos:   { w:3.7, h:2.3, dy:.1,  tapa:.7,  iris:1.7, baja:.45 },
+    rasgados: { w:4,   h:1.6, dy:.35, tapa:.5,  iris:1.4, baja:-.35 },
+    hundidos: { w:3.4, h:2.1, dy:.15, tapa:.6,  iris:1.6, baja:0 },
+  }[O] || { w:3.6, h:2.3, dy:0, tapa:.55, iris:1.7, baja:0 };
+  const xIn = 1.8;                             // borde interno del ojo
+  const ojo = (sg) => {                        // sg = -1 izquierdo, +1 derecho
+    const x0 = sg < 0 ? -(xIn + G.w) : xIn;
+    const y0 = yo + G.dy + (G.baja ? (sg < 0 ? 0 : 0) : 0);
+    const incl = G.baja * sg;                  // caídos/rasgados inclinan hacia fuera
+    const yy = y0 + (sg < 0 ? -incl : -incl) * 0;
+    /* cuenca: una sombra que le da profundidad al ojo */
+    P(x0 - .35, yy - .9, G.w + .7, G.h + 1.5, O === 'hundidos' ? som2 : som);
+    /* esclerótica */
+    P(x0, yy, G.w, G.h, '#F4F6F8');
+    /* el borde externo baja en los caídos y sube en los rasgados */
+    if(G.baja > 0) P(sg < 0 ? x0 : x0 + G.w - 1.1, yy, 1.1, .7, som);
+    if(G.baja < 0) P(sg < 0 ? x0 : x0 + G.w - 1.1, yy + G.h - .6, 1.1, .6, som);
+    /* iris y pupila, centrados */
+    const cx = x0 + G.w/2 - G.iris/2, cy = yy + (G.h - G.iris) / 2 + .1;
+    P(cx, cy, G.iris, Math.min(G.iris, G.h - .2), iris);
+    P(cx + G.iris * .28, cy + G.iris * .2, G.iris * .44, Math.min(G.iris * .55, G.h - .5), tinta);
+    P(cx + G.iris * .12, cy + G.iris * .1, .45, .45, '#FFFFFF');           // brillo
+    /* párpado superior con su pestaña */
+    P(x0 - .2, yy - .55, G.w + .4, G.tapa, mez(piel, -8));
+    P(x0 - .2, yy - .18, G.w + .4, .32, tinta);
+    if(O !== 'monolid' && O !== 'rasgados') P(x0 - .1, yy - .95, G.w + .2, .3, mez(piel, -18)); // pliegue
+    /* párpado inferior */
+    P(x0, yy + G.h - .12, G.w, .3, mez(piel, -20));
+    if(L.ojeras) P(x0 - .2, yy + G.h + .3, G.w + .4, .7, som2);
+  };
+  ojo(-1); ojo(1);
+  /* entrecejo: el puente entre los dos ojos */
+  P(-xIn + .1, yo - .3, xIn * 2 - .2, 1.4, luz);
 
-  /* ── 4 · las cejas ── */
-  const CJ = L.cejas || 'rectas', cCej = mez(colPelo, canas ? 8 : 12);
-  const yc = yo - 2;
+  /* ── 5 · las cejas ── */
+  const CJ = L.cejas || 'rectas', cCej = mez(colPelo, canas ? 10 : 8);
+  const yc = yo - 2.3;
+  const cejaIzq = (x, y, w, h) => P(x, y, w, h, cCej);
   if(CJ !== 'ninguna'){
-    if(CJ === 'rectas'){ P(-6.2, yc, 4.3, .9, cCej); P(1.9, yc, 4.3, .9, cCej); }
-    else if(CJ === 'gruesas'){ P(-6.3, yc - .3, 4.6, 1.5, cCej); P(1.7, yc - .3, 4.6, 1.5, cCej); }
-    else if(CJ === 'arqueadas'){ P(-6.2, yc + .3, 1.5, .9, cCej); P(-4.8, yc - .4, 2.9, .9, cCej);
-                                  P(1.9, yc - .4, 2.9, .9, cCej); P(4.7, yc + .3, 1.5, .9, cCej); }
-    else if(CJ === 'finas'){ P(-6, yc + .2, 4, .6, cCej); P(2, yc + .2, 4, .6, cCej); }
-    else if(CJ === 'fruncidas'){ P(-6, yc + .6, 4.2, 1, cCej); P(1.8, yc + .6, 4.2, 1, cCej);
-                                  P(-2, yc + 1.1, 4, .7, cCej); }
-    else if(CJ === 'unidas'){ P(-6.2, yc, 12.4, 1.1, cCej); }
+    const x0 = -(xIn + G.w + .5), an = G.w + 1;
+    if(CJ === 'rectas'){ cejaIzq(x0, yc, an, .95); cejaIzq(-x0 - an, yc, an, .95); }
+    else if(CJ === 'gruesas'){ cejaIzq(x0, yc - .35, an, 1.65); cejaIzq(-x0 - an, yc - .35, an, 1.65);
+                               cejaIzq(x0 - .3, yc + .3, .8, 1, cCej); cejaIzq(-x0 - an - .5, yc + .3, .8, 1); }
+    else if(CJ === 'arqueadas'){ cejaIzq(x0, yc + .5, 1.5, .9); cejaIzq(x0 + 1.3, yc - .3, an - 1.8, .95);
+                                 cejaIzq(-x0 - an + .5, yc - .3, an - 1.8, .95); cejaIzq(-x0 - 1.5, yc + .5, 1.5, .9); }
+    else if(CJ === 'finas'){ cejaIzq(x0 + .3, yc + .25, an - .6, .55); cejaIzq(-x0 - an + .3, yc + .25, an - .6, .55); }
+    else if(CJ === 'fruncidas'){ cejaIzq(x0 + .6, yc + .75, an - .6, 1.05); cejaIzq(-x0 - an, yc + .75, an - .6, 1.05);
+                                 cejaIzq(-1.8, yc + 1.25, 3.6, .8); }
+    else if(CJ === 'unidas'){ cejaIzq(x0, yc + .1, (-x0) * 2, 1.15); }
   }
 
-  /* ── 5 · la nariz ── */
+  /* ── 6 · la nariz ── */
   const N = L.nariz || 'recta';
-  const yn = -1.9;
-  if(N === 'recta'){ P(-.7, yn, 1.4, 2.4, som); P(-1.3, yn + 2, 2.6, .8, som); }
-  else if(N === 'ancha'){ P(-1, yn + .3, 2, 2, som); P(-2.1, yn + 2, 4.2, 1, som); P(-2.1, yn + 2.6, 1, .6, mez(piel,-22)); P(1.1, yn + 2.6, 1, .6, mez(piel,-22)); }
-  else if(N === 'aguilena'){ P(-.6, yn - .5, 1.2, 1.4, som); P(-.9, yn + .8, 1.8, 1.8, som); P(-1.5, yn + 2.3, 2.8, .8, som); }
-  else if(N === 'respingada'){ P(-.6, yn + .6, 1.2, 1.6, som); P(-1.4, yn + 1.9, 2.8, .8, som); P(-1.4, yn + 1.6, .7, .5, mez(piel,-22)); }
-  else if(N === 'chata'){ P(-1.1, yn + .8, 2.2, 1.4, som); P(-1.9, yn + 1.9, 3.8, .9, som); }
-  else if(N === 'larga'){ P(-.6, yn - .6, 1.2, 3.4, som); P(-1.3, yn + 2.6, 2.6, .8, som); }
-  if(L.septum) P(-.8, yn + 2.9, 1.6, .6, '#C9CDD2');
+  const yn = -2.6;
+  const puente = (w, alto) => { P(-w/2, yn, w, alto, luz); P(-w/2 - .35, yn, .35, alto, som); P(w/2, yn, .35, alto, som); };
+  if(N === 'recta'){ puente(1.2, 2.6); P(-.85, yn + 2.4, 1.7, 1, som); P(-1.6, yn + 2.9, .8, .5, som2); P(.8, yn + 2.9, .8, .5, som2); }
+  else if(N === 'ancha'){ puente(1.7, 2.2); P(-1.3, yn + 2, 2.6, 1.2, som); P(-2.3, yn + 2.5, 1.1, .7, som2); P(1.2, yn + 2.5, 1.1, .7, som2); P(-.5, yn + 2.4, 1, .5, luz); }
+  else if(N === 'aguilena'){ P(-.55, yn - .7, 1.1, 1.5, luz2); P(-.85, yn - .7, .3, 1.5, som);
+                             puente(1.3, 2.4); P(-1, yn + 2.2, 2, 1.1, som); P(-1.6, yn + 2.8, .7, .5, som2); P(.9, yn + 2.8, .7, .5, som2); }
+  else if(N === 'respingada'){ puente(1.1, 1.9); P(-.9, yn + 1.7, 1.8, 1, som); P(-.9, yn + 1.5, .9, .5, luz2);
+                               P(-1.6, yn + 2.2, .7, .5, som2); P(.9, yn + 2.2, .7, .5, som2); }
+  else if(N === 'chata'){ puente(1.9, 1.6); P(-1.5, yn + 1.4, 3, 1.2, som); P(-2.4, yn + 1.8, 1, .7, som2); P(1.4, yn + 1.8, 1, .7, som2); }
+  else if(N === 'larga'){ puente(1.1, 3.4); P(-.85, yn + 3.2, 1.7, 1, som); P(-1.5, yn + 3.7, .7, .5, som2); P(.8, yn + 3.7, .7, .5, som2); }
+  if(L.septum) P(-.75, yn + 3.6, 1.5, .55, '#C9CDD2');
 
-  /* ── 7 · el pelo ── */
-  const PL = L.pelost || (L.greñas ? 'grenas' : (L.capucha ? 'capucha' : 'lacio'));
-  const aP = aC + .3, xP = -aP/2, yP = yTop - 1.6;
-  const topeCanas = () => { if(canas) P(xP, yP, aP, 1.4, '#E2E6EA'); };
-  if(PL === 'calvo'){ /* nada, y la frente respira */ }
-  else if(PL === 'rapado'){ P(xP, yP + .7, aP, 3.2, mez(colPelo, -6)); }
-  else if(PL === 'lacio'){ P(xP, yP, aP, 4.4, colPelo); P(xP, yP + 4.4, 1.4, 2.6, colPelo); P(aP/2 - 1.4, yP + 4.4, 1.4, 2.6, colPelo); topeCanas(); }
-  else if(PL === 'raya'){ P(xP, yP, aP, 4.2, colPelo); P(-1.4, yP, 1.1, 2.6, mez(piel, 6)); P(xP, yP + 4.2, 1.3, 2.2, colPelo); P(aP/2 - 1.3, yP + 4.2, 1.3, 2.2, colPelo); topeCanas(); }
-  else if(PL === 'flequillo'){ P(xP, yP, aP, 5.1, colPelo); P(xP, yP + 5.1, 1.4, 2, colPelo); P(aP/2 - 1.4, yP + 5.1, 1.4, 2, colPelo); topeCanas(); }
-  else if(PL === 'grenas'){ P(xP - .5, yP - 1.4, aP + 1, 5.2, colPelo); P(xP - 1.1, yP + 1.6, 1.5, 3.2, colPelo);
-                            P(aP/2 - .4, yP + 1.2, 1.7, 3.6, colPelo); P(xP + 3, yP - 2, 3, 1.6, colPelo); topeCanas(); }
-  else if(PL === 'ondulado'){ P(xP, yP - .4, aP, 4.8, colPelo); P(xP + 1, yP - 1.2, 3, 1.2, colPelo); P(aP/2 - 4.4, yP - 1.2, 3.2, 1.2, colPelo);
-                              P(xP - .6, yP + 4, 1.6, 3.4, colPelo); P(aP/2 - 1, yP + 4, 1.6, 3.4, colPelo); topeCanas(); }
-  else if(PL === 'rizado'){ P(xP - .4, yP - 1, aP + .8, 5.4, colPelo);
-                            [[-5.4,-2.4],[-2.6,-3],[.4,-3],[3.2,-2.4],[-6.6,-.6],[5.6,-.6]]
-                              .forEach(([x,y]) => P(x, yP + y + 1, 2.4, 2.4, colPelo)); topeCanas(); }
-  else if(PL === 'afro'){ P(xP - 1.8, yP - 2.6, aP + 3.6, 7, colPelo);
-                          P(xP - 2.6, yP - .6, 2, 4.6, colPelo); P(aP/2 + .6, yP - .6, 2, 4.6, colPelo);
-                          P(xP + 1, yP - 3.6, aP - 2, 1.6, colPelo); topeCanas(); }
-  else if(PL === 'trenzas'){ P(xP, yP, aP, 4, colPelo);
-                             for(let i = 0; i < 5; i++) P(xP + .8 + i * 2.7, yP + 4, 1.5, 5.4, colPelo);
-                             for(let i = 0; i < 5; i++) P(xP + .8 + i * 2.7, yP + 1.2, 1.5, .7, mez(colPelo, 22)); topeCanas(); }
-  else if(PL === 'rastas'){ P(xP - .3, yP - .6, aP + .6, 4.4, colPelo);
-                            for(let i = 0; i < 6; i++) P(xP - .3 + i * 2.4, yP + 3.6, 1.7, 6.4 + (i % 2) * 1.6, colPelo); topeCanas(); }
-  else if(PL === 'cola'){ P(xP, yP, aP, 4.2, colPelo); P(aP/2 - .2, yP + 2.4, 2.2, 5.6, colPelo); P(aP/2 + 1.4, yP + 5, 1.6, 2.6, colPelo); topeCanas(); }
-  else if(PL === 'chongo'){ P(xP, yP, aP, 4.2, colPelo); P(-2.2, yP - 3.4, 4.4, 3.4, colPelo); P(-2.6, yP - .8, 5.2, 1, mez(colPelo, -12)); topeCanas(); }
-  else if(PL === 'largo'){ P(xP, yP - .2, aP, 4.6, colPelo); P(xP - 1.2, yP + 2.6, 2.2, 8.4, colPelo); P(aP/2 - 1, yP + 2.6, 2.2, 8.4, colPelo); topeCanas(); }
-  else if(PL === 'undercut'){ P(xP + .8, yP - .6, aP - 1.6, 4, colPelo); P(xP, yP + 3.2, aP, 1.6, mez(colPelo, -22)); topeCanas(); }
-  else if(PL === 'capucha'){ P(xP, yP + .4, aP, 3.8, colPelo); }
-
-  /* ── 8 · el vello facial ── */
-  const yb = 1.2, labio = mez(piel, -34);          // la línea de la boca la comparten barba y labios
+  /* ── 7 · el vello facial ── */
+  const yb = 1.5, labio = mez(piel, -40), labio2 = mez(piel, -28);
   const V = L.barbast || (L.barba ? 'corta' : 'rasurado');
-  const cB = canas ? mez(pelo, 40) : mez(pelo, 14);
-  const yBar = yBot - 4.4, aBar = aM;
-  if(V === 'sombra'){ P(-aBar/2 + .8, yBar + 1.4, aBar - 1.6, 3, mez(piel, -16)); }
-  else if(V === 'bigote'){ P(-2.2, yb - 1.2, 4.4, 1.1, cB); }
-  else if(V === 'bigoton'){ P(-3.2, yb - 1.5, 6.4, 1.6, cB); P(-3.9, yb - 1.1, .9, 1.2, cB); P(3, yb - 1.1, .9, 1.2, cB); }
-  else if(V === 'perilla'){ P(-1.4, yb + 1.6, 2.8, 2.2, cB); }
-  else if(V === 'candado'){ P(-2.2, yb - 1.2, 4.4, 1, cB); P(-2, yb + 1.4, 4, 2.4, cB);
-                            P(-2.4, yb - .2, .9, 2, cB); P(1.5, yb - .2, .9, 2, cB); }
-  else if(V === 'corta'){ P(-aBar/2 + .6, yBar + 1, aBar - 1.2, 3.6, cB); P(-2.2, yb - 1.2, 4.4, 1, cB); }
-  else if(V === 'completa'){ P(-aBar/2 + .2, yBar - .4, aBar - .4, 5.2, cB);
-                             P(-aBar/2 - .3, yBar - 2.4, 1.6, 3.4, cB); P(aBar/2 - 1.3, yBar - 2.4, 1.6, 3.4, cB);
-                             P(-2.4, yb - 1.3, 4.8, 1.1, cB); }
-  else if(V === 'larga'){ P(-aBar/2 + .2, yBar - .4, aBar - .4, 5.4, cB);
-                          P(-aBar/2 - .3, yBar - 2.6, 1.6, 3.6, cB); P(aBar/2 - 1.3, yBar - 2.6, 1.6, 3.6, cB);
-                          P(-3.2, yBar + 4.8, 6.4, 3.6, cB); P(-2.2, yBar + 8.2, 4.4, 1.8, cB);
-                          P(-2.4, yb - 1.3, 4.8, 1.1, cB); }
-  else if(V === 'patillas'){ P(-aBar/2 - .3, yBar - 3.4, 1.5, 4.4, cB); P(aBar/2 - 1.2, yBar - 3.4, 1.5, 4.4, cB); }
-  else if(V === 'chuletas'){ P(-aBar/2 - .4, yBar - 3.6, 2.2, 5, cB); P(aBar/2 - 1.8, yBar - 3.6, 2.2, 5, cB);
-                             P(-3.2, yb - 1.3, 6.4, 1.2, cB); }
-  if(L.boca === 'sonrisa' && (V === 'completa' || V === 'larga')) P(-1.6, yb + .1, 3.2, .7, mez(piel, -34));
+  const cB = canas ? mez(pelo, 42) : mez(pelo, 10), cB2 = mez(cB, -14);
+  const aMand = R.mand, aMen = R.menton;
+  const yMand = yBot - 5;
+  if(V === 'sombra'){
+    P(-aMand/2 + .8, yMand + 1.6, aMand - 1.6, 3.4, mez(piel, -17));
+    P(-2.4, yb - 1.4, 4.8, 1.1, mez(piel, -19));
+  }
+  else if(V === 'bigote'){ P(-2.3, yb - 1.35, 4.6, 1.2, cB); P(-2.3, yb - 1.35, 4.6, .4, cB2); }
+  else if(V === 'bigoton'){ P(-3.4, yb - 1.7, 6.8, 1.8, cB); P(-4.1, yb - 1.2, .9, 1.3, cB);
+                            P(3.2, yb - 1.2, .9, 1.3, cB); P(-3.4, yb - 1.7, 6.8, .5, cB2); }
+  else if(V === 'perilla'){ P(-1.5, yb + 1.7, 3, 2.4, cB); P(-1.5, yb + 1.7, 3, .5, cB2); }
+  else if(V === 'candado'){ P(-2.3, yb - 1.3, 4.6, 1.1, cB); P(-2.1, yb + 1.5, 4.2, 2.6, cB);
+                            P(-2.5, yb - .1, 1, 2.1, cB); P(1.5, yb - .1, 1, 2.1, cB); }
+  else if(V === 'corta'){ P(-aMand/2 + .5, yMand + 1.2, aMand - 1, 4, cB);
+                          P(-aMen/2 - .4, yBot - 1.6, aMen + .8, 1.6, cB);
+                          P(-2.4, yb - 1.35, 4.8, 1.1, cB); P(-aMand/2 + .5, yMand + 1.2, aMand - 1, .5, cB2); }
+  else if(V === 'completa'){ P(-aMand/2, yMand - .6, aMand, 5.6, cB);
+                             P(-aMand/2 - .5, yMand - 2.8, 1.7, 3.6, cB); P(aMand/2 - 1.2, yMand - 2.8, 1.7, 3.6, cB);
+                             P(-aMen/2 - .6, yBot - 1.4, aMen + 1.2, 2.2, cB);
+                             P(-2.6, yb - 1.45, 5.2, 1.2, cB); P(-aMand/2, yMand - .6, aMand, .6, cB2); }
+  else if(V === 'larga'){ P(-aMand/2, yMand - .6, aMand, 5.8, cB);
+                          P(-aMand/2 - .5, yMand - 3, 1.7, 3.8, cB); P(aMand/2 - 1.2, yMand - 3, 1.7, 3.8, cB);
+                          P(-3.6, yBot - .4, 7.2, 3.8, cB); P(-2.4, yBot + 3.2, 4.8, 2.2, cB);
+                          P(-1.4, yBot + 5.2, 2.8, 1.4, cB);
+                          P(-2.6, yb - 1.45, 5.2, 1.2, cB); P(-aMand/2, yMand - .6, aMand, .6, cB2); }
+  else if(V === 'patillas'){ P(-aMand/2 - .5, yMand - 3.6, 1.5, 4.8, cB); P(aMand/2 - 1, yMand - 3.6, 1.5, 4.8, cB); }
+  else if(V === 'chuletas'){ P(-aMand/2 - .6, yMand - 3.8, 2.3, 5.4, cB); P(aMand/2 - 1.7, yMand - 3.8, 2.3, 5.4, cB);
+                             P(-3.4, yb - 1.45, 6.8, 1.3, cB); }
 
-  /* ── la boca va DESPUÉS del vello facial: si no, la sombra de barba la borraba ── */
+  /* ── 8 · el filtrum y la boca ── */
+  P(-.4, yb - 1.3, .8, 1.1, som);              // el surco sobre el labio
   const B = L.boca || 'neutra';
-  if(B === 'neutra'){ P(-2, yb, 4, 1, labio); }
-  else if(B === 'sonrisa'){ P(-2.3, yb, 4.6, .9, labio); P(-2.9, yb - .6, .8, .8, labio); P(2.1, yb - .6, .8, .8, labio); }
-  else if(B === 'seria'){ P(-1.9, yb + .1, 3.8, .8, labio); P(-2.5, yb + .5, .7, .6, labio); P(1.8, yb + .5, .7, .6, labio); }
-  else if(B === 'llenos'){ P(-2.2, yb - .5, 4.4, 1, mez(piel,-26)); P(-2.4, yb + .5, 4.8, 1.2, labio); }
-  else if(B === 'finos'){ P(-1.8, yb + .2, 3.6, .6, labio); }
-  else if(B === 'media'){ P(-2, yb, 2.6, 1, labio); P(.7, yb - .5, 1.6, 1, labio); }
-  if(L.dientes && (B === 'sonrisa' || B === 'media')) P(-1.6, yb + .1, 3.2, .6, '#F4F6F8');
+  if(B === 'neutra'){ P(-2.1, yb - .35, 4.2, .7, labio2); P(-2.1, yb + .35, 4.2, .75, labio); P(-2.1, yb, 4.2, .35, som3); }
+  else if(B === 'sonrisa'){ P(-2.5, yb - .3, 5, .7, labio2); P(-2.5, yb + .4, 5, .8, labio);
+                            P(-3.1, yb - .8, .9, .9, labio); P(2.2, yb - .8, .9, .9, labio);
+                            if(L.dientes) P(-1.9, yb + .05, 3.8, .55, '#F6F8FA'); else P(-2.5, yb + .05, 5, .35, som3); }
+  else if(B === 'media'){ P(-2.1, yb - .3, 4.2, .7, labio2); P(-2.1, yb + .4, 4.2, .75, labio);
+                          P(1.7, yb - .85, .9, .9, labio);
+                          if(L.dientes) P(-.4, yb + .05, 2.4, .5, '#F6F8FA'); else P(-2.1, yb + .05, 4.2, .35, som3); }
+  else if(B === 'seria'){ P(-2, yb - .25, 4, .6, labio2); P(-2, yb + .35, 4, .65, labio);
+                          P(-2.6, yb + .55, .8, .7, labio); P(1.8, yb + .55, .8, .7, labio);
+                          P(-2, yb + .05, 4, .35, som3); }
+  else if(B === 'llenos'){ P(-2.4, yb - .8, 4.8, 1.1, labio2); P(-2.6, yb + .4, 5.2, 1.4, labio);
+                           P(-2.4, yb + .2, 4.8, .35, som3); P(-1.1, yb - .95, 2.2, .4, mez(piel,-18)); }
+  else if(B === 'finos'){ P(-1.9, yb - .05, 3.8, .45, labio2); P(-1.9, yb + .45, 3.8, .45, labio);
+                          P(-1.9, yb + .35, 3.8, .25, som3); }
 
-  /* ── 9 · el tocado ── */
+  /* ── 9 · el pelo ── */
+  const PL = L.pelost || (L.greñas ? 'grenas' : (L.capucha ? 'capucha' : 'lacio'));
+  const aC = R.sien + .4, xP = -aC/2, yP = yTop - 1.4;
+  const brillo = mez(colPelo, 26);
+  const topeCanas = () => { if(canas) P(xP, yP, aC, 1.5, '#E4E8EC'); };
+  const luzPelo = (x, y, w, h) => P(x, y, w, h, brillo);
+  if(PL === 'calvo'){ P(xP + 2.6, yP + 1.6, aC - 5.2, .9, luz); }
+  else if(PL === 'rapado'){ P(xP, yP + .6, aC, 3.4, mez(colPelo, -8)); luzPelo(xP + 2, yP + 1.2, 3.4, .6); }
+  else if(PL === 'lacio'){ P(xP, yP, aC, 4.6, colPelo); P(xP, yP + 4.4, 1.5, 2.8, colPelo);
+                           P(aC/2 - 1.5, yP + 4.4, 1.5, 2.8, colPelo); luzPelo(xP + 2.2, yP + .8, 4, .7); topeCanas(); }
+  else if(PL === 'raya'){ P(xP, yP, aC, 4.4, colPelo); P(-1.6, yP, 1.1, 2.8, mez(piel, 8));
+                          P(xP, yP + 4.2, 1.4, 2.4, colPelo); P(aC/2 - 1.4, yP + 4.2, 1.4, 2.4, colPelo);
+                          luzPelo(xP + 1, yP + .8, 2.6, .7); topeCanas(); }
+  else if(PL === 'flequillo'){ P(xP, yP, aC, 5.3, colPelo);
+                               for(let i = 0; i < 5; i++) P(xP + .4 + i * (aC - .8) / 5, yP + 5.1, (aC - .8) / 5 - .35, .9 + (i % 2) * .5, colPelo);
+                               P(xP, yP + 5.1, 1.5, 2.2, colPelo); P(aC/2 - 1.5, yP + 5.1, 1.5, 2.2, colPelo);
+                               luzPelo(xP + 2, yP + .7, 4, .7); topeCanas(); }
+  else if(PL === 'grenas'){ P(xP - .5, yP - 1.5, aC + 1, 5.4, colPelo); P(xP - 1.2, yP + 1.5, 1.6, 3.4, colPelo);
+                            P(aC/2 - .4, yP + 1.1, 1.8, 3.8, colPelo);
+                            P(xP + 2.6, yP - 2.4, 3.2, 1.8, colPelo); P(xP + 7, yP - 2, 2.4, 1.6, colPelo);
+                            luzPelo(xP + 3, yP - .7, 3, .7); topeCanas(); }
+  else if(PL === 'ondulado'){ P(xP, yP - .4, aC, 5, colPelo);
+                              P(xP + .8, yP - 1.3, 3.2, 1.3, colPelo); P(aC/2 - 4.6, yP - 1.3, 3.4, 1.3, colPelo);
+                              P(xP - .7, yP + 4.2, 1.8, 3.6, colPelo); P(aC/2 - 1.1, yP + 4.2, 1.8, 3.6, colPelo);
+                              luzPelo(xP + 2.4, yP + .3, 3.6, .7); topeCanas(); }
+  else if(PL === 'rizado'){ P(xP - .4, yP - 1, aC + .8, 5.6, colPelo);
+                            [[-5.6,-2.5],[-2.8,-3.1],[.2,-3.1],[3.2,-2.5],[-6.8,-.5],[5.6,-.5],[-4.2,-3.4],[1.8,-3.4]]
+                              .forEach(([x,y]) => P(x, yP + y + 1.2, 2.5, 2.5, colPelo));
+                            luzPelo(xP + 2.6, yP - 1.4, 2.4, .8); topeCanas(); }
+  else if(PL === 'afro'){ P(xP - 1.9, yP - 2.8, aC + 3.8, 5.6, colPelo);
+                          P(xP - 2.8, yP - .6, 2.2, 2.6, colPelo); P(aC/2 + .6, yP - .6, 2.2, 2.6, colPelo);
+                          P(xP + .8, yP - 3.8, aC - 1.6, 1.8, colPelo);
+                          [[-5,-4],[-1.4,-4.4],[2.4,-4]].forEach(([x,y]) => P(x, yP + y, 2.6, 2, colPelo));
+                          luzPelo(xP + .5, yP - 2, 3, 1); topeCanas(); }
+  else if(PL === 'trenzas'){ P(xP, yP, aC, 4.2, colPelo);
+                             for(let i = 0; i < 6; i++) P(xP + .5 + i * (aC - 1) / 6, yP + .9, 1.5, 2.9, brillo);
+                             for(let i = 0; i < 6; i++) P(xP + .5 + i * (aC - 1) / 6, yP + 1.9, 1.5, .4, mez(colPelo, -26));
+                             topeCanas(); }
+  else if(PL === 'rastas'){ P(xP - .3, yP - .7, aC + .6, 4.6, colPelo);
+                            for(let i = 0; i < 7; i++) P(xP - .2 + i * (aC + .4) / 7, yP + .2, 1.5, 3.4, mez(colPelo, 12));
+                            topeCanas(); }
+  else if(PL === 'cola'){ P(xP, yP, aC, 4.4, colPelo); P(aC/2 - .7, yP + 2.2, 1.4, 2.4, colPelo);
+                          luzPelo(xP + 2.2, yP + .8, 3.6, .7); topeCanas(); }
+  else if(PL === 'chongo'){ P(xP, yP, aC, 4.3, colPelo);
+                            P(-2.9, yP - .9, 5.8, 1.1, mez(colPelo, -16));
+                            luzPelo(-1.6, yP - 3.2, 2.2, .8); topeCanas(); }
+  else if(PL === 'largo'){ P(xP, yP - .2, aC, 4.8, colPelo);
+                           P(xP - .6, yP + 2.2, 1.5, 3.4, colPelo); P(aC/2 - .9, yP + 2.2, 1.5, 3.4, colPelo);
+                           luzPelo(xP + 2.4, yP + .6, 3.8, .8); topeCanas(); }
+  else if(PL === 'undercut'){ P(xP + .9, yP - .7, aC - 1.8, 4.2, colPelo);
+                              P(xP, yP + 3.3, aC, 1.7, mez(colPelo, -26));
+                              luzPelo(xP + 2.6, yP + .2, 3.4, .7); topeCanas(); }
+  else if(PL === 'capucha'){ P(xP, yP + .4, aC, 4, colPelo); }
+
+  /* ── 10 · el tocado ── */
   const T = L.tocado || 'ninguno', cT = L.tocadoCol || '#E8E4DA';
-  if(T === 'kufi'){ P(-6.4, yTop - 3.4, 12.8, 3.6, cT); P(-6.4, yTop - .4, 12.8, .8, mez(cT, -16)); }
-  else if(T === 'dastar'){ P(-7.4, yTop - 5.4, 14.8, 5.8, cT);
-                           P(-7.4, yTop - 2, 14.8, .9, mez(cT, -14)); P(-7.4, yTop - 4, 14.8, .8, mez(cT, 12));
-                           P(-1, yTop - 5.8, 3, 1.6, mez(cT, -10)); }
-  else if(T === 'kipa'){ P(-3.2, yTop - 2.6, 6.4, 2.4, cT); P(-3.2, yTop - .6, 6.4, .6, mez(cT, -18)); }
-  else if(T === 'hiyab'){ P(-8, yTop - 3.2, 16, 6.6, cT); P(-8, yTop + 3, 3.2, 9, cT); P(4.8, yTop + 3, 3.2, 9, cT);
-                          P(-6.2, yTop - .6, 12.4, 1, mez(cT, -12)); }
-  else if(T === 'keffiyeh'){ P(-7.8, yTop - 3.8, 15.6, 5, cT); P(-7.8, yTop + 1, 2.8, 8.2, cT); P(5, yTop + 1, 2.8, 8.2, cT);
-                             P(-7.8, yTop - 4.4, 15.6, 1.2, '#3A3F46');
-                             for(let i = 0; i < 7; i++) P(-7.4 + i * 2.3, yTop - 2.8, 1.1, 1.1, mez(cT, -22)); }
-  else if(T === 'fez'){ P(-4.4, yTop - 5.4, 8.8, 5.4, '#8E2F2B'); P(-4.4, yTop - .6, 8.8, .8, mez('#8E2F2B', -18));
-                        P(-.5, yTop - 7, 1, 1.8, '#20242C'); }
-  else if(T === 'songkok'){ P(-5.6, yTop - 4.2, 11.2, 4.4, '#1B2430'); P(-5.6, yTop - .4, 11.2, .8, mez('#1B2430', 18)); }
-  else if(T === 'boina'){ P(-6.6, yTop - 3.6, 13.2, 3.6, cT); P(3.4, yTop - 4.6, 2.4, 1.4, cT); P(-6.6, yTop - .4, 13.2, .7, mez(cT, -18)); }
-  else if(T === 'gorra'){ P(-6.6, yTop - 3.8, 13.2, 3.8, cT); P(-7.2, yTop - .6, 14.4, 1.2, mez(cT, -10)); P(-7.4, yTop - .6, 6, 1.5, mez(cT, -20)); }
-  else if(T === 'vaquero'){ P(-5.2, yTop - 5.6, 10.4, 4.6, cT); P(-9.4, yTop - 1.4, 18.8, 1.6, cT);
-                            P(-9.4, yTop - 1.8, 2.6, 1.4, cT); P(6.8, yTop - 1.8, 2.6, 1.4, cT);
-                            P(-5.2, yTop - 2.2, 10.4, 1, mez(cT, -22)); }
-  else if(T === 'ushanka'){ P(-7, yTop - 5, 14, 4.4, cT); P(-7.6, yTop - 1.2, 15.2, 2.4, mez(cT, 16));
-                            P(-8.4, yTop + .8, 2.4, 4, mez(cT, 10)); P(6, yTop + .8, 2.4, 4, mez(cT, 10)); }
-  else if(T === 'bandana'){ P(-7, yTop - 1.4, 14, 2.6, cT); P(5.4, yTop - .8, 2.6, 3.4, cT); }
-  else if(T === 'panama'){ P(-5, yTop - 5, 10, 4.4, cT); P(-8.4, yTop - 1.2, 16.8, 1.4, cT);
-                           P(-5, yTop - 2.2, 10, 1, '#5A4632'); }
+  const cT2 = mez(cT, -16), cT3 = mez(cT, 15);
+  if(T === 'kufi'){ P(-6.6, yTop - 3.6, 13.2, 3.8, cT); P(-6.6, yTop - .4, 13.2, .9, cT2);
+                    for(let i = 0; i < 6; i++) P(-5.6 + i * 2.1, yTop - 2.6, 1.1, 1.1, cT3); }
+  else if(T === 'dastar'){ P(-7.6, yTop - 5.6, 15.2, 6, cT);
+                           P(-7.6, yTop - 2.1, 15.2, .95, cT2); P(-7.6, yTop - 4.2, 15.2, .85, cT3);
+                           P(-1.1, yTop - 6, 3.2, 1.7, cT2); P(-7.6, yTop - 3.2, 15.2, .5, cT3); }
+  else if(T === 'kipa'){ P(-3.3, yTop - 2.8, 6.6, 2.6, cT); P(-3.3, yTop - .6, 6.6, .7, cT2);
+                         P(-1.6, yTop - 2.4, 3.2, .6, cT3); }
+  else if(T === 'hiyab'){ P(-8.2, yTop - 3.4, 16.4, 7, cT); P(-8.2, yTop + 3.2, 3.4, 9.4, cT); P(4.8, yTop + 3.2, 3.4, 9.4, cT);
+                          P(-6.4, yTop - .7, 12.8, 1.1, cT2); P(-8.2, yTop - 3.4, 16.4, .8, cT3); }
+  else if(T === 'keffiyeh'){ P(-8, yTop - 4, 16, 5.2, cT); P(-8, yTop + 1.1, 3, 8.6, cT); P(5, yTop + 1.1, 3, 8.6, cT);
+                             P(-8, yTop - 4.7, 16, 1.3, '#3A3F46');
+                             for(let i = 0; i < 8; i++) for(let j = 0; j < 2; j++)
+                               P(-7.6 + i * 2.05, yTop - 3.1 + j * 1.5, 1, 1, cT2); }
+  else if(T === 'fez'){ P(-4.5, yTop - 5.6, 9, 5.6, '#8E2F2B'); P(-4.5, yTop - .6, 9, .9, mez('#8E2F2B', -20));
+                        P(-4.5, yTop - 5.6, 9, .7, mez('#8E2F2B', 16));
+                        P(-.5, yTop - 7.4, 1, 2, '#20242C'); P(-1.4, yTop - 7.8, 2.8, .8, '#20242C'); }
+  else if(T === 'songkok'){ P(-5.8, yTop - 4.4, 11.6, 4.6, '#1B2430'); P(-5.8, yTop - .4, 11.6, .9, mez('#1B2430', 20));
+                            P(-5.8, yTop - 4.4, 11.6, .6, mez('#1B2430', 26)); }
+  else if(T === 'boina'){ P(-6.8, yTop - 3.8, 13.6, 3.8, cT); P(3.4, yTop - 4.8, 2.6, 1.5, cT);
+                          P(-6.8, yTop - .5, 13.6, .8, cT2); P(-4.4, yTop - 3.2, 4, .7, cT3); }
+  else if(T === 'gorra'){ P(-6.8, yTop - 4, 13.6, 4, cT); P(-7.4, yTop - .7, 14.8, 1.3, cT2);
+                          P(-7.8, yTop - .7, 6.4, 1.6, cT2); P(-.5, yTop - 4.4, 1, 1, cT3);
+                          P(-6.8, yTop - 2.4, 13.6, .4, cT3); }
+  else if(T === 'vaquero'){ P(-5.4, yTop - 5.8, 10.8, 4.8, cT); P(-9.8, yTop - 1.5, 19.6, 1.7, cT);
+                            P(-9.8, yTop - 2, 2.8, 1.5, cT); P(7, yTop - 2, 2.8, 1.5, cT);
+                            P(-5.4, yTop - 2.4, 10.8, 1.1, mez(cT, -26)); P(-1.4, yTop - 5.8, 2.8, 2.4, mez(cT, -12)); }
+  else if(T === 'ushanka'){ P(-7.2, yTop - 5.2, 14.4, 4.6, cT); P(-7.8, yTop - 1.3, 15.6, 2.6, cT3);
+                            P(-8.6, yTop + .9, 2.5, 4.2, cT3); P(6.1, yTop + .9, 2.5, 4.2, cT3);
+                            P(-2.2, yTop - 4.6, 4.4, 1.5, cT2); }
+  else if(T === 'bandana'){ P(-7.2, yTop - 1.6, 14.4, 2.8, cT); P(5.5, yTop - 1, 2.8, 3.6, cT);
+                            for(let i = 0; i < 5; i++) P(-6.4 + i * 2.6, yTop - 1, .9, .9, cT2); }
+  else if(T === 'panama'){ P(-5.2, yTop - 5.2, 10.4, 4.6, cT); P(-8.8, yTop - 1.3, 17.6, 1.5, cT);
+                           P(-5.2, yTop - 2.4, 10.4, 1.1, '#5A4632'); P(-5.2, yTop - 5.2, 10.4, .6, cT3); }
 
-  /* ── 10 · hombros, cuello y prenda ── */
-  const anchoH = L.fuerte ? 13.8 : 12;
-  const yH = 3.4;
+  /* ── 11 · cuello, hombros y prenda ── */
+  const anchoH = L.fuerte ? 14.2 : 12.2;
+  const yCuello = yBot - .2, yH = yBot + 1.5;
+  P(-2.1, yCuello, 4.2, 2, mez(piel, -6));      // el cuello
+  P(-2.1, yCuello, 4.2, .8, som2);              // sombra de la mandíbula
   const cuello = L.cuello || 'camisa';
-  P(-anchoH/2, yH, anchoH, 5, L.traje);
-  if(L.chaleco) P(-anchoH/2 + .9, yH, anchoH - 1.8, 5, mez(L.traje, -14));
-  if(cuello === 'camisa'){ P(-1.6, yH, 3.2, 5, L.camisa); if(L.corbata) P(-.9, yH + .4, 1.8, 4.6, L.ac); }
-  else if(cuello === 'mao'){ P(-2.6, yH, 5.2, 5, L.camisa); P(-2.6, yH, 5.2, 1.2, mez(L.camisa, -20));
-                             P(-.4, yH + 1.6, .8, .8, mez(L.camisa, -30)); P(-.4, yH + 3.2, .8, .8, mez(L.camisa, -30)); }
-  else if(cuello === 'kurta'){ P(-3, yH, 6, 5, L.camisa); P(-.5, yH, 1, 3.2, mez(L.camisa, -22));
-                               P(-3, yH, 6, .8, mez(L.camisa, 14)); }
-  else if(cuello === 'dashiki'){ P(-3.4, yH, 6.8, 5, L.camisa);
-                                 P(-3.4, yH + .8, 6.8, 1.2, L.ac); P(-3.4, yH + 2.8, 6.8, .9, L.ac);
-                                 P(-1, yH, 2, 2.2, mez(L.camisa, -24)); }
-  else if(cuello === 'kimono'){ P(-3.2, yH, 6.4, 5, L.camisa);
-                                P(-3.2, yH, 2.4, 5, mez(L.camisa, -18)); P(.8, yH, 2.4, 5, mez(L.camisa, 12));
-                                P(-.8, yH + 2.4, 1.6, 2.6, L.ac); }
-  else if(cuello === 'guayabera'){ P(-2.8, yH, 5.6, 5, L.camisa);
-                                   P(-2.2, yH + .6, .7, 4.2, mez(L.camisa, -18)); P(1.5, yH + .6, .7, 4.2, mez(L.camisa, -18)); }
-  else if(cuello === 'cuelloV'){ P(-2.4, yH, 4.8, 5, L.camisa); P(-1.1, yH, 2.2, 2.4, piel); }
-  else if(cuello === 'tortuga'){ P(-2.6, yH - 1, 5.2, 6, L.camisa); P(-2.6, yH - 1, 5.2, 1.6, mez(L.camisa, -16)); }
-  else if(cuello === 'poncho'){ P(-anchoH/2 - 1, yH - .4, anchoH + 2, 5.4, L.camisa);
-                                P(-anchoH/2 - 1, yH + 1.4, anchoH + 2, .9, L.ac);
-                                P(-anchoH/2 - 1, yH + 3.2, anchoH + 2, .9, mez(L.ac, -22));
-                                P(-1.1, yH - .4, 2.2, 1.8, piel); }
+  P(-anchoH/2, yH, anchoH, 5.4, L.traje);
+  P(-anchoH/2, yH, anchoH, .8, mez(L.traje, 20));            // luz del hombro
+  if(L.chaleco) P(-anchoH/2 + 1, yH, anchoH - 2, 5.4, mez(L.traje, -16));
+  if(cuello === 'camisa'){ P(-1.8, yH - .3, 3.6, 5.7, L.camisa);
+                           P(-2.6, yH - .3, 1.1, 2.2, mez(L.camisa, -14)); P(1.5, yH - .3, 1.1, 2.2, mez(L.camisa, -14));
+                           if(L.corbata){ P(-.9, yH + .5, 1.8, 4.9, L.ac); P(-.7, yH + .1, 1.4, .7, mez(L.ac, -22)); } }
+  else if(cuello === 'mao'){ P(-2.9, yH - .4, 5.8, 5.8, L.camisa); P(-2.9, yH - .4, 5.8, 1.3, mez(L.camisa, -22));
+                             P(-.4, yH + 1.5, .8, .8, mez(L.camisa, -34)); P(-.4, yH + 3.3, .8, .8, mez(L.camisa, -34)); }
+  else if(cuello === 'kurta'){ P(-3.2, yH - .3, 6.4, 5.7, L.camisa); P(-.5, yH - .3, 1, 3.4, mez(L.camisa, -24));
+                               P(-3.2, yH - .3, 6.4, .9, mez(L.camisa, 16));
+                               P(-2.4, yH + 1, .5, 3.4, L.ac); P(1.9, yH + 1, .5, 3.4, L.ac); }
+  else if(cuello === 'dashiki'){ P(-3.6, yH - .4, 7.2, 5.8, L.camisa);
+                                 P(-3.6, yH + .6, 7.2, 1.3, L.ac); P(-3.6, yH + 3, 7.2, 1, L.ac);
+                                 P(-3.6, yH + 2.2, 7.2, .5, mez(L.ac, -20));
+                                 P(-1.1, yH - .4, 2.2, 2.4, mez(L.camisa, -28)); }
+  else if(cuello === 'kimono'){ P(-3.4, yH - .3, 6.8, 5.7, L.camisa);
+                                P(-3.4, yH - .3, 2.6, 5.7, mez(L.camisa, -20)); P(.8, yH - .3, 2.6, 5.7, mez(L.camisa, 14));
+                                P(-.9, yH + 2.4, 1.8, 3, L.ac); P(-3.4, yH - .3, 6.8, .5, mez(L.camisa, 22)); }
+  else if(cuello === 'guayabera'){ P(-3, yH - .3, 6, 5.7, L.camisa);
+                                   P(-2.3, yH + .5, .7, 4.6, mez(L.camisa, -20)); P(1.6, yH + .5, .7, 4.6, mez(L.camisa, -20));
+                                   P(-.35, yH + 1.4, .7, .7, mez(L.camisa, -30)); P(-.35, yH + 3.2, .7, .7, mez(L.camisa, -30)); }
+  else if(cuello === 'cuelloV'){ P(-2.6, yH - .3, 5.2, 5.7, L.camisa);
+                                 P(-1.3, yH - .3, 2.6, 2.6, mez(piel, -6)); P(-1.3, yH - .3, 2.6, .5, som2); }
+  else if(cuello === 'tortuga'){ P(-2.8, yH - 1.6, 5.6, 7, L.camisa); P(-2.8, yH - 1.6, 5.6, 1.8, mez(L.camisa, -18));
+                                 P(-2.8, yH - 1.6, 5.6, .5, mez(L.camisa, 12)); }
+  else if(cuello === 'poncho'){ P(-anchoH/2 - 1.2, yH - .6, anchoH + 2.4, 6, L.camisa);
+                                P(-anchoH/2 - 1.2, yH + 1.2, anchoH + 2.4, 1, L.ac);
+                                P(-anchoH/2 - 1.2, yH + 3.2, anchoH + 2.4, 1, mez(L.ac, -24));
+                                P(-anchoH/2 - 1.2, yH + 2.4, anchoH + 2.4, .4, mez(L.ac, 18));
+                                P(-1.2, yH - .6, 2.4, 2, mez(piel, -6)); }
 }
 const blancoOjo = () => '#F2F4F6';
 const fondoOjo = L => mez(L.piel, -6);
