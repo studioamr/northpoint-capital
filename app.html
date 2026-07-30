@@ -208,8 +208,10 @@ label{font-family:var(--mono);font-size:10px;letter-spacing:.14em;text-transform
   font-family:var(--mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;
   padding:7px 12px;border-radius:99px;color:var(--dim);
   background:var(--glass);border:1px solid var(--line);white-space:nowrap;cursor:default}
-.en-linea i{width:7px;height:7px;border-radius:50%;background:var(--up);
-  box-shadow:0 0 0 3px rgba(87,199,155,.16);animation:pulse 2.4s ease-in-out infinite}
+/* Verde fijo. El parpadeo distraía y encima hacía dudar de si estabas dentro:
+   estar en línea es un estado, no una alarma. */
+.en-linea i{width:8px;height:8px;border-radius:50%;background:var(--up);
+  box-shadow:0 0 0 3px rgba(87,199,155,.18)}
 .en-linea i.yo{background:var(--up);box-shadow:0 0 0 2px var(--bg),0 0 0 4px var(--up)}
 .en-linea.solo{color:var(--dim)}
 .en-linea b{font-weight:500}
@@ -3391,7 +3393,7 @@ function enLaMesa(){
   return PERSONAJES.filter(p => (hoy - (P[p.id] || 0)) < PRESENCIA_MIN * 60000)
                    .map(p => ({ id:p.id, nom:p.nom, hace: Math.round((hoy - P[p.id]) / 60000) }));
 }
-const SILLA_CEO = { x:1.28, y:7.62, z:0, flip:false };
+const SILLA_CEO = { x:1.28, y:7.62, z:0, flip:false };   // (histórico: la vieja oficina de cristal)
 /* Las tres oficinas principales viven ARRIBA, en el mezzanine: cada socio la
    suya, de izquierda a derecha. La de cristal de abajo quedó de sala de juntas. */
 const SILLAS_SOCIOS = {
@@ -10518,12 +10520,35 @@ function dibujaOficina(t){
       }
     });
   } else {
+    /* El centro era una losa oscura enorme sin uso: ahora es LA MESA DE JUNTAS,
+       que es lo que le faltaba a la planta. Queda en el eje del elevador, a la
+       vista, y sin estorbar la circulación. */
     add(11, c2 => {
-      caja(c2, 4.6, 4.6, 0, 3.0, 2.2, .86, DECO.isla, 10, -22);
-      losa(c2, 4.66, 4.66, .87, DECO.islaTop, 2.88, 2.08);
-      c2.fillStyle = '#FFFFFF'; c2.beginPath();
-      c2.ellipse(iX(5.4, 5.2), iY(5.4, 5.2, .88), 7, 4, 0, 0, 7); c2.fill();
-      losa(c2, 6.2, 5.3, .88, '#E8EEF4', .4, .3);
+      /* alfombra que la asienta */
+      losa(c2, 4.15, 4.15, .01, DECO.alfombra, 3.9, 3.1);
+      /* mesa larga: tapa del tono de la casa con CANTO del acento — el dorado
+         macizo se comía el piso entero */
+      losa(c2, 4.5, 4.5, .73, DECO.mesa2, 3.2, 2.4);                 // el canto
+      caja(c2, 4.6, 4.6, 0, 3.0, 2.2, .74, mez(DECO.mesa1, -6), 10, -22);
+      losa(c2, 4.62, 4.62, .755, mez(DECO.mesa1, 22), 2.96, 2.16);   // la tapa
+      losa(c2, 4.75, 4.75, .757, mez(DECO.mesa1, 32), 2.7, 1.9);     // el brillo del centro
+      /* lo que hay encima: dos vasos, una carpeta y el mando de la pantalla */
+      c2.fillStyle = '#FFFFFF';
+      c2.beginPath(); c2.ellipse(iX(5.4, 5.2), iY(5.4, 5.2, .76), 6, 3.4, 0, 0, 7); c2.fill();
+      c2.beginPath(); c2.ellipse(iX(6.6, 6.1), iY(6.6, 6.1, .76), 6, 3.4, 0, 0, 7); c2.fill();
+      losa(c2, 6.1, 5.2, .76, '#E8EEF4', .42, .32);
+      losa(c2, 5.0, 6.1, .76, mez(DECO.mesa2, -22), .3, .22);
+    });
+    /* ocho sillas alrededor, dos por lado */
+    [[4.35, 4.95],[4.35, 5.85],[7.75, 4.95],[7.75, 5.85],
+     [5.2, 4.3],[6.4, 4.3],[5.2, 6.9],[6.4, 6.9]].forEach(([sx, sy], i) => {
+      add(sx + sy + .3, c2 => {
+        /* sillas con respaldo alto y un filo claro para que se lean sobre el piso */
+        caja(c2, sx, sy, 0, .46, .44, .4, mez(DECO.silla, 10), 16, -20);
+        const atras = (i < 4) ? (sx < 5 ? -.09 : .37) : 0;
+        if(i < 4) caja(c2, sx + atras, sy, 0, .11, .44, .86, mez(DECO.silla2, 14), 18, -22);
+        else caja(c2, sx, sy + (sy < 5 ? -.09 : .37), 0, .46, .11, .86, mez(DECO.silla2, 14), 18, -22);
+      });
     });
   }
 
@@ -10596,75 +10621,58 @@ function dibujaOficina(t){
      La esquina izquierda es del jefe: mamparas de cristal, alfombra propia,
      escritorio ejecutivo con su lámpara y silla de respaldo alto. Quien esté
      en sesión se sienta AQUÍ, no en un puesto más. */
-  add(9.6, c2 => {
-    losa(c2, .45, 5.95, .01, DECO.ceoAlfombra, 2.3, 2.5);
-    losa(c2, .57, 6.07, .02, mez(DECO.ceoAlfombra, 12), 2.06, 2.26);
+  /* ══ PLANTA BAJA · el vestíbulo del elevador ══
+     Aquí había una oficina de cristal plantada JUSTO enfrente de las puertas
+     del elevador: al salir te dabas de bruces con un escritorio. Los socios ya
+     tienen sus despachos arriba, así que este frente se despeja y se convierte
+     en lo que debe ser — el lugar por donde se entra a la casa: tapete, dos
+     macetas altas que enmarcan las puertas, banca de espera y recepción. */
+  add(9.55, c2 => {
+    /* tapete de bienvenida, alineado con el eje del elevador */
+    losa(c2, .35, 6.15, .01, DECO.ceoAlfombra, 2.0, 2.1);
+    losa(c2, .5, 6.3, .02, mez(DECO.ceoAlfombra, 14), 1.7, 1.8);
+    /* la marca en el piso, discreta */
+    c2.font = 'bold 11px "IBM Plex Mono", monospace';
+    c2.textAlign = 'center';
+    c2.fillStyle = 'rgba(255,255,255,.22)';
+    c2.fillText('NORTHPOINT', iX(1.35, 7.2), iY(1.35, 7.2, .03));
+    c2.textAlign = 'left';
   });
-  /* mamparas de cristal: el frente y el costado */
-  add(9.7, c2 => {
-    if(E.c === 'tokio'){
-      /* mamparas shoji: papel retroiluminado y retícula de madera */
-      caja(c2, 2.72, 5.95, 0, .08, 2.5, 1.5, '#F6F1E4', 8, -6);
-      caja(c2, .45, 5.88, 0, 2.35, .08, 1.5, '#F6F1E4', 8, -6);
-      c2.strokeStyle = 'rgba(94,58,42,.8)'; c2.lineWidth = 2;
-      for(let k = 0; k <= 5; k++){
-        const yy = 5.95 + k * .5;
-        c2.beginPath();
-        c2.moveTo(iX(2.76, yy), iY(2.76, yy, 0)); c2.lineTo(iX(2.76, yy), iY(2.76, yy, 1.5));
-        c2.stroke();
-      }
-      for(let k = 0; k <= 4; k++){
-        c2.beginPath();
-        c2.moveTo(iX(2.76, 5.95), iY(2.76, 5.95, k * .38));
-        c2.lineTo(iX(2.76, 8.45), iY(2.76, 8.45, k * .38)); c2.stroke();
-      }
-      for(let k = 0; k <= 5; k++){
-        const xx = .45 + k * .47;
-        c2.beginPath();
-        c2.moveTo(iX(xx, 5.92), iY(xx, 5.92, 0)); c2.lineTo(iX(xx, 5.92), iY(xx, 5.92, 1.5));
-        c2.stroke();
-      }
-    } else {
-      c2.globalAlpha = .3;
-      caja(c2, 2.72, 5.95, 0, .08, 2.5, 1.5, '#AECAE0', 20, -8);
-      caja(c2, .45, 5.88, 0, 2.35, .08, 1.5, '#AECAE0', 20, -8);
-      c2.globalAlpha = 1;
-      caja(c2, 2.72, 5.95, 1.5, .08, 2.5, .06, '#C6CEDA', 18, -14);
-      caja(c2, .45, 5.88, 1.5, 2.35, .08, .06, '#C6CEDA', 18, -14);
-    }
-  });
-  add(13.9, c2 => {
-    /* el escritorio ejecutivo, más grande que los demás */
-    caja(c2, .75, 6.8, 0, 1.7, .8, .9, DECO.ceoDesk, 12, -24);
-    losa(c2, .81, 6.86, .91, mez(DECO.ceoDesk, 18), 1.58, .68);
-    /* doble monitor */
-    caja(c2, 1.0, 6.95, .9, .55, .1, .45, '#12161E');
-    caja(c2, 1.65, 6.95, .9, .55, .1, .45, '#12161E');
-    const gx = iX(1.28, 7.0), gy = iY(1.28, 7.0, 1.4);
-    c2.fillStyle = 'rgba(96,214,164,.9)';
-    for(let k = 0; k < 4; k++) c2.fillRect(gx - 8 + k * 5, gy - 4 - (k % 2) * 4, 2.4, 6 + (k % 2) * 4);
-    const gx2 = iX(1.93, 7.0), gy2 = iY(1.93, 7.0, 1.4);
-    c2.strokeStyle = 'rgba(120,196,246,.9)'; c2.lineWidth = 1.6;
-    c2.beginPath();
-    for(let q = 0; q <= 8; q++){
-      const px2 = gx2 - 10 + q * 2.6, py2 = gy2 - 2 - Math.sin(q * .9 + t / 900) * 4;
-      q ? c2.lineTo(px2, py2) : c2.moveTo(px2, py2);
-    }
-    c2.stroke();
-    /* la lámpara de banquero */
-    caja(c2, 2.15, 7.35, .9, .12, .12, .3, '#2E3038');
-    c2.fillStyle = '#3E8E5A';
-    c2.beginPath(); c2.ellipse(iX(2.21, 7.41), iY(2.21, 7.41, 1.36), 7, 3.4, 0, 0, 7); c2.fill();
-    /* la silla del CEO: respaldo alto del color del tema */
-    caja(c2, 1.15, 7.85, 0, .6, .55, .42, DECO.ceoSilla, 14, -24);
-    caja(c2, 1.15, 8.28, 0, .6, .12, 1.05, mez(DECO.ceoSilla, -14), 16, -26);
-    /* planta propia */
-    caja(c2, .55, 8.15, 0, .45, .45, .35, DECO.macetero, 12, -20);
-    const px3 = iX(.77, 8.37), py3 = iY(.77, 8.37, .35);
-    [['#2F6B44',0,-12,9,6],['#3B8354',-7,-7,7,5],['#489A63',7,-7,7,5]].forEach(([col,dx,dy,rx,ry]) => {
-      c2.fillStyle = col; c2.beginPath(); c2.ellipse(px3 + dx, py3 + dy, rx, ry, 0, 0, 7); c2.fill();
+  /* las dos macetas que enmarcan las puertas — bajas, no tapan nada */
+  [[.32, 6.05], [.32, 8.05]].forEach(([px, py], i) => {
+    add(px + py + .25, c2 => {
+      caja(c2, px, py, 0, .5, .5, .55, DECO.macetero, 12, -20);
+      const cx = iX(px + .25, py + .25), cy = iY(px + .25, py + .25, .55);
+      [['#2F6B44', 0, -15, 9, 16], ['#3B8354', -7, -9, 7, 13], ['#489A63', 7, -11, 7, 12]]
+        .forEach(([col, dx, dy, rx, ry]) => {
+          c2.fillStyle = col;
+          c2.beginPath(); c2.ellipse(cx + dx, cy + dy, rx, ry, dx / 40, 0, 7); c2.fill();
+        });
     });
   });
+  /* banca de espera contra el muro, para quien llega antes de la apertura */
+  add(11.4, c2 => {
+    caja(c2, 2.35, 6.35, 0, .5, 1.7, .42, DECO.sofa1, 12, -20);
+    losa(c2, 2.4, 6.4, .43, DECO.sofa2, .4, 1.6);
+    caja(c2, 2.78, 6.35, .42, .09, 1.7, .5, mez(DECO.sofa1, -12), 10, -22);
+    /* dos cojines del color de la casa */
+    [6.6, 7.5].forEach(cy2 => caja(c2, 2.45, cy2, .43, .3, .45, .16, DECO.cojin, 10, -14));
+  });
+  /* recepción: mostrador en L mirando al elevador */
+  add(12.6, c2 => {
+    caja(c2, 3.25, 6.2, 0, .55, 2.0, 1.05, DECO.barra, 12, -22);
+    losa(c2, 3.2, 6.15, 1.06, DECO.barraTop, .68, 2.1);
+    caja(c2, 3.25, 5.55, 0, 1.5, .55, 1.05, DECO.barra, 12, -22);
+    losa(c2, 3.2, 5.5, 1.06, DECO.barraTop, 1.6, .68);
+    /* pantalla de turnos y el timbre */
+    caja(c2, 3.45, 6.6, 1.06, .1, .5, .34, '#12161E');
+    const sx2 = iX(3.5, 6.85), sy2 = iY(3.5, 6.85, 1.3);
+    c2.fillStyle = 'rgba(96,214,164,.85)';
+    for(let k = 0; k < 3; k++) c2.fillRect(sx2 - 6, sy2 - 8 + k * 5, 11 - k * 3, 2.4);
+    c2.fillStyle = '#D8DCE2';
+    c2.beginPath(); c2.ellipse(iX(3.95, 5.8), iY(3.95, 5.8, 1.1), 5, 2.6, 0, 0, 7); c2.fill();
+  });
+
 
   // jardineras y palmeras del borde
   [[8.4, 2.2],[8.4, 6.0],[2.2, 8.4],[6.2, 8.4],[8.6, 8.6]].forEach(([px, py], i) => {
