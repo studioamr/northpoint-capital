@@ -2450,10 +2450,9 @@ stop[stop-color="#9BC0DC"]{stop-color:var(--txt)}
     <div class="f-full" style="margin-top:12px"><label>Account name</label><input id="ncAlias" placeholder="Name it whatever you want" maxlength="24"></div>
 
     <div id="ncPlanZona" style="margin-top:12px">
-      <label>Plan</label>
-      <div class="chips" id="ncPlanChips"></div>
-      <label style="display:block;margin-top:12px">Size</label>
+      <label>Size</label>
       <div class="chips" id="ncSizeChips"></div>
+      <p class="micro" id="ncPlanNota" style="color:var(--faint);margin-top:6px;line-height:1.5"></p>
     </div>
 
     <div id="ncCamposSimple" hidden style="margin-top:12px">
@@ -6248,6 +6247,15 @@ function ncChips(cont, lista, activo, onPick, fmt){
     `<button type="button" data-v="${esc(String(v))}" class="${String(v)===String(activo)?'on':''}">${fmt?fmt(v):esc(String(v))}</button>`).join('');
   cont.querySelectorAll('button').forEach(b => b.onclick = () => onPick(b.dataset.v));
 }
+/* Qué plan del catálogo le toca a una fase: 'eval' pide un plan de evaluación
+   y cualquier otra fase (colchón, pago) pide uno fondeado. Se toma el primero
+   que cuadre, que es el más común de esa firma. */
+function planPorFase(firm, fase){
+  const cat = FIRM_CATALOG[firm]; if(!cat) return null;
+  const quiere = fase === 'eval' ? 'eval' : 'funded';
+  const nombres = Object.keys(cat.plans);
+  return nombres.find(n => cat.plans[n].phase === quiere) || nombres[0];
+}
 function ncPinta(){
   $$('#ncTipo button').forEach(b => b.classList.toggle('on', b.dataset.t === nc.tipo));
   const esProp = nc.tipo === 'prop';
@@ -6260,23 +6268,25 @@ function ncPinta(){
   if(esProp){
     ncChips($('#ncFirm'), NC_FIRMAS, nc.firm, v => {
       nc.firm = v;
-      const planes = FIRM_CATALOG[v] ? Object.keys(FIRM_CATALOG[v].plans) : [];
-      nc.plan = planes[0] || null;
+      nc.plan = planPorFase(v, nc.fase);
       nc.size = nc.plan ? Object.keys(FIRM_CATALOG[v].plans[nc.plan].sizes)[0] : null;
       ncPinta();
     });
   }
   if(conCatalogo){
-    const planes = Object.keys(FIRM_CATALOG[nc.firm].plans);
-    if(!planes.includes(nc.plan)) nc.plan = planes[0];
-    ncChips($('#ncPlanChips'), planes, nc.plan, v => {
-      nc.plan = v;
-      nc.size = Object.keys(FIRM_CATALOG[nc.firm].plans[v].sizes)[0];
-      ncPinta();
-    });
+    /* El plan ya no se pregunta: la fase que el usuario eligió arriba dice si
+       la cuenta está en evaluación o fondeada, y eso basta para saber qué plan
+       del catálogo le toca. Preguntar las dos cosas era preguntar lo mismo dos
+       veces. Si hace falta afinarlo (Growth vs Select), se cambia en Ajustes. */
+    nc.plan = planPorFase(nc.firm, nc.fase);
     const tallas = Object.keys(FIRM_CATALOG[nc.firm].plans[nc.plan].sizes);
     if(!tallas.includes(String(nc.size))) nc.size = tallas[0];
     ncChips($('#ncSizeChips'), tallas, nc.size, v => { nc.size = v; ncPinta(); }, t => fmt$(+t));
+    const R = FIRM_CATALOG[nc.firm].plans[nc.plan].sizes[nc.size] || {};
+    $('#ncPlanNota').innerHTML = `${esc(nc.firm)} · <b style="color:var(--dim)">${esc(nc.plan)}</b>` +
+      (R.target ? ` — ${bi('objetivo','target')} ${fmt$(R.target)}` : '') +
+      (R.maxDD ? ` · ${bi('drawdown','drawdown')} ${fmt$(R.maxDD)}` : '') +
+      `. ${bi('Se ajusta en Ajustes → Cuentas.','Fine-tune it in Settings → Accounts.')}`;
   } else {
     $('#ncStartLbl').textContent = nc.tipo === 'live' ? 'Capital inicial USD'
       : nc.tipo === 'sim' ? 'Practice balance USD' : 'Account size USD';
@@ -6287,13 +6297,23 @@ function ncPinta(){
       : 'That firm is not in the verified catalogue: the account is saved, but with no drawdown or cushion computed.';
   }
   if(esProp){
-    ncChips($('#ncFase'), Object.keys(FASES), nc.fase, v => { nc.fase = v; ncPinta(); }, k => FASES[k].t);
+    ncChips($('#ncFase'), Object.keys(FASES), nc.fase, v => {
+      nc.fase = v;
+      /* la fase manda: cambiarla cambia el plan y, si hace falta, el tamaño */
+      const np = planPorFase(nc.firm, v);
+      if(np && np !== nc.plan){
+        nc.plan = np;
+        const t = Object.keys(FIRM_CATALOG[nc.firm].plans[np].sizes);
+        if(!t.includes(String(nc.size))) nc.size = t[0];
+      }
+      ncPinta();
+    }, k => FASES[k].t);
   }
 }
 function ncAbrir(){
   nc.tipo = 'prop'; nc.firm = 'Tradeify'; nc.fase = 'eval';
-  const planes = Object.keys(FIRM_CATALOG.Tradeify.plans);
-  nc.plan = planes[0]; nc.size = Object.keys(FIRM_CATALOG.Tradeify.plans[nc.plan].sizes)[0];
+  nc.plan = planPorFase('Tradeify', 'eval');
+  nc.size = Object.keys(FIRM_CATALOG.Tradeify.plans[nc.plan].sizes)[0];
   $('#ncAlias').value = ''; $('#ncStart').value = ''; $('#ncErr').textContent = '';
   ncPinta();
   $('#ncDesde').value = todayISO();
