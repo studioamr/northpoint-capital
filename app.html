@@ -1190,6 +1190,19 @@ button.tag.quemada{text-decoration:line-through;text-decoration-color:var(--down
 .fase-llave.on .k{color:var(--up)}
 .fase-llave b{display:block;font-size:15px;margin:5px 0 3px}
 .fase-llave .p{font-family:var(--mono);font-size:10.5px;color:var(--dim)}
+.fase-salida{margin:18px 8px 4px;padding-top:14px;border-top:1px solid var(--line-soft)}
+.sal{display:flex;align-items:center;gap:11px;width:100%;text-align:left;font:inherit;color:var(--dim);
+  background:none;border:1px solid transparent;border-radius:9px;padding:8px 10px;margin-top:4px;
+  font-size:12.5px;line-height:1.45}
+.sal[data-sal]{cursor:pointer}
+.sal[data-sal]:hover{border-color:var(--line);background:var(--glass)}
+.sal-b{width:19px;height:19px;border-radius:50%;border:1px solid var(--line);flex:none;
+  display:flex;align-items:center;justify-content:center}
+.sal-b svg{width:10px;height:10px;stroke:var(--up);stroke-width:2.8;fill:none;stroke-linecap:round;stroke-linejoin:round}
+.sal.ok{color:var(--txt)}
+.sal.ok .sal-b{border-color:var(--up);background:rgba(87,199,155,.18)}
+.sal em{margin-left:auto;font-style:normal;font-family:var(--mono);font-size:9px;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--faint);white-space:nowrap}
 .fase-regla{margin:16px 8px 4px;border-left:2px solid var(--accent-deep);padding-left:13px;
   font-size:12.5px;line-height:1.65;color:var(--dim)}
 .fase-regla span{display:block;font-family:var(--mono);font-size:9px;letter-spacing:.14em;
@@ -1280,6 +1293,8 @@ button.tag.quemada{text-decoration:line-through;text-decoration-color:var(--down
 .ts-m span{font-size:10.5px;color:var(--dim)}
 .ts-m em{font-style:normal;font-size:10.5px;color:var(--up);min-width:44px;text-align:right}
 @media(max-width:560px){ .ts-n{min-width:112px;font-size:11px} }
+.rd-head{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px}
+.rd-head .btn{margin-left:auto}
 .rd{display:flex;gap:28px;align-items:center;flex-wrap:wrap}
 .rd-wheel{position:relative;flex:0 0 210px;max-width:210px;margin:0 auto}
 .rd-pie{display:block;width:100%;height:auto}
@@ -3070,6 +3085,8 @@ const PLAN_FASES = [
     ico:'semilla', que:'That the system exists — not the money.',
     ingreso:'$0 – 1,500 / mo', pasivo:0,
     ticket:['1–2 evaluation accounts running','1 payout of $1–2k every 1–2 months','Zero debt. The system first'],
+    salida:[['Net worth of $10,000','pat',10000],['First payout collected','payouts',1],
+            ['Investment account open with a position','pos',1],['30 sessions logged','ses',30]],
     costos:[['Food and going out',120],['Transport',60],['Phone and apps',25],['Golf / gym',60],['Extras',60]],
     regla:'50% of every payout gets invested the SAME day and is not touched for 10 years. The other 50% is yours.' },
 
@@ -3077,6 +3094,8 @@ const PLAN_FASES = [
     ico:'escudo', que:'Stop being fragile: a bad run is no longer an emergency.',
     ingreso:'$1,500 – 4,000 / mo', pasivo:150,
     ticket:['2–3 live funded accounts','1–2 payouts a month · $1.5–3k','Investment contribution $150+/mo'],
+    salida:[['Net worth of $50,000','pat',50000],['$20,000 in the portfolio','port',20000],
+            ['2 funded accounts alive at once','cuentas',2],['90 sessions logged','ses',90]],
     costos:[['Food',200],['Transport',80],['Phone and subscriptions',40],['Golf / gym',100],['Clothes and extras',120],['Monthly cushion',60]],
     regla:'Expenses rise AT MOST half as fast as income. Always.' },
 
@@ -3084,6 +3103,8 @@ const PLAN_FASES = [
     ico:'puerta', que:'The business pays your life. The first asset that earns without you.',
     ingreso:'$4,000 – 12,000 / mo', pasivo:800,
     ticket:['3–5 funded accounts · $4–8k/mo in payouts','First business billing $1–3k/mo','First rental property by the end of the phase','Investment income $800/mo'],
+    salida:[['Net worth of $250,000','pat',250000],['$100,000 in the portfolio','port',100000],
+            ['12 payouts collected','payouts',12],['A full month with zero breaches','limpio',20]],
     costos:[['Apartment rent',700],['Food',350],['Transport',180],['Health and insurance',120],['Golf',200],['Social life and extras',250]],
     regla:'Trading NEVER pays the rent. If the month depends on a trade, you do not have a business: you have a dangerous job.' },
 
@@ -3091,6 +3112,8 @@ const PLAN_FASES = [
     ico:'monte', que:'Money starts working harder than you do.',
     ingreso:'$12,000 – 30,000 / mo', pasivo:3300,
     ticket:['Businesses $8–15k/mo','Payouts $4–8k/mo','1–2 rental properties · $600–1,800/mo','The portfolio already makes $3.3k/mo'],
+    salida:[['Net worth of $1,000,000','pat',1000000],['$400,000 in the portfolio','port',400000],
+            ['A full year without touching the principal','ses',240],['Withdrawn over $150,000 all-time','cobrado',150000]],
     costos:[['Rent on a good apartment',1200],['Food and restaurants',600],['Paid-off car: fuel and insurance',350],['Health',250],['Golf and travel',700],['Extras',400]],
     regla:'No car above 5% of net worth. Here that is $50,000 — and no, the G does not fit yet.' },
 
@@ -3098,6 +3121,8 @@ const PLAN_FASES = [
     ico:'ave', que:'You work because you want to: passive income already covers your life.',
     ingreso:'passive $16,600 / mo', pasivo:16600,
     ticket:['Businesses $15–25k/mo or sellable equity','Rent from 2–4 properties · $2–4k/mo','The portfolio makes $16.6k/mo: you are free'],
+    salida:[['Net worth of $5,000,000','pat',5000000],['$2,500,000 in the portfolio','port',2500000],
+            ['Passive income above your expenses','pasivoCubre',1],['Insurance and will in place','manual',1]],
     costos:[['Good house (rent or mortgage)',2500],['Daily life and food',1200],['Cars',600],['Health and insurance',500],['Travel',1500],['Family and extras',700]],
     desbloquea:[{ k:'g63', t:'Mercedes-AMG G 63', p:PRECIOS.g63, gate:3700000 }],
     regla:'The house you live in cannot exceed 25% of your net worth. Ever.' },
@@ -3106,6 +3131,8 @@ const PLAN_FASES = [
     ico:'columnas', que:'It is no longer about earning more: it is about not losing it.',
     ingreso:'passive $50,000 / mo', pasivo:50000,
     ticket:['Rent $8–15k/mo','The portfolio makes $50k/mo','Trust and tax structure in place','Nothing concentrated above 20%'],
+    salida:[['Net worth of $15,000,000','pat',15000000],['$9,000,000 in the portfolio','port',9000000],
+            ['No single asset above 20% of the total','concentra',20],['Trust and tax structure signed','manual',1]],
     costos:[['Oceanfront house',6000],['Daily life',2500],['Part-time staff',2000],['Cars and insurance',1500],['Travel',4000],['Schools and family',2000]],
     desbloquea:[{ k:'sf90', t:'Ferrari SF90 Stradale', p:PRECIOS.sf90, gate:11000000 }],
     regla:'No single asset above 20%. What made you rich is not what keeps you rich.' },
@@ -3114,6 +3141,8 @@ const PLAN_FASES = [
     ico:'casa', que:'The house is not bought with your net worth: with what it produces.',
     ingreso:'passive $166,000 / mo', pasivo:166000,
     ticket:['The portfolio makes $166k/mo','The house is paid from returns, not from capital','The businesses are the cherry, not the support'],
+    salida:[['Net worth of $50,000,000','pat',50000000],['$36,000,000 in the portfolio','port',36000000],
+            ['The house costs under 25% of net worth','casaCabe',1],['Running costs paid from returns alone','pasivoCubre',1]],
     costos:[['Property tax and home insurance',14000],['Maintenance, garden and pool',8000],['Staff (housekeeper, driver, security)',12000],['Cars: insurance and maintenance',4000],['Daily life, food and health',12000],['Travel and aircraft',12000],['Schools and family',8000]],
     desbloquea:[{ k:'casa', t:'The cliffside house', p:PRECIOS.casa, gate:48000000 }],
     regla:'You sign for the house when it costs less than 25% of what you hold. Not a dollar sooner.' },
@@ -3122,6 +3151,8 @@ const PLAN_FASES = [
     ico:'yate', que:'The money is no longer for you: it is for what you leave behind.',
     ingreso:'passive $500,000 / mo', pasivo:500000,
     ticket:['Passive $500k/mo','The yacht gets chartered (~$150k/week), not bought yet','The next generation on the board'],
+    salida:[['Net worth of $150,000,000','pat',150000000],['Foundation or legacy vehicle running','manual',1],
+            ['The next generation prepared','manual',1]],
     costos:[['Everything from phase VI',70000],['Fractional jet and chartered yacht',40000],['Foundation and legacy',25000],['Extended family',15000]],
     desbloquea:[{ k:'yate', t:'The yacht (50 m)', p:PRECIOS.yate, gate:150000000 }],
     regla:'Anything costing more than 10% of its value a year to maintain is not bought: it is rented.' },
@@ -5449,15 +5480,59 @@ const MASTER_2040 = [
    Aparece al calcular: cuentas (evaluaciones y resets), ahorro/inversión,
    reserva y vida. Sliders en vivo que redistribuyen y cierran en 100.
    La rebanada de inversión ❄ es la que corre la lámina 2040 y la curva. */
-const RUEDA_DEFAULT = () => [
-  { id:'inv',  n:'Savings / Investing', pct:50, color:'#38BDF8', grows:true },
-  { id:'ctas', n:'Accounts',            pct:15, color:'#6C8CF5' },
-  { id:'res',  n:'Reserve',            pct:15, color:'#57C79B' },
-  { id:'vida', n:'Life / Fun',       pct:20, color:'#C79A3A' },
+/* ══ LA RUEDA · siete frascos, ajustados a tu fase ══
+   Mezcla de dos marcos probados: los 6 Jars de T. Harv Eker (necesidades,
+   libertad financiera, ahorro largo, educación, juego y dar) y Profit First
+   de Mike Michalowicz, cuya idea clave es que el impuesto y la utilidad
+   salen PRIMERO, no de lo que sobra. Traducido a un trader de fondeadora:
+   el payout es ingreso de negocio, así que antes de tocarlo se aparta el
+   impuesto y lo que cuesta mantener las cuentas vivas.
+   Los porcentajes cambian con la fase del plan: al principio pesan cuentas
+   y reserva porque eres frágil; al final pesa inversión porque ya no lo eres.
+   Es el punto de partida, no una jaula — muévelo cuando quieras. */
+const FRASCOS = [
+  { id:'tax',   n:'Taxes',              color:'#8A93A0' },
+  { id:'ctas',  n:'Accounts',           color:'#6C8CF5' },
+  { id:'inv',   n:'Investing',          color:'#38BDF8', grows:true },
+  { id:'res',   n:'Reserve',            color:'#57C79B' },
+  { id:'vida',  n:'Living',             color:'#C79A3A' },
+  { id:'edu',   n:'Growth',             color:'#8E6BC4' },
+  { id:'play',  n:'Play',               color:'#E8975A' },
 ];
+/* fase → [tax, ctas, inv, res, vida, edu, play] */
+const RUEDA_POR_FASE = {
+  0: [15, 20, 35, 15,  5,  5,  5],   // en casa, sin gastos reales: se construye el sistema
+  1: [15, 15, 30, 20, 10,  5,  5],   // el colchón manda
+  2: [18, 12, 30, 10, 20,  5,  5],   // ya te pagas la vida
+  3: [20,  8, 35,  7, 20,  5,  5],   // el dinero empieza a trabajar
+  4: [20,  5, 40,  5, 18,  4,  8],   // libre: pesa inversión, se puede disfrutar
+  5: [20,  3, 42,  5, 18,  4,  8],
+  6: [20,  3, 42,  5, 18,  4,  8],
+  7: [20,  2, 40,  5, 18,  5, 10],
+};
+function ruedaDeFase(i){
+  const p = RUEDA_POR_FASE[Math.max(0, Math.min(7, i))] || RUEDA_POR_FASE[0];
+  return FRASCOS.map((f, k) => ({ ...f, pct: p[k] }));
+}
+const RUEDA_DEFAULT = () => ruedaDeFase(faseActualIdx());
+/* en qué fase del plan estás, medido con el patrimonio real */
+function faseActualIdx(){
+  try{
+    const N = patrimonio().total;
+    const i = PLAN_FASES.findIndex(f => N < f.a);
+    return i === -1 ? PLAN_FASES.length - 1 : i;
+  }catch(e){ return 0; }
+}
 function rueda(){
   S.politica = S.politica || {};
-  if(!Array.isArray(S.politica.rueda) || !S.politica.rueda.length) S.politica.rueda = RUEDA_DEFAULT();
+  const fase = faseActualIdx();
+  /* si nunca la tocaste, sigue la fase sola; en cuanto muevas un slider,
+     se queda como la dejaste y deja de moverse por su cuenta. */
+  if(!Array.isArray(S.politica.rueda) || !S.politica.rueda.length
+     || (!S.politica.ruedaTocada && S.politica.ruedaFase !== fase)){
+    S.politica.rueda = ruedaDeFase(fase);
+    S.politica.ruedaFase = fase;
+  }
   return S.politica.rueda;
 }
 function ajustaRueda(id, val){
@@ -5477,7 +5552,12 @@ function renderRueda(monto){
   box.hidden = !(monto > 0);
   if(!(monto > 0)) return 0;
   box.innerHTML = `
-    <div class="fl" style="margin-bottom:12px">${bi('El destino · % de cada cosa','The split · % to each destination')}</div>
+    <div class="rd-head">
+      <span class="fl" style="margin:0">${bi('The split','The split')} · ${bi('phase','phase')} ${PLAN_FASES[faseActualIdx()].r}</span>
+      ${S.politica.ruedaTocada
+        ? `<button class="btn sm" id="rdReset">${bi('Back to the phase default','Back to the phase default')}</button>`
+        : `<span class="micro" style="color:var(--faint)">${bi('follows your phase automatically','follows your phase automatically')}</span>`}
+    </div>
     <div class="rd">
       <div class="rd-wheel">
         ${pieSVG(R)}
@@ -5492,13 +5572,24 @@ function renderRueda(monto){
             <b class="mono">${x.pct}%</b>
             <span class="rd-m mono">${fmt$(Math.round(monto * x.pct / 100))}</span>
           </div>`).join('')}
-        <p class="micro" style="margin:10px 0 0;color:var(--faint)">${bi(
-          '❄ La rebanada de inversión es la que corre la lámina 2040 y la curva de abajo.',
-          '❄ The investing slice is what runs the 2040 sheet and the curve below.')}</p>
+        <p class="micro" style="margin:12px 0 0;color:var(--faint);line-height:1.6">
+          ${bi('❄ The investing slice runs the 2040 sheet below.','❄ The investing slice runs the 2040 sheet below.')}<br>
+          ${bi('Built on the 6 Jars (Eker) and Profit First (Michalowicz): tax and account costs come off the top, never out of what is left.','Built on the 6 Jars (Eker) and Profit First (Michalowicz): tax and account costs come off the top, never out of what is left.')}</p>
       </div>
     </div>`;
+  const rst = $('#rdReset');
+  if(rst) rst.onclick = () => {
+    S.politica.ruedaTocada = false;
+    S.politica.rueda = ruedaDeFase(faseActualIdx());
+    S.politica.ruedaFase = faseActualIdx();
+    save(); renderPosiciones();
+  };
   $$('#ruedaBox [data-rd]').forEach(sl => {
-    sl.oninput = () => { ajustaRueda(sl.dataset.rd, +sl.value); save(); renderPosiciones(); };
+    sl.oninput = () => {
+      ajustaRueda(sl.dataset.rd, +sl.value);
+      S.politica.ruedaTocada = true;       // ya es tuya: deja de seguir la fase
+      save(); renderPosiciones();
+    };
   });
   return Math.round(monto * inv.pct / 100);
 }
@@ -7275,6 +7366,45 @@ function patrimonio(){
   return { pos, live, caja, total: pos + live + caja };
 }
 
+/* ¿Ya cumpliste lo que pide la fase para pasar? Lo que se puede medir con
+   tus datos se verifica solo; lo que no (un fideicomiso firmado, un seguro)
+   se marca a mano y queda guardado. */
+function cumpleSalida(clave, valor){
+  const P = patrimonio();
+  const pos = (S.positions || []).reduce((a,p) => a + valuar(p).valor, 0);
+  switch(clave){
+    case 'pat':     return P.total >= valor;
+    case 'port':    return pos >= valor;
+    case 'payouts': return (S.caja||[]).filter(m => m.tipo === 'ingreso').length >= valor;
+    case 'cobrado': return (S.caja||[]).filter(m => m.tipo === 'ingreso').reduce((a,m)=>a+(m.monto||0),0) >= valor;
+    case 'pos':     return (S.positions||[]).length >= valor;
+    case 'ses':     return Object.keys(S.sessions||{}).length >= valor;
+    case 'cuentas': return S.accounts.filter(a => !esLive(a) && !esSim(a) && reglasDe(a) && esViva(a)).length >= valor;
+    case 'limpio': {
+      /* días operados seguidos sin una sola violación */
+      const dias = Object.entries(tradesByDay()).sort((a,b)=>a[0].localeCompare(b[0]));
+      let racha = 0, mejor = 0;
+      dias.forEach(([,trs]) => {
+        const sucio = trs.some(t => violations(t, trs).length);
+        racha = sucio ? 0 : racha + 1;
+        mejor = Math.max(mejor, racha);
+      });
+      return mejor >= valor;
+    }
+    case 'pasivoCubre': {
+      const fa = PLAN_FASES[faseActualIdx()];
+      const gasto = fa.costos.reduce((a,[,v]) => a + v, 0);
+      return pos * 0.04 / 12 >= gasto;      // 4% seguro contra el costo del mes
+    }
+    case 'concentra': {
+      if(pos <= 0) return false;
+      const mayor = Math.max(...(S.positions||[]).map(p => valuar(p).valor), 0);
+      return mayor / pos * 100 <= valor;
+    }
+    default: return null;                    // manual: lo marcas tú
+  }
+}
+
 function renderMetas(){
   const host = $('#metasMods'); if(!host) return;
   const P = patrimonio();
@@ -7347,10 +7477,32 @@ function renderMetas(){
           <b>${esc(llave.t)}</b>
           <span class="p">${fmt$(llave.p)} · ${(llave.p / llave.gate * 100).toFixed(0)}% ${bi('de tu patrimonio ahí','of net worth there')}</span>
         </div>` : ''}
-        <div class="fase-regla"><span>${bi('La regla','The rule')}</span>${esc(f.regla)}</div>
+        ${(f.salida || []).length ? `
+        <div class="fase-salida">
+          <span class="fl">${bi('To clear this phase','To clear this phase')}</span>
+          ${f.salida.map(([t, clave, v], k) => {
+            const auto = cumpleSalida(clave, v);
+            const manual = auto === null;
+            const hecho = manual ? !!((S.salidas||{})[f.id+':'+k]) : auto;
+            return `<button type="button" class="sal ${hecho?'ok':''}${manual?' man':''}"
+                ${manual ? `data-sal="${f.id}:${k}"` : 'disabled'}>
+              <span class="sal-b">${hecho ? '<svg viewBox="0 0 24 24"><path d="M4 12.5 9.5 18 20 6.5"/></svg>' : ''}</span>
+              <span>${esc(t)}</span>
+              ${manual ? `<em>${bi('mark it','mark it')}</em>` : ''}
+            </button>`;
+          }).join('')}
+        </div>` : ''}
+        <div class="fase-regla"><span>${bi('The rule','The rule')}</span>${esc(f.regla)}</div>
       </div>
     </div>`;
   }).join('');
+
+  $$('#metasMods [data-sal]').forEach(b => b.onclick = () => {
+    S.salidas = S.salidas || {};
+    const k = b.dataset.sal;
+    if(S.salidas[k]) delete S.salidas[k]; else S.salidas[k] = todayISO();
+    save(); renderMetas();
+  });
 
   /* los gastos del mes cambian de fase: hoy pagas tu vida de hoy */
   const gastos = fa.costos;
