@@ -8428,51 +8428,20 @@ function escenaVuelo(c, W, H, t, E, rr){
   /* ventanillas */
   for(let i = 0; i < 9; i++){
     const wx = -L/2 + 96 + i * 62;
-    if(i === 3) continue;                     // ésa es la del monito
     c.fillStyle = '#5A6472';
     c.beginPath(); c.ellipse(wx, -58, 15, 20, 0, 0, 7); c.fill();
     c.fillStyle = 'rgba(180,206,232,.45)';
     c.beginPath(); c.ellipse(wx - 3, -62, 10, 14, 0, 0, 7); c.fill();
   }
-  /* LA VENTANILLA DEL MONITO
-     Antes era su retrato circular pegado sobre un hueco: se veía como una
-     calcomanía. Ahora va DENTRO — la cabina oscura al fondo, el monito
-     dibujado con el mismo pincel del avatar y recortado por el óvalo, el
-     respaldo del asiento a un lado, y el cristal con su reflejo encima. */
-  const vx = -L/2 + 96 + 3 * 62, vy = -58, vw = 44, vh = 56;
-  c.save();
-  c.beginPath(); c.ellipse(vx, vy, vw, vh, 0, 0, 7); c.clip();
-  /* el interior de la cabina */
-  const cab = c.createLinearGradient(vx, vy - vh, vx, vy + vh);
-  cab.addColorStop(0, '#2A313C'); cab.addColorStop(1, '#161B23');
-  c.fillStyle = cab; c.fillRect(vx - vw, vy - vh, vw * 2, vh * 2);
-  /* el respaldo del asiento, detrás y a un lado */
-  c.fillStyle = '#39414E';
-  c.fillRect(vx + 20, vy - 40, 30, 100);
-  c.fillStyle = '#4A5462';
-  c.fillRect(vx + 20, vy - 40, 30, 9);
-  /* el monito: cabeza y hombros dentro del óvalo, con aire alrededor —
-     a esta escala se lee como alguien sentado junto a la ventana */
-  c.save();
-  c.translate(vx - 9, vy + 13);
-  c.scale(3.1, 3.1);
-  c.imageSmoothingEnabled = false;
-  pintaRostro(c, lookActual());
-  c.restore();
-  /* luz que entra por el cristal y le da en la cara */
-  const luz = c.createLinearGradient(vx - vw, vy - vh, vx + vw * .3, vy + vh * .4);
-  luz.addColorStop(0, 'rgba(214,232,248,.26)');
-  luz.addColorStop(1, 'rgba(214,232,248,0)');
-  c.fillStyle = luz; c.fillRect(vx - vw, vy - vh, vw * 2, vh * 2);
-  c.restore();
-  /* el marco de la ventanilla, en dos aros */
-  c.strokeStyle = '#7E8794'; c.lineWidth = 9;
-  c.beginPath(); c.ellipse(vx, vy, vw, vh, 0, 0, 7); c.stroke();
-  c.strokeStyle = '#B4BCC8'; c.lineWidth = 3;
-  c.beginPath(); c.ellipse(vx, vy, vw + 5, vh + 5, 0, 0, 7); c.stroke();
-  /* el brillo del cristal, encima de todo */
-  c.strokeStyle = 'rgba(255,255,255,.4)'; c.lineWidth = 4;
-  c.beginPath(); c.ellipse(vx - 11, vy - 12, 19, 27, -.35, .2, 2.6); c.stroke();
+  /* La ventanilla del centro se deja como las demás: el avión se lee mejor
+     solo, y el monito ya tiene sus tres ciudades para salir. */
+  {
+    const vx = -L/2 + 96 + 3 * 62;
+    c.fillStyle = '#5A6472';
+    c.beginPath(); c.ellipse(vx, -58, 15, 20, 0, 0, 7); c.fill();
+    c.fillStyle = 'rgba(180,206,232,.45)';
+    c.beginPath(); c.ellipse(vx - 3, -62, 10, 14, 0, 0, 7); c.fill();
+  }
   /* morro y matrícula */
   c.fillStyle = '#2E343E';
   c.beginPath(); c.ellipse(L/2 - 12, -30, 30, 22, .2, 0, 7); c.fill();
@@ -8499,187 +8468,183 @@ function escenaVuelo(c, W, H, t, E, rr){
   c.textAlign = 'left';
 }
 
-/* La cara del monito como Image lista para el canvas. Se precarga una vez y
-   se regenera sólo si cambias el look; cuando termina de cargar repinta, que
-   si no la primera vez sale el hueco. */
-let _caraImg = null, _caraSrc = '';
-function caraCanvas(){
-  const url = caraLook(lookActual(), 260);
-  if(_caraSrc !== url){
-    _caraSrc = url;
-    const im = new Image();
-    im.onload = () => { if($('#v-agentes') && $('#v-agentes').classList.contains('on')) dibujaOficina(performance.now()); };
-    im.src = url;
-    _caraImg = im;
-  }
-  return (_caraImg && _caraImg.complete && _caraImg.naturalWidth) ? _caraImg : null;
-}
-
-/* ── LA MESA SATÉLITE ──
-   En Londres y Tokio no hay torre propia: hay una terraza, una laptop y el
-   monito trabajando con la ciudad de fondo. La misma disciplina, otro huso. */
-function escenaSatelite(c, W, H, t, E, osc){
-  const CI = CIUDADES[E.c];
+/* ══ EL SUELO ══
+   Cada ciudad se planta en lo suyo: Nueva York sobre Central Park, Tokio
+   sobre un jardín con su estanque y sus cerezos, Londres sobre el parque
+   inglés con el lago alargado. Todo respira con la hora: al mediodía el
+   verde sube y el agua brilla; de madrugada se apaga y quedan las farolas. */
+function sueloDe(c, W, H, ciudad, osc, rr){
   const luzDia = 1 - osc;
-  const px = W / 2, techo = 700;            // el plano de la azotea
-  const flot = Math.sin(t / 1100) * 4;
-  const AX = 470, AY = 166;                 // medio ancho y medio alto del rombo
-
-  /* ── LA TORRE ──
-     Antes había una plataforma flotando en el aire. Ahora hay edificio: dos
-     caras en isométrica que bajan hasta el borde del cuadro, con sus pisos y
-     sus ventanas encendidas según la hora. */
-  const ALTO = H - techo + 120;
-  const izq = mez('#2A3040', -6 + luzDia * 12), der = mez('#1C2230', -4 + luzDia * 10);
-  /* cara izquierda */
-  c.fillStyle = izq;
-  c.beginPath();
-  c.moveTo(px - AX, techo + AY); c.lineTo(px, techo + AY * 2);
-  c.lineTo(px, techo + AY * 2 + ALTO); c.lineTo(px - AX, techo + AY + ALTO);
-  c.closePath(); c.fill();
-  /* cara derecha */
-  c.fillStyle = der;
-  c.beginPath();
-  c.moveTo(px + AX, techo + AY); c.lineTo(px, techo + AY * 2);
-  c.lineTo(px, techo + AY * 2 + ALTO); c.lineTo(px + AX, techo + AY + ALTO);
-  c.closePath(); c.fill();
-  /* ventanas: filas que siguen la inclinación de cada cara */
-  const ventana = (lado) => {
-    const sg = lado === 'i' ? -1 : 1;
-    for(let f = 0; f < 9; f++){
-      for(let k = 0; k < 11; k++){
-        const u = (k + .5) / 11;
-        const bx = px + sg * (AX * (1 - u));
-        const by = techo + AY + AX * .353 * u * (lado === 'i' ? 1 : 1) + f * 62 + 46;
-        const on = ((f * 13 + k * 7 + (lado === 'i' ? 3 : 0)) % 11) < 6;
-        c.fillStyle = on
-          ? `rgba(255,233,174,${.18 + osc * .62})`
-          : `rgba(150,170,220,${.07 + luzDia * .12})`;
-        c.save(); c.translate(bx, by);
-        c.transform(1, sg * .353, 0, 1, 0, 0);
-        c.fillRect(-13, -18, 26, 26);
-        c.restore();
+  const S0 = 620;
+  const arbol = (tx, ty, es, hojas) => {
+    c.fillStyle = 'rgba(18,30,22,.26)';
+    c.beginPath(); c.ellipse(tx + 5, ty + 15, 17 * es, 6 * es, 0, 0, 7); c.fill();
+    c.fillStyle = '#3E2A1E'; c.fillRect(tx - 3 * es, ty, 6 * es, 16 * es);
+    hojas.forEach((col, k) => {
+      c.fillStyle = mez(col, luzDia * 16);
+      c.beginPath();
+      c.ellipse(tx + (k-1) * 9 * es, ty - (8 + k*7) * es, (15 - k*3) * es, (11 - k*2) * es, 0, 0, 7);
+      c.fill();
+    });
+  };
+  const farolas = (n, y0) => {
+    for(let i = 0; i < n; i++){
+      const fx = 140 + i * (W - 280) / (n - 1), fy = y0 + rr(i + 60) * 180;
+      c.fillStyle = '#2A2E38'; c.fillRect(fx - 2, fy, 4, 26);
+      c.fillStyle = osc > .3 ? '#FFE9AE' : '#8E96A4';
+      c.beginPath(); c.arc(fx, fy - 2, 5, 0, 7); c.fill();
+      if(osc > .3){
+        const h = c.createRadialGradient(fx, fy - 2, 2, fx, fy - 2, 46);
+        h.addColorStop(0, 'rgba(255,233,174,.24)'); h.addColorStop(1, 'rgba(255,233,174,0)');
+        c.fillStyle = h; c.beginPath(); c.arc(fx, fy - 2, 46, 0, 7); c.fill();
       }
     }
   };
-  ventana('i'); ventana('d');
-  /* aristas */
-  c.strokeStyle = `rgba(255,255,255,${.08 + luzDia * .1})`; c.lineWidth = 2;
-  c.beginPath(); c.moveTo(px, techo + AY * 2); c.lineTo(px, techo + AY * 2 + ALTO); c.stroke();
 
-  /* ── LA AZOTEA ── */
-  const piso = c.createLinearGradient(px - AX, techo, px + AX, techo + AY * 2);
-  piso.addColorStop(0, mez('#4E5668', -6 + luzDia * 16));
-  piso.addColorStop(1, mez('#3A4152', -4 + luzDia * 14));
-  c.fillStyle = piso;
-  c.beginPath();
-  c.moveTo(px - AX, techo + AY); c.lineTo(px, techo);
-  c.lineTo(px + AX, techo + AY); c.lineTo(px, techo + AY * 2);
-  c.closePath(); c.fill();
-  /* pretil */
-  c.strokeStyle = mez('#6E7688', luzDia * 18); c.lineWidth = 7;
-  c.beginPath();
-  c.moveTo(px - AX, techo + AY); c.lineTo(px, techo);
-  c.lineTo(px + AX, techo + AY); c.lineTo(px, techo + AY * 2);
-  c.closePath(); c.stroke();
-  /* baldosas del piso */
-  c.strokeStyle = `rgba(255,255,255,${.05 + luzDia * .07})`; c.lineWidth = 1.6;
-  for(let k = 1; k < 8; k++){
-    const u = k / 8;
-    c.beginPath();
-    c.moveTo(px - AX + AX * u, techo + AY - AY * u);
-    c.lineTo(px + AX * u, techo + AY * 2 - AY * u); c.stroke();
-    c.beginPath();
-    c.moveTo(px + AX - AX * u, techo + AY - AY * u);
-    c.lineTo(px - AX * u, techo + AY * 2 - AY * u); c.stroke();
-  }
-  /* barandal de cristal en los dos bordes de atrás */
-  const barandal = (sg) => {
-    c.strokeStyle = `rgba(180,200,225,${.3 + luzDia * .3})`; c.lineWidth = 3;
-    for(let k = 0; k <= 12; k++){
-      const u = k / 12;
-      const bx = px + sg * AX * (1 - u), by = techo + AY * (1 - u) + (sg > 0 ? 0 : 0);
-      c.beginPath(); c.moveTo(bx, by); c.lineTo(bx, by - 46); c.stroke();
+  if(ciudad === 'nyc'){
+    /* CENTRAL PARK */
+    const verde = mez('#2E5C38', -8 + luzDia * 26), verde2 = mez('#376E42', -6 + luzDia * 24);
+    c.fillStyle = verde; c.fillRect(0, S0, W, H - S0);
+    for(let i = 0; i < 26; i++){
+      c.fillStyle = verde2;
+      c.beginPath();
+      c.ellipse(rr(i + 200) * W, 640 + rr(i + 210) * (H - 660),
+                90 + rr(i+220) * 150, 34 + rr(i+230) * 46, 0, 0, 7); c.fill();
     }
-    c.lineWidth = 4;
-    c.beginPath(); c.moveTo(px + sg * AX, techo + AY - 46); c.lineTo(px, techo - 46); c.stroke();
-  };
-  barandal(-1); barandal(1);
-
-  /* ── MOBILIARIO ──
-     una jardinera, la mesa con la laptop y la taza, y el monito de cuerpo */
-  /* macetas: cajón en isométrica y un arbusto encima */
-  const jard = (jx, jy, w) => {
-    const h = 26, d = w * .30;
-    c.fillStyle = mez('#6B5A46', luzDia * 12);      // cara frontal izquierda
-    c.beginPath(); c.moveTo(jx - w/2, jy); c.lineTo(jx, jy + d);
-    c.lineTo(jx, jy + d + h); c.lineTo(jx - w/2, jy + h); c.closePath(); c.fill();
-    c.fillStyle = mez('#544636', luzDia * 10);      // cara frontal derecha
-    c.beginPath(); c.moveTo(jx + w/2, jy); c.lineTo(jx, jy + d);
-    c.lineTo(jx, jy + d + h); c.lineTo(jx + w/2, jy + h); c.closePath(); c.fill();
-    c.fillStyle = mez('#7C6B54', luzDia * 14);      // borde superior
-    c.beginPath(); c.moveTo(jx - w/2, jy); c.lineTo(jx, jy - d);
-    c.lineTo(jx + w/2, jy); c.lineTo(jx, jy + d); c.closePath(); c.fill();
-    /* el arbusto */
-    [[0,-16,22,15],[-15,-9,15,11],[15,-9,15,11]].forEach(([dx,dy,rx,ry]) => {
-      c.fillStyle = mez('#2E5C38', luzDia * 22);
-      c.beginPath(); c.ellipse(jx + dx, jy + dy, rx, ry, 0, 0, 7); c.fill();
-    });
-    c.fillStyle = mez('#3E7A4E', luzDia * 20);
-    c.beginPath(); c.ellipse(jx - 5, jy - 21, 13, 9, 0, 0, 7); c.fill();
-  };
-  jard(px - 268, techo + AY + 22, 96);
-  jard(px + 268, techo + AY + 22, 96);
-
-  const mx = px + 96, my = techo + AY + 58;
-  /* sombra de la mesa */
-  c.fillStyle = 'rgba(10,14,24,.3)';
-  c.beginPath(); c.ellipse(mx, my + 30, 120, 30, 0, 0, 7); c.fill();
-  /* patas */
-  c.fillStyle = mez('#8E96A6', -14); c.fillRect(mx - 4, my, 8, 34); c.fillRect(mx - 60, my + 16, 8, 26); c.fillRect(mx + 52, my + 16, 8, 26);
-  /* tablero */
-  c.fillStyle = mez('#E4E7EC', -8 + luzDia * 8);
-  c.beginPath(); c.moveTo(mx - 120, my); c.lineTo(mx, my - 42); c.lineTo(mx + 120, my); c.lineTo(mx, my + 42); c.closePath(); c.fill();
-  c.fillStyle = mez('#B9BEC8', -12 + luzDia * 6);
-  c.beginPath(); c.moveTo(mx - 120, my); c.lineTo(mx, my + 42); c.lineTo(mx, my + 52); c.lineTo(mx - 120, my + 10); c.closePath(); c.fill();
-  /* laptop */
-  c.fillStyle = '#2E343E';
-  c.beginPath(); c.moveTo(mx - 4, my - 12); c.lineTo(mx + 50, my + 6); c.lineTo(mx + 50, my - 42); c.lineTo(mx - 4, my - 58); c.closePath(); c.fill();
-  c.fillStyle = `rgba(96,190,255,${.55 + osc * .3})`;
-  c.beginPath(); c.moveTo(mx, my - 16); c.lineTo(mx + 45, my + 1); c.lineTo(mx + 45, my - 40); c.lineTo(mx, my - 54); c.closePath(); c.fill();
-  c.fillStyle = '#3A414C';
-  c.beginPath(); c.moveTo(mx - 4, my - 12); c.lineTo(mx - 52, my + 6); c.lineTo(mx + 2, my + 24); c.lineTo(mx + 50, my + 6); c.closePath(); c.fill();
-  /* taza */
-  c.fillStyle = '#E8E4DA';
-  c.fillRect(mx - 78, my - 18, 26, 16);
-  c.beginPath(); c.ellipse(mx - 65, my - 2, 13, 6, 0, 0, 7); c.fill();
-  c.strokeStyle = '#E8E4DA'; c.lineWidth = 3;
-  c.beginPath(); c.arc(mx - 50, my - 10, 7, -1.2, 1.2); c.stroke();
-
-  /* ── EL MONITO, DE CUERPO ──
-     dibujado con el mismo pincel del avatar, no una carita pegada */
-  const hx = px - 150, hy = techo + AY + 28 + flot;
-  const esc = 6.2;
-  c.fillStyle = 'rgba(10,14,24,.34)';
-  c.beginPath(); c.ellipse(hx, hy + 50, 34, 12, 0, 0, 7); c.fill();
-  c.save(); c.translate(hx, hy); c.scale(esc, esc);
-  c.imageSmoothingEnabled = false;
-  pintaRostro(c, lookActual());
-  c.restore();
-
-  /* ── EL CARTEL ── */
-  c.textAlign = 'center';
-  c.font = '700 44px -apple-system, "Segoe UI", sans-serif';
-  c.fillStyle = 'rgba(255,255,255,.96)';
-  c.fillText(loc([CI.n, CI.en]), W/2, 150);
-  c.font = '15px "IBM Plex Mono", monospace';
-  c.fillStyle = 'rgba(255,255,255,.52)';
-  const h = Math.floor(E.restan / 60), m = Math.round(E.restan % 60);
-  c.fillText(`${CI.sub}  ·  ${bi('vuela a','flies to')} ${loc([CIUDADES[E.sig].n, CIUDADES[E.sig].en])} ${bi('en','in')} ${h ? h + 'h ' : ''}${m}m`, W/2, 186);
-  c.textAlign = 'left';
-  c.font = '12px "IBM Plex Mono", monospace';
-  c.fillStyle = 'rgba(255,255,255,.4)';
-  c.fillText('NORTHPOINT CAPITAL · ' + loc([CI.n, CI.en]), 24, H - 22);
+    c.strokeStyle = mez('#8E7A5E', -10 + luzDia * 22); c.lineCap = 'round'; c.lineWidth = 22;
+    c.beginPath(); c.moveTo(-40, 760); c.quadraticCurveTo(560, 690, 900, 900); c.stroke();
+    c.beginPath(); c.moveTo(W + 40, 740); c.quadraticCurveTo(1240, 700, 900, 900); c.stroke();
+    c.lineWidth = 15;
+    c.beginPath(); c.moveTo(120, 1120); c.quadraticCurveTo(700, 980, 1180, 1130); c.stroke();
+    const agua = c.createLinearGradient(0, 980, 0, 1090);
+    agua.addColorStop(0, mez('#3E6E8E', -14 + luzDia * 26));
+    agua.addColorStop(1, mez('#2A5270', -10 + luzDia * 20));
+    c.fillStyle = agua;
+    c.beginPath(); c.ellipse(360, 1030, 210, 62, -.06, 0, 7); c.fill();
+    c.strokeStyle = `rgba(255,255,255,${.1 + luzDia * .22})`; c.lineWidth = 3;
+    c.beginPath(); c.ellipse(360, 1030, 210, 62, -.06, 0, 7); c.stroke();
+    for(let i = 0; i < 5; i++){
+      c.fillStyle = `rgba(255,255,255,${.08 + luzDia * .16})`;
+      c.fillRect(250 + i * 46, 1012 + (i % 2) * 16, 40, 2.4);
+    }
+    farolas(9, 880);
+    for(let i = 0; i < 54; i++){
+      const lado = i % 2 ? 1 : -1;
+      arbol(900 + lado * (250 + rr(i) * 620), 680 + rr(i+3) * 450,
+            .78 + rr(i + 40) * .7, ['#2E5C38','#376E42','#2A5232']);
+    }
+  }
+  else if(ciudad === 'tokio'){
+    /* JARDÍN JAPONÉS · grava rastrillada, estanque con puente rojo y cerezos */
+    const grava = mez('#8E8778', -22 + luzDia * 30);
+    c.fillStyle = grava; c.fillRect(0, S0, W, H - S0);
+    /* musgo en manchas */
+    for(let i = 0; i < 20; i++){
+      c.fillStyle = mez('#3E6B44', -12 + luzDia * 24);
+      c.beginPath();
+      c.ellipse(rr(i + 500) * W, 660 + rr(i + 510) * (H - 700),
+                110 + rr(i+520) * 160, 40 + rr(i+530) * 50, 0, 0, 7); c.fill();
+    }
+    /* líneas rastrilladas en la grava */
+    c.strokeStyle = `rgba(255,255,255,${.05 + luzDia * .09})`; c.lineWidth = 3;
+    for(let k = 0; k < 16; k++){
+      const y = S0 + 40 + k * 34;
+      c.beginPath();
+      for(let x = 0; x <= W; x += 40) c.lineTo(x, y + Math.sin(x / 190 + k) * 9);
+      c.stroke();
+    }
+    /* el estanque */
+    const ag = c.createLinearGradient(0, 950, 0, 1110);
+    ag.addColorStop(0, mez('#2E6B7A', -14 + luzDia * 26));
+    ag.addColorStop(1, mez('#1E4A5E', -10 + luzDia * 20));
+    c.fillStyle = ag;
+    c.beginPath(); c.ellipse(400, 1030, 260, 78, -.05, 0, 7); c.fill();
+    c.strokeStyle = mez('#6B6250', luzDia * 20); c.lineWidth = 8;
+    c.beginPath(); c.ellipse(400, 1030, 260, 78, -.05, 0, 7); c.stroke();
+    /* el puente rojo, curvo */
+    c.strokeStyle = mez('#C4483C', luzDia * 14); c.lineWidth = 15;
+    c.beginPath(); c.moveTo(210, 1060); c.quadraticCurveTo(400, 946, 590, 1060); c.stroke();
+    c.strokeStyle = mez('#8E3028', luzDia * 10); c.lineWidth = 5;
+    c.beginPath(); c.moveTo(210, 1076); c.quadraticCurveTo(400, 962, 590, 1076); c.stroke();
+    /* la linterna de piedra */
+    const lx = 1330, ly = 960;
+    c.fillStyle = mez('#8E8C84', luzDia * 16);
+    c.fillRect(lx - 8, ly, 16, 42); c.fillRect(lx - 22, ly - 16, 44, 16);
+    c.fillStyle = osc > .3 ? '#FFD98A' : mez('#A8A69C', luzDia * 12);
+    c.fillRect(lx - 15, ly - 34, 30, 20);
+    c.fillStyle = mez('#8E8C84', luzDia * 16);
+    c.beginPath(); c.moveTo(lx - 26, ly - 34); c.lineTo(lx, ly - 54); c.lineTo(lx + 26, ly - 34); c.closePath(); c.fill();
+    if(osc > .3){
+      const h = c.createRadialGradient(lx, ly - 24, 4, lx, ly - 24, 70);
+      h.addColorStop(0, 'rgba(255,217,138,.3)'); h.addColorStop(1, 'rgba(255,217,138,0)');
+      c.fillStyle = h; c.beginPath(); c.arc(lx, ly - 24, 70, 0, 7); c.fill();
+    }
+    /* cerezos en flor */
+    for(let i = 0; i < 34; i++){
+      const lado = i % 2 ? 1 : -1;
+      arbol(900 + lado * (280 + rr(i + 90) * 600), 700 + rr(i + 93) * 420,
+            .8 + rr(i + 95) * .6, ['#D98AA8','#E8A6BE','#C4738E']);
+    }
+    /* pinos oscuros, para contraste */
+    for(let i = 0; i < 10; i++){
+      const lado = i % 2 ? 1 : -1;
+      const tx = 900 + lado * (420 + rr(i + 120) * 420), ty = 730 + rr(i + 123) * 340;
+      c.fillStyle = '#3E2A1E'; c.fillRect(tx - 3, ty, 6, 18);
+      c.fillStyle = mez('#24462E', luzDia * 16);
+      [[0, -14, 22, 13],[0, -26, 17, 11],[0, -36, 12, 9]].forEach(([dx,dy,rx,ry]) => {
+        c.beginPath(); c.moveTo(tx - rx, ty + dy + ry); c.lineTo(tx, ty + dy - ry);
+        c.lineTo(tx + rx, ty + dy + ry); c.closePath(); c.fill(); });
+    }
+    farolas(7, 900);
+  }
+  else {
+    /* PARQUE INGLÉS · césped parejo, el lago alargado y los setos */
+    const verde = mez('#33633E', -8 + luzDia * 24), verde2 = mez('#3E7549', -6 + luzDia * 22);
+    c.fillStyle = verde; c.fillRect(0, S0, W, H - S0);
+    for(let i = 0; i < 22; i++){
+      c.fillStyle = verde2;
+      c.beginPath();
+      c.ellipse(rr(i + 700) * W, 655 + rr(i + 710) * (H - 690),
+                120 + rr(i+720) * 170, 38 + rr(i+730) * 48, 0, 0, 7); c.fill();
+    }
+    /* el lago, largo y sinuoso */
+    const ag = c.createLinearGradient(0, 940, 0, 1110);
+    ag.addColorStop(0, mez('#3A6A88', -14 + luzDia * 26));
+    ag.addColorStop(1, mez('#274C66', -10 + luzDia * 20));
+    c.fillStyle = ag;
+    c.beginPath();
+    c.moveTo(-60, 1010);
+    c.bezierCurveTo(300, 940, 700, 1080, 1080, 990);
+    c.bezierCurveTo(1400, 920, 1650, 1010, W + 60, 966);
+    c.lineTo(W + 60, 1090);
+    c.bezierCurveTo(1600, 1130, 1300, 1050, 1000, 1110);
+    c.bezierCurveTo(660, 1180, 320, 1060, -60, 1120);
+    c.closePath(); c.fill();
+    c.strokeStyle = `rgba(255,255,255,${.09 + luzDia * .18})`; c.lineWidth = 3;
+    for(let i = 0; i < 7; i++) c.strokeRect(220 + i * 210, 1020 + (i % 2) * 26, 54, 2);
+    /* el puente de piedra */
+    c.fillStyle = mez('#8E8478', luzDia * 18);
+    c.fillRect(700, 990, 190, 26);
+    c.fillStyle = mez('#6E6559', luzDia * 14);
+    for(let k = 0; k < 3; k++){
+      c.beginPath(); c.arc(742 + k * 70, 1016, 26, Math.PI, 0); c.fill();
+    }
+    /* setos recortados */
+    for(let i = 0; i < 8; i++){
+      const sx = 180 + i * 210, sy = 760 + (i % 2) * 40;
+      c.fillStyle = mez('#2A5233', luzDia * 18);
+      c.fillRect(sx - 46, sy, 92, 30);
+      c.fillStyle = mez('#356240', luzDia * 20);
+      c.fillRect(sx - 46, sy, 92, 9);
+    }
+    farolas(8, 860);
+    /* árboles frondosos */
+    for(let i = 0; i < 44; i++){
+      const lado = i % 2 ? 1 : -1;
+      arbol(900 + lado * (270 + rr(i + 40) * 600), 690 + rr(i + 43) * 430,
+            .85 + rr(i + 45) * .75, ['#2A5233','#356240','#24472C']);
+    }
+  }
 }
 
 function dibujaOficina(t){
@@ -8712,9 +8677,9 @@ function dibujaOficina(t){
 
   skylineCiudad(c, W, H, E.c, oscuridad, rr);
 
-  /* Fuera de Nueva York no hay torre: el monito trabaja desde donde cayó, con
-     la ciudad de fondo. La oficina del piso 88 es de Manhattan y de nadie más. */
-  if(E.c !== 'nyc'){ escenaSatelite(c, W, H, t, E, oscuridad); return; }
+  /* La mesa es la misma en las tres ciudades: la torre de Northpoint con su
+     piso de trading abierto. Lo que cambia es la ciudad de fondo y el suelo
+     donde se planta. */
 
   /* ══ MANZANAS LATERALES · edificios bajos, árboles y avenida ══ */
   const manzana = (ox0, oy0, lado) => {
@@ -8750,67 +8715,7 @@ function dibujaOficina(t){
   };
   manzana(250, 620, -1); manzana(1550, 620, 1);
 
-  /* ══ EL PARQUE ══
-     La torre no se planta sobre asfalto: se planta sobre Central Park. Pasto
-     en dos verdes, los senderos que lo cruzan, el estanque y la arboleda
-     alrededor del edificio. De noche se apaga; al mediodía brilla. */
-  const luzDia = 1 - oscuridad;
-  const verde  = mez('#2E5C38', -8 + luzDia * 26);
-  const verde2 = mez('#376E42', -6 + luzDia * 24);
-  c.fillStyle = verde; c.fillRect(0, 620, W, H - 620);
-  /* manchas de pasto más claro, para que no sea una plancha */
-  for(let i = 0; i < 26; i++){
-    const gx = rr(i + 200) * W, gy = 640 + rr(i + 210) * (H - 660);
-    c.fillStyle = verde2;
-    c.beginPath(); c.ellipse(gx, gy, 90 + rr(i+220) * 150, 34 + rr(i+230) * 46, 0, 0, 7); c.fill();
-  }
-  /* los senderos: dos diagonales y una curva, en tierra clara */
-  c.strokeStyle = mez('#8E7A5E', -10 + luzDia * 22); c.lineCap = 'round';
-  c.lineWidth = 22;
-  c.beginPath(); c.moveTo(-40, 760); c.quadraticCurveTo(560, 690, 900, 900); c.stroke();
-  c.beginPath(); c.moveTo(W + 40, 740); c.quadraticCurveTo(1240, 700, 900, 900); c.stroke();
-  c.lineWidth = 15;
-  c.beginPath(); c.moveTo(120, 1120); c.quadraticCurveTo(700, 980, 1180, 1130); c.stroke();
-  /* el estanque */
-  const agua = c.createLinearGradient(0, 980, 0, 1090);
-  agua.addColorStop(0, mez('#3E6E8E', -14 + luzDia * 26));
-  agua.addColorStop(1, mez('#2A5270', -10 + luzDia * 20));
-  c.fillStyle = agua;
-  c.beginPath(); c.ellipse(360, 1030, 210, 62, -.06, 0, 7); c.fill();
-  c.strokeStyle = `rgba(255,255,255,${.1 + luzDia * .22})`; c.lineWidth = 3;
-  c.beginPath(); c.ellipse(360, 1030, 210, 62, -.06, 0, 7); c.stroke();
-  for(let i = 0; i < 5; i++){
-    c.fillStyle = `rgba(255,255,255,${.08 + luzDia * .16})`;
-    c.fillRect(250 + i * 46, 1012 + (i % 2) * 16, 40, 2.4);
-  }
-  /* farolas del parque, encendidas de noche */
-  for(let i = 0; i < 9; i++){
-    const fx = 140 + i * 190, fy = 880 + rr(i + 60) * 180;
-    c.fillStyle = '#2A2E38'; c.fillRect(fx - 2, fy, 4, 26);
-    c.fillStyle = oscuridad > .3 ? '#FFE9AE' : '#8E96A4';
-    c.beginPath(); c.arc(fx, fy - 2, 5, 0, 7); c.fill();
-    if(oscuridad > .3){
-      const h = c.createRadialGradient(fx, fy - 2, 2, fx, fy - 2, 46);
-      h.addColorStop(0, 'rgba(255,233,174,.24)'); h.addColorStop(1, 'rgba(255,233,174,0)');
-      c.fillStyle = h; c.beginPath(); c.arc(fx, fy - 2, 46, 0, 7); c.fill();
-    }
-  }
-  /* la arboleda: más densa y con sombra en el pasto */
-  for(let i = 0; i < 54; i++){
-    const lado = i % 2 ? 1 : -1;
-    const tx = 900 + lado * (250 + rr(i) * 620), ty = 680 + rr(i+3) * 450;
-    const es = .78 + rr(i + 40) * .7;
-    c.fillStyle = 'rgba(18,30,22,.26)';
-    c.beginPath(); c.ellipse(tx + 5, ty + 15, 17 * es, 6 * es, 0, 0, 7); c.fill();
-    c.fillStyle = '#3E2A1E'; c.fillRect(tx - 3 * es, ty, 6 * es, 16 * es);
-    [mez('#2E5C38', luzDia * 16), mez('#376E42', luzDia * 18), mez('#2A5232', luzDia * 14)]
-      .forEach((col, k) => {
-        c.fillStyle = col;
-        c.beginPath();
-        c.ellipse(tx + (k-1) * 9 * es, ty - (8 + k*7) * es, (15 - k*3) * es, (11 - k*2) * es, 0, 0, 7);
-        c.fill();
-      });
-  }
+  sueloDe(c, W, H, E.c, oscuridad, rr);
 
   /* ══ LA TORRE · cristal, muchos pisos, y la azotea abierta ══ */
   const PISOS = 11;
@@ -9046,20 +8951,22 @@ function dibujaOficina(t){
   const hab = sillasActivas().find(s => s.n === ofiHablando);
   if(hab && ofiJunta[ofiIdx]) globo(c, hab, ofiJunta[ofiIdx].txt, t);
 
-  /* el cartel de la ciudad, igual que en Tokio y Londres */
+  /* El cartel es de la ciudad en la que estás — antes decía NEW YORK
+     estuvieras donde estuvieras, que era justo el error que se veía en Tokio. */
   c.textAlign = 'center';
   c.font = '700 44px -apple-system, "Segoe UI", sans-serif';
   c.fillStyle = 'rgba(255,255,255,.96)';
-  c.fillText(loc([CIUDADES.nyc.n, CIUDADES.nyc.en]), W/2, 150);
+  c.fillText(loc([CI.n, CI.en]), W/2, 150);
   c.font = '15px "IBM Plex Mono", monospace';
   c.fillStyle = 'rgba(255,255,255,.52)';
-  const restanNY = (E.restan || 0);
-  const hNY = Math.floor(restanNY / 60), mNY = Math.round(restanNY % 60);
-  c.fillText(`${CIUDADES.nyc.sub}  ·  ${bi('vuela a','flies to')} ${loc([CIUDADES[E.sig || 'tokio'].n, CIUDADES[E.sig || 'tokio'].en])} ${bi('en','in')} ${hNY ? hNY + 'h ' : ''}${mNY}m`, W/2, 186);
+  const restan = E.restan || 0;
+  const hR = Math.floor(restan / 60), mR = Math.round(restan % 60);
+  const sig = CIUDADES[E.sig] || CIUDADES.tokio;
+  c.fillText(`${CI.sub}  ·  ${bi('vuela a','flies to')} ${loc([sig.n, sig.en])} ${bi('en','in')} ${hR ? hR + 'h ' : ''}${mR}m`, W/2, 186);
 
   c.font = '12px "IBM Plex Mono", monospace'; c.textAlign = 'left';
   c.fillStyle = 'rgba(255,255,255,.4)';
-  c.fillText('NORTHPOINT CAPITAL · PISO 88 · NEW YORK', 24, H - 22);
+  c.fillText('NORTHPOINT CAPITAL · ' + CI.sub + ' · ' + loc([CI.n, CI.en]), 24, H - 22);
 
 }
 
