@@ -159,6 +159,7 @@ label{font-family:var(--mono);font-size:10px;letter-spacing:.14em;text-transform
   background:linear-gradient(160deg, var(--glass-2), var(--glass));
   border:1px solid var(--line);
   font-family:var(--mono);font-size:11px;color:var(--accent);
+  overflow:hidden;
 }
 .rail-user b{font-size:12.5px;font-weight:600;display:block;line-height:1.2}
 .rail-user span{font-family:var(--mono);font-size:9px;letter-spacing:.14em;color:var(--faint)}
@@ -1064,7 +1065,23 @@ button.tag.quemada{text-decoration:line-through;text-decoration-color:var(--down
   border:1px solid var(--line);border-radius:13px;background:var(--panel-bg);padding:13px;
   cursor:pointer;transition:border-color .2s,transform .2s;width:100%}
 .pj:hover{border-color:var(--accent);transform:translateY(-2px)}
-.pj-cara{width:52px;height:52px;border-radius:50%;image-rendering:pixelated;
+.av-panel{margin-top:16px;border:1px solid var(--line-soft);border-radius:13px;padding:16px}
+.av-h{display:flex;align-items:center;gap:14px;margin-bottom:14px}
+.av-h b{font-size:13.5px}
+.av-prev{width:72px;height:72px;border-radius:50%;overflow:hidden;flex:none;border:1px solid var(--line);
+  background:var(--glass-2);display:flex;align-items:center;justify-content:center}
+.av-img{width:100%;height:100%;object-fit:cover;image-rendering:pixelated;display:block}
+.av-emoji{line-height:1}
+.av-ini{font-family:var(--mono);font-size:.42em;letter-spacing:.05em;color:var(--txt)}
+.av-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(58px,1fr));gap:9px;margin-top:14px}
+.av-op{width:100%;aspect-ratio:1;border-radius:50%;border:1px solid var(--line);overflow:hidden;
+  background:var(--glass);cursor:pointer;padding:0;display:flex;align-items:center;justify-content:center;
+  transition:border-color .15s,transform .12s}
+.av-op:hover{border-color:var(--accent);transform:translateY(-1px)}
+.av-op.on{border-color:var(--up);border-width:2px;box-shadow:0 0 0 3px rgba(87,199,155,.16)}
+.av-grid.emo .av-op span{font-size:24px;line-height:1}
+.pj-cara{width:52px;height:52px;border-radius:50%;image-rendering:pixelated;overflow:hidden;
+  display:flex;align-items:center;justify-content:center;background:var(--glass-2);
   border:1px solid var(--line);flex:none}
 .pj-i{display:flex;flex-direction:column;gap:2px;min-width:0}
 .pj-i b{font-family:var(--mono);font-size:12px;letter-spacing:.06em;color:var(--txt)}
@@ -2355,6 +2372,24 @@ stop[stop-color="#9BC0DC"]{stop-color:var(--txt)}
 
     <div id="st-perfil" hidden>
       <div id="sIdent"></div>
+
+      <div class="av-panel">
+        <div class="av-h">
+          <div class="av-prev" data-avatar="72"></div>
+          <div>
+            <b>Your avatar</b>
+            <p class="micro" style="color:var(--faint);margin:4px 0 0">Pick a character, an emoji, your initials — or upload a photo.</p>
+          </div>
+        </div>
+        <div class="seg" id="avTabs">
+          <button type="button" data-av="pixel" class="on">Characters</button>
+          <button type="button" data-av="emoji">Emoji</button>
+          <button type="button" data-av="ini">Initials</button>
+          <button type="button" data-av="foto">Photo</button>
+        </div>
+        <div id="avBody"></div>
+        <input type="file" id="avFile" accept="image/*" hidden>
+      </div>
       <div class="f-row" style="margin-top:12px">
         <div><label>Theme</label>
           <select id="setTema"><option value="dark">Dark</option><option value="light">Light</option></select></div>
@@ -5295,7 +5330,7 @@ function encogeImagen(archivo, cb){
     URL.revokeObjectURL(img.src);
     cb(cv.toDataURL('image/jpeg', .75));
   };
-  img.onerror = () => { URL.revokeObjectURL(img.src); toast('Esa imagen no se pudo leer'); };
+  img.onerror = () => { URL.revokeObjectURL(img.src); toast('That image could not be read'); };
   img.src = URL.createObjectURL(archivo);
 }
 $('#tShotFile').addEventListener('change', e => {
@@ -6060,6 +6095,7 @@ function renderAjustes(){
     $('#setOpen').value = hhmm(V.open); $('#setClose').value = hhmm(V.close);
   }
   if(tab === 'perfil'){
+    renderAvatarSel();
     $('#sIdent').innerHTML = `<div class="duties"><div class="duties-h micro">${esc(u.nombre)}</div></div>`;
     $('#setTema').value = S.ui.tema || 'dark';
     $('#setVoz').checked = !S.ui.rtVozOff;
@@ -6076,6 +6112,72 @@ function renderAjustes(){
       .map(([n,l]) => `<div><b class="mono">${n}</b><span>${l}</span></div>`).join('')}</div>`;
   }
 }
+function renderAvatarSel(){
+  const cont = $('#avBody'); if(!cont) return;
+  const a = avatarPerfil();
+  const modo = S.ui.avTab || a.tipo || 'pixel';
+  $$('#avTabs button').forEach(b => b.classList.toggle('on', b.dataset.av === modo));
+  $$('[data-avatar]').forEach(el => el.innerHTML = avatarHTML(+el.dataset.avatar || 34));
+
+  if(modo === 'pixel'){
+    cont.innerHTML = `<div class="av-grid">${AVATAR_LOOKS.map(l => `
+      <button type="button" class="av-op${a.tipo==='pixel' && a.valor===l.id ? ' on' : ''}" data-pick="pixel:${l.id}">
+        <img src="${caraLook(l, 96)}" alt="">
+      </button>`).join('')}</div>`;
+  }
+  if(modo === 'emoji'){
+    cont.innerHTML = `<div class="av-grid emo">${AVATAR_EMOJIS.map(e => `
+      <button type="button" class="av-op${a.tipo==='emoji' && a.valor===e ? ' on' : ''}" data-pick="emoji:${e}">
+        <span>${e}</span>
+      </button>`).join('')}</div>`;
+  }
+  if(modo === 'ini'){
+    cont.innerHTML = `<p class="micro" style="color:var(--faint);line-height:1.6;margin:12px 0 0">
+      Your initials on a plain background — the quietest option there is.</p>
+      <button class="btn sm primary mt" data-pick="ini:">Use my initials</button>`;
+  }
+  if(modo === 'foto'){
+    cont.innerHTML = `<p class="micro" style="color:var(--faint);line-height:1.6;margin:12px 0 0">
+      A square image works best. It stays on this device — it is never uploaded anywhere.</p>
+      <div style="display:flex;gap:10px;margin-top:12px;flex-wrap:wrap">
+        <button class="btn sm primary" id="avSubir">Choose a photo</button>
+        ${a.tipo === 'foto' ? '<button class="btn sm" data-pick="pixel:p1">Remove it</button>' : ''}
+      </div>`;
+    $('#avSubir').onclick = () => $('#avFile').click();
+  }
+  $$('#avBody [data-pick]').forEach(b => b.onclick = () => {
+    const [tipo, ...r] = b.dataset.pick.split(':');
+    S.profile.avatar = { tipo, valor: r.join(':') };
+    save(); pintaAvatares(); renderAvatarSel();
+    if($('#v-agentes').classList.contains('on')) renderAgentes();
+  });
+}
+$('#avTabs')?.addEventListener('click', e => {
+  const b = e.target.closest('button'); if(!b) return;
+  S.ui.avTab = b.dataset.av; renderAvatarSel();
+});
+/* la foto se guarda encogida: un avatar no necesita 4 megapíxeles */
+$('#avFile')?.addEventListener('change', e => {
+  const f = e.target.files && e.target.files[0];
+  if(!f) return;
+  /* se recorta al cuadrado por el centro y se guarda a 256px: un avatar
+     no necesita más, y el estado vive en localStorage. */
+  const img = new Image();
+  img.onload = () => {
+    const lado = Math.min(img.width, img.height), px = 256;
+    const cv = document.createElement('canvas'); cv.width = px; cv.height = px;
+    cv.getContext('2d').drawImage(img, (img.width - lado)/2, (img.height - lado)/2, lado, lado, 0, 0, px, px);
+    URL.revokeObjectURL(img.src);
+    S.profile.avatar = { tipo:'foto', valor: cv.toDataURL('image/jpeg', .85) };
+    save(); pintaAvatares(); renderAvatarSel();
+    if($('#v-agentes').classList.contains('on')) renderAgentes();
+    toast('Avatar updated');
+  };
+  img.onerror = () => { URL.revokeObjectURL(img.src); toast('That image could not be read'); };
+  img.src = URL.createObjectURL(f);
+  e.target.value = '';
+});
+
 $('#btnSettings').addEventListener('click', ()=> abreAjustes(S.ui.setTab || 'cuentas'));
 $('#setMesaSave')?.addEventListener('click', ()=>{
   const m = parseFloat($('#setMeta').value);
@@ -6098,12 +6200,67 @@ $('#setMeta')?.addEventListener('input', pintaMetaAyuda);
 $('#setTema')?.addEventListener('change', e => { S.ui.tema = e.target.value; save(); applyTheme(e.target.value); });
 $('#setVoz')?.addEventListener('change', e => { S.ui.rtVozOff = !e.target.checked; save(); });
 
+/* ══ AVATAR · cuatro maneras de tener cara ══
+   Pixel: doce personajes del mismo trazo que la oficina, generados con el
+   mismo dibujante — se eligen como los avatares de una consola.
+   Emoji · Iniciales · Foto tuya. Se guarda en el perfil y se pinta en la
+   barra, en la tarjeta de The Desk y en cualquier parte que lo pida. */
+const AVATAR_LOOKS = [
+  { id:'p1',  piel:'#E8B48C', pelo:'#14100C', traje:'#22303E', camisa:'#FFFFFF', ac:'#4A7FA8', cara:'sereno' },
+  { id:'p2',  piel:'#C98F63', pelo:'#181410', traje:'#4E545E', camisa:'#EFE8D8', ac:'#C4544A', cara:'ceño', chaleco:true },
+  { id:'p3',  piel:'#F0CDA2', pelo:'#100E0C', traje:'#2A3A4A', camisa:'#EFE8F6', ac:'#8E6BC4', lentes:true },
+  { id:'p4',  piel:'#8D5A3B', pelo:'#0E0C0A', traje:'#3A4A3E', camisa:'#F2EDE0', ac:'#3EA97C', cara:'curioso' },
+  { id:'p5',  piel:'#F5D8B4', pelo:'#7A4020', traje:'#5E4A3E', camisa:'#FFFFFF', ac:'#C79A3A', greñas:true },
+  { id:'p6',  piel:'#D9A377', pelo:'#8A8F98', traje:'#20242C', camisa:'#F2EDE0', ac:'#D9A441', barba:true, canas:true, cara:'sabio' },
+  { id:'p7',  piel:'#6B4630', pelo:'#141210', traje:'#1E2A3C', camisa:'#FFFFFF', ac:'#38BDF8', corbata:true },
+  { id:'p8',  piel:'#EDC9A0', pelo:'#2A1D14', traje:'#4A3B5E', camisa:'#EFE8F6', ac:'#8E6BC4', capucha:true },
+  { id:'p9',  piel:'#C08A5C', pelo:'#1C1612', traje:'#2F4A46', camisa:'#E8F2EE', ac:'#57C79B', lentes:true, barba:true },
+  { id:'p10', piel:'#F2D3AC', pelo:'#0F0D0B', traje:'#5A2E32', camisa:'#FFF0F0', ac:'#DE6A5F', greñas:true, cara:'ceño' },
+  { id:'p11', piel:'#A9714A', pelo:'#141414', traje:'#26323F', camisa:'#E9EDF2', ac:'#9BC0DC', cara:'concentrado' },
+  { id:'p12', piel:'#FFE0BD', pelo:'#D8A93A', traje:'#33384A', camisa:'#FFFFFF', ac:'#E8C25A', cara:'curioso' },
+];
+const AVATAR_EMOJIS = ['🐂','🐻','🦅','🦈','🐺','🦁','🐉','🦊','🚀','⚡','🎯','♠️','💎','🔥','🧊','🌑','⚓','🏔️','🎲','🧿','👑','🥷','🤖','👽'];
+
+function avatarPerfil(){
+  const a = (S.profile && S.profile.avatar) || null;
+  if(a && a.tipo) return a;
+  return { tipo:'pixel', valor:'p1' };
+}
+/* la cara pixel de un look, dibujada con el mismo pincel de la oficina */
+const CARAS_AV = {};
+function caraLook(look, px = 96){
+  const k0 = look.id + ':' + px;
+  if(CARAS_AV[k0]) return CARAS_AV[k0];
+  const L = { camisa:'#FFFFFF', ac:'#9BC0DC', ...look };
+  const url = caraAgente('__av_' + look.id, px, L, 27);
+  CARAS_AV[k0] = url;
+  return url;
+}
+/* el HTML del avatar, del tamaño que se pida */
+function avatarHTML(px = 34){
+  const a = avatarPerfil();
+  const u = currentUser();
+  const ini = u ? u.nombre.trim().split(/\s+/).map(w=>w[0]).slice(0,2).join('').toUpperCase() : '—';
+  if(a.tipo === 'emoji') return `<span class="av-emoji" style="font-size:${Math.round(px*0.56)}px">${a.valor}</span>`;
+  if(a.tipo === 'foto' && a.valor) return `<img class="av-img" src="${a.valor}" alt="">`;
+  if(a.tipo === 'pixel'){
+    const look = AVATAR_LOOKS.find(l => l.id === a.valor) || AVATAR_LOOKS[0];
+    return `<img class="av-img" src="${caraLook(look, 96)}" alt="">`;
+  }
+  return `<span class="av-ini">${ini}</span>`;
+}
+function pintaAvatares(){
+  const box = $('#uAvatar');
+  if(box) box.innerHTML = avatarHTML(34);
+  $$('[data-avatar]').forEach(el => el.innerHTML = avatarHTML(+el.dataset.avatar || 34));
+}
+
 function applyProfile(){
   const u = currentUser();
   const n = u ? u.nombre : 'No session';
   $('#uName').textContent = n;
   $('#uRole').textContent = u ? u.roles.join(' · ') : '—';
-  $('#uAvatar').textContent = u ? n.trim().split(/\s+/).map(w=>w[0]).slice(0,2).join('').toUpperCase() : '—';
+  pintaAvatares();
 }
 
 /* El respaldo servía de poco sin forma de volver a meterlo. */
@@ -6708,16 +6865,18 @@ function enMuro(c, lado, fn){
 /* Retrato de un agente: la misma cara del pixel-art, recortada en círculo para
    la tira del equipo. Se dibuja una vez y se guarda como imagen. */
 const CARAS = {};
-function caraAgente(nom, px = 96){
-  if(CARAS[nom]) return CARAS[nom];
-  const L = OFI.look[nom]; if(!L) return '';
+function caraAgente(nom, px = 96, lookDado = null, aire = 22){
+  if(!lookDado && CARAS[nom]) return CARAS[nom];
+  const L = lookDado || OFI.look[nom]; if(!L) return '';
   const cv = document.createElement('canvas'); cv.width = px; cv.height = px;
   const c = cv.getContext('2d'); c.imageSmoothingEnabled = false;
   const g = c.createLinearGradient(0, 0, 0, px);
   g.addColorStop(0, mez(L.traje, 30)); g.addColorStop(1, L.traje);
   c.fillStyle = g; c.fillRect(0, 0, px, px);
-  const k = px / 22;                       // la cabeza mide ~15 unidades de ancho
-  c.save(); c.translate(px/2, px * .62); c.scale(k, k);
+  /* `aire` decide qué tan grande sale la cabeza: 22 la deja llenando el cuadro
+     (como en la tira del equipo) y 27 le deja margen para un círculo. */
+  const k = px / aire;
+  c.save(); c.translate(px/2, px * .60); c.scale(k, k);
   const P = (x, y, w, h, col) => { c.fillStyle = col; c.fillRect(x, y, w, h); };
   P(-7, -10, 14, 13.5, L.piel);                                   // cabeza
   P(-7.5, -6.6, .9, 4.2, L.piel); P(6.6, -6.6, .9, 4.2, L.piel);  // orejas
@@ -6738,8 +6897,9 @@ function caraAgente(nom, px = 96){
   P(-1.6, 3.4, 3.2, 5, L.camisa);
   if(L.corbata) P(-.9, 3.8, 1.8, 4.6, L.ac);
   c.restore();
-  CARAS[nom] = cv.toDataURL();
-  return CARAS[nom];
+  const url = cv.toDataURL();
+  if(!lookDado) CARAS[nom] = url;
+  return url;
 }
 
 /* ── avatar estilo Habbo: cabeza grande, cuerpo compacto, carácter propio ── */
@@ -7257,7 +7417,7 @@ function renderAgentes(){
       : 'No activity on the desk yet';
     return `
     <button type="button" class="staff" data-staff="${p.id}">
-      <img class="pj-cara" src="${caraAgente(p.nom)}" alt="${esc(p.nom)}" width="52" height="52">
+      <span class="pj-cara" data-avatar="52"></span>
       <div class="pj-i">
         <b>${esc(p.nom)}</b>
         <span>${bi('Founder · Northpoint','Founder · Northpoint')}</span>
@@ -7305,6 +7465,7 @@ function renderAgentes(){
   grid.innerHTML = (yo ? tarjeta(yo) : '') + balances;
   animaBalances();
   $$('#agGrid .staff[data-staff]').forEach(b => b.onclick = () => $('#btnSettings').click());
+  pintaAvatares();
   ofiJunta = guionOficina();
   if(typeof animaOficina === 'function') animaOficina();
   /* el tablero del negocio: el camino a payout con el proceso de cada socio
