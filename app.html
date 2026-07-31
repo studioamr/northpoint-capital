@@ -12446,7 +12446,7 @@ function barraCosto(items){
 }
 
 /* ── ④ LA PISTA DE LA FASE ── dónde estás entre las dos puertas */
-function pistaFase(f, N, py){
+function pistaFase(f, N, py, i){
   const p = Math.max(0, Math.min(100, (N - f.de) / (f.a - f.de) * 100));
   return `<div class="pf">
     <div class="pf-n"><b>${fmt$(N)}</b><em>${bi('patrimonio hoy','net worth today')}</em></div>
@@ -12454,9 +12454,15 @@ function pistaFase(f, N, py){
       <div class="pf-b"><i style="width:${p}%"></i><span class="pf-yo" style="left:${p}%"></span></div>
       <div class="pf-e"><span>${fmt$(f.de)}</span><span>${fmt$(f.a)}</span></div>
     </div>
-    <div class="pf-f">${py && py.alcanza
-      ? `<b>${fechaCorta(py.hasta)}</b><em>${enMeses(py.meses)} ${bi('a este ritmo','at this pace')}</em>`
-      : `<b>—</b><em>${bi('sin ritmo medible','no measurable pace')}</em>`}</div>
+    <div class="pf-f">${(() => {
+      /* la MISMA fecha que el encabezado y que las fechas de la fase: antes
+         decía el mes de la proyección y abajo el día exacto, en la misma vista */
+      const pz = plazoPagos(f, i);
+      if(pz && pz.abre) return `<b>${fmtFecha(pz.abre.k)}</b><em>${bi('cierra la fase','closes the phase')}</em>`;
+      return py && py.alcanza
+        ? `<b>${fechaCorta(py.hasta)}</b><em>${enMeses(py.meses)} ${bi('a este ritmo','at this pace')}</em>`
+        : `<b>—</b><em>${bi('sin ritmo medible','no measurable pace')}</em>`;
+    })()}</div>
   </div>`;
 }
 
@@ -12660,8 +12666,15 @@ function renderMetas(){
         </div>
       </div>`).join('');
 
+    /* El playbook manda: es lo que se HACE. El dibujo de la cuenta queda debajo,
+       como el porqué de esas cinco órdenes. */
     const secEmpezar = `
-      ${f.etapas ? `<div class="tj-graf">
+      <span class="fl">${bi('El playbook','The playbook')}</span>
+      <ol class="pb">
+        ${f.haz.map(hz => { const [cabeza, resto] = parteHaz(hz);
+          return `<li><strong>${esc(cabeza)}</strong>${resto ? `<span>${esc(resto)}</span>` : ''}</li>`; }).join('')}
+      </ol>
+      ${f.etapas ? `<div class="tj-graf" style="margin-top:22px">
         <div class="tj-gh"><span class="fl" style="margin:0">${bi('La vida de una cuenta','The life of an account')}</span>
           <em class="micro">${bi('de $50,000 al primer pago','from $50,000 to the first payout')}</em></div>
         ${vidaCuentaSVG((plazoPagos(f, i) || {}).nPagos || 1)}
@@ -12671,18 +12684,12 @@ function renderMetas(){
             <i class="down">${e.riesgo}</i><i class="up">${e.obj}</i><i>${e.dias}</i>
           </span>`).join('')}
         </div>
-      </div>` : ''}
-      <span class="fl" style="margin-top:20px">${bi('El playbook','The playbook')}</span>
-      <ol class="pb">
-        ${f.haz.map(hz => { const [cabeza, resto] = parteHaz(hz);
-          return `<li><strong>${esc(cabeza)}</strong>${resto ? `<span>${esc(resto)}</span>` : ''}</li>`; }).join('')}
-      </ol>
-`;
+      </div>` : ''}`;
 
     const cc = cartillaFase(f, i);
     const entra = cc.pagoMes + (f.neg || 0);
     const secProgreso = `
-      ${pistaFase(f, N, py)}
+      ${pistaFase(f, N, py, i)}
       <div class="esp">
         <span><em>${bi('CUENTAS','ACCOUNTS')}</em><b>${cc.ctas ? cc.ctas + ' × ' + fmtCorto(cc.tam) : '—'}</b></span>
         <span><em>${bi('PORTAFOLIO','PORTFOLIO')}</em><b>${cc.portMin ? fmt$(cc.portMin) : '—'}</b></span>
