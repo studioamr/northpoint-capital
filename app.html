@@ -1829,6 +1829,57 @@ canvas{display:block;width:100%}
    P&L y disciplina no se caen nunca — ésas son la tabla.
    Nunca se pierde el dato: cada trade se abre y ahí está completo. */
 #jTable th, #jTable td{white-space:nowrap}
+/* ══ La tabla de trades ══ Antes los encabezados numéricos iban a la izquierda
+   mientras sus celdas iban a la derecha, así que «P&L» quedaba flotando en
+   medio de la nada. Y ninguna fila se podía abrir. */
+#jTable th.r{text-align:right}
+#jTable th.pnl-col,#jTable td.pnl-col{padding-right:18px}
+#jTable td.pnl-col{font-size:14px;font-weight:500}
+#jTable .j-fecha{color:var(--faint);font-size:11px}
+#jTable .j-sym{font-weight:500;letter-spacing:.02em}
+#jTable td.dim{color:var(--dim)}
+#jTable .j-fila{cursor:pointer;transition:background .12s}
+#jTable .j-fila:hover{background:var(--w05)}
+#jTable .j-fila:hover .j-acc{opacity:1}
+#jTable .j-acc{opacity:.35;transition:opacity .12s;white-space:nowrap}
+#jTable .j-clip{color:var(--faint);font-size:11px;margin-right:4px}
+#jTable .tag{margin:1px 3px 1px 0}
+#jTable .tag.lg{border-color:rgba(87,199,155,.35);color:var(--up)}
+#jTable .tag.sh{border-color:rgba(228,110,98,.35);color:var(--down)}
+/* la banda que separa los días */
+#jTable .j-dia td{background:var(--w05);border-top:1px solid var(--line);
+  padding-top:14px;padding-bottom:10px}
+#jTable .j-dia b{font-size:12px;letter-spacing:.02em;color:var(--txt);font-weight:500}
+#jTable .j-dia span{font-family:var(--mono);font-size:10px;letter-spacing:.12em;
+  text-transform:uppercase;color:var(--faint);margin-left:12px}
+#jTable .j-dia td.r{font-size:13px}
+
+/* ══ El reporte de un trade ══ */
+.rt-pnl{font-family:var(--mono);font-size:26px;letter-spacing:-.02em;color:var(--txt)}
+.rt-sec{padding:20px 0;border-bottom:1px solid var(--line-soft)}
+.rt-sec:last-of-type{border-bottom:0}
+.rt-sec>.micro{margin-bottom:14px}
+.rt-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;
+  background:var(--line-soft);border:1px solid var(--line-soft);border-radius:10px;overflow:hidden}
+.rt-f{display:flex;justify-content:space-between;align-items:baseline;gap:10px;
+  background:var(--bg-2);padding:12px 14px}
+.rt-f span{font-size:11px;text-transform:uppercase;letter-spacing:.12em;color:var(--faint)}
+.rt-f b{font-family:var(--mono);font-size:14px;color:var(--txt);font-weight:500}
+.rt-sec>.rt-f{border:1px solid var(--line-soft);border-radius:10px;margin-bottom:10px}
+.rt-cta{display:flex;justify-content:space-between;align-items:center;gap:14px;
+  padding:13px 15px;border:1px solid var(--line-soft);border-radius:10px;margin-bottom:8px}
+.rt-cta b{font-family:var(--mono);font-size:14px}
+.rt-vio{border-left:2px solid var(--down);background:rgba(228,110,98,.06);
+  padding:12px 15px;border-radius:0 8px 8px 0;margin-bottom:8px}
+.rt-vio b{display:block;font-size:13.5px;color:var(--txt);margin-bottom:4px}
+.rt-vio p{font-size:12.5px;color:var(--dim);line-height:1.55}
+.rt-limpio{border-left:2px solid var(--up);background:rgba(87,199,155,.06);
+  padding:12px 15px;border-radius:0 8px 8px 0;font-size:13.5px;color:var(--txt)}
+.rt-notas{font-size:14px;line-height:1.6;color:var(--txt);white-space:pre-wrap;
+  padding:14px 16px;border:1px solid var(--line-soft);border-radius:10px}
+.rt-img{width:100%;border-radius:10px;border:1px solid var(--line)}
+.rt-pie{display:flex;gap:10px;padding-top:20px;flex-wrap:wrap}
+@media(max-width:560px){ .rt-grid{grid-template-columns:repeat(2,1fr)} }
 @media(max-width:1180px){
   #jTable th:nth-child(6), #jTable td:nth-child(6),
   #jTable th:nth-child(7), #jTable td:nth-child(7){display:none}
@@ -2605,6 +2656,22 @@ stop[stop-color="#9BC0DC"]{stop-color:var(--txt)}
   </div>
 </div>
 
+<div class="overlay" id="ovReporteTrade">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="rtTitulo" style="max-width:680px">
+    <div class="m-head">
+      <div>
+        <p class="micro">NORTHPOINT · REPORTE DEL TRADE</p>
+        <h3 id="rtTitulo" style="font-size:22px;margin-top:4px"></h3>
+        <p class="micro" id="rtSub" style="margin-top:4px;text-transform:none;letter-spacing:.04em"></p>
+      </div>
+      <div style="text-align:right">
+        <p class="rt-pnl" id="rtPnl"></p>
+        <button class="btn-icon" data-close aria-label="Cerrar" style="margin-top:6px">✕</button>
+      </div>
+    </div>
+    <div class="m-body" id="rtCuerpo"></div>
+  </div>
+</div>
 <div class="overlay" id="ovDia">
   <div class="modal" role="dialog" aria-modal="true" aria-labelledby="diaTitle" style="max-width:640px">
     <h3 id="diaTitle">Día</h3>
@@ -5994,6 +6061,130 @@ function renderJournal(){
   renderCal();
 }
 
+
+/* ══ EL REPORTE DE UN TRADE ══
+   La tabla dice qué pasó; el reporte dice qué significó. Se abre picando la
+   fila: ejecución, en qué cuentas cayó, la disciplina con su porqué, el plan
+   de ese día contra lo que se hizo, y lo que movió en el camino a payout. */
+const PORQUE_VIO = {
+  OTRO_INSTRUMENTO: ['El instrumento no es el de la casa',
+    'MNQ es el instrumento del sistema. Operar otro rompe la comparación: el tamaño del tick, el margen y el comportamiento cambian, y las estadísticas dejan de significar lo mismo.'],
+  OUT_OF_WINDOW: ['Fuera de la ventana de operación',
+    'El trade cayó fuera del horario del plan. La ventaja del sistema está medida DENTRO de esa ventana; afuera es otra cosa que no está probada.'],
+  THIRD_TRADE: ['Más trades de los que permite el plan',
+    'El plan del día fijó un tope de trades. Pasarlo es donde empieza el sobreoperar: los trades de más son, en promedio, los peores del día.'],
+  AFTER_TARGET: ['Siguió operando pasado el objetivo',
+    'El objetivo del día ya estaba cubierto. Seguir después es jugar con dinero que ya era tuyo.'],
+  REVENGE: ['Revancha después de una pérdida',
+    'Entró justo después de perder y sin checklist completo. Es la firma clásica de operar por emoción, no por sistema.'],
+  NO_SETUP: ['Sin checklist completo',
+    'El setup no estaba validado. Un trade sin checklist no es una decisión del sistema: es una opinión.'],
+  FIRM_LIMIT: ['Rompió el límite diario de la fondeadora',
+    'La pérdida del día alcanzó el tope duro de la cuenta. Este es el que mata cuentas — no admite matices.'],
+  DAY_RISK: ['Pasó el stop del día',
+    'La pérdida del día superó el stop que tú mismo escribiste en el plan. El stop no es una sugerencia.'],
+  MICROS: ['Tamaño fuera de norma', 'El tamaño de la posición no corresponde al del plan.'],
+  AFTER_WIN: ['Operó tras ganar', 'Siguió después de una ganancia, contra la regla vieja de cerrar en verde.'],
+};
+
+window.reporteTrade = function(id){
+  const t = S.trades.find(x => x.id === id); if(!t) return;
+  const dia = t.date;
+  const delDia = (tradesByDay(idsTodas())[dia] || []);
+  const idx = delDia.findIndex(x => x.id === t.id);
+  const v = violations(t, delDia);
+  const P = planDelDia(dia);
+  const pnlDia = delDia.reduce((a, x) => a + (x.pnl || 0), 0);
+
+  /* la aritmética del propio trade */
+  const puntos = (t.entry != null && t.exit != null)
+    ? ((t.exit - t.entry) * (t.dir === 'L' ? 1 : -1)) : null;
+  const ticks = puntos != null ? Math.round(puntos / .25) : null;
+
+  /* dónde cayó y qué significó para cada cuenta */
+  const cuentas = (t.accts || []).map(aid => {
+    const a = S.accounts.find(x => x.id === aid);
+    if(!a) return null;
+    const cc = carreraCuenta(a);
+    return { alias: a.alias, pnl: t.pnl || 0, balance: cc.balance, pct: cc.pct, sim: esSim(a) };
+  }).filter(Boolean);
+
+  const fila = (k, val, tono) => `<div class="rt-f"><span>${k}</span><b class="${tono||''}">${val}</b></div>`;
+
+  $('#rtTitulo').innerHTML = `${esc(t.sym || '—')}
+    <span class="tag" style="margin-left:8px">${t.dir === 'L' ? 'LONG' : 'SHORT'}</span>`;
+  $('#rtSub').textContent = `${fmtFecha(dia)} · ${t.time || '—'} · ${bi('disparo','shot')} ${idx + 1} ${bi('de','of')} ${delDia.length}`;
+  $('#rtPnl').textContent = fmt$(t.pnl, true);
+  $('#rtPnl').className = 'rt-pnl ' + ((t.pnl || 0) > 0 ? 'up' : (t.pnl || 0) < 0 ? 'down' : '');
+
+  $('#rtCuerpo').innerHTML = `
+    <div class="rt-sec">
+      <p class="micro">${bi('La ejecución','The execution')}</p>
+      <div class="rt-grid">
+        ${fila(bi('Entrada','Entry'), t.entry ?? '—')}
+        ${fila(bi('Salida','Exit'), t.exit ?? '—')}
+        ${fila(bi('Contratos','Contracts'), t.qty ?? '—')}
+        ${fila(bi('Puntos','Points'), puntos != null ? (puntos > 0 ? '+' : '') + puntos.toFixed(2) : '—',
+               puntos > 0 ? 'up' : puntos < 0 ? 'down' : '')}
+        ${fila('Ticks', ticks != null ? (ticks > 0 ? '+' : '') + ticks : '—')}
+        ${fila(bi('Hora','Time'), t.time || '—')}
+      </div>
+    </div>
+
+    <div class="rt-sec">
+      <p class="micro">${bi('Dónde cayó','Where it landed')}</p>
+      ${cuentas.length ? cuentas.map(c => `
+        <div class="rt-cta">
+          <div>
+            <b>${esc(c.alias)}</b>${c.sim ? ` <span class="tag" style="margin-left:6px">${bi('PRÁCTICA','PRACTICE')}</span>` : ''}
+            <p class="micro" style="margin-top:2px">${bi('balance','balance')} ${fmt$(c.balance)} · ${Math.round(c.pct)}% ${bi('del camino','of the road')}</p>
+          </div>
+          <b class="${c.pnl > 0 ? 'up' : c.pnl < 0 ? 'down' : ''}">${fmt$(c.pnl, true)}</b>
+        </div>`).join('')
+        : `<p class="dim">${bi('Este trade no está asignado a ninguna cuenta.','This trade is not assigned to any account.')}</p>`}
+    </div>
+
+    <div class="rt-sec">
+      <p class="micro">${bi('La disciplina','Discipline')}</p>
+      <div class="rt-f"><span>${bi('Checklist del setup','Setup checklist')}</span>
+        <b class="${t.setupOk ? 'up' : 'warn'}">${t.setupOk ? bi('COMPLETO','COMPLETE') : bi('INCOMPLETO','INCOMPLETE')}</b></div>
+      ${v.length ? v.map(cod => {
+        const p = PORQUE_VIO[cod] || [tr('vio.' + cod), ''];
+        return `<div class="rt-vio">
+          <b>${esc(p[0])}</b>
+          <p>${esc(p[1])}</p>
+        </div>`; }).join('')
+        : `<div class="rt-limpio">${bi('Limpio. Este trade respetó el plan completo.','Clean. This trade respected the whole plan.')}</div>`}
+    </div>
+
+    <div class="rt-sec">
+      <p class="micro">${bi('El plan de ese día contra lo que pasó','That day&rsquo;s plan vs what happened')}</p>
+      <div class="rt-grid">
+        ${fila(bi('Máx. trades','Max trades'), `${delDia.length} / ${P.maxT}`, delDia.length > P.maxT ? 'down' : '')}
+        ${fila(bi('Stop del día','Day stop'), P.stop ? fmt$(P.stop) : '—')}
+        ${fila(bi('Objetivo','Target'), P.obj ? fmt$(P.obj) : '—')}
+        ${fila(bi('P&L del día','Day P&L'), fmt$(pnlDia, true), pnlDia > 0 ? 'up' : pnlDia < 0 ? 'down' : '')}
+      </div>
+    </div>
+
+    ${t.notas ? `<div class="rt-sec">
+      <p class="micro">${bi('Tus notas','Your notes')}</p>
+      <p class="rt-notas">${esc(t.notas)}</p>
+    </div>` : ''}
+
+    ${t.shot ? `<div class="rt-sec">
+      <p class="micro">${bi('La gráfica','The chart')}</p>
+      <img class="rt-img" src="${t.shot}" alt="${bi('Captura del trade','Trade screenshot')}">
+    </div>` : ''}
+
+    <div class="rt-pie">
+      <button class="btn" onclick="closeOv(); openTrade('${t.id}')">${bi('Editar este trade','Edit this trade')}</button>
+      <button class="btn" onclick="closeOv(); abrirDia('${dia}')">${bi('Ver el día completo','See the whole day')}</button>
+    </div>`;
+
+  openOv('ovReporteTrade');
+};
+
 function renderTrades(){
   const diasTodos = tradesByDay(idsTodas());   // para violaciones: el día completo
   renderPicker($('#pickJournal'));
@@ -6024,34 +6215,37 @@ function renderTrades(){
   $('#jEmpty').innerHTML = '';
   let html = `<thead><tr>
     <th>${tr('j.fecha')}</th><th>${tr('j.hora')}</th><th>${tr('j.instr')}</th><th>${tr('j.dir')}</th><th class="r">${tr('j.ct')}</th>
-    <th class="r">${tr('j.entrada')}</th><th class="r">${tr('j.salida')}</th><th class="r">P&L</th>
+    <th class="r">${tr('j.entrada')}</th><th class="r">${tr('j.salida')}</th><th class="r pnl-col">P&L</th>
     <th>${tr('j.setup')}</th><th>${tr('j.disciplina')}</th><th></th>
   </tr></thead><tbody>`;
   days.forEach(d=>{
     const dt = byDay[d];
     const dp = dt.reduce((a,t)=>a+(t.pnl||0),0);
-    html += `<tr style="background:var(--w018)">
-      <td colspan="7" class="mono" style="font-size:10.5px;letter-spacing:.14em;color:var(--dim)">${fmtFecha(d)} · ${dt.length} TRADE${dt.length>1?'S':''}</td>
-      <td class="r mono ${dp>0?'up':dp<0?'down':''}" style="font-size:12px">${fmt$(dp,true)}</td>
+    const gan = dt.filter(x => (x.pnl||0) > 0).length, per = dt.filter(x => (x.pnl||0) < 0).length;
+    html += `<tr class="j-dia">
+      <td colspan="7"><b>${fmtFecha(d)}</b><span>${dt.length} ${dt.length>1?bi('trades','trades'):'trade'} · ${gan}G · ${per}P</span></td>
+      <td class="r mono ${dp>0?'up':dp<0?'down':''}">${fmt$(dp,true)}</td>
       <td colspan="3"></td></tr>`;
     dt.forEach(t=>{
       /* La disciplina no depende de qué cuentas estés viendo: se evalúa sobre el día
          completo, con todas las cuentas. */
       const v = violations(t, (diasTodos[d] || dt));
-      html += `<tr>
-        <td class="mono" style="color:var(--faint);font-size:11px">${t.date.slice(8)}/${t.date.slice(5,7)}</td>
+      html += `<tr class="j-fila" onclick="reporteTrade('${t.id}')" title="${bi('Ver el reporte de este trade','See this trade\'s report')}">
+        <td class="mono j-fecha">${t.date.slice(8)}/${t.date.slice(5,7)}</td>
         <td class="mono">${t.time||'—'}</td>
-        <td class="mono">${esc(t.sym)}</td>
-        <td><span class="tag">${t.dir==='L'?'LONG':'SHORT'}</span></td>
+        <td class="mono j-sym">${esc(t.sym)}</td>
+        <td><span class="tag ${t.dir==='L'?'lg':'sh'}">${t.dir==='L'?'LONG':'SHORT'}</span></td>
         <td class="r mono">${t.qty ?? '—'}</td>
-        <td class="r mono" style="color:var(--dim)">${t.entry??'—'}</td>
-        <td class="r mono" style="color:var(--dim)">${t.exit??'—'}</td>
-        <td class="r mono ${t.pnl>0?'up':t.pnl<0?'down':''}">${fmt$(t.pnl,true)}</td>
+        <td class="r mono dim">${t.entry??'—'}</td>
+        <td class="r mono dim">${t.exit??'—'}</td>
+        <td class="r mono pnl-col ${t.pnl>0?'up':t.pnl<0?'down':''}">${fmt$(t.pnl,true)}</td>
         <td>${t.setupOk?`<span class="tag ok">${tr('j.valido').toUpperCase()}</span>`:`<span class="tag wr">${tr('j.incompleto').toUpperCase()}</span>`}</td>
-        <td>${v.length? v.map(x=>`<span class="tag bad" style="margin:1px 2px 1px 0">${tr('vio.'+x).toUpperCase()}</span>`).join('') : `<span class="tag ok">${tr('j.limpio').toUpperCase()}</span>`}</td>
-        <td class="r" style="white-space:nowrap">
-          <button class="btn-icon" onclick="openTrade('${t.id}')" title="Edit">✎</button>
-          <button class="btn-icon" onclick="delTrade('${t.id}')" title="Delete">✕</button>
+        <td>${v.length? v.map(x=>`<span class="tag bad">${tr('vio.'+x).toUpperCase()}</span>`).join('') : `<span class="tag ok">${tr('j.limpio').toUpperCase()}</span>`}</td>
+        <td class="r j-acc" onclick="event.stopPropagation()">
+          ${t.shot ? '<span class="j-clip" title="'+bi('tiene captura','has a screenshot')+'">◧</span>' : ''}
+          <button class="btn-icon" onclick="reporteTrade('${t.id}')" title="${bi('Reporte','Report')}">▤</button>
+          <button class="btn-icon" onclick="openTrade('${t.id}')" title="${bi('Editar','Edit')}">✎</button>
+          <button class="btn-icon" onclick="delTrade('${t.id}')" title="${bi('Borrar','Delete')}">✕</button>
         </td>
       </tr>`;
     });
