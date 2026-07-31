@@ -1374,6 +1374,8 @@ button.tag.quemada{text-decoration:line-through;text-decoration-color:var(--down
 .ht-e{font-family:var(--mono);font-size:9px;letter-spacing:.14em;color:var(--faint)}
 .ht b{font-family:var(--mono);font-size:14px;font-weight:500}
 .ht-d{font-size:11.5px;color:var(--faint);line-height:1.45}
+.ht.ya{background:var(--w02)}
+.ht.ya .ht-e{color:var(--up)}
 .ht.pago{background:color-mix(in srgb,var(--up) 6%,transparent)}
 .ht.pago .ht-e,.ht.pago b{color:var(--up)}
 .ht.abre{background:color-mix(in srgb,var(--up) 12%,transparent)}
@@ -1412,7 +1414,7 @@ button.tag.quemada{text-decoration:line-through;text-decoration-color:var(--down
 .bc-l b{font-family:var(--mono);font-size:13px;font-weight:500;grid-column:2}
 .bc-l u{text-decoration:none;font-family:var(--mono);font-size:9px;color:var(--faint);grid-column:2}
 /* ④ la pista de la fase */
-.pf{display:grid;grid-template-columns:auto 1fr auto;gap:18px;align-items:center;
+.pf{display:grid;grid-template-columns:auto 1fr;gap:18px;align-items:center;
   border:1px solid var(--line-soft);border-radius:14px;padding:16px 18px;background:var(--w02)}
 .pf-n b{display:block;font-family:var(--mono);font-size:26px;font-weight:300;letter-spacing:-.02em}
 .pf-n em{display:block;font-style:normal;font-family:var(--mono);font-size:8.5px;letter-spacing:.13em;color:var(--faint);margin-top:2px}
@@ -12349,46 +12351,64 @@ function plazoPagos(f, i){
   const cc = cartillaFase(f, i);
   const obj = cc.objDia || 200, tramo = cc.tramo || 1000;
   if(!obj || !cc.ctas) return null;
-  const ctas = cc.ctas;
   const dEval = Math.ceil(EVAL_$ / obj);
   const dBuf  = Math.ceil(COLCHON_$ / obj);
   const dPago = Math.ceil(tramo / obj);
 
-  const ini     = proximoLunes();                  // el lunes que viene
-  const evalFin = masHabiles(ini, dEval - 1);      // el día que se pasa el examen
-  const bufIni  = masHabiles(evalFin, 1);
-  const bufFin  = masHabiles(bufIni, dBuf - 1);    // aquí se toca $52,100
-  /* Cuántos pagos pide ESTA fase: los que hagan falta para cruzar la puerta
-     desde donde estás. La fase 0 cierra con uno; la de los $30,000 con tres.
-     Se calcula, no se teclea. */
-  const entra = ctas * tramo;
-  const falta = Math.max(0, f.a - patrimonio().total);
-  /* Tope duro. Sin él, una fase lejana (de $15M a $50M con tres cuentas) pedía
-     16,667 pagos y el bucle de días caminaba tres siglos día por día: la app se
-     congelaba. Doce pagos es más de lo que cualquier fase muestra. */
-  const nPagos = Math.max(1, Math.min(12, Math.ceil(falta / entra)));
-  const pagos = [];
-  for(let k = 0; k < nPagos; k++)
-    pagos.push(masHabiles(k ? pagos[k-1] : bufFin, dPago));
-  const ultimo = pagos[pagos.length - 1];
+  /* ── LO QUE YA ESTÁ ARRIBA NO EMPIEZA DE NUEVO ──
+     Una cuenta que ya pasó el colchón sigue cobrando cada tramo mientras las
+     nuevas hacen su examen. Antes el cálculo mandaba TODA la flota al examen
+     en cada fase y por eso la fase I se iba hasta finales de octubre: en
+     realidad las cinco viejas cierran esa puerta mucho antes.
+     Las que ya están arriba salen de tus cuentas registradas; si todavía no hay
+     ninguna, de las que la fase anterior dejó corriendo. */
+  const propias = S.accounts.filter(a => !esLive(a) && !esSim(a) && reglasDe(a) && esViva(a));
+  const arribaReales = propias.filter(a => carreraCuenta(a).pasoBuffer).length;
+  const previas = i > 0 ? (PLAN_FASES[i-1].tk.ctas || 0) : 0;
+  const arriba  = Math.min(cc.ctas, Math.max(arribaReales, previas));
+  const nuevas  = Math.max(0, cc.ctas - arriba);
 
+  const ini = proximoLunes();
+  /* las nuevas: examen y colchón, en paralelo a los pagos de las que ya corren */
+  const evalFin = nuevas ? masHabiles(ini, dEval - 1) : null;
+  const bufIni  = nuevas ? masHabiles(evalFin, 1) : null;
+  const bufFin  = nuevas ? masHabiles(bufIni, dBuf - 1) : null;
+
+  /* el reloj de pagos: cada dPago días hábiles cobra TODO lo que esté arriba
+     del colchón ese día */
   let pat = patrimonio().total;
-  const dias = [];
-  for(let d = new Date(ini); d <= ultimo; d.setDate(d.getDate() + 1)){
-    if(FIN_DE_SEMANA(d)) continue;
-    const cur = new Date(d);
-    const iPago = pagos.findIndex(x => +x === +cur);
-    let tipo = cur <= evalFin ? 'eval' : cur <= bufFin ? 'buf' : 'listo';
-    if(iPago >= 0){ tipo = 'pago'; pat += entra; }
-    dias.push({ fecha:cur, k:claveDia(cur), tipo, n: iPago >= 0 ? iPago + 1 : 0,
-                monto: iPago >= 0 ? entra : 0, abre:false, pat });
+  const pagos = [], dias = [];
+  let d = new Date(ini), n = 0, tope = 0;
+  const listasEn = nuevas ? masHabiles(ini, dEval + dBuf - 1) : null;   // cuándo entran las nuevas
+  let cursor = arriba ? masHabiles(ini, dPago - 1) : masHabiles(bufFin || ini, dPago);
+  while(pat < f.a && tope++ < 400){
+    const cuantas = arriba + (listasEn && cursor >= listasEn ? nuevas : 0);
+    const monto = cuantas * tramo;
+    pagos.push({ fecha: new Date(cursor), monto, ctas: cuantas });
+    pat += monto; n++;
+    if(n >= 12) break;                                 // tope de lo que se dibuja
+    cursor = masHabiles(cursor, dPago);
+  }
+  const ultimo = pagos.length ? pagos[pagos.length-1].fecha : ini;
+
+  /* el mapa de días, para el resto de la vista */
+  let acum = patrimonio().total;
+  for(let x = new Date(ini); x <= ultimo; x.setDate(x.getDate() + 1)){
+    if(FIN_DE_SEMANA(x)) continue;
+    const cur = new Date(x);
+    const pg = pagos.find(p => +p.fecha === +cur);
+    let tipo = 'listo';
+    if(nuevas && cur <= evalFin) tipo = 'eval';
+    else if(nuevas && cur <= bufFin) tipo = 'buf';
+    if(pg){ tipo = 'pago'; acum += pg.monto; }
+    dias.push({ fecha:cur, k:claveDia(cur), tipo, monto: pg ? pg.monto : 0, abre:false, pat:acum });
   }
   const abre = dias.find(x => x.pat >= f.a);
   if(abre) abre.abre = true;
 
-  return { dias, ini, evalFin, bufIni, bufFin, pagos, nPagos, abre,
-           obj, tramo, ctas, entra, dEval, dBuf, dPago,
-           reales: S.accounts.filter(a => !esLive(a) && !esSim(a) && reglasDe(a) && esViva(a)).length };
+  return { dias, ini, evalFin, bufIni, bufFin, pagos, nPagos: pagos.length, abre,
+           obj, tramo, ctas: cc.ctas, arriba, nuevas, entra: cc.ctas * tramo,
+           dEval, dBuf, dPago, reales: propias.length };
 }
 
 /* Los cinco hitos en palabras, arriba del calendario: qué día empieza cada
@@ -12403,16 +12423,20 @@ function hitosHTML(pz, f, i){
                  ['FIRST','SECOND','THIRD','FOURTH','FIFTH','SIXTH']);
   const sig = PLAN_FASES[Math.min(i + 1, PLAN_FASES.length - 1)];
   return `<div class="hts">
-    ${fila(bi('EMPIEZAN LAS EVALS','EVALS START'), pz.ini,
-        pz.dEval + bi(' días hábiles · +$3,000 por cuenta',' business days · +$3,000 per account'))}
-    ${fila(bi('EMPIEZA EL COLCHÓN','BUFFER STARTS'), pz.bufIni,
-        pz.dBuf + bi(' días hábiles a ',' business days at ') + fmt$(pz.obj) + bi(' diarios',' a day'))}
-    ${fila(bi('LLEGA A $52,100','REACHES $52,100'), pz.bufFin,
-        bi('colchón completo: de aquí se puede cobrar','buffer complete: from here you can withdraw'))}
-    ${pz.pagos.map((fe, k) => fila(
-        k === 0 ? bi('PAGO MÁXIMO','MAX PAYOUT') : (ORD[k] || (k+1)) + bi(' PAGO',' PAYOUT'),
-        fe,
-        fmt$(pz.entra) + (k === 0 ? ' — ' + fmt$(pz.tramo) + ' × ' + pz.ctas + bi(' cuentas',' accounts') : '')
+    ${pz.arriba ? fila(bi('YA COBRANDO','ALREADY PAYING'), pz.ini,
+        pz.arriba + bi(' cuentas arriba del colchón: cobran cada ',' accounts above the buffer: they pay every ')
+          + pz.dPago + bi(' días hábiles sin esperar a nadie',' business days without waiting for anyone'), 'ya') : ''}
+    ${pz.nuevas ? fila(bi('EMPIEZAN LAS EVALS','EVALS START'), pz.ini,
+        pz.nuevas + bi(' cuentas nuevas · ',' new accounts · ') + pz.dEval
+          + bi(' días hábiles · +$3,000 cada una',' business days · +$3,000 each')) : ''}
+    ${pz.nuevas ? fila(bi('EMPIEZA EL COLCHÓN','BUFFER STARTS'), pz.bufIni,
+        pz.dBuf + bi(' días hábiles a ',' business days at ') + fmt$(pz.obj) + bi(' diarios',' a day')) : ''}
+    ${pz.nuevas ? fila(bi('LAS NUEVAS SE SUMAN','THE NEW ONES JOIN'), pz.bufFin,
+        bi('colchón completo: de aquí cobran todas','buffer complete: from here they all pay')) : ''}
+    ${pz.pagos.map((p, k) => fila(
+        k === 0 ? bi('PRIMER PAGO','FIRST PAYOUT') : (ORD[k] || (k+1)) + bi(' PAGO',' PAYOUT'),
+        p.fecha,
+        fmt$(p.monto) + ' — ' + fmt$(pz.tramo) + ' × ' + p.ctas + bi(' cuentas',' accounts')
           + (k === pz.pagos.length - 1 ? bi(' — con éste cierra la fase',' — this one closes the phase') : ''),
         'pago')).join('')}
     ${pz.abre ? fila(bi('ABRE LA FASE ' + sig.r, 'PHASE ' + sig.r + ' OPENS'), pz.abre.fecha,
@@ -12454,15 +12478,7 @@ function pistaFase(f, N, py, i){
       <div class="pf-b"><i style="width:${p}%"></i><span class="pf-yo" style="left:${p}%"></span></div>
       <div class="pf-e"><span>${fmt$(f.de)}</span><span>${fmt$(f.a)}</span></div>
     </div>
-    <div class="pf-f">${(() => {
-      /* la MISMA fecha que el encabezado y que las fechas de la fase: antes
-         decía el mes de la proyección y abajo el día exacto, en la misma vista */
-      const pz = plazoPagos(f, i);
-      if(pz && pz.abre) return `<b>${fmtFecha(pz.abre.k)}</b><em>${bi('cierra la fase','closes the phase')}</em>`;
-      return py && py.alcanza
-        ? `<b>${fechaCorta(py.hasta)}</b><em>${enMeses(py.meses)} ${bi('a este ritmo','at this pace')}</em>`
-        : `<b>—</b><em>${bi('sin ritmo medible','no measurable pace')}</em>`;
-    })()}</div>
+
   </div>`;
 }
 
