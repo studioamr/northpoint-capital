@@ -3766,7 +3766,7 @@ const PLAN_FASES = [
     /* Las tres etapas de UNA cuenta, con los números que André fijó el 30-jul.
        No es teoría: es el ciclo que ya corre en RED PILL 1. */
     etapas:[
-      { n:'1', t:['Evals','Evals'], de:50000, a:53000, riesgo:'ALL IN', obj:'+$3,000', dias:'3–5 días',
+      { n:'1', t:['Evals','Evals'], de:50000, a:53000, riesgo:'$100/día', obj:'$200/día', dias:'15 días',
         nota:['5 Red Pill de Tradeify ($400 USD · $8,175 MXN) · ORB en la sesión de NY',
               '5 Tradeify Red Pill ($400 USD · $8,175 MXN) · ORB on the NY session'] },
       { n:'2', t:['Buffer','Buffer'], de:50000, a:52100, riesgo:'$100/día', obj:'$200/día', dias:'10–20 días',
@@ -3858,7 +3858,7 @@ const PLAN_FASES = [
   { r:'V', id:'f5', t:'The first million', de:250000, a:1000000, neg:12700,
     ico:'monte', que:'Money starts working harder than you do.',
     ingreso:null, pasivo:3300,
-    haz:['Hold the five $150k accounts at $30,000/mo — that is the ceiling of the desk, and that is fine.',
+    haz:['Hold the ten accounts at $30,000/mo — that is the ceiling of the desk, and that is fine.',
          'Grow the businesses to $8–15k/mo: from here the engine is them, not the desk.',
          'Hold one or two rentals paying $600–1,800/mo between them.',
          'Send 35% of every dollar to the portfolio until it holds $400,000 — it now pays ~$3,300/mo on its own.',
@@ -12363,7 +12363,10 @@ function plazoPagos(f, i){
      Se calcula, no se teclea. */
   const entra = ctas * tramo;
   const falta = Math.max(0, f.a - patrimonio().total);
-  const nPagos = Math.max(1, Math.ceil(falta / entra));
+  /* Tope duro. Sin él, una fase lejana (de $15M a $50M con tres cuentas) pedía
+     16,667 pagos y el bucle de días caminaba tres siglos día por día: la app se
+     congelaba. Doce pagos es más de lo que cualquier fase muestra. */
+  const nPagos = Math.max(1, Math.min(12, Math.ceil(falta / entra)));
   const pagos = [];
   for(let k = 0; k < nPagos; k++)
     pagos.push(masHabiles(k ? pagos[k-1] : bufFin, dPago));
@@ -12674,16 +12677,12 @@ function renderMetas(){
         ${f.haz.map(hz => { const [cabeza, resto] = parteHaz(hz);
           return `<li><strong>${esc(cabeza)}</strong>${resto ? `<span>${esc(resto)}</span>` : ''}</li>`; }).join('')}
       </ol>
-      ${f.costoIni ? `<p class="ini-l micro">${bi('Arrancar cuesta ','Starting costs ')}
-        <b>${fmt$(f.costoIni.reduce((a,[,v]) => a + v, 0))}</b> — ${f.costoIni.map(([et, v]) =>
-          loc(et) + ' ' + fmt$(v)).join(' · ')}.</p>` : ''}`;
+`;
 
     const cc = cartillaFase(f, i);
     const entra = cc.pagoMes + (f.neg || 0);
     const secProgreso = `
       ${pistaFase(f, N, py)}
-      <span class="fl" style="margin-top:20px">${bi('El mes','The month')}</span>
-      ${barraMes(entra, gTot)}
       <div class="esp">
         <span><em>${bi('CUENTAS','ACCOUNTS')}</em><b>${cc.ctas ? cc.ctas + ' × ' + fmtCorto(cc.tam) : '—'}</b></span>
         <span><em>${bi('PORTAFOLIO','PORTFOLIO')}</em><b>${cc.portMin ? fmt$(cc.portMin) : '—'}</b></span>
