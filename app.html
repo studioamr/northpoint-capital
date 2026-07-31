@@ -1831,10 +1831,6 @@ button.tag.quemada{text-decoration:line-through;text-decoration-color:var(--down
 .ps-carrera{display:flex;align-items:baseline;gap:10px;margin-bottom:8px}
 .ps-carrera b{font-size:26px;font-family:var(--mono);letter-spacing:-.02em}
 .ps-carrera span{font-family:var(--mono);font-size:10px;color:var(--faint)}
-.ps-rol{padding:10px 0;border-bottom:1px solid var(--line-soft)}
-.ps-rol:last-child{border-bottom:0;padding-bottom:0}
-.ps-rol>b{font-size:12.5px}
-.ps-rol p{font-size:11.5px;color:var(--faint);line-height:1.6;margin-top:3px}
 /* la ✕ de una marca: discreta, dentro de la propia etiqueta */
 .vio-tag,.vio-off{display:inline-flex;align-items:center;gap:5px}
 .vio-x{background:none;border:0;color:inherit;opacity:.55;cursor:pointer;padding:0 1px;
@@ -5034,6 +5030,26 @@ window.perfilSocio = function(uid){
   /* sus números de la mesa */
   const c = carreraDe(uid);
 
+  /* sus balances de trader: futuros y live sí son suyos (las cuentas llevan
+     owner); el portafolio no tiene dueño — es de la mesa entera y se dice */
+  const fondSuyas = suyas.filter(a => esViva(a));
+  const futBal  = fondSuyas.reduce((x, a) => x + carreraCuenta(a).balance, 0);
+  const futBase = fondSuyas.reduce((x, a) => x + (a.start || 0), 0);
+  const liveSuyas = S.accounts.filter(a => (a.owner || 'andre.np') === uid && esLive(a) && esViva(a));
+  const liveBal  = liveSuyas.reduce((x, a) => x + saludDe(a).balance, 0);
+  const liveBase = liveSuyas.reduce((x, a) => x + (a.start || 0), 0);
+  const portBal  = (S.positions || []).reduce((x, q) => x + valuar(q).valor, 0);
+  const portBase = (S.positions || []).reduce((x, q) => x + (q.capital || 0), 0);
+  const balRow = (et, v, base, hay, nota) => {
+    const g = v - base;
+    const tono = !hay ? '' : g > 0 ? 'up' : g < 0 ? 'down' : '';
+    return `<div class="rt-cta">
+      <div><b>${et}</b><p class="micro" style="margin-top:2px">${nota}</p></div>
+      <div style="text-align:right"><b class="${tono}">${hay ? fmt$(v) : '—'}</b>
+        ${hay && base > 0 ? `<p class="micro ${tono}" style="margin-top:2px">${fmt$(g, true)}</p>` : ''}</div>
+    </div>`;
+  };
+
   /* su disciplina: sus trades contra el plan de cada día */
   const porDia = {};
   (S.trades || []).filter(t => t.por === uid).forEach(t => {
@@ -5103,10 +5119,16 @@ window.perfilSocio = function(uid){
     </div>` : ''}
 
     <div class="rt-sec">
-      <p class="micro">${esYo ? bi('El cargo que respondes','The seat you answer for') : bi('El cargo que responde','The seat they answer for')}</p>
-      ${(p.roles || []).map(r => { const R = ROLES[r]; if(!R) return '';
-        return `<div class="ps-rol"><b>${esc(R.t)}</b> <span class="micro" style="margin-left:6px">${r}</span>
-          ${(R.d || []).map(d => `<p>· ${esc(d)}</p>`).join('')}</div>`; }).join('')}
+      <p class="micro">${esYo ? bi('Tus balances','Your balances') : bi('Sus balances','Their balances')}</p>
+      ${balRow(bi('FUTUROS','FUTURES'), futBal, futBase, fondSuyas.length,
+          fondSuyas.length
+            ? fondSuyas.length + (fondSuyas.length === 1 ? bi(' cuenta fondeada viva',' live funded account') : bi(' cuentas fondeadas vivas',' live funded accounts'))
+            : bi('sin cuentas fondeadas','no funded accounts'))}
+      ${balRow('LIVE', liveBal, liveBase, liveSuyas.length,
+          liveSuyas.length ? bi('capital propio: ','own capital: ') + fmt$(liveBase) : bi('sin cuenta propia','no own account'))}
+      ${balRow(bi('PORTAFOLIO','PORTFOLIO'), portBal, portBase, (S.positions || []).length,
+          ((S.positions || []).length ? bi('sobre ','on ') + fmt$(portBase) + bi(' aportados',' contributed') + ' · ' : '')
+            + bi('de la mesa entera, no individual','the whole desk, not individual'))}
     </div>`;
 
   openOv('ovPerfilSocio');
