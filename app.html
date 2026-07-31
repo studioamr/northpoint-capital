@@ -12227,7 +12227,7 @@ function ticketFase(f, i){
    se lleva el excedente, la subida del colchón y el diente de sierra de los
    pagos contra el piso congelado. Las cifras salen del catálogo, no del aire:
    examen $3,000 · colchón maxDD+$100 · tramo de pago $1,000. */
-function vidaCuentaSVG(){
+function vidaCuentaSVG(nPagos = 1){
   const T = 50000, EX = 3000, COL = 2100, PAG = 1000;
   const piso = T + 100, buf = T + COL, top = T + COL + PAG, ex = T + EX;
   const vmin = T - 400, vmax = top + 300, R = vmax - vmin;
@@ -12245,13 +12245,24 @@ function vidaCuentaSVG(){
     }
     return pts;
   };
+  /* El ancho de cada tramo es su tiempo real, no un reparto bonito: el examen
+     son 15 días hábiles, el colchón 11 y cada pago 5. Así el dibujo no miente
+     ni en el eje del dinero ni en el del tiempo. */
+  const dE = 15, dB = 11, dP = 5;
+  const nP = Math.max(1, Math.min(4, nPagos));
+  const tot = dE + dB + dP * nP;
+  const fE = dE / tot, fB = (dE + dB) / tot;
+  const GAP = .03;                                   // el hueco del RESET
   const ola = [0, .5, -.35, .8, -.2, .6, -.5, .35];
-  const evalPts = paso(x(0), x(.26), T, ex, 8, ola);
-  const bufPts  = paso(x(.30), x(.62), T, buf, 12, ola);
-  /* el diente de sierra: sube $1,000, cobra, vuelve al colchón */
+  const evalPts = paso(x(0), x(fE - GAP), T, ex, 8, ola);
+  const bufPts  = paso(x(fE + GAP*.4), x(fB), T, buf, 12, ola);
+  /* El diente de sierra: sube $1,000, cobra, vuelve al colchón. Se dibujan los
+     pagos que ESTA fase necesita —uno en la primera— porque pintar tres cuando
+     sólo se ocupa uno enseñaba un plan que no es el de la fase. */
+  const n = nP, ancho = (1 - fB) / n;
   const sierra = [];
-  for(let c = 0; c < 3; c++){
-    const a = .64 + c * .12, b = a + .085;
+  for(let c = 0; c < n; c++){
+    const a = fB + c * ancho, b = a + ancho * (n === 1 ? .8 : .72);
     sierra.push([x(a), buf], [x(b), top], [x(b), buf]);
   }
   const L = pts => pts.map((p, k) => `${k ? 'L' : 'M'}${p[0].toFixed(1)},${y(p[1]).toFixed(1)}`).join(' ');
@@ -12269,17 +12280,18 @@ function vidaCuentaSVG(){
     <text x="${X1}" y="${y(piso) + 13}" class="vc-y piso" text-anchor="end">${bi('PISO CONGELADO','FROZEN FLOOR')} ${fmt$(piso)}</text>
 
     <path d="${L(evalPts)}" class="vc-linea eval"/>
-    <line x1="${x(.26)}" y1="${y(ex)}" x2="${x(.26)}" y2="${y(T)}" class="vc-reset"/>
-    <circle cx="${x(.26)}" cy="${y(ex)}" r="3.5" class="vc-pt ok"/>
+    <line x1="${x(fE - GAP)}" y1="${y(ex)}" x2="${x(fE - GAP)}" y2="${y(T)}" class="vc-reset"/>
+    <circle cx="${x(fE - GAP)}" cy="${y(ex)}" r="3.5" class="vc-pt ok"/>
     <path d="${L(bufPts)}" class="vc-linea"/>
-    <circle cx="${x(.62)}" cy="${y(buf)}" r="3.5" class="vc-pt ok"/>
+    <circle cx="${x(fB)}" cy="${y(buf)}" r="3.5" class="vc-pt ok"/>
     <path d="${L(sierra)}" class="vc-linea pago"/>
-    ${[0,1,2].map(c => `<circle cx="${x(.64 + c*.12 + .085)}" cy="${y(top)}" r="3" class="vc-pt pago"/>`).join('')}
+    ${Array.from({length:n}, (_, c) => `<circle cx="${x(fB + c*ancho + ancho*(n===1?.8:.72))}" cy="${y(top)}" r="3" class="vc-pt pago"/>`).join('')}
 
     ${eti(x(.02), ex, bi('① EXAMEN +$3,000','① EVAL +$3,000'))}
-    ${eti(x(.265), ex, bi('RESET','RESET'), 'reset')}
-    ${eti(x(.31), buf, bi('② COLCHÓN +$2,100','② BUFFER +$2,100'))}
-    ${eti(x(.645), top, bi('③ PAGOS · $1,000 cada vez','③ PAYOUTS · $1,000 each'))}
+    ${eti(x(fE - GAP + .005), ex, bi('RESET','RESET'), 'reset')}
+    ${eti(x(fE + GAP*.4), buf, bi('② COLCHÓN +$2,100','② BUFFER +$2,100'))}
+    ${eti(x(Math.min(fB + .01, .72)), top, n === 1 ? bi('③ PAGO MÁXIMO · $1,000 por cuenta','③ MAX PAYOUT · $1,000 per account')
+                                   : bi('③ PAGOS · $1,000 cada vez','③ PAYOUTS · $1,000 each'))}
   </svg>`;
 }
 
@@ -12649,7 +12661,7 @@ function renderMetas(){
       ${f.etapas ? `<div class="tj-graf">
         <div class="tj-gh"><span class="fl" style="margin:0">${bi('La vida de una cuenta','The life of an account')}</span>
           <em class="micro">${bi('de $50,000 al primer pago','from $50,000 to the first payout')}</em></div>
-        ${vidaCuentaSVG()}
+        ${vidaCuentaSVG((plazoPagos(f, i) || {}).nPagos || 1)}
         <div class="vc-pie">
           ${f.etapas.map(e => `<span>
             <u>${e.n}</u><b>${loc(e.t)}</b>
@@ -12725,7 +12737,13 @@ function renderMetas(){
         </span>
         <span class="fase-gate"><em>${bi('entra al mes','comes in a month')}</em>
           <b>${fmt$(cc.pagoMes + (f.neg || 0))}</b>
-          ${py.alcanza ? `<i>${bi('cierra ','closes ')}${fechaCorta(py.hasta)} · ${enMeses(py.meses)}</i>` : ''}</span>
+          ${(() => {
+            /* la fecha del encabezado sale del cálculo en días hábiles, igual
+               que la lista de fechas: decían meses distintos en la misma tarjeta */
+            const pz = plazoPagos(f, i);
+            if(pz && pz.abre) return `<i>${bi('cierra ','closes ')}${fmtFecha(pz.abre.k)}</i>`;
+            return py.alcanza ? `<i>${bi('cierra ','closes ')}${fechaCorta(py.hasta)} · ${enMeses(py.meses)}</i>` : '';
+          })()}</span>
       </div>
       <div class="tj-body">
         <div class="bar" style="margin:0 8px 16px"><i style="width:${pct}%"></i></div>
