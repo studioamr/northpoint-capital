@@ -1383,43 +1383,7 @@ button.tag.quemada{text-decoration:line-through;text-decoration-color:var(--down
   .ht{grid-template-columns:1fr auto;gap:4px 12px}
   .ht-e{grid-column:1} .ht b{grid-column:2;text-align:right} .ht-d{grid-column:1/-1}
 }
-/* ── EL CALENDARIO ── cada día con su palabra */
 .pgs{margin-top:8px}
-.pgs-n{margin-top:14px;color:var(--faint);text-transform:none;letter-spacing:.02em;line-height:1.6}
-.cl{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:20px}
-.cl-t{display:block;font-family:var(--mono);font-size:9px;letter-spacing:.16em;text-transform:uppercase;
-  color:var(--faint);margin-bottom:8px}
-.cl-g{display:grid;grid-template-columns:repeat(7,1fr);gap:3px}
-.cl-h{font-family:var(--mono);font-size:8.5px;color:var(--faint);text-align:center;padding-bottom:4px}
-.cl-v{aspect-ratio:1}
-.cl-d{position:relative;aspect-ratio:1;display:flex;flex-direction:column;align-items:center;
-  justify-content:center;gap:1px;border-radius:7px;border:1px solid transparent}
-.cl-d em{font-style:normal;font-family:var(--mono);font-size:10.5px;color:var(--dim)}
-.cl-d i{font-style:normal;font-family:var(--mono);font-size:6.5px;letter-spacing:.06em;
-  line-height:1;color:var(--faint)}
-.cl-d.fds em{opacity:.3}
-.cl-d.hoy{border-color:var(--line)}
-.cl-d.hoy em{color:var(--txt);font-weight:600}
-/* evaluación: tenue. colchón: más presente. pago: verde. abre: verde sólido */
-.cl-d.eval{background:var(--w04)}
-.cl-d.eval em{color:var(--dim)}
-.cl-d.buf{background:var(--w09)}
-.cl-d.buf em{color:var(--txt)}
-.cl-d.listo{background:var(--w04)}
-.cl-d.hito{border-color:var(--w25)}
-.cl-d.hito em{color:var(--txt);font-weight:600}
-.cl-d.hito i{color:var(--txt)}
-.cl-d.pago{background:color-mix(in srgb,var(--up) 18%,transparent);
-  border-color:color-mix(in srgb,var(--up) 45%,transparent)}
-.cl-d.pago em{color:var(--up);font-weight:700}
-.cl-d.pago i{color:var(--up)}
-.cl-d.abre{background:var(--up);border-color:var(--up)}
-.cl-d.abre em,.cl-d.abre i{color:var(--bg)}
-.cl-d.abre em{font-weight:700}
-.cl-ley{display:flex;flex-wrap:wrap;gap:8px 18px;margin-top:14px;padding-top:12px;
-  border-top:1px solid var(--line-soft)}
-.cl-ley span{display:flex;align-items:center;gap:7px;font-size:10.5px;color:var(--faint)}
-.cl-ley .cl-d{width:14px;height:14px;aspect-ratio:auto;border-radius:4px;flex:none}
 /* el día en que se abre la fase, destacado en la cabecera */
 .pgs-a .abre b{color:var(--txt)}
 .pgs-a .abre em{color:var(--up)}
@@ -12075,8 +12039,19 @@ function proyeccion(){
   let anio = hoy.getFullYear(), mes = hoy.getMonth() + 1;
   let pat = patrimonio().total, m = 0;
   const out = [];
+  const hoyN = pat;                                   // tu patrimonio de verdad
   PLAN_FASES.forEach((f, i) => {
-    if(pat >= f.a){ out.push({ hecha:true }); return; }   // ya la pasaste
+    /* «hecha» es sólo lo que YA pasaste con dinero real. Si la simulación se
+       pasó de largo (un mes de $30,000 salta dos puertas de una), la fase
+       siguiente no está «hecha»: se abre ese mismo mes, y eso hay que decirlo
+       con su fecha en vez de dejar el renglón mudo. */
+    if(hoyN >= f.a){ out.push({ hecha:true }); return; }
+    if(pat >= f.a){
+      out.push({ hecha:false, alcanza:true, desde:{ anio, mes }, hasta:{ anio, mes }, meses:0,
+                 edad0: Math.floor(anio + (mes - 1) / 12 - NACIMIENTO),
+                 edad1: Math.floor(anio + (mes - 1) / 12 - NACIMIENTO) });
+      return;
+    }
     const cc = cartillaFase(f, i);
     const mesa = cc.pagoMes;
     const neg  = f.neg || 0;
@@ -12367,53 +12342,6 @@ function plazoPagos(f, i){
   return { dias, ini, evalFin, bufIni, bufFin, pago1, pago2, pago3, abre,
            obj, tramo, ctas, entra, dEval, dBuf, dPago,
            reales: S.accounts.filter(a => !esLive(a) && !esSim(a) && reglasDe(a) && esViva(a)).length };
-}
-
-/* El calendario: del lunes de arranque al segundo pago, ni un día más. Cada
-   celda dice qué es con su palabra. */
-function calendarioHTML(pz){
-  if(!pz || !pz.dias.length) return '';
-  const hoy = new Date(); hoy.setHours(0,0,0,0);
-  const mapa = {}; pz.dias.forEach(d => mapa[d.k] = d);
-  const desde = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
-  const fin = pz.abre ? pz.abre.fecha : pz.pago3;
-  const meses = (fin.getFullYear() - desde.getFullYear()) * 12
-              + (fin.getMonth() - desde.getMonth()) + 1;
-  const DOW = bi(['L','M','M','J','V','S','D'], ['M','T','W','T','F','S','S']);
-  /* los días entre el colchón y el pago no son «nada»: son el tramo de $1,000
-     que hay que juntar para poder cobrar. Se dicen. */
-  const ETI = { eval:bi('EVAL','EVAL'), buf:bi('COLCHÓN','BUFFER'),
-                listo:bi('TRAMO','STRETCH'), pago:bi('PAGO','PAYOUT') };
-  const bloques = [];
-  for(let m = 0; m < meses; m++){
-    const base = new Date(desde.getFullYear(), desde.getMonth() + m, 1);
-    const dim = new Date(base.getFullYear(), base.getMonth() + 1, 0).getDate();
-    const off = (base.getDay() + 6) % 7;
-    const celdas = [];
-    for(let k = 0; k < off; k++) celdas.push('<span class="cl-v"></span>');
-    for(let d = 1; d <= dim; d++){
-      const fe = new Date(base.getFullYear(), base.getMonth(), d);
-      const h = mapa[claveDia(fe)];
-      const cls = [];
-      if(FIN_DE_SEMANA(fe)) cls.push('fds');
-      if(+fe === +hoy) cls.push('hoy');
-      if(h){
-        cls.push(h.tipo);
-        if(h.hito) cls.push('hito');
-        if(h.abre) cls.push('abre');
-      }
-      const eti = !h ? '' : h.tipo === 'pago'
-        ? `<i>${fmtCorto(h.monto)}</i>`
-        : h.hito ? `<i>${h.hito === 'eval' ? bi('PASA','PASSED') : '$52,100'}</i>`
-        : `<i>${ETI[h.tipo]}</i>`;
-      celdas.push(`<span class="cl-d ${cls.join(' ')}"><em>${d}</em>${eti}</span>`);
-    }
-    bloques.push(`<div class="cl-m">
-      <span class="cl-t">${MESESL[idi()][base.getMonth()]} ${base.getFullYear()}</span>
-      <div class="cl-g">${DOW.map(x => `<span class="cl-h">${x}</span>`).join('')}${celdas.join('')}</div>
-    </div>`);
-  }
-  return `<div class="cl">${bloques.join('')}</div>`;
 }
 
 /* Los cinco hitos en palabras, arriba del calendario: qué día empieza cada
@@ -12723,13 +12651,6 @@ function renderMetas(){
         return `<span class="fl" style="margin-top:20px">${bi('Las fechas de esta fase','This phase\'s dates')}</span>
           <div class="pgs">
             ${hitosHTML(pz, f, i)}
-            ${calendarioHTML(pz)}
-            <div class="cl-ley">
-              <span><i class="cl-d eval"></i>${bi('evaluación','evaluation')}</span>
-              <span><i class="cl-d buf"></i>${bi('colchón','buffer')}</span>
-              <span><i class="cl-d pago"></i>${bi('pago','payout')}</span>
-              <span><i class="cl-d abre"></i>${bi('abre la fase siguiente','next phase opens')}</span>
-            </div>
           </div>`;
       })()}
 `;
