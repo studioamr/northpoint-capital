@@ -1353,18 +1353,49 @@ button.tag.quemada{text-decoration:line-through;text-decoration-color:var(--down
   .tj-graf{overflow-x:auto;padding:14px 12px 10px}
   .vc{min-width:520px}
 }
-/* las tres etapas, en tarjetas */
-.etp{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:14px}
-.etp-i{border:1px solid var(--line-soft);border-radius:12px;padding:13px 14px;background:var(--bg);min-width:0}
-.etp-n{display:inline-block;font-size:10px;color:var(--accent);letter-spacing:.1em}
-.etp-i>b{display:block;font-size:13px;margin-top:2px}
-.etp-i>em{display:block;font-style:normal;font-family:var(--mono);font-size:10px;color:var(--faint);margin-top:1px}
-.etp-r{display:flex;gap:12px;margin:10px 0 8px;flex-wrap:wrap}
-.etp-r span{display:flex;flex-direction:column;gap:1px}
-.etp-r u{text-decoration:none;font-family:var(--mono);font-size:8px;letter-spacing:.12em;color:var(--faint)}
-.etp-r i{font-style:normal;font-family:var(--mono);font-size:11.5px}
-.etp-i>p{font-size:10.5px;color:var(--faint);line-height:1.5}
-@media(max-width:720px){ .etp{grid-template-columns:1fr} }
+/* el pie del dibujo: las tres etapas en una tira, sin tarjetas */
+.vc-pie{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;margin:10px -16px -6px;
+  background:var(--line-soft);border-top:1px solid var(--line-soft)}
+.vc-pie>span{background:var(--bg);padding:10px 14px;display:flex;align-items:baseline;
+  gap:8px;flex-wrap:wrap;min-width:0}
+.vc-pie u{text-decoration:none;font-family:var(--mono);font-size:9px;color:var(--accent)}
+.vc-pie b{font-size:12px}
+.vc-pie i{font-style:normal;font-family:var(--mono);font-size:10px;color:var(--faint)}
+.vc-pie i.up{color:var(--up)} .vc-pie i.down{color:var(--down)}
+@media(max-width:720px){ .vc-pie{grid-template-columns:1fr} }
+/* el costo de arranque, en una línea */
+.ini-l{margin-top:14px;color:var(--faint);text-transform:none;letter-spacing:.02em;line-height:1.6}
+.ini-l b{color:var(--txt);font-family:var(--mono)}
+/* ── EL CALENDARIO DE PAGOS ── */
+.pgs{margin-top:8px}
+.pgs-a{display:flex;gap:24px;flex-wrap:wrap;padding:14px 16px;border:1px solid var(--line-soft);
+  border-radius:12px;background:var(--w02);margin-bottom:14px}
+.pgs-a span{display:flex;flex-direction:column;gap:2px;min-width:0}
+.pgs-a .der{margin-left:auto;text-align:right}
+.pgs-a em{font-style:normal;font-family:var(--mono);font-size:8.5px;letter-spacing:.14em;color:var(--faint)}
+.pgs-a b{font-family:var(--mono);font-size:19px;font-weight:500;color:var(--up)}
+.pgs-a .der b{font-size:13px;color:var(--txt)}
+.pgs-a i{font-style:normal;font-size:11px;color:var(--faint)}
+.pgs-n{margin-top:12px;color:var(--faint);text-transform:none;letter-spacing:.02em;line-height:1.6}
+.cl{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:18px}
+.cl-t{display:block;font-family:var(--mono);font-size:9px;letter-spacing:.16em;text-transform:uppercase;
+  color:var(--faint);margin-bottom:8px}
+.cl-g{display:grid;grid-template-columns:repeat(7,1fr);gap:3px}
+.cl-h{font-family:var(--mono);font-size:8.5px;color:var(--faint);text-align:center;padding-bottom:4px}
+.cl-v{aspect-ratio:1}
+.cl-d{position:relative;aspect-ratio:1;display:flex;flex-direction:column;align-items:center;
+  justify-content:center;gap:1px;border-radius:7px;border:1px solid transparent}
+.cl-d em{font-style:normal;font-family:var(--mono);font-size:10.5px;color:var(--dim)}
+.cl-d i{font-style:normal;font-family:var(--mono);font-size:7.5px;color:var(--up);line-height:1}
+.cl-d.fds em{color:var(--faint);opacity:.4}
+.cl-d.pas em{opacity:.35}
+.cl-d.hoy{border-color:var(--line)}
+.cl-d.hoy em{color:var(--txt);font-weight:600}
+.cl-d.hito{background:var(--w04)}
+.cl-d.hito em{color:var(--txt)}
+.cl-d.pago{background:color-mix(in srgb,var(--up) 14%,transparent);
+  border-color:color-mix(in srgb,var(--up) 40%,transparent)}
+.cl-d.pago em{color:var(--up);font-weight:600}
 /* ② la barra del mes: entra / sale / queda */
 .bm{margin-top:8px}
 .bm-b{display:flex;height:10px;border-radius:99px;overflow:hidden;background:var(--w04)}
@@ -12215,6 +12246,117 @@ function vidaCuentaSVG(){
   </svg>`;
 }
 
+
+/* ══ EL CALENDARIO DE PAGOS ══
+   «Dos meses» no dice nada. Estas son las FECHAS: cuándo se pasa el examen,
+   cuándo queda el colchón y qué día cae cada payout, de cuánto.
+
+   Cómo se calcula, sin adivinar nada:
+     · cada cuenta avanza su objetivo diario en cada día hábil (fines de semana
+       no cuentan: el mercado está cerrado);
+     · lo que le falta a cada cuenta sale de carreraCuenta — si ya tienes
+       cuentas registradas, el calendario arranca de DONDE VAS, no de cero;
+     · si todavía no hay cuentas, se proyecta la flota que pide la fase;
+     · cada $1,000 por encima del colchón es un payout (Tradeify paga a diario),
+       así que a $200 al día cae uno cada 5 días hábiles.
+   Es un plan de fechas, no una promesa: un día rojo recorre todo a la derecha. */
+const FIN_DE_SEMANA = d => d.getDay() === 0 || d.getDay() === 6;
+function diaHabil(n){                     // el n-ésimo día hábil a partir de hoy
+  const d = new Date(); d.setHours(12,0,0,0);
+  let k = 0;
+  while(k < n){ d.setDate(d.getDate() + 1); if(!FIN_DE_SEMANA(d)) k++; }
+  return d;
+}
+const claveDia = d => d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0')
+                    + '-' + String(d.getDate()).padStart(2,'0');
+
+function plazoPagos(f, i, cuantos = 6){
+  const cc = cartillaFase(f, i);
+  const obj = cc.objDia || 200, tramo = cc.tramo || 1000;
+  if(!obj || !cc.ctas) return null;
+  const reales = S.accounts.filter(a => !esLive(a) && !esSim(a) && reglasDe(a) && esViva(a));
+  const hitos = [];
+
+  const deUnaCuenta = (alias, faltaEval, faltaBuf, hechos) => {
+    let d = 0;
+    if(faltaEval > 0){ d += Math.ceil(faltaEval / obj); hitos.push({ d, tipo:'eval', alias }); }
+    if(faltaBuf  > 0){ d += Math.ceil(faltaBuf  / obj); hitos.push({ d, tipo:'buf',  alias }); }
+    for(let k = 0; k < cuantos; k++){
+      d += Math.ceil(tramo / obj);
+      hitos.push({ d, tipo:'pago', alias, monto: tramo, n: hechos + k + 1 });
+    }
+  };
+
+  if(reales.length){
+    reales.forEach(a => {
+      const c = carreraCuenta(a);
+      const faltaEval = c.pasoEval ? 0 : Math.max(0, c.target - Math.max(0, c.p));
+      const faltaBuf  = c.pasoBuffer ? 0 : Math.max(0, c.buffer - Math.max(0, c.pasoEval ? c.picoDesp : 0));
+      const yaPagos = c.pasoPago ? 1 : 0;
+      deUnaCuenta(a.alias, faltaEval, faltaBuf, yaPagos);
+    });
+  } else {
+    /* todavía no hay cuentas: se proyecta la flota que pide la fase, todas
+       arrancando hoy — por eso caen juntas */
+    const R = { target:3000, buffer:2100 };
+    for(let n = 0; n < cc.ctas; n++) deUnaCuenta(null, R.target, R.buffer, 0);
+  }
+
+  /* se agrupan por día: lo que importa es qué cae ESE día en toda la mesa */
+  const porDia = {};
+  hitos.forEach(x => {
+    const d = diaHabil(x.d), k = claveDia(d);
+    porDia[k] = porDia[k] || { fecha:d, pagos:0, monto:0, evals:0, bufs:0 };
+    if(x.tipo === 'pago'){ porDia[k].pagos++; porDia[k].monto += x.monto; }
+    else if(x.tipo === 'eval') porDia[k].evals++;
+    else porDia[k].bufs++;
+  });
+  const dias = Object.entries(porDia).map(([k, v]) => ({ k, ...v }))
+                     .sort((a,b) => a.fecha - b.fecha);
+  const pagos = dias.filter(d => d.pagos);
+  return { dias, pagos, obj, tramo, ctas: cc.ctas, reales: reales.length,
+           porPago: (reales.length || cc.ctas) * tramo, diasPorPago: Math.ceil(tramo / obj) };
+}
+
+/* El calendario: los meses que hacen falta para ver los primeros pagos, con
+   los días marcados. Los sábados y domingos van apagados porque no se opera. */
+function calendarioHTML(pz, verPagos = 3){
+  if(!pz || !pz.dias.length) return '';
+  const hoy = new Date(); hoy.setHours(0,0,0,0);
+  /* el calendario no puede ser de dos meses fijos: si el primer payout cae en
+     septiembre y sólo se pintan julio y agosto, el usuario no ve NADA marcado.
+     Se estira hasta el mes del tercer pago (con tope de 5 meses). */
+  const ultimo = (pz.pagos[Math.min(verPagos, pz.pagos.length) - 1] || pz.dias[pz.dias.length-1]).fecha;
+  const meses = Math.min(5, Math.max(1,
+    (ultimo.getFullYear() - hoy.getFullYear()) * 12 + (ultimo.getMonth() - hoy.getMonth()) + 1));
+  const mapa = {}; pz.dias.forEach(d => mapa[d.k] = d);
+  const DOW = bi(['L','M','M','J','V','S','D'], ['M','T','W','T','F','S','S']);
+  const bloques = [];
+  for(let m = 0; m < meses; m++){
+    const base = new Date(hoy.getFullYear(), hoy.getMonth() + m, 1);
+    const dim = new Date(base.getFullYear(), base.getMonth() + 1, 0).getDate();
+    const off = (base.getDay() + 6) % 7;                    // lunes primero
+    const celdas = [];
+    for(let k = 0; k < off; k++) celdas.push('<span class="cl-v"></span>');
+    for(let d = 1; d <= dim; d++){
+      const f = new Date(base.getFullYear(), base.getMonth(), d);
+      const k = claveDia(f), h = mapa[k];
+      const cls = [FIN_DE_SEMANA(f) ? 'fds' : '', f < hoy ? 'pas' : '',
+                   +f === +hoy ? 'hoy' : '',
+                   h ? (h.pagos ? 'pago' : 'hito') : ''].filter(Boolean).join(' ');
+      celdas.push(`<span class="cl-d ${cls}"${h ? ` title="${h.pagos
+          ? bi('Payout de ','Payout of ') + fmt$(h.monto)
+          : (h.evals ? h.evals + bi(' evaluación(es) pasada(s)',' evaluation(s) passed') : h.bufs + bi(' colchón(es) listo(s)',' buffer(s) ready'))}"` : ''}>
+        <em>${d}</em>${h && h.pagos ? `<i>${fmtCorto(h.monto)}</i>` : ''}</span>`);
+    }
+    bloques.push(`<div class="cl-m">
+      <span class="cl-t">${MESESL[idi()][base.getMonth()]} ${base.getFullYear()}</span>
+      <div class="cl-g">${DOW.map(x => `<span class="cl-h">${x}</span>`).join('')}${celdas.join('')}</div>
+    </div>`);
+  }
+  return `<div class="cl">${bloques.join('')}</div>`;
+}
+
 /* ── ② LA BARRA DEL MES ── entra, sale, queda. Una sola línea en vez de dos
    columnas de listas. */
 function barraMes(entra, sale){
@@ -12460,28 +12602,21 @@ function renderMetas(){
         <div class="tj-gh"><span class="fl" style="margin:0">${bi('La vida de una cuenta','The life of an account')}</span>
           <em class="micro">${bi('de $50,000 al primer pago','from $50,000 to the first payout')}</em></div>
         ${vidaCuentaSVG()}
+        <div class="vc-pie">
+          ${f.etapas.map(e => `<span>
+            <u>${e.n}</u><b>${loc(e.t)}</b>
+            <i class="down">${e.riesgo}</i><i class="up">${e.obj}</i><i>${e.dias}</i>
+          </span>`).join('')}
+        </div>
       </div>` : ''}
-      ${(f.etapas || []).length ? `<div class="etp">
-        ${f.etapas.map(e => `<div class="etp-i">
-          <span class="etp-n mono">${e.n}</span>
-          <b>${loc(e.t)}</b>
-          <em>${fmt$(e.de)} → ${e.a ? fmt$(e.a) : bi('pago','payout')}</em>
-          <div class="etp-r">
-            <span><u>${bi('riesgo','risk')}</u><i class="down">${e.riesgo}</i></span>
-            <span><u>${bi('objetivo','target')}</u><i class="up">${e.obj}</i></span>
-            <span><u>${bi('tiempo','time')}</u><i>${e.dias}</i></span>
-          </div>
-          <p>${loc(e.nota)}</p>
-        </div>`).join('')}
-      </div>` : ''}
-      ${f.costoIni ? `<span class="fl" style="margin-top:20px">${bi('Lo que cuesta arrancar','What it costs to start')}
-        · ${fmt$(f.costoIni.reduce((a,[,v]) => a + v, 0))}</span>
-        ${barraCosto(f.costoIni)}` : ''}
       <span class="fl" style="margin-top:20px">${bi('El playbook','The playbook')}</span>
       <ol class="pb">
         ${f.haz.map(hz => { const [cabeza, resto] = parteHaz(hz);
           return `<li><strong>${esc(cabeza)}</strong>${resto ? `<span>${esc(resto)}</span>` : ''}</li>`; }).join('')}
-      </ol>`;
+      </ol>
+      ${f.costoIni ? `<p class="ini-l micro">${bi('Arrancar cuesta ','Starting costs ')}
+        <b>${fmt$(f.costoIni.reduce((a,[,v]) => a + v, 0))}</b> — ${f.costoIni.map(([et, v]) =>
+          loc(et) + ' ' + fmt$(v)).join(' · ')}.</p>` : ''}`;
 
     const cc = cartillaFase(f, i);
     const entra = cc.pagoMes + (f.neg || 0);
@@ -12497,6 +12632,34 @@ function renderMetas(){
         <span><em>${bi('CUENTA PROPIA','OWN ACCOUNT')}</em><b>${cc.live ? fmt$(cc.live) : '—'}</b></span>
         <span><em>${bi('NEGOCIOS','BUSINESSES')}</em><b>${f.neg ? fmt$(f.neg) : '—'}</b></span>
       </div>
+      ${(() => {
+        /* EL CALENDARIO: «dos meses» no dice nada; estas son las fechas.
+           Cuándo cae el primer payout, de cuánto, y cuándo el siguiente. */
+        const pz = plazoPagos(f, i);
+        if(!pz || !pz.pagos.length) return '';
+        const p1 = pz.pagos[0], p2 = pz.pagos[1];
+        return `<span class="fl" style="margin-top:20px">${bi('Cuándo cae el dinero','When the money lands')}</span>
+          <div class="pgs">
+            <div class="pgs-a">
+              <span><em>${bi('PRIMER PAYOUT','FIRST PAYOUT')}</em>
+                <b>${fmt$(p1.monto)}</b>
+                <i>${fmtFecha(p1.k)}</i></span>
+              ${p2 ? `<span><em>${bi('EL SIGUIENTE','THE NEXT ONE')}</em>
+                <b>${fmt$(p2.monto)}</b>
+                <i>${fmtFecha(p2.k)}</i></span>` : ''}
+              <span class="der"><em>${bi('RITMO','PACE')}</em>
+                <b>${bi('cada ','every ')}${pz.diasPorPago}${bi(' días hábiles',' business days')}</b>
+                <i>${pz.reales
+                  ? pz.reales + (pz.reales === 1 ? bi(' cuenta tuya hoy',' account of yours today') : bi(' cuentas tuyas hoy',' accounts of yours today'))
+                      + (pz.reales < pz.ctas ? bi(' · la fase pide ',' · the phase asks for ') + pz.ctas : '')
+                  : bi('proyección de las ','projection of the ') + pz.ctas + bi(' cuentas del plan',' planned accounts')}</i></span>
+            </div>
+            ${calendarioHTML(pz)}
+            <p class="pgs-n micro">${bi(
+              'Cada día hábil suma ' + fmt$(pz.obj) + ' por cuenta; al juntar ' + fmt$(pz.tramo) + ' sobre el colchón se cobra. Los fines de semana no cuentan y un día rojo recorre todo a la derecha.',
+              'Every business day adds ' + fmt$(pz.obj) + ' per account; once ' + fmt$(pz.tramo) + ' is stacked above the buffer you withdraw. Weekends do not count and one red day pushes everything right.')}</p>
+          </div>`;
+      })()}
       ${cc.genDia ? `<p class="ct-ley micro">${bi(
         'Un día verde son ' + fmt$(cc.objDia) + ' por cuenta. La casa deja cobrar hasta ' + fmt$(cc.tramo) + ' al día por cuenta, así que el plan usa el ' + cc.usoTope + '% del tope: sobra aire. El límite real es que sólo se cobra lo que se generó — retirar de más se come el colchón.',
         'A green day is ' + fmt$(cc.objDia) + ' per account. The house allows up to ' + fmt$(cc.tramo) + ' per account per day, so the plan uses ' + cc.usoTope + '% of the cap: there is room. The real limit is that you only withdraw what you made — taking more eats the cushion.')}</p>` : ''}
