@@ -7835,6 +7835,14 @@ function pintaPill(p){
     p.style.color = online ? 'var(--up)' : 'var(--warn)';
     return;
   }
+  if(cloudErr === 'sin-acceso'){
+    /* caso propio: la sesión es válida, lo que falta es el alta en la mesa */
+    p.textContent = bi('FALTA TU ALTA EN LA MESA', 'NOT ON THE DESK YET');
+    p.style.color = 'var(--warn)';
+    p.title = bi('Tu acceso de nube funciona. Pídele a André que agregue tu correo a la mesa.',
+                 'Your cloud login works. Ask André to add your email to the desk.');
+    return;
+  }
   if(cloudErr){
     p.textContent = tr('nu.errPre') + cloudErr + ' — ' + tr('nu.local');
     p.style.color = 'var(--down)';
@@ -7971,6 +7979,7 @@ const soloMio = e => { const c = {...e}; delete c.session; delete c.profile; del
                        delete c.rev; delete c.claves; delete c.carrera; return c; };
 
 
+let _avisoSinAcceso = false;
 async function cloudPull(){
   if(!cloudOn() || !cloudTok || cloudBusy) return;
   try{
@@ -7980,6 +7989,23 @@ async function cloudPull(){
     if(!r.ok) throw new Error(r.status);
     const filas = await r.json();
     const fila = filas && filas[0];
+    /* La fila id=1 SIEMPRE existe. Si la nube responde 200 con cero filas, no es
+       que la mesa esté vacía: es que la política no deja ver nada a este correo
+       — o sea, el socio se registró pero todavía no está dado de alta en la
+       mesa. Antes esto se veía igual que «trabajando solo» y no había forma de
+       adivinar la causa. */
+    if(!filas.length){
+      cloudErr = 'sin-acceso'; cloudPaint();
+      if(!_avisoSinAcceso){
+        _avisoSinAcceso = true;
+        const mio = (cloudTok && cloudTok.email) || '';
+        try{ toast(bi(
+          'Tu acceso funciona, pero ' + mio + ' todavía no está dado de alta en la mesa. Pídele a André que te agregue: es un renglón de su lado.',
+          'Your login works, but ' + mio + ' is not on the desk yet. Ask André to add you — it is one line on his side.')); }catch(e){}
+      }
+      return;
+    }
+    _avisoSinAcceso = false;
     if(fila && (fila.rev || 0) > (S.revNube || 0)){
       /* Lo que soloMio() quita para no mandarlo a la nube hay que REPONERLO aquí.
          Faltaban dos y costaban caro:
