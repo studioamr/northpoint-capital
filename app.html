@@ -1300,6 +1300,9 @@ button.tag.quemada{text-decoration:line-through;text-decoration-color:var(--down
   text-transform:uppercase;color:var(--faint)}
 .fase-gate b{display:block;font-family:var(--mono);font-size:clamp(19px,4vw,26px);font-weight:300;
   letter-spacing:-.01em;margin-top:3px;color:var(--txt)}
+/* la fecha proyectada: se calcula, no se teclea */
+.fase-gate i{display:block;font-style:normal;font-family:var(--mono);font-size:9.5px;
+  color:var(--faint);margin-top:4px;white-space:nowrap}
 .fase-mes > div{display:flex;align-items:baseline;gap:12px;padding:8px 0;border-bottom:1px solid var(--line-soft)}
 .fase-mes > div:last-child{border-bottom:0}
 .fase-mes em{font-style:normal;font-family:var(--mono);font-size:9.5px;letter-spacing:.11em;
@@ -3667,7 +3670,7 @@ const PRECIOS = { g63: 185000, sf90: 550000, casa: 12000000, yate: 40000000 };
    negocios, rentas, pasivo) y sus COSTOS del mes a ese nivel de vida.
    El ticket es el CÓMO; la cifra de acceso es el CUÁNTO. */
 const PLAN_FASES = [
-  { r:'0', id:'f0', t:'The base', de:0, a:10000, años:'2026 – 2027', edad:'23 – 25',
+  { r:'0', id:'f0', t:'The base', de:0, a:10000, neg:0,
     ico:'semilla', que:'That the system exists — not the money.',
     ingreso:null, pasivo:0,
     /* Las tres etapas de UNA cuenta, con los números que André fijó el 30-jul.
@@ -3702,7 +3705,7 @@ const PLAN_FASES = [
     costos:[['Food and going out',120],['Transport',60],['Phone and apps',25],['Golf / gym',60],['Extras',60]],
     regla:'50% of every payout gets invested the SAME day and is not touched for 10 years. The other 50% is yours.' },
 
-  { r:'I', id:'f1', t:'The cushion', de:10000, a:50000, años:'2027 – 2029', edad:'25 – 27',
+  { r:'I', id:'f1', t:'The cushion', de:10000, a:50000, neg:0,
     ico:'escudo', que:'Stop being fragile: a bad run is no longer an emergency.',
     ingreso:null, pasivo:150,
     haz:['Keep the ten funded accounts alive and one always in evaluation: one burns and the month survives.',
@@ -3717,7 +3720,7 @@ const PLAN_FASES = [
     costos:[['Food',200],['Transport',80],['Phone and subscriptions',40],['Golf / gym',100],['Clothes and extras',120],['Monthly cushion',60]],
     regla:'Expenses rise AT MOST half as fast as income. Always.' },
 
-  { r:'II', id:'f2', t:'The first paycheck', de:50000, a:250000, años:'2029 – 2032', edad:'27 – 30',
+  { r:'II', id:'f2', t:'The first paycheck', de:50000, a:250000, neg:2000,
     ico:'puerta', que:'The business pays your life. The first asset that earns without you.',
     ingreso:null, pasivo:800,
     haz:['Three payout cycles a month on the same ten accounts: 15 green days out of 20 — this is the vision, and it costs consistency, not size.',
@@ -3732,7 +3735,7 @@ const PLAN_FASES = [
     costos:[['Apartment rent',700],['Food',350],['Transport',180],['Health and insurance',120],['Golf',200],['Social life and extras',250]],
     regla:'Trading NEVER pays the rent. If the month depends on a trade, you do not have a business: you have a dangerous job.' },
 
-  { r:'III', id:'f3', t:'The first million', de:250000, a:1000000, años:'2032 – 2036', edad:'30 – 34',
+  { r:'III', id:'f3', t:'The first million', de:250000, a:1000000, neg:12700,
     ico:'monte', que:'Money starts working harder than you do.',
     ingreso:null, pasivo:3300,
     haz:['Hold the five $150k accounts at $30,000/mo — that is the ceiling of the desk, and that is fine.',
@@ -3747,7 +3750,7 @@ const PLAN_FASES = [
     costos:[['Rent on a good apartment',1200],['Food and restaurants',600],['Paid-off car: fuel and insurance',350],['Health',250],['Golf and travel',700],['Extras',400]],
     regla:'No car above 5% of net worth. Here that is $50,000 — and no, the G does not fit yet.' },
 
-  { r:'IV', id:'f4', t:'Freedom', de:1000000, a:5000000, años:'2036 – 2041', edad:'34 – 39',
+  { r:'IV', id:'f4', t:'Freedom', de:1000000, a:5000000, neg:23000,
     ico:'ave', que:'You work because you want to: passive income already covers your life.',
     ingreso:null, pasivo:16600,
     haz:['The portfolio is now the main engine: 42% of everything in, until it holds $2.5M.',
@@ -3763,7 +3766,7 @@ const PLAN_FASES = [
     desbloquea:[{ k:'g63', t:'Mercedes-AMG G 63', p:PRECIOS.g63, gate:3700000 }],
     regla:'The house you live in cannot exceed 25% of your net worth. Ever.' },
 
-  { r:'V', id:'f5', t:'The estate', de:5000000, a:15000000, años:'2041 – 2048', edad:'39 – 46',
+  { r:'V', id:'f5', t:'The estate', de:5000000, a:15000000, neg:11500,
     ico:'columnas', que:'It is no longer about earning more: it is about not losing it.',
     ingreso:null, pasivo:50000,
     haz:['Sign the trust and the tax structure first — this phase is not about earning more, it is about not losing it.',
@@ -3779,7 +3782,7 @@ const PLAN_FASES = [
     desbloquea:[{ k:'sf90', t:'Ferrari SF90 Stradale', p:PRECIOS.sf90, gate:11000000 }],
     regla:'No single asset above 20%. What made you rich is not what keeps you rich.' },
 
-  { r:'VI', id:'f6', t:'The house', de:15000000, a:50000000, años:'2048 – 2056', edad:'46 – 54',
+  { r:'VI', id:'f6', t:'The house', de:15000000, a:50000000, neg:8000,
     ico:'casa', que:'The house is not bought with your net worth: with what it produces.',
     ingreso:null, pasivo:166000,
     haz:['Take the portfolio to $36M — it pays $166,000/mo, and THAT is what buys the house.',
@@ -3794,7 +3797,7 @@ const PLAN_FASES = [
     desbloquea:[{ k:'casa', t:'The cliffside house', p:PRECIOS.casa, gate:48000000 }],
     regla:'You sign for the house when it costs less than 25% of what you hold. Not a dollar sooner.' },
 
-  { r:'VII', id:'f7', t:'The summit', de:50000000, a:150000000, años:'2056 onward', edad:'54+',
+  { r:'VII', id:'f7', t:'The summit', de:50000000, a:150000000, neg:0,
     ico:'yate', que:'The money is no longer for you: it is for what you leave behind.',
     ingreso:null, pasivo:500000,
     haz:['Passive $500,000/mo. From here the money is no longer for you.',
@@ -11929,6 +11932,54 @@ const fmtCorto = v => v >= 1000000 ? '$' + (v/1000000) + 'M' : '$' + Math.round(
 /* ¿Ya cumpliste lo que pide la fase para pasar? Lo que se puede medir con
    tus datos se verifica solo; lo que no (un fideicomiso firmado, un seguro)
    se marca a mano y queda guardado. */
+/* ── LA PROYECCIÓN ──
+   Las fechas del plan estaban TECLEADAS (2026-2056) y calculadas con un ingreso
+   viejo: decían dos años para una fase que a este ritmo se cruza en un mes.
+   Ahora se calculan, mes a mes, desde TU patrimonio de hoy y con los números
+   que tiene cada fase. Si cambias una cifra, las fechas se mueven solas.
+
+   Supuestos, dichos en voz alta porque mueven el resultado:
+     · la mesa produce lo de su fase (cuentas × objetivo diario × días verdes);
+     · lo invertido crece al 7% anual — ése es CRECIMIENTO, no el 4% de retiro
+       seguro, que es otra cosa;
+     · los negocios y rentas son los que la propia fase declara en `neg`;
+     · el primer mes no hay cobros: se pasan las evals y se arma el colchón.
+   Es un piso, no una promesa: no cuenta rachas buenas ni malas, y una mala
+   racha o una cuenta quemada mueven todo a la derecha. */
+const CREC_ANUAL = 0.07;
+const NACIMIENTO = 2002 + 8/12;                 // sep-2002
+function proyeccion(){
+  const g = CREC_ANUAL / 12;
+  const hoy = new Date();
+  let anio = hoy.getFullYear(), mes = hoy.getMonth() + 1;
+  let pat = patrimonio().total, m = 0;
+  const out = [];
+  PLAN_FASES.forEach((f, i) => {
+    if(pat >= f.a){ out.push({ hecha:true }); return; }   // ya la pasaste
+    const cc = cartillaFase(f, i);
+    const mesa = cc.pagoMes;
+    const neg  = f.neg || 0;
+    const gasto = f.costos.reduce((a,[,v]) => a + v, 0);
+    const desde = { anio, mes }, m0 = m;
+    let tope = 0;
+    while(pat < f.a && tope++ < 12 * 80){
+      const ing = (m === 0 ? 0 : mesa) + neg;      // el primer mes va sin cobros
+      pat = Math.max(0, pat * (1 + g) + ing - gasto);
+      m++; mes++;
+      if(mes > 12){ mes = 1; anio++; }
+    }
+    const alcanza = tope < 12 * 80;
+    out.push({ hecha:false, alcanza, desde, hasta:{ anio, mes }, meses: m - m0,
+               edad0: Math.floor(desde.anio + (desde.mes - 1) / 12 - NACIMIENTO),
+               edad1: Math.floor(anio + (mes - 1) / 12 - NACIMIENTO) });
+  });
+  return out;
+}
+/* el mes en tres letras ya vive arriba (MESES3 por idioma); aquí sólo se usa */
+const fechaCorta = d => (MESES3[idi()][d.mes-1] || '?') + ' ' + d.anio;
+const enMeses = n => n < 12 ? n + bi(' meses',' months')
+  : (n/12).toFixed(n % 12 ? 1 : 0) + bi(' años',' years');
+
 /* ── DÓNDE VAS, NO SÓLO SI YA LLEGASTE ──
    `cumpleSalida` contesta sí o no. Para una sección de PROGRESO eso no basta:
    hay que poder decir «$4,300 de $10,000». Esto devuelve el valor medido de
@@ -12159,19 +12210,25 @@ function renderMetas(){
 
   /* Sólo la fase en curso se abre. Las de adelante van con candado y una sola
      línea: qué son y a cuánto se abren. Menos texto, más camino. */
+  const PRY = proyeccion();
   host.innerHTML = PLAN_FASES.map((f,i) => {
     const hecha = N >= f.a;
     const activa = i === iActual;
     const pct = hecha ? 100 : Math.max(0, Math.min(100, (N - f.de) / (f.a - f.de) * 100));
     const llave = (f.desbloquea || [])[0];
+    /* la fecha ya no se teclea: la calcula la proyección desde tu patrimonio */
+    const py = PRY[i] || {};
+    const cuando = py.hecha ? '' : py.alcanza
+      ? fechaCorta(py.hasta) + ' · ' + bi('a los ','at ') + py.edad1
+      : bi('no llega con estos números','not reachable at these numbers');
 
     if(!activa){
       return `<div class="fase-min${hecha ? ' ok' : ''}">
         <span class="fm-ico">${hecha ? icoSVG(f.ico) : CANDADO}</span>
         <span class="fm-i">
-          <b>${bi('Phase','Phase')} ${f.r} · ${esc(f.t)}</b>
+          <b>${bi('Fase','Phase')} ${f.r} · ${esc(f.t)}</b>
           <span>${hecha ? bi('cumplida','done') + ' · ' + fmt$(f.a)
-                        : bi('se abre en','opens at') + ' ' + fmt$(f.de)}${llave ? ' · ' + esc(llave.t) : ''}</span>
+                        : bi('se abre en','opens at') + ' ' + fmt$(f.de) + (cuando ? ' · ' + cuando : '')}${llave ? ' · ' + esc(llave.t) : ''}</span>
         </span>
         ${hecha ? '<span class="fm-ok">✓</span>' : `<span class="fm-c">${fmtCorto(f.a)}</span>`}
       </div>`;
@@ -12275,7 +12332,9 @@ function renderMetas(){
         <em>${bi('LA SIGUIENTE FASE ABRE EN','THE NEXT PHASE OPENS AT')}</em>
         <b>${fmt$(f.a)}</b>
         <span>${N >= f.a ? bi('ya está: puedes pasar','it is done: you can move up')
-                          : bi('te faltan ','you need ') + fmt$(f.a - N)}</span>
+          : bi('te faltan ','you need ') + fmt$(f.a - N)
+            + (py.alcanza ? ' · ' + bi('a este ritmo, ','at this pace, ') + fechaCorta(py.hasta)
+                + ' (' + enMeses(py.meses) + ')' : '')}</span>
       </div>
       ${llave ? `<div class="fase-llave${N >= llave.gate ? ' on' : ''}">
         <span class="k">${N >= llave.gate ? bi('DESBLOQUEADO','UNLOCKED') : bi('SE ABRE EN','OPENS AT') + ' ' + fmt$(llave.gate)}</span>
@@ -12293,7 +12352,9 @@ function renderMetas(){
           <b>${bi('Fase','Phase')} ${f.r} · ${esc(f.t)}</b>
           <span>${esc(f.que)}</span>
         </span>
-        <span class="fase-gate"><em>${bi('entra al mes','comes in a month')}</em><b>${fmt$(cc.pagoMes + Math.round(cc.live * (f.tk.livePct || 0) / 100) + (f.pasivo || 0))}</b></span>
+        <span class="fase-gate"><em>${bi('entra al mes','comes in a month')}</em>
+          <b>${fmt$(cc.pagoMes + (f.neg || 0))}</b>
+          ${py.alcanza ? `<i>${bi('cierra ','closes ')}${fechaCorta(py.hasta)} · ${enMeses(py.meses)}</i>` : ''}</span>
       </div>
       <div class="tj-body">
         <div class="bar" style="margin:0 8px 16px"><i style="width:${pct}%"></i></div>
