@@ -1980,6 +1980,61 @@ button.tag.quemada{text-decoration:line-through;text-decoration-color:var(--down
 .ps-carrera{display:flex;align-items:baseline;gap:10px;margin-bottom:8px}
 .ps-carrera b{font-size:26px;font-family:var(--mono);letter-spacing:-.02em}
 .ps-carrera span{font-family:var(--mono);font-size:10px;color:var(--faint)}
+/* ══ EL REPORTE EN PDF ══
+   La misma hoja se ve en la vista previa y se imprime. Al imprimir se apaga
+   todo lo demás y la hoja pasa a tinta sobre papel: en un PDF el fondo negro
+   no se imprime y el texto claro sale invisible. */
+.rep-rango{display:flex;gap:14px;flex-wrap:wrap;margin-top:12px}
+.rep-rango label{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--dim)}
+.rep-rango input{width:auto}
+.rep-prev{margin-top:18px;border:1px solid var(--line-soft);border-radius:12px;
+  background:var(--w02);padding:20px 22px;max-height:46vh;overflow:auto}
+.rep-doc{font-size:12.5px;line-height:1.55}
+.rp-h{display:flex;justify-content:space-between;align-items:flex-start;gap:20px;
+  padding-bottom:16px;border-bottom:1px solid var(--line);margin-bottom:20px;flex-wrap:wrap}
+.rp-k{display:block;font-family:var(--mono);font-size:8.5px;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint)}
+.rp-h h1{font-size:23px;font-weight:500;letter-spacing:-.01em;margin:5px 0 3px}
+.rp-sub{font-family:var(--mono);font-size:11px;color:var(--faint)}
+.rp-tot{text-align:right}
+.rp-tot b{display:block;font-family:var(--mono);font-size:26px;font-weight:400;margin:4px 0}
+.rp-tot.up b{color:var(--up)} .rp-tot.down b{color:var(--down)}
+.rp-s{margin-bottom:24px;break-inside:avoid}
+.rp-s h2{font-family:var(--mono);font-size:9.5px;letter-spacing:.18em;text-transform:uppercase;
+  color:var(--faint);margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--line-soft)}
+.rp-kpi{display:grid;grid-template-columns:repeat(auto-fit,minmax(118px,1fr));gap:14px 20px}
+.rp-kpi em{display:block;font-style:normal;font-family:var(--mono);font-size:8px;
+  letter-spacing:.13em;text-transform:uppercase;color:var(--faint)}
+.rp-kpi b{display:block;font-family:var(--mono);font-size:15px;font-weight:500;margin-top:3px}
+.rp-t{width:100%;border-collapse:collapse;font-size:11.5px}
+.rp-t th{font-family:var(--mono);font-size:8.5px;letter-spacing:.12em;text-transform:uppercase;
+  color:var(--faint);text-align:left;padding:0 8px 7px 0;font-weight:400}
+.rp-t td{padding:6px 8px 6px 0;border-top:1px solid var(--line-soft);vertical-align:top}
+.rp-t th.n,.rp-t td.n{text-align:right;font-family:var(--mono)}
+.rp-t tr.tot td{border-top:1px solid var(--line);font-weight:600}
+.rp-n{font-size:11.5px;color:var(--faint);margin-top:10px}
+.rp-ok{font-size:12px;color:var(--up)}
+.rp-f{margin-top:26px;padding-top:12px;border-top:1px solid var(--line-soft);
+  font-family:var(--mono);font-size:9px;letter-spacing:.12em;color:var(--faint)}
+.rep-doc .up{color:var(--up)} .rep-doc .down{color:var(--down)} .rep-doc .warn{color:var(--warn)}
+/* ── LA IMPRESIÓN ── sólo la hoja, y en tinta */
+@media print{
+  body.imprimiendo{background:#fff !important;overflow:visible !important;height:auto !important}
+  body.imprimiendo>*{display:none !important}
+  body.imprimiendo #repDoc{display:block !important;position:static !important;
+    color:#111 !important;background:#fff !important;font-size:11px;max-width:none}
+  body.imprimiendo .rep-doc .up{color:#0F6B45 !important}
+  body.imprimiendo .rep-doc .down{color:#A33A2E !important}
+  body.imprimiendo .rep-doc .warn{color:#7A5E18 !important}
+  body.imprimiendo .rp-k,body.imprimiendo .rp-sub,body.imprimiendo .rp-t th,
+  body.imprimiendo .rp-kpi em,body.imprimiendo .rp-n,body.imprimiendo .rp-f{color:#666 !important}
+  body.imprimiendo .rp-h,body.imprimiendo .rp-t tr.tot td{border-color:#bbb !important}
+  body.imprimiendo .rp-s h2,body.imprimiendo .rp-t td,body.imprimiendo .rp-f{border-color:#ddd !important}
+  body.imprimiendo .rp-s{page-break-inside:avoid}
+  @page{margin:16mm 14mm}
+}
+/* fuera de impresión la hoja vive dentro del modal */
+#repDoc{display:block}
 /* la ✕ de una marca: discreta, dentro de la propia etiqueta */
 .vio-tag,.vio-off{display:inline-flex;align-items:center;gap:5px}
 .vio-x{background:none;border:0;color:inherit;opacity:.55;cursor:pointer;padding:0 1px;
@@ -2560,6 +2615,7 @@ stop[stop-color="#9BC0DC"]{stop-color:var(--txt)}
           <span class="micro" id="jResumen"></span>
           <div style="margin-left:auto;display:flex;gap:10px">
             <button class="btn" id="btnExport" data-i18n="j.exportar">Exportar</button>
+            <button class="btn" onclick="abreReporte()">Reporte PDF</button>
             <button class="btn primary" id="btnTrade" data-i18n="j.registrar">+ Log trade</button>
           </div>
         </div>
@@ -2868,6 +2924,38 @@ stop[stop-color="#9BC0DC"]{stop-color:var(--txt)}
       <button class="btn-icon" data-close aria-label="Cerrar">✕</button>
     </div>
     <div class="m-body" id="psCuerpo"></div>
+  </div>
+</div>
+<div class="overlay" id="ovReporte">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="repTit" style="max-width:900px">
+    <div class="m-head">
+      <div>
+        <p class="micro">NORTHPOINT · REPORTE</p>
+        <h3 id="repTit" style="font-size:22px;margin-top:4px">Cierre en PDF</h3>
+        <p class="micro" id="repInfo" style="margin-top:4px;text-transform:none;letter-spacing:.04em"></p>
+      </div>
+      <button class="btn-icon" data-close aria-label="Cerrar">✕</button>
+    </div>
+    <div class="m-body">
+      <span class="fl">Periodo</span>
+      <div class="seg" style="width:100%">
+        <button type="button" data-rmodo="dia" class="on">Hoy</button>
+        <button type="button" data-rmodo="semana">Esta semana</button>
+        <button type="button" data-rmodo="mes">Este mes</button>
+        <button type="button" data-rmodo="libre">A la medida</button>
+      </div>
+      <div class="rep-rango" id="repRango">
+        <label>Del <input type="date" id="repDe"></label>
+        <label>al <input type="date" id="repA"></label>
+      </div>
+      <span class="fl" style="margin-top:18px">Qué lleva</span>
+      <div class="av-chips" id="repSecs"></div>
+      <div class="rep-prev"><div id="repDoc" class="rep-doc"></div></div>
+    </div>
+    <div class="m-foot">
+      <button class="btn" data-close>Cerrar</button>
+      <button class="btn primary" onclick="imprimeReporte()">Descargar PDF</button>
+    </div>
   </div>
 </div>
 <div class="overlay" id="ovDia">
@@ -5197,6 +5285,261 @@ function renderFirmaCarrera(){
 
     </div>`;
 }
+
+
+/* ══ EL REPORTE EN PDF ══
+   Un cierre que se puede mandar: día, semana, mes o el rango que quieras, con
+   las secciones que elijas. No hay librería de PDF metida en el archivo — se
+   arma una hoja limpia y se manda a imprimir; el navegador la guarda como PDF
+   con «Guardar como PDF» en el destino. Eso da un PDF real, con texto
+   seleccionable, sin sumar un megabyte de dependencias.
+
+   Todo sale de tus datos: los trades del periodo, sus violaciones con el mismo
+   `violations()` de la app, el camino de cada cuenta con `carreraCuenta()` y los
+   movimientos de caja. Nada se recalcula aparte — si la app dice una cifra, el
+   reporte dice la misma. */
+
+const REP_SECS = [
+  ['resumen',   ['Resumen del periodo','Period summary']],
+  ['dias',      ['Día por día','Day by day']],
+  ['trades',    ['Todos los trades','Every trade']],
+  ['disciplina',['Disciplina y violaciones','Discipline and breaches']],
+  ['camino',    ['Camino a payout','Road to payout']],
+  ['caja',      ['Dinero cobrado y gastado','Money collected and spent']],
+];
+
+function repRango(modo){
+  const hoy = new Date(); hoy.setHours(12,0,0,0);
+  const iso = d => d.toISOString().slice(0,10);
+  if(modo === 'dia')  return [todayISO(), todayISO()];
+  if(modo === 'semana'){
+    const l = new Date(hoy); l.setDate(l.getDate() - ((l.getDay() + 6) % 7));
+    const v = new Date(l);   v.setDate(v.getDate() + 6);
+    return [iso(l), iso(v)];
+  }
+  if(modo === 'mes'){
+    const a = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
+    const b = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0);
+    return [iso(a), iso(b)];
+  }
+  return [$('#repDe').value || todayISO(), $('#repA').value || todayISO()];
+}
+
+window.abreReporte = function(){
+  const R = S.ui.reporte = S.ui.reporte || { modo:'dia', secs: REP_SECS.map(s => s[0]) };
+  const [de, a] = repRango(R.modo);
+  $('#repDe').value = de; $('#repA').value = a;
+  $$('#ovReporte [data-rmodo]').forEach(b => b.classList.toggle('on', b.dataset.rmodo === R.modo));
+  $('#repSecs').innerHTML = REP_SECS.map(([k, t]) => `
+    <button type="button" class="chp ${R.secs.includes(k) ? 'on' : ''}" data-rsec="${k}">${loc(t)}</button>`).join('');
+  $$('#ovReporte [data-rsec]').forEach(b => b.onclick = () => {
+    const k = b.dataset.rsec;
+    R.secs = R.secs.includes(k) ? R.secs.filter(x => x !== k) : [...R.secs, k];
+    b.classList.toggle('on'); save(); repPreview();
+  });
+  repPreview();
+  openOv('ovReporte');
+};
+
+$$('#ovReporte [data-rmodo]').forEach(b => b.onclick = () => {
+  const R = S.ui.reporte;
+  R.modo = b.dataset.rmodo; save();
+  const [de, a] = repRango(R.modo);
+  $('#repDe').value = de; $('#repA').value = a;
+  $$('#ovReporte [data-rmodo]').forEach(x => x.classList.toggle('on', x === b));
+  repPreview();
+});
+/* tocar una fecha cambia solo a «a la medida»: si no, el preset la pisaba */
+['#repDe','#repA'].forEach(sel => { const el = $(sel); if(!el) return;
+  el.onchange = () => {
+    S.ui.reporte.modo = 'libre'; save();
+    $$('#ovReporte [data-rmodo]').forEach(x => x.classList.toggle('on', x.dataset.rmodo === 'libre'));
+    repPreview();
+  }; });
+
+/* los datos del periodo, una sola vez */
+function repDatos(){
+  const R = S.ui.reporte, [de, a] = repRango(R.modo);
+  const hoy = todayISO();
+  const trs = (S.trades || []).filter(t => t.date >= de && t.date <= a && t.date <= hoy)
+    .sort((x,y) => (x.date+x.time).localeCompare(y.date+y.time));
+  const porDia = {};
+  trs.forEach(t => (porDia[t.date] = porDia[t.date] || []).push(t));
+  const dias = Object.keys(porDia).sort();
+
+  const pnl = trs.reduce((s,t) => s + (t.pnl||0), 0);
+  const cerr = trs.filter(t => (t.pnl||0) !== 0);
+  const w = trs.filter(t => (t.pnl||0) > 0);
+  const gW = w.reduce((s,t) => s + t.pnl, 0);
+  const gL = Math.abs(trs.filter(t => (t.pnl||0) < 0).reduce((s,t) => s + t.pnl, 0));
+
+  /* las violaciones con el MISMO criterio de la app */
+  const vio = {};
+  let marcados = 0;
+  dias.forEach(d => porDia[d].forEach(t => {
+    const v = violations(t, porDia[d]);
+    if(v.length) marcados++;
+    v.forEach(c => vio[c] = (vio[c] || 0) + 1);
+  }));
+  const verdes = dias.filter(d => porDia[d].reduce((s,t) => s + (t.pnl||0), 0) > 0);
+  const caja = (S.caja || []).filter(m => m.fecha >= de && m.fecha <= a);
+
+  return { de, a, trs, porDia, dias, pnl, marcados, vio, verdes, caja,
+    wr: cerr.length ? Math.round(w.length / cerr.length * 100) : 0,
+    pf: gL > 0 ? Math.round(gW/gL*100)/100 : (gW > 0 ? Infinity : 0),
+    mejor: dias.map(d => [d, porDia[d].reduce((s,t)=>s+(t.pnl||0),0)]).sort((x,y)=>y[1]-x[1])[0] || null,
+    peor:  dias.map(d => [d, porDia[d].reduce((s,t)=>s+(t.pnl||0),0)]).sort((x,y)=>x[1]-y[1])[0] || null,
+    ingresos: caja.filter(m => m.tipo === 'ingreso').reduce((s,m)=>s+(m.monto||0),0),
+    gastos:   caja.filter(m => m.tipo === 'gasto').reduce((s,m)=>s+(m.monto||0),0) };
+}
+
+/* la hoja: la misma que se ve en pantalla y la que se imprime */
+function repHTML(){
+  const R = S.ui.reporte, D = repDatos();
+  const on = k => R.secs.includes(k);
+  const quien = (USERS[(S.session && S.session.user)] || {}).nombre || '';
+  const titulo = R.modo === 'dia' ? bi('Cierre del día','Day close')
+    : R.modo === 'semana' ? bi('Cierre de la semana','Week close')
+    : R.modo === 'mes' ? bi('Cierre del mes','Month close') : bi('Reporte','Report');
+  const mismo = D.de === D.a;
+  const cel = (v, cls) => `<td class="${cls||''}">${v}</td>`;
+  const sec = (t, dentro) => `<section class="rp-s"><h2>${t}</h2>${dentro}</section>`;
+
+  let h = `<header class="rp-h">
+    <div>
+      <span class="rp-k">NORTHPOINT CAPITAL MANAGEMENT</span>
+      <h1>${titulo}</h1>
+      <p class="rp-sub">${mismo ? fmtFecha(D.de) : fmtFecha(D.de) + ' — ' + fmtFecha(D.a)}
+        ${quien ? ' · ' + esc(quien) : ''}</p>
+    </div>
+    <div class="rp-tot ${D.pnl > 0 ? 'up' : D.pnl < 0 ? 'down' : ''}">
+      <span class="rp-k">${bi('RESULTADO','RESULT')}</span>
+      <b>${fmt$(D.pnl, true)}</b>
+      <span class="rp-k">${D.trs.length} ${D.trs.length === 1 ? bi('trade','trade') : bi('trades','trades')}
+        · ${D.dias.length} ${bi('días','days')}</span>
+    </div>
+  </header>`;
+
+  if(on('resumen')){
+    const kpi = (et, v, cls) => `<div><em>${et}</em><b class="${cls||''}">${v}</b></div>`;
+    h += sec(bi('Resumen del periodo','Period summary'), `<div class="rp-kpi">
+      ${kpi(bi('P&L','P&L'), fmt$(D.pnl, true), D.pnl > 0 ? 'up' : D.pnl < 0 ? 'down' : '')}
+      ${kpi(bi('Trades','Trades'), D.trs.length)}
+      ${kpi(bi('Días operados','Days traded'), D.dias.length)}
+      ${kpi(bi('Días verdes','Green days'), D.verdes.length + ' / ' + D.dias.length,
+            D.verdes.length ? 'up' : '')}
+      ${kpi(bi('Aciertos','Win rate'), D.wr + '%')}
+      ${kpi('Profit factor', D.pf === Infinity ? '∞' : D.pf)}
+      ${kpi(bi('Trades limpios','Clean trades'), (D.trs.length - D.marcados) + ' / ' + D.trs.length,
+            D.marcados ? 'warn' : 'up')}
+      ${kpi(bi('Cobrado','Collected'), fmt$(D.ingresos), D.ingresos ? 'up' : '')}
+      ${D.mejor ? kpi(bi('Mejor día','Best day'), fmtFecha(D.mejor[0]) + ' · ' + fmt$(D.mejor[1], true), 'up') : ''}
+      ${D.peor && D.peor[1] < 0 ? kpi(bi('Peor día','Worst day'), fmtFecha(D.peor[0]) + ' · ' + fmt$(D.peor[1], true), 'down') : ''}
+    </div>`);
+  }
+
+  if(on('dias') && D.dias.length){
+    h += sec(bi('Día por día','Day by day'), `<table class="rp-t">
+      <thead><tr><th>${bi('Fecha','Date')}</th><th class="n">${bi('Trades','Trades')}</th>
+        <th class="n">P&L</th><th class="n">${bi('Marcas','Flags')}</th><th>${bi('Estado','State')}</th></tr></thead>
+      <tbody>${D.dias.map(d => {
+        const g = D.porDia[d], p = g.reduce((s,t)=>s+(t.pnl||0),0);
+        const m = g.reduce((s,t)=> s + (violations(t, g).length ? 1 : 0), 0);
+        return `<tr>${cel(fmtFecha(d))}${cel(g.length,'n')}
+          ${cel(fmt$(p, true), 'n ' + (p>0?'up':p<0?'down':''))}
+          ${cel(m || '—','n ' + (m?'warn':''))}
+          ${cel(m ? bi('con marcas','flagged') : bi('limpio','clean'), m ? 'warn' : 'up')}</tr>`;
+      }).join('')}</tbody></table>`);
+  }
+
+  if(on('trades') && D.trs.length){
+    h += sec(bi('Todos los trades','Every trade'), `<table class="rp-t">
+      <thead><tr><th>${bi('Fecha','Date')}</th><th>${bi('Hora','Time')}</th><th>${bi('Instr.','Instr.')}</th>
+        <th>${bi('Dir.','Dir.')}</th><th class="n">${bi('Entrada','Entry')}</th><th class="n">${bi('Salida','Exit')}</th>
+        <th class="n">${bi('Cont.','Qty')}</th><th class="n">P&L</th><th>${bi('Marcas','Flags')}</th></tr></thead>
+      <tbody>${D.trs.map(t => {
+        const v = violations(t, D.porDia[t.date] || [t]);
+        return `<tr>${cel(fmtFecha(t.date))}${cel(t.time||'—')}${cel(esc(t.sym||'—'))}
+          ${cel(t.dir === 'L' ? 'LONG' : 'SHORT')}${cel(t.entry ?? '—','n')}${cel(t.exit ?? '—','n')}
+          ${cel(t.qty ?? '—','n')}${cel(fmt$(t.pnl, true), 'n ' + ((t.pnl||0)>0?'up':(t.pnl||0)<0?'down':''))}
+          ${cel(v.length ? v.map(c => tr('vio.'+c)).join(' · ') : '—', v.length ? 'warn' : '')}</tr>`;
+      }).join('')}</tbody></table>`);
+  }
+
+  if(on('disciplina')){
+    const ks = Object.keys(D.vio);
+    h += sec(bi('Disciplina','Discipline'), ks.length
+      ? `<table class="rp-t"><thead><tr><th>${bi('Regla rota','Rule broken')}</th>
+          <th class="n">${bi('Veces','Times')}</th></tr></thead><tbody>
+          ${ks.sort((a,b)=>D.vio[b]-D.vio[a]).map(c =>
+            `<tr>${cel(tr('vio.'+c))}${cel(D.vio[c],'n warn')}</tr>`).join('')}
+        </tbody></table>
+        <p class="rp-n">${bi('Trades con marca: ','Flagged trades: ')}<b>${D.marcados}</b>
+          ${bi(' de ',' of ')}${D.trs.length}.</p>`
+      : `<p class="rp-ok">${bi('Limpio. Ni un trade del periodo rompió el plan.','Clean. Not one trade in the period broke the plan.')}</p>`);
+  }
+
+  if(on('camino')){
+    const ctas = S.accounts.filter(a => !esLive(a) && !esSim(a) && reglasDe(a));
+    h += sec(bi('Camino a payout','Road to payout'), ctas.length
+      ? `<table class="rp-t"><thead><tr><th>${bi('Cuenta','Account')}</th><th>${bi('Etapa','Stage')}</th>
+          <th class="n">${bi('Balance','Balance')}</th><th class="n">${bi('Avance','Progress')}</th></tr></thead>
+        <tbody>${ctas.map(a => { const c = carreraCuenta(a);
+          const et = c.pasoPago ? bi('cobró','paid') : c.pasoBuffer ? bi('tramo de pago','payout stretch')
+                   : c.pasoEval ? bi('colchón','buffer') : bi('evaluación','evaluation');
+          return `<tr>${cel(esc(a.alias))}${cel(et)}${cel(fmt$(c.balance),'n')}
+            ${cel(Math.round(c.pct) + '%','n ' + (c.pasoBuffer?'up':''))}</tr>`; }).join('')}
+        </tbody></table>`
+      : `<p class="rp-n">${bi('Sin cuentas fondeadas registradas.','No funded accounts registered.')}</p>`);
+  }
+
+  if(on('caja')){
+    h += sec(bi('Dinero cobrado y gastado','Money collected and spent'), D.caja.length
+      ? `<table class="rp-t"><thead><tr><th>${bi('Fecha','Date')}</th><th>${bi('Concepto','Concept')}</th>
+          <th class="n">${bi('Monto','Amount')}</th></tr></thead>
+        <tbody>${D.caja.map(m => `<tr>${cel(fmtFecha(m.fecha))}${cel(esc(m.nota || m.tipo))}
+          ${cel(fmt$(m.monto), 'n ' + (m.tipo === 'ingreso' ? 'up' : 'down'))}</tr>`).join('')}
+        <tr class="tot">${cel(bi('Neto','Net'))}${cel('')}
+          ${cel(fmt$(D.ingresos - D.gastos, true), 'n ' + (D.ingresos - D.gastos >= 0 ? 'up' : 'down'))}</tr>
+        </tbody></table>`
+      : `<p class="rp-n">${bi('Sin movimientos de caja en el periodo. Los payouts se registran en Cash flow — si no se anotan, el patrimonio no sube.',
+                             'No cash movements in the period. Payouts get logged in Cash flow — if they are not, net worth does not move.')}</p>`);
+  }
+
+  h += `<footer class="rp-f">NORTHPOINT · ${bi('generado el ','generated ')}${fmtFecha(todayISO())}
+    ${bi(' desde el terminal',' from the terminal')}</footer>`;
+  return h;
+}
+
+function repPreview(){
+  const doc = $('#repDoc'); if(!doc) return;
+  doc.innerHTML = repHTML();
+  const D = repDatos();
+  $('#repInfo').textContent = D.trs.length
+    ? `${D.trs.length} ${bi('trades','trades')} · ${D.dias.length} ${bi('días','days')} · ${fmt$(D.pnl, true)}`
+    : bi('Sin trades en este periodo','No trades in this period');
+}
+
+window.imprimeReporte = function(){
+  repPreview();
+  /* La hoja vive dentro del modal. Si sólo se ocultara el resto del body, la
+     hoja se iría con sus padres: hay que sacarla al primer nivel para imprimir
+     y devolverla a su lugar al terminar. */
+  const doc = $('#repDoc'), casa = doc.parentNode, marca = document.createComment('repDoc');
+  casa.replaceChild(marca, doc);
+  document.body.appendChild(doc);
+  document.body.classList.add('imprimiendo');
+  const volver = () => {
+    document.body.classList.remove('imprimiendo');
+    if(doc.parentNode === document.body) casa.replaceChild(doc, marca);
+  };
+  /* se deja pintar antes de abrir el diálogo: sin esto Safari imprime en blanco */
+  setTimeout(() => {
+    try{ window.print(); } finally { setTimeout(volver, 500); }
+  }, 60);
+};
+/* si el usuario cancela o termina de imprimir, la hoja regresa igual */
+addEventListener('afterprint', () => document.body.classList.remove('imprimiendo'));
 
 /* ── LA HOJA DE PERFIL DE UN SOCIO ──
    Todo lo que la mesa sabe de él, en una hoja: quién es (cargo, lema, deberes),
