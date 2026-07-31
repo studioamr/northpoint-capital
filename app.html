@@ -3791,7 +3791,7 @@ const PRECIOS = { g63: 185000, sf90: 550000, casa: 12000000, yate: 40000000 };
    negocios, rentas, pasivo) y sus COSTOS del mes a ese nivel de vida.
    El ticket es el CÓMO; la cifra de acceso es el CUÁNTO. */
 const PLAN_FASES = [
-  { r:'0', id:'f0', t:'The base', de:0, a:10000, neg:0,
+  { r:'0', id:'f0', t:'The base', de:0, a:30000, neg:0,
     ico:'semilla', que:'That the system exists — not the money.',
     ingreso:null, pasivo:0,
     /* Las tres etapas de UNA cuenta, con los números que André fijó el 30-jul.
@@ -3821,12 +3821,12 @@ const PLAN_FASES = [
     tk:{ ctas:10, tam:50000, objDia:200, verdes:15, liveCap:0, livePct:0,
          mas:['5 Tradeify Select + 5 Apex, all $50k',
               'Zero debt. The system comes first'] },
-    salida:[['Net worth of $10,000','pat',10000],['First payout collected','payouts',1],
+    salida:[['Net worth of $30,000','pat',30000],['First payout collected','payouts',1],
             ['Investment account open with a position','pos',1],['30 sessions logged','ses',30]],
     costos:[['Food and going out',120],['Transport',60],['Phone and apps',25],['Golf / gym',60],['Extras',60]],
     regla:'50% of every payout gets invested the SAME day and is not touched for 10 years. The other 50% is yours.' },
 
-  { r:'I', id:'f1', t:'The cushion', de:10000, a:50000, neg:0,
+  { r:'I', id:'f1', t:'The cushion', de:30000, a:50000, neg:0,
     ico:'escudo', que:'Stop being fragile: a bad run is no longer an emergency.',
     ingreso:null, pasivo:150,
     haz:['Keep the ten funded accounts alive and one always in evaluation: one burns and the month survives.',
@@ -12337,32 +12337,34 @@ function plazoPagos(f, i){
   const bufIni  = masHabiles(evalFin, 1);
   const bufFin  = masHabiles(bufIni, dBuf - 1);    // aquí se toca $52,100
   const pago1   = masHabiles(bufFin, dPago);       // PAGO MÁXIMO
-  const pago2   = masHabiles(pago1, dPago);        // el segundo, y cierra la fase
+  const pago2   = masHabiles(pago1, dPago);        // el segundo
+  const pago3   = masHabiles(pago2, dPago);        // el tercero: con éste se cruza la puerta
 
-  /* el día en que el patrimonio pasa la puerta de la fase */
-  const gastoDia = f.costos.reduce((a,[,v]) => a + v, 0) / 20;
+  /* El día en que se cruza la puerta. Se mide con lo que SALE DE LA MESA sobre
+     lo que ya tienes: el gasto de vivir se paga aparte y va dicho en «el mes»
+     — restarlo aquí dejaba el tercer pago $650 corto y hacía ver la fase como
+     si necesitara un cuarto pago que no necesita. */
   const entra = ctas * tramo;
   let pat = patrimonio().total;
   const dias = [];
   const marca = (d, tipo, extra) => dias.push({ fecha:d, k:claveDia(d), tipo, ...(extra||{}) });
-  for(let d = new Date(ini), n = 0; d <= pago2; d.setDate(d.getDate() + 1)){
+  for(let d = new Date(ini); d <= pago3; d.setDate(d.getDate() + 1)){
     if(FIN_DE_SEMANA(d)) continue;
     const cur = new Date(d);
     let tipo = cur <= evalFin ? 'eval' : cur <= bufFin ? 'buf' : 'listo';
-    const esPago = +cur === +pago1 || +cur === +pago2;
+    const esPago = +cur === +pago1 || +cur === +pago2 || +cur === +pago3;
     if(esPago) tipo = 'pago';
-    pat -= gastoDia;
     if(esPago) pat += entra;
     marca(cur, tipo, { hito: +cur === +evalFin ? 'eval' : +cur === +bufFin ? 'buf' : null,
                        monto: esPago ? entra : 0,
-                       n: +cur === +pago1 ? 1 : +cur === +pago2 ? 2 : 0,
+                       n: +cur === +pago1 ? 1 : +cur === +pago2 ? 2 : +cur === +pago3 ? 3 : 0,
                        abre: false, pat });
   }
   /* el primer día en que el patrimonio cruza: ahí se abre la fase siguiente */
   const abre = dias.find(x => x.pat >= f.a);
   if(abre) abre.abre = true;
 
-  return { dias, ini, evalFin, bufIni, bufFin, pago1, pago2, abre,
+  return { dias, ini, evalFin, bufIni, bufFin, pago1, pago2, pago3, abre,
            obj, tramo, ctas, entra, dEval, dBuf, dPago,
            reales: S.accounts.filter(a => !esLive(a) && !esSim(a) && reglasDe(a) && esViva(a)).length };
 }
@@ -12374,8 +12376,9 @@ function calendarioHTML(pz){
   const hoy = new Date(); hoy.setHours(0,0,0,0);
   const mapa = {}; pz.dias.forEach(d => mapa[d.k] = d);
   const desde = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
-  const meses = (pz.pago2.getFullYear() - desde.getFullYear()) * 12
-              + (pz.pago2.getMonth() - desde.getMonth()) + 1;
+  const fin = pz.abre ? pz.abre.fecha : pz.pago3;
+  const meses = (fin.getFullYear() - desde.getFullYear()) * 12
+              + (fin.getMonth() - desde.getMonth()) + 1;
   const DOW = bi(['L','M','M','J','V','S','D'], ['M','T','W','T','F','S','S']);
   /* los días entre el colchón y el pago no son «nada»: son el tramo de $1,000
      que hay que juntar para poder cobrar. Se dicen. */
@@ -12430,7 +12433,8 @@ function hitosHTML(pz, f, i){
         bi('colchón completo: de aquí se puede cobrar','buffer complete: from here you can withdraw'))}
     ${fila(bi('PAGO MÁXIMO','MAX PAYOUT'), pz.pago1,
         fmt$(pz.entra) + ' — ' + fmt$(pz.tramo) + bi(' × ',' × ') + pz.ctas + bi(' cuentas',' accounts'), 'pago')}
-    ${fila(bi('SEGUNDO PAGO','SECOND PAYOUT'), pz.pago2,
+    ${fila(bi('SEGUNDO PAGO','SECOND PAYOUT'), pz.pago2, fmt$(pz.entra), 'pago')}
+    ${fila(bi('TERCER PAGO','THIRD PAYOUT'), pz.pago3,
         fmt$(pz.entra) + bi(' — con éste cierra la fase',' — this one closes the phase'), 'pago')}
     ${pz.abre ? fila(bi('ABRE LA FASE ' + PLAN_FASES[Math.min(i+1, PLAN_FASES.length-1)].r,
                         'PHASE ' + PLAN_FASES[Math.min(i+1, PLAN_FASES.length-1)].r + ' OPENS'), pz.abre.fecha,
@@ -12728,14 +12732,8 @@ function renderMetas(){
               <span><i class="cl-d pago"></i>${bi('pago','payout')}</span>
               <span><i class="cl-d abre"></i>${bi('abre la fase siguiente','next phase opens')}</span>
             </div>
-            <p class="pgs-n micro">${bi(
-              'Cada día hábil suma ' + fmt$(pz.obj) + ' por cuenta. Los fines de semana no cuentan y un día rojo recorre todo a la derecha. Con dos pagos se cierra la fase: por eso el calendario no va más allá.',
-              'Every business day adds ' + fmt$(pz.obj) + ' per account. Weekends do not count and one red day pushes everything right. Two payouts close the phase: that is why the calendar stops there.')}</p>
           </div>`;
       })()}
-      ${cc.genDia ? `<p class="ct-ley micro">${bi(
-        'Un día verde son ' + fmt$(cc.objDia) + ' por cuenta. La casa deja cobrar hasta ' + fmt$(cc.tramo) + ' al día por cuenta, así que el plan usa el ' + cc.usoTope + '% del tope: sobra aire. El límite real es que sólo se cobra lo que se generó — retirar de más se come el colchón.',
-        'A green day is ' + fmt$(cc.objDia) + ' per account. The house allows up to ' + fmt$(cc.tramo) + ' per account per day, so the plan uses ' + cc.usoTope + '% of the cap: there is room. The real limit is that you only withdraw what you made — taking more eats the cushion.')}</p>` : ''}
       <span class="fl" style="margin-top:20px">${bi('El nivel de vida de esta fase','This phase\'s standard of living')}</span>
       <div class="gst">
         ${f.costos.map(([t, v]) => `<span><em>${esc(t)}</em>
