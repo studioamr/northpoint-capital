@@ -203,11 +203,15 @@ label{font-family:var(--mono);font-size:10px;letter-spacing:.14em;text-transform
 .top-date{font-family:var(--mono);font-size:11px;color:var(--dim);letter-spacing:.06em}
 /* Quién está en la mesa AHORITA, junto al reloj de la sesión: un punto verde
    por socio visto hace menos de 12 min. Verde = está; hueco = se fue. */
-/* El pill de la nube dice lo mismo con un punto: verde sincronizada, ámbar
-   trabajando solo, rojo error. El texto y el reloj eran ruido en la barra. */
-#cloudPill{padding:9px;gap:0;font-size:0;line-height:0;cursor:pointer}
+/* El pill de la nube SÓLO sale cuando hay algo que saber. Cuando todo está
+   bien decía lo mismo que el punto de presencia —dos puntos verdes iguales,
+   uno al lado del otro— y eso no informa: confunde. Ahora aparece en ámbar o
+   rojo con su palabra (trabajando solo, sin conexión, error), y desaparece
+   cuando la mesa está sincronizada. */
+#cloudPill{cursor:pointer;gap:7px}
+#cloudPill[hidden]{display:none}
 #cloudPill::before{content:'';width:8px;height:8px;border-radius:50%;
-  background:currentColor;display:block}
+  background:currentColor;flex:none}
 #cloudPill .dot{display:none}
 .en-linea[hidden]{display:none}
 .en-linea{display:inline-flex;align-items:center;gap:7px;
@@ -233,15 +237,15 @@ label{font-family:var(--mono);font-size:10px;letter-spacing:.14em;text-transform
   .sess-pill #sessTxt{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:block}
   .top-bar, .top-r, .topbar-right{gap:6px !important}
   .top-clock{flex:0 0 auto}
-  /* En celular el indicador de nube se reduce a su punto: el color ya dice todo
-     (verde = sincronizada, ámbar = sola) y el texto cabía a costa de empujar la
-     barra 74 px fuera de la pantalla. Se sigue pudiendo picar para el detalle. */
-  /* pintaPill() reescribe el contenido como texto plano, así que el texto se
+  /* En celular el aviso de nube se reduce a su punto ámbar o rojo: en esos
+     205 px no cabe la palabra, y el punto de un color que NO es el verde de
+     presencia ya se distingue. Se sigue picando para el detalle completo.
+     pintaPill() reescribe el contenido como texto plano, así que el texto se
      apaga con font-size:0 y el estado se lee en el punto, que hereda el color */
   /* En 375px no caben seis cosas en la barra: la fecha larga se va (la vista ya
-     la muestra) y quedan tema, sesión, quién está, nube y reloj. */
+     la muestra) y quedan tema, sesión, quién está, el aviso si lo hay y el reloj. */
   .top-date{display:none}
-  #cloudPill{flex:0 0 auto}
+  #cloudPill{flex:0 0 auto;font-size:0;line-height:0;gap:0;padding:7px 8px}
 }
 .avisoX{position:absolute;top:8px;right:8px;width:24px;height:24px;line-height:1;
   border:1px solid var(--line);background:var(--w05);color:var(--dim);
@@ -4417,10 +4421,19 @@ function pintaEnLinea(){
       const P2 = S.presencia || {}, ahora2 = Date.now();
       const yo2 = S.session && S.session.user;
       const otros2 = PERSONAJES.filter(p => p.id !== yo2 && (ahora2 - (P2[p.id] || 0)) < PRESENCIA_MIN * 60000);
-      toast(otros2.length
+      /* este punto es ahora el único de la barra cuando todo va bien, así que
+         al picarlo dice las dos cosas: quién está y si la mesa sincroniza */
+      const nube = (!cloudOn() || !cloudTok)
+        ? bi(' · Sin sesión de nube: lo que hagas se queda en este equipo.',
+             ' · No cloud session: whatever you do stays on this device.')
+        : cloudErr ? bi(' · La nube marca: ',' · The cloud reports: ') + cloudErr
+        : cloudTs ? bi(' · Mesa sincronizada a las ',' · Desk synced at ')
+            + new Date(cloudTs).toLocaleTimeString('es-MX', { hour12:false })
+        : '';
+      toast((otros2.length
         ? bi('Estás en línea. También en la mesa: ','You are online. Also at the desk: ') + otros2.map(p => p.nom).join(', ')
         : bi('Estás en línea. Los otros dos no han tocado el terminal en los últimos 12 minutos.',
-             'You are online. The other two have not touched the terminal in the last 12 minutes.'));
+             'You are online. The other two have not touched the terminal in the last 12 minutes.')) + nube);
     };
   }
   const yo = S.session && S.session.user;
@@ -7127,6 +7140,9 @@ function lockUI(){
   document.body.classList.add('locked');
   document.querySelector('.app').setAttribute('inert','');
   $('#login').classList.add('on');
+  /* en la pantalla de acceso no hay mesa de quién hablar: el aviso de nube se
+     apaga aquí o se queda colgado con el estado del que acaba de salir */
+  if(typeof cloudPaint === 'function') cloudPaint();
   setTimeout(()=> $('#lgUser').focus(), 80);
 }
 function unlockUI(){
@@ -8234,33 +8250,42 @@ function pintaPill(p){
      la sesión de nube y no se entera, puede pasar el día entero sin que su
      trabajo le llegue al otro. Para ellos el aviso es la diferencia entre
      "estoy trabajando solo sin darme cuenta" y saberlo a tiempo. */
-  /* Sin sesión de nube el terminal NO está roto: guarda todo en este equipo y
-     opera igual. Lo que importa saber de un vistazo es si hay conexión, así que
-     el pill dice EN LÍNEA (o SIN CONEXIÓN cuando de verdad se cayó la red).
-     El detalle de la sincronización sigue a un clic de distancia. */
+  /* Este aviso sólo existe para lo que está MAL. Cuando la mesa sincroniza, el
+     punto verde de presencia ya dice que estás dentro y trabajando: repetirlo
+     aquí era un segundo punto verde idéntico al lado. Así que en verde: se
+     esconde. */
+  const alerta = (txt, color, titulo) => {
+    p.hidden = false; p.textContent = txt; p.style.color = color;
+    p.title = titulo || 'Estado de la mesa compartida';
+  };
+  if(navigator.onLine === false)
+    return alerta(bi('SIN CONEXIÓN','OFFLINE'), 'var(--warn)',
+      bi('Sin red. El terminal guarda todo en este equipo y sube cuando vuelva.',
+         'No network. The terminal saves everything on this device and uploads when it returns.'));
+  /* Sin sesión de nube el terminal NO está roto: guarda todo aquí y opera igual.
+     Pero para los tres socios eso significa trabajar solos sin darse cuenta —
+     eso sí se avisa. Los 10 invitados nunca usan nube: para ellos no hay nada
+     que reportar y el aviso se calla. */
   if(!cloudOn() || !cloudTok){
-    const online = navigator.onLine !== false;
-    p.textContent = online ? 'EN LÍNEA' : 'SIN CONEXIÓN';
-    p.style.color = online ? 'var(--up)' : 'var(--warn)';
-    return;
+    const socio = SOCIOS_REALES.includes(S.session && S.session.user);
+    if(!socio){ p.hidden = true; return; }
+    return alerta(bi('TRABAJANDO SOLO','WORKING SOLO'), 'var(--warn)',
+      bi('Entraste con la clave local: nada viaja a la mesa. Sal y vuelve a entrar con tu contraseña de nube.',
+         'You signed in with the local key: nothing travels to the desk. Sign out and back in with your cloud password.'));
   }
-  if(cloudErr === 'sin-acceso'){
+  if(cloudErr === 'sin-acceso')
     /* caso propio: la sesión es válida, lo que falta es el alta en la mesa */
-    p.textContent = bi('FALTA TU ALTA EN LA MESA', 'NOT ON THE DESK YET');
-    p.style.color = 'var(--warn)';
-    p.title = bi('Tu acceso de nube funciona. Pídele a André que agregue tu correo a la mesa.',
-                 'Your cloud login works. Ask André to add your email to the desk.');
-    return;
-  }
-  if(cloudErr){
-    p.textContent = tr('nu.errPre') + cloudErr + ' — ' + tr('nu.local');
-    p.style.color = 'var(--down)';
-    return;
-  }
-  const viejo = cloudTs && (Date.now() - cloudTs > 30000);
-  p.textContent = (viejo ? 'NUBE · SIN RESPUESTA' : 'NUBE · SINCRONIZADA')
-    + (cloudTs ? ' · ' + new Date(cloudTs).toLocaleTimeString('es-MX',{hour12:false}) : '');
-  p.style.color = viejo ? 'var(--warn)' : 'var(--up)';
+    return alerta(bi('FALTA TU ALTA EN LA MESA', 'NOT ON THE DESK YET'), 'var(--warn)',
+      bi('Tu acceso de nube funciona. Pídele a André que agregue tu correo a la mesa.',
+         'Your cloud login works. Ask André to add your email to the desk.'));
+  if(cloudErr)
+    return alerta(tr('nu.errPre') + cloudErr, 'var(--down)', tr('nu.local'));
+  if(cloudTs && Date.now() - cloudTs > 30000)
+    return alerta(bi('NUBE SIN RESPUESTA','CLOUD NOT ANSWERING'), 'var(--warn)',
+      bi('El último contacto con la mesa fue a las ','Last contact with the desk was at ')
+        + new Date(cloudTs).toLocaleTimeString('es-MX', { hour12:false }));
+  /* todo en orden: el punto de presencia ya lo dice */
+  p.hidden = true;
 }
 
 /* ── fusión: nadie pierde lo que escribió ── */
