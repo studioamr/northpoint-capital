@@ -1335,6 +1335,27 @@ button.tag.quemada{text-decoration:line-through;text-decoration-color:var(--down
 .ct-t b{font-family:var(--mono);font-size:17px;font-weight:500;letter-spacing:-.01em}
 .ct-t span{font-size:10.5px;color:var(--faint);line-height:1.45}
 .ct-ley{margin:-4px 0 14px;color:var(--faint);text-transform:none;letter-spacing:.02em;line-height:1.6}
+/* ── PROGRESO: cada meta con lo que llevas medido de tus propios datos ── */
+.pg-lista{display:grid;gap:12px}
+.pg-fila{display:grid;gap:6px}
+.pg-h{display:flex;justify-content:space-between;align-items:baseline;gap:12px}
+.pg-h span{font-size:12.5px;color:var(--dim);min-width:0}
+.pg-h b{font-family:var(--mono);font-size:12.5px;font-weight:500;white-space:nowrap}
+.pg-h b em{font-style:normal;color:var(--faint);font-size:10.5px}
+.pg-bar{height:4px;border-radius:99px;background:var(--w04);overflow:hidden}
+.pg-bar>i{display:block;height:100%;border-radius:99px;background:var(--w25);
+  transition:width .6s cubic-bezier(.4,0,.2,1)}
+.pg-bar>i.ok{background:var(--up)}
+.pg-fila.man{display:flex;justify-content:space-between;align-items:baseline;gap:12px;
+  padding:8px 0;border-bottom:1px solid var(--line-soft)}
+.pg-fila.man span{font-size:12.5px;color:var(--dim)}
+.pg-fila.man b{font-family:var(--mono);font-size:10px;letter-spacing:.1em;color:var(--faint)}
+/* el cierre de la sección «para avanzar»: cuánto falta para la siguiente */
+.pg-sig{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin-top:16px;
+  padding:14px 16px;border:1px solid var(--line-soft);border-radius:12px;background:var(--w02)}
+.pg-sig em{font-style:normal;font-family:var(--mono);font-size:8.5px;letter-spacing:.14em;color:var(--faint)}
+.pg-sig b{font-family:var(--mono);font-size:20px;font-weight:500}
+.pg-sig span{font-size:11.5px;color:var(--faint);margin-left:auto}
 .ct-ini{margin:0 0 14px}
 .ct-ini-g{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:1px;
   background:var(--line-soft);border:1px solid var(--line-soft);border-radius:12px;overflow:hidden;margin-top:8px}
@@ -11908,6 +11929,34 @@ const fmtCorto = v => v >= 1000000 ? '$' + (v/1000000) + 'M' : '$' + Math.round(
 /* ¿Ya cumpliste lo que pide la fase para pasar? Lo que se puede medir con
    tus datos se verifica solo; lo que no (un fideicomiso firmado, un seguro)
    se marca a mano y queda guardado. */
+/* ── DÓNDE VAS, NO SÓLO SI YA LLEGASTE ──
+   `cumpleSalida` contesta sí o no. Para una sección de PROGRESO eso no basta:
+   hay que poder decir «$4,300 de $10,000». Esto devuelve el valor medido de
+   cada meta con las mismas fuentes, y cómo se escribe. */
+function valorSalida(clave){
+  const P = patrimonio();
+  switch(clave){
+    case 'pat':     return { v: P.total, fmt: fmt$ };
+    case 'port':    return { v: (S.positions || []).reduce((a,p) => a + valuar(p).valor, 0), fmt: fmt$ };
+    case 'payouts': return { v: (S.caja||[]).filter(m => m.tipo === 'ingreso').length, fmt: String };
+    case 'cobrado': return { v: (S.caja||[]).filter(m => m.tipo === 'ingreso').reduce((a,m)=>a+(m.monto||0),0), fmt: fmt$ };
+    case 'pos':     return { v: (S.positions||[]).length, fmt: String };
+    case 'ses': {
+      const dias = new Set(Object.keys(S.sessions || {}));
+      (S.trades || []).forEach(t => { if(t.date) dias.add(t.date); });
+      return { v: dias.size, fmt: String };
+    }
+    case 'cuentas': return { v: S.accounts.filter(a => !esLive(a) && !esSim(a) && reglasDe(a) && esViva(a)).length, fmt: String };
+    case 'limpio': {
+      const dias = Object.entries(tradesByDay()).sort((a,b)=>a[0].localeCompare(b[0]));
+      let racha = 0, mejor = 0;
+      dias.forEach(([,trs]) => { racha = trs.some(t => violations(t, trs).length) ? 0 : racha + 1; mejor = Math.max(mejor, racha); });
+      return { v: mejor, fmt: String };
+    }
+    default: return null;               // manual o sin medida
+  }
+}
+
 function cumpleSalida(clave, valor){
   const P = patrimonio();
   const pos = (S.positions || []).reduce((a,p) => a + valuar(p).valor, 0);
@@ -12042,16 +12091,7 @@ function cartillaHTML(f, i){
   </div>
   ${c.genDia ? `<p class="ct-ley micro">${bi(
     'Un día verde son ' + fmt$(c.objDia) + ' por cuenta = ' + fmt$(c.genDia) + ' entre las ' + c.ctas + '. La casa deja cobrar hasta ' + fmt$(c.tramo) + ' por cuenta al día, así que el plan usa el ' + c.usoTope + '% del tope: sobra aire. El límite real no es la regla — es que sólo se puede cobrar lo que se generó; retirar de más se come el colchón sobre el piso congelado.',
-    'A green day is ' + fmt$(c.objDia) + ' per account = ' + fmt$(c.genDia) + ' across the ' + c.ctas + '. The house allows up to ' + fmt$(c.tramo) + ' per account per day, so the plan uses ' + c.usoTope + '% of the cap: there is room. The real limit is not the rule — it is that you can only withdraw what you made; taking more eats the cushion above the frozen floor.')}</p>` : ''}
-  ${f.costoIni ? `<div class="ct-ini">
-    <span class="micro">${bi('LO QUE CUESTA ARRANCAR','WHAT IT COSTS TO START')}</span>
-    <div class="ct-ini-g">
-      ${f.costoIni.map(([et, v, nota]) => `<div><em>${loc(et)}</em><b>${fmt$(v)}</b>${nota ? `<i>${loc(nota)}</i>` : ''}</div>`).join('')}
-      <div class="tot"><em>${bi('TOTAL','TOTAL')}</em><b>${fmt$(f.costoIni.reduce((a, [, v]) => a + v, 0))}</b>
-        <i>${bi('el primer mes de cobros lo devuelve ','the first month of payouts returns it ')}
-          ${(cartillaFase(f, i).pagoMes / Math.max(1, f.costoIni.reduce((a, [, v]) => a + v, 0))).toFixed(1)}×</i></div>
-    </div>
-  </div>` : ''}`;
+    'A green day is ' + fmt$(c.objDia) + ' per account = ' + fmt$(c.genDia) + ' across the ' + c.ctas + '. The house allows up to ' + fmt$(c.tramo) + ' per account per day, so the plan uses ' + c.usoTope + '% of the cap: there is room. The real limit is not the rule — it is that you can only withdraw what you made; taking more eats the cushion above the frozen floor.')}</p>` : ''}`;
 }
 
 function ticketHTML(f, i){
@@ -12138,17 +12178,19 @@ function renderMetas(){
     }
 
     const gTot = f.costos.reduce((a,[,v]) => a + v, 0);
-    const tab = S.ui.planTab || 'haz';
+    /* TRES SECCIONES Y NADA MÁS (30-jul, André: «hay demasiadas secciones»).
+       Cómo empezar · Progreso y objetivos · Para avanzar. Todo lo que había
+       suelto —el ticket, los costos, las etapas, la regla, el desbloqueo—
+       vive dentro de una de las tres. */
+    let tab = S.ui.planTab || 'empezar';
+    if(!['empezar','progreso','avanzar'].includes(tab)) tab = 'empezar';
     const listos = (f.salida || []).filter(([t, clave, v], k) => {
       const auto = cumpleSalida(clave, v);
       return auto === null ? !!((S.salidas||{})[f.id+':'+k]) : auto;
     }).length;
 
-    /* Una pestaña a la vez: el playbook, los números o la salida. El texto
-       está completo, pero ya no encimado. */
-    /* Las tres etapas de una cuenta —evals, buffer, fondeada— con el riesgo y
-       el objetivo de cada una. Es el ciclo real, no un resumen: por eso va
-       antes de la lista y en cifras. */
+    /* ①  CÓMO EMPEZAR — lo que cuesta entrar, las etapas de una cuenta y el
+           playbook en órdenes cortas. */
     const etapasHTML = (f.etapas || []).map(e => `
       <div class="et">
         <span class="et-n mono">${e.n}</span>
@@ -12163,73 +12205,104 @@ function renderMetas(){
         </div>
       </div>`).join('');
 
-    const cuerpo = tab === 'haz'
-      ? etapasHTML + f.haz.map((h, k) => { const [cabeza, resto] = parteHaz(h);
-          return `<div class="como-paso"><b>${String(k+1).padStart(2,'0')}</b>
-            <span><strong>${esc(cabeza)}</strong>${resto ? `<em>${esc(resto)}</em>` : ''}</span></div>`; }).join('')
-      : tab === 'num'
-      ? `<div class="fase-grid">
-          <div>
-            <span class="fl">${bi('El ticket · de dónde sale','The ticket · where it comes from')}</span>
-            ${ticketHTML(f, i)}
-          </div>
-          <div>
-            <span class="fl">${bi('El mes a este nivel de vida','The month at this standard of living')}</span>
-            ${f.costos.map(([t, v]) => `<div class="cv-row"><span>${esc(t)}</span><b>${fmt$(v)}</b></div>`).join('')}
-            <div class="cv-row tot"><span>${bi('Total al mes','Monthly total')}</span><b>${fmt$(gTot)}</b></div>
-            <p class="fase-4pc micro">${bi('Para que lo pague el portafolio solo:','For the portfolio to pay it alone:')}
-              ${fmt$(gTot*12)} ÷ 4% = <b>${fmt$(Math.round(gTot*12/0.04))}</b> ${bi('invertidos','invested')}.</p>
-          </div>
-        </div>`
-      : `${f.salida.map(([t, clave, v], k) => {
-            const auto = cumpleSalida(clave, v);
-            const manual = auto === null;
-            const hecho = manual ? !!((S.salidas||{})[f.id+':'+k]) : auto;
-            return `<button type="button" class="sal ${hecho?'ok':''}${manual?' man':''}"
-                ${manual ? `data-sal="${f.id}:${k}"` : 'disabled'}>
-              <span class="sal-b">${hecho ? '<svg viewBox="0 0 24 24"><path d="M4 12.5 9.5 18 20 6.5"/></svg>' : ''}</span>
-              <span>${esc(t)}</span>
-              ${manual ? `<em>${bi('mark it','mark it')}</em>` : ''}
-            </button>`;
-          }).join('')}
-        ${llave ? `<div class="fase-llave${N >= llave.gate ? ' on' : ''}">
-          <span class="k">${N >= llave.gate ? bi('DESBLOQUEADO','UNLOCKED') : bi('SE ABRE EN','OPENS AT') + ' ' + fmt$(llave.gate)}</span>
-          <b>${esc(llave.t)}</b>
-          <span class="p">${fmt$(llave.p)} · ${(llave.p / llave.gate * 100).toFixed(0)}% ${bi('de tu patrimonio ahí','of net worth there')}</span>
-        </div>` : ''}`;
+    const secEmpezar = `
+      ${f.costoIni ? `<div class="ct-ini">
+        <span class="fl">${bi('Lo que cuesta arrancar','What it costs to start')}</span>
+        <div class="ct-ini-g">
+          ${f.costoIni.map(([et, v, nota]) => `<div><em>${loc(et)}</em><b>${fmt$(v)}</b>${nota ? `<i>${loc(nota)}</i>` : ''}</div>`).join('')}
+          <div class="tot"><em>${bi('TOTAL','TOTAL')}</em><b>${fmt$(f.costoIni.reduce((a,[,v]) => a + v, 0))}</b>
+            <i>${bi('el primer mes lo devuelve ','the first month returns it ')}${(cartillaFase(f,i).pagoMes / Math.max(1, f.costoIni.reduce((a,[,v]) => a + v, 0))).toFixed(0)}×</i></div>
+        </div>
+      </div>` : ''}
+      ${etapasHTML ? `<span class="fl">${bi('Las tres etapas de una cuenta','The three stages of an account')}</span>${etapasHTML}` : ''}
+      <span class="fl" style="margin-top:16px">${bi('El playbook','The playbook')}</span>
+      ${f.haz.map((h, k) => { const [cabeza, resto] = parteHaz(h);
+        return `<div class="como-paso"><b>${String(k+1).padStart(2,'0')}</b>
+          <span><strong>${esc(cabeza)}</strong>${resto ? `<em>${esc(resto)}</em>` : ''}</span></div>`; }).join('')}`;
+
+    /* ②  PROGRESO Y OBJETIVOS — las cifras que rigen la fase y, debajo, cuánto
+           llevas de cada una MEDIDO de tus propios datos. */
+    const cc = cartillaFase(f, i);
+    const metas = (f.salida || []).map(([t, clave, v], k) => {
+      const med = valorSalida(clave);
+      const auto = cumpleSalida(clave, v);
+      const manual = auto === null;
+      const hecho = manual ? !!((S.salidas||{})[f.id+':'+k]) : auto;
+      if(!med) return `<div class="pg-fila man"><span>${esc(t)}</span>
+        <b class="${hecho?'up':''}">${hecho ? bi('MARCADO','MARKED') : bi('lo marcas tú','you mark it')}</b></div>`;
+      const p = v > 0 ? Math.max(0, Math.min(100, med.v / v * 100)) : 0;
+      return `<div class="pg-fila">
+        <div class="pg-h"><span>${esc(t)}</span>
+          <b class="${hecho?'up':''}">${med.fmt(med.v)} <em>${bi('de','of')} ${med.fmt(v)}</em></b></div>
+        <div class="pg-bar"><i class="${hecho?'ok':''}" style="width:${p}%"></i></div>
+      </div>`;
+    }).join('');
+
+    const secProgreso = `
+      <span class="fl">${bi('Los objetivos de esta fase','This phase\'s objectives')}</span>
+      ${cartillaHTML(f, i)}
+      <span class="fl" style="margin-top:18px">${bi('Lo que llevas','What you have so far')} · ${listos}/${(f.salida||[]).length}</span>
+      <div class="pg-lista">${metas}</div>
+      <div class="fase-grid" style="margin-top:18px">
+        <div>
+          <span class="fl">${bi('De dónde sale el mes','Where the month comes from')}</span>
+          ${ticketHTML(f, i)}
+        </div>
+        <div>
+          <span class="fl">${bi('Lo que cuesta el mes','What the month costs')}</span>
+          ${f.costos.map(([t, v]) => `<div class="cv-row"><span>${esc(t)}</span><b>${fmt$(v)}</b></div>`).join('')}
+          <div class="cv-row tot"><span>${bi('Total al mes','Monthly total')}</span><b>${fmt$(gTot)}</b></div>
+          <p class="fase-4pc micro">${bi('Para que lo pague el portafolio solo:','For the portfolio to pay it alone:')}
+            ${fmt$(gTot*12)} ÷ 4% = <b>${fmt$(Math.round(gTot*12/0.04))}</b> ${bi('invertidos','invested')}.</p>
+        </div>
+      </div>`;
+
+    /* ③  PARA AVANZAR — la lista que abre la puerta, el desbloqueo y la regla. */
+    const secAvanzar = `
+      <span class="fl">${bi('Se cierra la fase cuando estén los cuatro','The phase closes when all four are in')}</span>
+      ${f.salida.map(([t, clave, v], k) => {
+          const auto = cumpleSalida(clave, v);
+          const manual = auto === null;
+          const hecho = manual ? !!((S.salidas||{})[f.id+':'+k]) : auto;
+          return `<button type="button" class="sal ${hecho?'ok':''}${manual?' man':''}"
+              ${manual ? `data-sal="${f.id}:${k}"` : 'disabled'}>
+            <span class="sal-b">${hecho ? '<svg viewBox="0 0 24 24"><path d="M4 12.5 9.5 18 20 6.5"/></svg>' : ''}</span>
+            <span>${esc(t)}</span>
+            ${manual ? `<em>${bi('márcalo','mark it')}</em>` : ''}
+          </button>`;
+        }).join('')}
+      <div class="pg-sig">
+        <em>${bi('LA SIGUIENTE FASE ABRE EN','THE NEXT PHASE OPENS AT')}</em>
+        <b>${fmt$(f.a)}</b>
+        <span>${N >= f.a ? bi('ya está: puedes pasar','it is done: you can move up')
+                          : bi('te faltan ','you need ') + fmt$(f.a - N)}</span>
+      </div>
+      ${llave ? `<div class="fase-llave${N >= llave.gate ? ' on' : ''}">
+        <span class="k">${N >= llave.gate ? bi('DESBLOQUEADO','UNLOCKED') : bi('SE ABRE EN','OPENS AT') + ' ' + fmt$(llave.gate)}</span>
+        <b>${esc(llave.t)}</b>
+        <span class="p">${fmt$(llave.p)} · ${(llave.p / llave.gate * 100).toFixed(0)}% ${bi('de tu patrimonio ahí','of net worth there')}</span>
+      </div>` : ''}
+      <div class="fase-regla"><span>${bi('La regla','The rule')}</span>${esc(f.regla)}</div>`;
+
+    const cuerpo = tab === 'empezar' ? secEmpezar : tab === 'progreso' ? secProgreso : secAvanzar;
 
     return `<div class="tj-mod fase fase-on">
       <div class="tj-h" style="cursor:default">
         <span class="fase-ico">${icoSVG(f.ico)}</span>
         <span class="tt">
-          <b>${bi('Phase','Phase')} ${f.r} · ${esc(f.t)}</b>
+          <b>${bi('Fase','Phase')} ${f.r} · ${esc(f.t)}</b>
           <span>${esc(f.que)}</span>
         </span>
-        <span class="fase-gate"><em>${bi('acceso a la siguiente','next gate')}</em><b>${fmt$(f.a)}</b></span>
+        <span class="fase-gate"><em>${bi('entra al mes','comes in a month')}</em><b>${fmt$(cc.pagoMes + Math.round(cc.live * (f.tk.livePct || 0) / 100) + (f.pasivo || 0))}</b></span>
       </div>
       <div class="tj-body">
-        <div class="bar" style="margin:0 8px 14px"><i style="width:${pct}%"></i></div>
-        <div class="fase-kpi">
-          <div><em>${bi('Ingreso','Income')}</em><b class="up">${(() => {
-            /* el ingreso ya no se escribe a mano: sale de la mesa + la cuenta
-               propia + lo pasivo de esta misma fase. Antes eran siete cifras
-               tecleadas que contradecían su propia aritmética. */
-            const cc = cartillaFase(f, i);
-            const tot = cc.pagoMes + Math.round(cc.live * (f.tk.livePct || 0) / 100) + (f.pasivo || 0);
-            return f.ingreso ? esc(f.ingreso) : fmt$(tot) + '<i>/mo</i>';
-          })()}</b></div>
-          <div><em>${bi('Expenses','Expenses')}</em><b>${fmt$(gTot)}<i>/mo</i></b></div>
-          <div><em>${bi('Passive','Passive')}</em><b class="${f.pasivo?'up':''}">${f.pasivo ? fmt$(f.pasivo) + '<i>/mo</i>' : '—'}</b></div>
-          <div><em>${f.años}</em><b>${f.edad} <i>${bi('años','yrs')}</i></b></div>
-        </div>
-        ${cartillaHTML(f, i)}
+        <div class="bar" style="margin:0 8px 16px"><i style="width:${pct}%"></i></div>
         <div class="seg fase-tabs">
-          <button type="button" data-pt="haz" class="${tab==='haz'?'on':''}">${bi('Haz esto','Do this')}</button>
-          <button type="button" data-pt="num" class="${tab==='num'?'on':''}">${bi('Los números','The numbers')}</button>
-          <button type="button" data-pt="salida" class="${tab==='salida'?'on':''}">${bi('La salida','The exit')} · ${listos}/${(f.salida||[]).length}</button>
+          <button type="button" data-pt="empezar"  class="${tab==='empezar'?'on':''}">${bi('Cómo empezar','How to start')}</button>
+          <button type="button" data-pt="progreso" class="${tab==='progreso'?'on':''}">${bi('Progreso y objetivos','Progress and targets')}</button>
+          <button type="button" data-pt="avanzar"  class="${tab==='avanzar'?'on':''}">${bi('Para avanzar','To move up')} · ${listos}/${(f.salida||[]).length}</button>
         </div>
         <div class="fase-panel">${cuerpo}</div>
-        <div class="fase-regla"><span>${bi('The rule','The rule')}</span>${esc(f.regla)}</div>
       </div>
     </div>`;
   }).join('');
