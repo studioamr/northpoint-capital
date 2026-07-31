@@ -6935,15 +6935,28 @@ async function doLogin(){
   cloudPaint();
   if(cloudOn() && cloudTok){ cloudPull(); }
   toast(tr('lg.bienvenido') + ', ' + usr.nombre + '.');
-  /* la primera vez: primero te haces el monito, y de ahí sale el recorrido */
+  /* Al entrar, tu llegada se anuncia YA: se marca la presencia sin esperar el
+     ciclo de un minuto y se empuja de inmediato, para que los otros dos te vean
+     aparecer en la mesa en segundos y no cuando toques algo. */
+  const yo2 = S.session.user;
+  S.presencia = S.presencia || {}; S.presencia[yo2] = Date.now();
+  try{ save(); }catch(e){}
   marcaPresencia();
   if(!(S.bienvenida || {})[u]) setTimeout(() => abreCreador(tourAbre), 700);
   else if(usaDefault(u)) setTimeout(()=> toast(tr('cl.cambiala')), 1600);
 }
 $('#btnLogout').addEventListener('click', ()=>{
-  cloudLogout();
-  S.session = { user:null };
-  save(); closeOv(); lockUI();
+  /* Salir debe verse: se retira la marca de presencia y se sube ANTES de soltar
+     el token, si no los otros dos te siguen viendo en la mesa hasta 12 minutos
+     después de que te fuiste. */
+  const yo3 = S.session && S.session.user;
+  if(yo3 && S.presencia) delete S.presencia[yo3];
+  try{ save(); }catch(e){}
+  setTimeout(() => {
+    cloudLogout();
+    S.session = { user:null };
+    save(); closeOv(); lockUI();
+  }, 350);
 });
 
 /* ════════ RECORRIDO DE BIENVENIDA ════════ */
@@ -8023,8 +8036,15 @@ async function cloudPull(){
   }catch(e){ cloudErr = (e && e.message) || 'sin red'; cloudPaint(); }
 }
 
+/* Cola de una casilla: si llega un guardado mientras otro va en vuelo, no se
+   tira — se anota y se manda en cuanto se libera. Antes dos save() seguidos
+   (registrar un trade y marcar el checklist, por ejemplo) hacían que el segundo
+   NUNCA se empujara: el trade se quedaba en la máquina hasta el siguiente
+   guardado, y en la mesa parecía que esa persona no había hecho nada. */
+let _pushPend = false, _pushFallos = 0;
 async function cloudPush(reintento){
-  if(!cloudOn() || !cloudTok || cloudBusy) return;
+  if(!cloudOn() || !cloudTok) return;
+  if(cloudBusy){ _pushPend = true; return; }
   cloudBusy = true;
   try{
     if(cloudTok.exp && Date.now() > cloudTok.exp - 60000) await cloudRefresh();
@@ -8051,9 +8071,22 @@ async function cloudPush(reintento){
       return cloudPush(true);
     }
     S.revNube = filas[0].rev;
-    cloudErr = null; cloudTs = Date.now(); cloudPaint();
-  }catch(e){ cloudErr = (e && e.message) || 'sin red'; cloudPaint(); }
-  finally{ cloudBusy = false; }
+    cloudErr = null; cloudTs = Date.now(); _pushFallos = 0; cloudPaint();
+  }catch(e){
+    cloudErr = (e && e.message) || 'sin red'; cloudPaint();
+    /* Un fallo de red no puede dejar el trade sin subir: se reintenta solo,
+       espaciando los intentos, hasta seis veces (unos dos minutos). */
+    _pushPend = true;
+    if(_pushFallos < 6){
+      const espera = Math.min(30000, 1500 * Math.pow(2, _pushFallos++));
+      setTimeout(() => { if(_pushPend){ _pushPend = false; cloudPush(); } }, espera);
+    }
+  }
+  finally{
+    cloudBusy = false;
+    /* lo que llegó mientras tanto sale ahora */
+    if(_pushPend && _pushFallos === 0){ _pushPend = false; setTimeout(() => cloudPush(), 200); }
+  }
 }
 if(cloudOn()) setInterval(cloudPull, 8000);
 /* al volver a la pestaña se jala al instante — sin esperar el tick de 8s */
