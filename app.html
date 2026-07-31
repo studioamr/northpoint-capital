@@ -1391,11 +1391,28 @@ button.tag.quemada{text-decoration:line-through;text-decoration-color:var(--down
 .cl-d.pas em{opacity:.35}
 .cl-d.hoy{border-color:var(--line)}
 .cl-d.hoy em{color:var(--txt);font-weight:600}
-.cl-d.hito{background:var(--w04)}
+/* los cinco estados de un día, del más tenue al más fuerte */
+.cl-d.ev{background:var(--w03)}
+.cl-d.buf{background:var(--w07)}
+.cl-d.hito{background:var(--w12)}
 .cl-d.hito em{color:var(--txt)}
 .cl-d.pago{background:color-mix(in srgb,var(--up) 14%,transparent);
-  border-color:color-mix(in srgb,var(--up) 40%,transparent)}
+  border-color:color-mix(in srgb,var(--up) 38%,transparent)}
 .cl-d.pago em{color:var(--up);font-weight:600}
+.cl-d.max{background:color-mix(in srgb,var(--up) 30%,transparent);
+  border-color:var(--up)}
+.cl-d.max em{color:var(--up);font-weight:700}
+.cl-d.abre{background:var(--up);border-color:var(--up)}
+.cl-d.abre em,.cl-d.abre i{color:var(--bg)}
+.cl-d.abre em{font-weight:700}
+/* la leyenda: qué significa cada tono */
+.cl-ley{display:flex;flex-wrap:wrap;gap:8px 18px;margin-top:14px;padding-top:12px;
+  border-top:1px solid var(--line-soft)}
+.cl-ley span{display:flex;align-items:center;gap:7px;font-size:10.5px;color:var(--faint)}
+.cl-ley .cl-d{width:14px;height:14px;aspect-ratio:auto;border-radius:4px;flex:none}
+/* el día en que se abre la fase, destacado en la cabecera */
+.pgs-a .abre b{color:var(--txt)}
+.pgs-a .abre em{color:var(--up)}
 /* ② la barra del mes: entra / sale / queda */
 .bm{margin-top:8px}
 .bm-b{display:flex;height:10px;border-radius:99px;overflow:hidden;background:var(--w04)}
@@ -12270,91 +12287,131 @@ function diaHabil(n){                     // el n-ésimo día hábil a partir de
 const claveDia = d => d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0')
                     + '-' + String(d.getDate()).padStart(2,'0');
 
-function plazoPagos(f, i, cuantos = 6){
+function plazoPagos(f, i, cuantos = 8){
   const cc = cartillaFase(f, i);
   const obj = cc.objDia || 200, tramo = cc.tramo || 1000;
   if(!obj || !cc.ctas) return null;
+  const EVAL = 3000, COLCHON = 2100;          // Select 50k: examen y colchón
+
+  /* Las cuentas que corren: las que ya están registradas arrancan DONDE VAN;
+     las que faltan por abrir arrancan de cero, que es lo honesto — una cuenta
+     que todavía no compras no lleva ganado nada. */
   const reales = S.accounts.filter(a => !esLive(a) && !esSim(a) && reglasDe(a) && esViva(a));
-  const hitos = [];
+  const cuentas = reales.map(a => {
+    const c = carreraCuenta(a);
+    return { alias:a.alias, nueva:false,
+             faltaEval: c.pasoEval ? 0 : Math.max(0, c.target - Math.max(0, c.p)),
+             faltaBuf:  c.pasoBuffer ? 0 : Math.max(0, c.buffer - Math.max(0, c.pasoEval ? c.picoDesp : 0)) };
+  });
+  for(let n = reales.length; n < cc.ctas; n++)
+    cuentas.push({ alias:null, nueva:true, faltaEval:EVAL, faltaBuf:COLCHON });
 
-  const deUnaCuenta = (alias, faltaEval, faltaBuf, hechos) => {
+  /* El día 0 es hoy. Se camina en días hábiles y se anota qué pasa en cada uno:
+     en cuáles se está haciendo el examen, en cuáles el colchón, y en cuáles
+     cae dinero. */
+  const D = {};                                  // nº de día hábil → qué pasa
+  const en = d => (D[d] = D[d] || { eval:0, buf:0, pagos:0, monto:0, evalOk:0, bufOk:0, max:0 });
+  const dEval = c => c.faltaEval > 0 ? Math.ceil(c.faltaEval / obj) : 0;
+  const dBuf  = c => c.faltaBuf  > 0 ? Math.ceil(c.faltaBuf  / obj) : 0;
+
+  cuentas.forEach(c => {
     let d = 0;
-    if(faltaEval > 0){ d += Math.ceil(faltaEval / obj); hitos.push({ d, tipo:'eval', alias }); }
-    if(faltaBuf  > 0){ d += Math.ceil(faltaBuf  / obj); hitos.push({ d, tipo:'buf',  alias }); }
-    for(let k = 0; k < cuantos; k++){
+    const ne = dEval(c), nb = dBuf(c);
+    for(let k = 1; k <= ne; k++) en(d + k).eval++;
+    d += ne; if(ne) en(d).evalOk++;
+    for(let k = 1; k <= nb; k++) en(d + k).buf++;
+    d += nb; if(nb) en(d).bufOk++;
+    for(let p = 0; p < cuantos; p++){
       d += Math.ceil(tramo / obj);
-      hitos.push({ d, tipo:'pago', alias, monto: tramo, n: hechos + k + 1 });
+      const e = en(d); e.pagos++; e.monto += tramo;
+      if(p === 0) e.max++;                       // el primer pago de esa cuenta es su PAGO MÁXIMO
     }
-  };
+  });
 
-  if(reales.length){
-    reales.forEach(a => {
-      const c = carreraCuenta(a);
-      const faltaEval = c.pasoEval ? 0 : Math.max(0, c.target - Math.max(0, c.p));
-      const faltaBuf  = c.pasoBuffer ? 0 : Math.max(0, c.buffer - Math.max(0, c.pasoEval ? c.picoDesp : 0));
-      const yaPagos = c.pasoPago ? 1 : 0;
-      deUnaCuenta(a.alias, faltaEval, faltaBuf, yaPagos);
-    });
-  } else {
-    /* todavía no hay cuentas: se proyecta la flota que pide la fase, todas
-       arrancando hoy — por eso caen juntas */
-    const R = { target:3000, buffer:2100 };
-    for(let n = 0; n < cc.ctas; n++) deUnaCuenta(null, R.target, R.buffer, 0);
+  /* Cuándo se abre la siguiente fase: se acumula el dinero que entra menos lo
+     que cuesta el mes (repartido en días hábiles) y se busca el primer día en
+     que el patrimonio pasa la puerta. */
+  const gastoDia = f.costos.reduce((a,[,v]) => a + v, 0) / 20;
+  let pat = patrimonio().total, desbloqueo = null;
+  const ultimo = Math.max(...Object.keys(D).map(Number), 0);
+  for(let d = 1; d <= ultimo && !desbloqueo; d++){
+    pat += ((D[d] || {}).monto || 0) - gastoDia;
+    if(pat >= f.a) desbloqueo = d;
   }
 
-  /* se agrupan por día: lo que importa es qué cae ESE día en toda la mesa */
-  const porDia = {};
-  hitos.forEach(x => {
-    const d = diaHabil(x.d), k = claveDia(d);
-    porDia[k] = porDia[k] || { fecha:d, pagos:0, monto:0, evals:0, bufs:0 };
-    if(x.tipo === 'pago'){ porDia[k].pagos++; porDia[k].monto += x.monto; }
-    else if(x.tipo === 'eval') porDia[k].evals++;
-    else porDia[k].bufs++;
-  });
-  const dias = Object.entries(porDia).map(([k, v]) => ({ k, ...v }))
-                     .sort((a,b) => a.fecha - b.fecha);
-  const pagos = dias.filter(d => d.pagos);
-  return { dias, pagos, obj, tramo, ctas: cc.ctas, reales: reales.length,
-           porPago: (reales.length || cc.ctas) * tramo, diasPorPago: Math.ceil(tramo / obj) };
+  const dias = Object.entries(D).map(([d, v]) => {
+    const fecha = diaHabil(+d);
+    return { d:+d, k: claveDia(fecha), fecha, ...v, abre: +d === desbloqueo };
+  }).sort((a,b) => a.d - b.d);
+  if(desbloqueo && !dias.some(x => x.abre)){
+    const fecha = diaHabil(desbloqueo);
+    dias.push({ d:desbloqueo, k:claveDia(fecha), fecha, eval:0, buf:0, pagos:0, monto:0,
+                evalOk:0, bufOk:0, max:0, abre:true });
+    dias.sort((a,b) => a.d - b.d);
+  }
+
+  return { dias, pagos: dias.filter(x => x.pagos), maximos: dias.filter(x => x.max),
+           abre: dias.find(x => x.abre) || null,
+           obj, tramo, ctas: cc.ctas, reales: reales.length, nuevas: cuentas.filter(c => c.nueva).length,
+           porPago: cc.ctas * tramo, diasPorPago: Math.ceil(tramo / obj) };
 }
 
-/* El calendario: los meses que hacen falta para ver los primeros pagos, con
-   los días marcados. Los sábados y domingos van apagados porque no se opera. */
-function calendarioHTML(pz, verPagos = 3){
+/* El calendario: cada día dice qué es. Examen, colchón, pago, pago máximo y el
+   día en que se abre la fase siguiente. */
+function calendarioHTML(pz){
   if(!pz || !pz.dias.length) return '';
   const hoy = new Date(); hoy.setHours(0,0,0,0);
-  /* el calendario no puede ser de dos meses fijos: si el primer payout cae en
-     septiembre y sólo se pintan julio y agosto, el usuario no ve NADA marcado.
-     Se estira hasta el mes del tercer pago (con tope de 5 meses). */
-  const ultimo = (pz.pagos[Math.min(verPagos, pz.pagos.length) - 1] || pz.dias[pz.dias.length-1]).fecha;
-  const meses = Math.min(5, Math.max(1,
-    (ultimo.getFullYear() - hoy.getFullYear()) * 12 + (ultimo.getMonth() - hoy.getMonth()) + 1));
   const mapa = {}; pz.dias.forEach(d => mapa[d.k] = d);
+  /* se pintan los meses necesarios para ver el desbloqueo (o el 3er pago) */
+  const fin = (pz.abre || pz.pagos[2] || pz.dias[pz.dias.length-1]).fecha;
+  const meses = Math.min(6, Math.max(1,
+    (fin.getFullYear() - hoy.getFullYear()) * 12 + (fin.getMonth() - hoy.getMonth()) + 1));
   const DOW = bi(['L','M','M','J','V','S','D'], ['M','T','W','T','F','S','S']);
   const bloques = [];
   for(let m = 0; m < meses; m++){
     const base = new Date(hoy.getFullYear(), hoy.getMonth() + m, 1);
     const dim = new Date(base.getFullYear(), base.getMonth() + 1, 0).getDate();
-    const off = (base.getDay() + 6) % 7;                    // lunes primero
+    const off = (base.getDay() + 6) % 7;
     const celdas = [];
     for(let k = 0; k < off; k++) celdas.push('<span class="cl-v"></span>');
     for(let d = 1; d <= dim; d++){
-      const f = new Date(base.getFullYear(), base.getMonth(), d);
-      const k = claveDia(f), h = mapa[k];
-      const cls = [FIN_DE_SEMANA(f) ? 'fds' : '', f < hoy ? 'pas' : '',
-                   +f === +hoy ? 'hoy' : '',
-                   h ? (h.pagos ? 'pago' : 'hito') : ''].filter(Boolean).join(' ');
-      celdas.push(`<span class="cl-d ${cls}"${h ? ` title="${h.pagos
-          ? bi('Payout de ','Payout of ') + fmt$(h.monto)
-          : (h.evals ? h.evals + bi(' evaluación(es) pasada(s)',' evaluation(s) passed') : h.bufs + bi(' colchón(es) listo(s)',' buffer(s) ready'))}"` : ''}>
-        <em>${d}</em>${h && h.pagos ? `<i>${fmtCorto(h.monto)}</i>` : ''}</span>`);
+      const fe = new Date(base.getFullYear(), base.getMonth(), d);
+      const h = mapa[claveDia(fe)];
+      const cls = [];
+      if(FIN_DE_SEMANA(fe)) cls.push('fds');
+      if(fe < hoy) cls.push('pas');
+      if(+fe === +hoy) cls.push('hoy');
+      if(h){
+        if(h.abre) cls.push('abre');
+        else if(h.max) cls.push('max');
+        else if(h.pagos) cls.push('pago');
+        else if(h.bufOk || h.evalOk) cls.push('hito');
+        else if(h.buf) cls.push('buf');
+        else if(h.eval) cls.push('ev');
+      }
+      const tit = !h ? '' : h.abre ? bi('Se abre la siguiente fase','The next phase opens')
+        : h.max ? bi('PAGO MÁXIMO · ','MAX PAYOUT · ') + fmt$(h.monto)
+        : h.pagos ? bi('Payout de ','Payout of ') + fmt$(h.monto)
+        : h.evalOk ? h.evalOk + bi(' evaluación(es) pasada(s)',' evaluation(s) passed')
+        : h.bufOk ? h.bufOk + bi(' colchón(es) listo(s)',' buffer(s) ready')
+        : h.buf ? bi('Armando colchón','Building buffer')
+        : bi('En evaluación','In evaluation');
+      celdas.push(`<span class="cl-d ${cls.join(' ')}"${tit ? ` title="${tit}"` : ''}>
+        <em>${d}</em>${h && h.monto ? `<i>${fmtCorto(h.monto)}</i>` : (h && h.abre ? '<i>★</i>' : '')}</span>`);
     }
     bloques.push(`<div class="cl-m">
       <span class="cl-t">${MESESL[idi()][base.getMonth()]} ${base.getFullYear()}</span>
       <div class="cl-g">${DOW.map(x => `<span class="cl-h">${x}</span>`).join('')}${celdas.join('')}</div>
     </div>`);
   }
-  return `<div class="cl">${bloques.join('')}</div>`;
+  const ley = [
+    ['ev',   bi('en evaluación','in evaluation')],
+    ['buf',  bi('armando colchón','building buffer')],
+    ['pago', bi('payout','payout')],
+    ['max',  bi('pago máximo','max payout')],
+    ['abre', bi('abre la siguiente fase','next phase opens')],
+  ].map(([c, t]) => `<span><i class="cl-d ${c}"></i>${t}</span>`).join('');
+  return `<div class="cl">${bloques.join('')}</div><div class="cl-ley">${ley}</div>`;
 }
 
 /* ── ② LA BARRA DEL MES ── entra, sale, queda. Una sola línea en vez de dos
@@ -12637,22 +12694,21 @@ function renderMetas(){
            Cuándo cae el primer payout, de cuánto, y cuándo el siguiente. */
         const pz = plazoPagos(f, i);
         if(!pz || !pz.pagos.length) return '';
-        const p1 = pz.pagos[0], p2 = pz.pagos[1];
+        const p1 = pz.pagos[0], p2 = pz.pagos[1], mx = pz.maximos[0];
         return `<span class="fl" style="margin-top:20px">${bi('Cuándo cae el dinero','When the money lands')}</span>
           <div class="pgs">
             <div class="pgs-a">
               <span><em>${bi('PRIMER PAYOUT','FIRST PAYOUT')}</em>
-                <b>${fmt$(p1.monto)}</b>
-                <i>${fmtFecha(p1.k)}</i></span>
+                <b>${fmt$(p1.monto)}</b><i>${fmtFecha(p1.k)}</i></span>
               ${p2 ? `<span><em>${bi('EL SIGUIENTE','THE NEXT ONE')}</em>
-                <b>${fmt$(p2.monto)}</b>
-                <i>${fmtFecha(p2.k)}</i></span>` : ''}
+                <b>${fmt$(p2.monto)}</b><i>${fmtFecha(p2.k)}</i></span>` : ''}
+              ${mx ? `<span><em>${bi('PAGO MÁXIMO','MAX PAYOUT')}</em>
+                <b>${fmt$(mx.monto)}</b><i>${fmtFecha(mx.k)}</i></span>` : ''}
+              ${pz.abre ? `<span class="abre"><em>${bi('ABRE LA FASE ' + PLAN_FASES[Math.min(i+1, PLAN_FASES.length-1)].r, 'PHASE ' + PLAN_FASES[Math.min(i+1, PLAN_FASES.length-1)].r + ' OPENS')}</em>
+                <b>${fmtFecha(pz.abre.k)}</b><i>${bi('al pasar ','on crossing ')}${fmt$(f.a)}</i></span>` : ''}
               <span class="der"><em>${bi('RITMO','PACE')}</em>
                 <b>${bi('cada ','every ')}${pz.diasPorPago}${bi(' días hábiles',' business days')}</b>
-                <i>${pz.reales
-                  ? pz.reales + (pz.reales === 1 ? bi(' cuenta tuya hoy',' account of yours today') : bi(' cuentas tuyas hoy',' accounts of yours today'))
-                      + (pz.reales < pz.ctas ? bi(' · la fase pide ',' · the phase asks for ') + pz.ctas : '')
-                  : bi('proyección de las ','projection of the ') + pz.ctas + bi(' cuentas del plan',' planned accounts')}</i></span>
+                <i>${pz.reales ? pz.reales + bi(' cuenta(s) tuya(s)',' account(s) of yours') : ''}${pz.reales && pz.nuevas ? ' + ' : ''}${pz.nuevas ? pz.nuevas + bi(' por abrir',' to open') : ''}</i></span>
             </div>
             ${calendarioHTML(pz)}
             <p class="pgs-n micro">${bi(
