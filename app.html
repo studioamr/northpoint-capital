@@ -1897,6 +1897,8 @@ button.tag.quemada{text-decoration:line-through;text-decoration-color:var(--down
 #toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
 
 /* banner de gestión */
+.g-banner.cerrado{border-color:var(--line);background:var(--w04)}
+.g-banner.cerrado span{color:var(--faint)}
 .g-banner{
   border-radius:12px;padding:14px 18px;margin-top:14px;
   border:1px solid var(--line);font-size:13px;color:var(--dim);
@@ -2472,6 +2474,7 @@ stop[stop-color="#9BC0DC"]{stop-color:var(--txt)}
               <div id="gestState" class="mt"></div>
               <div class="mt" style="display:flex;gap:10px;flex-wrap:wrap">
                 <button class="btn primary" id="btnTradeFromSes" style="flex:1;min-width:220px;padding:15px;font-size:14px;letter-spacing:.06em">◉ FIRE — log the trade</button>
+                <button class="btn" id="btnCerrarDia">Cerrar el día →</button>
                 <button class="btn" data-goto="journal">Ver journal</button>
               </div>
             </div>
@@ -6369,6 +6372,13 @@ function renderSesion(){
     stopTocado ? 'SESSION STOP HIT — close the platform. No exceptions.'
     : objCubierto ? 'Target for the day is covered. The best trade left is to switch off.'
     : g.msg}</span></div>`;
+  /* con el día cerrado, el banner lo dice y manda sobre cualquier otro aviso */
+  if(getSession(iso).cerrado){
+    const c = getSession(iso).cerrado;
+    $('#gestState').innerHTML = `<div class="g-banner cerrado" style="margin-top:0"><span>${bi(
+      'DÍA CERRADO a las ' + c.hora + ' · ' + c.trades + ' de ' + c.maxT + ' balas. La sesión está firmada.',
+      'DAY CLOSED at ' + c.hora + ' · ' + c.trades + ' of ' + c.maxT + ' bullets. The session is signed off.')}</span></div>`;
+  }
 
   /* las balas: tus trades del plan. Se gastan al disparar; pasarse pinta rojo. */
   const camaras = Math.max(rt.maxT, dayTr.length);
@@ -6394,8 +6404,25 @@ function renderSesion(){
       <div class="k-v">${Math.max(0, rt.maxT - dayTr.length)}<span style="font-size:14px;color:var(--faint)"> / ${rt.maxT}</span></div>
       <div class="k-s">${dayTr.length > rt.maxT ? 'te pasaste del plan' : 'quedan en el tambor'}</div></div>`,
   ].join('');
+  /* el botón dice en qué estado está el día, y la cabina también */
+  const cer = getSession(iso).cerrado;
+  const bc = $('#btnCerrarDia');
+  if(bc){
+    bc.textContent = cer ? bi('Reabrir el día','Reopen the day') : bi('Cerrar el día →','Close the day →');
+    bc.classList.toggle('primary', !!cer);
+  }
+  const bf = $('#btnTradeFromSes');
+  if(bf){
+    bf.disabled = !!cer;
+    bf.style.opacity = cer ? .45 : '';
+    bf.title = cer ? bi('El día está cerrado. Reábrelo para registrar otro trade.',
+                        'The day is closed. Reopen it to log another trade.') : '';
+  }
+
   clearInterval(obTimerInt);
-  if(S.ui.rtTab === 'live'){ obTick(); obTimerInt = setInterval(obTick, 1000); }
+  /* con el día cerrado el reloj se detiene: no hay sesión que contar */
+  if(S.ui.rtTab === 'live' && !cer){ obTick(); obTimerInt = setInterval(obTick, 1000); }
+  else if(cer && $('#obReloj')) $('#obReloj').textContent = cer.hora;
 
   /* ── CIERRE · el resumen de la sesión contra el plan ── */
   const vios = [...new Set(dayTr.flatMap(t => violations(t, dayTr)))];
@@ -7016,14 +7043,24 @@ $('#jSeg').addEventListener('click', e=>{
 });
 
 /* trade modal */
+/* la hora de Nueva York, en HH:MM, para sellar un trade en el momento */
+function horaMercadoAhora(){
+  const m = Math.round(minutosEn(TZ_MERCADO));
+  return String(Math.floor(m / 60) % 24).padStart(2,'0') + ':' + String(m % 60).padStart(2,'0');
+}
 let editingTrade = null;
 function openTrade(id){
   editingTrade = id ? S.trades.find(t=>t.id===id) : null;
   $('#tmTitle').textContent = editingTrade ? bi('Editar trade','Edit trade') : tr('tr.titulo');
   const t = editingTrade || {};
   $('#tFecha').value = t.date || todayISO();
-  $('#tHora').value = t.time || '07:35';
-  $('#tSym').value = t.sym || 'NQ';
+  /* La hora y el instrumento venían FIJOS en el código: 07:35 y NQ. Un trade
+     tomado a las 11:41 quedaba sellado a las 07:35 —hora falsa, y con ella la
+     comparación contra la ventana— y cada trade nuevo nacía marcado
+     OTRO_INSTRUMENTO porque el default no era MNQ. Ahora la hora es la del
+     mercado en este momento y el instrumento es el de la casa. */
+  $('#tHora').value = t.time || horaMercadoAhora();
+  $('#tSym').value = t.sym || (S.profile && S.profile.instrumento) || SISTEMA.instrumento;
   $('#tDir').value = t.dir || 'L';
   $('#tQty').value = t.qty || 1;
   $('#tSetup').value = (t.setupOk===false) ? '0' : '1';
@@ -8600,6 +8637,40 @@ $('#repCopy').addEventListener('click', ()=>{
 
 $('#btnTrade').addEventListener('click', ()=> openTrade());
 $('#btnTradeFromSes').addEventListener('click', ()=> openTrade());
+
+/* ── CERRAR EL DÍA ──
+   El día no siempre termina porque se acabaron las balas. Termina cuando tú
+   dices que terminó: sin disparar nada porque no hubo setup, con una de dos
+   porque ganaste la primera, o con las dos gastadas. Faltaba la manera de
+   decirlo — sin este botón, un día sin trades se quedaba «en vivo» para
+   siempre y el cierre nunca se firmaba.
+
+   Cerrar no borra ni inventa nada: sella la hora, deja escrito con cuántas
+   balas se cerró y lleva a la hoja de la sesión. Se puede reabrir el mismo día
+   si la mesa vuelve a abrir. */
+$('#btnCerrarDia')?.addEventListener('click', () => {
+  const iso = todayISO();
+  const ses = getSession(iso);
+  const dayTr = tradesByDay()[iso] || [];
+  const maxT = planDelDia(iso).maxT;
+  if(ses.cerrado){
+    ses.cerrado = null; save();
+    S.ui.rtTab = 'live'; render('sesion');
+    toast(bi('Día reabierto.','Day reopened.'));
+    return;
+  }
+  const cuantos = dayTr.length;
+  const como = !cuantos ? bi('sin disparar: no hubo setup','no shots: there was no setup')
+    : cuantos < maxT ? bi(cuantos + ' de ' + maxT + ' balas', cuantos + ' of ' + maxT + ' bullets')
+    : bi('con las ' + maxT + ' balas gastadas', 'with all ' + maxT + ' bullets spent');
+  if(!confirm(bi('Cerrar el día ' + como + '. Después de esto la sesión queda firmada.\n\n¿Cerrar?',
+                 'Close the day ' + como + '. After this the session is signed off.\n\n¿Close?'))) return;
+  ses.cerrado = { hora: horaMercadoAhora(), trades: cuantos, maxT,
+                  por: (S.session && S.session.user) || null, ts: Date.now() };
+  sellaCambio(ses); save();
+  S.ui.rtTab = 'cierre'; render('sesion');
+  toast(bi('Día cerrado ' + como + '.', 'Day closed ' + como + '.'));
+});
 $('#btnPos')?.addEventListener('click', ()=> openPos());
 
 /* ════════ Badges del rail ════════ */
