@@ -3152,6 +3152,7 @@ stop[stop-color="#9BC0DC"]{stop-color:var(--txt)}
       <button class="btn primary" id="recGo" style="width:100%;margin-top:6px">Guardar y entrar</button>
     </div>
     <button class="btn" id="lgAlta" style="width:100%;margin-top:10px;font-size:11px">¿Primera vez? Crea tu acceso de nube</button>
+    <button class="btn" id="lgOlvide" style="width:100%;margin-top:8px;font-size:11px">Olvidé mi contraseña</button>
     <div id="altaNube" hidden style="margin-top:14px;border-top:1px solid var(--line);padding-top:14px">
       <p class="micro" style="margin-bottom:10px;line-height:1.6">Tu correo REAL y una contraseña que solo tú sabrás.
         Te llega un correo de confirmación: lo abres y luego entras aquí con tu usuario y esa contraseña.</p>
@@ -8650,6 +8651,39 @@ $('#repCopy').addEventListener('click', ()=>{
 });
 
 $('#btnTrade').addEventListener('click', ()=> openTrade());
+/* ── PEDIR EL CORREO DE RECUPERACIÓN DESDE AQUÍ ──
+   Antes esto sólo se podía disparar desde el panel de Supabase, y ese correo
+   manda al Site URL del proyecto — que apunta a otra cosa porque el proyecto es
+   compartido. Pidiéndolo desde la app se manda `redirect_to` con la dirección
+   de ESTA página, así el enlace regresa aquí y cae en la pantalla de contraseña
+   nueva. El socio se destraba solo, sin que nadie toque ajustes ni vea su clave. */
+$('#lgOlvide')?.addEventListener('click', async () => {
+  const err = $('#lgErr');
+  const escrito = ($('#lgUser').value || '').trim();
+  /* hace falta el correo real, no el usuario: es a donde llega el enlace */
+  let correo = escrito.includes('@') ? escrito
+    : (S.correos || {})[resuelveUsuario(escrito)] || '';
+  if(!correo){
+    correo = (prompt('¿A qué correo te lo mando? (el que usaste al registrarte)') || '').trim();
+  }
+  if(!correo || !correo.includes('@')){ err.textContent = 'Escribe tu correo para mandártelo.'; return; }
+  err.textContent = 'Mandando…';
+  try{
+    const destino = location.origin + location.pathname;
+    const r = await fetch(CLOUD.url + '/auth/v1/recover?redirect_to=' + encodeURIComponent(destino), {
+      method:'POST', headers:{ 'apikey':CLOUD.anon, 'Content-Type':'application/json' },
+      body: JSON.stringify({ email: correo }),
+    });
+    if(!r.ok){ const d = await r.json().catch(()=>({}));
+      throw new Error(d.msg || d.error_description || 'no se pudo'); }
+    err.style.color = 'var(--up)';
+    err.textContent = 'Listo: revisa ' + correo + ' (y el correo no deseado). El enlace te trae de vuelta aquí.';
+  }catch(e){
+    err.style.color = '';
+    err.textContent = 'No se pudo mandar: ' + (e.message || 'intenta otra vez');
+  }
+});
+
 /* ── LLEGAR DESDE EL CORREO DE RECUPERACIÓN ──
    Si la URL trae el token, se abre la pantalla de contraseña nueva en lugar del
    acceso normal: quien llega aquí es porque no puede entrar. */
