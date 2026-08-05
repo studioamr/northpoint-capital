@@ -12733,6 +12733,224 @@ function dibujaOficina(t){
   });
 
 
+  /* ════════ LAS PIEZAS DE LUJO ════════
+     Una firma que va por $150M no se ve como un cuarto con escritorios. Aquí
+     viven las cuatro piezas que hacen que el piso se sienta caro, y las tres
+     ciudades las tienen — cambiando de material, no de idea:
+
+       · el muro de la marca detrás de recepción, retroiluminado
+       · la fuente de agua, con el agua MOVIÉNDOSE
+       · el acuario, que es el lujo que todo el mundo mira
+       · y la vitrina de la casa: la armadura en Tokio, el bar art déco en
+         Nueva York, la biblioteca con su globo en Londres
+
+     Cada ciudad pone su cultura en el piso, no un tinte encima del mismo mueble. */
+  const LUJO = {
+    nyc:     { agua:'#7EC8D8', pila:'#E8E4DC', pilaTop:'#C9A96A', metal:'#C9A96A',
+               vitrina:'#1C2026', vidrio:'rgba(190,214,232,.30)', muroLogo:'#1A1E26' },
+    tokio:   { agua:'#8ED8C8', pila:'#6B6250', pilaTop:'#8E877E', metal:'#B23A30',
+               vitrina:'#8E6B46', vidrio:'rgba(214,226,232,.26)', muroLogo:'#E4DCCC' },
+    londres: { agua:'#8EC0D8', pila:'#C9C2B4', pilaTop:'#A6906A', metal:'#A6906A',
+               vitrina:'#5E4630', vidrio:'rgba(200,214,232,.28)', muroLogo:'#22304C' },
+  };
+  const LJ = LUJO[E.c] || LUJO.nyc;
+
+  /* ── EL MURO DE LA MARCA ── detrás del mostrador, con su luz por atrás */
+  add(12.4, c2 => {
+    caja(c2, 4.1, 5.5, 0, .16, 2.7, 2.1, LJ.muroLogo, 8, -18);
+    const mx = iX(4.18, 6.85), my = iY(4.18, 6.85, 1.45);
+    /* el halo del retroiluminado */
+    const halo = c2.createRadialGradient(mx, my, 4, mx, my, 78);
+    halo.addColorStop(0, 'rgba(96,214,164,.30)'); halo.addColorStop(1, 'rgba(96,214,164,0)');
+    c2.fillStyle = halo; c2.beginPath(); c2.arc(mx, my, 78, 0, 7); c2.fill();
+    c2.save(); c2.translate(mx, my); c2.rotate(.4635);        // al plano del muro
+    c2.font = 'bold 15px "IBM Plex Mono", monospace'; c2.textAlign = 'center';
+    c2.fillStyle = 'rgba(255,255,255,.92)'; c2.fillText('NORTHPOINT', 0, 0);
+    c2.font = '7px "IBM Plex Mono", monospace';
+    c2.fillStyle = 'rgba(255,255,255,.5)'; c2.fillText('CAPITAL  MANAGEMENT', 0, 12);
+    c2.restore(); c2.textAlign = 'left';
+  });
+
+  /* ── LA FUENTE ── tres platos de piedra, un chorro y el agua que se mueve de
+     verdad: los anillos se abren con el reloj, no son una textura pintada. */
+  add(13.1, c2 => {
+    const fx = 4.55, fy = 8.35, r = 1.5;
+    /* la pila: base ancha, borde y el vaso de agua */
+    caja(c2, fx, fy, 0, r, r, .34, LJ.pila, 12, -22);
+    losa(c2, fx + .06, fy + .06, .35, LJ.pilaTop, r - .12, r - .12);
+    losa(c2, fx + .2, fy + .2, .36, mez(LJ.agua, -18), r - .4, r - .4);
+    const cx = iX(fx + r/2, fy + r/2), cy = iY(fx + r/2, fy + r/2, .37);
+    /* los anillos del agua, abriéndose */
+    for(let k = 0; k < 3; k++){
+      const u = ((t / 1400 + k / 3) % 1);
+      c2.strokeStyle = `rgba(255,255,255,${.42 * (1 - u)})`;
+      c2.lineWidth = 2 - u;
+      c2.beginPath(); c2.ellipse(cx, cy, 8 + u * 34, 4 + u * 17, 0, 0, 7); c2.stroke();
+    }
+    /* el pedestal y el chorro */
+    caja(c2, fx + r/2 - .16, fy + r/2 - .16, .36, .32, .32, .62, LJ.pilaTop, 14, -20);
+    const jx = iX(fx + r/2, fy + r/2), jy = iY(fx + r/2, fy + r/2, .98);
+    c2.fillStyle = LJ.metal;
+    c2.beginPath(); c2.ellipse(jx, jy, 7, 3.5, 0, 0, 7); c2.fill();
+    /* el agua cayendo, en gotas que suben y bajan en bucle */
+    for(let k = 0; k < 22; k++){
+      const u = ((t / 620 + k / 22) % 1);
+      const ang = (k / 22) * 6.283;
+      const dx = Math.cos(ang) * u * 26, dz = 34 * (1 - (2 * u - 1) * (2 * u - 1));
+      c2.fillStyle = `rgba(255,255,255,${.5 - u * .32})`;
+      c2.beginPath(); c2.ellipse(jx + dx, jy - dz + u * 8, 2.2, 3, 0, 0, 7); c2.fill();
+    }
+    /* el brillo del agua quieta */
+    c2.fillStyle = 'rgba(255,255,255,.16)';
+    c2.beginPath(); c2.ellipse(cx - 14, cy - 4, 16, 6, -.3, 0, 7); c2.fill();
+  });
+
+  /* ── EL ACUARIO ── el lujo que todo el mundo se queda viendo. Peces que
+     cruzan de verdad y el agua con su gradiente. */
+  add(15.6, c2 => {
+    const ax = 8.75, ay = 4.25, aw = .6, ah = 2.3;
+    caja(c2, ax, ay, 0, aw, ah, .55, LJ.vitrina, 10, -20);        // el mueble
+    /* el agua va TRANSLÚCIDA: un bloque opaco de dos tiles de alto tapaba media
+       mesa y se leía como una pared, no como un acuario. */
+    c2.save(); c2.globalAlpha = .62;
+    caja(c2, ax, ay, .55, aw, ah, .95, mez(LJ.agua, -26), 8, -16);
+    c2.restore();
+    /* el marco de la tapa, del metal de la casa */
+    caja(c2, ax - .03, ay - .03, 1.5, aw + .06, ah + .06, .07, LJ.metal, 14, -18);
+    /* frente de cristal con su reflejo */
+    const p1 = [iX(ax, ay + ah), iY(ax, ay + ah, 1.5)], p2 = [iX(ax + aw, ay + ah), iY(ax + aw, ay + ah, 1.5)];
+    const g2 = c2.createLinearGradient(p1[0], p1[1], p2[0], p2[1] + 60);
+    g2.addColorStop(0, 'rgba(255,255,255,.20)'); g2.addColorStop(.5, 'rgba(255,255,255,.05)');
+    g2.addColorStop(1, 'rgba(255,255,255,.16)');
+    c2.fillStyle = g2;
+    c2.beginPath();
+    c2.moveTo(p1[0], p1[1]); c2.lineTo(p2[0], p2[1]);
+    c2.lineTo(p2[0], iY(ax + aw, ay + ah, .55)); c2.lineTo(p1[0], iY(ax, ay + ah, .55));
+    c2.closePath(); c2.fill();
+    /* la arena y las algas del fondo */
+    const bx = iX(ax + .1, ay + ah), by = iY(ax + .1, ay + ah, .59);
+    c2.fillStyle = mez('#C9B48C', -10);
+    c2.fillRect(bx, by - 6, (iX(ax + aw - .1, ay + ah) - bx), 7);
+    for(let k = 0; k < 7; k++){
+      const gx2 = bx + 14 + k * 26 + Math.sin(t / 900 + k) * 3;
+      c2.strokeStyle = 'rgba(78,168,120,.75)'; c2.lineWidth = 3;
+      c2.beginPath(); c2.moveTo(gx2, by - 4);
+      c2.quadraticCurveTo(gx2 + Math.sin(t / 700 + k) * 8, by - 24, gx2 + Math.sin(t / 700 + k) * 4, by - 42);
+      c2.stroke();
+    }
+    /* los peces, cruzando */
+    const anchoPx = iX(ax + aw, ay + ah) - iX(ax, ay + ah);
+    [['#E8A63C', .00, 16], ['#E8734A', .38, 30], ['#6ECFE8', .70, 22], ['#F2F0EA', .55, 40]]
+      .forEach(([col, fase, alto], k) => {
+        const u = ((t / (2600 + k * 700) + fase) % 1);
+        const dir = k % 2 ? 1 : -1;
+        const px2 = p1[0] + (dir > 0 ? u : 1 - u) * anchoPx;
+        const py2 = by - alto + Math.sin(t / 800 + k * 2) * 5;
+        c2.fillStyle = col;
+        c2.beginPath(); c2.ellipse(px2, py2, 7, 3.6, 0, 0, 7); c2.fill();
+        c2.beginPath();
+        c2.moveTo(px2 - 6 * dir, py2); c2.lineTo(px2 - 12 * dir, py2 - 3.4);
+        c2.lineTo(px2 - 12 * dir, py2 + 3.4); c2.closePath(); c2.fill();
+      });
+    /* las burbujas */
+    for(let k = 0; k < 9; k++){
+      const u = ((t / 2100 + k / 9) % 1);
+      c2.fillStyle = `rgba(255,255,255,${.34 * (1 - u)})`;
+      c2.beginPath();
+      c2.arc(bx + 30 + k * 24, by - u * 58, 1.6 + u * 1.6, 0, 7); c2.fill();
+    }
+    /* la luz de la tapa */
+    const lx = iX(ax + aw / 2, ay + ah / 2), ly = iY(ax + aw / 2, ay + ah / 2, 1.55);
+    const lg = c2.createRadialGradient(lx, ly, 4, lx, ly, 66);
+    lg.addColorStop(0, 'rgba(160,230,240,.26)'); lg.addColorStop(1, 'rgba(160,230,240,0)');
+    c2.fillStyle = lg; c2.beginPath(); c2.arc(lx, ly, 66, 0, 7); c2.fill();
+  });
+
+  /* ── LA VITRINA DE LA CASA ── la misma esquina, tres culturas distintas.
+     Aquí es donde el piso deja de ser genérico. */
+  add(11.7, c2 => {
+    const vx = 7.35, vy = 3.2;
+    /* Todo lo de aquí se dibuja en píxeles alrededor de un punto, así que se
+       escala desde ese punto: a tamaño natural la armadura era un borrón. */
+    const zoomC = iX(vx + .65, vy + .3), zoomY = iY(vx + .65, vy + .3, .32);
+    c2.save(); c2.translate(zoomC, zoomY); c2.scale(1.55, 1.55); c2.translate(-zoomC, -zoomY);
+    if(E.c === 'tokio'){
+      /* LA ARMADURA · un yoroi en su vitrina, sobre tarima de madera */
+      caja(c2, vx, vy, 0, 1.3, .62, .3, '#6E4E32', 12, -20);
+      const ax2 = iX(vx + .65, vy + .3), ay2 = iY(vx + .65, vy + .3, .32);
+      c2.fillStyle = '#8E2F27';                                   // el dō (peto)
+      c2.beginPath();
+      c2.moveTo(ax2 - 17, ay2 - 40); c2.lineTo(ax2 + 17, ay2 - 40);
+      c2.lineTo(ax2 + 13, ay2 - 6); c2.lineTo(ax2 - 13, ay2 - 6); c2.closePath(); c2.fill();
+      c2.fillStyle = 'rgba(0,0,0,.25)';                            // las lamas
+      for(let k = 0; k < 5; k++) c2.fillRect(ax2 - 15 + k, ay2 - 36 + k * 6, 30 - k * 2, 1.6);
+      c2.fillStyle = '#B23A30';                                    // los sode (hombreras)
+      c2.fillRect(ax2 - 27, ay2 - 40, 10, 20); c2.fillRect(ax2 + 17, ay2 - 40, 10, 20);
+      c2.fillStyle = '#2A2420';                                    // el men-yoroi
+      c2.beginPath(); c2.ellipse(ax2, ay2 - 48, 10, 9, 0, 0, 7); c2.fill();
+      c2.fillStyle = '#C9A96A';                                    // el kuwagata (cuernos)
+      c2.beginPath();
+      c2.moveTo(ax2 - 3, ay2 - 56); c2.lineTo(ax2 - 13, ay2 - 76); c2.lineTo(ax2 - 7, ay2 - 56); c2.closePath(); c2.fill();
+      c2.beginPath();
+      c2.moveTo(ax2 + 3, ay2 - 56); c2.lineTo(ax2 + 13, ay2 - 76); c2.lineTo(ax2 + 7, ay2 - 56); c2.closePath(); c2.fill();
+      /* la katana en su soporte, al lado */
+      c2.strokeStyle = '#D8DCE2'; c2.lineWidth = 3;
+      c2.beginPath(); c2.moveTo(ax2 + 34, ay2 - 26); c2.quadraticCurveTo(ax2 + 52, ay2 - 34, ax2 + 66, ay2 - 24); c2.stroke();
+      c2.strokeStyle = '#8E2F27'; c2.lineWidth = 4;
+      c2.beginPath(); c2.moveTo(ax2 + 66, ay2 - 24); c2.lineTo(ax2 + 76, ay2 - 20); c2.stroke();
+    } else if(E.c === 'nyc'){
+      /* EL BAR ART DÉCO · barra de latón, botellería retroiluminada y copas */
+      caja(c2, vx, vy, 0, 1.5, .62, 1.0, LJ.vitrina, 12, -22);
+      losa(c2, vx - .04, vy - .04, 1.01, LJ.metal, 1.58, .7);
+      const bx2 = iX(vx + .12, vy + .5), by2 = iY(vx + .12, vy + .5, 1.02);
+      const anchoB = iX(vx + 1.38, vy + .5) - bx2;
+      /* el mueble de botellas por detrás, con su luz cálida */
+      c2.fillStyle = 'rgba(201,169,106,.16)'; c2.fillRect(bx2, by2 - 74, anchoB, 74);
+      for(let k = 0; k < 11; k++){
+        const h2 = 20 + (k % 4) * 7;
+        c2.fillStyle = ['#8E6B46','#3E5E48','#7E2F35','#C9A96A','#2E4A78'][k % 5];
+        c2.fillRect(bx2 + 7 + k * (anchoB - 16) / 11, by2 - 12 - h2, 6, h2);
+        c2.fillStyle = 'rgba(255,255,255,.3)';
+        c2.fillRect(bx2 + 7 + k * (anchoB - 16) / 11, by2 - 12 - h2, 2, h2);
+      }
+      /* tres copas de martini sobre la barra */
+      [0, 1, 2].forEach(k => {
+        const gx3 = bx2 + 22 + k * 26, gy3 = by2 - 6;
+        c2.fillStyle = 'rgba(232,240,248,.85)';
+        c2.beginPath();
+        c2.moveTo(gx3 - 6, gy3 - 14); c2.lineTo(gx3 + 6, gy3 - 14); c2.lineTo(gx3, gy3 - 6); c2.closePath(); c2.fill();
+        c2.fillRect(gx3 - .8, gy3 - 6, 1.6, 6);
+        c2.fillRect(gx3 - 4, gy3, 8, 1.6);
+      });
+    } else {
+      /* LA BIBLIOTECA · roble, lomos de piel y el globo terráqueo del club */
+      caja(c2, vx, vy, 0, 1.5, .5, 1.9, LJ.vitrina, 10, -20);
+      const bx3 = iX(vx + .1, vy + .42), by3 = iY(vx + .1, vy + .42, 1.9);
+      const anchoL = iX(vx + 1.4, vy + .42) - bx3;
+      for(let f2 = 0; f2 < 4; f2++){
+        const yy = by3 + 8 + f2 * 22;
+        c2.fillStyle = 'rgba(0,0,0,.3)'; c2.fillRect(bx3, yy + 16, anchoL, 3);
+        for(let k = 0; k < 16; k++){
+          const lw = 3 + (k % 3);
+          c2.fillStyle = ['#6E2A30','#3E5E48','#5E4630','#22304C','#7E5A2E'][(k + f2) % 5];
+          c2.fillRect(bx3 + 4 + k * (anchoL - 10) / 16, yy + 16 - (11 + (k % 4) * 3), lw, 11 + (k % 4) * 3);
+        }
+      }
+      /* el globo terráqueo sobre su pie */
+      const gx4 = iX(vx + 1.75, vy + .3), gy4 = iY(vx + 1.75, vy + .3, .0);
+      c2.fillStyle = '#5E4630';
+      c2.beginPath(); c2.moveTo(gx4 - 9, gy4); c2.lineTo(gx4 + 9, gy4); c2.lineTo(gx4 + 3, gy4 - 16); c2.lineTo(gx4 - 3, gy4 - 16); c2.closePath(); c2.fill();
+      c2.fillStyle = '#2E6B8E';
+      c2.beginPath(); c2.arc(gx4, gy4 - 32, 16, 0, 7); c2.fill();
+      c2.fillStyle = '#4E8E5A';
+      c2.beginPath(); c2.ellipse(gx4 - 5, gy4 - 37, 7, 5, .3, 0, 7); c2.fill();
+      c2.beginPath(); c2.ellipse(gx4 + 6, gy4 - 27, 5, 7, -.2, 0, 7); c2.fill();
+      c2.strokeStyle = LJ.metal; c2.lineWidth = 2.2;
+      c2.beginPath(); c2.arc(gx4, gy4 - 32, 19, -.4, 3.6); c2.stroke();
+    }
+    c2.restore();
+  });
+
   // jardineras y palmeras del borde
   [[8.4, 2.2],[8.4, 6.0],[2.2, 8.4],[6.2, 8.4],[8.6, 8.6]].forEach(([px, py], i) => {
     add(px + py + .2, c2 => {
