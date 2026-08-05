@@ -3137,6 +3137,20 @@ stop[stop-color="#9BC0DC"]{stop-color:var(--txt)}
     <div class="f-full"><label data-i18n="c.clave">Key</label><input id="lgPass" type="password" autocomplete="off" placeholder=""></div>
     <div id="lgErr" class="login-err"></div>
     <button class="btn primary" id="lgGo" style="width:100%;margin-top:6px" data-i18n="c.entrar">Sign in</button>
+
+    <!-- Pantalla de contraseña nueva: sólo aparece cuando se llega desde el
+         correo de recuperación, con el token en el fragmento de la URL. -->
+    <div id="recNube" hidden style="margin-top:14px;border-top:1px solid var(--line);padding-top:14px">
+      <p class="micro" style="margin-bottom:10px;line-height:1.6">
+        <b style="color:var(--up)">CONTRASEÑA NUEVA</b><br>
+        Escribe la que quieras. Nadie más la va a ver — ni queda escrita en ningún lado.</p>
+      <div class="f-full"><label>Contraseña nueva</label>
+        <input id="recPass" type="password" autocomplete="new-password" placeholder="mínimo 6 caracteres"></div>
+      <div class="f-full"><label>Otra vez</label>
+        <input id="recPass2" type="password" autocomplete="new-password"></div>
+      <div id="recErr" class="login-err"></div>
+      <button class="btn primary" id="recGo" style="width:100%;margin-top:6px">Guardar y entrar</button>
+    </div>
     <button class="btn" id="lgAlta" style="width:100%;margin-top:10px;font-size:11px">¿Primera vez? Crea tu acceso de nube</button>
     <div id="altaNube" hidden style="margin-top:14px;border-top:1px solid var(--line);padding-top:14px">
       <p class="micro" style="margin-bottom:10px;line-height:1.6">Tu correo REAL y una contraseña que solo tú sabrás.
@@ -8636,6 +8650,59 @@ $('#repCopy').addEventListener('click', ()=>{
 });
 
 $('#btnTrade').addEventListener('click', ()=> openTrade());
+/* ── LLEGAR DESDE EL CORREO DE RECUPERACIÓN ──
+   Si la URL trae el token, se abre la pantalla de contraseña nueva en lugar del
+   acceso normal: quien llega aquí es porque no puede entrar. */
+(function montaRecuperacion(){
+  const rec = tokenDeRecuperacion();
+  if(!rec || !rec.token) return;
+  const caja = $('#recNube'); if(!caja) return;
+  caja.hidden = false;
+  $('#lgUser').closest('.f-full').hidden = true;
+  $('#lgPass').closest('.f-full').hidden = true;
+  /* `hidden` no gana contra el display del botón: se apaga por estilo */
+  $('#lgGo').style.display = 'none';
+  const alta = $('#lgAlta'); if(alta) alta.style.display = 'none';
+  const sub = document.querySelector('#login .sub'); if(sub) sub.style.display = 'none';
+  setTimeout(() => $('#recPass').focus(), 120);
+
+  $('#recGo').addEventListener('click', async () => {
+    const p1 = $('#recPass').value, p2 = $('#recPass2').value;
+    const err = $('#recErr');
+    if(p1.length < 6){ err.textContent = 'Mínimo 6 caracteres.'; return; }
+    if(p1 !== p2){ err.textContent = 'Las dos no son iguales.'; return; }
+    err.textContent = ''; $('#recGo').disabled = true; $('#recGo').textContent = 'Guardando…';
+    try{
+      const u = await fijaClaveNube(rec.token, p1);
+      /* el token de recuperación ya vale como sesión: se guarda y se entra */
+      cloudTok = { access_token: rec.token, refresh_token: null,
+                   email: (u && u.email) || null, exp: Date.now() + 3600e3 };
+      try{ localStorage.setItem('np_tok', JSON.stringify(cloudTok)); }catch(e){}
+      /* se limpia el token de la barra en cuanto se usó */
+      history.replaceState(null, '', location.pathname + location.search);
+      /* se identifica al socio por su correo para dejarlo dentro */
+      const correo = (u && u.email) || '';
+      S.correos = S.correos || {};
+      const uid2 = Object.keys(S.correos).find(k => (S.correos[k]||'').toLowerCase() === correo.toLowerCase())
+        || SOCIOS_REALES.find(k => ((USERS[k]||{}).correo||'').toLowerCase() === correo.toLowerCase());
+      if(uid2){
+        S.correos[uid2] = correo;
+        S.session = { user: uid2 }; save(); unlockUI(); cloudPull(); render('agentes');
+        toast('Contraseña guardada. Ya estás dentro.');
+      }else{
+        caja.hidden = true;
+        $('#lgUser').closest('.f-full').hidden = false;
+        $('#lgPass').closest('.f-full').hidden = false;
+        $('#lgGo').style.display = '';
+        $('#lgErr').textContent = 'Contraseña guardada. Entra con tu usuario y esa contraseña.';
+      }
+    }catch(e){
+      err.textContent = 'No se pudo guardar: ' + (e.message || 'el enlace ya venció. Pide otro correo.');
+      $('#recGo').disabled = false; $('#recGo').textContent = 'Guardar y entrar';
+    }
+  });
+})();
+
 $('#btnTradeFromSes').addEventListener('click', ()=> openTrade());
 
 /* ── CERRAR EL DÍA ──
@@ -8812,6 +8879,37 @@ async function cloudLogin(correo, clave){
   try{ localStorage.setItem('np_tok', JSON.stringify(cloudTok)); }catch(e){}
   return cloudTok;
 }
+/* ── RECUPERAR LA CONTRASEÑA ──
+   Faltaba por completo, y por eso el correo de recuperación era un callejón sin
+   salida: Supabase manda a la app con un token en el fragmento (#access_token
+   …&type=recovery) y aquí no había nada que lo escuchara. Ahora se detecta al
+   cargar, se abre una pantalla para escribir la nueva contraseña, y se guarda
+   con el token de recuperación. La clave la escribe SU DUEÑO — nadie más la ve
+   ni queda escrita en ningún lado.
+
+   El token viaja en el fragmento (después del #), que nunca sale del navegador:
+   no llega al servidor que sirve la página ni queda en sus registros. Aun así
+   se limpia de la barra en cuanto se usa. */
+function tokenDeRecuperacion(){
+  const h = location.hash || '';
+  if(h.indexOf('access_token=') === -1) return null;
+  const p = new URLSearchParams(h.replace(/^#/, ''));
+  const tipo = p.get('type');
+  if(tipo !== 'recovery' && tipo !== 'invite' && tipo !== 'signup') return null;
+  return { token: p.get('access_token'), tipo, correo: null };
+}
+async function fijaClaveNube(accessToken, clave){
+  const r = await fetch(CLOUD.url + '/auth/v1/user', {
+    method:'PUT',
+    headers:{ 'apikey':CLOUD.anon, 'Authorization':'Bearer ' + accessToken,
+              'Content-Type':'application/json' },
+    body: JSON.stringify({ password: clave }),
+  });
+  const d = await r.json().catch(() => ({}));
+  if(!r.ok) throw new Error(d.msg || d.error_description || d.message || 'No se pudo guardar');
+  return d;
+}
+
 async function cloudRefresh(){
   if(!cloudTok || !cloudTok.refresh_token) return false;
   try{
