@@ -4206,12 +4206,57 @@ addEventListener('storage', e => {
 
    Invariante: un trade es UNA decisión sin importar en cuántas cuentas se copió.
    violations(), computeScore() y los contadores x/2 cuentan decisiones, nunca cuentas. */
+/* ════════ LO MÍO, NO LO DE LA MESA ════════
+   El estado vive en la nube y los tres socios comparten el mismo archivo, así que
+   S.accounts y S.trades traen también lo de los demás. Sin este corte, André leía
+   $502,130 en FUTUROS —sus 5 cuentas MÁS las 5 de Pablo— y el journal le pintaba
+   los trades de Pablo como suyos. El dinero, el journal, las metas y las fechas
+   del plan son de UNA persona; la carrera de la firma y las hojas de perfil son
+   las únicas que miran a los demás, y ésas piden al dueño por su nombre.
+
+   Quien no es socio (un invitado) no comparte estado con nadie: todo lo que ve ya
+   es suyo, y filtrarlo lo dejaría con la app en blanco.
+
+   Lo viejo, de antes de que existiera el dueño, es de André: era el único. */
+const DUENO_ORIGEN = 'andre.np';
+function socioEnSesion(){
+  const uid = S.session && S.session.user;
+  return uid && SOCIOS_REALES.includes(uid) ? uid : null;
+}
+function mias(lista){
+  const uid = socioEnSesion();
+  return uid ? lista.filter(a => (a.owner || DUENO_ORIGEN) === uid) : lista;
+}
+function misTrades(){
+  const uid = socioEnSesion(), trs = S.trades || [];
+  return uid ? trs.filter(t => (t.por || DUENO_ORIGEN) === uid) : trs;
+}
+/* La sesión del día se guardaba con la fecha como única llave, así que dos
+   socios trabajando el mismo día escribían encima del otro: el plan de sesión,
+   las palomitas del pre-market y el cierre eran uno solo para la mesa. Ahora la
+   llave lleva quién. Las de André se quedan con la fecha pelona —son las que ya
+   existen y no hay que mover ningún historial para leerlas. */
+function claveSesion(iso){
+  const uid = socioEnSesion();
+  return !uid || uid === DUENO_ORIGEN ? iso : iso + '@' + uid;
+}
+function misSesiones(){
+  const uid = socioEnSesion(), out = {};
+  Object.keys(S.sessions || {}).forEach(k => {
+    const corte = k.indexOf('@');
+    const iso = corte < 0 ? k : k.slice(0, corte);
+    const dueno = corte < 0 ? DUENO_ORIGEN : k.slice(corte + 1);
+    if(!uid || dueno === uid) out[iso] = S.sessions[k];
+  });
+  return out;
+}
+
 /* Una cuenta está en juego mientras no esté quemada. El estado se ha escrito como
    'active' y como 'viva' según de dónde venga la cuenta, y media app comparaba contra
    'active': con las 5 cuentas en 'viva', metas() veía CERO cuentas y se iba al valor
    declarado en vez de derivar del contrato. Se pregunta por lo único estable. */
 const esViva = a => !!a && a.estado !== 'quemada';
-function cuentasVivas(){ return S.accounts.filter(esViva); }
+function cuentasVivas(){ return mias(S.accounts.filter(esViva)); }
 /* Sin tipo marcado se asume fondeada: así las cuentas viejas no cambian de
    naturaleza al migrar. 'sim' es dinero de práctica — ni fondeada (no hay
    firma que la respalde) ni cuenta propia real (no cuenta para nada de lo
@@ -4451,7 +4496,7 @@ function limitesDia(trade){
    Pre-market): máx. trades, stop y objetivo. Eso manda; si ese día no se llenó,
    se cae a los límites de la fase. */
 function planDelDia(iso){
-  const s = (S.sessions || {})[iso];
+  const s = (S.sessions || {})[claveSesion(iso)];
   const r = s && s.rutina;
   return {
     maxT: (r && r.maxT) || maxTradesHoy(),
@@ -4529,8 +4574,9 @@ function tradesByDay(ids = idsSel()){
   /* Con dos trades a la misma hora el orden decidía violaciones, y lo desempataba
      un id aleatorio. Ahora manda 'seq' (orden real de captura) y, para lo viejo,
      la posición original en S.trades. */
-  const pos = new Map(S.trades.map((t,i)=>[t.id,i]));
-  [...S.trades].sort((a,b)=>
+  const mios = misTrades();
+  const pos = new Map(mios.map((t,i)=>[t.id,i]));
+  [...mios].sort((a,b)=>
       (a.date+a.time).localeCompare(b.date+b.time)
       || ((a.seq||0) - (b.seq||0))
       || (pos.get(a.id) - pos.get(b.id))
@@ -4576,7 +4622,7 @@ function computeScore(){
   const emo  = last.filter(t => { const v = vioOf(t); return !v.includes('REVENGE') && !v.includes('AFTER_WIN'); }).length / last.length;
   const dec  = last.filter(t => t.setupOk).length / last.length;
   const days = [...new Set(last.map(t=>t.date))];
-  const cons = days.filter(d => { const s = S.sessions[d]; return s && (s.pre||[]).filter(Boolean).length >= 5; }).length / days.length;
+  const cons = days.filter(d => { const s = S.sessions[claveSesion(d)]; return s && (s.pre||[]).filter(Boolean).length >= 5; }).length / days.length;
   const dims = [
     { k:'Risk Discipline', v: risk },
     { k:'Emotion Control', v: emo },
@@ -4615,7 +4661,7 @@ function pnlRanges(ids = idsSel(), soloReal = false){
      el mes en silencio. Ahora todos los rangos cortan en la fecha de referencia. */
   const inMonth = t => { const [ty,tm] = t.date.split('-').map(Number); return ty===y && tm===m+1 && t.date <= iso; };
   const r = { dia:0, semana:0, quincena:0, mes:0, anio:0 };
-  S.trades.forEach(t=>{
+  misTrades().forEach(t=>{
     let n;
     if(soloReal){
       n = (t.accts||[]).reduce((acc,id)=>{
@@ -5379,7 +5425,7 @@ $$('#ovReporte [data-rmodo]').forEach(b => b.onclick = () => {
 function repDatos(){
   const R = S.ui.reporte, [de, a] = repRango(R.modo);
   const hoy = todayISO();
-  const trs = (S.trades || []).filter(t => t.date >= de && t.date <= a && t.date <= hoy)
+  const trs = misTrades().filter(t => t.date >= de && t.date <= a && t.date <= hoy)
     .sort((x,y) => (x.date+x.time).localeCompare(y.date+y.time));
   const porDia = {};
   trs.forEach(t => (porDia[t.date] = porDia[t.date] || []).push(t));
@@ -5498,7 +5544,7 @@ function repHTML(){
   }
 
   if(on('camino')){
-    const ctas = S.accounts.filter(a => !esLive(a) && !esSim(a) && reglasDe(a));
+    const ctas = mias(S.accounts.filter(a => !esLive(a) && !esSim(a) && reglasDe(a)));
     h += sec(bi('Camino a payout','Road to payout'), ctas.length
       ? `<table class="rp-t"><thead><tr><th>${bi('Cuenta','Account')}</th><th>${bi('Etapa','Stage')}</th>
           <th class="n">${bi('Balance','Balance')}</th><th class="n">${bi('Avance','Progress')}</th></tr></thead>
@@ -5717,8 +5763,8 @@ function renderCamino(){
      de una firma fuera del catálogo (Apex, por ejemplo) simplemente no
      aparecía: registrabas trades y la cuenta no existía en el camino. Ahora
      aparece con su profit real y se dice que su vara no está verificada. */
-  const carreras = S.accounts.filter(a => !esLive(a) && !esSim(a)
-    && (modo === 'all' || enSel.has(a.id)));
+  const carreras = mias(S.accounts.filter(a => !esLive(a) && !esSim(a)
+    && (modo === 'all' || enSel.has(a.id))));
   panel.hidden = false;
   if(!carreras.length){
     $('#pgCaminoSub').textContent = '';
@@ -6256,7 +6302,8 @@ function normalizaChk(arr, n){
   return out;
 }
 function getSession(iso){
-  const s = S.sessions[iso] = S.sessions[iso] || {};
+  const k = claveSesion(iso);
+  const s = S.sessions[k] = S.sessions[k] || {};
   s.pre   = normalizaChk(s.pre,   PRE_RAW.length);
   s.setup = normalizaChk(s.setup, SETUP_RAW.length);
   s.post  = normalizaChk(s.post,  POST_RAW.length);
@@ -6552,7 +6599,7 @@ function renderSesion(){
 function buildReport(){
   const iso = todayISO();
   const dayTr = tradesByDay()[iso] || [];
-  const st = computeStats(S.trades);
+  const st = computeStats(misTrades());
   const R = pnlRanges(), M = metas();
   const dPnl = dayTr.reduce((a,t)=>a+(t.pnl||0),0);
   const lines = [];
@@ -8096,8 +8143,8 @@ function renderAjustes(){
       sync ? bi('Sincronizado en la nube.','Synced to the cloud.')
            : bi('Tus datos viven en este equipo y no salen del navegador.','Your data lives on this device and never leaves the browser.')}</span></div>`;
     $('#setResumen').innerHTML = `<div class="set-res">${
-      [[(S.trades||[]).length, bi('trades','trades')], [(S.accounts||[]).length, bi('cuentas','accounts')],
-       [(S.positions||[]).length, bi('posiciones','positions')], [Object.keys(S.sessions||{}).length, bi('sesiones','sessions')]]
+      [[misTrades().length, bi('trades','trades')], [cuentasVivas().length, bi('cuentas','accounts')],
+       [(S.positions||[]).length, bi('posiciones','positions')], [Object.keys(misSesiones()).length, bi('sesiones','sessions')]]
       .map(([n,l]) => `<div><b class="mono">${n}</b><span>${l}</span></div>`).join('')}</div>`;
   }
 }
@@ -12407,7 +12454,7 @@ function renderAgentes(){
   /* junto al perfil, los tres balances con su rendimiento: portafolio
      (posiciones contra lo aportado), futuros (profit contra el arranque de
      cada cuenta) y live (contra el capital que metiste). */
-  const fondeadas = S.accounts.filter(a => !esLive(a) && !esSim(a) && reglasDe(a) && esViva(a));
+  const fondeadas = mias(S.accounts.filter(a => !esLive(a) && !esSim(a) && reglasDe(a) && esViva(a)));
   const balFut  = fondeadas.reduce((x, a) => x + carreraCuenta(a).balance, 0);
   const baseFut = fondeadas.reduce((x, a) => x + (a.start || 0), 0);
   const balPort = (S.positions || []).reduce((a, p) => a + valuar(p).valor, 0);
@@ -12433,7 +12480,7 @@ function renderAgentes(){
   };
   const balances =
     balCard(bi('PORTAFOLIO','PORTFOLIO'), balPort, basePort, (S.positions||[]).length,
-      (S.positions||[]).length ? bi('sobre ','on ') + fmt$(basePort) + bi(' aportados',' contributed') : bi('sin posiciones todavía','no positions yet'))
+      (S.positions||[]).length ? bi('sobre ','on ') + fmt$(basePort) + bi(' aportados · de la mesa',' contributed · whole desk') : bi('sin posiciones todavía','no positions yet'))
     + balCard(bi('FUTUROS','FUTURES'), balFut, baseFut, fondeadas.length,
       fondeadas.length ? (fondeadas.length + bi(fondeadas.length===1?' cuenta fondeada viva':' cuentas fondeadas vivas', fondeadas.length===1?' live funded account':' live funded accounts')) : bi('sin cuentas fondeadas','no funded accounts'))
     + balCard('LIVE', balLive, baseLive, lives.length,
@@ -12601,11 +12648,11 @@ function valorSalida(clave){
     case 'cobrado': return { v: (S.caja||[]).filter(m => m.tipo === 'ingreso').reduce((a,m)=>a+(m.monto||0),0), fmt: fmt$ };
     case 'pos':     return { v: (S.positions||[]).length, fmt: String };
     case 'ses': {
-      const dias = new Set(Object.keys(S.sessions || {}));
-      (S.trades || []).forEach(t => { if(t.date) dias.add(t.date); });
+      const dias = new Set(Object.keys(misSesiones()));
+      misTrades().forEach(t => { if(t.date) dias.add(t.date); });
       return { v: dias.size, fmt: String };
     }
-    case 'cuentas': return { v: S.accounts.filter(a => !esLive(a) && !esSim(a) && reglasDe(a) && esViva(a)).length, fmt: String };
+    case 'cuentas': return { v: mias(S.accounts.filter(a => !esLive(a) && !esSim(a) && reglasDe(a) && esViva(a))).length, fmt: String };
     case 'limpio': {
       const dias = Object.entries(tradesByDay()).sort((a,b)=>a[0].localeCompare(b[0]));
       let racha = 0, mejor = 0;
@@ -12629,11 +12676,11 @@ function cumpleSalida(clave, valor){
        registraste trades. Contar sólo S.sessions dejaba fuera a quien opera
        y anota sus trades sin abrir la vista de rutina. */
     case 'ses': {
-      const dias = new Set(Object.keys(S.sessions || {}));
-      (S.trades || []).forEach(t => { if(t.date) dias.add(t.date); });
+      const dias = new Set(Object.keys(misSesiones()));
+      misTrades().forEach(t => { if(t.date) dias.add(t.date); });
       return dias.size >= valor;
     }
-    case 'cuentas': return S.accounts.filter(a => !esLive(a) && !esSim(a) && reglasDe(a) && esViva(a)).length >= valor;
+    case 'cuentas': return mias(S.accounts.filter(a => !esLive(a) && !esSim(a) && reglasDe(a) && esViva(a))).length >= valor;
     case 'limpio': {
       /* días operados seguidos sin una sola violación */
       const dias = Object.entries(tradesByDay()).sort((a,b)=>a[0].localeCompare(b[0]));
@@ -12837,7 +12884,7 @@ function plazoPagos(f, i){
      realidad las cinco viejas cierran esa puerta mucho antes.
      Las que ya están arriba salen de tus cuentas registradas; si todavía no hay
      ninguna, de las que la fase anterior dejó corriendo. */
-  const propias = S.accounts.filter(a => !esLive(a) && !esSim(a) && reglasDe(a) && esViva(a));
+  const propias = mias(S.accounts.filter(a => !esLive(a) && !esSim(a) && reglasDe(a) && esViva(a)));
   const arribaReales = propias.filter(a => carreraCuenta(a).pasoBuffer).length;
   const previas = i > 0 ? (PLAN_FASES[i-1].tk.ctas || 0) : 0;
   const arriba  = Math.min(cc.ctas, Math.max(arribaReales, previas));
