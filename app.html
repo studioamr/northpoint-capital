@@ -5511,13 +5511,21 @@ function carreraCuenta(a){
    cuentas no sale castigado frente a quien corre una. Sin nube, cada máquina
    sólo conoce sus propias cuentas — y la app lo dice en vez de fingir ceros. */
 function carreraSocio(uid){
-  const suyas = S.accounts.filter(a => (a.owner || 'andre.np') === uid
+  const todas = S.accounts.filter(a => (a.owner || DUENO_ORIGEN) === uid
     && !esLive(a) && !esSim(a) && reglasDe(a));
-  if(!suyas.length) return { uid, cuentas:0, avance:0, total:0, pct:0, cobrado:0, sinDatos:true };
+  /* Una cuenta quemada está FUERA de la carrera: no se cuenta ni arriba ni
+     abajo. Antes seguía sumando al denominador —y al conteo de «5 cuentas»—
+     así que una cuenta muerta te bajaba el porcentaje y te hacía ver con más
+     cuentas de las que tienes. Se guarda cuántas murieron para poder decirlo. */
+  const suyas = todas.filter(cuentaEnPie);
+  const quemadas = todas.length - suyas.length;
+  if(!suyas.length) return { uid, cuentas:0, avance:0, total:0, pct:0, cobrado:0,
+                             quemadas, sinDatos: !todas.length };
   let avance = 0, total = 0, pagos = 0;
   suyas.forEach(a => { const c = carreraCuenta(a); avance += c.avance; total += c.total; if(c.pasoPago) pagos++; });
   return { uid, cuentas:suyas.length, avance, total,
-           pct: total > 0 ? Math.max(0, Math.min(100, avance / total * 100)) : 0, pagos, sinDatos:false };
+           pct: total > 0 ? Math.max(0, Math.min(100, avance / total * 100)) : 0,
+           pagos, quemadas, sinDatos:false };
 }
 /* la cara del socio, del tamaño que se pida, con su look real */
 function caraSocio(uid, px = 40){
@@ -5584,7 +5592,11 @@ function renderFirmaCarrera(){
               <em>${x.sinDatos
                  ? bi('sin datos en esta máquina','no data on this machine')
                  : x.cuentas + (x.cuentas === 1 ? bi(' cuenta',' account') : bi(' cuentas',' accounts'))
-                   + (x.pagos ? ' · ' + x.pagos + bi(' cobrada',' paid') + (x.pagos > 1 ? 's' : '') : '') + sello(x.uid)}</em>
+                   + (x.pagos ? ' · ' + x.pagos + bi(' cobrada',' paid') + (x.pagos > 1 ? 's' : '') : '')
+                   /* una cuenta que se quemó sale de la carrera, pero se dice:
+                      que el número baje sin explicación se siente a error */
+                   + (x.quemadas ? ' · ' + x.quemadas + bi(' quemada',' burned') + (x.quemadas > 1 ? 's' : '') : '')
+                   + sello(x.uid)}</em>
               <i class="fc-ver">${bi('VER PERFIL →','SEE PROFILE →')}</i>
             </span>
           </button>`).join('')}
