@@ -3243,14 +3243,23 @@ stop[stop-color="#9BC0DC"]{stop-color:var(--txt)}
         Te llega un correo de confirmación: lo abres y luego entras aquí con tu usuario y esa contraseña.</p>
       <div class="f-full"><label>Quién eres</label>
         <select id="alSocio">
+          <option value="nuevo" selected>Soy nuevo en la mesa</option>
           <option value="pablo.np">Pablo — CIO · Portfolio Manager</option>
           <option value="mateo.np">Mateo — CRO · Research</option>
           <option value="andre.np">André — Quant · COO</option>
         </select>
       </div>
+      <div class="f-full" id="alNombreCaja"><label>Tu nombre</label>
+        <input id="alNombre" autocomplete="off" placeholder="Jorge" spellcheck="false" maxlength="24">
+        <p class="micro" style="margin-top:6px;line-height:1.5;text-transform:none;letter-spacing:.02em">Así te va a ver la firma en la carrera y en la oficina. Tu usuario sale de aquí.</p>
+      </div>
       <div class="f-full"><label>Tu correo real</label><input id="alCorreo" type="email" autocomplete="off" placeholder="tucorreo@gmail.com" autocapitalize="none" spellcheck="false"></div>
       <div class="f-full"><label>Tu contraseña de nube (mínimo 6)</label><input id="alPass" type="password" autocomplete="new-password"></div>
       <div class="f-full"><label>Repítela</label><input id="alPass2" type="password" autocomplete="new-password"></div>
+      <div class="f-full" id="alCodigoCaja"><label>Código de invitación</label>
+        <input id="alCodigo" autocomplete="off" placeholder="NORTHPOINT26" autocapitalize="characters" spellcheck="false" style="text-transform:uppercase">
+        <p class="micro" style="margin-top:6px;line-height:1.5;text-transform:none;letter-spacing:.02em">Te lo pasó André. Sin él la mesa no te deja pasar.</p>
+      </div>
       <div id="alErr" class="login-err"></div>
       <button class="btn primary" id="alGo" style="width:100%;margin-top:6px">Crear mi acceso</button>
     </div>
@@ -3819,6 +3828,9 @@ const PERSONAJES = [
     look:{ piel:'#E8B48C', pelo:'#100E0C', traje:'#2A3A4A', camisa:'#EFE8F6', ac:'#8E6BC4',
            prop:'laptop', lentes:true, porte:'inclinado', cara:'concentrado' } },
 ];
+/* Los tres de casa, aparte: PERSONAJES crece con quien se registre y hay que
+   saber dónde termina lo fijo para volver a armar el resto. */
+const PERSONAJES_ORIGEN = PERSONAJES.slice();
 
 /* Un invitado no es socio de la firma (no tiene PERSONAJES propio), pero si
    entró a probar la mesa, su silla también aparece — un look neutro, sin
@@ -3860,6 +3872,16 @@ const SILLAS_SOCIOS = {
   'mateo.np': { x:4.77, y:.62, z:2.76, flip:false, sinNombre:true },
   'andre.np': { x:7.92, y:.62, z:2.76, flip:false, sinNombre:true },
 };
+/* Arriba sólo caben tres oficinas. Quien llegó después trabaja en el piso de
+   abajo, en fila y de izquierda a derecha por orden de llegada — que es
+   exactamente como se llena una mesa de verdad. */
+function sillaDe(id){
+  if(SILLAS_SOCIOS[id]) return SILLAS_SOCIOS[id];
+  const i = SOCIOS_REALES.indexOf(id) - SOCIOS_ORIGEN.length;
+  if(i < 0) return null;
+  const porFila = 5, fila = Math.floor(i / porFila), col = i % porFila;
+  return { x: 1.5 + col * 1.75, y: 3.9 + fila * 1.5, z: 0, flip: false };
+}
 const sillasActivas = () => {
   const g = invitadoActual();
   if(g) return [{ n:g.n, x:5.6, y:4.2, z:0, flip:false }];
@@ -3868,14 +3890,14 @@ const sillasActivas = () => {
   const vivos = new Set(enLaMesa().map(x => x.nom));
   const yo = PERSONAJES.find(x => x.id === (S.session && S.session.user));
   if(yo) vivos.add(yo.nom);
-  return PERSONAJES.filter(p => vivos.has(p.nom) && SILLAS_SOCIOS[p.id])
+  return PERSONAJES.filter(p => vivos.has(p.nom) && sillaDe(p.id))
     .map(p => {
       /* El que se sienta arriba es TU monito, el que armaste en Ajustes →
          Perfil: mismo tono de piel, mismo pelo, mismo traje. Antes salía el
          de fábrica del personaje y por eso «no se parecía». */
       const m = (S.monitos || {})[p.id] || {};
       const av = m.avatar || {};
-      return { n:p.nom, ...SILLAS_SOCIOS[p.id],
+      return { n:p.nom, ...sillaDe(p.id),
                look: av.look || p.look,
                foto: (av.tipo === 'foto' && av.valor) ? av.valor : null };
     });
@@ -3909,9 +3931,96 @@ const USERS = {
   'invitado9':  { nombre:'Invitado 9',  roles:['NP-060'], correo:'invitado9@northpoint.local' },
   'invitado10': { nombre:'Invitado 10', roles:['NP-060'], correo:'invitado10@northpoint.local' },
 };
-/* Los únicos que pueden ser dueños de una cuenta real: los tres socios,
-   nunca un invitado de acceso de prueba. */
+/* Los únicos que pueden ser dueños de una cuenta real: los tres socios de
+   origen MÁS quien se haya dado de alta en la mesa. Nunca un invitado de
+   acceso de prueba: ése prueba en su propio navegador y no toca la firma.
+   refrescaMesa() lo mantiene al día. */
 const SOCIOS_REALES = ['pablo.np','mateo.np','andre.np'];
+const SOCIOS_ORIGEN = ['pablo.np','mateo.np','andre.np'];
+
+/* ════════ LA MESA SE ABRE ════════
+   Antes la firma eran tres nombres escritos en el código: para meter a alguien
+   había que editar el archivo y volver a publicar. Ahora quien se registra se
+   guarda en S.mesa, viaja por la nube y con eso YA es de la firma — sale en la
+   carrera, tiene silla en la oficina y su propia hoja de perfil.
+
+   PERSONAJES, USERS y SOCIOS_REALES se quedan siendo las mismas referencias
+   (medio archivo las tiene capturadas en closures): lo que cambia es su
+   CONTENIDO, que se vuelve a armar cada vez que la mesa cambia. */
+
+/* Un color estable sacado del nombre: dos personas distintas nunca salen
+   iguales, y la misma persona se ve igual en todos los equipos. */
+function semillaDe(txt){
+  let h = 0;
+  for(let i = 0; i < txt.length; i++) h = (h * 31 + txt.charCodeAt(i)) >>> 0;
+  return h;
+}
+const PIELES = ['#E8B48C','#D9A377','#C98F63','#B47A4E','#8D5A3B','#F0C9A6'];
+const TRAJES = ['#2A3A4A','#22303E','#4E545E','#3A3340','#2E4038','#414652'];
+const ACENTOS = ['#8E6BC4','#4A7FA8','#C4544A','#57C79B','#D9944A','#6B8EC4'];
+/* OJO con el nombre: más abajo ya existe un lookDe(uid) que lee el monito que
+   cada quien se armó en Ajustes. Este otro INVENTA uno de fábrica a partir del
+   id, y son cosas distintas — llamarlos igual hacía que el de abajo ganara (las
+   declaraciones se pisan) y los cinco amigos salían idénticos.
+   Los corrimientos van con >>> y no con >>: el hash pasa de 2^31 y el corrimiento
+   con signo daba negativo, o sea PIELES[-2] → undefined. */
+function lookNuevo(id){
+  const h = semillaDe(id);
+  return { piel: PIELES[h % PIELES.length], pelo:'#141110',
+           traje: TRAJES[(h >>> 3) % TRAJES.length], camisa:'#EFE8E0',
+           ac: ACENTOS[(h >>> 6) % ACENTOS.length],
+           prop: ['laptop','carpeta','globo'][(h >>> 9) % 3],
+           lentes: ((h >>> 11) & 1) === 1, porte:'inclinado', cara:'concentrado' };
+}
+/* De «Jorge Ramírez» sale «jorge.np». Si ya está ocupado, jorge2.np. */
+function uidDeNombre(nombre, tomados){
+  const base = (nombre || '').trim().toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, ' ').trim().split(' ')[0] || 'trader';
+  let id = base + '.np', n = 1;
+  while(tomados.has(id)){ n++; id = base + n + '.np'; }
+  return id;
+}
+
+function refrescaMesa(st){
+  const est = st || (typeof S !== 'undefined' ? S : null);
+  const extra = Object.values((est && est.mesa) || {})
+    .filter(m => m && m.id && !SOCIOS_ORIGEN.includes(m.id))
+    .sort((a, b) => (a.alta || 0) - (b.alta || 0));
+
+  PERSONAJES.length = PERSONAJES_ORIGEN.length;
+  SOCIOS_REALES.length = SOCIOS_ORIGEN.length;
+  Object.keys(USERS).forEach(k => { if(USERS[k] && USERS[k].deMesa) delete USERS[k]; });
+
+  extra.forEach(m => {
+    const nom = (m.nom || m.id).toUpperCase();
+    PERSONAJES.push({ id:m.id, nom,
+      area: m.area || bi('Trader · Mesa','Trader · Desk'),
+      roles: m.roles || ['NP-100'],
+      lema: m.lema || bi('Aquí se opera el plan, no la corazonada.','Here we trade the plan, not the hunch.'),
+      voz:  m.voz  || bi('Su cuenta, su riesgo, su disciplina.','Their account, their risk, their discipline.'),
+      look: m.look || lookNuevo(m.id) });
+    SOCIOS_REALES.push(m.id);
+    USERS[m.id] = { nombre: m.nom || nom, roles: m.roles || ['NP-100'],
+                    correo: m.correo || '', deMesa: true };
+  });
+}
+/* Alta de un socio nuevo. Devuelve su id. No pisa a nadie que ya exista. */
+function altaEnMesa(nombre, correo){
+  S.mesa = S.mesa || {};
+  const tomados = new Set([...SOCIOS_ORIGEN, ...Object.keys(S.mesa)]);
+  /* si ese correo ya tiene lugar, es él volviendo: se respeta el que tenía */
+  const previo = Object.values(S.mesa).find(m => m && m.correo && correo && m.correo === correo);
+  if(previo){ refrescaMesa(); return previo.id; }
+  const id = uidDeNombre(nombre, tomados);
+  S.mesa[id] = { id, nom: (nombre || '').trim() || id.split('.')[0],
+                 correo: correo || '', alta: Date.now(),
+                 area: bi('Trader · Mesa','Trader · Desk'), roles:['NP-100'],
+                 look: lookNuevo(id) };
+  S.correos = S.correos || {}; if(correo) S.correos[id] = correo;
+  refrescaMesa();
+  return id;
+}
 /* Todos entran con 1234 la primera vez y la cambian en Configuración.
    La clave local se guarda como hash SHA-256 en tu equipo: no impide
    nada a quien tenga acceso al navegador, pero evita que quede escrita en claro.
@@ -4146,6 +4255,10 @@ const DEFAULTS = () => ({
   claves: {},          // usuario -> hash SHA-256 de su clave local
   monitos: {},           // usuario -> { avatar }: cada quien su cara
   presencia: {},         // usuario -> última vez que usó la app (ms)
+  /* La mesa: quien se registra entra AQUÍ y con eso ya es de la firma —sale en
+     la carrera, tiene su silla y su hoja de perfil. Viaja por la nube, así que
+     alta en un equipo es alta en todos. */
+  mesa: {},              // usuario -> { id, nom, area, lema, voz, roles, look, alta }
   viosOut: {},           // 'tradeId|COD' -> { fecha, motivo, por }: marcas descartadas, con razón
   ui: { acctSel: { mode:'all', ids:[] } }
 });
@@ -4211,6 +4324,11 @@ function migrar(s){
   s.ui = { ...(s.ui||{}), acctSel: { mode:'all', ids:[], ...((s.ui||{}).acctSel||{}) } };
   (s.trades||[]).forEach(t => { if(!Array.isArray(t.accts) || !t.accts.length) t.accts = [SIN_CUENTA]; });
   s.schema = SCHEMA;
+  /* La mesa se rearma aquí porque migrar() es por donde pasa TODO estado que
+     entra: el de disco al arrancar, el que baja de la nube y el que se importa.
+     Así un socio dado de alta en otro equipo aparece en éste sin tocar nada. */
+  if(!s.mesa || typeof s.mesa !== 'object') s.mesa = {};
+  try{ refrescaMesa(s); }catch(e){}
   return s;
 }
 function load(){
@@ -8126,18 +8244,40 @@ $('#lgGo').addEventListener('click', doLogin);
 $('#lgAlta').addEventListener('click', () => {
   const p = $('#altaNube'); p.hidden = !p.hidden;
 });
+/* El campo del nombre sólo aparece cuando alguien viene nuevo: los tres de casa
+   ya tienen el suyo. */
+function alPintaNombre(){
+  const nuevo = $('#alSocio').value === 'nuevo';
+  const caja = $('#alNombreCaja'); if(caja) caja.style.display = nuevo ? '' : 'none';
+  /* los tres de casa ya están en la lista blanca: a ellos no se les pide código */
+  const cod = $('#alCodigoCaja'); if(cod) cod.style.display = nuevo ? '' : 'none';
+}
+$('#alSocio')?.addEventListener('change', alPintaNombre);
+alPintaNombre();
+
 $('#alGo').addEventListener('click', async () => {
-  const uid2 = $('#alSocio').value;
+  const elegido = $('#alSocio').value;
+  const esNuevo = elegido === 'nuevo';
+  const nombre = ($('#alNombre').value || '').trim();
+  const codigo = ($('#alCodigo').value || '').trim().toUpperCase();
   const correo = $('#alCorreo').value.trim().toLowerCase();
   const p1 = $('#alPass').value, p2 = $('#alPass2').value;
   const err = m => { $('#alErr').textContent = m; };
+  if(esNuevo && nombre.length < 2) return err('Escribe tu nombre: así te va a ver la firma.');
+  if(esNuevo && codigo.length < 4) return err('Falta el código de invitación que te pasó André.');
   if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(correo)) return err('Ese correo no se ve bien.');
   if(p1.length < 6) return err('La contraseña necesita al menos 6 caracteres.');
   if(p1 !== p2) return err('Las contraseñas no coinciden.');
+  /* Quien llega nuevo se gana su lugar en la mesa aquí mismo: de «Jorge» sale
+     jorge.np y con eso ya es de la firma —carrera, silla y hoja de perfil—.
+     El alta viaja por la nube, así que los demás lo ven al siguiente refresco. */
+  /* El alta en la mesa se escribe HASTA que Supabase confirme: si el correo ya
+     estaba tomado, no queremos dejar un socio fantasma en la firma. */
+  let uid2 = elegido;
   /* La silla ya ocupada: si este equipo (o la mesa) ya sabe que ese puesto es de
      otro correo, se avisa. Antes se podía registrar «André» con el correo de
      Mateo y el mapeo equivocado viajaba a los tres equipos. */
-  const yaEs = (S.correos || {})[uid2];
+  const yaEs = esNuevo ? null : (S.correos || {})[uid2];
   if(yaEs && yaEs !== correo){
     const seguir = confirm(bi(
       'Ese puesto ya está a nombre de ' + yaEs + '.\n¿De verdad quieres cambiarlo a ' + correo + '?',
@@ -8156,6 +8296,8 @@ $('#alGo').addEventListener('click', async () => {
        qué correos tienen cuenta. Se detecta y se dice claro. */
     if(d.identities && d.identities.length === 0)
       throw new Error('Ese correo ya tiene cuenta. Usa Entrar con tu contraseña; si la perdiste, dile a André.');
+    /* confirmado: ahora sí se gana su lugar en la firma */
+    if(esNuevo){ uid2 = altaEnMesa(nombre, correo); guardaCodigo(codigo, nombre); }
     S.correos = S.correos || {};
     S.correos[uid2] = correo;
     /* respaldo local de SU contraseña (hash, nunca en texto): sin esto, el día
@@ -8169,10 +8311,12 @@ $('#alGo').addEventListener('click', async () => {
     $('#lgPass').value = p1;
     /* si Supabase ya devolvió sesión (correo autoconfirmado), se entra solo */
     if(d.access_token || (d.session && d.session.access_token)){
-      toast('Acceso creado. Entrando…');
+      toast(esNuevo ? 'Bienvenido a la mesa. Tu usuario es ' + uid2 + '. Entrando…' : 'Acceso creado. Entrando…');
       return doLogin();
     }
-    toast('Acceso creado. Abre ' + correo + ', confirma la liga y luego pica Entrar — tu contraseña ya quedó puesta.');
+    toast(esNuevo
+      ? 'Listo, ya eres de la mesa. Tu usuario es ' + uid2 + '. Abre ' + correo + ', confirma la liga y entra.'
+      : 'Acceso creado. Abre ' + correo + ', confirma la liga y luego pica Entrar — tu contraseña ya quedó puesta.');
   }catch(e){
     err((e && e.message) || 'No se pudo crear el acceso.');
   }finally{
@@ -8202,9 +8346,12 @@ function resuelveUsuario(txt){
    pregunta una vez y se recuerda. Sin esto habría que adivinar. */
 function preguntaQuienEres(correo){
   return new Promise(res => {
+    /* Los nombres salen de la mesa, no de una lista escrita a mano: si Jorge se
+       dio de alta ayer, Jorge tiene que aparecer aquí hoy. */
+    const nombres = SOCIOS_REALES.map(k => k.replace('.np','')).join(', ');
     const quien = prompt(bi(
-      'Primera vez en este equipo con ' + correo + '.\n¿Quién eres? Escribe: pablo, mateo o andre',
-      'First time on this device with ' + correo + '.\nWho are you? Type: pablo, mateo or andre'));
+      'Primera vez en este equipo con ' + correo + '.\n¿Quién eres? Escribe: ' + nombres,
+      'First time on this device with ' + correo + '.\nWho are you? Type: ' + nombres));
     if(!quien) return res(null);
     res(resuelveUsuario(String(quien).trim().toLowerCase()));
   });
@@ -8241,8 +8388,9 @@ async function doLogin(){
   }
   const usr = u && USERS[u];
   if(!usr){
-    $('#lgErr').textContent = bi('No reconozco a «' + escrito + '». Escribe tu usuario (pablo.np · mateo.np · andre.np) o el correo con el que te registraste.',
-                                 'I do not recognise "' + escrito + '". Use your username (pablo.np · mateo.np · andre.np) or the email you signed up with.');
+    const lista = SOCIOS_REALES.join(' · ');
+    $('#lgErr').textContent = bi('No reconozco a «' + escrito + '». Escribe tu usuario (' + lista + ') o el correo con el que te registraste.',
+                                 'I do not recognise "' + escrito + '". Use your username (' + lista + ') or the email you signed up with.');
     return;
   }
   if(cloudOn()){
@@ -9275,7 +9423,49 @@ async function cloudLogin(correo, clave){
   cloudTok = { access_token:d.access_token, refresh_token:d.refresh_token, email:correo,
                exp: Date.now() + (d.expires_in || 3600) * 1000 };
   try{ localStorage.setItem('np_tok', JSON.stringify(cloudTok)); }catch(e){}
+  /* Si trae código de invitación pendiente, se canjea AQUÍ: es el primer momento
+     en que hay sesión de verdad, y la base sólo escucha a quien ya se autenticó. */
+  await canjeaCodigo();
   return cloudTok;
+}
+
+/* ── EL CÓDIGO DE INVITACIÓN ──
+   Registrarse en Supabase no basta: la base sólo deja leer y escribir los datos
+   de la firma a los correos que estén en la lista blanca. Antes esa lista la
+   escribía André a mano, socio por socio; ahora quien trae el código se mete
+   solo. La función de la base es la que decide —el navegador no puede meterse
+   a la lista por su cuenta— y sólo da de alta el correo de QUIEN LA LLAMA, así
+   que nadie puede colar a un tercero.
+
+   El código se guarda aparte del estado (localStorage suelto) porque hace falta
+   ANTES de tener permiso de bajar el estado. */
+const CODIGO_LS = 'np_codigo', NOMBRE_LS = 'np_nombre';
+function guardaCodigo(cod, nombre){
+  try{
+    if(cod) localStorage.setItem(CODIGO_LS, cod.trim());
+    if(nombre) localStorage.setItem(NOMBRE_LS, nombre.trim());
+  }catch(e){}
+}
+async function canjeaCodigo(cod){
+  let codigo = cod;
+  if(!codigo){ try{ codigo = localStorage.getItem(CODIGO_LS) || ''; }catch(e){} }
+  if(!codigo || !cloudTok) return null;
+  let nombre = ''; try{ nombre = localStorage.getItem(NOMBRE_LS) || ''; }catch(e){}
+  try{
+    const r = await fetch(CLOUD.url + '/rest/v1/rpc/unirse_a_mesa', {
+      method:'POST',
+      headers:{ apikey:CLOUD.anon, Authorization:'Bearer ' + cloudTok.access_token,
+                'Content-Type':'application/json' },
+      body: JSON.stringify({ codigo, nombre }),
+    });
+    if(!r.ok) return null;
+    const res = await r.json();
+    if(res === 'ok'){
+      try{ localStorage.removeItem(CODIGO_LS); }catch(e){}
+      _avisoSinAcceso = false;
+    }
+    return res;
+  }catch(e){ return null; }
 }
 /* ── RECUPERAR LA CONTRASEÑA ──
    Faltaba por completo, y por eso el correo de recuperación era un callejón sin
@@ -9456,6 +9646,15 @@ function fusionarEstado(local, remoto){
      con id — el spread tampoco lo fusionaba: el socio que sincroniza último le
      borraba al otro su marca de "ya lo vi" y el tour le volvía a salir. */
   f.bienvenida = { ...(remoto.bienvenida||{}), ...(local.bienvenida||{}) };
+  /* La mesa se UNE, nunca se reemplaza: si Jorge se dio de alta en su equipo y
+     Ana en el suyo, los dos tienen que quedar. El spread de arriba dejaba ganar
+     al último que sincronizara y el otro desaparecía de la firma. Gana el alta
+     más vieja de cada quien, que es la de verdad. */
+  f.mesa = { ...(remoto.mesa||{}) };
+  Object.keys(local.mesa || {}).forEach(id => {
+    const mio = local.mesa[id], suyo = (remoto.mesa||{})[id];
+    f.mesa[id] = !suyo ? mio : ((mio.alta||0) <= (suyo.alta||0) ? mio : suyo);
+  });
   /* mismo caso con el contador de trades: si cada quien trae el suyo, gana el
      mayor — así ninguno vuelve a emitir un 'seq' que ya usó el otro. */
   f.seqTrade = Math.max(local.seqTrade||0, remoto.seqTrade||0);
@@ -9541,9 +9740,27 @@ async function cloudPull(){
       if(!_avisoSinAcceso){
         _avisoSinAcceso = true;
         const mio = (cloudTok && cloudTok.email) || '';
-        try{ toast(bi(
-          'Tu acceso funciona, pero ' + mio + ' todavía no está dado de alta en la mesa. Pídele a André que te agregue: es un renglón de su lado.',
-          'Your login works, but ' + mio + ' is not on the desk yet. Ask André to add you — it is one line on his side.')); }catch(e){}
+        /* Entró bien pero la mesa no lo conoce: casi siempre es que se registró
+           sin código o lo escribió mal. Se le pide aquí mismo en vez de mandarlo
+           a molestar a André — y si de verdad no tiene, entonces sí se le dice. */
+        const cod = prompt(bi(
+          'Tu acceso funciona, pero ' + mio + ' todavía no está en la mesa.\n\nEscribe el código de invitación que te pasó André:',
+          'Your login works, but ' + mio + ' is not on the desk yet.\n\nEnter the invitation code André gave you:'));
+        if(cod && cod.trim()){
+          const res = await canjeaCodigo(cod.trim().toUpperCase());
+          if(res === 'ok'){
+            try{ toast(bi('Listo, ya estás en la mesa. Bajando los datos…','You are on the desk now. Pulling data…')); }catch(e){}
+            cloudErr = null; cloudPaint();
+            return cloudPull();
+          }
+          try{ toast(res === 'codigo-malo'
+            ? bi('Ese código no sirve. Pídele a André el bueno.','That code is not valid. Ask André for the right one.')
+            : bi('No se pudo canjear el código. Intenta otra vez.','Could not redeem the code. Try again.')); }catch(e){}
+        } else {
+          try{ toast(bi(
+            'Sin código no puedo meterte a la mesa. Pídeselo a André.',
+            'Without a code I cannot add you to the desk. Ask André for it.')); }catch(e){}
+        }
       }
       return;
     }
