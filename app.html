@@ -2821,6 +2821,14 @@ stop[stop-color="#9BC0DC"]{stop-color:var(--txt)}
         <div><label>P&L USD <span style="color:var(--faint)">(auto)</span></label><input type="number" id="tPnl" step="1" placeholder="auto"></div>
       </div>
       <div class="f-full" style="margin-top:10px">
+        <label>¿Sonó la alarma de ICE VADER?</label>
+        <select id="tAlarma">
+          <option value="1">Sí · entré con la alarma</option>
+          <option value="0">No · entré sin alarma</option>
+        </select>
+        <p class="micro" id="tAlarmaAviso" style="margin-top:6px;line-height:1.5;text-transform:none;letter-spacing:.02em"></p>
+      </div>
+      <div class="f-full" style="margin-top:10px">
         <label>Checklist setup</label>
         <select id="tSetup"><option value="1">Valid · complete</option><option value="0">Incomplete</option></select>
       </div>
@@ -3450,6 +3458,7 @@ const I18N = {
   'vio.AFTER_TARGET':  { es:'Operó pasado el objetivo', en:'Traded past the target' },
   'vio.REVENGE':       { es:'Revenge',               en:'Revenge' },
   'vio.NO_SETUP':      { es:'Sin setup',             en:'No setup' },
+  'vio.SIN_ALARMA':    { es:'Sin alarma de Ice Vader', en:'No Ice Vader alarm' },
   'vio.FIRM_LIMIT':    { es:'Límite de la firma',    en:'Firm limit' },
   'vio.DAY_RISK':      { es:'Riesgo diario excedido', en:'Daily risk exceeded' },
 
@@ -3627,6 +3636,17 @@ const SISTEMA = {
   graficos: ['1m', '5m'],
   estrategia: 'ORB a liquidez',
 
+  /* ── LA SEÑAL MANDA ──
+     Desde el 5-ago-2026 la mesa no entra por criterio propio: entra cuando el
+     indicador ICE VADER manda la alarma, y NADA MÁS entonces. Sin alarma no hay
+     trade — no es "no recomendado", está prohibido.
+
+     Es la regla más dura de todas y por eso vive aquí arriba, junto al
+     instrumento: no depende de la fase ni del día. Un trade sin alarma se marca
+     SIN_ALARMA aunque haya ganado, porque lo que se está midiendo no es el
+     resultado sino si se respetó el sistema. */
+  senal: { nombre:'ICE VADER', obligatoria:true, desde:'2026-08-05' },
+
   /* Una sola ventana: la sesión de Nueva York, 7:00–8:30, lunes a viernes. El
      rango de apertura se forma 7:30–7:45 y nada queda abierto pasadas las 8:30. */
   estrategias: [
@@ -3668,6 +3688,7 @@ const SISTEMA = {
 
   /* El tope sale de la fase, no de la memoria: si el plan cambia, el texto cambia. */
   get gestion(){ return [
+    `Sin alarma de ${this.senal.nombre} no se entra. Ni una vez.`,
     `Máximo ${this.fases.eval.maxTrades} trades por sesión, estrictos.`,
     'Si se gana el trade 1, se cierra la plataforma: el día terminó.',
     'Si se pierde el trade 1, queda un solo intento más — y únicamente con un setup válido nuevo y completo. Nunca revenge.',
@@ -4808,6 +4829,12 @@ function violationsRaw(trade, dayTrades){
     }
   }
   if(!trade.setupOk && v.indexOf('REVENGE') === -1) v.push('NO_SETUP');
+  /* La señal es la puerta: sin alarma el trade no debió existir. Se marca
+     aunque haya ganado —lo que se mide es el sistema, no la suerte— y sólo se
+     aplica a lo operado desde que la regla entró, para no ensuciar el historial
+     de antes con una regla que entonces no existía. */
+  if(SISTEMA.senal && SISTEMA.senal.obligatoria
+     && trade.date >= SISTEMA.senal.desde && !trade.alarma) v.push('SIN_ALARMA');
   return v;
 }
 
@@ -7573,6 +7600,12 @@ function openTrade(id){
   $('#tDir').value = t.dir || 'L';
   $('#tQty').value = t.qty || 1;
   $('#tSetup').value = (t.setupOk===false) ? '0' : '1';
+  /* La alarma arranca en «Sí» sólo cuando se está EDITANDO un trade que ya la
+     traía. En uno nuevo arranca en «No» a propósito: la regla es que sin alarma
+     no se entra, así que decir que sí sonó tiene que ser un acto deliberado y
+     no el valor por default que nadie mira. */
+  $('#tAlarma').value = t.alarma ? '1' : '0';
+  pintaAvisoAlarma();
   $('#tIn').value = t.entry ?? '';
   $('#tOut').value = t.exit ?? '';
   $('#tPnl').value = t.pnl ?? '';
@@ -7581,6 +7614,19 @@ function openTrade(id){
   renderTradeAccts(Array.isArray(t.accts) ? t.accts : acctsSel().map(a=>a.id));
   openOv('ovTrade');
 }
+
+/* El aviso bajo el selector: si dice que no sonó, la app se lo dice en la cara
+   ANTES de guardar, no después en el reporte. */
+function pintaAvisoAlarma(){
+  const sel = $('#tAlarma'), av = $('#tAlarmaAviso');
+  if(!sel || !av) return;
+  const con = sel.value === '1';
+  av.textContent = con
+    ? 'Va limpio: la señal mandó y tú obedeciste.'
+    : 'Este trade queda marcado SIN ALARMA. La regla de la casa es que sin ' + SISTEMA.senal.nombre + ' no se entra — gane o pierda, cuenta contra tu disciplina.';
+  av.style.color = con ? 'var(--faint)' : 'var(--warn)';
+}
+$('#tAlarma')?.addEventListener('change', pintaAvisoAlarma);
 
 /* ── Screenshot del trade ──
    Se guarda como JPEG reducido (~1000px) dentro del propio trade: localStorage
@@ -7681,6 +7727,7 @@ $('#tSave').addEventListener('click', ()=>{
     exit: $('#tOut').value===''?null:parseFloat($('#tOut').value),
     pnl,
     setupOk: $('#tSetup').value==='1',
+    alarma:  $('#tAlarma').value==='1',
     notas: $('#tNotas').value.trim(),
     shot: tShot || null,
     accts: tradeAccts.length ? [...tradeAccts] : [SIN_CUENTA],
@@ -7689,6 +7736,25 @@ $('#tSave').addEventListener('click', ()=>{
   };
   if(S.accounts.length && !tradeAccts.length){
     toast('Pick at least one account'); return;
+  }
+  /* ── LA PUERTA DE ICE VADER ──
+     No se bloquea el guardado: el journal tiene que poder registrar lo que de
+     verdad pasó, incluso —sobre todo— cuando se rompió la regla. Un diario que
+     sólo acepta trades limpios no es un diario, es una vitrina. Lo que sí se
+     hace es preguntarlo a la cara, con el nombre de la regla, para que romperla
+     sea una decisión consciente y no un descuido. */
+  if(SISTEMA.senal && SISTEMA.senal.obligatoria && !data.alarma
+     && data.date >= SISTEMA.senal.desde && !editingTrade){
+    const sigue = confirm(bi(
+      'Este trade va SIN alarma de ' + SISTEMA.senal.nombre + '.\n\n'
+      + 'La regla de la casa es que sin la señal no se entra. Se va a registrar '
+      + 'con la marca «Sin alarma de Ice Vader» y cuenta contra tu disciplina, '
+      + 'gane o pierda.\n\n¿Aun así lo registro?',
+      'This trade has NO ' + SISTEMA.senal.nombre + ' alarm.\n\n'
+      + 'The house rule is that without the signal you do not enter. It will be '
+      + 'logged with the "No Ice Vader alarm" breach and it counts against your '
+      + 'discipline, win or lose.\n\nLog it anyway?'));
+    if(!sigue) return;
   }
   /* Un dedazo en el año (2027 por 2026) metía un trade en el futuro que SÍ
      contaba: inflaba el P&L, las estadísticas y el camino a payout, y te decía
