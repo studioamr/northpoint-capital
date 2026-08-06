@@ -2408,6 +2408,15 @@ stop[stop-color="#9BC0DC"]{stop-color:var(--txt)}
 .iv-por{font-size:12.5px;line-height:1.6;color:var(--dim);border-left:2px solid var(--line);
   padding-left:12px;margin:0}
 @media (prefers-reduced-motion:reduce){ .iv-track{transition:none} }
+
+/* El aviso que explica un balance clavado: vive dentro de la celda del balance,
+   así que va alineado a la izquierda aunque la columna sea numérica y a la
+   derecha — si no, el texto se lee al revés. */
+.acct-tbl .aviso-cta{text-align:left;margin-top:6px;padding:7px 8px;border-radius:8px;
+  border:1px solid color-mix(in srgb,var(--warn,#D9A441) 40%,transparent);
+  background:color-mix(in srgb,var(--warn,#D9A441) 8%,transparent);
+  white-space:normal;max-width:230px;line-height:1.5}
+.acct-tbl .aviso-cta b{color:var(--txt)}
 </style>
 </head>
 <body>
@@ -2691,14 +2700,9 @@ stop[stop-color="#9BC0DC"]{stop-color:var(--txt)}
 
         <!-- Cada sección es UNA hilera que se arrastra: los objetivos del plan,
              las tasas y los gráficos. Nada apilado, nada de rejillas. -->
-        <div style="display:flex;align-items:center;gap:12px;margin:18px 0 8px">
-          <span class="micro" data-i18n="pg.targets">Plan targets</span>
-        </div>
-        <div class="mdk-wrap">
-          <button class="mdk-nav prev" id="objPrev" aria-label="Previous">&lsaquo;</button>
-          <div class="px-rail mdk-rail" id="dashKpis"></div>
-          <button class="mdk-nav next" id="objNext" aria-label="Next">&rsaquo;</button>
-        </div>
+        <!-- «Plan targets» retirado de Journal (André, 6-ago-2026). Las metas
+             del plan viven en The plan; aquí eran la misma cifra dos veces.
+             renderObjetivos() se queda y sale sola si no encuentra su hilera. -->
 
         <div style="display:flex;align-items:center;gap:12px;margin:22px 0 8px">
           <span class="micro" data-i18n="md.tasas">Win rate and desk ratios</span>
@@ -5486,7 +5490,37 @@ function renderAcctTable(){
       return `<tr>
         <td><span class="al">${esc(a.alias)}</span><div class="sub">${esc(a.firm)} · ${esc(a.plan.replace(' (fondeada)',''))}</div></td>
         <td>${faseTag(a)}${h.hito?`<div class="sub">hito ${fmt$(h.hito)}</div>`:''}</td>
-        <td class="r mono">${fmt$(h.balance)}</td>
+        <td class="r mono">${fmt$(h.balance)}${(() => {
+          /* ── POR QUÉ UN BALANCE SE QUEDA CLAVADO ──
+             Una cuenta sólo cuenta los trades que (a) la traen marcada y (b) son
+             del día de su línea de salida en adelante. Cuando falta una de las
+             dos, el balance se queda en su arranque y la tabla no daba ni una
+             pista: se veía como si la app hubiera perdido el dinero.
+
+             Ahora lo dice aquí, con el número exacto y el botón que lo arregla.
+             El aviso vivía en el camino a payout, dentro de Rutina — y Rutina
+             está guardada, así que sin esto el diagnóstico no existe en ningún
+             lado. */
+          const suyos  = (S.trades || []).filter(t => (t.accts || []).includes(a.id));
+          const antes  = suyos.filter(t => t.date < a.desde);
+          const futuro = suyos.filter(t => t.date > todayISO());
+          const dolares = ts => ts.reduce((x, t) => x + (t.pnl || 0), 0);
+          const trozos = [];
+          if(antes.length) trozos.push(`<div class="sub aviso-cta">
+            <b>${antes.length} ${antes.length === 1 ? bi('trade no cuenta','trade not counting') : bi('trades no cuentan','trades not counting')}</b>
+            · ${fmt$(dolares(antes), true)} ${bi('· son anteriores al ','· dated before ')}${fmtFecha(a.desde)}
+            <button class="btn sm" style="margin-top:5px" onclick="event.stopPropagation(); desdePrimerTrade('${a.id}')">${bi('Contar desde su primer trade','Count from its first trade')}</button>
+          </div>`);
+          if(futuro.length) trozos.push(`<div class="sub aviso-cta">
+            <b>${futuro.length} ${bi('con fecha futura','dated in the future')}</b>
+            · ${bi('casi siempre es el año mal tecleado','almost always a mistyped year')}
+          </div>`);
+          if(!suyos.length) trozos.push(`<div class="sub aviso-cta">
+            <b>${bi('ningún trade marcado en esta cuenta','no trade is tagged to this account')}</b>
+            · ${bi('se elige en los chips al registrarlo','pick it in the chips when you log it')}
+          </div>`);
+          return trozos.join('');
+        })()}</td>
         <td class="r mono ${h.hoy>0?'up':h.hoy<0?'down':''}">${h.hoy?fmt$(h.hoy,true):'—'}</td>
         <td class="r mono" style="color:var(--dim)">${h.linea==null?'—':fmt$(h.linea)}${h.fija?` <span class="tag ok">${tr('ac.fija').toUpperCase()}</span>`:''}</td>
         <td class="r">${h.colchon==null
@@ -5992,8 +6026,11 @@ function renderFirmaCarrera(){
   };
 
   host.innerHTML = `
-    <div class="p-head"><h3>${bi('La carrera de la firma','The firm\'s race')}</h3>
-      <span class="micro">${bi('primero en llegar al 100%','first to 100%')}</span></div>
+    <div class="p-head"><h3>${bi('Miembros de la firma','Firm members')}</h3>
+      <!-- El subtítulo decía «primero en llegar al 100%». Con el orden por
+           capital y sin el nombre de carrera, eso ya no describe lo que ves:
+           lo que se lista es quién está en la mesa y cuánto trae puesto. -->
+      <span class="micro">${bi('quién está en la mesa y cuánto maneja','who is at the desk and how much they run')}</span></div>
     <div class="p-body">
       ${sinNube ? `<div class="pr-aviso micro" style="margin:0 0 14px;border-color:rgba(228,110,98,.5);background:rgba(228,110,98,.08)">
         <b style="color:var(--down)">${bi('ESTÁS TRABAJANDO SOLO','YOU ARE WORKING SOLO')}</b> —
@@ -6652,6 +6689,10 @@ function renderCamino(){
 }
 
 function renderObjetivos(){
+  /* Su hilera se retiró de Journal. La función se queda entera —las metas se
+     siguen calculando igual— y simplemente no pinta si no hay dónde. Sin esto,
+     el $('#dashKpis').innerHTML de abajo tumba el render completo de Journal. */
+  if(!$('#dashKpis')) return;
   const M = metas(), R = pnlRanges(idsSel(), true);
   const kpis = [
     [tr('me.pnlHoy').toUpperCase(), R.dia, M.dia],
