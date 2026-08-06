@@ -2898,6 +2898,13 @@ stop[stop-color="#9BC0DC"]{stop-color:var(--txt)}
         <label>Checklist setup</label>
         <select id="tSetup"><option value="1">Valid · complete</option><option value="0">Incomplete</option></select>
       </div>
+      <div class="f-full" style="margin-top:10px">
+        <label>Ice Vader</label>
+        <select id="tAlarma">
+          <option value="1">La alarma sonó · entrada del sistema</option>
+          <option value="0">Sin alarma · entré por mi cuenta</option>
+        </select>
+      </div>
     </div>
 
     <div class="cap">
@@ -3521,6 +3528,7 @@ const I18N = {
   'vio.OUT_OF_WINDOW': { es:'Fuera de ventana',      en:'Outside window' },
   /* Ya no es "3er trade": el plan permite 5 en evaluación y 2 en las otras fases. */
   'vio.THIRD_TRADE':   { es:'Trades de más',         en:'Over trade limit' },
+  'vio.SIN_ALARMA':    { es:'Sin alarma de Ice Vader', en:'No Ice Vader alert' },
   'vio.AFTER_WIN':     { es:'Operó tras ganar',      en:'Traded after a win' },   // histórico: trades viejos
   'vio.AFTER_TARGET':  { es:'Operó pasado el objetivo', en:'Traded past the target' },
   'vio.REVENGE':       { es:'Revenge',               en:'Revenge' },
@@ -3800,6 +3808,12 @@ const SISTEMA = {
 };
 
 /* Contratos, tope y objetivo de la fase de una cuenta. */
+/* El día que entró en vigor la regla de la alarma. Se pone HOY —el día en que
+   se implementó— y no el día en que se dijo, porque entre uno y otro la app no
+   preguntaba y un trade sin respuesta no es un trade indisciplinado: es un
+   trade que se registró antes de que existiera la pregunta. */
+const REGLA_ALARMA_DESDE = '2026-08-06';
+
 const sistemaDe = fase => SISTEMA.fases[fase] || SISTEMA.fases.eval;
 /* Cuántos trades permite el plan hoy: manda la fase más restrictiva en vista. */
 function maxTradesHoy(){
@@ -4995,6 +5009,19 @@ function violationsRaw(trade, dayTrades){
      real como "minis" porque la regla estaba escrita para un sistema de NQ. */
   if(esInstrumentoAjeno(trade.sym)) v.push('OTRO_INSTRUMENTO');
   if(trade.time && !estrDeTrade(trade)) v.push('OUT_OF_WINDOW');
+  /* ── SIN ALARMA NO HAY TRADE ──
+     La regla de la casa: si Ice Vader no mandó la alerta, entrar está prohibido.
+     No es una preferencia — es lo único que separa una entrada del sistema de
+     una corazonada, y la ventaja que se mide es la del sistema.
+
+     NO ES RETROACTIVA, y esto es a propósito. Los trades de antes se registraron
+     cuando la app ni siquiera preguntaba, así que marcarlos ahora sería inventar
+     una falta que nadie pudo cometer — el mismo error que se evitó con el tope
+     de trades. Del día del corte en adelante, no contestar cuenta como que no
+     sonó: desde ese día la pregunta es parte de registrar el trade.
+
+     Si algún día quieres que aplique hacia atrás, es UNA constante. */
+  if(trade.date >= REGLA_ALARMA_DESDE && trade.alarma !== true) v.push('SIN_ALARMA');
   /* El tope de trades sale del plan de ESE día, no de un número cableado. */
   if(idx >= P.maxT) v.push('THIRD_TRADE');
   /* "Operó tras ganar" se retira: era la vieja regla de 2 trades con cierre al
@@ -7643,6 +7670,8 @@ const PORQUE_VIO = {
     'MNQ es el instrumento del sistema. Operar otro rompe la comparación: el tamaño del tick, el margen y el comportamiento cambian, y las estadísticas dejan de significar lo mismo.'],
   OUT_OF_WINDOW: ['Fuera de la ventana de operación',
     'El trade cayó fuera del horario del plan. La ventaja del sistema está medida DENTRO de esa ventana; afuera es otra cosa que no está probada.'],
+  SIN_ALARMA: ['Entró sin la alarma de Ice Vader',
+    'La regla de la casa es que sin la alerta del indicador no se entra. La ventaja que está medida es la del sistema: una entrada que el sistema no señaló no es parte de esa ventaja, aunque haya salido bien. De hecho la que sale bien es la más cara, porque enseña a repetirla.'],
   THIRD_TRADE: ['Más trades de los que permite el plan',
     'El plan del día fijó un tope de trades. Pasarlo es donde empieza el sobreoperar: los trades de más son, en promedio, los peores del día.'],
   AFTER_TARGET: ['Siguió operando pasado el objetivo',
@@ -7853,6 +7882,9 @@ function openTrade(id){
   $('#tDir').value = t.dir || 'L';
   $('#tQty').value = t.qty || 1;
   $('#tSetup').value = (t.setupOk===false) ? '0' : '1';
+  /* Al editar un trade viejo no hay respuesta guardada. Se abre en «sin alarma»
+     a propósito: el default no puede ser el que limpia la marca solo. */
+  if($('#tAlarma')) $('#tAlarma').value = (t.alarma === true) ? '1' : '0';
   $('#tIn').value = t.entry ?? '';
   $('#tOut').value = t.exit ?? '';
   $('#tPnl').value = t.pnl ?? '';
@@ -7964,6 +7996,10 @@ $('#tSave').addEventListener('click', ()=>{
     exit: $('#tOut').value===''?null:parseFloat($('#tOut').value),
     pnl,
     setupOk: $('#tSetup').value==='1',
+    /* La respuesta se guarda SIEMPRE, aunque el día sea anterior a la regla:
+       así el dato existe desde ya y el día que quieras mover la fecha de inicio
+       hacia atrás, el historial ya tiene con qué responder. */
+    alarma: $('#tAlarma') ? $('#tAlarma').value==='1' : undefined,
     notas: $('#tNotas').value.trim(),
     shot: tShot || null,
     accts: tradeAccts.length ? [...tradeAccts] : [SIN_CUENTA],
