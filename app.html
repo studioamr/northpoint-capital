@@ -1961,7 +1961,20 @@ button.tag.quemada{text-decoration:line-through;text-decoration-color:var(--down
 .iv-paso b{display:block;font-size:14px;font-weight:600;margin-bottom:5px}
 .iv-paso p,.iv-al p{font-size:13.5px;line-height:1.66;color:var(--dim);max-width:66ch}
 
-.iv-modos{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px}
+/* el carrusel: una tarjeta a la vez, girando en horizontal sin tope */
+.iv-car-v{overflow:hidden;border-radius:12px}
+.iv-track{display:flex;transition:transform .45s cubic-bezier(.4,0,.2,1)}
+.iv-track>.iv-modo{flex:0 0 100%;min-width:100%}
+.iv-car-n{display:flex;align-items:center;justify-content:center;gap:16px;margin-top:14px}
+.iv-fl{background:none;border:1px solid var(--line-soft);border-radius:50%;width:32px;height:32px;
+  color:var(--faint);font:inherit;font-size:17px;line-height:1;cursor:pointer;
+  display:grid;place-items:center;transition:border-color .2s,color .2s}
+.iv-fl:hover{border-color:var(--line);color:var(--txt)}
+.iv-puntos{display:flex;gap:7px}
+.iv-pt{width:7px;height:7px;border-radius:50%;border:0;padding:0;cursor:pointer;
+  background:var(--line);transition:background .2s,transform .2s}
+.iv-pt.on{background:var(--up);transform:scale(1.35)}
+@media (prefers-reduced-motion:reduce){ .iv-track{transition:none} }
 .iv-modo{border:1px solid var(--line-soft);border-radius:12px;padding:16px}
 .iv-modo.def{border-color:color-mix(in srgb,var(--up) 45%,transparent)}
 .iv-modo-h{display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin-bottom:12px}
@@ -5832,6 +5845,22 @@ const IV_ALERTAS = [
   ['Liquidez barrida','Liquidity swept', 'Cuando el precio toma el alto o bajo de Asia o de Londres.','When price takes the Asia or London high or low.'],
 ];
 
+/* ── EL CARRUSEL DE LOS MODOS ──
+   Van en horizontal y EN LOOP: del tercero se pasa al primero y del primero al
+   tercero, para poder compararlos girando sin llegar nunca a un tope. El estado
+   vive fuera de la función porque el render se vuelve a llamar al cambiar de
+   idioma o de tema y no queremos que el carrusel salte al principio. */
+let ivPos = 0;
+window.ivVe = function(i){
+  const track = $('#ivTrack'); if(!track) return;
+  const n = IV_MODOS.length;
+  ivPos = ((i % n) + n) % n;                       // el módulo que sí cierra el círculo
+  track.style.transform = 'translateX(' + (-ivPos * 100) + '%)';
+  $$('#ivPuntos .iv-pt').forEach((p, k) => p.classList.toggle('on', k === ivPos));
+  $$('#ivTrack .iv-modo').forEach((c, k) => c.setAttribute('aria-hidden', k !== ivPos));
+};
+window.ivGira = d => ivVe(ivPos + d);
+
 function renderIceVader(){
   const host = $('#v-icevader .iv-host'); if(!host) return;
   const modo = m => `
@@ -5879,7 +5908,15 @@ function renderIceVader(){
         <p class="iv-lead">${bi(
           'Los tres entran EXACTAMENTE en el mismo punto. Lo que cambia es dónde ponen el stop — y como el riesgo en dólares es fijo, un stop más ancho significa menos contratos. Ahí está todo el truco: no eliges cuánto arriesgas, eliges cómo lo repartes.',
           'All three enter at EXACTLY the same point. What changes is where the stop goes — and since the dollar risk is fixed, a wider stop means fewer contracts. That is the whole trick: you do not choose how much you risk, you choose how you spread it.')}</p>
-        <div class="iv-modos">${IV_MODOS.map(modo).join('')}</div>
+        <div class="iv-car">
+          <div class="iv-car-v"><div class="iv-track" id="ivTrack">${IV_MODOS.map(modo).join('')}</div></div>
+          <div class="iv-car-n">
+            <button type="button" class="iv-fl" onclick="ivGira(-1)" aria-label="${bi('Modo anterior','Previous mode')}">‹</button>
+            <div class="iv-puntos" id="ivPuntos">${IV_MODOS.map((m,i) =>
+              `<button type="button" class="iv-pt${i===0?' on':''}" onclick="ivVe(${i})" aria-label="${loc(m.n)}"></button>`).join('')}</div>
+            <button type="button" class="iv-fl" onclick="ivGira(1)" aria-label="${bi('Modo siguiente','Next mode')}">›</button>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -5936,34 +5973,21 @@ function renderIceVader(){
           'La app ya vigila estas cifras: si un día se pasa del riesgo de su fase, el trade sale marcado. La EVAL va ALL IN a propósito — ahí el único piso es el de la fondeadora.',
           'The app already watches these numbers: if a day goes past its phase risk, the trade gets flagged. EVAL is ALL IN on purpose — there the only floor is the firm’s.')}</p>
       </div>
-    </div>
-
-    <div class="panel mt2">
-      <div class="p-head">
-        <h3>${bi('Los números de fábrica','The factory numbers')}</h3>
-        <span class="micro">${bi('leídos del script, no de memoria','read from the script, not from memory')}</span>
-      </div>
-      <div class="p-body">
-        <div class="iv-tabla">
-          ${[
-            [bi('Rango de apertura','Opening range'), IV.orb.ini + ' – ' + IV.orb.fin + ' ET', 'orHora · orDur'],
-            [bi('Última entrada','Last entry'), IV.ultima + ' ET', 'ultHora'],
-            [bi('Cerrar todo','Close everything'), IV.cierre + ' ET', 'finHora'],
-            [bi('Trades por día','Trades per day'), String(IV.maxTrades), 'maxTrades'],
-            [bi('Velas fuera del rango','Candles closing outside'), IV.velasFuera + bi(' consecutivas',' consecutive'), 'velasFuera'],
-            [bi('Riesgo por trade (de fábrica)','Risk per trade (factory)'), IV.riesgoPct + '%' + bi(' → $1,000 en una de $50,000',' → $1,000 on a $50,000 account'), 'riesgoPct'],
-            [bi('Colchón del stop','Stop cushion'), IV.colchon + ' pts', 'colchon'],
-            [bi('Stop mínimo','Minimum stop'), IV.minStop + ' pts', 'minStop'],
-            [bi('Velas del tramo','Leg candles'), String(IV.velasTramo), 'velasResp'],
-            [bi('Asia','Asia'), IV.asia.ini + ' – ' + IV.asia.fin, 'asiaIni · asiaFin'],
-            [bi('Londres','London'), IV.londres.ini + ' – ' + IV.londres.fin, 'lonIni · lonFin'],
-          ].map(([k,v,p]) => `<div class="iv-fila"><span>${k}</span><b>${v}</b><i>${p}</i></div>`).join('')}
-        </div>
-        <p class="iv-nota">${bi(
-          'Cada renglón trae el nombre del parámetro en el indicador para que puedas comparar sin adivinar. Si cambias algo allá, esta tabla deja de ser cierta.',
-          'Every row carries the parameter name in the indicator so you can compare without guessing. If you change something there, this table stops being true.')}</p>
-      </div>
     </div>`;
+
+  ivVe(ivPos);   /* se vuelve a colocar donde estaba, no en el primero */
+  /* arrastre con el dedo: en el celular nadie busca las flechitas */
+  const v = $('.iv-car-v');
+  if(v){
+    let x0 = null;
+    v.addEventListener('touchstart', e => { x0 = e.touches[0].clientX; }, { passive:true });
+    v.addEventListener('touchend', e => {
+      if(x0 == null) return;
+      const dx = e.changedTouches[0].clientX - x0;
+      if(Math.abs(dx) > 44) ivGira(dx < 0 ? 1 : -1);
+      x0 = null;
+    }, { passive:true });
+  }
 }
 
 function renderFirmaCarrera(){
