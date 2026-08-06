@@ -1038,27 +1038,18 @@ body.doc-open #indice{display:none}
   .hero-mark .hl-in{animation:none;transform:none;background:none;color:var(--txt)}
 }
 
-/* ── FILOSOFÍA · la flecha de partículas ── */
-.flecha-marco{position:relative;height:clamp(420px,72vh,760px)}
-#flechaCanvas{position:absolute;inset:0;width:100%;height:100%;color:var(--txt)}
 
 
-/* ── FILOSOFÍA: NEGRO TOTAL ──
-   La pantalla de la flecha es negra pase lo que pase, también en tema claro:
-   el símbolo vive en la oscuridad y las partículas son de luz. El canvas
-   además pinta su propio fondo con un velo de negro por frame — eso deja las
-   ESTELAS que hacen ver que el flujo sube. */
-#filosofia.doc-active{background:#000;min-height:100vh}
-#filosofia #flechaCanvas{color:#F4F4F4}
 
-/* ── MESA: LA TORRE, Y «NY SESSION» EN PARTÍCULAS ──
-   El mismo estilo que Filosofía: negro total pase lo que pase y partículas de
-   luz. En esta pantalla no hay un solo nodo de texto: hasta el rótulo se
-   dibuja en el canvas, muestreado de la tipografía — por eso aquí no quedan
-   reglas de texto. */
-#mesa.doc-active{background:#000;min-height:100vh}
-.torre-marco{position:relative;height:clamp(440px,80vh,860px)}
-#torreCanvas{position:absolute;inset:0;width:100%;height:100%}
+/* ── LAS DOS PANTALLAS DE PARTÍCULAS (Filosofía y Mesa) ──
+   A pantalla completa y SIN recuadro: el canvas es la sección entera, para que
+   se sienta espacio y no una ventana adentro de la página. Los colores salen
+   del TEMA: en oscuro, luz sobre negro; en claro se INVIERTEN solos —tinta
+   sobre papel— porque el motor lee color y fondo computados, no valores fijos. */
+#filosofia.doc-active,#mesa.doc-active{position:relative;overflow:hidden;
+  background:var(--bg);min-height:100vh}
+.flecha-marco,.torre-marco{position:absolute;inset:0}
+#flechaCanvas,#torreCanvas{position:absolute;inset:0;width:100%;height:100%;color:var(--txt)}
 </style>
 </head>
 <body>
@@ -1120,25 +1111,19 @@ body.doc-open #indice{display:none}
 
 <!-- ============================ 01 FILOSOFÍA ============================ -->
 <section id="filosofia">
-  <div class="wrap">
-    <!-- LA FLECHA, Y NADA MÁS (André): el trazo de su boceto —sube, respira
-         hacia abajo, y sube más alto hasta la punta— hecho de partículas que
-         flotan. Sin una palabra: la filosofía ES el símbolo. -->
-    <div class="flecha-marco rv">
-      <canvas id="flechaCanvas" aria-label="An arrow that rises, breathes, and keeps rising"></canvas>
-    </div>
+  <!-- LA FLECHA, protagonista. Sin .wrap: el canvas es la sección entera,
+       para que se sienta espacio y no una ventana adentro de la página. -->
+  <div class="flecha-marco rv">
+    <canvas id="flechaCanvas" aria-label="An arrow that rises, breathes, and keeps rising"></canvas>
   </div>
 </section>
 
 <!-- ============================ 02 MESA DE FUTUROS ============================ -->
 <section id="mesa">
-  <div class="wrap">
-    <!-- SÓLO LA TORRE (André). Y el rótulo no es texto: «NY SESSION» se
-         muestrea de la tipografía y se dibuja en partículas dentro del mismo
-         canvas — en esta pantalla no hay un solo nodo de texto. -->
-    <div class="torre-marco rv">
-      <canvas id="torreCanvas" aria-label="The New York tower · NY Session"></canvas>
-    </div>
+  <!-- Ya sin el edificio (André): el rótulo ES la pantalla. Dos líneas
+       muestreadas de la tipografía, en partículas. -->
+  <div class="torre-marco rv">
+    <canvas id="torreCanvas" aria-label="NY Session · 7:20 AM Mon–Fri"></canvas>
   </div>
 </section>
 
@@ -1296,290 +1281,203 @@ body.doc-open #indice{display:none}
      ni .proj-card en el documento eran líneas que ya no podían correr nunca. */
 })();
 
-/* ---------- FILOSOFÍA · la flecha que SUBE ----------
-   Ya no flota: fluye. Cada partícula del río tiene una posición d SOBRE el
-   trazo y avanza hacia la punta a su propia velocidad; al llegar, vuelve a
-   nacer al principio. Las alas de la punta sí flotan quietas —el flujo no
-   puede correr por ellas porque apuntan hacia atrás— y el aire suelto deriva
-   hacia ARRIBA, para empujar la misma sensación.
-
-   La estela no es un efecto aparte: el canvas pinta un velo de negro casi
-   transparente por frame en vez de borrarse, y lo que dibujaste hace tres
-   frames sigue ahí, desvaneciéndose. Eso es lo que hace leer «está subiendo».
-
-   El canvas mide 0 mientras la sección está cerrada (el índice es un router
-   de documentos): el bucle lo detecta y no gasta ni un frame. */
+/* ---------- LAS PANTALLAS DE PARTÍCULAS (Filosofía y Mesa) ----------
+   Un solo motor para las dos. Lo que comparten: canvas a pantalla completa,
+   colores del TEMA (en claro se invierten solos: el motor lee el color y el
+   fondo computados cada ~1.5s, y al cambiar borra las estelas del tema
+   anterior), el velo por frame que deja estela, y un campo de estrellas por
+   TODA la pantalla —subiendo apenas— para que se sienta espacio y no un
+   recuadro. Lo que cambia es el contenido: construir(W,H) devuelve el río
+   que fluye (la flecha) o las casas fijas (el rótulo muestreado). */
 (function(){
-  var cv = document.getElementById('flechaCanvas');
-  if (!cv || !cv.getContext) return;
-  var cx = cv.getContext('2d');
   var reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
-  var PTS = [[.06,.84],[.42,.34],[.46,.70],[.90,.14]];   /* el boceto, normalizado */
-  var rio = [], alas = [], aire = [], segs = [], total = 0;
-  var W = 0, H = 0, dpr = 1, tinta = '#F4F4F4', f = 0, tAntes = 0, quieta = true;
 
-  function puntoEn(d){
-    for (var j = 0; j < segs.length; j++){
-      if (d <= segs[j].len){
-        var g = segs[j], fr = d / g.len;
-        return [g[0][0] + (g[1][0] - g[0][0]) * fr, g[0][1] + (g[1][1] - g[0][1]) * fr];
+  function pantalla(cv, construir){
+    if (!cv || !cv.getContext) return;
+    var cx = cv.getContext('2d');
+    var sec = cv.closest('section');
+    var st = null, W = 0, H = 0, dpr = 1, f = 0, tAntes = 0, quieta = true;
+    var tinta = '#F4F4F4', fondo = 'rgb(8,8,8)', velo = 'rgba(8,8,8,.15)';
+
+    function colores(){
+      var c = getComputedStyle(cv).color;
+      var b = (getComputedStyle(sec).backgroundColor.match(/\d+/g) || ['8','8','8']).slice(0, 3);
+      var fo = 'rgb(' + b.join(',') + ')';
+      if (c !== tinta || fo !== fondo){
+        tinta = c; fondo = fo; velo = 'rgba(' + b.join(',') + ',0.15)';
+        cx.fillStyle = fondo; cx.fillRect(0, 0, W, H);   /* fuera las estelas del tema anterior */
+        quieta = true;
       }
-      d -= segs[j].len;
     }
-    var u = segs[segs.length - 1];
-    return [u[1][0], u[1][1]];
+
+    function arma(){
+      var r = cv.getBoundingClientRect();
+      if (r.width < 10 || r.height < 10) return;
+      W = r.width; H = r.height;
+      dpr = Math.min(2, devicePixelRatio || 1);
+      cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
+      cx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      colores();
+      st = construir(W, H);
+      /* el espacio: estrellas por toda la pantalla */
+      st.aire = [];
+      var nA = Math.round(Math.min(260, Math.max(100, W * H / 9000)));
+      for (var q = 0; q < nA; q++){
+        st.aire.push({ x: Math.random() * W, y: Math.random() * H,
+                       v: 3 + Math.random() * 11, ph: Math.random() * 6.283,
+                       amp: 3 + Math.random() * 7,
+                       s: Math.random() < .8 ? 1 : 1.6,
+                       a: .05 + Math.random() * .12 });
+      }
+      cx.fillStyle = fondo; cx.fillRect(0, 0, W, H);
+      quieta = true;
+    }
+
+    function puntoEn(d){
+      var segs = st.segs;
+      for (var j = 0; j < segs.length; j++){
+        if (d <= segs[j].len){
+          var g = segs[j], fr = d / g.len;
+          return [g[0][0] + (g[1][0] - g[0][0]) * fr, g[0][1] + (g[1][1] - g[0][1]) * fr];
+        }
+        d -= segs[j].len;
+      }
+      var u = segs[segs.length - 1];
+      return [u[1][0], u[1][1]];
+    }
+
+    function pinta(t, dt){
+      cx.fillStyle = velo; cx.fillRect(0, 0, W, H);   /* la estela vive aquí */
+      cx.fillStyle = tinta;
+      var i, p, xy;
+      for (i = 0; i < st.rio.length; i++){
+        p = st.rio[i];
+        p.d = (p.d + p.v * dt) % st.total;
+        xy = puntoEn(p.d);
+        cx.globalAlpha = p.a * (.6 + .4 * Math.sin(t * 1.3 + p.ph * 2));
+        cx.fillRect(xy[0] + Math.sin(t * 1.7 + p.ph) * p.amp,
+                    xy[1] + Math.cos(t * 1.3 + p.ph) * p.amp, p.s, p.s);
+      }
+      for (i = 0; i < st.fijos.length; i++){
+        p = st.fijos[i];
+        cx.globalAlpha = p.a * (.6 + .4 * Math.sin(t * 1.4 + p.ph * 2));
+        cx.fillRect(p.hx + Math.sin(t * p.sp + p.ph) * p.amp,
+                    p.hy + Math.cos(t * p.sp * .8 + p.ph * 1.6) * p.amp, p.s, p.s);
+      }
+      for (i = 0; i < st.aire.length; i++){
+        p = st.aire[i];
+        p.y -= p.v * dt;
+        if (p.y < -12){ p.y = H + 12; p.x = Math.random() * W; }
+        cx.globalAlpha = p.a * (.7 + .3 * Math.sin(t * .9 + p.ph));
+        cx.fillRect(p.x + Math.sin(t * .5 + p.ph) * p.amp, p.y, p.s, p.s);
+      }
+      cx.globalAlpha = 1;
+    }
+
+    function loop(ms){
+      requestAnimationFrame(loop);
+      if (!cv.clientWidth) return;                 /* la sección está cerrada */
+      if (Math.abs(cv.clientWidth - W) > 1) arma();
+      if (!st) return;
+      var dt = Math.min(.05, (ms - tAntes) / 1000 || 0);
+      tAntes = ms;
+      if (f++ % 90 === 0) colores();
+      if (reduce){
+        if (quieta){ cx.fillStyle = fondo; cx.fillRect(0, 0, W, H); pinta(0, 0); quieta = false; }
+        return;
+      }
+      pinta(ms / 1000, dt);
+    }
+    requestAnimationFrame(loop);
+    /* la tipografía llega tarde: al cargar la de verdad se rearma el muestreo */
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(function(){ W = 0; });
   }
 
-  function arma(){
-    var r = cv.getBoundingClientRect();
-    if (r.width < 10 || r.height < 10) return;
-    W = r.width; H = r.height;
-    dpr = Math.min(2, devicePixelRatio || 1);
-    cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
-    cx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    cx.fillStyle = '#000'; cx.fillRect(0, 0, W, H);   /* el lienzo nace negro */
-
-    var pts = PTS.map(function(p){ return [p[0] * W, p[1] * H]; });
-    segs = []; total = 0;
-    for (var i = 0; i < pts.length - 1; i++){
+  /* ── FILOSOFÍA · la flecha, centrada y protagonista ──
+     El trazo vive en una caja centrada (74% del ancho, 56% del alto): con el
+     canvas a pantalla completa, dibujarla de borde a borde la pegaba a las
+     orillas y dejaba de ser la protagonista. */
+  pantalla(document.getElementById('flechaCanvas'), function(W, H){
+    var ox = W * .13, bw = W * .74, oy = H * .20, bh = H * .56;
+    var pts = [[.06,.84],[.42,.34],[.46,.70],[.90,.14]].map(function(p){
+      return [ox + p[0] * bw, oy + p[1] * bh];
+    });
+    var segs = [], total = 0, i;
+    for (i = 0; i < pts.length - 1; i++){
       var g = [pts[i], pts[i + 1]];
       g.len = Math.hypot(g[1][0] - g[0][0], g[1][1] - g[0][1]);
       segs.push(g); total += g.len;
     }
-
-    /* el río: nace repartido por todo el trazo para que no se vea un tren */
-    rio = [];
-    var N = Math.round(Math.min(520, Math.max(240, W * .45)));
-    for (var k = 0; k < N; k++){
-      rio.push({ d: Math.random() * total,
-                 v: 26 + Math.random() * 58,            /* px/s hacia la punta */
-                 ph: Math.random() * 6.283,
-                 amp: .8 + Math.random() * 2.6,          /* jitter corto: la línea se queda nítida */
-                 s: Math.random() < .85 ? 1 : 1.7,
-                 a: .3 + Math.random() * .7 });
+    var rio = [], N = Math.round(Math.min(560, Math.max(260, W * .42)));
+    for (i = 0; i < N; i++){
+      rio.push({ d: Math.random() * total, v: 26 + Math.random() * 58,
+                 ph: Math.random() * 6.283, amp: .8 + Math.random() * 2.4,
+                 s: Math.random() < .85 ? 1 : 1.7, a: .3 + Math.random() * .7 });
     }
-
-    /* las alas de la punta: quietas, flotando */
-    var a = pts[pts.length - 2], b = pts[pts.length - 1];
-    var ang = Math.atan2(b[1] - a[1], b[0] - a[0]), L = Math.max(16, W * .05);
-    alas = [];
+    /* las alas de la punta, quietas: el flujo no corre por ellas porque
+       apuntan hacia atrás */
+    var fijos = [];
+    var a = pts[2], b = pts[3];
+    var ang = Math.atan2(b[1] - a[1], b[0] - a[0]), L = Math.max(18, bw * .06);
     [.5, -.5].forEach(function(sg){
       var t = ang + Math.PI + sg;
       for (var m = 0; m < N * .07; m++){
         var fr = Math.random();
-        alas.push({ hx: b[0] + Math.cos(t) * L * fr, hy: b[1] + Math.sin(t) * L * fr,
-                    ph: Math.random() * 6.283, sp: .5 + Math.random() * .9,
-                    amp: 1 + Math.random() * 2.5, s: 1, a: .35 + Math.random() * .65 });
+        fijos.push({ hx: b[0] + Math.cos(t) * L * fr, hy: b[1] + Math.sin(t) * L * fr,
+                     ph: Math.random() * 6.283, sp: .5 + Math.random() * .9,
+                     amp: 1 + Math.random() * 2.2, s: 1, a: .35 + Math.random() * .65 });
       }
     });
+    return { segs: segs, total: total, rio: rio, fijos: fijos };
+  });
 
-    /* el aire: poquito, tenue, y subiendo — empuja la misma dirección */
-    aire = [];
-    for (var q = 0; q < N * .12; q++){
-      aire.push({ x: Math.random() * W, y: Math.random() * H,
-                  v: 7 + Math.random() * 16, ph: Math.random() * 6.283,
-                  amp: 4 + Math.random() * 8, a: .05 + Math.random() * .09 });
-    }
-    quieta = true;
-  }
-
-  function pinta(t, dt){
-    /* el velo: NO se borra — se oscurece. Ahí viven las estelas. */
-    cx.fillStyle = 'rgba(0,0,0,.15)';
-    cx.fillRect(0, 0, W, H);
-    cx.fillStyle = tinta;
-    var i, p;
-    for (i = 0; i < rio.length; i++){
-      p = rio[i];
-      p.d = (p.d + p.v * dt) % total;
-      var xy = puntoEn(p.d);
-      cx.globalAlpha = p.a * (.6 + .4 * Math.sin(t * 1.3 + p.ph * 2));
-      cx.fillRect(xy[0] + Math.sin(t * 1.7 + p.ph) * p.amp,
-                  xy[1] + Math.cos(t * 1.3 + p.ph) * p.amp, p.s, p.s);
-    }
-    for (i = 0; i < alas.length; i++){
-      p = alas[i];
-      cx.globalAlpha = p.a * (.6 + .4 * Math.sin(t * 1.4 + p.ph * 2));
-      cx.fillRect(p.hx + Math.sin(t * p.sp + p.ph) * p.amp,
-                  p.hy + Math.cos(t * p.sp * .8 + p.ph * 1.6) * p.amp, p.s, p.s);
-    }
-    for (i = 0; i < aire.length; i++){
-      p = aire[i];
-      p.y -= p.v * dt;
-      if (p.y < -12){ p.y = H + 12; p.x = Math.random() * W; }
-      cx.globalAlpha = p.a;
-      cx.fillRect(p.x + Math.sin(t * .5 + p.ph) * p.amp, p.y, 1, 1);
-    }
-    cx.globalAlpha = 1;
-  }
-
-  function loop(ms){
-    requestAnimationFrame(loop);
-    if (!cv.clientWidth) return;                       /* la sección está cerrada */
-    if (Math.abs(cv.clientWidth - W) > 1) arma();
-    if (!rio.length) return;
-    var dt = Math.min(.05, (ms - tAntes) / 1000 || 0); /* tope: al volver de una
-        pestaña dormida, un dt gigante teletransportaría el río entero */
-    tAntes = ms;
-    if (f++ % 90 === 0){
-      var c = getComputedStyle(cv).color;
-      if (c !== tinta){ tinta = c; quieta = true; }
-    }
-    if (reduce){                                       /* sin movimiento: un cuadro */
-      if (quieta){
-        cx.fillStyle = '#000'; cx.fillRect(0, 0, W, H);
-        pinta(0, 0); quieta = false;
-      }
-      return;
-    }
-    pinta(ms / 1000, dt);
-  }
-  requestAnimationFrame(loop);
-})();
-
-
-/* ---------- MESA · la torre de Nueva York, en partículas ----------
-   El mismo lenguaje que la flecha: cada partícula tiene su casa sobre el
-   trazo del edificio —la antena, los tres cuerpos escalonados, el suelo— y
-   flota apenas alrededor, con el mismo velo de negro por frame que deja
-   estela. Las ventanas van en partículas más tenues. El edificio se queda
-   quieto y respira; el aire suelto sube, como en Filosofía. */
-(function(){
-  var cv = document.getElementById('torreCanvas');
-  if (!cv || !cv.getContext) return;
-  var cx = cv.getContext('2d');
-  var reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
-
-  /* la torre del HQ en un lienzo de 140×104, la misma silueta de siempre */
-  function rect(x, y, w, h){ return [[x,y,x+w,y],[x+w,y,x+w,y+h],[x+w,y+h,x,y+h],[x,y+h,x,y]]; }
-  var TRAZO = [];
-  [[70,6,70,18]].concat(rect(61,18,18,16), rect(52,34,36,22), rect(44,56,52,42), [[28,98,112,98]])
-    .forEach(function(g){ TRAZO.push({ x1:g[0], y1:g[1], x2:g[2], y2:g[3], dim:false }); });
-  [[56,62,56,92],[70,62,70,92],[84,62,84,92],[62,40,62,50],[78,40,78,50]]
-    .forEach(function(g){ TRAZO.push({ x1:g[0], y1:g[1], x2:g[2], y2:g[3], dim:true }); });
-
-  var parts = [], aire = [], W = 0, H = 0, dpr = 1, f = 0, quieta = true;
-  var TINTA = '#F4F4F4';       /* la sección es negra siempre: la tinta no cambia */
-
-  function arma(){
-    var r = cv.getBoundingClientRect();
-    if (r.width < 10 || r.height < 10) return;
-    W = r.width; H = r.height;
-    dpr = Math.min(2, devicePixelRatio || 1);
-    cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
-    cx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    cx.fillStyle = '#000'; cx.fillRect(0, 0, W, H);
-
-    /* encajar el lienzo 140×104 en el marco, centrado */
-    /* la torre ocupa el alto menos la franja del rótulo */
-    var esc = Math.min(W * .58 / 140, H * .72 / 104);
-    var ox = (W - 140 * esc) / 2, oy = H * .05;
-    var segs = TRAZO.map(function(g){
-      var s_ = { a:[ox + g.x1 * esc, oy + g.y1 * esc], b:[ox + g.x2 * esc, oy + g.y2 * esc], dim:g.dim };
-      s_.len = Math.hypot(s_.b[0] - s_.a[0], s_.b[1] - s_.a[1]);
-      return s_;
-    });
-    var total = 0; segs.forEach(function(g){ total += g.len; });
-
-    parts = [];
-    var N = Math.round(Math.min(620, Math.max(280, W * .55)));
-    for (var k = 0; k < N; k++){
-      var d = Math.random() * total, seg = segs[segs.length - 1], fr = 1;
-      for (var j = 0; j < segs.length; j++){
-        if (d <= segs[j].len){ seg = segs[j]; fr = d / segs[j].len; break; }
-        d -= segs[j].len;
-      }
-      parts.push({
-        hx: seg.a[0] + (seg.b[0] - seg.a[0]) * fr,
-        hy: seg.a[1] + (seg.b[1] - seg.a[1]) * fr,
-        ph: Math.random() * 6.283, sp: .5 + Math.random() * .9,
-        amp: .8 + Math.random() * 2.4,          /* poco: la silueta se queda nítida */
-        s: Math.random() < .85 ? 1 : 1.7,
-        a: (.3 + Math.random() * .7) * (seg.dim ? .42 : 1)
-      });
-    }
-
-    /* ── «NY SESSION», también en partículas ──
-       No es HTML. Se dibuja el texto en un lienzo aparte, se muestrean sus
-       píxeles cada 2px, y cada punto con tinta se vuelve la casa de una
-       partícula — la misma técnica que la torre, así el rótulo y el edificio
-       son EL MISMO material. Si salen de más, se ralea al azar para no
-       duplicar el costo del frame. */
-    var ts = Math.max(20, Math.min(46, W * .045));
-    var ty = oy + 104 * esc + (H - oy - 104 * esc) * .5;
+  /* ── MESA · «NY SESSION / 7:20 AM MON–FRI», muestreado y centrado ──
+     Las dos líneas se muestrean POR SEPARADO. La primera pasada raleaba las
+     dos juntas con la misma probabilidad y la línea chica —cuyos glifos ya
+     tienen pocos píxeles— se quedaba ilegible. La grande se muestrea cada 2px
+     con tope propio; la chica cada 1px, con tope propio y flotación más corta,
+     para que se lea a pesar del tamaño. */
+  pantalla(document.getElementById('torreCanvas'), function(W, H){
     var off = document.createElement('canvas');
     off.width = Math.max(1, Math.round(W)); off.height = Math.max(1, Math.round(H));
-    var oc = off.getContext('2d');
-    oc.font = '500 ' + ts + 'px "IBM Plex Mono", ui-monospace, monospace';
-    oc.textAlign = 'center'; oc.textBaseline = 'middle';
-    try{ oc.letterSpacing = Math.round(ts * .4) + 'px'; }catch(e){}
-    oc.fillStyle = '#fff';
-    oc.fillText('NY SESSION', off.width / 2, ty);
-    var iw = off.width, datos = oc.getImageData(0, 0, iw, off.height).data;
-    var casas = [];
-    for (var yy = 0; yy < off.height; yy += 2)
-      for (var xx = 0; xx < iw; xx += 2)
-        if (datos[(yy * iw + xx) * 4 + 3] > 120) casas.push([xx, yy]);
-    if (casas.length > 680){
-      var prob = 680 / casas.length, ralas = [];
-      for (var z = 0; z < casas.length; z++) if (Math.random() < prob) ralas.push(casas[z]);
-      casas = ralas;
-    }
-    for (var c2 = 0; c2 < casas.length; c2++){
-      parts.push({ hx: casas[c2][0], hy: casas[c2][1],
-                   ph: Math.random() * 6.283, sp: .5 + Math.random() * .9,
-                   amp: .6 + Math.random() * 1.5,          /* poco: las letras se leen */
-                   s: 1, a: .35 + Math.random() * .65 });
-    }
-    aire = [];
-    for (var q = 0; q < N * .1; q++){
-      aire.push({ x: Math.random() * W, y: Math.random() * H,
-                  v: 6 + Math.random() * 13, ph: Math.random() * 6.283,
-                  amp: 4 + Math.random() * 8, a: .05 + Math.random() * .08 });
-    }
-    quieta = true;
-  }
+    var oc = off.getContext('2d'), iw = off.width;
 
-  function pinta(t, dt){
-    cx.fillStyle = 'rgba(0,0,0,.15)';           /* el velo: aquí vive la estela */
-    cx.fillRect(0, 0, W, H);
-    cx.fillStyle = TINTA;
-    var i, p;
-    for (i = 0; i < parts.length; i++){
-      p = parts[i];
-      cx.globalAlpha = p.a * (.6 + .4 * Math.sin(t * 1.3 + p.ph * 2));
-      cx.fillRect(p.hx + Math.sin(t * p.sp + p.ph) * p.amp,
-                  p.hy + Math.cos(t * p.sp * .8 + p.ph * 1.6) * p.amp, p.s, p.s);
+    function muestrea(texto, px, ls, y, paso, tope){
+      oc.clearRect(0, 0, iw, off.height);
+      oc.fillStyle = '#fff'; oc.textAlign = 'center'; oc.textBaseline = 'middle';
+      oc.font = '500 ' + px + 'px "IBM Plex Mono", ui-monospace, monospace';
+      try{ oc.letterSpacing = Math.round(ls) + 'px'; }catch(e){}
+      oc.fillText(texto, iw / 2, y);
+      var datos = oc.getImageData(0, 0, iw, off.height).data, pts = [];
+      for (var yy = 0; yy < off.height; yy += paso)
+        for (var xx = 0; xx < iw; xx += paso)
+          if (datos[(yy * iw + xx) * 4 + 3] > 120) pts.push([xx, yy]);
+      if (pts.length > tope){                     /* ralear AL AZAR, no por el final */
+        var prob = tope / pts.length, ralas = [];
+        for (var z = 0; z < pts.length; z++) if (Math.random() < prob) ralas.push(pts[z]);
+        pts = ralas;
+      }
+      return pts;
     }
-    for (i = 0; i < aire.length; i++){
-      p = aire[i];
-      p.y -= p.v * dt;
-      if (p.y < -12){ p.y = H + 12; p.x = Math.random() * W; }
-      cx.globalAlpha = p.a;
-      cx.fillRect(p.x + Math.sin(t * .5 + p.ph) * p.amp, p.y, 1, 1);
-    }
-    cx.globalAlpha = 1;
-  }
 
-  var tAntes = 0;
-  function loop(ms){
-    requestAnimationFrame(loop);
-    if (!cv.clientWidth) return;                 /* la sección está cerrada */
-    if (Math.abs(cv.clientWidth - W) > 1) arma();
-    if (!parts.length) return;
-    var dt = Math.min(.05, (ms - tAntes) / 1000 || 0);
-    tAntes = ms;
-    if (reduce){
-      if (quieta){ cx.fillStyle = '#000'; cx.fillRect(0, 0, W, H); pinta(0, 0); quieta = false; }
-      return;
-    }
-    pinta(ms / 1000, dt);
-  }
-  requestAnimationFrame(loop);
-  /* la tipografía llega tarde: cuando el font de verdad carga, se rearma para
-     que el rótulo no se quede muestreado del monospace de reserva */
-  if (document.fonts && document.fonts.ready) document.fonts.ready.then(function(){ W = 0; });
+    var ts  = Math.max(40, Math.min(120, W * .082));
+    var ts2 = Math.max(16, ts * .3);
+    var grandes = muestrea('NY SESSION', ts, ts * .2, H * .44, 2, 1100);
+    var chicas  = muestrea('7:20 AM MON\u2013FRI', ts2, ts2 * .34, H * .44 + ts * .98, 1, 750);
+
+    var fijos = [];
+    grandes.forEach(function(c){
+      fijos.push({ hx: c[0], hy: c[1], ph: Math.random() * 6.283, sp: .5 + Math.random() * .9,
+                   amp: .5 + Math.random() * 1.4, s: 1, a: .35 + Math.random() * .65 });
+    });
+    chicas.forEach(function(c){
+      fijos.push({ hx: c[0], hy: c[1], ph: Math.random() * 6.283, sp: .5 + Math.random() * .9,
+                   amp: .3 + Math.random() * .7, s: 1, a: .4 + Math.random() * .6 });
+    });
+    return { segs: [], total: 1, rio: [], fijos: fijos };
+  });
 })();
+
 </script>
 
 <div class="deck" aria-hidden="false">
