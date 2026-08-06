@@ -1111,10 +1111,13 @@ body.doc-open #indice{display:none}
 
 <!-- ============================ 01 FILOSOFÍA ============================ -->
 <section id="filosofia">
-  <!-- LA FLECHA, protagonista. Sin .wrap: el canvas es la sección entera,
-       para que se sienta espacio y no una ventana adentro de la página. -->
+  <!-- WITHIN CHAOS, ORDER — dicho EN CIENCIA (André): el atractor de Lorenz,
+       el retrato clásico del caos determinista. Miles de pasos que jamás se
+       repiten y jamás se salen de su forma: caos por dentro, orden por fuera.
+       Las partículas INTEGRAN las ecuaciones en vivo — no es un dibujo, es la
+       dinámica de verdad. La frase va abajo, muestreada en partículas. -->
   <div class="flecha-marco rv">
-    <canvas id="flechaCanvas" aria-label="An arrow that rises, breathes, and keeps rising"></canvas>
+    <canvas id="flechaCanvas" aria-label="Within chaos, order — a Lorenz attractor drawn by particles"></canvas>
   </div>
 </section>
 
@@ -1123,7 +1126,7 @@ body.doc-open #indice{display:none}
   <!-- Ya sin el edificio (André): el rótulo ES la pantalla. Dos líneas
        muestreadas de la tipografía, en partículas. -->
   <div class="torre-marco rv">
-    <canvas id="torreCanvas" aria-label="NY Session · 7:20 AM Mon–Fri"></canvas>
+    <canvas id="torreCanvas" aria-label="NY Session · Mon–Fri"></canvas>
   </div>
 </section>
 
@@ -1350,6 +1353,24 @@ body.doc-open #indice{display:none}
       cx.fillStyle = velo; cx.fillRect(0, 0, W, H);   /* la estela vive aquí */
       cx.fillStyle = tinta;
       var i, p, xy;
+      /* la física: cada partícula INTEGRA el sistema de Lorenz (σ=10, ρ=28,
+         β=8/3) y se proyecta el plano x–z, que es la vista de mariposa. El
+         paso de simulación va atado al dt real con tope: en una pestaña que
+         despierta, un paso gigante sacaría a todas del atractor de un brinco. */
+      if (st.lor){
+        var L = st.lor, h = Math.min(.011, dt * .55);
+        for (i = 0; i < L.parts.length; i++){
+          p = L.parts[i];
+          for (var k2 = 0; k2 < 2; k2++){
+            var dx = 10 * (p.y - p.x);
+            var dy = p.x * (28 - p.z) - p.y;
+            var dz = p.x * p.y - (8 / 3) * p.z;
+            p.x += dx * h; p.y += dy * h; p.z += dz * h;
+          }
+          cx.globalAlpha = p.a * (.55 + .45 * Math.sin(t * 1.2 + p.ph));
+          cx.fillRect(L.ox + p.x * L.esc, L.oy - (p.z - 25) * L.esc, p.s, p.s);
+        }
+      }
       for (i = 0; i < st.rio.length; i++){
         p = st.rio[i];
         p.d = (p.d + p.v * dt) % st.total;
@@ -1393,87 +1414,75 @@ body.doc-open #indice{display:none}
     if (document.fonts && document.fonts.ready) document.fonts.ready.then(function(){ W = 0; });
   }
 
-  /* ── FILOSOFÍA · la flecha, centrada y protagonista ──
-     El trazo vive en una caja centrada (74% del ancho, 56% del alto): con el
-     canvas a pantalla completa, dibujarla de borde a borde la pegaba a las
-     orillas y dejaba de ser la protagonista. */
-  pantalla(document.getElementById('flechaCanvas'), function(W, H){
-    var ox = W * .13, bw = W * .74, oy = H * .20, bh = H * .56;
-    var pts = [[.06,.84],[.42,.34],[.46,.70],[.90,.14]].map(function(p){
-      return [ox + p[0] * bw, oy + p[1] * bh];
-    });
-    var segs = [], total = 0, i;
-    for (i = 0; i < pts.length - 1; i++){
-      var g = [pts[i], pts[i + 1]];
-      g.len = Math.hypot(g[1][0] - g[0][0], g[1][1] - g[0][1]);
-      segs.push(g); total += g.len;
-    }
-    var rio = [], N = Math.round(Math.min(560, Math.max(260, W * .42)));
-    for (i = 0; i < N; i++){
-      rio.push({ d: Math.random() * total, v: 26 + Math.random() * 58,
-                 ph: Math.random() * 6.283, amp: .8 + Math.random() * 2.4,
-                 s: Math.random() < .85 ? 1 : 1.7, a: .3 + Math.random() * .7 });
-    }
-    /* las alas de la punta, quietas: el flujo no corre por ellas porque
-       apuntan hacia atrás */
-    var fijos = [];
-    var a = pts[2], b = pts[3];
-    var ang = Math.atan2(b[1] - a[1], b[0] - a[0]), L = Math.max(18, bw * .06);
-    [.5, -.5].forEach(function(sg){
-      var t = ang + Math.PI + sg;
-      for (var m = 0; m < N * .07; m++){
-        var fr = Math.random();
-        fijos.push({ hx: b[0] + Math.cos(t) * L * fr, hy: b[1] + Math.sin(t) * L * fr,
-                     ph: Math.random() * 6.283, sp: .5 + Math.random() * .9,
-                     amp: 1 + Math.random() * 2.2, s: 1, a: .35 + Math.random() * .65 });
-      }
-    });
-    return { segs: segs, total: total, rio: rio, fijos: fijos };
-  });
-
-  /* ── MESA · «NY SESSION / 7:20 AM MON–FRI», muestreado y centrado ──
-     Las dos líneas se muestrean POR SEPARADO. La primera pasada raleaba las
-     dos juntas con la misma probabilidad y la línea chica —cuyos glifos ya
-     tienen pocos píxeles— se quedaba ilegible. La grande se muestrea cada 2px
-     con tope propio; la chica cada 1px, con tope propio y flotación más corta,
-     para que se lea a pesar del tamaño. */
-  pantalla(document.getElementById('torreCanvas'), function(W, H){
+  /* Muestrear un texto a partículas: se dibuja en un lienzo aparte, y cada
+     píxel con tinta (cada `paso`) se vuelve la casa de una partícula. Si salen
+     de más, se ralea AL AZAR — recortar por el final deja las letras cojas. */
+  function textoAPuntos(W, H, texto, px, ls, y, paso, tope){
     var off = document.createElement('canvas');
     off.width = Math.max(1, Math.round(W)); off.height = Math.max(1, Math.round(H));
     var oc = off.getContext('2d'), iw = off.width;
-
-    function muestrea(texto, px, ls, y, paso, tope){
-      oc.clearRect(0, 0, iw, off.height);
-      oc.fillStyle = '#fff'; oc.textAlign = 'center'; oc.textBaseline = 'middle';
-      oc.font = '500 ' + px + 'px "IBM Plex Mono", ui-monospace, monospace';
-      try{ oc.letterSpacing = Math.round(ls) + 'px'; }catch(e){}
-      oc.fillText(texto, iw / 2, y);
-      var datos = oc.getImageData(0, 0, iw, off.height).data, pts = [];
-      for (var yy = 0; yy < off.height; yy += paso)
-        for (var xx = 0; xx < iw; xx += paso)
-          if (datos[(yy * iw + xx) * 4 + 3] > 120) pts.push([xx, yy]);
-      if (pts.length > tope){                     /* ralear AL AZAR, no por el final */
-        var prob = tope / pts.length, ralas = [];
-        for (var z = 0; z < pts.length; z++) if (Math.random() < prob) ralas.push(pts[z]);
-        pts = ralas;
-      }
-      return pts;
+    oc.fillStyle = '#fff'; oc.textAlign = 'center'; oc.textBaseline = 'middle';
+    oc.font = '500 ' + px + 'px "IBM Plex Mono", ui-monospace, monospace';
+    try{ oc.letterSpacing = Math.round(ls) + 'px'; }catch(e){}
+    oc.fillText(texto, iw / 2, y);
+    var datos = oc.getImageData(0, 0, iw, off.height).data, pts = [];
+    for (var yy = 0; yy < off.height; yy += paso)
+      for (var xx = 0; xx < iw; xx += paso)
+        if (datos[(yy * iw + xx) * 4 + 3] > 120) pts.push([xx, yy]);
+    if (pts.length > tope){
+      var prob = tope / pts.length, ralas = [];
+      for (var z = 0; z < pts.length; z++) if (Math.random() < prob) ralas.push(pts[z]);
+      pts = ralas;
     }
+    return pts;
+  }
+  function fija(c, amp0, ampV){
+    return { hx: c[0], hy: c[1], ph: Math.random() * 6.283, sp: .5 + Math.random() * .9,
+             amp: amp0 + Math.random() * ampV, s: 1, a: .35 + Math.random() * .65 };
+  }
 
+  /* ── FILOSOFÍA · el caos con orden, EN CIENCIA ──
+     El atractor de Lorenz: el sistema es caótico —dos arranques casi iguales
+     terminan en lugares opuestos— y aun así ninguna trayectoria se sale jamás
+     de la mariposa. Caos por dentro, orden por fuera: la frase, demostrada.
+     Las partículas nacen regadas y se PRE-INTEGRAN un tramo aleatorio en el
+     arranque, para que la mariposa aparezca ya formada y no como un enjambre
+     acomodándose. */
+  pantalla(document.getElementById('flechaCanvas'), function(W, H){
+    var lado = Math.min(W * .56, H * .60);
+    var lor = { ox: W / 2, oy: H * .42, esc: lado / 52, parts: [] };
+    var N = Math.round(Math.min(760, Math.max(340, W * .55)));
+    for (var i = 0; i < N; i++){
+      var p = { x: 1 + Math.random() * 8 - 4, y: 1 + Math.random() * 8 - 4,
+                z: 20 + Math.random() * 8 - 4,
+                ph: Math.random() * 6.283,
+                s: Math.random() < .85 ? 1 : 1.6,
+                a: .25 + Math.random() * .6 };
+      var burn = 200 + Math.floor(Math.random() * 500);
+      for (var b = 0; b < burn; b++){
+        var dx = 10 * (p.y - p.x), dy = p.x * (28 - p.z) - p.y, dz = p.x * p.y - (8 / 3) * p.z;
+        p.x += dx * .008; p.y += dy * .008; p.z += dz * .008;
+      }
+      lor.parts.push(p);
+    }
+    /* la frase, abajo, del mismo material */
+    var ts = Math.max(22, Math.min(64, W * .042));
+    var fijos = textoAPuntos(W, H, 'WITHIN CHAOS, ORDER.', ts, ts * .18, H * .84, 2, 950)
+      .map(function(c){ return fija(c, .4, 1.1); });
+    return { segs: [], total: 1, rio: [], fijos: fijos, lor: lor };
+  });
+
+  /* ── FUTURES · «NY SESSION / MON–FRI», muestreado y centrado ──
+     Las dos líneas se muestrean POR SEPARADO: ralearlas juntas dejaba a la
+     chica ilegible. La grande cada 2px; la chica cada 1px y flota más corto. */
+  pantalla(document.getElementById('torreCanvas'), function(W, H){
     var ts  = Math.max(40, Math.min(120, W * .082));
-    var ts2 = Math.max(16, ts * .3);
-    var grandes = muestrea('NY SESSION', ts, ts * .2, H * .44, 2, 1100);
-    var chicas  = muestrea('7:20 AM MON\u2013FRI', ts2, ts2 * .34, H * .44 + ts * .98, 1, 750);
-
+    var ts2 = Math.max(18, ts * .32);
     var fijos = [];
-    grandes.forEach(function(c){
-      fijos.push({ hx: c[0], hy: c[1], ph: Math.random() * 6.283, sp: .5 + Math.random() * .9,
-                   amp: .5 + Math.random() * 1.4, s: 1, a: .35 + Math.random() * .65 });
-    });
-    chicas.forEach(function(c){
-      fijos.push({ hx: c[0], hy: c[1], ph: Math.random() * 6.283, sp: .5 + Math.random() * .9,
-                   amp: .3 + Math.random() * .7, s: 1, a: .4 + Math.random() * .6 });
-    });
+    textoAPuntos(W, H, 'NY SESSION', ts, ts * .2, H * .44, 2, 1100)
+      .forEach(function(c){ fijos.push(fija(c, .5, 1.4)); });
+    textoAPuntos(W, H, 'MON\u2013FRI', ts2, ts2 * .34, H * .44 + ts * .98, 1, 700)
+      .forEach(function(c){ fijos.push(fija(c, .3, .7)); });
     return { segs: [], total: 1, rio: [], fijos: fijos };
   });
 })();
