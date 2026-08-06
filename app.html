@@ -2044,57 +2044,6 @@ button.tag.quemada{text-decoration:line-through;text-decoration-color:var(--down
   .cr-esq{opacity:var(--esq)}
 }
 
-/* ── LA OFICINA DE ICE VADER ── cuarto isométrico, misma proyección 2:1 que la
-   torre de The Desk para que se sienta del mismo mundo. Los tonos salen de las
-   variables del tema por color-mix; lo único que se declara en firme es su
-   naranja, porque es la marca del personaje. */
-.so-ofi{display:block;width:100%;height:auto;border-radius:12px;background:var(--w03);
-  border:1px solid var(--line-soft)}
-.so-piso{fill:color-mix(in srgb,var(--txt) 16%,transparent)}
-.so-duela{fill:color-mix(in srgb,var(--txt) 22%,transparent)}
-.so-muro-i{fill:color-mix(in srgb,var(--txt) 30%,transparent)}
-.so-muro-d{fill:color-mix(in srgb,var(--txt) 24%,transparent)}
-.so-vidrio{fill:color-mix(in srgb,var(--up) 7%,transparent)}
-.so-vidrio-b{fill:color-mix(in srgb,var(--up) 5%,transparent)}
-.so-edif{fill:color-mix(in srgb,var(--txt) 44%,transparent)}
-.so-marco{fill:color-mix(in srgb,var(--txt) 52%,transparent)}
-.so-mon{fill:color-mix(in srgb,var(--txt) 72%,transparent)}
-.so-mon-in{fill:color-mix(in srgb,var(--bg) 88%,transparent)}
-.so-v-up{fill:var(--up)} .so-v-dn{fill:var(--down)}
-.so-orb{fill:color-mix(in srgb,var(--up) 26%,transparent)}
-.so-mesa{fill:#8E6B46} .so-mesa-d{fill:#6E5136} .so-mesa-f{fill:#5A4229}
-.so-mad{fill:#7A5A3C} .so-mad-d{fill:#5E4530} .so-mad-f{fill:#4A3626}
-.so-lib-a{fill:#6E2A30} .so-lib-b{fill:#3E5E48} .so-lib-c{fill:#22304C} .so-lib-d{fill:#7E5A2E}
-.so-esc{fill:#9A7850} .so-esc-d{fill:#77593A} .so-esc-f{fill:#5E4630}
-.so-esc-eje{fill:#A6906A}
-.so-tapete{fill:color-mix(in srgb,var(--down) 22%,transparent)}
-.so-tapete-b{fill:color-mix(in srgb,var(--down) 15%,transparent)}
-.so-maceta{fill:#8E6B46} .so-maceta-d{fill:#6E5136} .so-maceta-f{fill:#5A4229}
-.so-hoja{fill:#3E8E5A} .so-hoja.b{fill:#4EA86A} .so-hoja.c{fill:#2E7048}
-.so-tec{fill:#D8DCE2} .so-tec-d{fill:#A8ACB2} .so-tec-f{fill:#8E9298}
-.so-taza{fill:var(--up)} .so-taza-d{fill:color-mix(in srgb,var(--up) 70%,#000)}
-.so-taza-f{fill:color-mix(in srgb,var(--up) 55%,#000)}
-/* Ice Vader */
-.so-silla{fill:#2E3238} .so-silla-e{fill:#22262C} .so-silla-p{fill:rgba(0,0,0,.22)}
-/* El hoodie amarillo y el gorro negro: así lo dibujó André, y son lo que hace a
-   Ice Vader reconocible de lejos —antes que la cara, que a esta escala casi no se ve. */
-.so-ropa{fill:#E8B32F} .so-ropa-b{fill:#C9932A}
-.so-zapato{fill:color-mix(in srgb,var(--txt) 74%,transparent)}
-.so-brazo{fill:none;stroke:#E8B32F;stroke-width:7;stroke-linecap:round}
-.so-brazo.teclea{animation:ivTeclea 1.1s ease-in-out infinite}
-.so-brazo.b.teclea{animation-delay:.28s}
-.so-piel{fill:#E8C4A0}
-.so-lente{fill:none;stroke:#22201E;stroke-width:2}
-.so-ojo{fill:#22201E}
-.so-boca{fill:none;stroke:#8A6048;stroke-width:1.5;stroke-linecap:round}
-.so-boca.llena{fill:#8A4030;stroke:none}
-.so-cachete{fill:#E89B7A;opacity:.5}
-.so-gafete{fill:var(--up);opacity:.9}
-.so-cabeza{transform-origin:0 -44px;animation:ivRespira 4.6s ease-in-out infinite}
-.so-yo{transition:opacity .9s ease}
-.so-yo.ido{opacity:.2}
-.so-ido-tx{font-family:var(--mono);font-size:11px;fill:var(--faint);letter-spacing:.2em}
-@media (prefers-reduced-motion:reduce){ .so-brazo.teclea,.so-cabeza{animation:none} }
 .vig-rol{font-size:11px;color:var(--faint)}
 /* lo de hoy, dicho por Ice Vader */
 .vig-num{margin-top:18px;border:1px solid var(--line-soft);border-radius:11px;padding:15px 17px}
@@ -2824,9 +2773,6 @@ stop[stop-color="#9BC0DC"]{stop-color:var(--txt)}
             </div>
             <div id="preList"></div>
           </div>
-          </div>
-
-
         </div>
 
         <div id="rt-live" class="mt" hidden>
@@ -3922,6 +3868,12 @@ const MICROS = ['MNQ','MES','MYM','M2K'];
      · Sólo se opera la ventana 9:30–12:00 ET, lunes a viernes.
      · Nada queda abierto después de las 8:30.
      · Si el checklist no da setup válido, el mejor trade del día es no operar. */
+/* El huso del mercado vive AQUÍ ARRIBA porque lo usan tres mundos distintos:
+   la pill de sesión, la vigilia y las escenas. Declarado abajo (donde nació,
+   junto a las escenas) la pill lo alcanzaba antes de inicializarse y tumbaba
+   la carga entera del terminal. */
+const TZ_MERCADO = 'America/New_York';
+
 const SISTEMA = {
   version: '3.0',
   actualizado: '2026-07-25',
@@ -5044,11 +4996,15 @@ function metas(){
 /* La sesión global en la que cae el reloj (hora local de la mesa, CT).
    Fuera de nuestra ventana el terminal ya no dice "mesa cerrada": dice en qué
    sesión anda el mundo, que es lo que de verdad mueve al índice. */
-function sesionMundial(now = ahora()){
-  const h = now.getHours() + now.getMinutes()/60;
-  if(h >= 2 && h < 7)  return 'LONDON SESSION';
-  if(h >= 7 && h < 16) return 'NY SESSION';
-  return 'ASIA SESSION';               // 16:00 → 02:00
+function sesionMundial(){
+  /* mismo ciclo que TRAMOS y en el mismo huso (Nueva York): antes esta pill
+     usaba la hora local de la mesa con cortes viejos y decía ASIA en plena
+     tarde. Una sola verdad para las tres cosas que dicen la sesión. */
+  const m = minutosEn(TZ_MERCADO);
+  if(m >= 9*60+30 && m < 16*60) return 'NY SESSION';
+  if(m >= 2*60 && m < 9*60+30)  return 'LONDON SESSION';
+  if(m >= 20*60 || m < 2*60)    return 'ASIA SESSION';
+  return bi('MERCADO CERRADO','MARKET CLOSED');   // 16:00 → 20:00
 }
 function sessionState(now = ahora()){
   const mins = now.getHours()*60 + now.getMinutes();
@@ -7824,46 +7780,6 @@ function pintaVigilia(){
   if(av) av.hidden = enVentana;
 }
 
-/* El radar: no es adorno. La caja del rango se dibuja cuando el rango existe, la
-   línea de precio late mientras hay sesión, y el barrido sólo corre cuando de
-   verdad se está vigilando el break. Si la pantalla está quieta, es porque no
-   hay nada que vigilar. */
-function vigRadar(k, m){
-  const W = 640, H = 190;
-  const vivo = k === 'rango' || k === 'vigila' || k === 'tarde';
-  const hayRango = k === 'vigila' || k === 'tarde' || k === 'cerrado';
-  /* una silueta de precio estable: la misma cada día, no ruido aleatorio que
-     parezca datos reales — esto es un esquema, no el mercado */
-  const pts = [];
-  for(let i = 0; i <= 60; i++){
-    const x = i / 60 * W;
-    const y = 95 + Math.sin(i * .42) * 20 + Math.sin(i * .13) * 26;
-    pts.push(x.toFixed(1) + ',' + y.toFixed(1));
-  }
-  return `<svg class="vig-svg" viewBox="0 0 ${W} ${H}" role="img" aria-hidden="true">
-    <defs>
-      <linearGradient id="vigFade" x1="0" y1="0" x2="1" y2="0">
-        <stop offset="0" stop-color="var(--up)" stop-opacity="0"/>
-        <stop offset="1" stop-color="var(--up)" stop-opacity=".55"/>
-      </linearGradient>
-    </defs>
-    <g class="vig-grid">
-      ${[38,76,114,152].map(y => `<line x1="0" y1="${y}" x2="${W}" y2="${y}"/>`).join('')}
-    </g>
-    ${hayRango ? `
-      <rect class="vig-orb" x="0" y="58" width="${W}" height="74"/>
-      <line class="vig-orb-l" x1="0" y1="58" x2="${W}" y2="58"/>
-      <line class="vig-orb-l" x1="0" y1="132" x2="${W}" y2="132"/>
-      <line class="vig-orb-m" x1="0" y1="95" x2="${W}" y2="95"/>
-      <text class="vig-tx" x="8" y="52">ORB 9:30–9:45</text>` : ''}
-    ${k === 'rango' ? `
-      <rect class="vig-orb form" x="0" y="58" width="${W}" height="74"/>
-      <text class="vig-tx" x="8" y="52">${bi('MIDIENDO…','MEASURING…')}</text>` : ''}
-    <polyline class="vig-px ${vivo ? 'vivo' : ''}" points="${pts.join(' ')}"/>
-    ${k === 'vigila' ? `<rect class="vig-scan" x="0" y="0" width="120" height="${H}" fill="url(#vigFade)"/>` : ''}
-  </svg>`;
-}
-
 /* Se enciende al entrar a Rutina → Pre-market y se apaga al salir: un reloj que
    sigue corriendo en una pestaña que nadie mira es batería tirada. */
 function arrancaVigilia(){
@@ -8820,7 +8736,7 @@ $('#tSave').addEventListener('click', ()=>{
   if(!isFinite(pnl)){ toast('The trade P&L is missing'); return; }
   const data = {
     date: $('#tFecha').value || todayISO(),
-    time: $('#tHora').value || '07:35',
+    time: $('#tHora').value || horaMercadoAhora(),
     sym: $('#tSym').value,
     dir: $('#tDir').value,
     qty: parseInt($('#tQty').value)||1,
@@ -11741,7 +11657,6 @@ const TRAMOS = [
   { c:'tokio',   de: 20*60,   a: 26*60,    sig:'londres', vuela:false },  // 20:00 – 02:00 (cruza)
   { c:'londres', de: 2*60,    a: 9*60+30,  sig:'nyc',     vuela:false },  // 02:00 – 09:30
 ];
-const TZ_MERCADO = 'America/New_York';
 const VUELO_MIN = 25;                     // lo que dura el traslado en pantalla
 
 function escenaAhora(now = new Date()){
@@ -11769,7 +11684,7 @@ function escenaAhora(now = new Date()){
   for(const tr of TRAMOS){
     const mm = (tr.de > tr.a || tr.a > 1440) && m < tr.de ? m + 1440 : m;
     if(mm >= tr.de && mm < tr.a)
-      return { tipo:'ciudad', c:tr.c, sig:tr.sig, restan: tr.a - mm };
+      return { tipo:'ciudad', c:tr.c, sig:tr.sig, restan: tr.a - mm, vuela: !!tr.vuela };
   }
   /* Ninguna sesión abierta: el mercado está CERRADO. Antes se caía a «Nueva
      York» y la pantalla mentía; ahora se está en casa hasta la próxima
@@ -14292,7 +14207,12 @@ function dibujaOficina(t){
   const restan = E.restan || 0;
   const hR = Math.floor(restan / 60), mR = Math.round(restan % 60);
   const sig = CIUDADES[E.sig] || CIUDADES.tokio;
-  c.fillText(`${CI.sub}  ·  ${bi('vuela a','flies to')} ${loc([sig.n, sig.en])} ${bi('en','in')} ${hR ? hR + 'h ' : ''}${mR}m`, W/2, 186);
+  /* Sólo el tramo de NY termina en vuelo; Asia le PASA la mesa a Londres en el
+     minuto exacto. Decir «vuela a Londres» ahí era mentir un viaje. */
+  const tiempo = `${hR ? hR + 'h ' : ''}${mR}m`;
+  c.fillText(CI.sub + '  ·  ' + (E.vuela
+      ? bi('cierra en ' + tiempo + ' · luego vuela a ', 'closes in ' + tiempo + ' · then flies to ') + loc([sig.n, sig.en])
+      : bi('pasa a ', 'hands off to ') + loc([sig.n, sig.en]) + bi(' en ', ' in ') + tiempo), W/2, 186);
 
   c.font = '12px "IBM Plex Mono", monospace'; c.textAlign = 'left';
   c.fillStyle = 'rgba(255,255,255,.4)';
