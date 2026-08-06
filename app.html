@@ -3893,6 +3893,31 @@ function enLaMesa(){
   return PERSONAJES.filter(p => (hoy - (P[p.id] || 0)) < PRESENCIA_MIN * 60000)
                    .map(p => ({ id:p.id, nom:p.nom, hace: Math.round((hoy - P[p.id]) / 60000) }));
 }
+/* ── ¿ESTE YA SE REGISTRÓ? ──
+   La mesa nace con tres nombres escritos en el código, pero un nombre escrito
+   no es una persona: Mateo nunca ha entrado y su monito salía igual — en la
+   carrera, en el gimnasio, en la cena y en el jet— como si fuera un socio
+   trabajando. Eso es la misma clase de mentira que un P&L inventado.
+
+   Un socio EXISTE cuando dejó rastro, y hay cuatro rastros que sólo se hacen
+   entrando: darse de alta, tocar el terminal, armar su monito, o tener una
+   cuenta o un trade suyos en la mesa. Nadie se marca registrado a mano; el
+   rastro se estampa solo y viaja por la nube, así que en cuanto un amigo se
+   registra aparece, y mientras no lo haga simplemente no está.
+
+   El rastro NO se borra al cerrar sesión: la presencia sí se borra —por eso
+   no basta ella sola— pero sus cuentas, sus trades y su monito se quedan. */
+function registrado(uid){
+  if(!uid) return false;
+  if(S.session && S.session.user === uid) return true;   // tú siempre estás
+  if((S.mesa || {})[uid]) return true;                   // se dio de alta
+  if((S.presencia || {})[uid]) return true;              // tocó el terminal
+  if((S.monitos || {})[uid]) return true;                // armó su monito
+  const suyo = o => (o.owner || DUENO_ORIGEN) === uid;
+  return (S.accounts || []).some(suyo) || (S.trades || []).some(suyo);
+}
+const registrados = () => PERSONAJES.filter(p => registrado(p.id));
+
 const SILLA_CEO = { x:1.28, y:7.62, z:0, flip:false };   // (histórico: la vieja oficina de cristal)
 /* Las tres oficinas principales viven ARRIBA, en el mezzanine: cada socio la
    suya, de izquierda a derecha. La de cristal de abajo quedó de sala de juntas. */
@@ -5052,7 +5077,10 @@ function pintaEnLinea(){
     caja.onclick = () => {
       const P2 = S.presencia || {}, ahora2 = Date.now();
       const yo2 = S.session && S.session.user;
-      const otros2 = PERSONAJES.filter(p => p.id !== yo2 && (ahora2 - (P2[p.id] || 0)) < PRESENCIA_MIN * 60000);
+      const otros2 = registrados().filter(p => p.id !== yo2 && (ahora2 - (P2[p.id] || 0)) < PRESENCIA_MIN * 60000);
+      /* «los otros dos» estaba escrito a mano y era falso en cuanto la mesa no
+         eran tres: si eres el único registrado, no hay otros dos esperando. */
+      const faltan = registrados().filter(p => p.id !== yo2).length;
       /* este punto es ahora el único de la barra cuando todo va bien, así que
          al picarlo dice las dos cosas: quién está y si la mesa sincroniza */
       const nube = (!cloudOn() || !cloudTok)
@@ -5064,8 +5092,14 @@ function pintaEnLinea(){
         : '';
       toast((otros2.length
         ? bi('Estás en línea. También en la mesa: ','You are online. Also at the desk: ') + otros2.map(p => p.nom).join(', ')
-        : bi('Estás en línea. Los otros dos no han tocado el terminal en los últimos 12 minutos.',
-             'You are online. The other two have not touched the terminal in the last 12 minutes.')) + nube);
+        : !faltan
+          ? bi('Estás en línea. Por ahora eres el único registrado en la mesa.',
+               'You are online. For now you are the only one registered at the desk.')
+          : bi('Estás en línea. ','You are online. ') + (faltan === 1
+              ? bi('El otro socio no ha tocado el terminal en los últimos 12 minutos.',
+                   'The other partner has not touched the terminal in the last 12 minutes.')
+              : bi('Los otros ' + faltan + ' no han tocado el terminal en los últimos 12 minutos.',
+                   'The other ' + faltan + ' have not touched the terminal in the last 12 minutes.'))) + nube);
     };
   }
   const yo = S.session && S.session.user;
@@ -5584,7 +5618,10 @@ function caraSocio(uid, px = 40){
 function renderFirmaCarrera(){
   const host = $('#pgFirma'); if(!host) return;
   const P = S.presencia || {}, hoy = Date.now();
-  const socios = PERSONAJES.map(p => {
+  /* Sólo corre quien se registró. Antes corrían los tres nombres del código y
+     Mateo aparecía en la pista con la barra en cero y «sin datos» — parecía un
+     socio que va perdiendo, cuando la verdad es que nunca ha entrado. */
+  const socios = registrados().map(p => {
     const c = carreraSocio(p.id);
     const visto = P[p.id] || 0;
     return { ...c, nom:p.nom, enMesa: (hoy - visto) < PRESENCIA_MIN * 60000,
@@ -5606,7 +5643,8 @@ function renderFirmaCarrera(){
     if(!ts) return ' · ' + bi('nunca ha subido desde su equipo','never uploaded from their device');
     const min = Math.round((hoy - ts) / 60000);
     return ' · ↑ ' + (min < 1 ? bi('ahorita','just now') : min < 60 ? bi('hace ','')+ min + bi(' min',' min ago')
-           : bi('hace ','') + Math.round(min / 60) + ' h' + bi('','ago'));
+           /* en inglés el 'ago' venía sin espacio y se leía «34 hago» */
+           : bi('hace ','') + Math.round(min / 60) + ' h' + bi('',' ago'));
   };
 
   host.innerHTML = `
@@ -5634,8 +5672,10 @@ function renderFirmaCarrera(){
             </div>
             <span class="fc-info">
               <b>${esc(x.nom)}${x.sinDatos ? '' : ` <span class="fc-pct">${Math.round(x.pct)}%</span>`}</b>
+              <!-- ya está registrado —si no, no estaría en la pista—, así que
+                   lo que le falta no es sincronía: es dar de alta su cuenta -->
               <em>${x.sinDatos
-                 ? bi('sin datos en esta máquina','no data on this machine')
+                 ? bi('registrado · todavía sin cuentas','registered · no accounts yet')
                  : x.cuentas + (x.cuentas === 1 ? bi(' cuenta',' account') : bi(' cuentas',' accounts'))
                    + (x.pagos ? ' · ' + x.pagos + bi(' cobrada',' paid') + (x.pagos > 1 ? 's' : '') : '')
                    /* una cuenta que se quemó sale de la carrera, pero se dice:
@@ -11287,7 +11327,13 @@ function escenaFinde(c, W, H, t, E, rr, PC){
                   'market closed · Asia opens Sunday 8 PM NY'), W / 2, 210);
     c.textAlign = 'left';
   };
-  const SOC = SOCIOS_REALES.map(u => ({ uid: u, look: lookDe(u), nom: (USERS[u] || {}).nombre || u }));
+  /* Quien no se ha registrado no sale a vivir el fin de semana: su lugar queda
+     VACÍO, no lo ocupa otro. Por eso esto no se filtra —se pone en null— y la
+     lista conserva su largo: las escenas piden a SOC[0], SOC[1] y SOC[2] por
+     posición, así que una lista más corta le daría a André el swing de golf de
+     Pablo y dejaría SOC[2] en undefined, que es pantalla negra. */
+  const SOC = SOCIOS_REALES.map(u => registrado(u)
+    ? { uid: u, look: lookDe(u), nom: (USERS[u] || {}).nombre || u } : null);
 
 
 
@@ -11582,6 +11628,9 @@ function escenaFinde(c, W, H, t, E, rr, PC){
     const u = (t % 3000) / 3000;
     const gx = 700, gy = 920;
     const ang = u < .35 ? (-2.2 + (u / .35) * 3.1) : .9;
+    /* si el del swing no está registrado, no hay swing: ni monito ni palo ni
+       bola. El campo se queda solo, que es exactamente lo que pasa. */
+    if(SOC[2]){
     monitoPlano(c, gx, gy, SOC[2].look, 1.5, { ropa:'#F2F4F6', pantalon:'#8E5C46', brazoDer: ang, nombre: SOC[2].nom });
     c.save(); c.translate(gx + 19, gy - 69); c.rotate(ang);
     c.strokeStyle = '#B9BEC6'; c.lineWidth = 4;
@@ -11594,8 +11643,9 @@ function escenaFinde(c, W, H, t, E, rr, PC){
       const by2 = gy - 10 - Math.sin(Math.PI * v) * 300;
       c.fillStyle = '#FFFFFF'; c.beginPath(); c.arc(bx2, by2, 6, 0, 7); c.fill();
     }
-    monitoPlano(c, 980, 940, SOC[0].look, 1.4, { ropa:'#4A7FA8', pantalon:'#EDEFF2', nombre: SOC[0].nom });
-    monitoPlano(c, 1090, 960, SOC[1].look, 1.4, { ropa:'#7E4A38', pantalon:'#1A2028', nombre: SOC[1].nom });
+    }
+    if(SOC[0]) monitoPlano(c, 980, 940, SOC[0].look, 1.4, { ropa:'#4A7FA8', pantalon:'#EDEFF2', nombre: SOC[0].nom });
+    if(SOC[1]) monitoPlano(c, 1090, 960, SOC[1].look, 1.4, { ropa:'#7E4A38', pantalon:'#1A2028', nombre: SOC[1].nom });
     /* bolsa de palos */
     c.fillStyle = '#7E241E'; c.fillRect(1150, 900, 26, 58);
     c.strokeStyle = '#B9BEC6'; c.lineWidth = 3;
@@ -11653,6 +11703,7 @@ function escenaFinde(c, W, H, t, E, rr, PC){
        y al final el mantel les tapa las piernas — como en una mesa de verdad */
     c.fillStyle = '#F4EFE6'; c.fillRect(500, 800, 760, 26);
     SOC.forEach((sc, i) => {
+      if(!sc) return;                        // su silla se queda vacía
       monitoPlano(c, 640 + i * 220, 856, sc.look, 1.5, { sentado:true, ropa: sc.look.traje });
     });
     c.fillStyle = '#E4DCCC'; c.fillRect(500, 826, 760, 90);
@@ -11660,7 +11711,7 @@ function escenaFinde(c, W, H, t, E, rr, PC){
     /* los nombres, sobre el mantel para que se lean */
     c.font = '12px "IBM Plex Mono", monospace'; c.textAlign = 'center';
     c.fillStyle = 'rgba(255,255,255,.5)';
-    SOC.forEach((sc, i) => c.fillText(sc.nom, 640 + i * 220, 902));
+    SOC.forEach((sc, i) => { if(sc) c.fillText(sc.nom, 640 + i * 220, 902); });
     c.textAlign = 'left';
     /* platos, copas y vela, ya puestos en la mesa */
     for(let i = 0; i < 3; i++){
@@ -11726,6 +11777,7 @@ function escenaFinde(c, W, H, t, E, rr, PC){
     });
     /* los socios paseando con sus bolsas */
     SOC.forEach((sc, i) => {
+      if(!sc) return;                        // sin registrarse no sale de compras
       const paso = Math.sin(t / 220 + i * 2.2) * .8;
       const sx = 420 + i * 480 + Math.sin(t / 3200 + i) * 40;
       monitoPlano(c, sx, 1030, sc.look, 1.6, { paso, nombre: sc.nom });
@@ -11785,19 +11837,19 @@ function escenaFinde(c, W, H, t, E, rr, PC){
     c.fillStyle = '#14171C'; c.fillRect(370, 1006, 200, 8);
     c.fillStyle = '#2A2E36'; c.fillRect(560, 900, 12, 106);
     c.fillRect(540, 894, 52, 10);
-    monitoPlano(c, 452, 1000, SOC[0].look, 1.6,
+    if(SOC[0]) monitoPlano(c, 452, 1000, SOC[0].look, 1.6,
       { ropa:'#3E4A56', pantalon:'#22262E', paso: Math.sin(t / 90) * 1.2, brazoIzq: .9, brazoDer: -.9, nombre: SOC[0].nom });
     /* MATEO con la barra: sube y baja */
     const lift = (Math.sin(t / 420) + 1) / 2;
     const ly = 940 - lift * 60;
-    monitoPlano(c, 1100, 1040, SOC[1].look, 1.6,
+    if(SOC[1]) monitoPlano(c, 1100, 1040, SOC[1].look, 1.6,
       { ropa:'#57C79B', pantalon:'#22262E', brazoIzq: 2.6 + lift * .5, brazoDer: 2.6 + lift * .5, nombre: SOC[1].nom });
     c.strokeStyle = '#B9BEC6'; c.lineWidth = 6;
     c.beginPath(); c.moveTo(1030, ly); c.lineTo(1170, ly); c.stroke();
     c.fillStyle = '#14171C';
     c.fillRect(1022, ly - 20, 16, 40); c.fillRect(1162, ly - 20, 16, 40);
     /* ANDRÉ estirando */
-    monitoPlano(c, 1480, 1040, SOC[2].look, 1.6,
+    if(SOC[2]) monitoPlano(c, 1480, 1040, SOC[2].look, 1.6,
       { ropa:'#C9A96A', pantalon:'#22262E', brazoIzq: 3 + Math.sin(t / 600) * .2, brazoDer: 3 - Math.sin(t / 600) * .2, nombre: SOC[2].nom });
     /* botella de agua */
     c.fillStyle = '#4A9EC4'; c.fillRect(1560, 1006, 12, 30);
