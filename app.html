@@ -1984,6 +1984,66 @@ button.tag.quemada{text-decoration:line-through;text-decoration-color:var(--down
 .vig-svg{display:block;width:100%;height:auto;border-radius:10px;background:var(--w03);
   border:1px solid var(--line-soft)}
 
+/* ── EL CRISTAL ──
+   La regla de todo esto: NADA se mueve al mismo ritmo. Los periodos son primos
+   entre sí (11s, 17s, 23s, 29s), así que las capas nunca vuelven a coincidir y
+   la figura no se siente en bucle. Eso es lo que separa «está vivo» de «hay un
+   gif dando vueltas».
+   --vel es un multiplicador que viene del estado: 0.38 en vigila (piensa rápido)
+   y 2.6 el fin de semana (casi dormido). Un solo número mueve todo el ritmo. */
+.cr{display:block;width:100%;height:auto;border-radius:12px;
+  background:radial-gradient(ellipse at 50% 45%,
+    color-mix(in srgb,#5AA8E0 8%,transparent), transparent 70%), var(--w03);
+  border:1px solid var(--line-soft)}
+.cr-cara-a{fill:url(#crA)} .cr-cara-b{fill:url(#crB)}
+.cr-filo{fill:#F4FBFF;opacity:.6}
+.cr-veta{stroke:#FFFFFF;stroke-width:1.2;opacity:.45;stroke-linecap:round}
+.cr-corazon{fill:#BEE2F7;opacity:.55}
+.cr-brillo{fill:#FFFFFF;opacity:.9;
+  animation:crLate calc(4s * var(--vel)) ease-in-out infinite;
+  transform-origin:center;transform-box:view-box}
+@keyframes crLate{0%,100%{scale:1;opacity:.75}50%{scale:1.3;opacity:1}}
+
+/* el núcleo gira lento y respira */
+.cr-nucleo{animation:crGira calc(29s * var(--vel)) linear infinite,
+                     crRespira var(--pulso) ease-in-out infinite;
+  transform-origin:center; transform-box:view-box}
+@keyframes crGira{to{rotate:360deg}}
+@keyframes crRespira{0%,100%{scale:1}50%{scale:1.055}}
+
+/* cada punta se mueve por su cuenta: sin esto el núcleo sería un molinete */
+.cr-punta{animation:crPunta calc(11s * var(--vel)) ease-in-out infinite;
+  animation-delay:var(--d); transform-origin:center; transform-box:view-box}
+@keyframes crPunta{0%,100%{scale:1;opacity:.92}50%{scale:1.11;opacity:1}}
+
+/* los dos anillos, en sentidos contrarios y a velocidades distintas */
+.cr-orb{transform-box:view-box}
+.cr-orb.a{animation:crGira calc(17s * var(--vel)) linear infinite}
+.cr-orb.b{animation:crGiraInv calc(23s * var(--vel)) linear infinite}
+@keyframes crGiraInv{to{rotate:-360deg}}
+.cr-esq{animation:crFlota calc(7s * var(--vel)) ease-in-out infinite;
+  animation-delay:var(--d); opacity:var(--esq); transform-box:view-box}
+@keyframes crFlota{0%,100%{translate:0 0;opacity:calc(var(--esq) * .55)}
+  50%{translate:0 -7px;opacity:var(--esq)}}
+
+/* el halo late con el pulso del estado */
+.cr-halo{animation:crHalo var(--pulso) ease-in-out infinite;
+  opacity:var(--brillo);transform-origin:center;transform-box:view-box}
+@keyframes crHalo{0%,100%{scale:.94}50%{scale:1.06}}
+
+/* los destellos: aparecen y se van, cada uno con su retraso */
+.cr-chispa path{fill:#EAF6FF}
+.cr-chispa{animation:crChispa calc(5s * var(--vel)) ease-in-out infinite;
+  animation-delay:var(--d);opacity:0;transform-origin:center;transform-box:fill-box}
+@keyframes crChispa{0%,72%,100%{opacity:0;scale:.4}
+  12%{opacity:calc(var(--brillo) * .95);scale:1.15} 30%{opacity:0;scale:.7}}
+
+/* quien pidió no moverse, no se mueve: queda la figura quieta y legible */
+@media (prefers-reduced-motion:reduce){
+  .cr-nucleo,.cr-punta,.cr-orb,.cr-esq,.cr-halo,.cr-chispa,.cr-brillo{animation:none}
+  .cr-esq{opacity:var(--esq)}
+}
+
 /* ── LA OFICINA DE ICE VADER ── cuarto isométrico, misma proyección 2:1 que la
    torre de The Desk para que se sienta del mismo mundo. Los tonos salen de las
    variables del tema por color-mix; lo único que se declara en firme es su
@@ -7401,6 +7461,117 @@ function obTick(){
    suyos. Se dibuja con las mismas piezas que el resto de la app usa para las
    caras —forma, pelo, ojos, lentes— para que no se sienta pegado de otro lado. */
 
+
+/* ════════ EL CRISTAL · ICE VADER PENSANDO ════════
+   No es un spinner ni una barra de progreso: es una cosa VIVA. La diferencia
+   entre las dos está en que un spinner gira igual siempre —y por eso lo dejas
+   de ver a los diez segundos— mientras que esto respira, se mueve distinto en
+   cada estado y nunca repite exactamente el mismo cuadro.
+
+   Tres capas girando a velocidades y sentidos distintos: el núcleo, las puntas
+   grandes y las esquirlas que orbitan. Como los periodos no son múltiplos entre
+   sí (11s, 17s, 23s… números primos), la figura tarda minutos en repetirse y el
+   ojo la lee como movimiento orgánico y no como bucle.
+
+   Y el estado de la sesión es lo que cambia el RITMO, no un color: dormido late
+   despacio, midiendo el rango se acelera, y vigilando el break piensa a toda
+   velocidad. Si el cristal está agitado, es que puede sonar. */
+
+/* Cuánto «piensa» en cada momento del día. */
+const CRIS_RITMO = {
+  dormido: { vel:1.00, brillo:.28, esquirlas:.5, pulso:'6s'   },
+  rango:   { vel:0.62, brillo:.55, esquirlas:.8, pulso:'3.2s' },
+  vigila:  { vel:0.38, brillo:1.00, esquirlas:1, pulso:'1.9s' },
+  tarde:   { vel:1.30, brillo:.34, esquirlas:.6, pulso:'7s'   },
+  cerrado: { vel:2.20, brillo:.12, esquirlas:.3, pulso:'11s'  },
+  finde:   { vel:2.60, brillo:.09, esquirlas:.25,pulso:'13s'  },
+};
+
+/* Una punta de hielo: dos caras para que tenga volumen, y el filo claro que es
+   lo que la hace leerse como cristal y no como triángulo de papel. */
+function crisPunta(x, y, largo, ancho, giro, op){
+  const p = (a, b) => a.toFixed(1) + ',' + b.toFixed(1);
+  return `<g transform="translate(${x} ${y}) rotate(${giro})" opacity="${op}">
+    <polygon class="cr-cara-a" points="${p(0,-largo)} ${p(-ancho,largo*.28)} ${p(0,largo*.52)}"/>
+    <polygon class="cr-cara-b" points="${p(0,-largo)} ${p(ancho,largo*.28)} ${p(0,largo*.52)}"/>
+    <polygon class="cr-filo"   points="${p(0,-largo)} ${p(-ancho*.26,largo*.1)} ${p(0,largo*.3)}"/>
+    <line class="cr-veta" x1="0" y1="${(-largo*.68).toFixed(1)}" x2="0" y2="${(largo*.2).toFixed(1)}"/>
+  </g>`;
+}
+
+function crisSVG(etapa){
+  const R = CRIS_RITMO[etapa] || CRIS_RITMO.dormido;
+  const W = 620, H = 260, cx = W/2, cy = H/2;
+
+  /* las seis puntas del núcleo, a distintas alturas y grosores */
+  const NUCLEO = [
+    [  0, 74, 17], [ 58, 60, 13], [124, 50, 11],
+    [180, 66, 15], [232, 44, 10], [300, 56, 12],
+  ];
+  const puntas = NUCLEO.map(([g, l, a], i) =>
+    `<g class="cr-punta" style="--i:${i};--d:${(i * .37).toFixed(2)}s">
+       ${crisPunta(0, 0, l, a, g, .92)}
+     </g>`).join('');
+
+  /* las esquirlas que orbitan: dos anillos girando en sentidos contrarios */
+  const orbita = (n, radio, tam, clase, base) =>
+    Array.from({length:n}, (_, i) => {
+      const a = (i / n) * 6.283 + base;
+      const ox = Math.cos(a) * radio, oy = Math.sin(a) * radio * .46;
+      return `<g class="cr-esq" style="--d:${(i * .29).toFixed(2)}s">
+        ${crisPunta(ox, oy, tam, tam * .34, (a * 57.3 + 120) % 360, .72)}
+      </g>`;
+    }).join('');
+
+  return `<svg class="cr" viewBox="0 0 ${W} ${H}" role="img"
+      aria-label="${bi('Ice Vader trabajando','Ice Vader working')}"
+      style="--vel:${R.vel};--brillo:${R.brillo};--pulso:${R.pulso};--esq:${R.esquirlas}">
+    <defs>
+      <linearGradient id="crA" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0"   stop-color="#EAF6FF"/>
+        <stop offset=".45" stop-color="#8FC9EE"/>
+        <stop offset="1"   stop-color="#3E7FB0"/>
+      </linearGradient>
+      <linearGradient id="crB" x1="1" y1="0" x2="0" y2="1">
+        <stop offset="0"   stop-color="#B6DFF7"/>
+        <stop offset=".55" stop-color="#5FA3D2"/>
+        <stop offset="1"   stop-color="#255C8A"/>
+      </linearGradient>
+      <radialGradient id="crHalo">
+        <stop offset="0"   stop-color="#8FD4FF" stop-opacity=".55"/>
+        <stop offset=".45" stop-color="#5AA8E0" stop-opacity=".18"/>
+        <stop offset="1"   stop-color="#5AA8E0" stop-opacity="0"/>
+      </radialGradient>
+      <filter id="crGlow" x="-60%" y="-60%" width="220%" height="220%">
+        <feGaussianBlur stdDeviation="7" result="b"/>
+        <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+      </filter>
+    </defs>
+
+    <!-- el halo, que late con el estado -->
+    <ellipse class="cr-halo" cx="${cx}" cy="${cy}" rx="205" ry="112" fill="url(#crHalo)"/>
+
+    <!-- anillo exterior de esquirlas, girando al revés -->
+    <g class="cr-orb b" transform="translate(${cx} ${cy})">${orbita(7, 196, 15, 'a', .4)}</g>
+    <!-- anillo interior -->
+    <g class="cr-orb a" transform="translate(${cx} ${cy})">${orbita(5, 128, 21, 'b', 1.1)}</g>
+
+    <!-- el núcleo -->
+    <g class="cr-nucleo" transform="translate(${cx} ${cy})" filter="url(#crGlow)">
+      ${puntas}
+      <polygon class="cr-corazon" points="0,-13 11,0 0,13 -11,0"/>
+      <polygon class="cr-brillo"   points="0,-7 6,0 0,7 -6,0"/>
+    </g>
+
+    <!-- destellos: aparecen y se van, nunca en el mismo sitio -->
+    <g class="cr-chispas" transform="translate(${cx} ${cy})">
+      ${[[-150,-52,.0],[132,-38,.9],[-96,58,1.7],[168,44,2.5],[-38,-84,3.3],[64,78,4.1]]
+        .map(([x,y,d]) => `<g class="cr-chispa" style="--d:${d}s" transform="translate(${x} ${y})">
+            <path d="M0 -9 L2 -2 L9 0 L2 2 L0 9 L-2 2 L-9 0 L-2 -2 Z"/>
+          </g>`).join('')}
+    </g>
+  </svg>`;
+}
 /* ── EL ESTADO DE LA SESIÓN ──
    El agente reporta en qué punto de su rutina va, en seco. Se probó una versión
    donde hablaba en primera persona como empleado —«ya tengo el rango, jefe»— y
@@ -7601,6 +7772,8 @@ function pintaVigilia(){
         <span class="vig-est">${loc(E.n)}</span>
         <span class="vig-reloj mono">${reloj} <i>NY</i></span>
       </div>
+
+      ${crisSVG(E.k)}
 
 
       <p class="vig-d">${loc(E.d)}</p>
