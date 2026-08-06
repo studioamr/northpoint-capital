@@ -2019,9 +2019,7 @@ button.tag.quemada{text-decoration:line-through;text-decoration-color:var(--down
 /* El hoodie amarillo y el gorro negro: así lo dibujó André, y son lo que hace a
    Steve reconocible de lejos —antes que la cara, que a esta escala casi no se ve. */
 .so-ropa{fill:#E8B32F} .so-ropa-b{fill:#C9932A}
-.so-capucha{fill:#C9932A} .so-cordon{stroke:#F2E6C4;stroke-width:1.6;fill:none;stroke-linecap:round}
-.so-gorro{fill:#17161A} .so-gorro-v{fill:#232228} .so-gorro-p{fill:#2E2C34}
-.so-tenis{fill:#F4F4F2}
+.so-zapato{fill:color-mix(in srgb,var(--txt) 74%,transparent)}
 .so-brazo{fill:none;stroke:#E8B32F;stroke-width:7;stroke-linecap:round}
 .so-brazo.teclea{animation:svTeclea 1.1s ease-in-out infinite}
 .so-brazo.b.teclea{animation-delay:.28s}
@@ -2050,6 +2048,42 @@ button.tag.quemada{text-decoration:line-through;text-decoration-color:var(--down
 .vig-dato b.up{color:var(--up)} .vig-dato b.down{color:var(--down)} .vig-dato b.warn{color:var(--warn)}
 .vig-ojo{margin:13px 0 0;font-size:12.5px;line-height:1.55;color:var(--warn);
   border-left:2px solid var(--warn);padding-left:11px}
+
+/* ── LAS SIETE ALERTAS ── el estado real de cada una: las de reloj se marcan
+   solas, las de mercado dicen que las manda Steve y a qué canal caen. */
+.vig-al{margin-top:18px;border:1px solid var(--line-soft);border-radius:11px;overflow:hidden}
+.vig-al-h{display:flex;align-items:center;gap:12px;padding:13px 16px;
+  border-bottom:1px solid var(--line-soft);flex-wrap:wrap}
+.vig-al-h b{font-size:13.5px}
+.al-pipe{margin-left:auto;font-family:var(--mono);font-size:9px;letter-spacing:.1em;
+  color:var(--warn);border:1px solid color-mix(in srgb,var(--warn) 45%,transparent);
+  border-radius:99px;padding:3px 9px}
+.al-pipe.on{color:var(--up);border-color:color-mix(in srgb,var(--up) 45%,transparent);cursor:pointer}
+.al-f{display:grid;grid-template-columns:22px 1fr auto auto;gap:12px;align-items:center;
+  padding:11px 16px;border-bottom:1px solid var(--line-soft)}
+.al-f:last-child{border-bottom:0}
+.al-k{font-family:var(--mono);font-size:10px;color:var(--faint)}
+.al-t b{display:block;font-size:13px;font-weight:600}
+.al-t p{font-size:12px;line-height:1.5;color:var(--dim);margin:2px 0 0;max-width:56ch}
+.al-c{font-family:var(--mono);font-size:9.5px;color:var(--faint)}
+.al-e{font-family:var(--mono);font-size:9px;letter-spacing:.1em;color:var(--faint);
+  white-space:nowrap;min-width:74px;text-align:right}
+.al-f.ok .al-e{color:var(--up)}
+.al-f.esp .al-e{color:var(--warn)}
+.al-f.clave{background:color-mix(in srgb,var(--up) 6%,transparent)}
+.al-f.clave .al-t b{color:var(--up)}
+.al-como{padding:15px 16px;border-top:1px solid var(--line-soft);
+  background:color-mix(in srgb,var(--warn) 5%,transparent)}
+.al-como b{display:block;font-size:13px;margin-bottom:9px}
+.al-como ol{margin:0 0 11px;padding-left:19px}
+.al-como li{font-size:12.5px;line-height:1.65;color:var(--dim);margin-bottom:6px}
+.al-como code{font-family:var(--mono);font-size:11.5px;background:var(--w03);
+  padding:1px 5px;border-radius:4px;color:var(--txt)}
+.al-como .micro{margin:0 0 12px;line-height:1.55;text-transform:none;letter-spacing:.02em}
+@media (max-width:600px){
+  .al-f{grid-template-columns:20px 1fr;gap:8px}
+  .al-c,.al-e{grid-column:2;text-align:left;min-width:0}
+}
 @media (prefers-reduced-motion:reduce){
   .sv-barrido,.sv-vapor,.sv-brazo.teclea,.sv-cabeza,.sv-cinta-g,.sv-led.on{animation:none}
 }
@@ -7490,7 +7524,18 @@ function steveSVG(etapa, pctRango){
   /* ── EL TAPETE ── */
   const tapete = losa(3.0, 4.6, 4.2, 3.2, .02, 'so-tapete') + losa(3.4, 5.0, 3.4, 2.4, .03, 'so-tapete-b');
 
-  /* ── STEVE ── de espaldas tres cuartos, mirando sus pantallas */
+  /* ── EL QUE ESTÁ EN EL PISO ERES TÚ ──
+     Aquí estaba Steve, y estaba mal: Steve no está en tu oficina, está en el
+     gráfico. Quien se sienta en este cuarto eres TÚ, con el monito que armaste
+     en Ajustes → Perfil — mismo tono de piel, mismo pelo, mismo traje, y tus
+     lentes si te los pusiste. Tu cuarto, tu silla, tus pantallas. */
+  const yoUid = (S.session && S.session.user) || null;
+  const LK = (() => { try { return lookDe(yoUid) || {}; } catch(e){ return {}; } })();
+  const piel  = LK.piel  || '#E8C4A0';
+  const pelo  = LK.pelo  || '#1A1614';
+  const ropa  = LK.traje || '#E8B32F';
+  const ropaB = mez(ropa, -22);
+  const acento = LK.ac   || 'var(--up)';
   const sx = 5.3, sy = 4.4;
   const bx = px(sx, sy), by = py(sx, sy, 0);
   const steve = `
@@ -7500,26 +7545,24 @@ function steveSVG(etapa, pctRango){
       <rect class="so-silla-e" x="-2.5" y="-16" width="5" height="20"/>
       <path class="so-silla" d="M-19 -20 q0 -12 19 -12 q19 0 19 12 l0 24 q-19 6 -38 0 Z"/>
       <!-- torso, con la naranja de la casa -->
-      <path class="so-ropa" d="M-15 -22 q0 -20 15 -20 q15 0 15 20 l2 20 q-17 6 -34 0 Z"
+      <path class="so-ropa" style="fill:${ropa}" d="M-15 -22 q0 -20 15 -20 q15 0 15 20 l2 20 q-17 6 -34 0 Z"
             transform="rotate(${P.incl * .5} 0 -20)"/>
-      <path class="so-ropa-b" d="M-15 -34 q6 -8 15 -8 q9 0 15 8 l-3 4 q-12 -6 -24 0 Z"/>
+      <path class="so-ropa-b" style="fill:${ropaB}" d="M-15 -34 q6 -8 15 -8 q9 0 15 8 l-3 4 q-12 -6 -24 0 Z"/>
       <!-- la capucha caída y el cordón: es un hoodie, no una playera -->
-      <path class="so-capucha" d="M-14 -30 q14 10 28 0 q2 8 -4 12 q-10 4 -20 0 q-6 -4 -4 -12 Z"/>
-      <path class="so-cordon" d="M-4 -26 l-1 8 M4 -26 l1 8"/>
+      <path class="so-cuello" style="fill:${ropaB}" d="M-9 -30 q9 7 18 0 l-2 5 q-7 4 -14 0 Z"/>
       <!-- brazos hacia el teclado -->
-      <path class="so-brazo ${P.tecla ? 'teclea' : ''}" d="M-13 -30 C-24 -22 -24 -12 -12 -8"/>
-      <path class="so-brazo b ${P.tecla ? 'teclea' : ''}" d="M13 -30 C24 -22 24 -12 12 -8"/>
+      <path class="so-brazo ${P.tecla ? 'teclea' : ''}" style="stroke:${ropa}" d="M-13 -30 C-24 -22 -24 -12 -12 -8"/>
+      <path class="so-brazo b ${P.tecla ? 'teclea' : ''}" style="stroke:${ropa}" d="M13 -30 C24 -22 24 -12 12 -8"/>
       <!-- cabeza: se le ve la nuca y un cuarto de perfil.
            EL GORRO ES SUYO — es lo que lo hace reconocible de lejos, más que
            la cara: gorro negro de pompón, como lo dibujó André. -->
       <g class="so-cabeza" transform="rotate(${P.incl * .6} 0 -44)">
-        <ellipse class="so-piel" cx="0" cy="-52" rx="15" ry="16"/>
-        <path class="so-gorro" d="M-16 -58 q0 -17 16 -17 q16 0 16 17 q-4 3 -16 3 q-12 0 -16 -3 Z"/>
-        <rect class="so-gorro-v" x="-16.5" y="-60" width="33" height="7" rx="3"/>
-        <circle class="so-gorro-p" cx="0" cy="-79" r="6"/>
+        <ellipse class="so-piel" style="fill:${piel}" cx="0" cy="-52" rx="15" ry="16"/>
+        <path style="fill:${pelo}" d="M-15 -56 q2 -15 15 -15 q13 0 15 15 q-4 -6 -15 -6 q-11 0 -15 6 Z"/>
+        <path style="fill:${pelo}" d="M-15 -58 h30 v6 q-8 -4 -15 -4 q-7 0 -15 4 Z"/>
         <!-- el cuarto de cara: lente, ojo y su sonrisa -->
         <g transform="translate(9 0)">
-          <rect class="so-lente" x="-3" y="-56" width="12" height="10" rx="2.5"/>
+          ${LK.lentes === false ? '' : `<rect class="so-lente" x="-3" y="-56" width="12" height="10" rx="2.5"/>`}
           <ellipse class="so-ojo" cx="3.5" cy="-51" rx="${P.ojos==='wide'?2:1.7}" ry="${P.ojos==='medio'?1.1:P.ojos==='cerra'?.5:1.9}"/>
           ${P.boca === 'grande'
             ? `<path class="so-boca llena" d="M0 -44 q5 6 10 0 q-5 2 -10 0 Z"/><ellipse class="so-cachete" cx="0" cy="-46" rx="3" ry="2"/>`
@@ -7527,10 +7570,10 @@ function steveSVG(etapa, pctRango){
         </g>
       </g>
       <!-- su gafete -->
-      <rect class="so-gafete" x="4" y="-18" width="10" height="7" rx="1.5"/>
+      <rect class="so-gafete" style="fill:${acento}" x="4" y="-18" width="10" height="7" rx="1.5"/>
       <!-- sus tenis blancos, que asoman bajo la silla -->
-      <ellipse class="so-tenis" cx="-9" cy="9" rx="6.5" ry="3.4"/>
-      <ellipse class="so-tenis" cx="9"  cy="9" rx="6.5" ry="3.4"/>
+      <ellipse class="so-zapato" cx="-9" cy="9" rx="6.5" ry="3.4"/>
+      <ellipse class="so-zapato" cx="9"  cy="9" rx="6.5" ry="3.4"/>
     </g>`;
 
   /* ── LA TAZA Y EL TECLADO ── */
@@ -7561,7 +7604,7 @@ function steveSVG(etapa, pctRango){
     ${planta(1.2, 8.6, 1.15)}
     ${planta(8.4, 1.0, .9)}
     ${steve}
-    ${fuera ? `<text x="${W/2}" y="34" class="so-ido-tx" text-anchor="middle">${bi('STEVE SALIÓ','STEVE IS OUT')}</text>` : ''}
+    ${fuera ? `<text x="${W/2}" y="34" class="so-ido-tx" text-anchor="middle">${bi('OFICINA CERRADA','OFFICE CLOSED')}</text>` : ''}
   </svg>`;
 }
 
@@ -7592,6 +7635,87 @@ const VIG_ETAPAS = [
 function vigEtapa(m){
   for(const e of VIG_ETAPAS) if(m >= e.de && m < e.a) return e;
   return VIG_ETAPAS[VIG_ETAPAS.length - 1];
+}
+
+/* ── LAS SIETE ALERTAS, EN VIVO ──
+   Steve manda siete avisos a lo largo del día. Dos de ellos los puede saber esta
+   app sola, porque dependen del RELOJ: la apertura de las sesiones y el cierre
+   del rango. Los otros cinco dependen del mercado y esta app no los puede oír —
+   viajan de TradingView a tu Discord por webhook y de ahí a tu celular.
+
+   Así que el panel dice la verdad de cada uno: los dos de reloj se marcan solos,
+   y los cinco de mercado se muestran EN ESPERA con el nombre del canal a donde
+   van a caer. Fingir que la app sabe si sonó la alarma sería justo el tipo de
+   mentira que rompe la confianza en el resto de los números. */
+const ALERTAS_7 = [
+  { k:1, reloj: m => m >= 20*60 || m < 9*60+30, canal:'sesiones',
+    n:['Apertura de sesiones','Session opens'],
+    d:['Asia, Londres y NY. La de NY ya trae la liquidez del overnight.',
+       'Asia, London and NY. The NY one carries the overnight liquidity.'] },
+  { k:2, reloj: m => m >= 9*60+45, canal:'sesiones',
+    n:['Rango listo','Range ready'],
+    d:['A los 15 minutos: alto, bajo, 50% y ancho.',
+       'After 15 minutes: high, low, 50% and width.'] },
+  { k:3, canal:'senales', n:['Break confirmado','Break confirmed'],
+    d:['Ya trae precio de orden, stop, objetivo, contratos y riesgo en dólares.',
+       'Carries order price, stop, target, contracts and dollar risk.'] },
+  { k:4, canal:'senales', n:['FVG en el nivel','FVG at the level'],
+    d:['La entrada se mueve al 50% del hueco.','The entry moves to the middle of the gap.'] },
+  { k:5, canal:'senales', clave:true, n:['ENTRADA LLENA','ENTRY FILLED'],
+    d:['Ésta es la que te hace entrar. Sin ella, el trade no existió.',
+       'This is the one that gets you in. Without it, the trade did not happen.'] },
+  { k:6, canal:'senales', n:['Salida','Exit'],
+    d:['Con el resultado, y cierra el día.','With the result, and it closes the day.'] },
+  { k:7, canal:'liquidez', n:['Liquidez barrida','Liquidity swept'],
+    d:['Cuando toman el alto o bajo de Asia o de Londres.',
+       'When the Asia or London high or low gets taken.'] },
+];
+
+function vigAlertas(){
+  const m = minutosEn(TZ_MERCADO), wd = diaSemanaEn(TZ_MERCADO);
+  const habil = wd !== 0 && wd !== 6;
+  const wh = (S.profile && S.profile.webhookOk) || false;
+
+  const fila = a => {
+    const yaSono = habil && a.reloj && a.reloj(m);
+    const est = !habil ? ['—', 'off']
+      : yaSono ? [bi('SONÓ','FIRED'), 'ok']
+      : a.reloj ? [bi('EN ESPERA','WAITING'), 'esp']
+      : [bi('LA MANDA STEVE','STEVE SENDS IT'), 'mer'];
+    return `<div class="al-f ${est[1]}${a.clave ? ' clave' : ''}">
+      <span class="al-k">${a.k}</span>
+      <div class="al-t"><b>${loc(a.n)}</b><p>${loc(a.d)}</p></div>
+      <span class="al-c">#${a.canal}</span>
+      <span class="al-e">${est[0]}</span>
+    </div>`;
+  };
+
+  return `<div class="vig-al">
+    <div class="vig-al-h">
+      <b>${bi('Las siete alertas','The seven alerts')}</b>
+      <span class="al-pipe ${wh ? 'on' : ''}">${wh
+        ? bi('TradingView → Discord conectado','TradingView → Discord connected')
+        : bi('el puente no está armado','the bridge is not wired')}</span>
+    </div>
+    <div class="al-lista">${ALERTAS_7.map(fila).join('')}</div>
+    ${wh ? '' : `<div class="al-como">
+      <b>${bi('Para que te lleguen al celular','To get them on your phone')}</b>
+      <ol>
+        <li>${bi('En Discord, crea el canal y su <b>webhook</b>: Editar canal → Integraciones → Crear webhook → Copiar URL.',
+                 'In Discord, create the channel and its <b>webhook</b>: Edit channel → Integrations → Create webhook → Copy URL.')}</li>
+        <li>${bi('En TradingView, crea UNA alerta con condición <code>Any alert() function call</code>.',
+                 'In TradingView, create ONE alert with condition <code>Any alert() function call</code>.')}</li>
+        <li>${bi('En esa alerta, pestaña Notificaciones → <b>Webhook URL</b> → pega la de Discord y agrégale <code>/slack</code> al final.',
+                 'In that alert, Notifications tab → <b>Webhook URL</b> → paste the Discord one and add <code>/slack</code> at the end.')}</li>
+        <li>${bi('En el mensaje de la alerta deja <code>{{strategy.order.alert_message}}</code> para que llegue el texto que Steve arma.',
+                 'In the alert message put <code>{{strategy.order.alert_message}}</code> so Steve’s own text comes through.')}</li>
+      </ol>
+      <p class="micro">${bi(
+        'El <code>/slack</code> del final no es capricho: sin él Discord recibe el aviso pero no lo publica, y es donde se atora todo el mundo la primera vez.',
+        'The trailing <code>/slack</code> is not optional: without it Discord receives the alert but does not post it, and that is where everyone gets stuck the first time.')}</p>
+      <button type="button" class="btn sm" id="btnPuenteOk">${bi('Ya quedó, márcalo','Done — mark it')}</button>
+    </div>`}
+  </div>`;
 }
 /* ── LOS LÍMITES DEL DÍA, EN UN SOLO LUGAR ──
    Antes vivían en el panel «Session plan», tecleados a mano, y la cabina en vivo
@@ -7705,6 +7829,7 @@ function pintaVigilia(){
       </div>
 
       ${vigNumeros()}
+      ${vigAlertas()}
 
       <div class="vig-pie">
         ${puedeSonar
@@ -7712,6 +7837,18 @@ function pintaVigilia(){
           : `<p class="vig-quieto">${bi('Ahorita no te puedo dar nada, jefe. Si te andan dando ganas de entrar por tu cuenta, ésa es justo la señal de que no.','I have got nothing for you right now, boss. If you are feeling the itch to enter on your own, that is exactly the sign not to.')}</p>`}
       </div>
     </div>`;
+
+  const bp = $('#btnPuenteOk');
+  if(bp) bp.onclick = () => {
+    S.profile = S.profile || {}; S.profile.webhookOk = true; save();
+    toast(bi('Puente marcado como armado. Si algo no llega, desmárcalo desde aquí.',
+             'Bridge marked as wired. If nothing arrives, unmark it here.'));
+    pintaVigilia();
+  };
+  const pp = $('.al-pipe.on');
+  if(pp) pp.onclick = () => {
+    S.profile.webhookOk = false; save(); pintaVigilia();
+  };
 
   /* el botón sólo se activa cuando la alarma PUDO haber sonado */
   const b = $('#rtActivar');
