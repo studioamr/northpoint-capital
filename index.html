@@ -762,49 +762,6 @@ section{
 /* ============================================================
    FOOTER
    ============================================================ */
-footer{
-  border-top:1px solid var(--line-soft);
-  padding:64px 0 48px;
-}
-.foot-top{
-  display:flex;
-  justify-content:space-between;
-  align-items:flex-start;
-  gap:36px;
-  flex-wrap:wrap;
-  margin-bottom:52px;
-}
-.foot-contact{
-  font-family:var(--mono);
-  font-size:13px;
-  color:var(--dim);
-  line-height:2;
-  text-align:right;
-}
-.foot-contact a:hover{color:var(--accent)}
-.foot-bottom{
-  padding-top:22px;
-  border-top:1px solid var(--line-soft);
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
-  gap:16px;
-  flex-wrap:wrap;
-}
-.foot-bottom p{
-  font-size:12px;
-  color:var(--faint);
-}
-.foot-bottom .conf{
-  font-family:var(--mono);
-  letter-spacing:.08em;
-}
-.foot-term{
-  font-size:13px;
-  color:var(--dim);
-  transition:color .2s;
-}
-.foot-term:hover{color:var(--accent)}
 
 /* ============================================================
    SCROLL REVEAL
@@ -864,7 +821,6 @@ footer{
   .hero-foot{flex-direction:column;align-items:flex-start;gap:8px}
   .score-card{padding:28px 24px}
   .proj-card{padding:26px 20px 22px}
-  .foot-contact{text-align:left}
 }
 
 /* ============================================================
@@ -1096,7 +1052,7 @@ body.doc-open .docback{display:inline-block}
 }
 
 /* ── FILOSOFÍA · la flecha de partículas ── */
-.flecha-marco{position:relative;height:clamp(340px,58vh,520px)}
+.flecha-marco{position:relative;height:clamp(420px,72vh,760px)}
 #flechaCanvas{position:absolute;inset:0;width:100%;height:100%;color:var(--txt)}
 
 /* ── MESA · los edificios en cinta ── */
@@ -1121,6 +1077,14 @@ body.doc-open .docback{display:inline-block}
   .ed-track{animation:none}
   .edificios{overflow-x:auto;mask-image:none;-webkit-mask-image:none}
 }
+
+/* ── FILOSOFÍA: NEGRO TOTAL ──
+   La pantalla de la flecha es negra pase lo que pase, también en tema claro:
+   el símbolo vive en la oscuridad y las partículas son de luz. El canvas
+   además pinta su propio fondo con un velo de negro por frame — eso deja las
+   ESTELAS que hacen ver que el flujo sube. */
+#filosofia.doc-active{background:#000;min-height:100vh}
+#filosofia #flechaCanvas{color:#F4F4F4}
 </style>
 </head>
 <body>
@@ -1273,27 +1237,8 @@ body.doc-open .docback{display:inline-block}
   </div>
 </section>
 
-<footer>
-  <div class="wrap">
-    <div class="foot-top">
-      <a href="#" class="brand" aria-label="Northpoint — volver arriba">
-        <span class="brand-t">
-          <span class="brand-name">NORTHPOINT</span>
-          <span class="brand-sub">Capital Management</span>
-        </span>
-      </a>
-      <div class="foot-contact">
-        <p>northpoint.io</p>
-        <p><a href="mailto:investors@northpoint.io">investors@northpoint.io</a></p>
-        <p><a class="foot-term" href="app.html">Terminal de traders →</a></p>
-      </div>
-    </div>
-    <div class="foot-bottom">
-      <p>© 2025 Northpoint Capital Management. Todos los derechos reservados. Documento confidencial. Distribución restringida a personal autorizado.</p>
-      <p class="conf">CONFIDENCIAL · NORTHPOINT.IO</p>
-    </div>
-  </div>
-</footer>
+<!-- El pie se retiró (André): correos y avisos que no le decían nada a nadie.
+     La marca y la vuelta arriba viven en el deck de abajo. -->
 
 <script>
 (function(){
@@ -1445,10 +1390,17 @@ body.doc-open .docback{display:inline-block}
      ni .proj-card en el documento eran líneas que ya no podían correr nunca. */
 })();
 
-/* ---------- FILOSOFÍA · la flecha hecha de partículas ----------
-   El trazo del boceto de André: sube, respira hacia abajo, y sube más alto
-   hasta la punta. Cada partícula tiene su casa sobre la línea y flota
-   alrededor; unas pocas viven sueltas para que el aire respire.
+/* ---------- FILOSOFÍA · la flecha que SUBE ----------
+   Ya no flota: fluye. Cada partícula del río tiene una posición d SOBRE el
+   trazo y avanza hacia la punta a su propia velocidad; al llegar, vuelve a
+   nacer al principio. Las alas de la punta sí flotan quietas —el flujo no
+   puede correr por ellas porque apuntan hacia atrás— y el aire suelto deriva
+   hacia ARRIBA, para empujar la misma sensación.
+
+   La estela no es un efecto aparte: el canvas pinta un velo de negro casi
+   transparente por frame en vez de borrarse, y lo que dibujaste hace tres
+   frames sigue ahí, desvaneciéndose. Eso es lo que hace leer «está subiendo».
+
    El canvas mide 0 mientras la sección está cerrada (el índice es un router
    de documentos): el bucle lo detecta y no gasta ni un frame. */
 (function(){
@@ -1457,7 +1409,20 @@ body.doc-open .docback{display:inline-block}
   var cx = cv.getContext('2d');
   var reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
   var PTS = [[.06,.84],[.42,.34],[.46,.70],[.90,.14]];   /* el boceto, normalizado */
-  var parts = [], W = 0, H = 0, dpr = 1, tinta = '#888', f = 0, quieta = true;
+  var rio = [], alas = [], aire = [], segs = [], total = 0;
+  var W = 0, H = 0, dpr = 1, tinta = '#F4F4F4', f = 0, tAntes = 0, quieta = true;
+
+  function puntoEn(d){
+    for (var j = 0; j < segs.length; j++){
+      if (d <= segs[j].len){
+        var g = segs[j], fr = d / g.len;
+        return [g[0][0] + (g[1][0] - g[0][0]) * fr, g[0][1] + (g[1][1] - g[0][1]) * fr];
+      }
+      d -= segs[j].len;
+    }
+    var u = segs[segs.length - 1];
+    return [u[1][0], u[1][1]];
+  }
 
   function arma(){
     var r = cv.getBoundingClientRect();
@@ -1465,69 +1430,103 @@ body.doc-open .docback{display:inline-block}
     W = r.width; H = r.height;
     dpr = Math.min(2, devicePixelRatio || 1);
     cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
+    cx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    cx.fillStyle = '#000'; cx.fillRect(0, 0, W, H);   /* el lienzo nace negro */
 
     var pts = PTS.map(function(p){ return [p[0] * W, p[1] * H]; });
-    var segs = [];
-    for (var i = 0; i < pts.length - 1; i++) segs.push([pts[i], pts[i + 1]]);
-    /* la punta: dos alas hacia atrás desde el último punto, abiertas ~29° */
+    segs = []; total = 0;
+    for (var i = 0; i < pts.length - 1; i++){
+      var g = [pts[i], pts[i + 1]];
+      g.len = Math.hypot(g[1][0] - g[0][0], g[1][1] - g[0][1]);
+      segs.push(g); total += g.len;
+    }
+
+    /* el río: nace repartido por todo el trazo para que no se vea un tren */
+    rio = [];
+    var N = Math.round(Math.min(520, Math.max(240, W * .45)));
+    for (var k = 0; k < N; k++){
+      rio.push({ d: Math.random() * total,
+                 v: 26 + Math.random() * 58,            /* px/s hacia la punta */
+                 ph: Math.random() * 6.283,
+                 amp: .8 + Math.random() * 2.6,          /* jitter corto: la línea se queda nítida */
+                 s: Math.random() < .85 ? 1 : 1.7,
+                 a: .3 + Math.random() * .7 });
+    }
+
+    /* las alas de la punta: quietas, flotando */
     var a = pts[pts.length - 2], b = pts[pts.length - 1];
     var ang = Math.atan2(b[1] - a[1], b[0] - a[0]), L = Math.max(16, W * .05);
-    [.5, -.5].forEach(function(s){
-      var t = ang + Math.PI + s;
-      segs.push([b, [b[0] + Math.cos(t) * L, b[1] + Math.sin(t) * L]]);
+    alas = [];
+    [.5, -.5].forEach(function(sg){
+      var t = ang + Math.PI + sg;
+      for (var m = 0; m < N * .07; m++){
+        var fr = Math.random();
+        alas.push({ hx: b[0] + Math.cos(t) * L * fr, hy: b[1] + Math.sin(t) * L * fr,
+                    ph: Math.random() * 6.283, sp: .5 + Math.random() * .9,
+                    amp: 1 + Math.random() * 2.5, s: 1, a: .35 + Math.random() * .65 });
+      }
     });
 
-    var total = 0;
-    segs.forEach(function(s){ s.len = Math.hypot(s[1][0] - s[0][0], s[1][1] - s[0][1]); total += s.len; });
-
-    parts = [];
-    var N = Math.round(Math.min(540, Math.max(240, W * .5)));
-    for (var k = 0; k < N; k++){
-      var d = Math.random() * total, acc = 0, seg = segs[segs.length - 1], fr = 1;
-      for (var j = 0; j < segs.length; j++){
-        if (d <= acc + segs[j].len){ seg = segs[j]; fr = (d - acc) / segs[j].len; break; }
-        acc += segs[j].len;
-      }
-      parts.push({
-        hx: seg[0][0] + (seg[1][0] - seg[0][0]) * fr,
-        hy: seg[0][1] + (seg[1][1] - seg[0][1]) * fr,
-        ph: Math.random() * 6.283, sp: .5 + Math.random() * .9,
-        amp: 1.5 + Math.random() * 4.5,
-        s: Math.random() < .85 ? 1 : 1.7,
-        a: .3 + Math.random() * .7
-      });
-    }
-    for (var m = 0; m < N * .09; m++){
-      parts.push({ hx: Math.random() * W, hy: Math.random() * H, ph: Math.random() * 6.283,
-                   sp: .2 + Math.random() * .4, amp: 5 + Math.random() * 10, s: 1, a: .06 + Math.random() * .1 });
+    /* el aire: poquito, tenue, y subiendo — empuja la misma dirección */
+    aire = [];
+    for (var q = 0; q < N * .12; q++){
+      aire.push({ x: Math.random() * W, y: Math.random() * H,
+                  v: 7 + Math.random() * 16, ph: Math.random() * 6.283,
+                  amp: 4 + Math.random() * 8, a: .05 + Math.random() * .09 });
     }
     quieta = true;
   }
 
-  function pinta(t){
-    cx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    cx.clearRect(0, 0, W, H);
+  function pinta(t, dt){
+    /* el velo: NO se borra — se oscurece. Ahí viven las estelas. */
+    cx.fillStyle = 'rgba(0,0,0,.15)';
+    cx.fillRect(0, 0, W, H);
     cx.fillStyle = tinta;
-    for (var i = 0; i < parts.length; i++){
-      var p = parts[i];
+    var i, p;
+    for (i = 0; i < rio.length; i++){
+      p = rio[i];
+      p.d = (p.d + p.v * dt) % total;
+      var xy = puntoEn(p.d);
       cx.globalAlpha = p.a * (.6 + .4 * Math.sin(t * 1.3 + p.ph * 2));
+      cx.fillRect(xy[0] + Math.sin(t * 1.7 + p.ph) * p.amp,
+                  xy[1] + Math.cos(t * 1.3 + p.ph) * p.amp, p.s, p.s);
+    }
+    for (i = 0; i < alas.length; i++){
+      p = alas[i];
+      cx.globalAlpha = p.a * (.6 + .4 * Math.sin(t * 1.4 + p.ph * 2));
       cx.fillRect(p.hx + Math.sin(t * p.sp + p.ph) * p.amp,
                   p.hy + Math.cos(t * p.sp * .8 + p.ph * 1.6) * p.amp, p.s, p.s);
+    }
+    for (i = 0; i < aire.length; i++){
+      p = aire[i];
+      p.y -= p.v * dt;
+      if (p.y < -12){ p.y = H + 12; p.x = Math.random() * W; }
+      cx.globalAlpha = p.a;
+      cx.fillRect(p.x + Math.sin(t * .5 + p.ph) * p.amp, p.y, 1, 1);
     }
     cx.globalAlpha = 1;
   }
 
   function loop(ms){
     requestAnimationFrame(loop);
-    if (!cv.clientWidth) return;                 /* la sección está cerrada */
+    if (!cv.clientWidth) return;                       /* la sección está cerrada */
     if (Math.abs(cv.clientWidth - W) > 1) arma();
-    if (!parts.length) return;
+    if (!rio.length) return;
+    var dt = Math.min(.05, (ms - tAntes) / 1000 || 0); /* tope: al volver de una
+        pestaña dormida, un dt gigante teletransportaría el río entero */
+    tAntes = ms;
     if (f++ % 90 === 0){
-      var c = getComputedStyle(cv).color;        /* sigue al tema claro/oscuro */
+      var c = getComputedStyle(cv).color;
       if (c !== tinta){ tinta = c; quieta = true; }
     }
-    if (reduce){ if (quieta){ pinta(0); quieta = false; } return; }
-    pinta(ms / 1000);
+    if (reduce){                                       /* sin movimiento: un cuadro */
+      if (quieta){
+        cx.fillStyle = '#000'; cx.fillRect(0, 0, W, H);
+        pinta(0, 0); quieta = false;
+      }
+      return;
+    }
+    pinta(ms / 1000, dt);
   }
   requestAnimationFrame(loop);
 })();
