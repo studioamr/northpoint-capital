@@ -490,7 +490,7 @@ body.locked .app{visibility:hidden;pointer-events:none}
 .ts-cal-body{display:grid;grid-template-columns:repeat(7,1fr) .8fr;gap:6px}
 .ts-cell{
   aspect-ratio:1;border:1px solid var(--line-soft);border-radius:8px;background:var(--w02);
-  display:flex;flex-direction:column;padding:6px 7px;overflow:hidden;
+  display:flex;flex-direction:column;padding:6px 7px;overflow:hidden;position:relative;
 }
 .ts-cell.empty{border:none;background:transparent}
 .ts-cell .ts-d{font-family:var(--mono);font-size:10px;color:var(--faint)}
@@ -504,6 +504,12 @@ body.locked .app{visibility:hidden;pointer-events:none}
 .ts-cell.down .ts-pnl{color:var(--down)}
 .ts-cell.vio{box-shadow:inset 0 0 0 1px rgba(217,164,65,.5)}
 .ts-cell.today{box-shadow:0 0 0 1.5px var(--accent-deep)}
+/* EL FUNERAL. Va DESPUÉS de .vio y .today a propósito: si el día que se quemó
+   una cuenta es además hoy, o trae una violación, lo que hay que ver es la
+   quema. Y no se marca con el rojo del día perdedor —un día en rojo se recupera
+   mañana; éste no— sino con el borde entero encendido. */
+.ts-cell.quemo{box-shadow:inset 0 0 0 1.5px var(--down)}
+.ts-cell .ts-quemo{position:absolute;top:4px;right:5px;font-size:10px;line-height:1}
 .ts-cell.today.vio{box-shadow:0 0 0 1.5px var(--accent-deep), inset 0 0 0 1px rgba(217,164,65,.5)}
 .ts-week{
   border-radius:8px;background:var(--w03);display:flex;flex-direction:column;
@@ -7252,8 +7258,26 @@ function calMatrix(key){
 }
 const esHabil = iso => { const [y,m,d] = iso.split('-').map(Number); const w = new Date(y,m-1,d).getDay(); return w!==0 && w!==6; };
 
+/* ── LOS FUNERALES DEL CALENDARIO ──
+   Una quema no es un mal día más. Es el día que una cuenta DEJÓ DE EXISTIR, y
+   hasta ahora sus \$50,000 desaparecían del tablero sin dejar rastro de cuándo
+   ni de cuál: el número bajaba solo y eso se siente a error, no a consecuencia.
+
+   La fecha no se marca a mano — sale de quemaDetectada(), que recorre los fills
+   día a día y encuentra el primero que tocó la línea de drawdown. Si un trade
+   viejo se corrige, el funeral se mueve solo al día que de verdad fue. */
+function quemasPorDia(){
+  const m = {};
+  mias(S.accounts).forEach(a => {
+    const q = quemaDetectada(a);
+    if(q && q.fecha) (m[q.fecha] = m[q.fecha] || []).push(a.alias);
+  });
+  return m;
+}
+
 function renderCal(){
   const byDay = tradesByDay();
+  const quemas = quemasPorDia();
   const M = metas();
   const hoyISO = todayISO();
   const [Y, MM] = calMes.split('-').map(Number);
@@ -7277,11 +7301,13 @@ function renderCal(){
       const habil = esHabil(iso);
       if(tr.length){ wkPnl += pnl; wkDias++; }
 
+      const quemo = quemas[iso];
       const cls = [
         'ts-cell',
         tr.length ? (pnl>0?'up':pnl<0?'down':'flat') : (futuro && habil ? 'fut' : ''),
         iso===hoyISO ? 'today' : '',
-        vio ? 'vio' : ''
+        vio ? 'vio' : '',
+        quemo ? 'quemo' : ''
       ].filter(Boolean).join(' ');
 
       let cuerpo;
@@ -7297,7 +7323,16 @@ function renderCal(){
       } else {
         cuerpo = '';
       }
-      html += `<div class="${cls}"${tr.length ? ` data-iso="${iso}" role="button" tabindex="0"` : ''} title="${iso}"><span class="ts-d">${Number(iso.slice(8))}</span>${cuerpo}</div>`;
+      /* El funeral se marca aunque ese día no haya trades en TU selección: la
+         cuenta murió igual, y un día vacío que se llevó \$50,000 es justo el que
+         no puede pasar desapercibido. */
+      const tQ = quemo
+        ? '\n' + (quemo.length === 1 ? bi('Se quemó ','Burned ') : bi('Se quemaron ','Burned '))
+          + quemo.join(', ')
+        : '';
+      html += `<div class="${cls}"${tr.length ? ` data-iso="${iso}" role="button" tabindex="0"` : ''} title="${iso}${esc(tQ)}"><span class="ts-d">${Number(iso.slice(8))}</span>${
+        quemo ? `<span class="ts-quemo" aria-label="${bi('cuenta quemada','account burned')}">\u{1F525}</span>` : ''
+      }${cuerpo}</div>`;
     }
     const wCls = wkPnl>0?'up':wkPnl<0?'down':'';
     html += `<div class="ts-week ${wCls}">
