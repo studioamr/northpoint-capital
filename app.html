@@ -3737,19 +3737,27 @@ const SISTEMA = {
   ],
 
   /* Las tres fases del plan. `maxPerdidaDia` y `objetivoDia` son los del documento;
-     el tope de trades es 2 estrictos en todas — la regla de gestión no cambia por
-     fase. El plan no fija número de contratos: el tamaño sale del riesgo. */
+     el tope de trades es UNO en todas — la regla de gestión no cambia por fase.
+     El plan no fija número de contratos: el tamaño sale del riesgo.
+
+     ── POR QUÉ UNO, Y NO DOS ──
+     Lo manda Ice Vader, no una preferencia: el indicador arma UN rango de
+     apertura al día, espera UN break confirmado y llena UNA orden límite en el
+     retest. Su propio parámetro dice maxTrades = 1. Con el tope en 2 la app
+     daba por bueno un segundo trade que el sistema nunca señaló — y ése, por
+     definición, salió de la mano y no del plan. El segundo trade del día ahora
+     se marca. */
   fases: {
-    eval:   { maxPerdidaDia:1000, objetivoDia:1000, maxTrades:2, topeDia:1100,
+    eval:   { maxPerdidaDia:1000, objetivoDia:1000, maxTrades:1, topeDia:1100,
               de:50000, a:53000, minDias:3, diasObjetivo:'3-5' },
     /* ── EL COLCHÓN IBA AL DOBLE ──
        Estaba en 200/400 y el plan de André dice $100 de riesgo y $200 de
        objetivo al día. Con el límite al doble, un día que rompía el plan pasaba
        como bueno y la app no marcaba nada: el error más caro de todos, porque
        enseña que cabe más riesgo del que cabe. */
-    buffer: { maxPerdidaDia:100,  objetivoDia:200,  maxTrades:2,
+    buffer: { maxPerdidaDia:100,  objetivoDia:200,  maxTrades:1,
               de:50000, a:52100, maxDias:14 },
-    payout: { maxPerdidaDia:100,  objetivoDia:200,  maxTrades:2,
+    payout: { maxPerdidaDia:100,  objetivoDia:200,  maxTrades:1,
               desde:50100 },
   },
 
@@ -3772,7 +3780,7 @@ const SISTEMA = {
 
   /* El tope sale de la fase, no de la memoria: si el plan cambia, el texto cambia. */
   get gestion(){ return [
-    `Máximo ${this.fases.eval.maxTrades} trades por sesión, estrictos.`,
+    `Un solo trade por sesión: el que señala Ice Vader.`,
     'Si se gana el trade 1, se cierra la plataforma: el día terminó.',
     'Si se pierde el trade 1, queda un solo intento más — y únicamente con un setup válido nuevo y completo. Nunca revenge.',
     'Nada queda abierto después de las 8:30.',
@@ -3905,7 +3913,7 @@ const ROLES = {
     'Implementa protocolos operativos y auditorías internas.']},
   'NP-060': { t:'Trader · Mesa de Futuros', d:[
     'Ejecuta el protocolo diario completo: pre-market 7:00, setup y gestión.',
-    `Opera únicamente la ventana 9:00–10:30 NY, máximo ${SISTEMA.fases.eval.maxTrades} trades por sesión.`,
+    `Opera únicamente la ventana 9:00–10:30 NY, un solo trade por sesión.`,
     'Registra cada operación con screenshot, setup, resultado y análisis.',
     'Envía el reporte del día al equipo y responde por su Score conductual.']},
 };
@@ -4919,11 +4927,23 @@ function limitesDia(trade){
 /* Las reglas del día las escribe el operador en el Plan de sesión (Rutina →
    Pre-market): máx. trades, stop y objetivo. Eso manda; si ese día no se llenó,
    se cae a los límites de la fase. */
+/* ── EL PLAN DE UN DÍA, Y POR QUÉ NO SE REESCRIBE EL PASADO ──
+   El tope de trades se guarda EN el plan de cada día, así que bajar el tope del
+   sistema a 1 no alcanza: el plan de hoy ya traía 2 escrito y habría seguido
+   dando por bueno un segundo trade.
+
+   Pero tampoco se puede reescribir hacia atrás. Un día viejo se operó bajo la
+   regla que existía ese día, y volverlo violación ahora sería inventar una falta
+   que no ocurrió. Así que el tope del sistema es un TECHO sólo de hoy en
+   adelante: el pasado conserva su propia regla, y el presente no puede
+   concederse más trades de los que el sistema permite. */
 function planDelDia(iso){
   const s = (S.sessions || {})[claveSesion(iso)];
   const r = s && s.rutina;
+  const techo = maxTradesHoy();
+  const guardado = (r && r.maxT) || techo;
   return {
-    maxT: (r && r.maxT) || maxTradesHoy(),
+    maxT: iso >= todayISO() ? Math.min(guardado, techo) : guardado,
     stop: (r && r.stop) || null,
     obj:  (r && r.obj)  || null,
   };
@@ -7016,7 +7036,12 @@ function getRutina(iso){
   if(r.bias === undefined) r.bias = null;
   if(r.sesgo === undefined) r.sesgo = '';
   if(r.niveles === undefined) r.niveles = '';
-  if(!r.maxT) r.maxT = SISTEMA.fases.eval.maxTrades;
+  /* El mismo techo, aquí también: si no, el campo de Rutina seguiría enseñando
+     el 2 viejo mientras la violación se calcula con 1, y no habría forma de
+     entender por qué se marcó el segundo trade. */
+  const techo = maxTradesHoy();
+  if(!r.maxT) r.maxT = techo;
+  else if(iso >= todayISO() && r.maxT > techo) r.maxT = techo;
   if(r.stop === undefined) r.stop = SISTEMA.fases.eval.maxPerdidaDia;
   if(r.obj === undefined) r.obj = SISTEMA.fases.eval.objetivoDia;
   return r;
@@ -10201,7 +10226,7 @@ function guionOficina(){
   di(MATEO, lema('mateo.np'));
   Object.entries(F).forEach(([k, f]) => {
     const nom = k === 'eval' ? 'En evaluación' : (k === 'buffer' ? 'En colchón' : 'En retiros');
-    di(MATEO, `${nom}: riesgo ${fmt$(f.maxPerdidaDia)} al día, objetivo ${fmt$(f.objetivoDia)}, ${f.maxTrades} trades estrictos.`
+    di(MATEO, `${nom}: riesgo ${fmt$(f.maxPerdidaDia)} al día, objetivo ${fmt$(f.objetivoDia)}, ${f.maxTrades === 1 ? 'un solo trade' : f.maxTrades + ' trades estrictos'}.`
          + (f.topeDia ? ` Y ningún día mayor a ${fmt$(f.topeDia)}.` : ''));
   });
   deberes(MATEO, 'mateo.np');
