@@ -10869,12 +10869,13 @@ function escenaAhora(now = new Date()){
   }
   for(const tr of TRAMOS){
     const mm = (tr.de > tr.a || tr.a > 1440) && m < tr.de ? m + 1440 : m;
-    if(mm >= tr.de && mm < tr.a){
-      const restan = tr.a - mm;
-      if(restan <= VUELO_MIN)
-        return { tipo:'vuelo', de:tr.c, a:tr.sig, prog:1 - restan / VUELO_MIN };
-      return { tipo:'ciudad', c:tr.c, sig:tr.sig, restan };
-    }
+    /* Mientras la sesión está abierta se está en la mesa, y punto. El vuelo
+       salía en los últimos 25 minutos del tramo —a las 15:35 con Nueva York
+       todavía abierto hasta las 16:00— así que la pantalla enseñaba un avión
+       justo cuando se administra el cierre. Ahora el traslado va en el hueco
+       cerrado, que es cuando de verdad se viaja. */
+    if(mm >= tr.de && mm < tr.a)
+      return { tipo:'ciudad', c:tr.c, sig:tr.sig, restan: tr.a - mm };
   }
   /* Ninguna sesión abierta: el mercado está CERRADO. Antes se caía a «Nueva
      York» y la pantalla mentía; ahora se está en casa hasta la próxima
@@ -10884,6 +10885,18 @@ function escenaAhora(now = new Date()){
     const d = (tr.de - m + 1440) % 1440;
     if(d < faltan){ faltan = d; prox = tr; }
   });
+  /* de dónde se viene: el tramo que acaba de cerrar. Hace falta para saber de
+     qué ciudad despega el avión — antes el vuelo nacía dentro del tramo y ese
+     dato venía solo. */
+  let ant = null, hace = 1e9;
+  TRAMOS.forEach(tr => {
+    const d = (m - (tr.a % 1440) + 1440) % 1440;
+    if(d < hace){ hace = d; ant = tr; }
+  });
+  /* El ciclo completo queda: sesión → CERRADO → avión → la que sigue. El avión
+     es el último tramo del hueco, pegado a la apertura. */
+  if(prox && faltan <= VUELO_MIN)
+    return { tipo:'vuelo', de: ant ? ant.c : 'nyc', a: prox.c, prog: 1 - faltan / VUELO_MIN };
   return { tipo:'finde', esc:'casa', c:'nyc', cerrado:true,
            abre: prox ? prox.c : 'londres', faltan };
 }
