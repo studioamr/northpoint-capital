@@ -3615,7 +3615,7 @@ const MICROS = ['MNQ','MES','MYM','M2K'];
 
    NO NEGOCIABLES:
      · Nunca minis — sólo micros.
-     · Sólo se opera la ventana 7:00–8:30, lunes a viernes.
+     · Sólo se opera la ventana 9:00–10:30 NY (7:00–8:30 en Morelia), lunes a viernes.
      · Nada queda abierto después de las 8:30.
      · Si el checklist no da setup válido, el mejor trade del día es no operar. */
 const SISTEMA = {
@@ -3627,13 +3627,30 @@ const SISTEMA = {
   graficos: ['1m', '5m'],
   estrategia: 'ORB a liquidez',
 
-  /* Una sola ventana: la sesión de Nueva York, 7:00–8:30, lunes a viernes. El
-     rango de apertura se forma 7:30–7:45 y nada queda abierto pasadas las 8:30. */
+  /* Una sola ventana: la sesión de Nueva York, en HORA DE NUEVA YORK — 9:00 a
+     10:30, lunes a viernes. El rango de apertura se forma 9:30–9:45 y nada queda
+     abierto pasadas las 10:30. En Morelia son las 7:00–8:30 de siempre. */
+  /* ── LA VENTANA VA EN HORA DE NUEVA YORK ──
+     Estaba escrita 7:00–8:30, que es la hora de MORELIA con la que André tiene
+     su plan. Pero el trade se sella con horaMercadoAhora(), que estampa hora de
+     NUEVA YORK, y estrDeTrade() comparaba esa hora contra esta ventana. Dos
+     husos distintos en la misma resta: CADA trade real salía marcado
+     OUT_OF_WINDOW por las dos horas de diferencia.
+
+     Es la misma ventana de siempre, dicha en el huso en que se mide:
+       7:00 Morelia  →   9:00 NY   se prepara
+       7:30 Morelia  →   9:30 NY   abre y empieza el rango
+       7:45 Morelia  →   9:45 NY   el rango queda cerrado
+       8:30 Morelia  →  10:30 NY   se acaba
+
+     Anclarla a Nueva York y no a México además la deja a prueba de horarios de
+     verano: allá el reloj se mueve dos veces al año y aquí ya no, así que la
+     diferencia entre los dos husos no es fija. La apertura del mercado sí. */
   estrategias: [
     { id:'ny', nom:'NY SESSION', codigo:'E-01',
       desc:'ORB into liquidity on the New York session.',
-      ventana: { open: 7*60, orb1: 7*60+30, orb2: 7*60+45, close: 8*60+30 },
-      entrada: 'Break of the 7:30–7:45 range toward untaken liquidity.',
+      ventana: { open: 9*60, orb1: 9*60+30, orb2: 9*60+45, close: 10*60+30 },
+      entrada: 'Break of the 9:30–9:45 range toward untaken liquidity.',
       cuota: 1 },
   ],
 
@@ -3801,7 +3818,7 @@ const ROLES = {
     'Implementa protocolos operativos y auditorías internas.']},
   'NP-060': { t:'Trader · Mesa de Futuros', d:[
     'Ejecuta el protocolo diario completo: pre-market 7:00, setup y gestión.',
-    `Opera únicamente la ventana 7:00–8:30, máximo ${SISTEMA.fases.eval.maxTrades} trades por sesión.`,
+    `Opera únicamente la ventana 9:00–10:30 NY, máximo ${SISTEMA.fases.eval.maxTrades} trades por sesión.`,
     'Registra cada operación con screenshot, setup, resultado y análisis.',
     'Envía el reporte del día al equipo y responde por su Score conductual.']},
 };
@@ -6709,7 +6726,7 @@ const PRE_RAW = [
    haber dejado correr el rango sin meter la mano. */
 const SETUP_RAW = [
   [['El rango ya se formó','The range has formed'],
-   ['Dejé correr 7:30–7:45 sin tocar nada. Ya hay techo y piso.','I let 7:30–7:45 run without touching anything. There is a high and a low.']],
+   ['Dejé correr 9:30–9:45 NY sin tocar nada. Ya hay techo y piso.','I let 9:30–9:45 NY run without touching anything. There is a high and a low.']],
   [['Queda liquidez sin tomar','Liquidity still untaken'],
    ['Alguno de los niveles de mi mapa sigue intacto.','One of the levels on my map is still untouched.']],
   [['El break va hacia esa liquidez','The break points at it'],
