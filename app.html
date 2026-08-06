@@ -811,8 +811,11 @@ body.locked .app{visibility:hidden;pointer-events:none}
 /* En hilera, cada tarjeta manda su propio ancho: los objetivos del plan
    y los gráficos van en la misma cinta arrastrable que las tasas. */
 #dashKpis > .kpi{flex:0 0 196px}
-#mdCharts > .md-ch{flex:0 0 340px;margin:0}
-@media(max-width:620px){ #dashKpis > .kpi{flex-basis:172px} #mdCharts > .md-ch{flex-basis:276px} }
+/* OJO: sin el «>». Al meter las tarjetas en la pista de la cinta dejaron de ser
+   hijas directas del carril; con el selector viejo perdían su ancho y se
+   aplastaban todas en una columna. */
+#mdCharts .md-ch{flex:0 0 340px;margin:0}
+@media(max-width:620px){ #mdCharts .md-ch{flex-basis:276px} }
 .md-ext{padding:18px 20px}
 .md-ext-h{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
 .md-ext-f{font-family:var(--mono);font-size:9.5px;letter-spacing:.08em;color:var(--faint)}
@@ -2436,6 +2439,22 @@ stop[stop-color="#9BC0DC"]{stop-color:var(--txt)}
 .ps-cam-et.up{color:var(--up);border-color:color-mix(in srgb,var(--up) 45%,transparent)}
 .ps-cam-pie{display:flex;justify-content:space-between;gap:12px;margin-top:6px;
   font-family:var(--mono);font-size:10px;color:var(--faint)}
+
+/* ── LAS CINTAS ── el envoltorio; lo de adentro conserva su propio estilo */
+.px-rail.cinta{overflow:hidden;cursor:default}
+.cinta-env{display:flex;flex:0 0 auto;width:max-content;
+  animation:cintaCorre var(--dur,40s) linear infinite}
+.cinta-pista{display:flex;gap:12px;padding-right:12px;flex:0 0 auto}
+@keyframes cintaCorre{
+  from{transform:translateX(0)}
+  to{transform:translateX(calc(-1 * var(--w,50%)))}
+}
+.px-rail.cinta:hover .cinta-env,
+.px-rail.cinta:focus-within .cinta-env{animation-play-state:paused}
+@media (prefers-reduced-motion:reduce){
+  .cinta-env{animation:none}
+  .px-rail.cinta{overflow-x:auto}
+}
 </style>
 </head>
 <body>
@@ -2726,18 +2745,12 @@ stop[stop-color="#9BC0DC"]{stop-color:var(--txt)}
         <div style="display:flex;align-items:center;gap:12px;margin:22px 0 8px">
           <span class="micro" data-i18n="md.tasas">Win rate and desk ratios</span>
         </div>
-        <div class="mdk-wrap">
-          <button class="mdk-nav prev" id="mdKpiPrev" aria-label="Previous">&lsaquo;</button>
-          <div class="px-rail mdk-rail" id="mdKpiRail"></div>
-          <button class="mdk-nav next" id="mdKpiNext" aria-label="Next">&rsaquo;</button>
-        </div>
+        <div class="mdk-wrap">          <div class="px-rail mdk-rail" id="mdKpiRail"></div>        </div>
 
         <div style="display:flex;align-items:center;gap:12px;margin:22px 0 8px">
           <span class="micro" data-i18n="md.graficos">Northpoint Score y curvas</span>
         </div>
-        <div class="mdk-wrap">
-          <button class="mdk-nav prev" id="mdChPrev" aria-label="Previous">&lsaquo;</button>
-          <div class="px-rail mdk-rail" id="mdCharts">
+        <div class="mdk-wrap">          <div class="px-rail mdk-rail" id="mdCharts">
           <div class="panel md-ch">
             <div class="p-head"><h3 data-i18n="me.score">Northpoint Score</h3><span class="micro" id="mdScoreSub"></span></div>
             <div class="p-body">
@@ -2766,9 +2779,7 @@ stop[stop-color="#9BC0DC"]{stop-color:var(--txt)}
               <div id="dayEmpty"></div>
             </div>
           </div>
-          </div>
-          <button class="mdk-nav next" id="mdChNext" aria-label="Next">&rsaquo;</button>
-        </div>
+          </div>        </div>
 
         <!-- calendario -->
         <div class="panel mt">
@@ -6780,6 +6791,78 @@ function renderObjetivos(){
   }).join('');
 }
 
+/* ══════════ LAS CINTAS QUE NO SE DETIENEN ══════════
+   Las hileras de tasas y de gráficos estaban quietas: había que arrastrarlas
+   para ver que seguían. Ahora corren solas, en bucle y sin costura.
+
+   El truco: la pista lleva su contenido DOS veces y se anima de 0 a −(ancho de
+   UNA pista). Al llegar está mostrando la copia idéntica y el salto de vuelta a
+   0 no se ve.
+
+   TRES COSAS QUE NO SON OBVIAS Y QUE ROMPEN ESTO:
+
+   · La copia NO puede llevar los id. El carril de gráficos trae canvas con id
+     —radarCanvas, eqCanvas…— y duplicarlos deja DOS elementos con el mismo id:
+     getElementById encuentra el primero, se dibuja sólo ahí, y la copia pasa
+     vacía cada vuelta. Se le quitan todos.
+
+   · Y por eso los canvas de la copia se pintan A MANO con drawImage desde el
+     original. Si no, media cinta son cajas en blanco.
+
+   · La velocidad sale del ANCHO, no de una duración fija. Con segundos fijos,
+     una hilera de cuatro tarjetas corre lentísima y una de diez vuela. Con
+     píxeles por segundo, las dos se sienten igual.
+
+   Se pausa al pasar el mouse y al enfocar con el teclado: una cinta que no se
+   deja leer es un adorno. */
+function sincronizaLienzos(orig, copia){
+  const a = orig.querySelectorAll('canvas'), b = copia.querySelectorAll('canvas');
+  a.forEach((o, i) => {
+    const d = b[i]; if(!d || !o.width || !o.height) return;
+    d.width = o.width; d.height = o.height;
+    try{ d.getContext('2d').drawImage(o, 0, 0); }catch(e){}
+  });
+}
+
+function cintaInfinita(rail, pxSeg){
+  if(!rail) return;
+  let env = rail.querySelector(':scope > .cinta-env');
+  if(!env){
+    const hijos = [...rail.children];
+    if(!hijos.length) return;
+    env = document.createElement('div'); env.className = 'cinta-env';
+    const pista = document.createElement('div'); pista.className = 'cinta-pista';
+    hijos.forEach(h => pista.appendChild(h));   /* se MUEVEN los originales */
+    env.appendChild(pista);
+    rail.appendChild(env);
+    rail.classList.add('cinta');
+  }
+  const pista = env.querySelector('.cinta-pista:not(.copia)');
+  if(!pista || !pista.children.length) return;
+  const vieja = env.querySelector('.cinta-pista.copia');
+  if(vieja) vieja.remove();
+  const copia = pista.cloneNode(true);
+  copia.classList.add('copia');
+  copia.setAttribute('aria-hidden', 'true');
+  copia.querySelectorAll('[id]').forEach(e => e.removeAttribute('id'));
+  env.appendChild(copia);
+  sincronizaLienzos(pista, copia);
+  const w = pista.scrollWidth;
+  env.style.setProperty('--w', w + 'px');
+  env.style.setProperty('--dur', Math.max(14, w / (pxSeg || 26)).toFixed(1) + 's');
+}
+
+/* Los gráficos terminan de dibujarse después del layout, así que la copia nace
+   en blanco. Esto la vuelve a pintar cuando ya hay tinta en el original. */
+function repintaCintas(){
+  ['#mdKpiRail', '#mdCharts'].forEach(q => {
+    const env = document.querySelector(q + ' .cinta-env'); if(!env) return;
+    const o = env.querySelector('.cinta-pista:not(.copia)');
+    const c = env.querySelector('.cinta-pista.copia');
+    if(o && c) sincronizaLienzos(o, c);
+  });
+}
+
 function renderDashboard(){
   renderAcctPanel();
 
@@ -6843,6 +6926,11 @@ function renderDashboard(){
 
   /* ── los cuatro gráficos ── */
   drawRadar(); drawEquity(); drawDrawdown(); drawDaily();
+  /* las cintas se arman AQUÍ, ya con los gráficos dibujados, y se repintan un
+     instante después porque los canvas se asientan tras el layout */
+  cintaInfinita($('#mdKpiRail'), 30);
+  cintaInfinita($('#mdCharts'), 26);
+  setTimeout(repintaCintas, 280);
 
   /* ── extremos: el mejor, el total y el peor ── */
   const mejor = todos.length ? todos.reduce((a,t)=>(t.pnl||0)>(a.pnl||0)?t:a) : null;
@@ -7727,9 +7815,9 @@ Analiza el día de este trader. Si hay screenshots, comenta lo que se ve en el g
 
 /* franja de KPIs de Mi desempeño: arrastra o usa las flechas, igual que Precios en Inicio */
 /* las tres hileras se mueven igual: flechas, arrastre y rueda */
-[['#mdKpiPrev','#mdKpiRail',-200], ['#mdKpiNext','#mdKpiRail',200],
- ['#objPrev','#dashKpis',-210],    ['#objNext','#dashKpis',210],
- ['#mdChPrev','#mdCharts',-352],   ['#mdChNext','#mdCharts',352],
+/* Las flechas de las dos cintas se fueron con el scroll: corren solas y un
+   botón que no mueve nada es peor que no tenerlo. */
+[['#objPrev','#dashKpis',-210],    ['#objNext','#dashKpis',210],
  ['#pfPrev','#pfKpis',-200],       ['#pfNext','#pfKpis',200]
 ].forEach(([btn, rail, dx]) =>
   $(btn)?.addEventListener('click', ()=> $(rail).scrollBy({left:dx, behavior:'smooth'})));
@@ -14603,7 +14691,9 @@ function vistaActual(){
 function renderAll(){ applyProfile(); aplicarIdioma(); pintaPlegado(); render(vistaActual()); }
 
 addEventListener('resize', ()=>{
-  if($('#v-journal').classList.contains('on')) drawEquity();
+  /* al redibujar la curva hay que repintar la copia de la cinta: si no, el
+     original se actualiza y la mitad del bucle sigue enseñando datos viejos */
+  if($('#v-journal').classList.contains('on')){ drawEquity(); repintaCintas(); }
 });
 
 
@@ -14613,7 +14703,7 @@ function applyTheme(t){
   else document.documentElement.removeAttribute('data-theme');
   try{ localStorage.setItem('np_theme', t); }catch(e){}
   /* la curva de equity se pinta en canvas: repintar con los colores del tema */
-  try{ if(currentUser() && $('#v-journal') && $('#v-journal').classList.contains('on')) drawEquity(); }catch(e){}
+  try{ if(currentUser() && $('#v-journal') && $('#v-journal').classList.contains('on')){ drawEquity(); repintaCintas(); } }catch(e){}
 }
 var __theme = 'dark';
 try{ __theme = localStorage.getItem('np_theme') || 'dark'; }catch(e){}
