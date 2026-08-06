@@ -4574,9 +4574,12 @@ function deVeras(lista){ return lista.filter(a => !esSim(a)); }
 function acctsSel(){
   const sel = (S.ui && S.ui.acctSel) || { mode:'all', ids:[] };
   if(sel.mode === 'custom'){
-    /* aquí SÍ manda lo que el usuario eligió, sim incluidas: las pidió él */
+    /* aquí SÍ manda lo que el usuario eligió, sim incluidas: las pidió él —
+       pero elegir NO da acceso a lo ajeno: la selección se guarda y sobrevive,
+       así que una que se hizo cuando todo se veía revuelto seguía arrastrando
+       la cuenta de otro socio a las KPIs, las gráficas y el calendario. */
     const set = new Set(sel.ids);
-    const out = ordenar(S.accounts.filter(a => set.has(a.id)));
+    const out = ordenar(mias(S.accounts).filter(a => set.has(a.id)));
     return out.length ? out : ordenar(deVeras(cuentasVivas()));
   }
   if(sel.mode === 'sim')    return ordenar(cuentasVivas().filter(esSim));
@@ -5155,7 +5158,9 @@ function renderPicker(host){
   if(!host) return;
   const abierto = host.querySelector('.acct-pop') && !host.querySelector('.acct-pop').hidden;
   const sel = new Set(acctsSel().map(a=>a.id));
-  const huerf = S.trades.some(t => !Array.isArray(t.accts) || t.accts.includes(SIN_CUENTA));
+  /* los trades sin cuenta que se cuentan son los MÍOS: los de otro socio me
+     encendían el renglón «sin cuenta» por un pendiente que no era mío */
+  const huerf = misTrades().some(t => !Array.isArray(t.accts) || t.accts.includes(SIN_CUENTA));
   const modo = (S.ui.acctSel||{}).mode || 'all';
   const tic = '<svg viewBox="0 0 24 24"><path d="M4 12.5 9.5 18 20 6.5"/></svg>';
 
@@ -5285,7 +5290,7 @@ function refrescarSeleccion(){
 
 function toggleAcct(id){
   const actuales = new Set(acctsSel().map(a=>a.id));
-  if(idsSel().has(SIN_CUENTA) && S.trades.some(t=>(t.accts||[]).includes(SIN_CUENTA))) actuales.add(SIN_CUENTA);
+  if(idsSel().has(SIN_CUENTA) && misTrades().some(t=>(t.accts||[]).includes(SIN_CUENTA))) actuales.add(SIN_CUENTA);
   if(actuales.has(id)){
     if(actuales.size <= 1){ toast(tr('ac.min1')); return; }
     actuales.delete(id);
@@ -5504,7 +5509,10 @@ window.borrarCuenta = id => {
 window.asignarHuerfanos = destino => {
   const ids = destino === '*' ? ordenar(mias(S.accounts)).map(a=>a.id) : [destino];
   let n = 0;
-  S.trades.forEach(t=>{ if(!Array.isArray(t.accts) || t.accts.includes(SIN_CUENTA)){ t.accts = [...ids]; n++; } });
+  /* Éste no sólo enseñaba lo ajeno: lo MOVÍA. Barría los trades sin cuenta de
+     toda la mesa —los de Pablo también— y los metía a MIS cuentas, con su P&L.
+     Se toca únicamente lo mío; lo de cada quien lo asigna cada quien. */
+  misTrades().forEach(t=>{ if(!Array.isArray(t.accts) || t.accts.includes(SIN_CUENTA)){ t.accts = [...ids]; n++; } });
   save(); renderAcctMgr(); renderDashboard(); renderAgentes();
   toast(n + ' trade' + (n>1?'s':'') + ' asignado' + (n>1?'s':''));
 };
@@ -6318,7 +6326,7 @@ function renderCamino(){
     $('#pgCaminoSub').textContent = '';
     $('#pgClimb').innerHTML = '';
     $('#pgPasos').innerHTML = '';
-    const hayFondeadas = S.accounts.some(a => !esLive(a) && !esSim(a));
+    const hayFondeadas = mias(S.accounts).some(a => !esLive(a) && !esSim(a));
     $('#pgCaminoNota').textContent = hayFondeadas
       ? bi('No account matches this filter. Change the selection above.',
            'No account matches this filter. Change the selection above.')
