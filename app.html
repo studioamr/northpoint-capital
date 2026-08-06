@@ -1938,6 +1938,40 @@ button.tag.quemada{text-decoration:line-through;text-decoration-color:var(--down
   background:linear-gradient(90deg,color-mix(in srgb,var(--up) 9%,transparent),color-mix(in srgb,var(--up) 34%,transparent));
   transition:width .6s cubic-bezier(.4,0,.2,1)}
 .fc-linea.yo .fc-track>i{background:linear-gradient(90deg,color-mix(in srgb,var(--up) 16%,transparent),color-mix(in srgb,var(--up) 55%,transparent))}
+/* ── EL CAMINO DE REGRESO ──
+   Rayado rojo por DEBAJO del avance: es el tramo de pista que se puede desandar
+   antes de tocar el drawdown. Va detrás del monito y con mezcla de color, así
+   que se lee en claro y en oscuro sin declararlo dos veces. */
+.fc-caida{position:absolute;top:0;height:100%;display:block;border-radius:99px;
+  background:repeating-linear-gradient(-45deg,
+    color-mix(in srgb,var(--down) 30%,transparent) 0 5px,
+    color-mix(in srgb,var(--down) 12%,transparent) 5px 10px);
+  box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--down) 34%,transparent);
+  pointer-events:none}
+.fc-cap{font-family:var(--mono);font-size:12px;color:var(--up);margin-left:6px}
+
+/* ── EL MANUAL DE LA CASA ── lectura larga, así que respira: medida de columna
+   corta, mucho aire entre bloques y la numeración fuera del texto. */
+.mn-intro{font-size:14.5px;line-height:1.7;color:var(--txt);max-width:62ch;
+  padding-bottom:22px;border-bottom:1px solid var(--line-soft)}
+.mn-bloque{padding:24px 0;border-bottom:1px solid var(--line-soft)}
+.mn-h{display:flex;align-items:center;gap:11px;margin-bottom:16px}
+.mn-h b{font-size:15px;letter-spacing:.01em}
+.mn-k{font-family:var(--mono);font-size:10px;color:var(--faint);letter-spacing:.14em}
+.mn-ico{width:26px;height:26px;flex:0 0 26px;display:grid;place-items:center;
+  border:1px solid var(--line-soft);border-radius:7px;color:var(--faint)}
+.mn-ico svg{width:15px;height:15px;stroke:currentColor;fill:none}
+.mn-paso{display:grid;grid-template-columns:42px 1fr;gap:12px;padding:11px 0}
+.mn-n{font-family:var(--mono);font-size:10px;color:var(--faint);padding-top:3px;letter-spacing:.06em}
+.mn-paso b{display:block;font-size:14px;font-weight:600;margin-bottom:5px}
+.mn-paso p{font-size:13.5px;line-height:1.68;color:var(--dim);max-width:62ch}
+.mn-cierre{margin-top:24px;font-size:14.5px;line-height:1.7;color:var(--txt);max-width:62ch;
+  border-left:2px solid var(--up);padding:14px 18px;border-radius:0 10px 10px 0;
+  background:color-mix(in srgb,var(--up) 7%,transparent)}
+@media (max-width:560px){
+  .mn-paso{grid-template-columns:1fr;gap:2px}
+  .mn-n{padding-top:0}
+}
 .fc-linea.vacia .fc-track{border-style:dashed}
 .fc-linea.vacia .fc-track>i{background:none}
 .fc-cara{position:absolute;top:50%;transform:translate(-50%,-50%);width:46px;height:46px;
@@ -2453,6 +2487,7 @@ stop[stop-color="#9BC0DC"]{stop-color:var(--txt)}
         <!-- El tablero del negocio: el camino a payout con el proceso de
              cada socio sobre la banda. -->
         <div class="panel mt2" id="pgFirma"></div>
+        <div class="panel mt2" id="pgManual"></div>
 
       </section>
 
@@ -4521,6 +4556,25 @@ function quemaDetectada(a){
 /* Marcada a mano o reventada por la aritmética: para el dinero da lo mismo. */
 const estaQuemada = a => !esViva(a) || !!quemaDetectada(a);
 const cuentaEnPie = a => !estaQuemada(a);
+
+/* ── CUÁNTO FALTA PARA MORIR ──
+   La carrera sólo enseñaba hacia adelante, y una carrera que no puede perderse
+   no asusta a nadie. Esto es el otro lado: cuánto puede caer una cuenta desde
+   donde está hasta tocar su línea de drawdown. Se camina igual que quemaDetectada
+   —el mismo pico, la misma línea, el mismo congelamiento en lockAtProfit— para
+   que las dos cifras no puedan contradecirse. */
+function lineaDD(a){
+  const R = reglasDe(a); if(!R) return null;
+  const porDia = {}, hoy = todayISO();
+  (S.trades || []).forEach(t => {
+    if(t.date >= a.desde && t.date <= hoy && (t.accts || []).includes(a.id))
+      porDia[t.date] = (porDia[t.date] || 0) + (t.pnl || 0); });
+  let bal = a.start, pico = a.start;
+  Object.keys(porDia).sort().forEach(d => { bal += porDia[d]; pico = Math.max(pico, bal); });
+  let linea = pico - R.maxDD;
+  if(R.lockAtProfit != null && linea >= a.start + R.lockAtProfit) linea = a.start + R.lockAtProfit;
+  return { linea, balance: bal, margen: Math.max(0, bal - linea), maxDD: R.maxDD };
+}
 /* Sin tipo marcado se asume fondeada: así las cuentas viejas no cambian de
    naturaleza al migrar. 'sim' es dinero de práctica — ni fondeada (no hay
    firma que la respalde) ni cuenta propia real (no cuenta para nada de lo
@@ -5547,11 +5601,19 @@ function carreraSocio(uid){
   const suyas = todas.filter(cuentaEnPie);
   const quemadas = todas.length - suyas.length;
   if(!suyas.length) return { uid, cuentas:0, avance:0, total:0, pct:0, cobrado:0,
+                             capital:0, margen:0, caidaPct:0,
                              quemadas, sinDatos: !todas.length };
-  let avance = 0, total = 0, pagos = 0;
-  suyas.forEach(a => { const c = carreraCuenta(a); avance += c.avance; total += c.total; if(c.pasoPago) pagos++; });
-  return { uid, cuentas:suyas.length, avance, total,
+  let avance = 0, total = 0, pagos = 0, capital = 0, margen = 0;
+  suyas.forEach(a => {
+    const c = carreraCuenta(a); avance += c.avance; total += c.total; if(c.pasoPago) pagos++;
+    capital += c.balance;
+    const dd = lineaDD(a); if(dd) margen += dd.margen;
+  });
+  return { uid, cuentas:suyas.length, avance, total, capital, margen,
            pct: total > 0 ? Math.max(0, Math.min(100, avance / total * 100)) : 0,
+           /* cuánto de la pista puede perder antes de morir, en la MISMA escala
+              que el avance: así el trozo rojo se lee contra el verde */
+           caidaPct: total > 0 ? Math.max(0, Math.min(100, margen / total * 100)) : 0,
            pagos, quemadas, sinDatos:false };
 }
 /* la cara del socio, del tamaño que se pida, con su look real */
@@ -5563,16 +5625,141 @@ function caraSocio(uid, px = 40){
   return p ? `<img src="${caraLook({ ...p.look, fondo: p.look.traje }, 128)}" alt="">` : '<span>?</span>';
 }
 
+
+/* ════════ EL MANUAL DE LA CASA ════════
+   Va debajo de la carrera, en The Desk, porque es lo primero que necesita quien
+   acaba de entrar. Está escrito para alguien que NO SABE NADA de trading: no
+   supone que conoce qué es un futuro, ni un tick, ni un drawdown.
+
+   Su lógica es la nueva: el pre-market NO busca nada — prepara y espera. Cuando
+   ICE VADER suena, ahí y sólo ahí se abre la operación. Por eso los pasos van en
+   ese orden y por eso el paso 5 dice explícitamente qué hacer cuando NO suena,
+   que es lo que más va a pasar y donde más gente se rompe.
+
+   Se escribe una sola vez y se pinta en las dos lenguas. */
+const MANUAL = {
+  intro: [
+    'Esto es lo que hacemos, dicho para alguien que nunca ha operado. Léelo entero antes de tocar una cuenta: son diez minutos y te ahorra los primeros $50,000 de errores.',
+    'This is what we do, written for someone who has never traded. Read it end to end before you touch an account: ten minutes that save you the first $50,000 of mistakes.',
+  ],
+  bloques: [
+    { k:'01', t:['Qué operamos','What we trade'], ico:'columnas', pasos:[
+      { t:['MNQ, y nada más','MNQ, nothing else'],
+        d:['Es un contrato de futuro sobre el Nasdaq 100 —el índice de las 100 empresas tecnológicas más grandes de EE.UU.—. La versión «micro»: por eso la M. Cuando el índice sube, tu posición sube; cuando baja, baja.',
+           'A futures contract on the Nasdaq 100 — the index of the 100 largest US tech companies. The "micro" version: that is the M. When the index goes up, your position goes up; when it goes down, it goes down.'] },
+      { t:['Un punto vale $2','One point is worth $2'],
+        d:['El precio se mueve en puntos. Cada punto que se mueve a tu favor son $2 por contrato; cada punto en contra, $2 menos. Con 2 contratos, $4 por punto. Ahí está toda la aritmética.',
+           'Price moves in points. Every point in your favour is $2 per contract; every point against you, $2 less. With 2 contracts, $4 a point. That is the whole arithmetic.'] },
+      { t:['Nunca minis','Never minis'],
+        d:['Existe el NQ, que es el mismo contrato pero diez veces más grande: $20 el punto. No se toca. Un error que en micro cuesta $40 en mini cuesta $400, y las cuentas no perdonan eso.',
+           'There is NQ, the same contract ten times bigger: $20 a point. We do not touch it. A mistake that costs $40 in micro costs $400 in mini, and the accounts do not forgive that.'] },
+    ]},
+    { k:'02', t:['Con qué dinero','Whose money'], ico:'escudo', pasos:[
+      { t:['No es tu dinero, es de una fondeadora','It is not your money, it is a prop firm’s'],
+        d:['Compras una evaluación —unos $80 dólares— y te prestan una cuenta de $50,000 de práctica. Si demuestras que sabes, te dan una cuenta real con ese tamaño y te quedas con la mayor parte de lo que ganes.',
+           'You buy an evaluation — about $80 — and they lend you a $50,000 practice account. If you prove you can trade it, they give you a live one that size and you keep most of what you make.'] },
+      { t:['La línea de drawdown es lo único que te puede matar','The drawdown line is the only thing that can kill you'],
+        d:['Cada cuenta trae un piso que se mueve. Si tu balance lo toca, la cuenta muere y se acabó — no hay segunda oportunidad ni apelación. En Tradeify son $2,000 por debajo de tu punto más alto. Ese número es tu vida entera.',
+           'Every account has a moving floor. If your balance touches it, the account dies — no second chance, no appeal. At Tradeify it is $2,000 below your highest point. That number is your whole life.'] },
+      { t:['Por eso arriba se ve el camino de regreso','That is why the track shows the way back'],
+        d:['En la carrera de la firma, el rayado rojo detrás de tu monito es cuánto puedes caer antes de tocar esa línea. Si se hace chiquito, no estás cerca de ganar: estás cerca de morir.',
+           'On the firm’s race, the red hatching behind your avatar is how far you can fall before touching that line. If it gets small, you are not close to winning: you are close to dying.'] },
+    ]},
+    { k:'03', t:['Cuándo se opera','When we trade'], ico:'puerta', pasos:[
+      { t:['Una sola ventana: 7:00 a 8:30','One window only: 7:00 to 8:30'],
+        d:['Hora de Nueva York, de lunes a viernes. Nada abierto pasadas las 8:30, aunque vaya ganando. Fuera de esa hora y media, el terminal está para mirar, no para operar.',
+           'New York time, Monday to Friday. Nothing left open past 8:30, even if it is winning. Outside that hour and a half the terminal is for looking, not trading.'] },
+      { t:['Máximo 2 trades por día','Two trades a day, maximum'],
+        d:['Estrictos. Si ganas el primero, se cierra la plataforma: el día terminó. Si lo pierdes, queda un solo intento más. No hay tercero — el tercero es de donde salen las cuentas quemadas.',
+           'Strict. If you win the first one, close the platform: the day is over. If you lose it, you get one more. There is no third — the third is where burned accounts come from.'] },
+    ]},
+    { k:'04', t:['Antes de que abra','Before the open'], ico:'semilla', pasos:[
+      { t:['Prepara, no busques','Prepare, do not hunt'],
+        d:['El pre-market NO sirve para encontrar un trade. Sirve para dejar todo listo y quitarte la opinión de encima. Si llegas con una idea de para dónde va el mercado, vas a torcer lo que veas para que te dé la razón.',
+           'Pre-market is NOT for finding a trade. It is for getting everything ready and getting your opinion out of the way. If you arrive with a view on where the market is going, you will bend what you see to agree with you.'] },
+      { t:['Arma la alerta y pruébala','Arm the alert and test it'],
+        d:['Carga ICE VADER en el gráfico de MNQ y activa su alerta CON SONIDO. Óyela sonar una vez. Una alerta muda es la forma más cara de perderse un trade — o peor, de entrar a mano porque «lo viste».',
+           'Load ICE VADER on the MNQ chart and turn its alert on WITH SOUND. Hear it fire once. A silent alert is the most expensive way to miss a trade — or worse, to enter by hand because you "saw it".'] },
+      { t:['Escribe el riesgo antes','Write the risk down first'],
+        d:['Cuántos contratos, dónde va el stop y cuál es el objetivo. Escrito ANTES de que suene nada. Decidir el tamaño con la posición ya abierta es decidirlo con miedo.',
+           'How many contracts, where the stop goes, what the target is. Written BEFORE anything fires. Deciding size with a position already open is deciding it while scared.'] },
+    ]},
+    { k:'05', t:['La entrada','The entry'], ico:'monte', pasos:[
+      { t:['Se entra cuando suena. Sólo cuando suena.','You enter when it fires. Only when it fires.'],
+        d:['ICE VADER manda la alarma y la alarma decide: no tú. No hay «casi», no hay «se ve igual», no hay «esta vez sí es». Si la alarma no sonó, el trade está prohibido — no desaconsejado, prohibido.',
+           'ICE VADER sends the alarm and the alarm decides: not you. There is no "almost", no "it looks the same", no "this time it is real". If the alarm did not fire, the trade is forbidden — not discouraged, forbidden.'] },
+      { t:['Sonó: ahora sí abres','It fired: now you open'],
+        d:['Entras con el tamaño y el stop que ya escribiste, sin perseguir el precio. La decisión ya la tomó la señal; lo tuyo es sólo comprobar que se puede: que estás en ventana, que te quedan balas y que el riesgo del día aguanta.',
+           'You enter with the size and stop you already wrote, without chasing price. The signal already decided; your job is only to check you may: that you are in the window, you have bullets left, and the day’s risk allows it.'] },
+      { t:['No sonó: ése es el trabajo','It did not fire: that IS the job'],
+        d:['La mayoría de los días no vas a operar, y eso no es un día perdido — es un día bien hecho. Se cierra la plataforma a las 8:30 y se va uno. Quien no aguanta un día en blanco termina inventando trades, y de ahí nadie vuelve.',
+           'Most days you will not trade, and that is not a wasted day — it is a day done right. Close the platform at 8:30 and leave. Whoever cannot stand a blank day ends up inventing trades, and nobody comes back from that.'] },
+    ]},
+    { k:'06', t:['Después','Afterwards'], ico:'ave', pasos:[
+      { t:['Registra el trade aquí mismo','Log the trade right here'],
+        d:['Con su screenshot y diciendo la verdad sobre si la alarma sonó o no. La app te marca solo si rompiste una regla. Un journal que sólo acepta trades limpios no es un journal: es una vitrina.',
+           'With its screenshot, and telling the truth about whether the alarm fired. The app flags you by itself if you broke a rule. A journal that only accepts clean trades is not a journal: it is a display case.'] },
+      { t:['Lo que se mide es el sistema, no el resultado','What gets measured is the system, not the result'],
+        d:['Un trade sin alarma que GANÓ queda marcado igual, y es peor que uno que perdió: te enseñó que romper la regla funciona. Eso es exactamente lo que quiebra las cuentas tres semanas después.',
+           'A trade with no alarm that WON gets flagged the same, and it is worse than one that lost: it taught you that breaking the rule works. That is exactly what blows accounts three weeks later.'] },
+    ]},
+  ],
+  cierre: [
+    'Si te quedas con una sola frase: aquí no se gana adivinando para dónde va el mercado. Se gana esperando sin hacer nada hasta que la señal manda, y obedeciéndola igual el día que te da flojera y el día que estás seguro de que se equivoca.',
+    'If you keep one sentence: here you do not win by guessing where the market goes. You win by waiting, doing nothing, until the signal fires — and obeying it the same on the day you cannot be bothered and the day you are sure it is wrong.',
+  ],
+};
+
+function renderManual(){
+  const host = $('#pgManual'); if(!host) return;
+  const paso = (p, n) => `
+    <div class="mn-paso">
+      <span class="mn-n">${n}</span>
+      <div><b>${loc(p.t)}</b><p>${loc(p.d)}</p></div>
+    </div>`;
+  host.innerHTML = `
+    <div class="p-head">
+      <h3>${bi('Cómo se opera aquí','How we trade here')}</h3>
+      <span class="micro">${bi('de cero · nadie nace sabiendo','from zero · nobody is born knowing')}</span>
+    </div>
+    <div class="p-body">
+      <p class="mn-intro">${loc(MANUAL.intro)}</p>
+      ${MANUAL.bloques.map(b => `
+        <div class="mn-bloque">
+          <div class="mn-h">
+            <span class="mn-ico">${icoSVG(b.ico)}</span>
+            <span class="mn-k">${b.k}</span>
+            <b>${loc(b.t)}</b>
+          </div>
+          ${b.pasos.map((p, i) => paso(p, b.k + '.' + (i + 1))).join('')}
+        </div>`).join('')}
+      <p class="mn-cierre">${loc(MANUAL.cierre)}</p>
+    </div>`;
+}
+
 function renderFirmaCarrera(){
   const host = $('#pgFirma'); if(!host) return;
   const P = S.presencia || {}, hoy = Date.now();
+  /* ── QUIÉN SALE EN LA PISTA ──
+     Antes salían los tres de casa siempre, aunque uno no se hubiera registrado
+     nunca: la pista tenía un carril fantasma que decía «sin datos» y ocupaba un
+     lugar. Ahora sale quien EXISTE de verdad — el que se dio de alta (tiene
+     correo registrado o está en la mesa) o el que ya trabajó (tiene cuentas o
+     trades). Y tú siempre, aunque acabes de entrar. */
+  const registrado = uid => !!(S.correos || {})[uid] || !!(S.mesa || {})[uid]
+    || uid === (S.session && S.session.user);
   const socios = PERSONAJES.map(p => {
     const c = carreraSocio(p.id);
     const visto = P[p.id] || 0;
     return { ...c, nom:p.nom, enMesa: (hoy - visto) < PRESENCIA_MIN * 60000,
              hace: visto ? Math.round((hoy - visto) / 60000) : null };
-  });
-  const orden = socios.slice().sort((a, b) => b.pct - a.pct);
+  }).filter(x => registrado(x.uid) || !x.sinDatos);
+  /* ── EL ORDEN ES POR DINERO, NO POR PORCENTAJE ──
+     Un porcentaje alto sobre poco capital iba delante de alguien con el doble
+     en la mesa: André con \$100,000 salía primero que Pablo con \$200,000. Aquí
+     el primero es el que más capital tiene en futuros, que es lo que de verdad
+     mide quién va ganando. El porcentaje desempata. */
+  const orden = socios.slice().sort((a, b) => (b.capital || 0) - (a.capital || 0) || b.pct - a.pct);
   const yo = S.session && S.session.user;
   const conDatos = socios.filter(x => !x.sinDatos).length;
   /* Sin sesión de nube este panel es una foto vieja: ni lo tuyo sube ni lo de
@@ -5587,8 +5774,11 @@ function renderFirmaCarrera(){
     const ts = SY[uid] || 0;
     if(!ts) return ' · ' + bi('nunca ha subido desde su equipo','never uploaded from their device');
     const min = Math.round((hoy - ts) / 60000);
-    return ' · ↑ ' + (min < 1 ? bi('ahorita','just now') : min < 60 ? bi('hace ','')+ min + bi(' min',' min ago')
-           : bi('hace ','') + Math.round(min / 60) + ' h' + bi('','ago'));
+    /* «hace 24 h» en español, «24 h ago» en inglés. Estaba partido en dos
+       bi() y en inglés salía pegado: «24 hago». */
+    return ' · ↑ ' + (min < 1 ? bi('ahorita','just now')
+      : min < 60 ? bi('hace ' + min + ' min', min + ' min ago')
+      : bi('hace ' + Math.round(min / 60) + ' h', Math.round(min / 60) + ' h ago'));
   };
 
   host.innerHTML = `
@@ -5609,16 +5799,23 @@ function renderFirmaCarrera(){
             <span class="fc-pos mono">${x.sinDatos ? '—' : (i + 1)}</span>
             <div class="fc-track">
               <i style="width:${x.sinDatos ? 0 : x.pct}%"></i>
+              ${x.sinDatos || !x.caidaPct ? '' : `
+              <!-- el camino de regreso: lo que se puede DESANDAR antes de tocar
+                   el drawdown. Empieza donde vas y se pinta hacia atrás. -->
+              <u class="fc-caida" style="left:${Math.max(0, x.pct - x.caidaPct)}%;width:${Math.min(x.pct, x.caidaPct)}%"
+                 title="${bi('Puedes caer ','You can fall ')}${fmt$(x.margen)}${bi(' antes de tocar el drawdown',' before hitting the drawdown')}"></u>`}
               <span class="fc-cara" style="left:clamp(23px, ${x.pct}%, calc(100% - 23px))">
                 ${caraSocio(x.uid, 46)}
                 ${x.enMesa ? '<em class="fc-viva"></em>' : ''}
               </span>
             </div>
             <span class="fc-info">
-              <b>${esc(x.nom)}${x.sinDatos ? '' : ` <span class="fc-pct">${Math.round(x.pct)}%</span>`}</b>
+              <b>${esc(x.nom)}${x.sinDatos ? '' : ` <span class="fc-cap">${fmt$(x.capital)}</span>`}</b>
               <em>${x.sinDatos
                  ? bi('sin datos en esta máquina','no data on this machine')
-                 : x.cuentas + (x.cuentas === 1 ? bi(' cuenta',' account') : bi(' cuentas',' accounts'))
+                 : Math.round(x.pct) + '% · ' + x.cuentas + (x.cuentas === 1 ? bi(' cuenta',' account') : bi(' cuentas',' accounts'))
+                   /* lo que se puede perder antes de morir, dicho en dinero */
+                   + (x.margen ? ' · ' + bi('aguanta ','holds ') + fmt$(x.margen) : '')
                    + (x.pagos ? ' · ' + x.pagos + bi(' cobrada',' paid') + (x.pagos > 1 ? 's' : '') : '')
                    /* una cuenta que se quemó sale de la carrera, pero se dice:
                       que el número baje sin explicación se siente a error */
@@ -13357,6 +13554,7 @@ function renderAgentes(){
   /* el tablero del negocio: el camino a payout con el proceso de cada socio
      (la caja y los objetivos viven en Mi dinero; la carrera se retiró) */
   renderFirmaCarrera();
+  renderManual();
 }
 
 /* ════════ LA VIDA DEL NEGOCIO ════════
