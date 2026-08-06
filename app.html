@@ -2484,10 +2484,10 @@ stop[stop-color="#9BC0DC"]{stop-color:var(--txt)}
           <div class="grid g2">
             <div>
               <div class="panel">
-                <div class="p-head"><h3>Bias for the day</h3><span class="micro" id="rtBiasTag"></span></div>
+                <div class="p-head"><h3>La señal · ICE VADER</h3><span class="micro" id="rtBiasTag"></span></div>
                 <div class="p-body">
                   <div class="chips" id="rtBias" style="margin-top:0"></div>
-                  <textarea id="rtSesgo" rows="2" class="mt" style="width:100%" placeholder="Why? Daily bias, HTF structure, levels I am defending today..."></textarea>
+                  <textarea id="rtSesgo" rows="2" class="mt" style="width:100%" placeholder="Notas de la señal: en qué gráfico está cargada, qué alerta armaste, si hubo algo raro..."></textarea>
                 </div>
               </div>
               <div class="panel mt">
@@ -6710,27 +6710,42 @@ function drawEquity(){
 /* Los checklists se guardan como pares [es,en] y se resuelven al pintar. */
 /* ══ EL PASO A PASO ══
    Dos listas con trabajos distintos, y en ese orden:
-   · PRE-MARKET (7:00 → 7:30) es PREPARAR. Todo lo que se hace ANTES de que el
-     mercado decida nada: plataforma, noticias, mapa de niveles, cuentas, sesgo
-     y —lo último— el riesgo escrito antes de ver un solo precio de apertura.
-   · VALIDADOR (7:45 en adelante) es DECIDIR. Sólo corre cuando el rango YA se
-     formó, y se apoya en el mapa que dejaste hecho: ¿sigue vivo alguno de esos
-     niveles?, ¿el break va hacia él?, ¿hay confirmación?
-   Antes se traslapaban: el pre-market pedía «esperar el ORB» y el validador
-   volvía a juzgar el mismo break. Ahora uno prepara y el otro juzga. */
+   · PRE-MARKET (7:00 → 7:30) es DEJAR TODO LISTO PARA OBEDECER. Desde que ICE
+     VADER manda, preparar ya no es armar una opinión: es asegurarse de que la
+     señal está cargada, que la alerta suena, que el riesgo está escrito antes
+     de que suene, y que no traes lado. El pre-market ya no produce una tesis —
+     produce a alguien capaz de ejecutar sin discutir.
+   · VALIDADOR (cuando suena la alarma) es COMPROBAR, no decidir. La decisión ya
+     la tomó la señal; lo que queda es verificar que se puede tomar: ventana,
+     trades disponibles, riesgo del día y que no vengas de una pérdida.
+   Antes las dos listas juzgaban el mismo break, una preparándolo y la otra
+   volviéndolo a evaluar. Hoy una alista y la otra deja pasar. */
+/* ── EL PRE-MARKET, DESPUÉS DE ICE VADER ──
+   La lista vieja preparaba a un operador que DECIDE: mapa de niveles, bias del
+   día, a favor de qué voy a buscar. Eso servía cuando la entrada salía de tu
+   criterio. Con la señal mandando, ese mismo trabajo se vuelve un problema:
+   quien llega con un bias armado toma la alarma que le da la razón y se salta
+   la que se la quita, y entonces ya no está siguiendo el sistema — está
+   usándolo de coartada.
+
+   Así que el bias sale y entra lo que de verdad decide el día: que la señal
+   esté cargada, que la alerta esté ARMADA Y PROBADA (una alerta muda es la
+   forma más cara de perderse el trade, o peor, de entrar a mano), que el riesgo
+   esté escrito antes de que suene, y que las manos estén quietas hasta que
+   suene. */
 const PRE_RAW = [
-  [['Plataforma lista','Platform ready'],
-   ['TradingView abierto y los gráficos en su sitio.','TradingView open and the charts where they belong.'],'7:00'],
+  [['Ice Vader en el gráfico','Ice Vader on the chart'],
+   ['TradingView abierto con el indicador cargado en MNQ.','TradingView open with the indicator loaded on MNQ.'],'7:00'],
+  [['Alerta armada y probada','Alert armed and tested'],
+   ['La alerta está activa, con sonido, y la oí sonar una vez.','The alert is on, with sound, and I heard it fire once.'],'7:05'],
   [['Noticias del día','Today’s news'],
-   ['Calendario macro revisado: sé si hay evento y a qué hora.','Macro calendar checked: I know if there is an event and when.'],'7:05'],
-  [['Mapa de niveles','Level map'],
-   ['H/L de Asia y Londres, PDH y PDL marcados en el gráfico.','Asia and London highs and lows, PDH and PDL marked on the chart.'],'7:10'],
+   ['Calendario macro revisado: sé si hay evento y a qué hora.','Macro calendar checked: I know if there is an event and when.'],'7:10'],
   [['Estado de cuentas','Account status'],
    ['Balance, colchón y cuánto puedo perder hoy sin romper nada.','Balance, cushion and how much I can lose today without breaking anything.'],'7:15'],
-  [['Bias for the day','Bias for the day'],
-   ['A favor de qué voy a buscar, y por qué.','Which way I am looking, and why.'],'7:20'],
   [['Riesgo escrito','Risk written down'],
-   ['Contratos, stop y objetivo definidos ANTES de ver la apertura.','Size, stop and target set BEFORE seeing the open.'],'7:25'],
+   ['Contratos, stop y objetivo definidos ANTES de que suene.','Size, stop and target set BEFORE it fires.'],'7:20'],
+  [['Sin bias, manos quietas','No bias, hands off'],
+   ['No traigo lado. Hasta que suene la alarma, no toco nada.','I have no side. Until the alarm fires, I touch nothing.'],'7:25'],
 ];
 /* El validador no se toca antes de las 7:45: el primer punto es justamente
    haber dejado correr el rango sin meter la mano. */
@@ -6858,7 +6873,10 @@ function renderSesion(){
     if(!S.ui.rtVozOff) rtDi('Co-piloto en línea.'); };
 
   /* ── PRE · sesgo, niveles, plan, compromisos ── */
-  const BIAS = [['alcista','↑ ALCISTA'],['bajista','↓ BAJISTA'],['neutral','↔ NEUTRAL']];
+  /* Ya no se elige un LADO: el lado lo dice la alarma cuando suena. Lo que se
+     declara aquí es si la alerta quedó lista, que es lo único que de verdad
+     decide si hoy se puede operar. */
+  const BIAS = [['armada','✓ ARMADA Y PROBADA'],['muda','✕ SIN ARMAR']];
   $('#rtBias').innerHTML = BIAS.map(([v,l]) =>
     `<button type="button" data-v="${v}" class="${rt.bias===v?'on':''}">${l}</button>`).join('');
   $$('#rtBias button').forEach(b => b.onclick = () => {
@@ -6866,7 +6884,8 @@ function renderSesion(){
     rtDi('Sesgo confirmado: ' + b.dataset.v + '. Ajustamos el plan.');
     renderSesion();
   });
-  $('#rtBiasTag').textContent = rt.bias ? rt.bias.toUpperCase() : 'NOT SET';
+  $('#rtBiasTag').textContent = rt.bias === 'armada' ? 'LISTA · ESPERANDO ALARMA'
+    : rt.bias === 'muda' ? 'SIN ARMAR — HOY NO SE OPERA' : 'SIN DECLARAR';
   const liga = (id, k, num) => { const el = $('#'+id); if(!el) return;
     if(document.activeElement !== el) el.value = rt[k] ?? '';
     el.onchange = () => { rt[k] = num ? (parseFloat(el.value)||0) : el.value; save(); }; };
@@ -6874,10 +6893,23 @@ function renderSesion(){
   liga('rtMaxT','maxT',true); liga('rtStop','stop',true); liga('rtObj','obj',true);
 
   $('#rtActivar').onclick = () => {
-    if(!rt.bias){ toast('Set the bias for the day first'); return; }
+    /* La puerta cambió de sentido. Antes no dejaba pasar sin un bias; hoy no
+       deja pasar sin la ALERTA lista, que es lo que de verdad hace falta.
+       Y si dice que está muda, se lo dice de frente: sin alarma no hay trade,
+       así que abrir la sesión es abrirla para mirar. */
+    if(!rt.bias){ toast('Primero di si la alerta de Ice Vader quedó armada.'); return; }
+    if(rt.bias === 'muda'){
+      const sigue = confirm(
+        'La alerta de ICE VADER está SIN ARMAR.\n\n'
+        + 'Sin alarma no se entra: cualquier trade de hoy va a quedar marcado. '
+        + 'Ármala antes de abrir.\n\n¿Abrir la sesión de todos modos, sólo para mirar?');
+      if(!sigue) return;
+    }
     if(!rt.startedAt) rt.startedAt = Date.now();
     S.ui.rtTab = 'live'; save();
-    rtDi('Session live. New York open. No rush, no noise. You have ' + rt.maxT + (rt.maxT>1?' balas.':' bala.'));
+    rtDi(rt.bias === 'armada'
+      ? 'Sesión abierta. La alerta está armada: no busques nada, deja que suene. Tienes ' + rt.maxT + (rt.maxT>1?' balas.':' bala.')
+      : 'Sesión abierta SIN alarma armada. Hoy se mira, no se entra.');
     renderSesion();
   };
 
@@ -7036,7 +7068,7 @@ function renderSesion(){
 
     ${seccion('04','The plan vs what happened')}
     <div class="hoja-plan">
-      <div><span>Bias for the day</span><b>${rt.bias ? rt.bias.toUpperCase() : '— not set'}</b>${rt.sesgo ? `<i>${esc(rt.sesgo)}</i>` : ''}</div>
+      <div><span>Alerta de Ice Vader</span><b>${rt.bias === 'armada' ? 'ARMADA' : rt.bias === 'muda' ? 'SIN ARMAR' : '— sin declarar'}</b>${rt.sesgo ? `<i>${esc(rt.sesgo)}</i>` : ''}</div>
       <div><span>Key levels</span><b>${rt.niveles ? esc(rt.niveles) : '— none written'}</b></div>
       <div><span>Objetivo</span><b class="${objCubierto?'up':(picoDia >= rt.obj ? 'down' : '')}">${fmt$(rt.obj)} · ${
         objCubierto ? 'covered'
