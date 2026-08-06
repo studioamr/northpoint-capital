@@ -3753,16 +3753,34 @@ const SISTEMA = {
       cuota: 1 },
   ],
 
-  /* Las tres fases del plan. `maxPerdidaDia` y `objetivoDia` son los del documento;
-     el tope de trades es 2 estrictos en todas — la regla de gestión no cambia por
-     fase. El plan no fija número de contratos: el tamaño sale del riesgo. */
+  /* ── LAS TRES FASES, CON LAS CIFRAS DEL PLAN ──
+     Los números salen del documento de André (Visión + Fases 1-3), no de lo que
+     traía el indicador. Dos cosas cambiaron el 5-ago-2026:
+
+     · maxTrades pasa a 1 EN TODAS. Manda ICE VADER, y el indicador trae
+       maxTrades = 1 de fábrica: un trade al día y no hay revancha. El plan decía
+       «2 estrictos», pero eso se escribió cuando la entrada era discrecional —
+       con la señal mandando, el segundo intento ya no existe.
+
+     · El colchón iba al doble de lo que dice el plan (200/400 en vez de 100/200).
+       Con un límite al doble, un día que rompe el plan pasaba como bueno y la app
+       no marcaba nada: exactamente el error que más caro sale.
+
+     La EVAL va ALL IN a propósito —así está escrito el plan—: no hay stop diario
+     propio, el único piso es el de la fondeadora. Se deja en null para no fingir
+     un límite que el plan no puso; el tope duro del día ($1,100) sí se respeta,
+     que es lo que cuida la regla de consistencia.
+
+     El plan no fija número de contratos: el tamaño sale del riesgo. */
   fases: {
-    eval:   { maxPerdidaDia:1000, objetivoDia:1000, maxTrades:2, topeDia:1100,
-              de:50000, a:53000, minDias:3, diasObjetivo:'3-5' },
-    buffer: { maxPerdidaDia:200,  objetivoDia:400,  maxTrades:2,
+    eval:   { maxPerdidaDia:null, objetivoDia:1000, maxTrades:1, topeDia:1100,
+              allIn:true, de:50000, a:53000, minDias:3, diasObjetivo:'3-5' },
+    buffer: { maxPerdidaDia:100,  objetivoDia:200,  maxTrades:1,
               de:50000, a:52100, maxDias:14 },
-    payout: { maxPerdidaDia:100,  objetivoDia:200,  maxTrades:2,
-              desde:50100 },
+    /* Fase 3 tiene dos tiempos: mientras se construye hasta el primer payout va
+       $100/$200; una vez cobrando, se aprieta a $50/$100. */
+    payout: { maxPerdidaDia:100,  objetivoDia:200,  maxTrades:1,
+              cobrandoPerdida:50, cobrandoObjetivo:100, desde:50100 },
   },
 
   /* Fase 3 · cada 15 días. 20% cuentas, 20% portafolio y 20% para cada uno de los
@@ -3785,10 +3803,9 @@ const SISTEMA = {
   /* El tope sale de la fase, no de la memoria: si el plan cambia, el texto cambia. */
   get gestion(){ return [
     `Sin alarma de ${this.senal.nombre} no se entra. Ni una vez.`,
-    `Máximo ${this.fases.eval.maxTrades} trades por sesión, estrictos.`,
-    'Si se gana el trade 1, se cierra la plataforma: el día terminó.',
-    'Si se pierde el trade 1, queda un solo intento más — y únicamente con un setup válido nuevo y completo. Nunca revenge.',
-    'Nada queda abierto después de las 8:30.',
+    `${this.fases.eval.maxTrades} trade por sesión. Uno. Lo dice el indicador y no se discute.`,
+    'Gane o pierda, al cerrarse se cierra la plataforma: el día terminó.',
+    'Última entrada 11:00. Nada queda abierto después de las 12:00 ET.',
   ]; },
 
   /* Cuándo la cuenta propia deja de necesitar a las fondeadoras: cuando iguala a
@@ -4404,9 +4421,18 @@ const FASES = {
             oDia: () => SISTEMA.fases.buffer.objetivoDia,                           // 400 [PLAN]
             tope: () => null,
             hito: (R,a) => a.start + R.maxDD + (R.lockAtProfit||0) },               // 52,100 [CAT]
+  /* ── FASE 3, EN DOS TIEMPOS ──
+     Mientras se construye hasta el primer payout van $100/$200. Una vez que la
+     cuenta YA COBRÓ, el plan aprieta a $50/$100: se protege lo que ya es tuyo.
+     Por eso estas dos leen la cuenta y no sólo las reglas de la firma. */
   payout: { get t(){ return tr('fase.payout'); }, corto:'PAY',
-            rDia: () => SISTEMA.fases.payout.maxPerdidaDia,                         // 100 [PLAN]
-            oDia: () => SISTEMA.fases.payout.objetivoDia,                           // 200 [PLAN]
+            cobrando: a => { try{ return !!(a && carreraCuenta(a).pasoPago); }catch(e){ return false; } },
+            rDia: function(R, a){ return this.cobrando(a)
+              ? SISTEMA.fases.payout.cobrandoPerdida                                //  50 [PLAN]
+              : SISTEMA.fases.payout.maxPerdidaDia; },                              // 100 [PLAN]
+            oDia: function(R, a){ return this.cobrando(a)
+              ? SISTEMA.fases.payout.cobrandoObjetivo                               // 100 [PLAN]
+              : SISTEMA.fases.payout.objetivoDia; },                                // 200 [PLAN]
             tope: () => null,
             hito: () => null },
 };
@@ -4721,7 +4747,7 @@ function saludDe(a){
   }
   const F = FASES[a.fase] || FASES.eval;
   return { ...base, linea, fija, colchon: bal - linea, maxDD:R.maxDD,
-           hito: F.hito(R, a), rDia: F.rDia(R), oDia: F.oDia(R), tope: F.tope(R) };
+           hito: F.hito(R, a), rDia: F.rDia(R, a), oDia: F.oDia(R, a), tope: F.tope(R) };
 }
 const capitalVista = () => acctsSel().filter(a => esViva(a) && !esSim(a)).reduce((x,a)=>x+(a.size||0),0);
 
@@ -4795,13 +4821,13 @@ function metas(){
   }
   const dia = conReglas.reduce((x,a)=>{
     const R = reglasDe(a), F = FASES[a.fase] || FASES.eval;
-    return x + F.oDia(R);
+    return x + F.oDia(R, a);
   }, 0);
   /* Techo real de la fase: más allá del hito la cuenta reinicia o entra a retiros,
      así que pedir dia×20 llegaba a 100,000 cuando el máximo alcanzable era 15,000. */
   const techo = conReglas.reduce((x,a)=>{
     const h = saludDe(a);
-    return x + (h.hito != null ? Math.max(0, h.hito - h.balance) : (FASES[a.fase]||FASES.eval).oDia(reglasDe(a)) * 20);
+    return x + (h.hito != null ? Math.max(0, h.hito - h.balance) : (FASES[a.fase]||FASES.eval).oDia(reglasDe(a), a) * 20);
   }, 0);
   const cap = v => techo > 0 ? Math.min(v, techo) : v;
   return { dia, semana:cap(dia*5), quincena:cap(dia*10), mes:cap(dia*20), anio:dia*240,
@@ -4849,7 +4875,7 @@ function cuentaQueRompio(dayTrades){
     const a = S.accounts.find(x => x.id === id); if(!a) return;
     const R = reglasDe(a); if(!R) return;
     const F = FASES[a.fase] || FASES.eval;
-    const tope = R.dailyLoss || 0, rD = F.rDia(R) || 0;
+    const tope = R.dailyLoss || 0, rD = F.rDia(R, a) || 0;
     if(tope && -p >= tope)      { if(!peor || peor.tipo !== 'FIRM_LIMIT') peor = { id, alias:a.alias, perdida:p, tipo:'FIRM_LIMIT', tope }; }
     else if(rD && -p > rD)      { if(!peor)                               peor = { id, alias:a.alias, perdida:p, tipo:'DAY_RISK',  tope:rD }; }
   });
@@ -4864,7 +4890,7 @@ function limitesDia(trade){
     if(!ids.has(a.id)) return;
     const R = reglasDe(a); if(!R) return;
     const F = FASES[a.fase] || FASES.eval;
-    const r = F.rDia(R);
+    const r = F.rDia(R, a);
     if(r && (rDia == null || r < rDia)) rDia = r;
     if(R.dailyLoss && (dailyLoss == null || R.dailyLoss < dailyLoss)) dailyLoss = R.dailyLoss;
   });
@@ -5792,8 +5818,8 @@ const IV_PASOS = [
     d:['Aquí es donde el indicador se vuelve tres estrategias distintas. Es la única decisión que tomas tú, y la tomas ANTES de que abra el mercado — no cuando ya estás dentro.',
        'This is where the indicator becomes three different strategies. It is the only decision you make, and you make it BEFORE the open — not once you are already in.'] },
   { k:'5', t:['Se cierra todo al final de la ventana','Everything closes at the end of the window'],
-    d:['Última entrada a las ' + IV.ultima + '. A las ' + IV.cierre + ' se cierra lo que quede abierto, gane o pierda. Y de fábrica es ' + IV.maxTrades + ' trade al día: uno. No hay revancha.',
-       'Last entry at ' + IV.ultima + '. At ' + IV.cierre + ' anything still open is closed, win or lose. And the factory setting is ' + IV.maxTrades + ' trade a day: one. There is no rematch.'] },
+    d:['Última entrada a las ' + IV.ultima + '. A las ' + IV.cierre + ' se cierra lo que quede abierto, gane o pierda. Y es ' + IV.maxTrades + ' trade al día: uno. No hay revancha — y ésa es ahora la regla de la casa, no sólo el default del indicador.',
+       'Last entry at ' + IV.ultima + '. At ' + IV.cierre + ' anything still open is closed, win or lose. And it is ' + IV.maxTrades + ' trade a day: one. No rematch — and that is now the house rule, not just the indicator’s default.'] },
 ];
 
 const IV_ALERTAS = [
@@ -5884,6 +5910,36 @@ function renderIceVader(){
 
     <div class="panel mt2">
       <div class="p-head">
+        <h3>${bi('El riesgo lo pone el plan, no el indicador','Risk comes from the plan, not the indicator')}</h3>
+        <span class="micro">${bi('esto se configura a mano','set this by hand')}</span>
+      </div>
+      <div class="p-body">
+        <div class="iv-aviso" style="border-color:var(--warn);background:color-mix(in srgb,var(--warn) 8%,transparent)">
+          <b>${bi('Baja el riesgo del indicador antes de operar','Lower the indicator’s risk before trading')}</b>
+          <p>${bi(
+            'ICE VADER trae <code>riesgoPct = 2%</code> de fábrica: $1,000 por operación en una cuenta de $50,000. Tu plan dice $100 al día en Buffer y $50 cuando ya estás cobrando. Son diez y veinte veces menos. Si lo dejas como viene, un solo trade te gasta el riesgo de diez días.',
+            'ICE VADER ships with <code>riesgoPct = 2%</code>: $1,000 per trade on a $50,000 account. Your plan says $100 a day in Buffer and $50 once you are getting paid. That is ten and twenty times less. Left as it comes, one trade spends ten days of risk.')}</p>
+        </div>
+        <div class="iv-tabla">
+          ${[
+            [bi('EVAL · riesgo del día','EVAL · daily risk'), bi('ALL IN','ALL IN'), bi('sin stop propio','no self stop')],
+            [bi('EVAL · objetivo del día','EVAL · daily target'), fmt$(SISTEMA.fases.eval.objetivoDia), bi('tope duro ','hard cap ') + fmt$(SISTEMA.fases.eval.topeDia)],
+            [bi('BUFFER · riesgo del día','BUFFER · daily risk'), fmt$(SISTEMA.fases.buffer.maxPerdidaDia), '≈ 0.2%'],
+            [bi('BUFFER · objetivo del día','BUFFER · daily target'), fmt$(SISTEMA.fases.buffer.objetivoDia), '≈ 0.4%'],
+            [bi('FUNDED · riesgo del día','FUNDED · daily risk'), fmt$(SISTEMA.fases.payout.maxPerdidaDia), bi('antes del primer pago','before the first payout')],
+            [bi('FUNDED · objetivo del día','FUNDED · daily target'), fmt$(SISTEMA.fases.payout.objetivoDia), bi('antes del primer pago','before the first payout')],
+            [bi('COBRANDO · riesgo del día','GETTING PAID · daily risk'), fmt$(SISTEMA.fases.payout.cobrandoPerdida), bi('se aprieta','it tightens')],
+            [bi('COBRANDO · objetivo del día','GETTING PAID · daily target'), fmt$(SISTEMA.fases.payout.cobrandoObjetivo), bi('se aprieta','it tightens')],
+          ].map(([k,v,p]) => `<div class="iv-fila"><span>${k}</span><b>${v}</b><i>${p}</i></div>`).join('')}
+        </div>
+        <p class="iv-nota">${bi(
+          'La app ya vigila estas cifras: si un día se pasa del riesgo de su fase, el trade sale marcado. La EVAL va ALL IN a propósito — ahí el único piso es el de la fondeadora.',
+          'The app already watches these numbers: if a day goes past its phase risk, the trade gets flagged. EVAL is ALL IN on purpose — there the only floor is the firm’s.')}</p>
+      </div>
+    </div>
+
+    <div class="panel mt2">
+      <div class="p-head">
         <h3>${bi('Los números de fábrica','The factory numbers')}</h3>
         <span class="micro">${bi('leídos del script, no de memoria','read from the script, not from memory')}</span>
       </div>
@@ -5895,7 +5951,7 @@ function renderIceVader(){
             [bi('Cerrar todo','Close everything'), IV.cierre + ' ET', 'finHora'],
             [bi('Trades por día','Trades per day'), String(IV.maxTrades), 'maxTrades'],
             [bi('Velas fuera del rango','Candles closing outside'), IV.velasFuera + bi(' consecutivas',' consecutive'), 'velasFuera'],
-            [bi('Riesgo por trade','Risk per trade'), IV.riesgoPct + '%' + bi(' → $1,000 en una de $50,000',' → $1,000 on a $50,000 account'), 'riesgoPct'],
+            [bi('Riesgo por trade (de fábrica)','Risk per trade (factory)'), IV.riesgoPct + '%' + bi(' → $1,000 en una de $50,000',' → $1,000 on a $50,000 account'), 'riesgoPct'],
             [bi('Colchón del stop','Stop cushion'), IV.colchon + ' pts', 'colchon'],
             [bi('Stop mínimo','Minimum stop'), IV.minStop + ' pts', 'minStop'],
             [bi('Velas del tramo','Leg candles'), String(IV.velasTramo), 'velasResp'],
