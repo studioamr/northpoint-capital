@@ -11762,10 +11762,21 @@ const CIUDADES = {
    YORK — no en la hora del que mira la pantalla. Entre una sesión y otra el
    mercado está CERRADO de verdad, y ese hueco no se rellena con una ciudad
    falsa: se va uno a su casa. */
+/* ── EL DÍA DE LA CASA, COMO LO PIDIÓ ANDRÉ ──
+   Nueva York manda: se abre a las 9:30 y se trabaja hasta su cierre. Después el
+   mercado ESTÁ CERRADO de verdad —de 16:00 a 20:00— y eso se dice, no se
+   rellena con una ciudad falsa. Al final de ese hueco sale el avión rumbo a
+   Asia, que abre a las 20:00. Asia aguanta hasta las 2 de la mañana y ahí se
+   cambia SOLA a Londres, sin avión de por medio porque no hay hueco: la misma
+   hora que cierra una abre la otra. Londres aguanta hasta las 9:30 y devuelve
+   la mesa a Nueva York.
+
+   `vuela` marca la única transición con hueco, que es la única que necesita
+   avión. Las otras dos se tocan en el minuto exacto. */
 const TRAMOS = [
-  { c:'londres', de:120,  a:510,  sig:'nyc'     },   // 02:00 – 08:30 NY
-  { c:'nyc',     de:570,  a:960,  sig:'tokio'   },   // 09:30 – 16:00 NY
-  { c:'tokio',   de:1200, a:1500, sig:'londres' },   // 20:00 – 01:00 NY (cruza medianoche)
+  { c:'nyc',     de: 9*60+30, a: 16*60,    sig:'tokio',   vuela:true  },  // 09:30 – 16:00
+  { c:'tokio',   de: 20*60,   a: 26*60,    sig:'londres', vuela:false },  // 20:00 – 02:00 (cruza)
+  { c:'londres', de: 2*60,    a: 9*60+30,  sig:'nyc',     vuela:false },  // 02:00 – 09:30
 ];
 const TZ_MERCADO = 'America/New_York';
 const VUELO_MIN = 25;                     // lo que dura el traslado en pantalla
@@ -11789,14 +11800,13 @@ function escenaAhora(now = new Date()){
               : m < 1320 ? 'restaurante' : 'casa';
     return { tipo:'finde', esc, c:'nyc', finde:true };
   }
+  /* dentro de un tramo: la ciudad, hasta su último minuto. El avión ya NO sale
+     al final de cada sesión — Asia y Londres se tocan sin hueco, así que volar
+     ahí sería inventarse un viaje que no existe. */
   for(const tr of TRAMOS){
     const mm = (tr.de > tr.a || tr.a > 1440) && m < tr.de ? m + 1440 : m;
-    if(mm >= tr.de && mm < tr.a){
-      const restan = tr.a - mm;
-      if(restan <= VUELO_MIN)
-        return { tipo:'vuelo', de:tr.c, a:tr.sig, prog:1 - restan / VUELO_MIN };
-      return { tipo:'ciudad', c:tr.c, sig:tr.sig, restan };
-    }
+    if(mm >= tr.de && mm < tr.a)
+      return { tipo:'ciudad', c:tr.c, sig:tr.sig, restan: tr.a - mm };
   }
   /* Ninguna sesión abierta: el mercado está CERRADO. Antes se caía a «Nueva
      York» y la pantalla mentía; ahora se está en casa hasta la próxima
@@ -11806,8 +11816,13 @@ function escenaAhora(now = new Date()){
     const d = (tr.de - m + 1440) % 1440;
     if(d < faltan){ faltan = d; prox = tr; }
   });
+  /* la recta final del único hueco con avión: se va a Asia */
+  if(prox && faltan <= VUELO_MIN){
+    const salio = TRAMOS.find(t => t.sig === prox.c && t.vuela);
+    if(salio) return { tipo:'vuelo', de:salio.c, a:prox.c, prog: 1 - faltan / VUELO_MIN };
+  }
   return { tipo:'finde', esc:'casa', c:'nyc', cerrado:true,
-           abre: prox ? prox.c : 'londres', faltan };
+           abre: prox ? prox.c : 'tokio', faltan };
 }
 /* qué día es allá: el viernes de Nueva York puede ser sábado en Tokio */
 function diaSemanaEn(tz, now = new Date()){
