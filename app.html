@@ -6259,33 +6259,6 @@ const cuentasDe  = uid => S.accounts.filter(a => (a.owner || DUENO_ORIGEN) === u
 const psCorto = v => { const s = v < 0 ? '−' : '+', n = Math.abs(v);
   return s + (n >= 1000 ? String(+(n/1000).toFixed(1)).replace(/\.0$/,'') + 'k' : Math.round(n)); };
 
-/* La curva: profit acumulado día a día. Sin ejes ni rejilla — lo que importa es
-   la forma y de qué lado del cero termina. */
-function psCurva(trs){
-  const byDay = porDiaDe(trs);
-  const dias = Object.keys(byDay).sort();
-  if(dias.length < 2) return '';
-  let acum = 0;
-  const pts = dias.map(d => { acum += byDay[d].reduce((a,t) => a + (t.pnl||0), 0); return acum; });
-  const min = Math.min(0, ...pts), max = Math.max(0, ...pts), span = (max - min) || 1;
-  const W = 600, H = 84;
-  const px = i => i / (dias.length - 1) * W;
-  const py = v => H - ((v - min) / span) * H;
-  const linea = pts.map((v,i) => `${i?'L':'M'}${px(i).toFixed(1)},${py(v).toFixed(1)}`).join(' ');
-  const fin = pts[pts.length-1], tono = fin > 0 ? 'up' : fin < 0 ? 'down' : '';
-  return `<div class="ps-curva ${tono}">
-    <svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-hidden="true">
-      <path class="ps-c-area" d="${linea} L${W},${py(min).toFixed(1)} L0,${py(min).toFixed(1)} Z"/>
-      ${min < 0 && max > 0 ? `<line class="ps-c-cero" x1="0" y1="${py(0).toFixed(1)}" x2="${W}" y2="${py(0).toFixed(1)}"/>` : ''}
-      <path class="ps-c-linea" d="${linea}" vector-effect="non-scaling-stroke"/>
-    </svg>
-    <div class="ps-c-pie"><span>${fmtFecha(dias[0])}</span>
-      <b class="${tono}">${fmt$(fin, true)}</b>
-      <span>${fmtFecha(dias[dias.length-1])}</span></div>
-  </div>`;
-}
-
-/* El calendario del mes. Un día con trades se pica y se abre abajo. */
 function psCal(trs, mesKey){
   const byDay = porDiaDe(trs);
   const hoy = todayISO();
@@ -6360,62 +6333,6 @@ function psDiaHTML(trs){
 }
 
 /* Una cuenta por dentro: en qué punto de la carrera va y qué pasó ahí. */
-function psCuentaHTML(a, esYo){
-  const cc = carreraCuenta(a), R = reglasDe(a) || {};
-  const quema = quemaDetectada(a);
-  const trs = tradesDe(psV.uid).filter(t => (t.accts || []).includes(a.id));
-  const etapa = quema || !esViva(a) ? [bi('QUEMADA','BURNED'), 'down']
-    : cc.pasoPago ? [bi('COBRÓ','PAID'), 'up']
-    : cc.pasoBuffer ? [bi('EN TRAMO DE PAGO','IN PAYOUT STRETCH'), 'up']
-    : cc.pasoEval ? [bi('FONDEADA','FUNDED'), '']
-    : [bi('EN EVALUACIÓN','IN EVALUATION'), ''];
-  const fila = (k, v, tono) => `<div class="rt-f"><span>${k}</span><b class="${tono||''}">${v}</b></div>`;
-  return `
-    <div class="rt-sec">
-      <button type="button" class="ps-back" onclick="psCuenta(null)">‹ ${bi('Todas sus cuentas','All their accounts')}</button>
-      <div class="ps-cta-h">
-        <div><b>${esc(a.alias)}</b>
-          <p class="micro" style="margin-top:3px">${esc(a.firm || '')}${a.plan ? ' · ' + esc(a.plan) : ''} · ${fmt$(a.size || a.start || 0)}</p></div>
-        <b class="${etapa[1]}">${etapa[0]}</b>
-      </div>
-      <div class="ps-cta-bal">
-        <span class="mono ${cc.balance > (a.start||0) ? 'up' : cc.balance < (a.start||0) ? 'down' : ''}">${fmt$(cc.balance)}</span>
-        <i>${bi('arrancó en ','started at ')}${fmt$(a.start || 0)}</i>
-      </div>
-      <div class="bar" style="margin:10px 0 4px"><i style="width:${Math.min(100, Math.max(0, cc.pct))}%"></i></div>
-      <p class="micro">${Math.round(cc.pct)}% ${bi('del camino al pago','of the road to payout')}</p>
-      ${quema ? `<p class="ps-quema">${bi('Reventó el ','Blew on ')}${fmtFecha(quema.fecha)}${bi(' contra su línea de drawdown. Su dinero ya no cuenta como capital.',' against its drawdown line. Its money no longer counts as capital.')}</p>` : ''}
-    </div>
-
-    <div class="rt-sec">
-      <p class="micro">${bi('Las varas de esta cuenta','This account’s bars')}</p>
-      <div class="rt-grid">
-        ${fila(bi('Objetivo','Target'), cc.target ? fmt$(cc.target) : '—')}
-        ${fila(bi('Drawdown máx.','Max drawdown'), R.maxDD ? fmt$(R.maxDD) : '—')}
-        ${R.lockAtProfit != null ? fila(bi('Se congela en','Locks at'), fmt$((a.start||0) + R.lockAtProfit)) : ''}
-        ${R.consistency ? fila(bi('Consistencia','Consistency'), Math.round(R.consistency * 100) + '%') : ''}
-        ${R.minDays ? fila(bi('Días mínimos','Min days'), R.minDays) : ''}
-        ${fila(bi('Desde','Since'), fmtFecha(a.desde))}
-      </div>
-    </div>
-
-    ${trs.length ? `<div class="rt-sec">
-      <p class="micro">${bi('Su curva en esta cuenta','Their curve on this account')}</p>
-      ${psCurva(trs) || `<p class="dim">${bi('Un solo día operado: todavía no hay curva.','Only one day traded: no curve yet.')}</p>`}
-    </div>` : ''}
-
-    <div class="rt-sec">
-      <p class="micro">${bi('Calendario de esta cuenta','This account’s calendar')}</p>
-      ${psCal(trs, psV.mes)}
-      ${psDiaHTML(trs)}
-    </div>
-
-    <div class="rt-sec">
-      <p class="micro">${bi('Trades en esta cuenta','Trades on this account')}</p>
-      ${psTrades(trs, 40)}
-    </div>`;
-}
-
 window.psMes = function(n){
   const [y, m] = psV.mes.split('-').map(Number);
   const d = new Date(y, m - 1 + n, 1);
@@ -6423,12 +6340,11 @@ window.psMes = function(n){
   psV.dia = null;
   pintaPerfilSocio();
 };
-window.psCuenta = function(id){ psV.acct = id; psV.dia = null; pintaPerfilSocio(); $('#psCuerpo').scrollTop = 0; };
 window.psDia    = function(iso){ psV.dia = (psV.dia === iso ? null : iso); pintaPerfilSocio(); };
 
 window.perfilSocio = function(uid){
   if(!PERSONAJES.find(x => x.id === uid)) return;
-  psV = { uid, mes: todayISO().slice(0, 7), acct: null, dia: null };
+  psV = { uid, mes: todayISO().slice(0, 7), dia: null };
   pintaPerfilSocio();
   openOv('ovPerfilSocio');
 };
@@ -6465,19 +6381,7 @@ function pintaPerfilSocio(){
   $('#psEstado').innerHTML = `<span class="ps-punto"></span>${vistoTxt} · ${esYo ? '' : '↑ '}${syncTxt}`;
 
   const suyas = cuentasDe(uid);
-
-  /* dentro de una cuenta la hoja cambia entera: es su expediente */
-  const abierta = psV.acct && suyas.find(a => a.id === psV.acct);
-  if(abierta){ $('#psCuerpo').innerHTML = psCuentaHTML(abierta, esYo); return; }
-
-  const cs = carreraSocio(uid);
-  const c  = carreraDe(uid);
   const trs = tradesDe(uid);
-  const faseDe = (a, cc) => (quemaDetectada(a) || !esViva(a)) ? [bi('QUEMADA','BURNED'), 'down']
-    : cc.pasoPago ? [bi('COBRÓ','PAID'), 'up']
-    : cc.pasoBuffer ? [bi('EN TRAMO DE PAGO','IN PAYOUT STRETCH'), 'up']
-    : cc.pasoEval ? [bi('FONDEADA','FUNDED'), '']
-    : [bi('EN EVALUACIÓN','IN EVALUATION'), ''];
 
   /* sus balances: futuros y live sí son suyos (las cuentas llevan owner); el
      portafolio no tiene dueño — es de la mesa entera y se dice */
@@ -6499,83 +6403,20 @@ function pintaPerfilSocio(){
     </div>`;
   };
 
-  /* su disciplina: sus trades contra el plan de cada día */
-  const porDia = porDiaDe(trs);
-  let marcados = 0, tot = 0;
-  Object.values(porDia).forEach(g => g.forEach(t => { tot++; if(violations(t, g).length) marcados++; }));
+  /* ── LA TARJETA: SÓLO BALANCES Y CALENDARIO ──
+     Antes traía ocho secciones —lema, carrera al payout, curva, calendario,
+     números de mesa, disciplina, últimos trades y balances— y para llegar a lo
+     que de verdad se busca de otro socio había que bajar por todo lo demás.
 
-  const fila = (k, val, tono) => `<div class="rt-f"><span>${k}</span><b class="${tono||''}">${val}</b></div>`;
+     Quedan dos, en este orden: cuánto trae y cómo le ha ido día a día. Los
+     balances van primero porque es lo primero que se pregunta de alguien en la
+     mesa; el calendario debajo, con el detalle del día al picarlo.
+
+     El expediente por cuenta se fue con la poda: sólo se alcanzaba desde los
+     botones de la carrera, así que sin ellos era código inalcanzable. Vive en
+     git y es una sección volver a colgarlo si algún día se pide. */
 
   $('#psCuerpo').innerHTML = `
-    <div class="rt-sec">
-      <p class="ps-lema">«${esc(p.lema)}»</p>
-      ${p.voz ? `<p class="micro" style="margin-top:8px;text-transform:none;letter-spacing:.04em">${esc(p.voz)}</p>` : ''}
-    </div>
-
-    <div class="rt-sec">
-      <p class="micro">${esYo ? bi('Tu carrera al payout','Your race to payout') : bi('Su carrera al payout','Their race to payout')}</p>
-      ${cs.sinDatos
-        ? `<p class="dim">${esYo
-            ? bi('Sin cuentas tuyas en esta máquina todavía.','No accounts of yours on this machine yet.')
-            : bi('Sin cuentas suyas en esta máquina. Si es socio de nube, sus datos llegan cuando su equipo sube.','No accounts of theirs on this machine. If they are a cloud partner, their data lands when their device uploads.')}</p>`
-        : `<div class="ps-carrera"><b>${Math.round(cs.pct)}%</b>
-             <span>${cs.cuentas}${cs.cuentas === 1 ? bi(' cuenta',' account') : bi(' cuentas',' accounts')}${cs.pagos ? ' · ' + cs.pagos + bi(' cobrada',' paid') + (cs.pagos > 1 ? 's' : '') : ''}</span></div>
-           <div class="bar" style="margin-bottom:14px"><i style="width:${cs.pct}%"></i></div>
-           ${suyas.map(a => { const cc = carreraCuenta(a); const f = faseDe(a, cc);
-             return `<button type="button" class="rt-cta abre" onclick="psCuenta('${a.id}')">
-               <div><b>${esc(a.alias)}</b>
-                 <p class="micro" style="margin-top:2px">${f[0]} · ${bi('balance','balance')} ${fmt$(cc.balance)}</p></div>
-               <div class="rt-cta-r"><b class="${f[1]}">${Math.round(cc.pct)}%</b><i>›</i></div>
-             </button>`; }).join('')}
-           <p class="micro" style="margin-top:8px">${bi('Pica una cuenta para ver por dentro sus trades y su calendario.','Tap an account to see its trades and calendar inside.')}</p>`}
-    </div>
-
-    ${trs.length ? `<div class="rt-sec">
-      <p class="micro">${esYo ? bi('Tu curva','Your curve') : bi('Su curva','Their curve')}</p>
-      ${psCurva(trs) || `<p class="dim">${bi('Un solo día operado: todavía no hay curva.','Only one day traded: no curve yet.')}</p>`}
-    </div>
-
-    <div class="rt-sec">
-      <p class="micro">${esYo ? bi('Tu calendario','Your calendar') : bi('Su calendario','Their calendar')}</p>
-      ${psCal(trs, psV.mes)}
-      ${psDiaHTML(trs)}
-    </div>` : ''}
-
-    <div class="rt-sec">
-      <p class="micro">${esYo ? bi('Tus números en la mesa','Your desk numbers') : bi('Sus números en la mesa','Their desk numbers')}</p>
-      ${c ? `<div class="rt-grid">
-        ${fila('Trades', c.n)}
-        ${fila(bi('Sesiones','Sessions'), c.sesiones)}
-        ${fila('P&L', fmt$(c.pnl, true), c.pnl > 0 ? 'up' : c.pnl < 0 ? 'down' : '')}
-        ${fila(bi('Aciertos','Win rate'), c.wr + '%')}
-        ${fila('Profit factor', c.pf === Infinity ? '∞' : c.pf)}
-        ${fila(bi('Desde','Since'), fmtFecha(c.desde))}
-        ${c.mejor ? fila(bi('Mejor día','Best day'), fmtFecha(c.mejor[0]) + ' · ' + fmt$(c.mejor[1], true), 'up') : ''}
-        ${c.peor && c.peor[1] < 0 ? fila(bi('Peor día','Worst day'), fmtFecha(c.peor[0]) + ' · ' + fmt$(c.peor[1], true), 'down') : ''}
-        ${fila(bi('Último trade','Last trade'), fmtFecha(c.ultimo))}
-      </div>`
-      : `<p class="dim">${esYo
-          ? bi('Todavía no registras trades desde este equipo.','No trades registered from this device yet.')
-          : bi('Todavía no registra trades desde su equipo.','No trades registered from their device yet.')}</p>`}
-    </div>
-
-    ${c ? `<div class="rt-sec">
-      <p class="micro">${esYo ? bi('Tu disciplina','Your discipline') : bi('Su disciplina','Their discipline')}</p>
-      ${marcados
-        ? `<div class="rt-f"><span>${bi('Trades con marca','Flagged trades')}</span>
-             <b class="warn">${marcados} ${bi('de','of')} ${tot}</b></div>
-           <div class="rt-f"><span>${bi('Trades limpios','Clean trades')}</span>
-             <b class="up">${tot - marcados} ${bi('de','of')} ${tot}</b></div>`
-        : `<div class="rt-limpio">${esYo
-            ? bi('Limpio. Ni un trade tuyo rompió el plan.','Clean. Not one of your trades broke the plan.')
-            : bi('Limpio. Ni un trade suyo rompió el plan.','Clean. Not one of their trades broke the plan.')}</div>`}
-    </div>` : ''}
-
-    ${trs.length ? `<div class="rt-sec">
-      <p class="micro">${esYo ? bi('Tus últimos trades','Your last trades') : bi('Sus últimos trades','Their last trades')}</p>
-      ${psTrades(trs, 15)}
-    </div>` : ''}
-
     <div class="rt-sec">
       <p class="micro">${esYo ? bi('Tus balances','Your balances') : bi('Sus balances','Their balances')}</p>
       ${balRow(bi('FUTUROS','FUTURES'), futBal, futBase, fondSuyas.length,
@@ -6587,6 +6428,15 @@ function pintaPerfilSocio(){
       ${balRow(bi('PORTAFOLIO','PORTFOLIO'), portBal, portBase, (S.positions || []).length,
           ((S.positions || []).length ? bi('sobre ','on ') + fmt$(portBase) + bi(' aportados',' contributed') + ' · ' : '')
             + bi('de la mesa entera, no individual','the whole desk, not individual'))}
+    </div>
+
+    <div class="rt-sec">
+      <p class="micro">${esYo ? bi('Tu calendario','Your calendar') : bi('Su calendario','Their calendar')}</p>
+      ${trs.length
+        ? psCal(trs, psV.mes) + psDiaHTML(trs)
+        : `<p class="dim">${esYo
+            ? bi('Todavía no registras trades desde este equipo.','No trades registered from this device yet.')
+            : bi('Todavía no registra trades desde su equipo.','No trades registered from their device yet.')}</p>`}
     </div>`;
 }
 
