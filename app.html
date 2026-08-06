@@ -703,6 +703,21 @@ body.locked .app{visibility:hidden;pointer-events:none}
 /* la vara de la carrera: el corte marca dónde termina la eval y empieza el colchón */
 .pr-track i.quema{background:var(--down)}
 .pr-track .corte{position:absolute;top:0;bottom:0;width:2px;background:var(--w15,rgba(255,255,255,.18))}
+/* EL CAMINO DE REGRESO. La barra de arriba mide hacia dónde vas; ésta mide
+   cuánto aguantas antes de morir. Va al revés a propósito —se vacía de derecha
+   a izquierda— para que las dos no se lean como la misma cosa. El fondo es el
+   drawdown completo; lo lleno es lo que todavía te queda. */
+.pr-atras{margin-top:9px}
+.pa-track{position:relative;height:5px;border-radius:99px;background:rgba(228,110,98,.18);overflow:hidden}
+.pa-track i{position:absolute;right:0;top:0;bottom:0;border-radius:99px;background:var(--up);
+  transition:width .5s cubic-bezier(.2,.7,.3,1)}
+.pa-track i.poco{background:#E0A73C}
+.pa-track i.nada{background:var(--down)}
+/* el contenedor va en versalitas y hereda uppercase; una frase entera en
+   mayúsculas no se lee, y ésta es justo la que hay que leer con calma */
+.pa-tx{margin-top:5px;font-size:11.5px;color:var(--faint);line-height:1.65;text-transform:none}
+.pa-tx b{font-family:var(--mono);color:var(--dim)}
+.pa-tx b.al-filo{color:var(--down)}
 .pr-fila .cifras{font-family:var(--mono);font-size:10px;color:var(--faint);margin-top:5px;
   display:flex;justify-content:space-between;gap:10px}
 .pr-fila .falta{font-family:var(--mono);font-size:12px;text-align:right;min-width:96px}
@@ -4646,6 +4661,45 @@ function saludDe(a){
 }
 const capitalVista = () => acctsSel().filter(a => esViva(a) && !esSim(a)).reduce((x,a)=>x+(a.size||0),0);
 
+/* ── EL CAMINO DE REGRESO ──
+   El camino a payout dice a cuánto está el premio. Éste dice a cuánto está la
+   MUERTE, que es el número que de verdad decide si mañana operas o no.
+
+   Va al revés a propósito —se vacía de derecha a izquierda— para que las dos
+   barras no se lean como la misma cosa: el fondo es el drawdown completo que te
+   dieron, y lo lleno es lo que todavía te queda de él.
+
+   Y termina en días, no en dólares, porque un colchón de \$2,000 no significa
+   nada hasta que sabes que son veinte días malos seguidos. Los días se cuentan
+   al stop que TÚ escribiste en el plan; si esa cuenta no tiene stop, no se
+   inventa uno — se calla esa línea. */
+function caminoDeRegreso(a){
+  const h = saludDe(a);
+  if(!h.reglas || h.linea == null || !h.maxDD) return '';
+  const colchon = Math.max(0, h.colchon);
+  const pct  = Math.max(0, Math.min(100, colchon / h.maxDD * 100));
+  const stop = h.rDia || null;
+  const dias = stop ? Math.floor(colchon / stop) : null;
+  const filo = pct <= 20 || (dias != null && dias <= 2);
+  const clase = pct <= 20 ? 'nada' : pct <= 45 ? 'poco' : '';
+  const marca = filo ? ' class="al-filo"' : '';
+  return `<div class="pr-atras">
+    <div class="pa-track" role="img"
+         aria-label="${bi('Colchón restante','Cushion left')} ${Math.round(pct)}%">
+      <i class="${clase}" style="width:${pct}%"></i>
+    </div>
+    <p class="pa-tx">
+      <b${marca}>${fmt$(colchon)}</b>${bi(' de colchón — la línea está en ',' of cushion — the line sits at ')}<b>${fmt$(h.linea)}</b>${h.fija ? bi(' (ya fija)',' (locked)') : ''}.
+      ${dias != null
+        ? '<br>' + bi('Aguantas ','That is ') + `<b${marca}>${dias}</b>`
+          + bi(dias === 1 ? ' día malo entero' : ' días malos enteros',
+               dias === 1 ? ' full bad day' : ' full bad days')
+          + bi(' al stop de ',' at your ') + `<b>${fmt$(stop)}</b>` + bi('.',' stop.')
+        : ''}
+    </p>
+  </div>`;
+}
+
 /* Consistencia: la fondeadora exige que ningún día concentre más de cierto % de lo
    ganado en la fase. Se mide contra el ACUMULADO vivo, que es como la revisan ellos. */
 function consistenciaDe(a){
@@ -6459,6 +6513,7 @@ function renderCamino(){
           ${quema ? `<span class="micro" style="color:var(--down);margin-left:8px">🔥 ${bi('se quemó el ','burned ')}${quema.fecha ? fmtFecha(quema.fecha) : ''}</span>`
                   : (hito ? `<span class="micro" style="color:var(--faint);margin-left:8px">${hito}</span>` : '')}
         </div>
+        ${quema ? '' : caminoDeRegreso(a)}
         ${fuera ? `<div class="pr-aviso micro">
           <b>${fuera} ${fuera === 1 ? bi('trade no cuenta','trade is not counting') : bi('trades no cuentan','trades are not counting')}</b>
           — ${bi('son anteriores al','they are older than')} ${fmtFecha(a.desde)}, ${bi('la fecha desde la que corre esta cuenta.','the date this account starts counting from.')}
