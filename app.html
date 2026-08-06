@@ -2417,6 +2417,25 @@ stop[stop-color="#9BC0DC"]{stop-color:var(--txt)}
   background:color-mix(in srgb,var(--warn,#D9A441) 8%,transparent);
   white-space:normal;max-width:230px;line-height:1.5}
 .acct-tbl .aviso-cta b{color:var(--txt)}
+
+/* ── EL DESGLOSE DE FUTUROS EN LA TARJETA ──
+   Reusa .pr-track .vara de Rutina a propósito: es la MISMA carrera y no puede
+   verse de dos formas distintas en dos pantallas. Aquí sólo va el marco. */
+.rt-cta .ps-chev{font-style:normal;color:var(--faint);margin-left:10px;
+  transition:transform .22s ease;display:inline-block}
+.rt-cta .ps-chev.on{transform:rotate(90deg);color:var(--txt)}
+.ps-caminos{margin:-2px 0 10px;padding:14px 14px 4px;border:1px solid var(--line-soft);
+  border-top:0;border-radius:0 0 12px 12px;background:var(--w02)}
+.ps-cam{padding-bottom:14px}
+.ps-cam:last-child{padding-bottom:6px}
+.ps-cam-h{display:flex;align-items:baseline;gap:9px;margin-bottom:7px}
+.ps-cam-h b{font-size:13px;font-weight:600}
+.ps-cam-h .mono{margin-left:auto;font-family:var(--mono);font-size:12.5px}
+.ps-cam-et{font-family:var(--mono);font-size:8.5px;letter-spacing:.12em;color:var(--faint);
+  border:1px solid var(--line-soft);border-radius:99px;padding:2px 7px}
+.ps-cam-et.up{color:var(--up);border-color:color-mix(in srgb,var(--up) 45%,transparent)}
+.ps-cam-pie{display:flex;justify-content:space-between;gap:12px;margin-top:6px;
+  font-family:var(--mono);font-size:10px;color:var(--faint)}
 </style>
 </head>
 <body>
@@ -6341,7 +6360,7 @@ addEventListener('afterprint', () => document.body.classList.remove('imprimiendo
 
    El estado de la hoja vive aparte porque tiene navegación propia: qué socio,
    qué mes se está viendo, si estás dentro de una cuenta y si abriste un día. */
-let psV = { uid:null, mes:null, acct:null, dia:null };
+let psV = { uid:null, mes:null, acct:null, dia:null, fut:false };
 
 const tradesDe   = uid => (S.trades || []).filter(t => (t.por || DUENO_ORIGEN) === uid);
 const porDiaDe   = trs => { const m = {}; trs.forEach(t => (m[t.date] = m[t.date] || []).push(t)); return m; };
@@ -6432,11 +6451,12 @@ window.psMes = function(n){
   psV.dia = null;
   pintaPerfilSocio();
 };
+window.psFuturos = function(){ psV.fut = !psV.fut; pintaPerfilSocio(); };
 window.psDia    = function(iso){ psV.dia = (psV.dia === iso ? null : iso); pintaPerfilSocio(); };
 
 window.perfilSocio = function(uid){
   if(!PERSONAJES.find(x => x.id === uid)) return;
-  psV = { uid, mes: todayISO().slice(0, 7), dia: null };
+  psV = { uid, mes: todayISO().slice(0, 7), dia: null, fut: false };
   pintaPerfilSocio();
   openOv('ovPerfilSocio');
 };
@@ -6468,7 +6488,8 @@ function pintaPerfilSocio(){
 
   $('#psCara').innerHTML = caraSocio(uid, 72);
   $('#psNombre').textContent = p.nom;
-  $('#psCargo').textContent = p.area + ' · ' + (p.roles || []).join(' · ');
+  /* El cargo y los códigos NP-0xx se retiraron: no le decían nada a nadie —
+     ni a ti sobre ti, ni a ti sobre otro. Lo que importa está abajo. */
   $('#psEstado').className = 'ps-estado' + (enMesa ? ' viva' : '');
   $('#psEstado').innerHTML = `<span class="ps-punto"></span>${vistoTxt} · ${esYo ? '' : '↑ '}${syncTxt}`;
 
@@ -6485,14 +6506,60 @@ function pintaPerfilSocio(){
   const liveBase = liveSuyas.reduce((x, a) => x + (a.start || 0), 0);
   const portBal  = (S.positions || []).reduce((x, q) => x + valuar(q).valor, 0);
   const portBase = (S.positions || []).reduce((x, q) => x + (q.capital || 0), 0);
-  const balRow = (et, v, base, hay, nota) => {
+  const balRow = (et, v, base, hay, nota, abrible) => {
     const g = v - base;
     const tono = !hay ? '' : g > 0 ? 'up' : g < 0 ? 'down' : '';
-    return `<div class="rt-cta">
-      <div><b>${et}</b><p class="micro" style="margin-top:2px">${nota}</p></div>
+    const cuerpo = `<div><b>${et}</b><p class="micro" style="margin-top:2px">${nota}</p></div>
       <div style="text-align:right"><b class="${tono}">${hay ? fmt$(v) : '—'}</b>
-        ${hay && base > 0 ? `<p class="micro ${tono}" style="margin-top:2px">${fmt$(g, true)}</p>` : ''}</div>
-    </div>`;
+        ${hay && base > 0 ? `<p class="micro ${tono}" style="margin-top:2px">${fmt$(g, true)}</p>` : ''}</div>`;
+    /* FUTUROS no es un número, es la SUMA de varias carreras. Picarlo abre el
+       desglose por cuenta — antes había que salir de la tarjeta para ver de
+       dónde salía ese total. Los otros dos balances no se abren porque no
+       tienen nada dentro que enseñar. */
+    if(!abrible || !hay) return `<div class="rt-cta">${cuerpo}</div>`;
+    return `<button type="button" class="rt-cta abre" onclick="psFuturos()"
+        aria-expanded="${psV.fut ? 'true' : 'false'}">${cuerpo}
+      <i class="ps-chev${psV.fut ? ' on' : ''}">›</i></button>` + (psV.fut ? psCaminos(fondSuyas) : '');
+  };
+
+  /* El camino a payout de cada cuenta, con la misma barra y los mismos dos
+     cortes que la de Rutina: es la MISMA carrera y no puede verse de dos
+     formas distintas en dos pantallas. */
+  const psCaminos = ctas => {
+    if(!ctas.length) return '';
+    return `<div class="ps-caminos">` + ordenar(ctas).map(a => {
+      const cc = carreraCuenta(a);
+      if(!cc.total){
+        return `<div class="ps-cam">
+          <div class="ps-cam-h"><b>${esc(a.alias)}</b><span class="mono">${fmt$(cc.balance)}</span></div>
+          <p class="micro" style="text-transform:none;letter-spacing:.03em">${bi(
+            'Esta firma no está en el catálogo, así que no se calcula su vara. El profit sí es real.',
+            'This firm is not in the catalogue, so its bar is not computed. The profit is real.')}</p>
+        </div>`;
+      }
+      const c1 = cc.target / cc.total * 100;
+      const c2 = (cc.target + cc.buffer) / cc.total * 100;
+      const etapa = cc.pasoPago ? [bi('COBRÓ','PAID'),'up']
+                  : cc.pasoBuffer ? [bi('TRAMO DE PAGO','PAYOUT STRETCH'),'up']
+                  : cc.pasoEval ? [bi('FONDEADA','FUNDED'),'']
+                  : [bi('EN EVALUACIÓN','IN EVALUATION'),''];
+      return `<div class="ps-cam">
+        <div class="ps-cam-h">
+          <b>${esc(a.alias)}</b>
+          <span class="ps-cam-et ${etapa[1]}">${etapa[0]}</span>
+          <span class="mono">${fmt$(cc.balance)}</span>
+        </div>
+        <div class="pr-track vara">
+          <i class="${cc.pct >= 100 ? 'listo' : ''}" style="width:${cc.pct}%"></i>
+          <span class="corte" style="left:${c1}%"></span>
+          <span class="corte" style="left:${c2}%"></span>
+        </div>
+        <div class="ps-cam-pie">
+          <span>${Math.round(cc.pct)}% ${bi('del camino','of the road')}</span>
+          <span>${fmt$(cc.avance)} ${bi('de','of')} ${fmt$(cc.total)}</span>
+        </div>
+      </div>`;
+    }).join('') + `</div>`;
   };
 
   /* ── LA TARJETA: SÓLO BALANCES Y CALENDARIO ──
@@ -6514,7 +6581,8 @@ function pintaPerfilSocio(){
       ${balRow(bi('FUTUROS','FUTURES'), futBal, futBase, fondSuyas.length,
           fondSuyas.length
             ? fondSuyas.length + (fondSuyas.length === 1 ? bi(' cuenta fondeada viva',' live funded account') : bi(' cuentas fondeadas vivas',' live funded accounts'))
-            : bi('sin cuentas fondeadas','no funded accounts'))}
+              + bi(' · pica para ver su camino',' · tap to see their road')
+            : bi('sin cuentas fondeadas','no funded accounts'), true)}
       ${balRow('LIVE', liveBal, liveBase, liveSuyas.length,
           liveSuyas.length ? bi('capital propio: ','own capital: ') + fmt$(liveBase) : bi('sin cuenta propia','no own account'))}
       ${balRow(bi('PORTAFOLIO','PORTFOLIO'), portBal, portBase, (S.positions || []).length,
