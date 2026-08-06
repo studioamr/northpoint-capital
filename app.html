@@ -9666,7 +9666,17 @@ $('#btnPos')?.addEventListener('click', ()=> openPos());
 /* ════════ Badges del rail ════════ */
 function updateBadges(){
   const dayTr = tradesByDay()[todayISO()] || [];
-  $('#bdgTrades').textContent = dayTr.length ? dayTr.length+'/2' : '';
+  /* ── ESTA LÍNEA TUMBÓ LA APP ENTERA ──
+     La insignia vivía DENTRO del renglón de Rutina de la barra lateral. Al
+     guardar Rutina se fue con ella, y esta escritura sin guarda reventaba
+     updateBadges() → render() → show() → y con él TODO lo que faltaba del
+     arranque, incluido el lockUI() de la última línea. Resultado: la app se
+     abría a medio construir y sin pedir contraseña.
+
+     El de abajo (#bdgTix) sí estaba guardado. La diferencia entre los dos era
+     el bug. Y el tope ya no es «/2»: sale del plan del día, que hoy dice uno. */
+  const b = $('#bdgTrades');
+  if(b) b.textContent = dayTr.length ? dayTr.length + '/' + planDelDia(todayISO()).maxT : '';
   const abiertas = S.tickets.filter(t => t.estado === 'abierta').length;
   /* La tesis vive dentro de Hoy: si algún día vuelve a tener insignia propia, aquí está. */
   const bt = $('#bdgTix');
