@@ -1950,6 +1950,14 @@ button.tag.quemada{text-decoration:line-through;text-decoration-color:var(--down
   pointer-events:none}
 .fc-cap{font-family:var(--mono);font-size:12px;color:var(--up);margin-left:6px}
 
+/* ── EL DÍA QUE MURIÓ UNA CUENTA ──
+   Franja roja arriba de la celda y su rótulo. No se pinta la celda entera de
+   rojo a propósito: ese día pudo cerrar en verde en las otras cuentas, y el
+   calendario no debe mentir sobre el P&L para contar la muerte. */
+.ts-cell.quema{box-shadow:inset 0 2px 0 var(--down),inset 0 0 0 1px color-mix(in srgb,var(--down) 40%,transparent)}
+.ts-quema{display:block;font-family:var(--mono);font-size:7.5px;letter-spacing:.1em;
+  color:var(--down);margin-top:2px;font-weight:600}
+
 /* ── EL MANUAL DE LA CASA ── lectura larga, así que respira: medida de columna
    corta, mucho aire entre bloques y la numeración fuera del texto. */
 .mn-intro{font-size:14.5px;line-height:1.7;color:var(--txt);max-width:62ch;
@@ -5129,7 +5137,7 @@ setInterval(tickClock, 1000); tickClock();
 
 /* ════════ DASHBOARD ════════ */
 /* ════════ DASHBOARD DE LA FIRMA ════════ */
-const idsTodas = () => new Set([...S.accounts.map(a=>a.id), SIN_CUENTA]);
+const idsTodas = () => new Set([...mias(S.accounts).map(a=>a.id), SIN_CUENTA]);
 /* ════════ PANORAMA · las tres patas del negocio ════════
    Cuenta fondeada, portafolio y cuenta propia. Cada una con su aro: dónde va contra
    su propio destino, que no es el mismo en las tres.
@@ -5180,8 +5188,8 @@ function renderPicker(host){
         <button type="button" data-p="funded" class="${modo==='funded'?'on':''}">${tr('ac.fondeadas')}</button>
       </div>
       <div class="acct-opts">
-        ${S.accounts.length
-          ? ordenar(S.accounts).map(a=>{
+        ${mias(S.accounts).length
+          ? ordenar(mias(S.accounts)).map(a=>{
               const h = saludDe(a), F = FASES[a.fase] || FASES.eval;
               return fila(a.id, a.alias, ` <span class="tag">${F.corto}</span>`, fmt$(h.balance));
             }).join('')
@@ -5453,7 +5461,7 @@ function renderAcctMgr(){
 
   $('#acFoot').innerHTML = (huerf ? `<div class="cal-pace" style="margin-top:12px">Hay <b>${huerf}</b> trade${huerf>1?'s':''} registrado${huerf>1?'s':''} antes de las cuentas.
        <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">
-       ${ordenar(S.accounts).map(a=>`<button class="btn sm" onclick="asignarHuerfanos('${a.id}')">Asignar a ${esc(a.alias)}</button>`).join('')}
+       ${ordenar(mias(S.accounts)).map(a=>`<button class="btn sm" onclick="asignarHuerfanos('${a.id}')">Asignar a ${esc(a.alias)}</button>`).join('')}
        ${S.accounts.length>1?`<button class="btn sm primary" onclick="asignarHuerfanos('*')">Asignar a todas</button>`:''}
        </div></div>` : '');
 
@@ -5504,7 +5512,7 @@ window.borrarCuenta = id => {
   save(); renderAcctMgr(); renderDashboard(); renderAgentes(); toast('Account deleted');
 };
 window.asignarHuerfanos = destino => {
-  const ids = destino === '*' ? ordenar(S.accounts).map(a=>a.id) : [destino];
+  const ids = destino === '*' ? ordenar(mias(S.accounts)).map(a=>a.id) : [destino];
   let n = 0;
   S.trades.forEach(t=>{ if(!Array.isArray(t.accts) || t.accts.includes(SIN_CUENTA)){ t.accts = [...ids]; n++; } });
   save(); renderAcctMgr(); renderDashboard(); renderAgentes();
@@ -6457,7 +6465,7 @@ function renderCamino(){
     $('#pgCaminoSub').textContent = '';
     $('#pgClimb').innerHTML = '';
     $('#pgPasos').innerHTML = '';
-    const hayFondeadas = S.accounts.some(a => !esLive(a) && !esSim(a));
+    const hayFondeadas = mias(S.accounts).some(a => !esLive(a) && !esSim(a));
     $('#pgCaminoNota').textContent = hayFondeadas
       ? bi('No account matches this filter. Change the selection above.',
            'No account matches this filter. Change the selection above.')
@@ -7349,8 +7357,24 @@ function calMatrix(key){
 }
 const esHabil = iso => { const [y,m,d] = iso.split('-').map(Number); const w = new Date(y,m-1,d).getDay(); return w!==0 && w!==6; };
 
+/* ── LAS QUEMAS DEL MES ──
+   Una cuenta que muere es el suceso más importante que le puede pasar a un día,
+   y no salía en ninguna parte: desaparecía del dinero y ya. Aquí se junta qué
+   cuenta murió y qué día, para que el calendario lo pueda marcar.
+   Sólo las MÍAS: la lápida de otro socio no es asunto de mi calendario. */
+function quemasPorDia(){
+  const m = {};
+  mias(S.accounts).forEach(a => {
+    if(esLive(a) || esSim(a)) return;
+    const q = quemaDetectada(a);
+    if(q && q.fecha) (m[q.fecha] = m[q.fecha] || []).push(a.alias);
+  });
+  return m;
+}
+
 function renderCal(){
   const byDay = tradesByDay();
+  const quemas = quemasPorDia();
   const M = metas();
   const hoyISO = todayISO();
   const [Y, MM] = calMes.split('-').map(Number);
@@ -7374,11 +7398,13 @@ function renderCal(){
       const habil = esHabil(iso);
       if(tr.length){ wkPnl += pnl; wkDias++; }
 
+      const muertas = quemas[iso] || [];
       const cls = [
         'ts-cell',
         tr.length ? (pnl>0?'up':pnl<0?'down':'flat') : (futuro && habil ? 'fut' : ''),
         iso===hoyISO ? 'today' : '',
-        vio ? 'vio' : ''
+        vio ? 'vio' : '',
+        muertas.length ? 'quema' : ''
       ].filter(Boolean).join(' ');
 
       let cuerpo;
@@ -7394,7 +7420,14 @@ function renderCal(){
       } else {
         cuerpo = '';
       }
-      html += `<div class="${cls}"${tr.length ? ` data-iso="${iso}" role="button" tabindex="0"` : ''} title="${iso}"><span class="ts-d">${Number(iso.slice(8))}</span>${cuerpo}</div>`;
+      /* la lápida: el día que una cuenta tocó su línea de drawdown */
+      if(muertas.length) cuerpo += `<span class="ts-quema">${muertas.length > 1
+        ? muertas.length + bi(' QUEMADAS',' BURNED')
+        : bi('QUEMADA','BURNED')}</span>`;
+      const tit = muertas.length
+        ? iso + ' — ' + bi('se quemó ','burned: ') + muertas.join(', ')
+        : iso;
+      html += `<div class="${cls}"${(tr.length || muertas.length) ? ` data-iso="${iso}" role="button" tabindex="0"` : ''} title="${tit}"><span class="ts-d">${Number(iso.slice(8))}</span>${cuerpo}</div>`;
     }
     const wCls = wkPnl>0?'up':wkPnl<0?'down':'';
     html += `<div class="ts-week ${wCls}">
@@ -7445,7 +7478,10 @@ let diaAbierto = null;
 const LLAVE_IA = 'northpoint_llave_ia';
 function abrirDia(iso){
   const trs = tradesByDay()[iso] || [];
-  if(!trs.length) return;
+  const muertas = quemasPorDia()[iso] || [];
+  /* un día sin trades pero con una cuenta muerta SÍ se abre: es el día más
+     importante del mes y antes no se podía ni picar */
+  if(!trs.length && !muertas.length) return;
   diaAbierto = iso;
   const pnl = trs.reduce((a,t)=>a+(t.pnl||0),0);
   const wins = trs.filter(t=>(t.pnl||0)>0).length;
@@ -7453,7 +7489,8 @@ function abrirDia(iso){
   const vios = [...new Set(trs.flatMap(t => violations(t, trs)))];
   $('#diaTitle').textContent = fmtFecha(iso);
   $('#diaSub').innerHTML = `<b class="${pnl>0?'up':pnl<0?'down':''}">${fmt$(pnl,true)}</b> · ${trs.length} trade${trs.length>1?'s':''} · ${wins}W·${loss}L`
-    + (vios.length ? ` · <span class="tag wr">${vios.join(' · ')}</span>` : '');
+    + (vios.length ? ` · <span class="tag wr">${vios.join(' · ')}</span>` : '')
+    + (muertas.length ? ` · <span class="tag wr">${bi('SE QUEMÓ ','BURNED: ')}${muertas.map(esc).join(', ')}</span>` : '');
   $('#diaTrades').innerHTML = trs.map(t => `
     <div class="dia-t">
       <div class="dt-h">
@@ -7903,7 +7940,7 @@ document.addEventListener('paste', e => {
 let tradeAccts = [], pendienteTix = null;
 function renderTradeAccts(pre){
   const cont = $('#tAccts');
-  tradeAccts = (pre || []).filter(id => id === SIN_CUENTA || S.accounts.some(a=>a.id===id));
+  tradeAccts = (pre || []).filter(id => id === SIN_CUENTA || mias(S.accounts).some(a=>a.id===id));
   if(!S.accounts.length){
     if(!tradeAccts.length) tradeAccts = [SIN_CUENTA];
     cont.innerHTML = `<p class="micro" style="color:var(--faint)">Sin cuentas dadas de alta: el trade se guarda sin asignar.</p>`;
@@ -7911,7 +7948,7 @@ function renderTradeAccts(pre){
   }
   /* por defecto se marcan las cuentas de verdad; una sim se pica a propósito */
   if(!tradeAccts.length) tradeAccts = cuentasVivas().filter(a => !esSim(a)).map(a=>a.id);
-  cont.innerHTML = ordenar(S.accounts).map(a=>{
+  cont.innerHTML = ordenar(mias(S.accounts)).map(a=>{
     const on = tradeAccts.includes(a.id);
     const F = FASES[a.fase] || FASES.eval;
     return `<button type="button" class="tag" data-a="${a.id}" aria-pressed="${on}">
