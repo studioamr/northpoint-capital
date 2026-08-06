@@ -3618,6 +3618,13 @@ const MICROS = ['MNQ','MES','MYM','M2K'];
      · Sólo se opera la ventana 9:00–10:30 NY (7:00–8:30 en Morelia), lunes a viernes.
      · Nada queda abierto después de las 8:30.
      · Si el checklist no da setup válido, el mejor trade del día es no operar. */
+/* El huso del mercado se declara AQUÍ ARRIBA porque lo usan tres cosas que
+   corren en momentos distintos: la pill de la barra, el sello de hora del trade
+   y las escenas de la torre. Declarado abajo —donde nació, junto a las escenas—
+   la pill lo alcanzaba antes de inicializarse y tumbaba la carga del terminal
+   entero con un ReferenceError. */
+const TZ_MERCADO = 'America/New_York';
+
 const SISTEMA = {
   version: '3.0',
   actualizado: '2026-07-25',
@@ -4697,11 +4704,21 @@ function metas(){
 /* La sesión global en la que cae el reloj (hora local de la mesa, CT).
    Fuera de nuestra ventana el terminal ya no dice "mesa cerrada": dice en qué
    sesión anda el mundo, que es lo que de verdad mueve al índice. */
-function sesionMundial(now = ahora()){
-  const h = now.getHours() + now.getMinutes()/60;
-  if(h >= 2 && h < 7)  return 'LONDON SESSION';
-  if(h >= 7 && h < 16) return 'NY SESSION';
-  return 'ASIA SESSION';               // 16:00 → 02:00
+/* ── LA PILL DE ARRIBA, EN HORA DE NUEVA YORK ──
+   Leía la hora LOCAL del equipo con cortes pensados para Morelia, así que en
+   cuanto el reloj de allá y el de aquí no coincidían empezaba a mentir: decía
+   ASIA SESSION a media tarde. Las sesiones son del mercado, no de dónde esté
+   sentado quien mira, así que se miden en el mismo huso en que se mide todo lo
+   demás — el de Nueva York.
+     LONDRES  03:00 → 09:30    NY  09:30 → 16:00    ASIA  20:00 → 03:00
+   Entre las 16:00 y las 20:00 no hay sesión abierta y eso se dice, en vez de
+   rellenar el hueco con una ciudad falsa. */
+function sesionMundial(){
+  const m = minutosEn(TZ_MERCADO);
+  if(m >= 9*60+30 && m < 16*60) return 'NY SESSION';
+  if(m >= 3*60 && m < 9*60+30)  return 'LONDON SESSION';
+  if(m >= 20*60 || m < 3*60)    return 'ASIA SESSION';
+  return 'MARKET CLOSED';                    // 16:00 → 20:00
 }
 function sessionState(now = ahora()){
   const mins = now.getHours()*60 + now.getMinutes();
@@ -10591,7 +10608,6 @@ const TRAMOS = [
   { c:'nyc',     de:570,  a:960,  sig:'tokio'   },   // 09:30 – 16:00 NY
   { c:'tokio',   de:1200, a:1500, sig:'londres' },   // 20:00 – 01:00 NY (cruza medianoche)
 ];
-const TZ_MERCADO = 'America/New_York';
 const VUELO_MIN = 25;                     // lo que dura el traslado en pantalla
 
 function escenaAhora(now = new Date()){
