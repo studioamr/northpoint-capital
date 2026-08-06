@@ -5607,10 +5607,15 @@ function carreraSocio(uid){
   const suyas = todas.filter(cuentaEnPie);
   const quemadas = todas.length - suyas.length;
   if(!suyas.length) return { uid, cuentas:0, avance:0, total:0, pct:0, cobrado:0,
-                             quemadas, sinDatos: !todas.length };
+                             capital:0, quemadas, sinDatos: !todas.length };
   let avance = 0, total = 0, pagos = 0;
   suyas.forEach(a => { const c = carreraCuenta(a); avance += c.avance; total += c.total; if(c.pasoPago) pagos++; });
-  return { uid, cuentas:suyas.length, avance, total,
+  /* El capital que trae puesto: la suma del tamaño de sus cuentas EN PIE. Una
+     quemada no es capital, así que no cuenta —es la misma regla que ya rige el
+     balance de FUTUROS, y tenía que ser la misma aquí para no decir dos cosas
+     distintas del mismo dinero en dos pantallas. */
+  const capital = suyas.reduce((x, a) => x + (a.size || 0), 0);
+  return { uid, cuentas:suyas.length, avance, total, capital,
            pct: total > 0 ? Math.max(0, Math.min(100, avance / total * 100)) : 0,
            pagos, quemadas, sinDatos:false };
 }
@@ -5635,7 +5640,12 @@ function renderFirmaCarrera(){
     return { ...c, nom:p.nom, enMesa: (hoy - visto) < PRESENCIA_MIN * 60000,
              hace: visto ? Math.round((hoy - visto) / 60000) : null };
   });
-  const orden = socios.slice().sort((a, b) => b.pct - a.pct);
+  /* Ordena por CAPITAL, no por porcentaje. El porcentaje es qué tan lejos vas
+     en TU camino, y con eso quien maneja \$100k le ganaba a quien maneja \$200k
+     nomás por ir más adelantado en cuentas más chicas. En una mesa el primero
+     es el que trae más dinero puesto. El porcentaje sigue a la vista y desempata
+     cuando dos traen el mismo capital. */
+  const orden = socios.slice().sort((a, b) => (b.capital - a.capital) || (b.pct - a.pct));
   const yo = S.session && S.session.user;
   const conDatos = socios.filter(x => !x.sinDatos).length;
   /* Sin sesión de nube este panel es una foto vieja: ni lo tuyo sube ni lo de
@@ -5684,7 +5694,8 @@ function renderFirmaCarrera(){
                    lo que le falta no es sincronía: es dar de alta su cuenta -->
               <em>${x.sinDatos
                  ? bi('registrado · todavía sin cuentas','registered · no accounts yet')
-                 : x.cuentas + (x.cuentas === 1 ? bi(' cuenta',' account') : bi(' cuentas',' accounts'))
+                 : fmt$(x.capital) + bi(' manejados · ',' under management · ')
+                   + x.cuentas + (x.cuentas === 1 ? bi(' cuenta',' account') : bi(' cuentas',' accounts'))
                    + (x.pagos ? ' · ' + x.pagos + bi(' cobrada',' paid') + (x.pagos > 1 ? 's' : '') : '')
                    /* una cuenta que se quemó sale de la carrera, pero se dice:
                       que el número baje sin explicación se siente a error */
