@@ -5070,7 +5070,13 @@ setInterval(tickClock, 1000); tickClock();
 
 /* ════════ DASHBOARD ════════ */
 /* ════════ DASHBOARD DE LA FIRMA ════════ */
-const idsTodas = () => new Set([...S.accounts.map(a=>a.id), SIN_CUENTA]);
+/* ── LAS CUENTAS QUE SE LISTAN SON LAS MÍAS ──
+   El estado lo comparten los tres socios, así que S.accounts trae también las de
+   los demás. mias() ya cortaba el DINERO, pero estas siete listas seguían
+   enseñando las de todos — y dos de ellas son de uso diario: el selector de
+   cuentas y los chips del formulario de trade. Ahí el bug no era cosmético: se
+   podía registrar un trade propio en una cuenta de Pablo. */
+const idsTodas = () => new Set([...mias(S.accounts).map(a=>a.id), SIN_CUENTA]);
 /* ════════ PANORAMA · las tres patas del negocio ════════
    Cuenta fondeada, portafolio y cuenta propia. Cada una con su aro: dónde va contra
    su propio destino, que no es el mismo en las tres.
@@ -5122,7 +5128,7 @@ function renderPicker(host){
       </div>
       <div class="acct-opts">
         ${S.accounts.length
-          ? ordenar(S.accounts).map(a=>{
+          ? ordenar(mias(S.accounts)).map(a=>{
               const h = saludDe(a), F = FASES[a.fase] || FASES.eval;
               return fila(a.id, a.alias, ` <span class="tag">${F.corto}</span>`, fmt$(h.balance));
             }).join('')
@@ -5324,7 +5330,7 @@ function renderAcctPanel(){
 function renderAcctMgr(){
   const planes = Object.keys(FIRM_CATALOG.Tradeify.plans);
   const huerf = S.trades.filter(t => !Array.isArray(t.accts) || t.accts.includes(SIN_CUENTA)).length;
-  $('#acList').innerHTML = S.accounts.length ? ordenar(S.accounts).map(a=>{
+  $('#acList').innerHTML = mias(S.accounts).length ? ordenar(mias(S.accounts)).map(a=>{
     const R = reglasDe(a), h = saludDe(a);
     const tallas = R ? Object.keys((FIRM_CATALOG[a.firm].plans[a.plan]||{}).sizes||{}) : [String(a.size)];
     return `<div class="panel" style="margin-bottom:10px"><div class="p-body">
@@ -5394,7 +5400,7 @@ function renderAcctMgr(){
 
   $('#acFoot').innerHTML = (huerf ? `<div class="cal-pace" style="margin-top:12px">Hay <b>${huerf}</b> trade${huerf>1?'s':''} registrado${huerf>1?'s':''} antes de las cuentas.
        <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">
-       ${ordenar(S.accounts).map(a=>`<button class="btn sm" onclick="asignarHuerfanos('${a.id}')">Asignar a ${esc(a.alias)}</button>`).join('')}
+       ${ordenar(mias(S.accounts)).map(a=>`<button class="btn sm" onclick="asignarHuerfanos('${a.id}')">Asignar a ${esc(a.alias)}</button>`).join('')}
        ${S.accounts.length>1?`<button class="btn sm primary" onclick="asignarHuerfanos('*')">Asignar a todas</button>`:''}
        </div></div>` : '');
 
@@ -5445,7 +5451,7 @@ window.borrarCuenta = id => {
   save(); renderAcctMgr(); renderDashboard(); renderAgentes(); toast('Account deleted');
 };
 window.asignarHuerfanos = destino => {
-  const ids = destino === '*' ? ordenar(S.accounts).map(a=>a.id) : [destino];
+  const ids = destino === '*' ? ordenar(mias(S.accounts)).map(a=>a.id) : [destino];
   let n = 0;
   S.trades.forEach(t=>{ if(!Array.isArray(t.accts) || t.accts.includes(SIN_CUENTA)){ t.accts = [...ids]; n++; } });
   save(); renderAcctMgr(); renderDashboard(); renderAgentes();
@@ -7650,7 +7656,7 @@ document.addEventListener('paste', e => {
 let tradeAccts = [], pendienteTix = null;
 function renderTradeAccts(pre){
   const cont = $('#tAccts');
-  tradeAccts = (pre || []).filter(id => id === SIN_CUENTA || S.accounts.some(a=>a.id===id));
+  tradeAccts = (pre || []).filter(id => id === SIN_CUENTA || mias(S.accounts).some(a=>a.id===id));
   if(!S.accounts.length){
     if(!tradeAccts.length) tradeAccts = [SIN_CUENTA];
     cont.innerHTML = `<p class="micro" style="color:var(--faint)">Sin cuentas dadas de alta: el trade se guarda sin asignar.</p>`;
@@ -7658,7 +7664,7 @@ function renderTradeAccts(pre){
   }
   /* por defecto se marcan las cuentas de verdad; una sim se pica a propósito */
   if(!tradeAccts.length) tradeAccts = cuentasVivas().filter(a => !esSim(a)).map(a=>a.id);
-  cont.innerHTML = ordenar(S.accounts).map(a=>{
+  cont.innerHTML = ordenar(mias(S.accounts)).map(a=>{
     const on = tradeAccts.includes(a.id);
     const F = FASES[a.fase] || FASES.eval;
     return `<button type="button" class="tag" data-a="${a.id}" aria-pressed="${on}">
