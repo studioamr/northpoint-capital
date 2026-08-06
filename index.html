@@ -1064,17 +1064,14 @@ body.doc-open .docback{display:inline-block}
 #filosofia.doc-active{background:#000;min-height:100vh}
 #filosofia #flechaCanvas{color:#F4F4F4}
 
-/* ── MESA: LA TORRE Y LA FRASE ──
-   El mismo estilo que Filosofía: negro total pase lo que pase, partículas de
-   luz, y NI UN DATO del método. Los grises van en literal y no en tokens a
-   propósito: la sección es negra también en tema claro, y las variables del
-   tema claro pondrían texto oscuro sobre negro. */
+/* ── MESA: LA TORRE, Y «NY SESSION» EN PARTÍCULAS ──
+   El mismo estilo que Filosofía: negro total pase lo que pase y partículas de
+   luz. En esta pantalla no hay un solo nodo de texto: hasta el rótulo se
+   dibuja en el canvas, muestreado de la tipografía — por eso aquí no quedan
+   reglas de texto. */
 #mesa.doc-active{background:#000;min-height:100vh}
-.torre-marco{position:relative;height:clamp(360px,60vh,640px)}
+.torre-marco{position:relative;height:clamp(440px,80vh,860px)}
 #torreCanvas{position:absolute;inset:0;width:100%;height:100%}
-.mesa-frase{text-align:center;margin:8px 0 70px}
-.mesa-frase p{color:#A6A6A6;font-size:15.5px;line-height:1.85;margin:0}
-.mesa-frase .fin{color:#F4F4F4;font-family:var(--mono);font-size:10.5px;letter-spacing:.26em;margin-top:20px}
 </style>
 </head>
 <body>
@@ -1152,18 +1149,11 @@ body.doc-open .docback{display:inline-block}
 <!-- ============================ 02 MESA DE FUTUROS ============================ -->
 <section id="mesa">
   <div class="wrap">
-    <!-- LA TORRE Y LA FRASE, nada más (André). El mismo estilo que Filosofía:
-         negro total y partículas de luz. Se fue también el párrafo que nombraba
-         el instrumento y la cadencia — «acuérdate que eso es nuestro»: la frase
-         dice QUÉ creemos y hasta dónde se cuenta. -->
+    <!-- SÓLO LA TORRE (André). Y el rótulo no es texto: «NY SESSION» se
+         muestrea de la tipografía y se dibuja en partículas dentro del mismo
+         canvas — en esta pantalla no hay un solo nodo de texto. -->
     <div class="torre-marco rv">
-      <canvas id="torreCanvas" aria-label="La torre de Nueva York"></canvas>
-    </div>
-    <div class="mesa-frase rv">
-      <p>Dentro del caos hay orden.</p>
-      <p>El orden son patrones que se repiten.</p>
-      <p>Nosotros encontramos uno.</p>
-      <p class="fin">EL RESTO ES DE LA CASA</p>
+      <canvas id="torreCanvas" aria-label="La torre de Nueva York · NY Session"></canvas>
     </div>
   </div>
 </section>
@@ -1496,8 +1486,9 @@ body.doc-open .docback{display:inline-block}
     cx.fillStyle = '#000'; cx.fillRect(0, 0, W, H);
 
     /* encajar el lienzo 140×104 en el marco, centrado */
-    var esc = Math.min(W * .62 / 140, H * .88 / 104);
-    var ox = (W - 140 * esc) / 2, oy = (H - 104 * esc) / 2;
+    /* la torre ocupa el alto menos la franja del rótulo */
+    var esc = Math.min(W * .58 / 140, H * .72 / 104);
+    var ox = (W - 140 * esc) / 2, oy = H * .05;
     var segs = TRAZO.map(function(g){
       var s_ = { a:[ox + g.x1 * esc, oy + g.y1 * esc], b:[ox + g.x2 * esc, oy + g.y2 * esc], dim:g.dim };
       s_.len = Math.hypot(s_.b[0] - s_.a[0], s_.b[1] - s_.a[1]);
@@ -1521,6 +1512,39 @@ body.doc-open .docback{display:inline-block}
         s: Math.random() < .85 ? 1 : 1.7,
         a: (.3 + Math.random() * .7) * (seg.dim ? .42 : 1)
       });
+    }
+
+    /* ── «NY SESSION», también en partículas ──
+       No es HTML. Se dibuja el texto en un lienzo aparte, se muestrean sus
+       píxeles cada 2px, y cada punto con tinta se vuelve la casa de una
+       partícula — la misma técnica que la torre, así el rótulo y el edificio
+       son EL MISMO material. Si salen de más, se ralea al azar para no
+       duplicar el costo del frame. */
+    var ts = Math.max(20, Math.min(46, W * .045));
+    var ty = oy + 104 * esc + (H - oy - 104 * esc) * .5;
+    var off = document.createElement('canvas');
+    off.width = Math.max(1, Math.round(W)); off.height = Math.max(1, Math.round(H));
+    var oc = off.getContext('2d');
+    oc.font = '500 ' + ts + 'px "IBM Plex Mono", ui-monospace, monospace';
+    oc.textAlign = 'center'; oc.textBaseline = 'middle';
+    try{ oc.letterSpacing = Math.round(ts * .4) + 'px'; }catch(e){}
+    oc.fillStyle = '#fff';
+    oc.fillText('NY SESSION', off.width / 2, ty);
+    var iw = off.width, datos = oc.getImageData(0, 0, iw, off.height).data;
+    var casas = [];
+    for (var yy = 0; yy < off.height; yy += 2)
+      for (var xx = 0; xx < iw; xx += 2)
+        if (datos[(yy * iw + xx) * 4 + 3] > 120) casas.push([xx, yy]);
+    if (casas.length > 680){
+      var prob = 680 / casas.length, ralas = [];
+      for (var z = 0; z < casas.length; z++) if (Math.random() < prob) ralas.push(casas[z]);
+      casas = ralas;
+    }
+    for (var c2 = 0; c2 < casas.length; c2++){
+      parts.push({ hx: casas[c2][0], hy: casas[c2][1],
+                   ph: Math.random() * 6.283, sp: .5 + Math.random() * .9,
+                   amp: .6 + Math.random() * 1.5,          /* poco: las letras se leen */
+                   s: 1, a: .35 + Math.random() * .65 });
     }
     aire = [];
     for (var q = 0; q < N * .1; q++){
@@ -1567,6 +1591,9 @@ body.doc-open .docback{display:inline-block}
     pinta(ms / 1000, dt);
   }
   requestAnimationFrame(loop);
+  /* la tipografía llega tarde: cuando el font de verdad carga, se rearma para
+     que el rótulo no se quede muestreado del monospace de reserva */
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(function(){ W = 0; });
 })();
 </script>
 
