@@ -2436,6 +2436,10 @@ stop[stop-color="#9BC0DC"]{stop-color:var(--txt)}
 
     <nav class="rail-group">
       <div class="micro" data-i18n="nav.grupo.mesa">Operación diaria</div>
+      <!-- RUTINA E ICE VADER, GUARDADAS «POR EL MOMENTO» (André, 6-ago-2026).
+           Se comentan y NO se borran: sus dos secciones, sus renders y todo lo
+           que vive dentro siguen intactos en el archivo. Volver es descomentar
+           estos dos bloques y devolver sus renglones a TITLES.
       <a class="item" href="#sesion" data-view="sesion">
         <svg viewBox="0 0 24 24" fill="none" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg>
         <span data-i18n="nav.sesion">Rutina</span> <span class="bdg" id="bdgTrades"></span>
@@ -2444,6 +2448,7 @@ stop[stop-color="#9BC0DC"]{stop-color:var(--txt)}
         <svg viewBox="0 0 24 24" fill="none" stroke-width="1.6"><path d="M12 3v18M3 12h18"/><path d="M5.6 5.6l12.8 12.8M18.4 5.6L5.6 18.4"/><circle cx="12" cy="12" r="3.2"/></svg>
         <span>Ice Vader</span>
       </a>
+      -->
       <a class="item" href="#journal" data-view="journal">
         <svg viewBox="0 0 24 24" fill="none" stroke-width="1.6"><path d="M4 19V5a2 2 0 0 1 2-2h13v18H6a2 2 0 0 1-2-2z"/><path d="M8 7h7M8 11h7"/></svg>
         <span data-i18n="nav.journal">Mi desempeño</span>
@@ -5158,11 +5163,10 @@ function pnlRanges(ids = idsSel(), soloReal = false){
 
 /* ════════ Router ════════ */
 const TITLES = {
-  sesion:      ['tit.mesa.k',  'tit.sesion.t'],
+  /* sesion e icevader guardadas — ver el comentario de la barra lateral */
   journal:     ['tit.mesa.k',  'tit.journal.t'],
   trades:      ['tit.mesa.k',  'tit.trades.t'],
   agentes:     ['tit.np.k',    'tit.agentes.t'],
-  icevader:    ['tit.mesa.k',  'tit.ice.t'],
   posiciones:  ['tit.snow.k',  'tit.pos.t'],
   vida:        ['tit.snow.k',  'tit.vida.t'],
   plan:        ['tit.snow.k',  'tit.plan.t'],
@@ -5171,6 +5175,10 @@ function show(view){
   if(view === 'progreso') view = 'agentes';   // el progreso vive en La torre ahora
   if(view === 'estudio' || view === 'coach') view = 'trades';  // curso y coach se fueron; aquí viven los trades
   if(view === 'dashboard') view = 'vida';     // el panorama se mudó a La caja
+  /* Rutina e Ice Vader están guardadas: una liga vieja o un marcador que apunte
+     ahí aterriza en Journal, que es donde sí hay algo, en vez de rebotar a The
+     Desk sin explicación. */
+  if(view === 'sesion' || view === 'icevader') view = 'journal';
   if(!TITLES[view]) view = 'agentes';
   $$('.view').forEach(v=>v.classList.remove('on'));
   $('#v-'+view).classList.add('on');
@@ -8823,9 +8831,6 @@ const TOUR = [
   { vista:'agentes', t:['La vara: $6,100','The bar: $6,100'], p:[
     'Una cuenta se gana en tres tramos: $3,000 para pasar la evaluación, $2,100 para librar el colchón y $1,000 de pago máximo. Eso es el 100%, y la barra se mueve sola con tus trades. Si se quema, queda escrito en qué momento fue.',
     'An account is won in three legs: $3,000 to clear the evaluation, $2,100 to clear the buffer and $1,000 of maximum payout. That is your 100%, and the bar moves on its own from your trades. If it burns, the moment it burned stays on the record.'] },
-  { vista:'sesion', t:['La rutina','The routine'], p:[
-    'El protocolo del día en orden: preparar antes de las 7:25, decidir cuando el rango ya se formó, ejecutar y cerrar antes de las 8:30. Fuera de esa ventana no se opera.',
-    'The daily protocol in order: prepare before 7:25, decide once the range has formed, execute, and be flat before 8:30. Outside that window nobody trades.'] },
   { vista:'journal', t:['El journal','The journal'], p:[
     'Tu P&L contra la meta del día, la semana y el mes, la curva de capital y el calendario. Las violaciones se marcan solas contra el plan del día. Si una es falsa la puedes descartar, pero pidiendo motivo y queda tachada en el día: un día perdedor bien operado es profesional; uno ganador que rompió las reglas es un pasivo.',
     'Your P&L against the day, week and month targets, the equity curve and the calendar. Breaches are flagged automatically against that day\u2019s plan. A wrong one can be dismissed — with a reason, and it stays crossed out in the day: a losing day traded by the book is professional; a winning day that broke the rules is a liability.'] },
@@ -9711,7 +9716,7 @@ $('#xSave').addEventListener('click', ()=>{
     sym: $('#xSym').value, dir: $('#xDir').value,
     tesis, por: S.session.user, firmas: {}, estado: 'abierta'
   });
-  save(); closeOv(); location.hash = 'sesion'; renderTix(); updateBadges();
+  save(); closeOv(); renderTix(); updateBadges();
   toast('Tesis propuesta a la mesa');
 });
 
@@ -14470,7 +14475,8 @@ function render(view){
    renderAll() le pasaba a render() el hash crudo ('dashboard', 'progreso'…) y
    render() no lo reconocía: la vista se quedaba con números viejos sin un solo
    error. Pega al guardar ajustes, al restaurar y en cada sync de la nube. */
-const ALIAS_VISTA = { dashboard:'vida', progreso:'agentes', estudio:'trades', coach:'trades' };
+const ALIAS_VISTA = { dashboard:'vida', progreso:'agentes', estudio:'trades', coach:'trades',
+                      sesion:'journal', icevader:'journal' };
 function vistaActual(){
   const v = location.hash.slice(1) || 'agentes';
   return ALIAS_VISTA[v] || (TITLES[v] ? v : 'agentes');
