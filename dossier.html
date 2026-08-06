@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>NORTHPOINT · Cómo trabaja la mesa</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* ═══════════════════════════════════════════════════════════════
+   NORTHPOINT · DOSSIER
+   Un solo archivo, pensado para DOS destinos a la vez: se lee en el
+   navegador y se imprime a PDF sin retocar nada. Por eso todo el color
+   va en tokens con equivalente de impresión, y los saltos de página
+   están puestos a mano — dejarle los cortes al navegador parte tablas
+   y deja títulos huérfanos al pie.
+   Misma tipografía y mismo tono que la landing: es la misma pieza.
+   ═══════════════════════════════════════════════════════════════ */
+:root{
+  --bg:#F5F5F3; --bg-2:#EBEBE9;
+  --line:rgba(0,0,0,.16); --line-soft:rgba(0,0,0,.08);
+  --txt:#0C0C0C; --dim:#585858; --faint:#8C8C8C;
+  --glass:rgba(0,0,0,.035);
+  --sans:'Inter',-apple-system,system-ui,sans-serif;
+  --mono:'IBM Plex Mono',ui-monospace,monospace;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg);color:var(--txt);font-family:var(--sans);
+  font-size:14px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.hoja{max-width:820px;margin:0 auto;padding:64px 56px 90px}
+
+/* ── tipografía ── */
+h1{font-size:52px;letter-spacing:-.03em;line-height:1;font-weight:600}
+h2{font-size:27px;letter-spacing:-.02em;line-height:1.15;font-weight:600;margin-bottom:14px}
+h3{font-size:15px;font-weight:600;margin-bottom:6px}
+p{color:var(--dim);margin-bottom:12px}
+p.lead{color:var(--txt);font-size:16px;line-height:1.7;max-width:64ch}
+strong{color:var(--txt);font-weight:600}
+.mono{font-family:var(--mono)}
+.num{font-family:var(--mono);font-size:10px;letter-spacing:.18em;color:var(--faint);
+  text-transform:uppercase;margin-bottom:18px}
+
+/* ── portada ── */
+.tapa{border-bottom:1px solid var(--line);padding-bottom:44px;margin-bottom:52px}
+.marca{font-family:var(--mono);font-size:11px;letter-spacing:.3em;color:var(--faint);margin-bottom:34px}
+.tapa p{margin-top:20px;max-width:60ch}
+.sello{font-family:var(--mono);font-size:10px;letter-spacing:.16em;color:var(--faint);
+  margin-top:34px;padding-top:16px;border-top:1px solid var(--line-soft)}
+
+/* ── secciones ── */
+section{margin-bottom:56px}
+.sec-h{border-top:1px solid var(--line);padding-top:22px;margin-bottom:26px}
+
+/* ── tarjetas ── */
+.rej{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin:22px 0}
+.rej.dos{grid-template-columns:repeat(2,1fr)}
+.tar{border:1px solid var(--line-soft);border-radius:11px;padding:16px;background:var(--glass)}
+.tar .cod{font-family:var(--mono);font-size:9px;letter-spacing:.16em;color:var(--faint);margin-bottom:9px}
+.tar p{font-size:12.5px;line-height:1.55;margin:0}
+
+/* ── pasos numerados ── */
+.pasos{counter-reset:p;margin:22px 0}
+.paso{display:flex;gap:16px;padding:13px 0;border-bottom:1px solid var(--line-soft);break-inside:avoid}
+.paso:last-child{border-bottom:0}
+.paso .k{font-family:var(--mono);font-size:11px;color:var(--faint);min-width:26px;padding-top:2px}
+.paso p{margin:0;font-size:13px}
+
+/* ── tabla de datos ── */
+table{width:100%;border-collapse:collapse;margin:20px 0;font-size:12.5px}
+th{font-family:var(--mono);font-size:9px;letter-spacing:.14em;color:var(--faint);
+  text-transform:uppercase;text-align:left;padding:0 10px 9px 0;border-bottom:1px solid var(--line)}
+td{padding:9px 10px 9px 0;border-bottom:1px solid var(--line-soft);vertical-align:top}
+td.v{font-family:var(--mono);white-space:nowrap;color:var(--txt)}
+tr:last-child td{border-bottom:0}
+
+/* ── nota / cita ── */
+.nota{border-left:2px solid var(--line);padding:2px 0 2px 15px;margin:20px 0;
+  color:var(--dim);font-size:13px;line-height:1.65;break-inside:avoid}
+.nota b{color:var(--txt)}
+
+/* ── liga ── */
+a{color:var(--txt);text-decoration:none;border-bottom:1px solid var(--line)}
+.liga{display:inline-block;font-family:var(--mono);font-size:12px;letter-spacing:.04em;
+  border:1px solid var(--line);border-radius:8px;padding:9px 15px;margin:6px 10px 6px 0;
+  border-bottom:1px solid var(--line)}
+
+/* ── pie ── */
+.pie{border-top:1px solid var(--line);padding-top:20px;margin-top:64px;
+  font-family:var(--mono);font-size:10px;letter-spacing:.14em;color:var(--faint);
+  display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap}
+
+/* ── IMPRESIÓN ──
+   Los cortes van a mano: dejárselos al navegador parte las tablas y deja
+   títulos colgando al pie de la hoja. */
+@page{size:A4;margin:15mm 14mm}
+@media print{
+  body{font-size:10.5pt;background:#fff}
+  .hoja{max-width:none;padding:0}
+  .salto{page-break-before:always}
+  section,.tar,.paso,table,.nota,.rej{break-inside:avoid}
+  h2,h3{break-after:avoid}
+  a{border-bottom:none}
+  .no-print{display:none}
+}
+@media (max-width:680px){
+  .hoja{padding:40px 22px 60px}
+  h1{font-size:38px}
+  .rej,.rej.dos{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+<div class="hoja">
+
+<!-- ══════════════ PORTADA ══════════════ -->
+<div class="tapa">
+  <p class="marca">NORTHPOINT · CAPITAL MANAGEMENT</p>
+  <h1>Cómo trabaja<br>la mesa.</h1>
+  <p class="lead">Esto es todo lo que hay que saber para entrarle: qué hacemos, con qué
+  herramienta, dónde se registra y dónde se avisa. Cuatro cosas y ninguna más.</p>
+  <p class="sello">DOCUMENTO INTERNO · AGOSTO 2026</p>
+</div>
+
+<!-- ══════════════ 01 · EL PROCESO ══════════════ -->
+<section>
+  <div class="sec-h"><p class="num">01 — El proceso</p>
+  <h2>Un mercado, una ventana, una operación.</h2></div>
+
+  <p class="lead">Northpoint opera <strong>micro Nasdaq (MNQ)</strong> en la apertura de Nueva York.
+  Nada más. Todo lo que no es eso —otro instrumento, otra hora, un segundo trade— queda
+  marcado en el journal, gane o pierda.</p>
+
+  <div class="rej">
+    <div class="tar"><p class="cod">01</p><h3>La ventana</h3>
+      <p>Los primeros 15 minutos de Nueva York forman el rango del día. Se espera el
+      rompimiento y su retest. La última entrada es a las 11:00 y a las 12:00 se cierra
+      todo, gane o pierda.</p></div>
+    <div class="tar"><p class="cod">02</p><h3>El riesgo lo pone el plan</h3>
+      <p>Cuánto se arriesga al día no se decide en el momento: está escrito antes de abrir.
+      El tamaño de la posición sale de ese número, no al revés.</p></div>
+    <div class="tar"><p class="cod">03</p><h3>Se escribe todo</h3>
+      <p>Cada operación queda con su hora, su tamaño y si respetó el plan. El journal es el
+      único lugar donde se ve si mejoras o si sólo tuviste suerte.</p></div>
+  </div>
+
+  <div class="nota"><b>La regla que manda:</b> si Ice Vader no mandó la alarma, entrar está
+  prohibido. La ventaja que está medida es la del sistema — una entrada que el sistema no
+  señaló no es parte de esa ventaja, aunque salga bien. De hecho la que sale bien es la más
+  cara: enseña a repetirla.</div>
+</section>
+
+<!-- ══════════════ 02 · ICE VADER ══════════════ -->
+<section class="salto">
+  <div class="sec-h"><p class="num">02 — Ice Vader</p>
+  <h2>El indicador de la casa.</h2></div>
+
+  <p class="lead">Ice Vader no adivina. Toma los primeros 15 minutos de Nueva York, espera a
+  que el precio los rompa <strong>de verdad</strong>, espera a que vuelva, y entra con orden
+  límite. Todo lo demás —cuántos contratos, dónde va el stop, hasta dónde apunta— lo calcula
+  solo. Tú eliges una cosa: el modo.</p>
+
+  <div class="pasos">
+    <div class="paso"><span class="k">01</span><p>Marca el rango de apertura (ORB) de
+      <span class="mono">9:30 a 9:45</span> hora de Nueva York.</p></div>
+    <div class="paso"><span class="k">02</span><p>Espera el rompimiento: <strong>dos velas
+      que CIERREN fuera</strong> del rango, consecutivas. Si una vuelve a cerrar adentro, el
+      conteo se reinicia.</p></div>
+    <div class="paso"><span class="k">03</span><p>Espera el retest y entra con orden
+      <strong>límite</strong>: al 50% del hueco (FVG) que dejó el break si lo hay, y si no,
+      en el nivel del ORB con 5 puntos de tolerancia.</p></div>
+    <div class="paso"><span class="k">04</span><p>El stop y el objetivo los define el
+      <strong>modo</strong>. Los contratos salen del riesgo, no al revés.</p></div>
+    <div class="paso"><span class="k">05</span><p>A las <span class="mono">12:00</span> se
+      cierra todo. Un solo trade al día.</p></div>
+  </div>
+</section>
+
+<!-- ══════════════ LOS TRES MODOS ══════════════ -->
+<section>
+  <div class="sec-h"><p class="num">02.1 — Los tres modos</p>
+  <h2>El mismo break, tres formas de cobrarlo.</h2></div>
+
+  <p class="lead">Los tres entran <strong>exactamente en el mismo punto</strong>. Lo que
+  cambia es dónde ponen el stop — y como el riesgo en dólares es fijo, un stop más ancho
+  significa menos contratos. Ahí está todo el truco: no eliges cuánto arriesgas, eliges
+  cómo lo repartes.</p>
+
+  <table>
+    <thead><tr><th>Modo</th><th>Stop</th><th>Tamaño</th><th>Objetivo</th><th>Carácter</th></tr></thead>
+    <tbody>
+      <tr>
+        <td class="v">MICROS</td>
+        <td>Al otro lado del ORB — el rango completo</td>
+        <td>1 a 3 micros</td>
+        <td>El nivel de Asia o Londres más cercano. Sin liquidez enfrente, sale en 2R</td>
+        <td>Acierta muy seguido</td>
+      </tr>
+      <tr>
+        <td class="v">1:1</td>
+        <td>En el low/high del tramo — las últimas 5 velas</td>
+        <td>~1 mini (≈10 micros)</td>
+        <td>A la misma distancia que el stop. Ni un punto más</td>
+        <td>Te sacan más seguido</td>
+      </tr>
+      <tr>
+        <td class="v">MINIS <span style="color:var(--faint)">· de fábrica</span></td>
+        <td>El mismo stop corto del tramo</td>
+        <td>~1 mini (≈10 micros)</td>
+        <td>En la liquidez, mucho más lejos</td>
+        <td>Acierta poco pero paga mucho</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="nota">En <b>MICROS</b> el stop es tan ancho que el riesgo en dólares sólo
+  alcanza para poquísimos contratos, y por eso acierta seguido: el objetivo suele quedar
+  mucho más cerca que el stop. En <b>1:1</b> y <b>MINIS</b> el stop va pegado a la
+  estructura, así que el tamaño sale mucho más grande — y cualquier mecha te saca.</div>
+</section>
+
+<!-- ══════════════ LOS NÚMEROS ══════════════ -->
+<section class="salto">
+  <div class="sec-h"><p class="num">02.2 — Cómo viene configurado</p>
+  <h2>Los números de fábrica.</h2></div>
+
+  <p>Salen del propio script, no de una descripción. Si cambias uno en TradingView, cambia
+  lo que hace — pero éstos son los que operamos.</p>
+
+  <table>
+    <thead><tr><th>Qué</th><th>Valor</th><th>Por qué</th></tr></thead>
+    <tbody>
+      <tr><td>Instrumento y temporalidad</td><td class="v">MNQ · 1 min</td><td>El de la casa</td></tr>
+      <tr><td>Rango de apertura</td><td class="v">9:30 → 9:45 ET</td><td>15 minutos</td></tr>
+      <tr><td>Última entrada</td><td class="v">11:00 ET</td><td>Después ya no se manda nada</td></tr>
+      <tr><td>Cierre forzado</td><td class="v">12:00 ET</td><td>Se cierra abierto o no</td></tr>
+      <tr><td>Trades por día</td><td class="v">1</td><td>El segundo se marca en el journal</td></tr>
+      <tr><td>Velas fuera para el break</td><td class="v">2 consecutivas</td><td>Deben CERRAR fuera</td></tr>
+      <tr><td>Tolerancia del retest</td><td class="v">5 pts</td><td>Cuando no hay FVG</td></tr>
+      <tr><td>FVG · distancia máx / tamaño mín</td><td class="v">25 pts / 2 pts</td><td>Huecos que sí cuentan</td></tr>
+      <tr><td>Riesgo por trade</td><td class="v">2% del capital</td><td>Con $50,000 son $1,000</td></tr>
+      <tr><td>Colchón del stop</td><td class="v">3 pts</td><td>Para que no saque una mecha</td></tr>
+      <tr><td>Stop mínimo</td><td class="v">10 pts</td><td>Piso duro</td></tr>
+      <tr><td>Velas del tramo</td><td class="v">5</td><td>Ancla del stop corto</td></tr>
+      <tr><td>Liquidez · Asia</td><td class="v">20:00 → 02:00</td><td>Alto y bajo del overnight</td></tr>
+      <tr><td>Liquidez · Londres</td><td class="v">02:00 → 08:00</td><td>Alto y bajo</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ══════════════ 03 · DISCORD ══════════════ -->
+<section>
+  <div class="sec-h"><p class="num">03 — Discord</p>
+  <h2>Ahí llegan las alarmas.</h2></div>
+
+  <p class="lead">Ice Vader manda <strong>siete avisos</strong> a lo largo del día. Viajan de
+  TradingView al Discord y de ahí a tu celular. No hay que estar mirando la pantalla — hay
+  que estar listo cuando suene la número cinco.</p>
+
+  <table>
+    <thead><tr><th>#</th><th>Aviso</th><th>Qué trae</th></tr></thead>
+    <tbody>
+      <tr><td class="v">1</td><td>Apertura de sesiones</td><td>Asia, Londres y NY. La de NY ya trae la liquidez del overnight</td></tr>
+      <tr><td class="v">2</td><td>ORB listo</td><td>Alto, bajo, 50% y ancho del rango</td></tr>
+      <tr><td class="v">3</td><td>Break confirmado</td><td>Precio de la orden, stop, objetivo, contratos y riesgo en dólares</td></tr>
+      <tr><td class="v">4</td><td>FVG en el nivel</td><td>La entrada se mueve al 50% del hueco</td></tr>
+      <tr><td class="v">5</td><td><strong>Entrada llena</strong></td><td><strong>Ésta es la que te hace entrar. Sin ella, el trade no existió</strong></td></tr>
+      <tr><td class="v">6</td><td>Salida</td><td>Con el resultado. Cierra el día</td></tr>
+      <tr><td class="v">7</td><td>Liquidez barrida</td><td>Cuando toman el alto o bajo de Asia o Londres</td></tr>
+    </tbody>
+  </table>
+
+  <h3 style="margin-top:26px">Para que te lleguen al celular</h3>
+  <div class="pasos">
+    <div class="paso"><span class="k">01</span><p>En Discord: <span class="mono">Editar canal
+      → Integraciones → Crear webhook → Copiar URL</span>.</p></div>
+    <div class="paso"><span class="k">02</span><p>En TradingView, crea <strong>UNA sola</strong>
+      alerta con la condición <span class="mono">Any alert() function call</span>. Una, no siete.</p></div>
+    <div class="paso"><span class="k">03</span><p>En esa alerta, pestaña Notificaciones →
+      <span class="mono">Webhook URL</span> → pega la de Discord y agrégale
+      <span class="mono">/slack</span> al final.</p></div>
+  </div>
+  <div class="nota">El <b>/slack</b> del final no es capricho: sin él Discord recibe el aviso
+  pero no lo publica. Es donde se atora todo el mundo la primera vez.</div>
+</section>
+
+<!-- ══════════════ 04 · EL TERMINAL ══════════════ -->
+<section class="salto">
+  <div class="sec-h"><p class="num">04 — El Terminal</p>
+  <h2>Donde se registra todo.</h2></div>
+
+  <p class="lead">La plataforma interna de la mesa. Ahí vive el journal, tus cuentas, el
+  calendario y el camino a payout de cada quien. Cada quien ve <strong>lo suyo</strong>.</p>
+
+  <div class="rej dos">
+    <div class="tar"><p class="cod">JOURNAL</p><h3>Tu desempeño, medido</h3>
+      <p>Tasa de acierto, días ganadores, promedio de ganancia contra pérdida, curva de P&amp;L
+      acumulado, drawdown y el calendario del mes con el resultado de cada día. Se abre un día
+      y salen sus trades con el screenshot y el análisis.</p></div>
+    <div class="tar"><p class="cod">TRADES</p><h3>El registro</h3>
+      <p>Cada operación con su hora, instrumento, dirección, contratos, entrada, salida y en qué
+      cuentas cayó. Y si la alarma sonó o entraste por tu cuenta: eso queda escrito.</p></div>
+    <div class="tar"><p class="cod">CUENTAS</p><h3>Balance y colchón</h3>
+      <p>Cada cuenta con su balance, su línea de drawdown y cuánto colchón le queda — dicho
+      también en días malos seguidos que aguantas al stop de tu plan.</p></div>
+    <div class="tar"><p class="cod">CAMINO</p><h3>Evaluación → colchón → retiro</h3>
+      <p>El recorrido de cada cuenta, calculado solo de lo que registraste. Y si una se quema,
+      el día queda marcado en el calendario.</p></div>
+  </div>
+
+  <div class="nota">El Terminal no adorna: una cuenta quemada se dice quemada, y un día que
+  rompió el plan se marca aunque haya cerrado en verde. Un número maquillado no es optimismo —
+  es la forma más rápida de volver a perder.</div>
+</section>
+
+<!-- ══════════════ ENTRAR ══════════════ -->
+<section>
+  <div class="sec-h"><p class="num">05 — Entrar</p>
+  <h2>Qué se necesita.</h2></div>
+
+  <p class="lead">No pedimos que ya sepas operar. Pedimos que puedas seguir un protocolo
+  noventa minutos al día, escribir lo que hiciste aunque salga mal, y aceptar que otro te
+  frene. Lo demás se enseña.</p>
+
+  <div class="pasos">
+    <div class="paso"><span class="k">01</span><p>Entra al Terminal y crea tu acceso.</p></div>
+    <div class="paso"><span class="k">02</span><p>Métete al Discord y arma el webhook para que
+      las alarmas te lleguen al celular.</p></div>
+    <div class="paso"><span class="k">03</span><p>Carga Ice Vader en TradingView, en MNQ a 1
+      minuto, y déjalo en el modo de fábrica.</p></div>
+    <div class="paso"><span class="k">04</span><p>Registra tus cuentas y opera <strong>una sola
+      vez al día</strong>, cuando suene la alarma.</p></div>
+  </div>
+
+  <p style="margin-top:24px">
+    <a class="liga" href="https://studioamr.github.io/northpoint-capital/">↳ La firma</a>
+    <a class="liga" href="https://studioamr.github.io/northpoint-capital/app.html">↳ El Terminal</a>
+    <a class="liga" href="https://discord.gg/TWeVqTTPS">↳ El Discord</a>
+  </p>
+</section>
+
+<div class="pie">
+  <span>NORTHPOINT · CAPITAL MANAGEMENT</span>
+  <span>CONFIDENCIAL · DISTRIBUCIÓN RESTRINGIDA</span>
+</div>
+
+</div>
+</body>
+</html>
