@@ -720,7 +720,6 @@ body.locked .app{visibility:hidden;pointer-events:none}
 .pr-dias.cerca .pr-dias-t{color:var(--warn,#D9A441)}
 .pr-dias.agotado .pr-dias-t{color:var(--down)}
 .pr-nota{font-size:12px;color:var(--dim);line-height:1.6;margin-top:14px;padding-top:12px;
-  border-top:1px solid var(--line-soft)}
 .pr-nota b{color:var(--txt);font-weight:500}
 @media (max-width:640px){
   .pr-paso span{font-size:9px}
@@ -885,6 +884,8 @@ body.locked .app{visibility:hidden;pointer-events:none}
   box-shadow:0 0 8px rgba(155,192,220,.35)}
 .ob-bala.gastada{background:transparent;border-color:var(--line);box-shadow:none}
 .ob-bala.extra{background:var(--down);border-color:var(--down);box-shadow:none}
+/* sin sesión el tambor se ve apagado: no hay balas que gastar */
+.ob-bala.apagada{background:transparent;border-color:var(--line-soft);box-shadow:none;opacity:.5}
 button.tag{cursor:pointer;background:transparent;display:inline-flex;align-items:center;gap:7px;
   transition:border-color .15s,color .15s,opacity .15s}
 button.tag .dot{width:6px;height:6px;border-radius:50%;border:1px solid var(--line);flex:0 0 auto}
@@ -1938,6 +1939,74 @@ button.tag.quemada{text-decoration:line-through;text-decoration-color:var(--down
   background:linear-gradient(90deg,color-mix(in srgb,var(--up) 9%,transparent),color-mix(in srgb,var(--up) 34%,transparent));
   transition:width .6s cubic-bezier(.4,0,.2,1)}
 .fc-linea.yo .fc-track>i{background:linear-gradient(90deg,color-mix(in srgb,var(--up) 16%,transparent),color-mix(in srgb,var(--up) 55%,transparent))}
+/* ── EL CAMINO DE REGRESO ──
+   Rayado rojo por DEBAJO del avance: es el tramo de pista que se puede desandar
+   antes de tocar el drawdown. Va detrás del monito y con mezcla de color, así
+   que se lee en claro y en oscuro sin declararlo dos veces. */
+.fc-caida{position:absolute;top:0;height:100%;display:block;border-radius:99px;
+  background:repeating-linear-gradient(-45deg,
+    color-mix(in srgb,var(--down) 30%,transparent) 0 5px,
+    color-mix(in srgb,var(--down) 12%,transparent) 5px 10px);
+  box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--down) 34%,transparent);
+  pointer-events:none}
+.fc-cap{font-family:var(--mono);font-size:12px;color:var(--up);margin-left:6px}
+
+/* ── ICE VADER ── la sección del indicador. Los esquemas mandan, el texto los
+   acompaña: por eso la medida es corta y los tres modos van en rejilla para
+   poder compararlos de un vistazo. */
+.iv-lead{font-size:14.5px;line-height:1.7;color:var(--txt);max-width:66ch;margin-bottom:22px}
+  border-top:1px solid var(--line-soft)}
+
+/* el carrusel: una tarjeta a la vez, girando en horizontal sin tope */
+.iv-car-v{overflow:hidden;border-radius:12px}
+.iv-track{display:flex;transition:transform .45s cubic-bezier(.4,0,.2,1)}
+.iv-track>.iv-modo{flex:0 0 100%;min-width:100%}
+.iv-car-n{display:flex;align-items:center;justify-content:center;gap:16px;margin-top:14px}
+.iv-fl{background:none;border:1px solid var(--line-soft);border-radius:50%;width:32px;height:32px;
+  color:var(--faint);font:inherit;font-size:17px;line-height:1;cursor:pointer;
+  display:grid;place-items:center;transition:border-color .2s,color .2s}
+.iv-fl:hover{border-color:var(--line);color:var(--txt)}
+.iv-puntos{display:flex;gap:7px}
+.iv-pt{width:7px;height:7px;border-radius:50%;border:0;padding:0;cursor:pointer;
+  background:var(--line);transition:background .2s,transform .2s}
+.iv-pt.on{background:var(--up);transform:scale(1.35)}
+@media (prefers-reduced-motion:reduce){ .iv-track{transition:none} }
+.iv-modo{border:1px solid var(--line-soft);border-radius:12px;padding:16px}
+.iv-modo.def{border-color:color-mix(in srgb,var(--up) 45%,transparent)}
+.iv-modo-h{display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin-bottom:12px}
+.iv-modo-h b{font-family:var(--mono);font-size:14px;letter-spacing:.08em}
+.iv-def{font-family:var(--mono);font-size:8.5px;letter-spacing:.12em;color:var(--up);
+  border:1px solid color-mix(in srgb,var(--up) 45%,transparent);border-radius:99px;padding:2px 7px}
+.iv-car{margin-left:auto;font-size:11.5px;color:var(--faint)}
+.iv-svg{display:block;width:100%;height:auto;margin-bottom:12px;
+  border:1px solid var(--line-soft);border-radius:8px;background:var(--w03)}
+.iv-t{font-family:var(--mono);font-size:8px;fill:var(--faint);letter-spacing:.08em}
+.iv-t.iv-up{fill:var(--up)} .iv-t.iv-down{fill:var(--down)}
+.iv-rr{font-family:var(--mono);font-size:13px;font-weight:600}
+.iv-dl{display:grid;grid-template-columns:auto 1fr;gap:7px 12px;margin:0 0 12px}
+.iv-dl dt{font-family:var(--mono);font-size:9px;color:var(--faint);letter-spacing:.1em;padding-top:2px}
+.iv-dl dd{margin:0;font-size:13px;line-height:1.5;color:var(--txt)}
+.iv-por{font-size:12.5px;line-height:1.6;color:var(--dim);border-left:2px solid var(--line);
+  padding-left:12px;margin:0}
+
+  border-top:1px solid var(--line-soft)}
+
+  padding:10px 0;border-top:1px solid var(--line-soft)}
+@media (max-width:560px){
+  .iv-fila{grid-template-columns:1fr auto;gap:8px}
+  .iv-fila i{grid-column:1/-1;text-align:left}
+}
+
+/* ── EL DÍA QUE MURIÓ UNA CUENTA ──
+   Franja roja arriba de la celda y su rótulo. No se pinta la celda entera de
+   rojo a propósito: ese día pudo cerrar en verde en las otras cuentas, y el
+   calendario no debe mentir sobre el P&L para contar la muerte. */
+.ts-cell.quema{box-shadow:inset 0 2px 0 var(--down),inset 0 0 0 1px color-mix(in srgb,var(--down) 40%,transparent)}
+.ts-quema{display:block;font-family:var(--mono);font-size:7.5px;letter-spacing:.1em;
+  color:var(--down);margin-top:2px;font-weight:600}
+
+  .mn-n{padding-top:0}
+}
 .fc-linea.vacia .fc-track{border-style:dashed}
 .fc-linea.vacia .fc-track>i{background:none}
 .fc-cara{position:absolute;top:50%;transform:translate(-50%,-50%);width:46px;height:46px;
@@ -2374,6 +2443,10 @@ stop[stop-color="#9BC0DC"]{stop-color:var(--txt)}
         <svg viewBox="0 0 24 24" fill="none" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg>
         <span data-i18n="nav.sesion">Rutina</span> <span class="bdg" id="bdgTrades"></span>
       </a>
+      <a class="item" href="#icevader" data-view="icevader">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="1.6"><path d="M12 3v18M3 12h18"/><path d="M5.6 5.6l12.8 12.8M18.4 5.6L5.6 18.4"/><circle cx="12" cy="12" r="3.2"/></svg>
+        <span>Ice Vader</span>
+      </a>
       <a class="item" href="#journal" data-view="journal">
         <svg viewBox="0 0 24 24" fill="none" stroke-width="1.6"><path d="M4 19V5a2 2 0 0 1 2-2h13v18H6a2 2 0 0 1-2-2z"/><path d="M8 7h7M8 11h7"/></svg>
         <span data-i18n="nav.journal">Mi desempeño</span>
@@ -2593,6 +2666,10 @@ stop[stop-color="#9BC0DC"]{stop-color:var(--txt)}
             <!-- ════ PROGRESO ════
            Dónde vas: la fase en curso, los objetivos del plan y el mes día por día.
            Antes esto estaba mezclado con el registro de trades y se perdía. -->
+<section class="view" id="v-icevader">
+        <div class="iv-host"></div>
+      </section>
+
 <section class="view" id="v-journal">
         <!-- Estructura tipo panel de journaling: primero las tasas, luego los cuatro
              gráficos que resumen el mes, el calendario, los extremos y el historial. -->
@@ -2819,6 +2896,14 @@ stop[stop-color="#9BC0DC"]{stop-color:var(--txt)}
         <div><label>Entry</label><input type="number" id="tIn" step="0.25" placeholder="0.00"></div>
         <div><label>Exit</label><input type="number" id="tOut" step="0.25" placeholder="0.00"></div>
         <div><label>P&L USD <span style="color:var(--faint)">(auto)</span></label><input type="number" id="tPnl" step="1" placeholder="auto"></div>
+      </div>
+      <div class="f-full" style="margin-top:10px">
+        <label>¿Sonó la alarma de ICE VADER?</label>
+        <select id="tAlarma">
+          <option value="1">Sí · entré con la alarma</option>
+          <option value="0">No · entré sin alarma</option>
+        </select>
+        <p class="micro" id="tAlarmaAviso" style="margin-top:6px;line-height:1.5;text-transform:none;letter-spacing:.02em"></p>
       </div>
       <div class="f-full" style="margin-top:10px">
         <label>Checklist setup</label>
@@ -3285,6 +3370,7 @@ const I18N = {
   'nav.agentes':       { es:'The Desk',       en:'The Desk' },
   'tit.np.k':          { es:'NORTHPOINT',             en:'NORTHPOINT' },
   'tit.agentes.t':     { es:'The Desk',       en:'The Desk' },
+  'tit.icevader.t':    { es:'Ice Vader',      en:'Ice Vader' },
   'ag.k':              { es:'Northpoint Capital Management', en:'Northpoint Capital Management' },
   'ag.t':              { es:'The Desk',        en:'The Desk' },
   'ag.llaveSacar':     { es:'Sacar una llave en console.anthropic.com →', en:'Get a key at console.anthropic.com →' },
@@ -3450,6 +3536,7 @@ const I18N = {
   'vio.AFTER_TARGET':  { es:'Operó pasado el objetivo', en:'Traded past the target' },
   'vio.REVENGE':       { es:'Revenge',               en:'Revenge' },
   'vio.NO_SETUP':      { es:'Sin setup',             en:'No setup' },
+  'vio.SIN_ALARMA':    { es:'Sin alarma de Ice Vader', en:'No Ice Vader alarm' },
   'vio.FIRM_LIMIT':    { es:'Límite de la firma',    en:'Firm limit' },
   'vio.DAY_RISK':      { es:'Riesgo diario excedido', en:'Daily risk exceeded' },
 
@@ -3615,9 +3702,15 @@ const MICROS = ['MNQ','MES','MYM','M2K'];
 
    NO NEGOCIABLES:
      · Nunca minis — sólo micros.
-     · Sólo se opera la ventana 7:00–8:30, lunes a viernes.
+     · Sólo se opera la ventana 9:30–12:00 ET, lunes a viernes.
      · Nada queda abierto después de las 8:30.
      · Si el checklist no da setup válido, el mejor trade del día es no operar. */
+/* El huso del mercado vive AQUÍ ARRIBA porque lo usan tres mundos distintos:
+   la pill de sesión, la vigilia y las escenas. Declarado abajo (donde nació,
+   junto a las escenas) la pill lo alcanzaba antes de inicializarse y tumbaba
+   la carga entera del terminal. */
+const TZ_MERCADO = 'America/New_York';
+
 const SISTEMA = {
   version: '3.0',
   actualizado: '2026-07-25',
@@ -3627,26 +3720,63 @@ const SISTEMA = {
   graficos: ['1m', '5m'],
   estrategia: 'ORB a liquidez',
 
-  /* Una sola ventana: la sesión de Nueva York, 7:00–8:30, lunes a viernes. El
-     rango de apertura se forma 7:30–7:45 y nada queda abierto pasadas las 8:30. */
+  /* ── LA SEÑAL MANDA ──
+     Desde el 5-ago-2026 la mesa no entra por criterio propio: entra cuando el
+     indicador ICE VADER manda la alarma, y NADA MÁS entonces. Sin alarma no hay
+     trade — no es "no recomendado", está prohibido.
+
+     Es la regla más dura de todas y por eso vive aquí arriba, junto al
+     instrumento: no depende de la fase ni del día. Un trade sin alarma se marca
+     SIN_ALARMA aunque haya ganado, porque lo que se está midiendo no es el
+     resultado sino si se respetó el sistema. */
+  senal: { nombre:'ICE VADER', obligatoria:true, desde:'2026-08-05' },
+
+  /* Una sola ventana: la sesión de Nueva York, en HORA DE NUEVA YORK. El rango
+     de apertura se forma 9:30–9:45, la última entrada es a las 11:00 y nada
+     queda abierto pasadas las 12:00. Son los horarios del propio ICE VADER. */
+  /* ── LA VENTANA, EN HORA DE NUEVA YORK ──
+     Estaba en 7:00–8:30 y el trade se sella con horaMercadoAhora(), que estampa
+     hora de NUEVA YORK. ICE VADER forma el rango 9:30–9:45 ET, deja de entrar a
+     las 11:00 y cierra a las 12:00 — o sea que CADA trade real salía marcado
+     OUT_OF_WINDOW por dos horas de diferencia. El 7:00–8:30 era la hora de
+     Morelia (9:30 ET = 7:30 aquí), pero el código nunca la convirtió.
+     Ahora la ventana es la del indicador, en el mismo huso en que se sella. */
   estrategias: [
     { id:'ny', nom:'NY SESSION', codigo:'E-01',
       desc:'ORB into liquidity on the New York session.',
-      ventana: { open: 7*60, orb1: 7*60+30, orb2: 7*60+45, close: 8*60+30 },
-      entrada: 'Break of the 7:30–7:45 range toward untaken liquidity.',
+      ventana: { open: 9*60+30, orb1: 9*60+30, orb2: 9*60+45, close: 12*60 },
+      entrada: 'Break of the 9:30–9:45 range toward untaken liquidity, on the Ice Vader alarm.',
       cuota: 1 },
   ],
 
-  /* Las tres fases del plan. `maxPerdidaDia` y `objetivoDia` son los del documento;
-     el tope de trades es 2 estrictos en todas — la regla de gestión no cambia por
-     fase. El plan no fija número de contratos: el tamaño sale del riesgo. */
+  /* ── LAS TRES FASES, CON LAS CIFRAS DEL PLAN ──
+     Los números salen del documento de André (Visión + Fases 1-3), no de lo que
+     traía el indicador. Dos cosas cambiaron el 5-ago-2026:
+
+     · maxTrades pasa a 1 EN TODAS. Manda ICE VADER, y el indicador trae
+       maxTrades = 1 de fábrica: un trade al día y no hay revancha. El plan decía
+       «2 estrictos», pero eso se escribió cuando la entrada era discrecional —
+       con la señal mandando, el segundo intento ya no existe.
+
+     · El colchón iba al doble de lo que dice el plan (200/400 en vez de 100/200).
+       Con un límite al doble, un día que rompe el plan pasaba como bueno y la app
+       no marcaba nada: exactamente el error que más caro sale.
+
+     La EVAL va ALL IN a propósito —así está escrito el plan—: no hay stop diario
+     propio, el único piso es el de la fondeadora. Se deja en null para no fingir
+     un límite que el plan no puso; el tope duro del día ($1,100) sí se respeta,
+     que es lo que cuida la regla de consistencia.
+
+     El plan no fija número de contratos: el tamaño sale del riesgo. */
   fases: {
-    eval:   { maxPerdidaDia:1000, objetivoDia:1000, maxTrades:2, topeDia:1100,
-              de:50000, a:53000, minDias:3, diasObjetivo:'3-5' },
-    buffer: { maxPerdidaDia:200,  objetivoDia:400,  maxTrades:2,
+    eval:   { maxPerdidaDia:null, objetivoDia:1000, maxTrades:1, topeDia:1100,
+              allIn:true, de:50000, a:53000, minDias:3, diasObjetivo:'3-5' },
+    buffer: { maxPerdidaDia:100,  objetivoDia:200,  maxTrades:1,
               de:50000, a:52100, maxDias:14 },
-    payout: { maxPerdidaDia:100,  objetivoDia:200,  maxTrades:2,
-              desde:50100 },
+    /* Fase 3 tiene dos tiempos: mientras se construye hasta el primer payout va
+       $100/$200; una vez cobrando, se aprieta a $50/$100. */
+    payout: { maxPerdidaDia:100,  objetivoDia:200,  maxTrades:1,
+              cobrandoPerdida:50, cobrandoObjetivo:100, desde:50100 },
   },
 
   /* Fase 3 · cada 15 días. 20% cuentas, 20% portafolio y 20% para cada uno de los
@@ -3668,10 +3798,10 @@ const SISTEMA = {
 
   /* El tope sale de la fase, no de la memoria: si el plan cambia, el texto cambia. */
   get gestion(){ return [
-    `Máximo ${this.fases.eval.maxTrades} trades por sesión, estrictos.`,
-    'Si se gana el trade 1, se cierra la plataforma: el día terminó.',
-    'Si se pierde el trade 1, queda un solo intento más — y únicamente con un setup válido nuevo y completo. Nunca revenge.',
-    'Nada queda abierto después de las 8:30.',
+    `Sin alarma de ${this.senal.nombre} no se entra. Ni una vez.`,
+    `${this.fases.eval.maxTrades} trade por sesión. Uno. Lo dice el indicador y no se discute.`,
+    'Gane o pierda, al cerrarse se cierra la plataforma: el día terminó.',
+    'Última entrada 11:00. Nada queda abierto después de las 12:00 ET.',
   ]; },
 
   /* Cuándo la cuenta propia deja de necesitar a las fondeadoras: cuando iguala a
@@ -3801,7 +3931,7 @@ const ROLES = {
     'Implementa protocolos operativos y auditorías internas.']},
   'NP-060': { t:'Trader · Mesa de Futuros', d:[
     'Ejecuta el protocolo diario completo: pre-market 7:00, setup y gestión.',
-    `Opera únicamente la ventana 7:00–8:30, máximo ${SISTEMA.fases.eval.maxTrades} trades por sesión.`,
+    `Opera únicamente la ventana 9:30–12:00 ET, máximo ${SISTEMA.fases.eval.maxTrades} trades por sesión.`,
     'Registra cada operación con screenshot, setup, resultado y análisis.',
     'Envía el reporte del día al equipo y responde por su Score conductual.']},
 };
@@ -4287,9 +4417,18 @@ const FASES = {
             oDia: () => SISTEMA.fases.buffer.objetivoDia,                           // 400 [PLAN]
             tope: () => null,
             hito: (R,a) => a.start + R.maxDD + (R.lockAtProfit||0) },               // 52,100 [CAT]
+  /* ── FASE 3, EN DOS TIEMPOS ──
+     Mientras se construye hasta el primer payout van $100/$200. Una vez que la
+     cuenta YA COBRÓ, el plan aprieta a $50/$100: se protege lo que ya es tuyo.
+     Por eso estas dos leen la cuenta y no sólo las reglas de la firma. */
   payout: { get t(){ return tr('fase.payout'); }, corto:'PAY',
-            rDia: () => SISTEMA.fases.payout.maxPerdidaDia,                         // 100 [PLAN]
-            oDia: () => SISTEMA.fases.payout.objetivoDia,                           // 200 [PLAN]
+            cobrando: a => { try{ return !!(a && carreraCuenta(a).pasoPago); }catch(e){ return false; } },
+            rDia: function(R, a){ return this.cobrando(a)
+              ? SISTEMA.fases.payout.cobrandoPerdida                                //  50 [PLAN]
+              : SISTEMA.fases.payout.maxPerdidaDia; },                              // 100 [PLAN]
+            oDia: function(R, a){ return this.cobrando(a)
+              ? SISTEMA.fases.payout.cobrandoObjetivo                               // 100 [PLAN]
+              : SISTEMA.fases.payout.objetivoDia; },                                // 200 [PLAN]
             tope: () => null,
             hito: () => null },
 };
@@ -4500,6 +4639,25 @@ function quemaDetectada(a){
 /* Marcada a mano o reventada por la aritmética: para el dinero da lo mismo. */
 const estaQuemada = a => !esViva(a) || !!quemaDetectada(a);
 const cuentaEnPie = a => !estaQuemada(a);
+
+/* ── CUÁNTO FALTA PARA MORIR ──
+   La carrera sólo enseñaba hacia adelante, y una carrera que no puede perderse
+   no asusta a nadie. Esto es el otro lado: cuánto puede caer una cuenta desde
+   donde está hasta tocar su línea de drawdown. Se camina igual que quemaDetectada
+   —el mismo pico, la misma línea, el mismo congelamiento en lockAtProfit— para
+   que las dos cifras no puedan contradecirse. */
+function lineaDD(a){
+  const R = reglasDe(a); if(!R) return null;
+  const porDia = {}, hoy = todayISO();
+  (S.trades || []).forEach(t => {
+    if(t.date >= a.desde && t.date <= hoy && (t.accts || []).includes(a.id))
+      porDia[t.date] = (porDia[t.date] || 0) + (t.pnl || 0); });
+  let bal = a.start, pico = a.start;
+  Object.keys(porDia).sort().forEach(d => { bal += porDia[d]; pico = Math.max(pico, bal); });
+  let linea = pico - R.maxDD;
+  if(R.lockAtProfit != null && linea >= a.start + R.lockAtProfit) linea = a.start + R.lockAtProfit;
+  return { linea, balance: bal, margen: Math.max(0, bal - linea), maxDD: R.maxDD };
+}
 /* Sin tipo marcado se asume fondeada: así las cuentas viejas no cambian de
    naturaleza al migrar. 'sim' es dinero de práctica — ni fondeada (no hay
    firma que la respalde) ni cuenta propia real (no cuenta para nada de lo
@@ -4585,7 +4743,7 @@ function saludDe(a){
   }
   const F = FASES[a.fase] || FASES.eval;
   return { ...base, linea, fija, colchon: bal - linea, maxDD:R.maxDD,
-           hito: F.hito(R, a), rDia: F.rDia(R), oDia: F.oDia(R), tope: F.tope(R) };
+           hito: F.hito(R, a), rDia: F.rDia(R, a), oDia: F.oDia(R, a), tope: F.tope(R) };
 }
 const capitalVista = () => acctsSel().filter(a => esViva(a) && !esSim(a)).reduce((x,a)=>x+(a.size||0),0);
 
@@ -4659,13 +4817,13 @@ function metas(){
   }
   const dia = conReglas.reduce((x,a)=>{
     const R = reglasDe(a), F = FASES[a.fase] || FASES.eval;
-    return x + F.oDia(R);
+    return x + F.oDia(R, a);
   }, 0);
   /* Techo real de la fase: más allá del hito la cuenta reinicia o entra a retiros,
      así que pedir dia×20 llegaba a 100,000 cuando el máximo alcanzable era 15,000. */
   const techo = conReglas.reduce((x,a)=>{
     const h = saludDe(a);
-    return x + (h.hito != null ? Math.max(0, h.hito - h.balance) : (FASES[a.fase]||FASES.eval).oDia(reglasDe(a)) * 20);
+    return x + (h.hito != null ? Math.max(0, h.hito - h.balance) : (FASES[a.fase]||FASES.eval).oDia(reglasDe(a), a) * 20);
   }, 0);
   const cap = v => techo > 0 ? Math.min(v, techo) : v;
   return { dia, semana:cap(dia*5), quincena:cap(dia*10), mes:cap(dia*20), anio:dia*240,
@@ -4675,11 +4833,15 @@ function metas(){
 /* La sesión global en la que cae el reloj (hora local de la mesa, CT).
    Fuera de nuestra ventana el terminal ya no dice "mesa cerrada": dice en qué
    sesión anda el mundo, que es lo que de verdad mueve al índice. */
-function sesionMundial(now = ahora()){
-  const h = now.getHours() + now.getMinutes()/60;
-  if(h >= 2 && h < 7)  return 'LONDON SESSION';
-  if(h >= 7 && h < 16) return 'NY SESSION';
-  return 'ASIA SESSION';               // 16:00 → 02:00
+function sesionMundial(){
+  /* mismo ciclo que TRAMOS y en el mismo huso (Nueva York): antes esta pill
+     usaba la hora local de la mesa con cortes viejos y decía ASIA en plena
+     tarde. Una sola verdad para las tres cosas que dicen la sesión. */
+  const m = minutosEn(TZ_MERCADO);
+  if(m >= 9*60+30 && m < 16*60) return 'NY SESSION';
+  if(m >= 2*60 && m < 9*60+30)  return 'LONDON SESSION';
+  if(m >= 20*60 || m < 2*60)    return 'ASIA SESSION';
+  return bi('MERCADO CERRADO','MARKET CLOSED');   // 16:00 → 20:00
 }
 function sessionState(now = ahora()){
   const mins = now.getHours()*60 + now.getMinutes();
@@ -4713,7 +4875,7 @@ function cuentaQueRompio(dayTrades){
     const a = S.accounts.find(x => x.id === id); if(!a) return;
     const R = reglasDe(a); if(!R) return;
     const F = FASES[a.fase] || FASES.eval;
-    const tope = R.dailyLoss || 0, rD = F.rDia(R) || 0;
+    const tope = R.dailyLoss || 0, rD = F.rDia(R, a) || 0;
     if(tope && -p >= tope)      { if(!peor || peor.tipo !== 'FIRM_LIMIT') peor = { id, alias:a.alias, perdida:p, tipo:'FIRM_LIMIT', tope }; }
     else if(rD && -p > rD)      { if(!peor)                               peor = { id, alias:a.alias, perdida:p, tipo:'DAY_RISK',  tope:rD }; }
   });
@@ -4728,7 +4890,7 @@ function limitesDia(trade){
     if(!ids.has(a.id)) return;
     const R = reglasDe(a); if(!R) return;
     const F = FASES[a.fase] || FASES.eval;
-    const r = F.rDia(R);
+    const r = F.rDia(R, a);
     if(r && (rDia == null || r < rDia)) rDia = r;
     if(R.dailyLoss && (dailyLoss == null || R.dailyLoss < dailyLoss)) dailyLoss = R.dailyLoss;
   });
@@ -4808,6 +4970,12 @@ function violationsRaw(trade, dayTrades){
     }
   }
   if(!trade.setupOk && v.indexOf('REVENGE') === -1) v.push('NO_SETUP');
+  /* La señal es la puerta: sin alarma el trade no debió existir. Se marca
+     aunque haya ganado —lo que se mide es el sistema, no la suerte— y sólo se
+     aplica a lo operado desde que la regla entró, para no ensuciar el historial
+     de antes con una regla que entonces no existía. */
+  if(SISTEMA.senal && SISTEMA.senal.obligatoria
+     && trade.date >= SISTEMA.senal.desde && !trade.alarma) v.push('SIN_ALARMA');
   return v;
 }
 
@@ -4934,6 +5102,7 @@ const TITLES = {
   journal:     ['tit.mesa.k',  'tit.journal.t'],
   trades:      ['tit.mesa.k',  'tit.trades.t'],
   agentes:     ['tit.np.k',    'tit.agentes.t'],
+  icevader: ['tit.mesa.k',  'tit.icevader.t'],
   posiciones:  ['tit.snow.k',  'tit.pos.t'],
   vida:        ['tit.snow.k',  'tit.vida.t'],
   plan:        ['tit.snow.k',  'tit.plan.t'],
@@ -5048,7 +5217,7 @@ setInterval(tickClock, 1000); tickClock();
 
 /* ════════ DASHBOARD ════════ */
 /* ════════ DASHBOARD DE LA FIRMA ════════ */
-const idsTodas = () => new Set([...S.accounts.map(a=>a.id), SIN_CUENTA]);
+const idsTodas = () => new Set([...mias(S.accounts).map(a=>a.id), SIN_CUENTA]);
 /* ════════ PANORAMA · las tres patas del negocio ════════
    Cuenta fondeada, portafolio y cuenta propia. Cada una con su aro: dónde va contra
    su propio destino, que no es el mismo en las tres.
@@ -5099,8 +5268,8 @@ function renderPicker(host){
         <button type="button" data-p="funded" class="${modo==='funded'?'on':''}">${tr('ac.fondeadas')}</button>
       </div>
       <div class="acct-opts">
-        ${S.accounts.length
-          ? ordenar(S.accounts).map(a=>{
+        ${mias(S.accounts).length
+          ? ordenar(mias(S.accounts)).map(a=>{
               const h = saludDe(a), F = FASES[a.fase] || FASES.eval;
               return fila(a.id, a.alias, ` <span class="tag">${F.corto}</span>`, fmt$(h.balance));
             }).join('')
@@ -5372,7 +5541,7 @@ function renderAcctMgr(){
 
   $('#acFoot').innerHTML = (huerf ? `<div class="cal-pace" style="margin-top:12px">Hay <b>${huerf}</b> trade${huerf>1?'s':''} registrado${huerf>1?'s':''} antes de las cuentas.
        <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">
-       ${ordenar(S.accounts).map(a=>`<button class="btn sm" onclick="asignarHuerfanos('${a.id}')">Asignar a ${esc(a.alias)}</button>`).join('')}
+       ${ordenar(mias(S.accounts)).map(a=>`<button class="btn sm" onclick="asignarHuerfanos('${a.id}')">Asignar a ${esc(a.alias)}</button>`).join('')}
        ${S.accounts.length>1?`<button class="btn sm primary" onclick="asignarHuerfanos('*')">Asignar a todas</button>`:''}
        </div></div>` : '');
 
@@ -5423,7 +5592,7 @@ window.borrarCuenta = id => {
   save(); renderAcctMgr(); renderDashboard(); renderAgentes(); toast('Account deleted');
 };
 window.asignarHuerfanos = destino => {
-  const ids = destino === '*' ? ordenar(S.accounts).map(a=>a.id) : [destino];
+  const ids = destino === '*' ? ordenar(mias(S.accounts)).map(a=>a.id) : [destino];
   let n = 0;
   S.trades.forEach(t=>{ if(!Array.isArray(t.accts) || t.accts.includes(SIN_CUENTA)){ t.accts = [...ids]; n++; } });
   save(); renderAcctMgr(); renderDashboard(); renderAgentes();
@@ -5520,11 +5689,19 @@ function carreraSocio(uid){
   const suyas = todas.filter(cuentaEnPie);
   const quemadas = todas.length - suyas.length;
   if(!suyas.length) return { uid, cuentas:0, avance:0, total:0, pct:0, cobrado:0,
+                             capital:0, margen:0, caidaPct:0,
                              quemadas, sinDatos: !todas.length };
-  let avance = 0, total = 0, pagos = 0;
-  suyas.forEach(a => { const c = carreraCuenta(a); avance += c.avance; total += c.total; if(c.pasoPago) pagos++; });
-  return { uid, cuentas:suyas.length, avance, total,
+  let avance = 0, total = 0, pagos = 0, capital = 0, margen = 0;
+  suyas.forEach(a => {
+    const c = carreraCuenta(a); avance += c.avance; total += c.total; if(c.pasoPago) pagos++;
+    capital += c.balance;
+    const dd = lineaDD(a); if(dd) margen += dd.margen;
+  });
+  return { uid, cuentas:suyas.length, avance, total, capital, margen,
            pct: total > 0 ? Math.max(0, Math.min(100, avance / total * 100)) : 0,
+           /* cuánto de la pista puede perder antes de morir, en la MISMA escala
+              que el avance: así el trozo rojo se lee contra el verde */
+           caidaPct: total > 0 ? Math.max(0, Math.min(100, margen / total * 100)) : 0,
            pagos, quemadas, sinDatos:false };
 }
 /* la cara del socio, del tamaño que se pida, con su look real */
@@ -5536,16 +5713,208 @@ function caraSocio(uid, px = 40){
   return p ? `<img src="${caraLook({ ...p.look, fondo: p.look.traje }, 128)}" alt="">` : '<span>?</span>';
 }
 
+
+
+/* ════════════════════════════════════════════════════════════════════
+   I C E   V A D E R  ·  la sección que explica el indicador
+
+   TODO lo que se dice aquí sale del código Pine del indicador, no de una
+   descripción de memoria: los horarios, los tres modos, los defaults y las
+   siete alertas están leídos del script. Si el script cambia, esto miente —
+   por eso cada cifra lleva su nombre de parámetro al lado, para poder
+   compararla contra el indicador sin adivinar.
+   ════════════════════════════════════════════════════════════════════ */
+const IV = {
+  /* Los defaults REALES del script, para que la ficha no invente nada. */
+  orb:      { ini:'9:30', fin:'9:45', dur:15 },
+  ultima:   '11:00',
+  cierre:   '12:00',
+  asia:     { ini:'20:00', fin:'02:00' },
+  londres:  { ini:'02:00', fin:'08:00' },
+  velasFuera: 2, tolRetest: 5, tolFVG: 25, minFVG: 2,
+  riesgoPct: 2, colchon: 3, minStop: 10, velasTramo: 5, maxTrades: 1,
+};
+
+/* ── EL DIBUJO DE UN MODO ──
+   Un esquema del mismo trade con los tres stops y los tres objetivos, para que
+   la diferencia entre modos se VEA en vez de leerse. La escala es relativa: lo
+   que importa es cuál stop es más ancho y cuál objetivo está más lejos. */
+function ivEsquema(modo){
+  const W = 360, H = 200;
+  /* precios relativos dentro de la caja */
+  const orbAlto = 62, orbBajo = 118, entrada = 62, tramo = 88;
+  const stop = modo === 'micros' ? orbBajo : tramo;
+  const obj  = modo === '1:1' ? entrada - (stop - entrada) : 18;
+  const rr = ((entrada - obj) / (stop - entrada));
+  const tono = modo === 'micros' ? 'var(--warn)' : modo === '1:1' ? 'var(--accent-deep)' : 'var(--up)';
+  return `<svg class="iv-svg" viewBox="0 0 ${W} ${H}" role="img"
+      aria-label="${bi('Esquema del modo ','Scheme of the ')}${modo}">
+    <!-- la caja del rango de apertura -->
+    <rect x="18" y="${orbAlto}" width="${W-36}" height="${orbBajo-orbAlto}"
+          fill="color-mix(in srgb, var(--faint) 12%, transparent)"/>
+    <line x1="18" y1="${orbAlto}" x2="${W-18}" y2="${orbAlto}" stroke="var(--faint)" stroke-width="1.5"/>
+    <line x1="18" y1="${orbBajo}" x2="${W-18}" y2="${orbBajo}" stroke="var(--faint)" stroke-width="1.5"/>
+    <text x="22" y="${orbAlto-5}" class="iv-t">ORB ${IV.orb.ini}–${IV.orb.fin}</text>
+
+    <!-- riesgo y objetivo -->
+    <rect x="150" y="${entrada}" width="${W-168}" height="${stop-entrada}"
+          fill="color-mix(in srgb, var(--down) 15%, transparent)"/>
+    <rect x="150" y="${obj}" width="${W-168}" height="${entrada-obj}"
+          fill="color-mix(in srgb, var(--up) 15%, transparent)"/>
+
+    <!-- el precio: baja, rompe arriba y hace el retest -->
+    <path d="M18 ${orbBajo-6} L60 ${orbAlto+14} L96 ${orbBajo-16} L132 ${orbAlto-22} L150 ${entrada}"
+          fill="none" stroke="var(--txt)" stroke-width="1.6" stroke-linejoin="round"/>
+    <path d="M150 ${entrada} L${W-30} ${obj+6}" fill="none" stroke="${tono}"
+          stroke-width="1.8" stroke-dasharray="4 3"/>
+
+    <line x1="150" y1="${entrada}" x2="${W-18}" y2="${entrada}" stroke="var(--txt)" stroke-width="1.2"/>
+    <line x1="150" y1="${stop}" x2="${W-18}" y2="${stop}" stroke="var(--down)" stroke-width="1.4"/>
+    <line x1="150" y1="${obj}" x2="${W-18}" y2="${obj}" stroke="var(--up)" stroke-width="1.4"/>
+
+    <text x="${W-16}" y="${entrada-4}" class="iv-t" text-anchor="end">${bi('ENTRADA','ENTRY')}</text>
+    <text x="${W-16}" y="${stop+12}" class="iv-t iv-down" text-anchor="end">STOP</text>
+    <text x="${W-16}" y="${obj-5}" class="iv-t iv-up" text-anchor="end">${bi('OBJETIVO','TARGET')}${modo!=='1:1' ? ' · ' + bi('LIQUIDEZ','LIQUIDITY') : ''}</text>
+    <text x="152" y="${(entrada+obj)/2+4}" class="iv-rr" fill="${tono}">1:${rr.toFixed(1)}</text>
+  </svg>`;
+}
+
+const IV_MODOS = [
+  { k:'micros', n:['MICROS','MICROS'],
+    stop:['Al otro lado del ORB — el rango completo','The far side of the ORB — the whole range'],
+    tam:['1 a 3 micros','1 to 3 micros'],
+    obj:['El nivel de Asia o Londres más cercano, barrido o no. Si no hay liquidez enfrente, sale en 2R.',
+         'The nearest Asia or London level, swept or not. With no liquidity ahead, it exits at 2R.'],
+    car:['Acierta muy seguido','Hits very often'],
+    por:['Porque el objetivo suele quedar mucho más cerca que el stop. El stop es tan ancho que el riesgo en dólares sólo alcanza para poquísimos contratos.',
+         'Because the target usually sits much closer than the stop. The stop is so wide that the dollar risk only affords very few contracts.'] },
+  { k:'1:1', n:['1:1','1:1'],
+    stop:['En el low/high del tramo — las últimas ' + IV.velasTramo + ' velas','At the leg low/high — the last ' + IV.velasTramo + ' candles'],
+    tam:['Del orden de un mini (~10 micros)','About one mini (~10 micros)'],
+    obj:['Exactamente a la misma distancia que el stop. Ni un punto más.','Exactly the same distance as the stop. Not one point more.'],
+    car:['Te sacan más seguido','You get stopped more often'],
+    por:['Arriesgas muchos menos puntos, así que el tamaño sale mucho más grande. El precio: el stop va pegado a la estructura y salta con cualquier mecha.',
+         'You risk far fewer points, so size comes out much bigger. The price: the stop hugs the structure and any wick takes you out.'] },
+  { k:'minis', n:['MINIS','MINIS'], def:true,
+    stop:['El mismo stop corto del tramo','The same short leg stop'],
+    tam:['Del orden de un mini (~10 micros)','About one mini (~10 micros)'],
+    obj:['En la liquidez, mucho más lejos','At the liquidity, much further out'],
+    car:['Acierta poco pero paga mucho','Hits rarely but pays big'],
+    por:['El de mayor R:R de los tres: stop corto y objetivo lejos. Es el modo de fábrica del indicador.',
+         'The best R:R of the three: short stop, distant target. It is the indicator’s factory mode.'] },
+];
+
+const IV_ALERTAS = [
+  ['Apertura de sesiones','Session opens', 'Asia, Londres y NY. La de NY te trae ya la liquidez del overnight.','Asia, London and NY. The NY one already carries the overnight liquidity.'],
+  ['ORB listo','ORB ready', 'A los ' + IV.orb.dur + ' minutos: alto, bajo, 50% y ancho del rango.','After ' + IV.orb.dur + ' minutes: high, low, 50% and width of the range.'],
+  ['Break confirmado','Break confirmed', 'Ya trae el precio de la orden, el stop, el objetivo, los contratos y el riesgo en dólares. Aquí es donde te acomodas.','Already carries the order price, stop, target, contracts and dollar risk. This is where you get ready.'],
+  ['FVG en el nivel','FVG at the level', 'Avisa que la entrada se movió al 50% del hueco.','Tells you the entry moved to the middle of the gap.'],
+  ['Entrada llena','Entry filled', 'El retest llenó la orden límite. ESTA es la que te hace entrar.','The retest filled the limit order. THIS is the one that gets you in.'],
+  ['Salida','Exit', 'Con el resultado, y te dice que el día se cerró.','With the result, and it tells you the day is done.'],
+  ['Liquidez barrida','Liquidity swept', 'Cuando el precio toma el alto o bajo de Asia o de Londres.','When price takes the Asia or London high or low.'],
+];
+
+/* ── EL CARRUSEL DE LOS MODOS ──
+   Van en horizontal y EN LOOP: del tercero se pasa al primero y del primero al
+   tercero, para poder compararlos girando sin llegar nunca a un tope. El estado
+   vive fuera de la función porque el render se vuelve a llamar al cambiar de
+   idioma o de tema y no queremos que el carrusel salte al principio. */
+let ivPos = 0;
+window.ivVe = function(i){
+  const track = $('#ivTrack'); if(!track) return;
+  const n = IV_MODOS.length;
+  ivPos = ((i % n) + n) % n;                       // el módulo que sí cierra el círculo
+  track.style.transform = 'translateX(' + (-ivPos * 100) + '%)';
+  $$('#ivPuntos .iv-pt').forEach((p, k) => p.classList.toggle('on', k === ivPos));
+  $$('#ivTrack .iv-modo').forEach((c, k) => c.setAttribute('aria-hidden', k !== ivPos));
+};
+window.ivGira = d => ivVe(ivPos + d);
+
+function renderIceVader(){
+  const host = $('#v-icevader .iv-host'); if(!host) return;
+  const modo = m => `
+    <div class="iv-modo${m.def ? ' def' : ''}">
+      <div class="iv-modo-h">
+        <b>${loc(m.n)}</b>
+        ${m.def ? `<span class="iv-def">${bi('DE FÁBRICA','FACTORY')}</span>` : ''}
+        <span class="iv-car">${loc(m.car)}</span>
+      </div>
+      ${ivEsquema(m.k)}
+      <dl class="iv-dl">
+        <dt>STOP</dt><dd>${loc(m.stop)}</dd>
+        <dt>${bi('TAMAÑO','SIZE')}</dt><dd>${loc(m.tam)}</dd>
+        <dt>${bi('OBJETIVO','TARGET')}</dt><dd>${loc(m.obj)}</dd>
+      </dl>
+      <p class="iv-por">${loc(m.por)}</p>
+    </div>`;
+
+  host.innerHTML = `
+    <div class="panel">
+      <div class="p-head">
+        <h3>${bi('Los tres modos','The three modes')}</h3>
+        <span class="micro">${bi('el mismo break, tres formas de cobrarlo','same break, three ways to charge for it')}</span>
+      </div>
+      <div class="p-body">
+        <p class="iv-lead">${bi(
+          'Los tres entran EXACTAMENTE en el mismo punto. Lo que cambia es dónde ponen el stop — y como el riesgo en dólares es fijo, un stop más ancho significa menos contratos. Ahí está todo el truco: no eliges cuánto arriesgas, eliges cómo lo repartes.',
+          'All three enter at EXACTLY the same point. What changes is where the stop goes — and since the dollar risk is fixed, a wider stop means fewer contracts. That is the whole trick: you do not choose how much you risk, you choose how you spread it.')}</p>
+        <div class="iv-car">
+          <div class="iv-car-v"><div class="iv-track" id="ivTrack">${IV_MODOS.map(modo).join('')}</div></div>
+          <div class="iv-car-n">
+            <button type="button" class="iv-fl" onclick="ivGira(-1)" aria-label="${bi('Modo anterior','Previous mode')}">‹</button>
+            <div class="iv-puntos" id="ivPuntos">${IV_MODOS.map((m,i) =>
+              `<button type="button" class="iv-pt${i===0?' on':''}" onclick="ivVe(${i})" aria-label="${loc(m.n)}"></button>`).join('')}</div>
+            <button type="button" class="iv-fl" onclick="ivGira(1)" aria-label="${bi('Modo siguiente','Next mode')}">›</button>
+          </div>
+        </div>
+      </div>
+    </div>`;
+
+  ivVe(ivPos);   /* se vuelve a colocar donde estaba, no en el primero */
+  /* arrastre con el dedo: en el celular nadie busca las flechitas */
+  const v = $('.iv-car-v');
+  if(v){
+    let x0 = null;
+    v.addEventListener('touchstart', e => { x0 = e.touches[0].clientX; }, { passive:true });
+    v.addEventListener('touchend', e => {
+      if(x0 == null) return;
+      const dx = e.changedTouches[0].clientX - x0;
+      if(Math.abs(dx) > 44) ivGira(dx < 0 ? 1 : -1);
+      x0 = null;
+    }, { passive:true });
+  }
+}
+
 function renderFirmaCarrera(){
   const host = $('#pgFirma'); if(!host) return;
   const P = S.presencia || {}, hoy = Date.now();
+  /* ── QUIÉN SALE EN LA PISTA ──
+     Antes salían los tres de casa siempre, aunque uno no se hubiera registrado
+     nunca: la pista tenía un carril fantasma que decía «sin datos» y ocupaba un
+     lugar. Ahora sale quien EXISTE de verdad — el que se dio de alta (tiene
+     correo registrado o está en la mesa) o el que ya trabajó (tiene cuentas o
+     trades). Y tú siempre, aunque acabes de entrar. */
+  /* Alguien EXISTE si esta máquina tiene prueba de él. El correo registrado no
+     basta: Pablo se dio de alta desde SU equipo, y si su correo todavía no bajó
+     por la nube desaparecía de la pista aunque llevara semanas subiendo datos.
+     Ahora también cuenta haber subido algo (S.sync) o haberse dejado ver
+     (S.presencia) — las dos cosas viajan por la nube y sólo las tiene quien de
+     verdad usó la app. El que nunca hizo nada sigue sin salir. */
+  const registrado = uid => !!(S.correos || {})[uid] || !!(S.mesa || {})[uid]
+    || !!(S.sync || {})[uid] || !!(S.presencia || {})[uid]
+    || uid === (S.session && S.session.user);
   const socios = PERSONAJES.map(p => {
     const c = carreraSocio(p.id);
     const visto = P[p.id] || 0;
     return { ...c, nom:p.nom, enMesa: (hoy - visto) < PRESENCIA_MIN * 60000,
              hace: visto ? Math.round((hoy - visto) / 60000) : null };
-  });
-  const orden = socios.slice().sort((a, b) => b.pct - a.pct);
+  }).filter(x => registrado(x.uid) || !x.sinDatos);
+  /* ── EL ORDEN ES POR DINERO, NO POR PORCENTAJE ──
+     Un porcentaje alto sobre poco capital iba delante de alguien con el doble
+     en la mesa: André con \$100,000 salía primero que Pablo con \$200,000. Aquí
+     el primero es el que más capital tiene en futuros, que es lo que de verdad
+     mide quién va ganando. El porcentaje desempata. */
+  const orden = socios.slice().sort((a, b) => (b.capital || 0) - (a.capital || 0) || b.pct - a.pct);
   const yo = S.session && S.session.user;
   const conDatos = socios.filter(x => !x.sinDatos).length;
   /* Sin sesión de nube este panel es una foto vieja: ni lo tuyo sube ni lo de
@@ -5560,8 +5929,11 @@ function renderFirmaCarrera(){
     const ts = SY[uid] || 0;
     if(!ts) return ' · ' + bi('nunca ha subido desde su equipo','never uploaded from their device');
     const min = Math.round((hoy - ts) / 60000);
-    return ' · ↑ ' + (min < 1 ? bi('ahorita','just now') : min < 60 ? bi('hace ','')+ min + bi(' min',' min ago')
-           : bi('hace ','') + Math.round(min / 60) + ' h' + bi('','ago'));
+    /* «hace 24 h» en español, «24 h ago» en inglés. Estaba partido en dos
+       bi() y en inglés salía pegado: «24 hago». */
+    return ' · ↑ ' + (min < 1 ? bi('ahorita','just now')
+      : min < 60 ? bi('hace ' + min + ' min', min + ' min ago')
+      : bi('hace ' + Math.round(min / 60) + ' h', Math.round(min / 60) + ' h ago'));
   };
 
   host.innerHTML = `
@@ -5582,16 +5954,23 @@ function renderFirmaCarrera(){
             <span class="fc-pos mono">${x.sinDatos ? '—' : (i + 1)}</span>
             <div class="fc-track">
               <i style="width:${x.sinDatos ? 0 : x.pct}%"></i>
+              ${x.sinDatos || !x.caidaPct ? '' : `
+              <!-- el camino de regreso: lo que se puede DESANDAR antes de tocar
+                   el drawdown. Empieza donde vas y se pinta hacia atrás. -->
+              <u class="fc-caida" style="left:${Math.max(0, x.pct - x.caidaPct)}%;width:${Math.min(x.pct, x.caidaPct)}%"
+                 title="${bi('Puedes caer ','You can fall ')}${fmt$(x.margen)}${bi(' antes de tocar el drawdown',' before hitting the drawdown')}"></u>`}
               <span class="fc-cara" style="left:clamp(23px, ${x.pct}%, calc(100% - 23px))">
                 ${caraSocio(x.uid, 46)}
                 ${x.enMesa ? '<em class="fc-viva"></em>' : ''}
               </span>
             </div>
             <span class="fc-info">
-              <b>${esc(x.nom)}${x.sinDatos ? '' : ` <span class="fc-pct">${Math.round(x.pct)}%</span>`}</b>
+              <b>${esc(x.nom)}${x.sinDatos ? '' : ` <span class="fc-cap">${fmt$(x.capital)}</span>`}</b>
               <em>${x.sinDatos
                  ? bi('sin datos en esta máquina','no data on this machine')
-                 : x.cuentas + (x.cuentas === 1 ? bi(' cuenta',' account') : bi(' cuentas',' accounts'))
+                 : Math.round(x.pct) + '% · ' + x.cuentas + (x.cuentas === 1 ? bi(' cuenta',' account') : bi(' cuentas',' accounts'))
+                   /* lo que se puede perder antes de morir, dicho en dinero */
+                   + (x.margen ? ' · ' + bi('aguanta ','holds ') + fmt$(x.margen) : '')
                    + (x.pagos ? ' · ' + x.pagos + bi(' cobrada',' paid') + (x.pagos > 1 ? 's' : '') : '')
                    /* una cuenta que se quemó sale de la carrera, pero se dice:
                       que el número baje sin explicación se siente a error */
@@ -6131,76 +6510,17 @@ function pintaPerfilSocio(){
 
   const fila = (k, val, tono) => `<div class="rt-f"><span>${k}</span><b class="${tono||''}">${val}</b></div>`;
 
+  /* ── LA TARJETA DEL JUGADOR ──
+     André la redujo a lo único que se consulta de otro: cuánto trae y cómo le
+     ha ido día por día. Fuera el lema, la carrera al payout, los números de la
+     mesa, la disciplina y la lista de trades — eso ya vive en The Desk y en su
+     journal, y repetirlo aquí sólo amontonaba. */
+  /* ── LA TARJETA DEL JUGADOR ──
+     André la redujo a lo único que de verdad se consulta de otro: cuánto trae y
+     cómo le ha ido día por día. Fuera el lema, la carrera al payout, los números
+     de la mesa, la disciplina y la lista de trades — todo eso ya vive en The Desk
+     y en su journal, y repetirlo aquí sólo amontonaba. */
   $('#psCuerpo').innerHTML = `
-    <div class="rt-sec">
-      <p class="ps-lema">«${esc(p.lema)}»</p>
-      ${p.voz ? `<p class="micro" style="margin-top:8px;text-transform:none;letter-spacing:.04em">${esc(p.voz)}</p>` : ''}
-    </div>
-
-    <div class="rt-sec">
-      <p class="micro">${esYo ? bi('Tu carrera al payout','Your race to payout') : bi('Su carrera al payout','Their race to payout')}</p>
-      ${cs.sinDatos
-        ? `<p class="dim">${esYo
-            ? bi('Sin cuentas tuyas en esta máquina todavía.','No accounts of yours on this machine yet.')
-            : bi('Sin cuentas suyas en esta máquina. Si es socio de nube, sus datos llegan cuando su equipo sube.','No accounts of theirs on this machine. If they are a cloud partner, their data lands when their device uploads.')}</p>`
-        : `<div class="ps-carrera"><b>${Math.round(cs.pct)}%</b>
-             <span>${cs.cuentas}${cs.cuentas === 1 ? bi(' cuenta',' account') : bi(' cuentas',' accounts')}${cs.pagos ? ' · ' + cs.pagos + bi(' cobrada',' paid') + (cs.pagos > 1 ? 's' : '') : ''}</span></div>
-           <div class="bar" style="margin-bottom:14px"><i style="width:${cs.pct}%"></i></div>
-           ${suyas.map(a => { const cc = carreraCuenta(a); const f = faseDe(a, cc);
-             return `<button type="button" class="rt-cta abre" onclick="psCuenta('${a.id}')">
-               <div><b>${esc(a.alias)}</b>
-                 <p class="micro" style="margin-top:2px">${f[0]} · ${bi('balance','balance')} ${fmt$(cc.balance)}</p></div>
-               <div class="rt-cta-r"><b class="${f[1]}">${Math.round(cc.pct)}%</b><i>›</i></div>
-             </button>`; }).join('')}
-           <p class="micro" style="margin-top:8px">${bi('Pica una cuenta para ver por dentro sus trades y su calendario.','Tap an account to see its trades and calendar inside.')}</p>`}
-    </div>
-
-    ${trs.length ? `<div class="rt-sec">
-      <p class="micro">${esYo ? bi('Tu curva','Your curve') : bi('Su curva','Their curve')}</p>
-      ${psCurva(trs) || `<p class="dim">${bi('Un solo día operado: todavía no hay curva.','Only one day traded: no curve yet.')}</p>`}
-    </div>
-
-    <div class="rt-sec">
-      <p class="micro">${esYo ? bi('Tu calendario','Your calendar') : bi('Su calendario','Their calendar')}</p>
-      ${psCal(trs, psV.mes)}
-      ${psDiaHTML(trs)}
-    </div>` : ''}
-
-    <div class="rt-sec">
-      <p class="micro">${esYo ? bi('Tus números en la mesa','Your desk numbers') : bi('Sus números en la mesa','Their desk numbers')}</p>
-      ${c ? `<div class="rt-grid">
-        ${fila('Trades', c.n)}
-        ${fila(bi('Sesiones','Sessions'), c.sesiones)}
-        ${fila('P&L', fmt$(c.pnl, true), c.pnl > 0 ? 'up' : c.pnl < 0 ? 'down' : '')}
-        ${fila(bi('Aciertos','Win rate'), c.wr + '%')}
-        ${fila('Profit factor', c.pf === Infinity ? '∞' : c.pf)}
-        ${fila(bi('Desde','Since'), fmtFecha(c.desde))}
-        ${c.mejor ? fila(bi('Mejor día','Best day'), fmtFecha(c.mejor[0]) + ' · ' + fmt$(c.mejor[1], true), 'up') : ''}
-        ${c.peor && c.peor[1] < 0 ? fila(bi('Peor día','Worst day'), fmtFecha(c.peor[0]) + ' · ' + fmt$(c.peor[1], true), 'down') : ''}
-        ${fila(bi('Último trade','Last trade'), fmtFecha(c.ultimo))}
-      </div>`
-      : `<p class="dim">${esYo
-          ? bi('Todavía no registras trades desde este equipo.','No trades registered from this device yet.')
-          : bi('Todavía no registra trades desde su equipo.','No trades registered from their device yet.')}</p>`}
-    </div>
-
-    ${c ? `<div class="rt-sec">
-      <p class="micro">${esYo ? bi('Tu disciplina','Your discipline') : bi('Su disciplina','Their discipline')}</p>
-      ${marcados
-        ? `<div class="rt-f"><span>${bi('Trades con marca','Flagged trades')}</span>
-             <b class="warn">${marcados} ${bi('de','of')} ${tot}</b></div>
-           <div class="rt-f"><span>${bi('Trades limpios','Clean trades')}</span>
-             <b class="up">${tot - marcados} ${bi('de','of')} ${tot}</b></div>`
-        : `<div class="rt-limpio">${esYo
-            ? bi('Limpio. Ni un trade tuyo rompió el plan.','Clean. Not one of your trades broke the plan.')
-            : bi('Limpio. Ni un trade suyo rompió el plan.','Clean. Not one of their trades broke the plan.')}</div>`}
-    </div>` : ''}
-
-    ${trs.length ? `<div class="rt-sec">
-      <p class="micro">${esYo ? bi('Tus últimos trades','Your last trades') : bi('Sus últimos trades','Their last trades')}</p>
-      ${psTrades(trs, 15)}
-    </div>` : ''}
-
     <div class="rt-sec">
       <p class="micro">${esYo ? bi('Tus balances','Your balances') : bi('Sus balances','Their balances')}</p>
       ${balRow(bi('FUTUROS','FUTURES'), futBal, futBase, fondSuyas.length,
@@ -6212,7 +6532,16 @@ function pintaPerfilSocio(){
       ${balRow(bi('PORTAFOLIO','PORTFOLIO'), portBal, portBase, (S.positions || []).length,
           ((S.positions || []).length ? bi('sobre ','on ') + fmt$(portBase) + bi(' aportados',' contributed') + ' · ' : '')
             + bi('de la mesa entera, no individual','the whole desk, not individual'))}
-    </div>`;
+    </div>
+
+    ${trs.length ? `<div class="rt-sec">
+      <p class="micro">${esYo ? bi('Tu calendario','Your calendar') : bi('Su calendario','Their calendar')}</p>
+      ${psCal(trs, psV.mes)}
+      ${psDiaHTML(trs)}
+    </div>`
+    : `<div class="rt-sec"><p class="dim">${esYo
+        ? bi('Todavía no registras trades desde este equipo.','No trades registered from this device yet.')
+        : bi('Todavía no registra trades desde su equipo.','No trades registered from their device yet.')}</p></div>`}`;
 }
 
 function renderCamino(){
@@ -6233,7 +6562,7 @@ function renderCamino(){
     $('#pgCaminoSub').textContent = '';
     $('#pgClimb').innerHTML = '';
     $('#pgPasos').innerHTML = '';
-    const hayFondeadas = S.accounts.some(a => !esLive(a) && !esSim(a));
+    const hayFondeadas = mias(S.accounts).some(a => !esLive(a) && !esSim(a));
     $('#pgCaminoNota').textContent = hayFondeadas
       ? bi('No account matches this filter. Change the selection above.',
            'No account matches this filter. Change the selection above.')
@@ -6683,14 +7012,16 @@ function drawEquity(){
 /* Los checklists se guardan como pares [es,en] y se resuelven al pintar. */
 /* ══ EL PASO A PASO ══
    Dos listas con trabajos distintos, y en ese orden:
-   · PRE-MARKET (7:00 → 7:30) es PREPARAR. Todo lo que se hace ANTES de que el
-     mercado decida nada: plataforma, noticias, mapa de niveles, cuentas, sesgo
-     y —lo último— el riesgo escrito antes de ver un solo precio de apertura.
-   · VALIDADOR (7:45 en adelante) es DECIDIR. Sólo corre cuando el rango YA se
-     formó, y se apoya en el mapa que dejaste hecho: ¿sigue vivo alguno de esos
-     niveles?, ¿el break va hacia él?, ¿hay confirmación?
-   Antes se traslapaban: el pre-market pedía «esperar el ORB» y el validador
-   volvía a juzgar el mismo break. Ahora uno prepara y el otro juzga. */
+   · PRE-MARKET (7:00 → 7:30) es DEJAR TODO LISTO PARA OBEDECER. Desde que ICE
+     VADER manda, preparar ya no es armar una opinión: es asegurarse de que la
+     señal está cargada, que la alerta suena, que el riesgo está escrito antes
+     de que suene, y que no traes lado. El pre-market ya no produce una tesis —
+     produce a alguien capaz de ejecutar sin discutir.
+   · VALIDADOR (cuando suena la alarma) es COMPROBAR, no decidir. La decisión ya
+     la tomó la señal; lo que queda es verificar que se puede tomar: ventana,
+     trades disponibles, riesgo del día y que no vengas de una pérdida.
+   Antes las dos listas juzgaban el mismo break, una preparándolo y la otra
+   volviéndolo a evaluar. Hoy una alista y la otra deja pasar. */
 const PRE_RAW = [
   [['Plataforma lista','Platform ready'],
    ['TradingView abierto y los gráficos en su sitio.','TradingView open and the charts where they belong.'],'7:00'],
@@ -6718,8 +7049,7 @@ const SETUP_RAW = [
    ['BOS, FVG de 5m y las EMAs 14/50 a favor.','Break of structure, 5m fair value gap and the 14/50 EMAs in favour.']],
   [['Entro sin perseguir','I enter without chasing'],
    ['En el break o tantito antes, con el stop del plan.','On the break or just before, with the stop from the plan.']],
-];
-const POST_RAW = [
+];const POST_RAW = [
   [['Trades registrados','Trades logged'],
    ['Screenshot, setup, resultado y análisis de cada operación.','Screenshot, setup, result and analysis for every trade.']],
   [['Dashboard verificado','Dashboard checked'],
@@ -6790,9 +7120,13 @@ function getRutina(iso){
   if(r.bias === undefined) r.bias = null;
   if(r.sesgo === undefined) r.sesgo = '';
   if(r.niveles === undefined) r.niveles = '';
-  if(!r.maxT) r.maxT = SISTEMA.fases.eval.maxTrades;
-  if(r.stop === undefined) r.stop = SISTEMA.fases.eval.maxPerdidaDia;
-  if(r.obj === undefined) r.obj = SISTEMA.fases.eval.objetivoDia;
+  /* Los límites ya no se teclean: los pone la fase de tus cuentas. Se copian al
+     día para que quede CONGELADO lo que aplicaba entonces —si mañana cambias de
+     fase, el journal de ayer no debe cambiar de reglas retroactivamente. */
+  const L = limitesDelDia();
+  if(!r.maxT) r.maxT = L.maxT;
+  if(r.stop === undefined) r.stop = L.stop;
+  if(r.obj === undefined) r.obj = L.obj;
   return r;
 }
 /* El cronómetro de la sesión: arranca al activar y vive en la rutina del día,
@@ -6807,6 +7141,63 @@ function obTick(){
   el.textContent = h > 0
     ? `${h}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`
     : `${m}:${String(s).padStart(2,'0')}`;
+}
+
+
+
+/* ════════ ICE VADER · EL AGENTE ════════
+   Ice Vader no es un indicador con nombre: es alguien sentado en su escritorio
+   trabajando para ti. Se dibuja en SVG y no en el canvas isométrico de la
+   oficina porque aquí importa la CARA —que se le vea concentrado, o cansado, o
+   alerta— y a esa escala el pixel-art no da para eso.
+
+   La postura NO es decoración: cambia con la etapa real de la sesión, así que si
+   miras a Ice Vader sabes en qué va sin leer una palabra. Cuando está recargado, es
+   que no hay nada; cuando se echa para adelante, es que algo se está midiendo;
+   cuando está al filo con las tres pantallas encendidas, es que puede sonar.
+
+   Es un personaje, no un tipo genérico: sus lentes, su fleco y su taza son
+   suyos. Se dibuja con las mismas piezas que el resto de la app usa para las
+   caras —forma, pelo, ojos, lentes— para que no se sienta pegado de otro lado. */
+
+
+/* ════════ EL CRISTAL · ICE VADER PENSANDO ════════
+   No es un spinner ni una barra de progreso: es una cosa VIVA. La diferencia
+   entre las dos está en que un spinner gira igual siempre —y por eso lo dejas
+   de ver a los diez segundos— mientras que esto respira, se mueve distinto en
+   cada estado y nunca repite exactamente el mismo cuadro.
+
+   Tres capas girando a velocidades y sentidos distintos: el núcleo, las puntas
+   grandes y las esquirlas que orbitan. Como los periodos no son múltiplos entre
+   sí (11s, 17s, 23s… números primos), la figura tarda minutos en repetirse y el
+   ojo la lee como movimiento orgánico y no como bucle.
+
+   Y el estado de la sesión es lo que cambia el RITMO, no un color: dormido late
+   despacio, midiendo el rango se acelera, y vigilando el break piensa a toda
+   velocidad. Si el cristal está agitado, es que puede sonar. */
+
+/* ── LOS LÍMITES DEL DÍA, EN UN SOLO LUGAR ──
+   Antes vivían en el panel «Session plan», tecleados a mano, y la cabina en vivo
+   los leía de ahí. Al quitar ese panel las balas se quedaron leyendo un número
+   que ya nadie fijaba. Ahora salen de las cuentas vivas —manda la fase más
+   estricta, como en el resto de la app— y los usan LOS DOS: Ice Vader para decírtelos
+   y la cabina para contar las balas. Una sola fuente, imposible que discrepen. */
+function limitesDelDia(){
+  const propias = mias(S.accounts).filter(a => !esLive(a) && !esSim(a) && reglasDe(a) && cuentaEnPie(a));
+  if(!propias.length) return { hay:false, cuentas:0, maxT: SISTEMA.fases.eval.maxTrades,
+                               stop:null, obj:0, capital:0, margen:0, fase:null, dura:null };
+  const ORDEN = { eval:0, buffer:1, payout:2 };
+  const dura = propias.slice().sort((a, b) => (ORDEN[b.fase]||0) - (ORDEN[a.fase]||0))[0];
+  const R = reglasDe(dura), F = FASES[dura.fase] || FASES.eval;
+  return {
+    hay: true, cuentas: propias.length, dura,
+    maxT: sistemaDe(dura.fase).maxTrades,
+    stop: F.rDia(R, dura),
+    obj:  F.oDia(R, dura),
+    fase: F.t,
+    capital: propias.reduce((x, a) => x + carreraCuenta(a).balance, 0),
+    margen:  propias.reduce((x, a) => { const d = lineaDD(a); return x + (d ? d.margen : 0); }, 0),
+  };
 }
 
 function renderSesion(){
@@ -6831,6 +7222,9 @@ function renderSesion(){
     if(!S.ui.rtVozOff) rtDi('Co-piloto en línea.'); };
 
   /* ── PRE · sesgo, niveles, plan, compromisos ── */
+  /* Ya no se elige un LADO: el lado lo dice la alarma cuando suena. Lo que se
+     declara aquí es si la alerta quedó lista, que es lo único que de verdad
+     decide si hoy se puede operar. */
   const BIAS = [['alcista','↑ ALCISTA'],['bajista','↓ BAJISTA'],['neutral','↔ NEUTRAL']];
   $('#rtBias').innerHTML = BIAS.map(([v,l]) =>
     `<button type="button" data-v="${v}" class="${rt.bias===v?'on':''}">${l}</button>`).join('');
@@ -6870,10 +7264,17 @@ function renderSesion(){
         ${okAll ? tr('se.setupOk') : tr('se.todasONo')}
       </div>
     </div>`;
-
-  /* ── EN VIVO · la cabina one-bullet ── */
+  /* ── EN VIVO · la cabina one-bullet ──
+     La cabina daba por hecho que había sesión: enseñaba el reloj corriendo, las
+     balas cargadas y el P&L en cero aunque nunca hubieras abierto nada. Ahora
+     tiene un estado CERRADO explícito — sin sesión abierta, o con el día ya
+     firmado, o fuera de la ventana — y lo dice en vez de fingir que estás
+     operando. Una cabina que siempre se ve encendida enseña a ignorarla. */
   const dayTr = tradesByDay()[iso] || [];
   const g = gestionState(dayTr);
+  const mMerc = minutosEn(TZ_MERCADO), wdMerc = diaSemanaEn(TZ_MERCADO);
+  const enVentanaHoy = wdMerc !== 0 && wdMerc !== 6 && mMerc >= 9*60+30 && mMerc < 12*60;
+  const sinSesion = !rt.startedAt && !dayTr.length;
   const pnlHoy = dayTr.reduce((a,t)=>a+(t.pnl||0),0);
   const stopTocado = rt.stop > 0 && pnlHoy <= -rt.stop;
   const objCubierto = rt.obj > 0 && pnlHoy >= rt.obj;
@@ -6881,6 +7282,16 @@ function renderSesion(){
     stopTocado ? 'SESSION STOP HIT — close the platform. No exceptions.'
     : objCubierto ? 'Target for the day is covered. The best trade left is to switch off.'
     : g.msg}</span></div>`;
+  /* sin sesión abierta la cabina se declara cerrada, y lo explica */
+  if(sinSesion){
+    $('#gestState').innerHTML = `<div class="g-banner cerrado" style="margin-top:0"><span>${
+      enVentanaHoy
+        ? bi('CERRADO · no has abierto la sesión. Ice Vader está trabajando; cuando suene, pica «SONÓ LA ALARMA» en Pre-market.',
+             'CLOSED · you have not opened the session. Ice Vader is working; when it fires, hit "THE ALARM FIRED" in Pre-market.')
+        : bi('CERRADO · fuera de la ventana de Ice Vader (9:30–12:00 NY). Hoy no hay nada que operar aquí.',
+             'CLOSED · outside Ice Vader’s window (9:30–12:00 NY). There is nothing to trade here today.')
+    }</span></div>`;
+  }
   /* con el día cerrado, el banner lo dice y manda sobre cualquier otro aviso */
   if(getSession(iso).cerrado){
     const c = getSession(iso).cerrado;
@@ -6889,11 +7300,20 @@ function renderSesion(){
       'DAY CLOSED at ' + c.hora + ' · ' + c.trades + ' of ' + c.maxT + ' bullets. The session is signed off.')}</span></div>`;
   }
 
-  /* las balas: tus trades del plan. Se gastan al disparar; pasarse pinta rojo. */
-  const camaras = Math.max(rt.maxT, dayTr.length);
-  $('#obBalas').innerHTML = Array.from({length: camaras}, (_,i) =>
-    `<span class="ob-bala${i < dayTr.length ? (i < rt.maxT ? ' gastada' : ' extra') : ''}"
-           title="${i < dayTr.length ? 'disparada' : 'disponible'}"></span>`).join('');
+  /* ── LAS BALAS ──
+     Leían rt.maxT, que se tecleaba en «Session plan». Al quitar ese panel el
+     número se quedó huérfano y el tambor podía salir vacío o con las balas de
+     otra fase. Ahora manda el plan del día —congelado al abrirlo— y si el día
+     todavía no arranca se cae a los límites de hoy. */
+  const maxT = rt.maxT || limitesDelDia().maxT || 1;
+  const camaras = Math.max(maxT, dayTr.length);
+  $('#obBalas').innerHTML = Array.from({length: camaras}, (_,i) => {
+    const disparada = i < dayTr.length;
+    const cls = sinSesion ? ' apagada' : disparada ? (i < maxT ? ' gastada' : ' extra') : '';
+    return `<span class="ob-bala${cls}" title="${
+      sinSesion ? bi('sin sesión abierta','no session open')
+      : disparada ? bi('disparada','fired') : bi('disponible','available')}"></span>`;
+  }).join('');
 
   const pctObj = rt.obj > 0 ? Math.max(0, Math.min(100, pnlHoy / rt.obj * 100)) : 0;
   const margenStop = rt.stop > 0 ? rt.stop + Math.min(0, pnlHoy) : null;   // cuánto aguanta el día
@@ -6910,8 +7330,10 @@ function renderSesion(){
       <div class="k-s">${stopTocado?'TOCADO — fuera':'aguanta '+fmt$(margenStop??0)+' más'}</div>
       <div class="bar"><i class="${stopTocado?'neg':''}" style="width:${100-pctStop}%;background:var(--down)"></i></div></div>`,
     `<div class="panel kpi" style="margin:0"><div class="k-l">BALAS</div>
-      <div class="k-v">${Math.max(0, rt.maxT - dayTr.length)}<span style="font-size:14px;color:var(--faint)"> / ${rt.maxT}</span></div>
-      <div class="k-s">${dayTr.length > rt.maxT ? 'te pasaste del plan' : 'quedan en el tambor'}</div></div>`,
+      <div class="k-v">${Math.max(0, maxT - dayTr.length)}<span style="font-size:14px;color:var(--faint)"> / ${maxT}</span></div>
+      <div class="k-s">${sinSesion ? bi('sin sesión','no session')
+        : dayTr.length > maxT ? bi('te pasaste del plan','you went past the plan')
+        : bi('quedan en el tambor','left in the drum')}</div></div>`,
   ].join('');
   /* el botón dice en qué estado está el día, y la cabina también */
   const cer = getSession(iso).cerrado;
@@ -6930,7 +7352,8 @@ function renderSesion(){
 
   clearInterval(obTimerInt);
   /* con el día cerrado el reloj se detiene: no hay sesión que contar */
-  if(S.ui.rtTab === 'live' && !cer){ obTick(); obTimerInt = setInterval(obTick, 1000); }
+  if(S.ui.rtTab === 'live' && !cer && !sinSesion){ obTick(); obTimerInt = setInterval(obTick, 1000); }
+  else if(sinSesion && $('#obReloj')) $('#obReloj').textContent = '—';
   else if(cer && $('#obReloj')) $('#obReloj').textContent = cer.hora;
 
   /* ── CIERRE · el resumen de la sesión contra el plan ── */
@@ -7009,7 +7432,7 @@ function renderSesion(){
 
     ${seccion('04','The plan vs what happened')}
     <div class="hoja-plan">
-      <div><span>Bias for the day</span><b>${rt.bias ? rt.bias.toUpperCase() : '— not set'}</b>${rt.sesgo ? `<i>${esc(rt.sesgo)}</i>` : ''}</div>
+      <div><span>Alerta de Ice Vader</span><b>${rt.bias === 'armada' ? 'ARMADA' : rt.bias === 'muda' ? 'SIN ARMAR' : '— sin declarar'}</b>${rt.sesgo ? `<i>${esc(rt.sesgo)}</i>` : ''}</div>
       <div><span>Key levels</span><b>${rt.niveles ? esc(rt.niveles) : '— none written'}</b></div>
       <div><span>Objetivo</span><b class="${objCubierto?'up':(picoDia >= rt.obj ? 'down' : '')}">${fmt$(rt.obj)} · ${
         objCubierto ? 'covered'
@@ -7093,8 +7516,24 @@ function calMatrix(key){
 }
 const esHabil = iso => { const [y,m,d] = iso.split('-').map(Number); const w = new Date(y,m-1,d).getDay(); return w!==0 && w!==6; };
 
+/* ── LAS QUEMAS DEL MES ──
+   Una cuenta que muere es el suceso más importante que le puede pasar a un día,
+   y no salía en ninguna parte: desaparecía del dinero y ya. Aquí se junta qué
+   cuenta murió y qué día, para que el calendario lo pueda marcar.
+   Sólo las MÍAS: la lápida de otro socio no es asunto de mi calendario. */
+function quemasPorDia(){
+  const m = {};
+  mias(S.accounts).forEach(a => {
+    if(esLive(a) || esSim(a)) return;
+    const q = quemaDetectada(a);
+    if(q && q.fecha) (m[q.fecha] = m[q.fecha] || []).push(a.alias);
+  });
+  return m;
+}
+
 function renderCal(){
   const byDay = tradesByDay();
+  const quemas = quemasPorDia();
   const M = metas();
   const hoyISO = todayISO();
   const [Y, MM] = calMes.split('-').map(Number);
@@ -7118,11 +7557,13 @@ function renderCal(){
       const habil = esHabil(iso);
       if(tr.length){ wkPnl += pnl; wkDias++; }
 
+      const muertas = quemas[iso] || [];
       const cls = [
         'ts-cell',
         tr.length ? (pnl>0?'up':pnl<0?'down':'flat') : (futuro && habil ? 'fut' : ''),
         iso===hoyISO ? 'today' : '',
-        vio ? 'vio' : ''
+        vio ? 'vio' : '',
+        muertas.length ? 'quema' : ''
       ].filter(Boolean).join(' ');
 
       let cuerpo;
@@ -7138,7 +7579,14 @@ function renderCal(){
       } else {
         cuerpo = '';
       }
-      html += `<div class="${cls}"${tr.length ? ` data-iso="${iso}" role="button" tabindex="0"` : ''} title="${iso}"><span class="ts-d">${Number(iso.slice(8))}</span>${cuerpo}</div>`;
+      /* la lápida: el día que una cuenta tocó su línea de drawdown */
+      if(muertas.length) cuerpo += `<span class="ts-quema">${muertas.length > 1
+        ? muertas.length + bi(' QUEMADAS',' BURNED')
+        : bi('QUEMADA','BURNED')}</span>`;
+      const tit = muertas.length
+        ? iso + ' — ' + bi('se quemó ','burned: ') + muertas.join(', ')
+        : iso;
+      html += `<div class="${cls}"${(tr.length || muertas.length) ? ` data-iso="${iso}" role="button" tabindex="0"` : ''} title="${tit}"><span class="ts-d">${Number(iso.slice(8))}</span>${cuerpo}</div>`;
     }
     const wCls = wkPnl>0?'up':wkPnl<0?'down':'';
     html += `<div class="ts-week ${wCls}">
@@ -7189,7 +7637,10 @@ let diaAbierto = null;
 const LLAVE_IA = 'northpoint_llave_ia';
 function abrirDia(iso){
   const trs = tradesByDay()[iso] || [];
-  if(!trs.length) return;
+  const muertas = quemasPorDia()[iso] || [];
+  /* un día sin trades pero con una cuenta muerta SÍ se abre: es el día más
+     importante del mes y antes no se podía ni picar */
+  if(!trs.length && !muertas.length) return;
   diaAbierto = iso;
   const pnl = trs.reduce((a,t)=>a+(t.pnl||0),0);
   const wins = trs.filter(t=>(t.pnl||0)>0).length;
@@ -7197,7 +7648,8 @@ function abrirDia(iso){
   const vios = [...new Set(trs.flatMap(t => violations(t, trs)))];
   $('#diaTitle').textContent = fmtFecha(iso);
   $('#diaSub').innerHTML = `<b class="${pnl>0?'up':pnl<0?'down':''}">${fmt$(pnl,true)}</b> · ${trs.length} trade${trs.length>1?'s':''} · ${wins}W·${loss}L`
-    + (vios.length ? ` · <span class="tag wr">${vios.join(' · ')}</span>` : '');
+    + (vios.length ? ` · <span class="tag wr">${vios.join(' · ')}</span>` : '')
+    + (muertas.length ? ` · <span class="tag wr">${bi('SE QUEMÓ ','BURNED: ')}${muertas.map(esc).join(', ')}</span>` : '');
   $('#diaTrades').innerHTML = trs.map(t => `
     <div class="dia-t">
       <div class="dt-h">
@@ -7463,11 +7915,11 @@ window.reporteTrade = function(id){
       <p class="micro">${bi('Tus notas','Your notes')}</p>
       <p class="rt-notas">${esc(t.notas)}</p>
     </div>` : ''}
-
     ${t.shot ? `<div class="rt-sec">
       <p class="micro">${bi('La gráfica','The chart')}</p>
       <img class="rt-img" src="${t.shot}" alt="${bi('Captura del trade','Trade screenshot')}">
     </div>` : ''}
+
 
     <div class="rt-pie">
       <button class="btn" onclick="closeOv(); openTrade('${t.id}')">${bi('Editar este trade','Edit this trade')}</button>
@@ -7573,6 +8025,12 @@ function openTrade(id){
   $('#tDir').value = t.dir || 'L';
   $('#tQty').value = t.qty || 1;
   $('#tSetup').value = (t.setupOk===false) ? '0' : '1';
+  /* La alarma arranca en «Sí» sólo cuando se está EDITANDO un trade que ya la
+     traía. En uno nuevo arranca en «No» a propósito: la regla es que sin alarma
+     no se entra, así que decir que sí sonó tiene que ser un acto deliberado y
+     no el valor por default que nadie mira. */
+  $('#tAlarma').value = t.alarma ? '1' : '0';
+  pintaAvisoAlarma();
   $('#tIn').value = t.entry ?? '';
   $('#tOut').value = t.exit ?? '';
   $('#tPnl').value = t.pnl ?? '';
@@ -7581,6 +8039,19 @@ function openTrade(id){
   renderTradeAccts(Array.isArray(t.accts) ? t.accts : acctsSel().map(a=>a.id));
   openOv('ovTrade');
 }
+
+/* El aviso bajo el selector: si dice que no sonó, la app se lo dice en la cara
+   ANTES de guardar, no después en el reporte. */
+function pintaAvisoAlarma(){
+  const sel = $('#tAlarma'), av = $('#tAlarmaAviso');
+  if(!sel || !av) return;
+  const con = sel.value === '1';
+  av.textContent = con
+    ? 'Va limpio: la señal mandó y tú obedeciste.'
+    : 'Este trade queda marcado SIN ALARMA. La regla de la casa es que sin ' + SISTEMA.senal.nombre + ' no se entra — gane o pierda, cuenta contra tu disciplina.';
+  av.style.color = con ? 'var(--faint)' : 'var(--warn)';
+}
+$('#tAlarma')?.addEventListener('change', pintaAvisoAlarma);
 
 /* ── Screenshot del trade ──
    Se guarda como JPEG reducido (~1000px) dentro del propio trade: localStorage
@@ -7628,7 +8099,7 @@ document.addEventListener('paste', e => {
 let tradeAccts = [], pendienteTix = null;
 function renderTradeAccts(pre){
   const cont = $('#tAccts');
-  tradeAccts = (pre || []).filter(id => id === SIN_CUENTA || S.accounts.some(a=>a.id===id));
+  tradeAccts = (pre || []).filter(id => id === SIN_CUENTA || mias(S.accounts).some(a=>a.id===id));
   if(!S.accounts.length){
     if(!tradeAccts.length) tradeAccts = [SIN_CUENTA];
     cont.innerHTML = `<p class="micro" style="color:var(--faint)">Sin cuentas dadas de alta: el trade se guarda sin asignar.</p>`;
@@ -7636,7 +8107,7 @@ function renderTradeAccts(pre){
   }
   /* por defecto se marcan las cuentas de verdad; una sim se pica a propósito */
   if(!tradeAccts.length) tradeAccts = cuentasVivas().filter(a => !esSim(a)).map(a=>a.id);
-  cont.innerHTML = ordenar(S.accounts).map(a=>{
+  cont.innerHTML = ordenar(mias(S.accounts)).map(a=>{
     const on = tradeAccts.includes(a.id);
     const F = FASES[a.fase] || FASES.eval;
     return `<button type="button" class="tag" data-a="${a.id}" aria-pressed="${on}">
@@ -7673,7 +8144,7 @@ $('#tSave').addEventListener('click', ()=>{
   if(!isFinite(pnl)){ toast('The trade P&L is missing'); return; }
   const data = {
     date: $('#tFecha').value || todayISO(),
-    time: $('#tHora').value || '07:35',
+    time: $('#tHora').value || horaMercadoAhora(),
     sym: $('#tSym').value,
     dir: $('#tDir').value,
     qty: parseInt($('#tQty').value)||1,
@@ -7681,6 +8152,7 @@ $('#tSave').addEventListener('click', ()=>{
     exit: $('#tOut').value===''?null:parseFloat($('#tOut').value),
     pnl,
     setupOk: $('#tSetup').value==='1',
+    alarma:  $('#tAlarma').value==='1',
     notas: $('#tNotas').value.trim(),
     shot: tShot || null,
     accts: tradeAccts.length ? [...tradeAccts] : [SIN_CUENTA],
@@ -7689,6 +8161,25 @@ $('#tSave').addEventListener('click', ()=>{
   };
   if(S.accounts.length && !tradeAccts.length){
     toast('Pick at least one account'); return;
+  }
+  /* ── LA PUERTA DE ICE VADER ──
+     No se bloquea el guardado: el journal tiene que poder registrar lo que de
+     verdad pasó, incluso —sobre todo— cuando se rompió la regla. Un diario que
+     sólo acepta trades limpios no es un diario, es una vitrina. Lo que sí se
+     hace es preguntarlo a la cara, con el nombre de la regla, para que romperla
+     sea una decisión consciente y no un descuido. */
+  if(SISTEMA.senal && SISTEMA.senal.obligatoria && !data.alarma
+     && data.date >= SISTEMA.senal.desde && !editingTrade){
+    const sigue = confirm(bi(
+      'Este trade va SIN alarma de ' + SISTEMA.senal.nombre + '.\n\n'
+      + 'La regla de la casa es que sin la señal no se entra. Se va a registrar '
+      + 'con la marca «Sin alarma de Ice Vader» y cuenta contra tu disciplina, '
+      + 'gane o pierda.\n\n¿Aun así lo registro?',
+      'This trade has NO ' + SISTEMA.senal.nombre + ' alarm.\n\n'
+      + 'The house rule is that without the signal you do not enter. It will be '
+      + 'logged with the "No Ice Vader alarm" breach and it counts against your '
+      + 'discipline, win or lose.\n\nLog it anyway?'));
+    if(!sigue) return;
   }
   /* Un dedazo en el año (2027 por 2026) metía un trade en el futuro que SÍ
      contaba: inflaba el P&L, las estadísticas y el camino a payout, y te decía
@@ -10558,12 +11049,22 @@ const CIUDADES = {
    YORK — no en la hora del que mira la pantalla. Entre una sesión y otra el
    mercado está CERRADO de verdad, y ese hueco no se rellena con una ciudad
    falsa: se va uno a su casa. */
+/* ── EL DÍA DE LA CASA, COMO LO PIDIÓ ANDRÉ ──
+   Nueva York manda: se abre a las 9:30 y se trabaja hasta su cierre. Después el
+   mercado ESTÁ CERRADO de verdad —de 16:00 a 20:00— y eso se dice, no se
+   rellena con una ciudad falsa. Al final de ese hueco sale el avión rumbo a
+   Asia, que abre a las 20:00. Asia aguanta hasta las 2 de la mañana y ahí se
+   cambia SOLA a Londres, sin avión de por medio porque no hay hueco: la misma
+   hora que cierra una abre la otra. Londres aguanta hasta las 9:30 y devuelve
+   la mesa a Nueva York.
+
+   `vuela` marca la única transición con hueco, que es la única que necesita
+   avión. Las otras dos se tocan en el minuto exacto. */
 const TRAMOS = [
-  { c:'londres', de:120,  a:510,  sig:'nyc'     },   // 02:00 – 08:30 NY
-  { c:'nyc',     de:570,  a:960,  sig:'tokio'   },   // 09:30 – 16:00 NY
-  { c:'tokio',   de:1200, a:1500, sig:'londres' },   // 20:00 – 01:00 NY (cruza medianoche)
+  { c:'nyc',     de: 9*60+30, a: 16*60,    sig:'tokio',   vuela:true  },  // 09:30 – 16:00
+  { c:'tokio',   de: 20*60,   a: 26*60,    sig:'londres', vuela:false },  // 20:00 – 02:00 (cruza)
+  { c:'londres', de: 2*60,    a: 9*60+30,  sig:'nyc',     vuela:false },  // 02:00 – 09:30
 ];
-const TZ_MERCADO = 'America/New_York';
 const VUELO_MIN = 25;                     // lo que dura el traslado en pantalla
 
 function escenaAhora(now = new Date()){
@@ -10585,14 +11086,13 @@ function escenaAhora(now = new Date()){
               : m < 1320 ? 'restaurante' : 'casa';
     return { tipo:'finde', esc, c:'nyc', finde:true };
   }
+  /* dentro de un tramo: la ciudad, hasta su último minuto. El avión ya NO sale
+     al final de cada sesión — Asia y Londres se tocan sin hueco, así que volar
+     ahí sería inventarse un viaje que no existe. */
   for(const tr of TRAMOS){
     const mm = (tr.de > tr.a || tr.a > 1440) && m < tr.de ? m + 1440 : m;
-    if(mm >= tr.de && mm < tr.a){
-      const restan = tr.a - mm;
-      if(restan <= VUELO_MIN)
-        return { tipo:'vuelo', de:tr.c, a:tr.sig, prog:1 - restan / VUELO_MIN };
-      return { tipo:'ciudad', c:tr.c, sig:tr.sig, restan };
-    }
+    if(mm >= tr.de && mm < tr.a)
+      return { tipo:'ciudad', c:tr.c, sig:tr.sig, restan: tr.a - mm, vuela: !!tr.vuela };
   }
   /* Ninguna sesión abierta: el mercado está CERRADO. Antes se caía a «Nueva
      York» y la pantalla mentía; ahora se está en casa hasta la próxima
@@ -10602,8 +11102,13 @@ function escenaAhora(now = new Date()){
     const d = (tr.de - m + 1440) % 1440;
     if(d < faltan){ faltan = d; prox = tr; }
   });
+  /* la recta final del único hueco con avión: se va a Asia */
+  if(prox && faltan <= VUELO_MIN){
+    const salio = TRAMOS.find(t => t.sig === prox.c && t.vuela);
+    if(salio) return { tipo:'vuelo', de:salio.c, a:prox.c, prog: 1 - faltan / VUELO_MIN };
+  }
   return { tipo:'finde', esc:'casa', c:'nyc', cerrado:true,
-           abre: prox ? prox.c : 'londres', faltan };
+           abre: prox ? prox.c : 'tokio', faltan };
 }
 /* qué día es allá: el viernes de Nueva York puede ser sábado en Tokio */
 function diaSemanaEn(tz, now = new Date()){
@@ -13110,7 +13615,12 @@ function dibujaOficina(t){
   const restan = E.restan || 0;
   const hR = Math.floor(restan / 60), mR = Math.round(restan % 60);
   const sig = CIUDADES[E.sig] || CIUDADES.tokio;
-  c.fillText(`${CI.sub}  ·  ${bi('vuela a','flies to')} ${loc([sig.n, sig.en])} ${bi('en','in')} ${hR ? hR + 'h ' : ''}${mR}m`, W/2, 186);
+  /* Sólo el tramo de NY termina en vuelo; Asia le PASA la mesa a Londres en el
+     minuto exacto. Decir «vuela a Londres» ahí era mentir un viaje. */
+  const tiempo = `${hR ? hR + 'h ' : ''}${mR}m`;
+  c.fillText(CI.sub + '  ·  ' + (E.vuela
+      ? bi('cierra en ' + tiempo + ' · luego vuela a ', 'closes in ' + tiempo + ' · then flies to ') + loc([sig.n, sig.en])
+      : bi('pasa a ', 'hands off to ') + loc([sig.n, sig.en]) + bi(' en ', ' in ') + tiempo), W/2, 186);
 
   c.font = '12px "IBM Plex Mono", monospace'; c.textAlign = 'left';
   c.fillStyle = 'rgba(255,255,255,.4)';
@@ -14116,6 +14626,7 @@ function render(view){
   if(view==='agentes') renderAgentes();
   else if(view==='sesion'){ renderSesion(); renderTix(); renderCamino(); }
   else if(view==='journal'){ renderDashboard(); renderJournal(); renderObjetivos(); }
+  else if(view==='icevader') renderIceVader();
   else if(view==='trades') renderTrades();
   else if(view==='posiciones') renderPosiciones();
   else if(view==='vida') renderVida();
