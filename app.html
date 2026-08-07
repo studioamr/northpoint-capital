@@ -4916,22 +4916,39 @@ function metas(){
      LONDRES  03:00 → 09:30    NY  09:30 → 16:00    ASIA  20:00 → 03:00
    Entre las 16:00 y las 20:00 no hay sesión abierta y eso se dice, en vez de
    rellenar el hueco con una ciudad falsa. */
-function sesionMundial(){
-  const m = minutosEn(TZ_MERCADO);
-  if(m >= 9*60+30 && m < 16*60) return 'NY SESSION';
-  if(m >= 3*60 && m < 9*60+30)  return 'LONDON SESSION';
-  if(m >= 20*60 || m < 3*60)    return 'ASIA SESSION';
-  return 'MARKET CLOSED';                    // 16:00 → 20:00
+/* ── LA SESIÓN DEL MUNDO, EN HORA DE NY ──
+   Los futuros sólo cierran DE VERDAD una hora al día —el halt del CME de
+   17:00 a 18:00 NY— y el fin de semana. Todo lo demás es una sesión u otra,
+   con los cortes de la casa: Asia hasta las 2 (asiaFin del indicador) y
+   Londres de las 2 a la apertura de NY. Antes decía MARKET CLOSED cuatro
+   horas (16→20) mientras Globex operaba — André lo cachó a la 1 AM con Asia
+   viva y Londres a una hora. */
+function sesionMundial(now){
+  const m = minutosEn(TZ_MERCADO, now);
+  if(m >= 9*60+30 && m < 17*60) return 'NY SESSION';
+  if(m >= 17*60 && m < 18*60)   return 'MARKET CLOSED';   // el halt real
+  if(m >= 18*60 || m < 2*60)    return 'ASIA SESSION';
+  return 'LONDON SESSION';                                // 02:00 → 09:30
 }
+/* TODO en hora de NY. Mezclar el reloj local con una ventana escrita en NY fue
+   el mismo desfase de husos dos veces en dos días — aquí estaba la segunda. */
 function sessionState(now = ahora()){
-  const mins = now.getHours()*60 + now.getMinutes();
-  const wd = now.getDay();
-  if(wd === 0 || wd === 6) return { k:'off', txt:'FIN DE SEMANA' };
-  if(mins <  VENTANA.open)  return { k:'sesion', txt:sesionMundial(now) };
-  if(mins <  VENTANA.orb1)  return { k:'live', txt:'VENTANA ABIERTA · PRE-ORB' };
-  if(mins <= VENTANA.orb2)  return { k:'orb',  txt:'ORB 7:30 – 7:45' };
-  if(mins <= VENTANA.close) return { k:'live', txt:'VENTANA ABIERTA · CIERRA 8:30' };
-  return { k:'sesion', txt:sesionMundial(now) };
+  const m  = minutosEn(TZ_MERCADO, now);
+  const wd = diaSemanaEn(TZ_MERCADO, now);
+  /* el fin de semana REAL de futuros: viernes 17:00 → domingo 18:00 NY */
+  if((wd === 5 && m >= 17*60) || wd === 6 || (wd === 0 && m < 18*60))
+    return { k:'off', txt: bi('FIN DE SEMANA · ASIA DOM 18:00 NY','WEEKEND · ASIA SUN 6 PM NY') };
+  if(m >= 17*60 && m < 18*60) return { k:'off', txt:'MARKET CLOSED · 17–18 NY' };
+  /* la ventana propia, con sus horas derivadas de VENTANA para que las
+     etiquetas no vuelvan a quedarse viejas (decían 7:30 de la era Morelia) */
+  const hh = x => Math.floor(x/60) + ':' + String(x%60).padStart(2,'0');
+  if(m >= VENTANA.open && m < VENTANA.orb1)
+    return { k:'live', txt: bi('VENTANA ABIERTA · PRE-ORB','WINDOW OPEN · PRE-ORB') };
+  if(m >= VENTANA.orb1 && m <= VENTANA.orb2)
+    return { k:'orb',  txt:'ORB ' + hh(VENTANA.orb1) + ' – ' + hh(VENTANA.orb2) + ' NY' };
+  if(m > VENTANA.orb2 && m <= VENTANA.close)
+    return { k:'live', txt: bi('VENTANA ABIERTA · CIERRA ','WINDOW OPEN · CLOSES ') + hh(VENTANA.close) + ' NY' };
+  return { k:'sesion', txt: sesionMundial(now) };
 }
 
 /* violaciones por trade, dentro de su día (trades ordenados por hora) */
@@ -11089,10 +11106,15 @@ const CIUDADES = {
    YORK — no en la hora del que mira la pantalla. Entre una sesión y otra el
    mercado está CERRADO de verdad, y ese hueco no se rellena con una ciudad
    falsa: se va uno a su casa. */
+/* Los relevos son DIRECTOS: cada hueco entre tramos mide exactamente el vuelo
+   (25 min), así que la escena pasa de sesión a avión a sesión sin inventar un
+   «CERRADO» que el mercado no tiene. El único hueco largo es 17:00–18:00 —el
+   halt real del CME— y ahí sí se ve cerrado (35 min) antes del vuelo a Tokio.
+   Asia entrega a Londres a las 02:00, como el indicador de la casa. */
 const TRAMOS = [
-  { c:'londres', de:120,  a:510,  sig:'nyc'     },   // 02:00 – 08:30 NY
-  { c:'nyc',     de:570,  a:960,  sig:'tokio'   },   // 09:30 – 16:00 NY
-  { c:'tokio',   de:1200, a:1500, sig:'londres' },   // 20:00 – 01:00 NY (cruza medianoche)
+  { c:'londres', de:120,  a:545,  sig:'nyc'     },   // 02:00 – 09:05 NY
+  { c:'nyc',     de:570,  a:1020, sig:'tokio'   },   // 09:30 – 17:00 NY
+  { c:'tokio',   de:1080, a:1535, sig:'londres' },   // 18:00 – 01:35 NY (cruza medianoche)
 ];
 const VUELO_MIN = 25;                     // lo que dura el traslado en pantalla
 
@@ -11106,7 +11128,8 @@ function escenaAhora(now = new Date()){
   /* El fin de semana del mercado: del cierre de NY el viernes (16:00) hasta que
      Asia abre el domingo (20:00 NY). Ese hueco es suyo: casa, gym, golf,
      shopping y cena, según la hora del día. */
-  const finde = (wd === 5 && m >= 960) || wd === 6 || (wd === 0 && m < 1200);
+  /* viernes 17:00 → domingo 18:00 NY, que es cuando Globex reabre de verdad */
+  const finde = (wd === 5 && m >= 1020) || wd === 6 || (wd === 0 && m < 1080);
   if(finde){
     /* El estadio se fue (André: «quita el partido de futbol»). Su franja de la
        tarde se queda en casa, que es donde de verdad se está el fin de semana. */
@@ -11779,8 +11802,8 @@ function escenaFinde(c, W, H, t, E, rr, PC){
     c.fillText(sub, W / 2, 184);
     c.font = '12px "IBM Plex Mono", monospace';
     c.fillStyle = 'rgba(255,255,255,.32)';
-    c.fillText(bi('mercado cerrado · Asia abre el domingo 20:00 NY',
-                  'market closed · Asia opens Sunday 8 PM NY'), W / 2, 210);
+    c.fillText(bi('mercado cerrado · Asia abre el domingo 18:00 NY',
+                  'market closed · Asia opens Sunday 6 PM NY'), W / 2, 210);
     c.textAlign = 'left';
   };
   /* Quien no se ha registrado no sale a vivir el fin de semana: su lugar queda
