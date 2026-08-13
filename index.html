@@ -1046,10 +1046,10 @@ body.doc-open #indice{display:none}
    se sienta espacio y no una ventana adentro de la página. Los colores salen
    del TEMA: en oscuro, luz sobre negro; en claro se INVIERTEN solos —tinta
    sobre papel— porque el motor lee color y fondo computados, no valores fijos. */
-#filosofia.doc-active,#mesa.doc-active{position:relative;overflow:hidden;
+#filosofia.doc-active,#mesa.doc-active,#educacion.doc-active{position:relative;overflow:hidden;
   background:var(--bg);min-height:100vh}
-.flecha-marco,.torre-marco{position:absolute;inset:0}
-#flechaCanvas,#torreCanvas{position:absolute;inset:0;width:100%;height:100%;color:var(--txt)}
+.flecha-marco,.torre-marco,.edu-marco{position:absolute;inset:0}
+#flechaCanvas,#torreCanvas,#eduCanvas{position:absolute;inset:0;width:100%;height:100%;color:var(--txt)}
 
 /* ── EL MANIFIESTO sobre las pantallas de partículas ──
    Texto de verdad (no muestreado): un párrafo en partículas no se lee. Va en
@@ -1116,8 +1116,11 @@ body.doc-open #indice{display:none}
       <a class="ix" href="#mesa">
         <span class="nm"><em>Futures</em></span><span class="fr">/0.2</span>
       </a>
+      <a class="ix" href="#educacion">
+        <span class="nm"><em>Education</em></span><span class="fr">/0.3</span>
+      </a>
       <a class="ix" href="app.html">
-        <span class="nm"><em>Terminal</em></span><span class="fr">/0.3</span>
+        <span class="nm"><em>Terminal</em></span><span class="fr">/0.4</span>
       </a>
     </div>
   </div>
@@ -1147,15 +1150,31 @@ body.doc-open #indice{display:none}
   <!-- Ya sin el edificio (André): el rótulo ES la pantalla. Dos líneas
        muestreadas de la tipografía, en partículas. -->
   <div class="torre-marco rv">
-    <canvas id="torreCanvas" aria-label="NY Session · Mon–Fri"></canvas>
+    <canvas id="torreCanvas" aria-label="New York — the skyline of the session"></canvas>
   </div>
   <!-- Cómo opera la mesa SIN regalar el método: cadencia y disciplina, sí;
        horarios del rango, confirmaciones y riesgo, jamás. -->
   <div class="manifiesto rv">
     <p>One market. One window. One trade — the one the system calls.
     Risk is written before the open, every trade is journaled win or lose,
-    and when the system stays quiet, nobody trades.</p>
+    and when the system stays quiet, nobody trades.
+    <strong>We stream the session live, Monday through Friday.</strong></p>
     <p class="k2">HOW IT WORKS IS THE HOUSE'S · WHAT IT DOES IS MEASURED DAILY</p>
+  </div>
+</section>
+
+<section id="educacion">
+  <!-- EDUCATION: el bootcamp del método. Se ANUNCIA aquí; se ENSEÑA adentro —
+       el qué es público, el cómo se aprende en el bootcamp. -->
+  <div class="edu-marco rv">
+    <canvas id="eduCanvas" aria-label="The bootcamp"></canvas>
+  </div>
+  <div class="manifiesto rv">
+    <p class="k">EDUCATION</p>
+    <p>A bootcamp on the house method — taught live, over the shoulder, on real
+    sessions. Not a video course: you trade the process with us, with the same
+    rules and the same journal, until it holds without us.</p>
+    <p class="k2">DETAILS INSIDE THE DISCORD</p>
   </div>
 </section>
 
@@ -1190,7 +1209,7 @@ body.doc-open #indice{display:none}
   /* El índice ES la navegación: cada sección se abre como documento. Esta lista
      tiene que coincidir con las secciones que existen — un id de más deja un
      renglón del índice que no abre nada. */
-  var DOC_SECS = ['filosofia','mesa'];
+  var DOC_SECS = ['filosofia','mesa','educacion'];
   document.querySelectorAll('a[href^="#"]').forEach(function(a){
     a.addEventListener('click', function(e){
       var href = a.getAttribute('href');
@@ -1213,7 +1232,8 @@ body.doc-open #indice{display:none}
   /* ---------- Router de documentos: el índice ES la navegación ---------- */
   var DECK_MAP = {
     filosofia: '// PHILOSOPHY /0.1',
-    mesa:      '// FUTURES /0.2'
+    mesa:      '// FUTURES /0.2',
+    educacion: '// EDUCATION /0.3'
   };
   function routeDoc(){
     var h = location.hash.slice(1);
@@ -1248,7 +1268,8 @@ body.doc-open #indice{display:none}
     var mapa = [
       ['indice','// INDEX /0.0'],
       ['filosofia','// PHILOSOPHY /0.1'],
-      ['mesa','// FUTURES /0.2']
+      ['mesa','// FUTURES /0.2'],
+      ['educacion','// EDUCATION /0.3']
     ];
     var ioSec = new IntersectionObserver(function(es){
       es.forEach(function(e){
@@ -1499,17 +1520,69 @@ body.doc-open #indice{display:none}
     return { segs: [], total: 1, rio: [], fijos: [], lor: lor };
   });
 
-  /* ── FUTURES · «NY SESSION / MON–FRI», muestreado y centrado ──
-     Las dos líneas se muestrean POR SEPARADO: ralearlas juntas dejaba a la
-     chica ilegible. La grande cada 2px; la chica cada 1px y flota más corto. */
+  /* ── FUTURES · NUEVA YORK, el skyline en partículas ──
+     Muchos edificios (André). El trazado es DETERMINISTA —una PRNG por índice,
+     no Math.random suelto— porque arma() se rearma al redimensionar y al
+     cargar la fuente: con azar puro el skyline brincaría a otra silueta cada
+     vez. Los contornos van en partículas brillantes distribuidas por longitud
+     de segmento, y las ventanas son partículas tenues regadas por dentro. */
   pantalla(document.getElementById('torreCanvas'), function(W, H){
-    var ts  = Math.max(40, Math.min(120, W * .082));
-    var ts2 = Math.max(18, ts * .32);
+    var R = function(i){ var v = Math.sin(i * 91.7) * 4735.73; return v - Math.floor(v); };
+    var y0 = H * .64, anc = W * .80;
+    /* la manzana: 11 edificios, dos de ellos hitos con antena */
+    var n = 11, ws = [], total = 0, i;
+    for(i = 0; i < n; i++){ var w = .6 + R(i) * .5; ws.push(w); total += w * 1.18; }
+    var esc = anc / total, x = (W - anc) / 2, edifs = [];
+    for(i = 0; i < n; i++){
+      var w2 = ws[i] * esc;
+      var h = 70 + R(i + 30) * 170;
+      if(i === 4) h = Math.min(H * .38, 320);
+      if(i === 7) h = Math.min(H * .30, 252);
+      edifs.push({ x: x, w: w2, h: h, hito: i === 4 || i === 7 });
+      x += w2 * 1.18;
+    }
+    var segs = [];
+    var seg = function(a, b, c2, d){ var g = [[a, b], [c2, d]];
+      g.len = Math.hypot(c2 - a, d - b); segs.push(g); };
+    edifs.forEach(function(e){
+      seg(e.x, y0, e.x, y0 - e.h);
+      seg(e.x, y0 - e.h, e.x + e.w, y0 - e.h);
+      seg(e.x + e.w, y0 - e.h, e.x + e.w, y0);
+      if(e.hito) seg(e.x + e.w / 2, y0 - e.h, e.x + e.w / 2, y0 - e.h - 34);
+    });
+    seg((W - anc) / 2 - 30, y0, (W + anc) / 2 + 30, y0);
+    var totalL = 0; segs.forEach(function(g){ totalL += g.len; });
+
     var fijos = [];
-    textoAPuntos(W, H, 'NY SESSION', ts, ts * .2, H * .44, 2, 1100)
-      .forEach(function(c){ fijos.push(fija(c, .5, 1.4)); });
-    textoAPuntos(W, H, 'MON\u2013FRI', ts2, ts2 * .34, H * .44 + ts * .98, 1, 700)
-      .forEach(function(c){ fijos.push(fija(c, .3, .7)); });
+    var N = Math.round(Math.min(900, Math.max(420, W * .7)));
+    for(i = 0; i < N; i++){
+      var d = Math.random() * totalL, g = segs[segs.length - 1], fr = 1;
+      for(var k = 0; k < segs.length; k++){
+        if(d <= segs[k].len){ g = segs[k]; fr = d / segs[k].len; break; }
+        d -= segs[k].len;
+      }
+      fijos.push(fija([g[0][0] + (g[1][0] - g[0][0]) * fr,
+                       g[0][1] + (g[1][1] - g[0][1]) * fr], .4, 1.2));
+    }
+    /* las ventanas: tenues, por dentro, con la misma PRNG para que no cambien
+       de sitio en cada rearme */
+    edifs.forEach(function(e, ei){
+      for(var wy = y0 - e.h + 12; wy < y0 - 8; wy += 15)
+        for(var wx = e.x + 7; wx < e.x + e.w - 6; wx += 13)
+          if(R(wx * 3.1 + wy * 7.7 + ei) < .26){
+            var f2 = fija([wx, wy], .3, .8);
+            f2.a *= .34;
+            fijos.push(f2);
+          }
+    });
+    return { segs: [], total: 1, rio: [], fijos: fijos };
+  });
+
+  /* ── EDUCATION · «BOOTCAMP», muestreado ── */
+  pantalla(document.getElementById('eduCanvas'), function(W, H){
+    var ts = Math.max(40, Math.min(118, W * .085));
+    var fijos = textoAPuntos(W, H, 'BOOTCAMP', ts, ts * .2, H * .46, 2, 1200)
+      .map(function(c){ return fija(c, .5, 1.4); });
     return { segs: [], total: 1, rio: [], fijos: fijos };
   });
 })();
