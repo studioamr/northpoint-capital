@@ -11756,10 +11756,11 @@ function trasladoJet(c, W, H, t, E, rr, prog){
     [[0,0,150,44],[52,-26,110,44],[112,-6,90,40],[26,18,140,34]].forEach(([dx,dy,w,h]) => {
       c.beginPath(); c.ellipse(nx + dx*es, ny + dy*es, w*es/2, h*es/2, 0, 0, 7); c.fill(); });
   }
-  /* la ciudad de destino asoma desde abajo: en traslado conforme avanza el
-     vuelo, y en crucero se queda a la vista — estás justo encima */
-  if(!E.finde){
-    const sube = E.crucero ? 1 : Math.max(0, prog - .35) / .65;
+  /* la ciudad de destino asoma desde abajo SOLO en los traslados. En crucero
+     no se dibuja nada abajo: André pidió el jet limpio — la sesión abierta ya
+     la dice el cartel. */
+  if(!E.finde && !E.crucero){
+    const sube = Math.max(0, prog - .35) / .65;
     if(sube > 0){
       const base = H + 120 - sube * 220;
       c.fillStyle = '#1B212A';
@@ -12875,42 +12876,48 @@ function dibujaOficina(t){
   c.clearRect(0, 0, W, H);
   const N = ISO.N, rr = i => ((Math.sin(i * 12.9898) * 43758.5453) % 1 + 1) % 1;
 
-  /* ── DÓNDE ESTAMOS ──
-     La escena la manda el mercado: la ciudad de la sesión en curso, o el jet
-     si vamos en camino. El cielo es el de la hora LOCAL de esa ciudad. */
+  /* ── DÓNDE ESTAMOS, Y QUÉ RELOJ MANDA ──
+     El estado (arriba en el jet / abajo en la sesión) va ANTES del cielo
+     porque decide el RELOJ: en el jet se vive con la hora de MÉXICO, siempre;
+     al bajar a la sesión, la pantalla cambia a la hora local de esa ciudad —y
+     el cielo la sigue. Al cerrar la sesión (botón o fin del tramo) se sube
+     solo: el estado se resetea con la LLAVE ciudad+día, no con un timer. */
   const E = escenaAhora();
+  const btnB = $('#btnBajar');
+  if(E.tipo === 'ciudad'){
+    const llave = E.c + '|' + todayISO();
+    if(llave !== ofiCiudadKey){ ofiCiudadKey = llave; ofiBajado = false; }
+  } else if(ofiBajado || ofiCiudadKey){ ofiBajado = false; ofiCiudadKey = ''; }
+  if(btnB){
+    const ver = E.tipo === 'ciudad';
+    if(btnB.hidden !== !ver) btnB.hidden = !ver;
+    if(ver){
+      /* el mismo botón, dos caras: bajar cuando estás arriba, cerrar cuando
+         estás abajo — y cerrar te regresa al jet */
+      const et = ofiBajado ? bi('↑ CERRAR SESIÓN','↑ CLOSE THE SESSION')
+                           : bi('↓ BAJAR A LA SESIÓN','↓ DESCEND TO THE SESSION');
+      if(btnB.textContent !== et) btnB.textContent = et;
+    }
+  }
+  const arriba = E.tipo === 'vuelo' || (E.tipo === 'ciudad' && !ofiBajado);
+
   const ciudadFoco = E.tipo === 'vuelo' ? E.a : E.c;
   const CI = CIUDADES[ciudadFoco];
-  const minLocal = minutosEn(CI.tz);
+  const minLocal = arriba ? minutosEn('America/Mexico_City') : minutosEn(CI.tz);
   const PC = pintaCielo(c, W, H, minLocal, rr);
   const oscuridad = PC.oscuridad, momento = PC.momento;
 
-  /* rótulo: ciudad, hora local y momento del día */
+  /* rótulo: en el jet dice MÉXICO; abajo, la ciudad de la sesión */
   c.font = '13px "IBM Plex Mono", monospace'; c.textAlign = 'right';
   c.fillStyle = 'rgba(255,255,255,.42)';
   const relojLocal = String(Math.floor(minLocal / 60)).padStart(2,'0') + ':' + String(minLocal % 60).padStart(2,'0');
-  c.fillText(`${loc([CI.n, CI.en])}  ·  ${relojLocal}  ·  ${momento.toUpperCase()}`, W - 24, 40);
+  c.fillText(`${arriba ? loc(['MÉXICO','MEXICO']) : loc([CI.n, CI.en])}  ·  ${relojLocal}  ·  ${momento.toUpperCase()}`, W - 24, 40);
   c.textAlign = 'left';
 
-  /* ── EL JET ES LA BASE ──
-     Entre semana la vista por defecto es el avión. Con una sesión abierta, el
-     jet cruza SOBRE su ciudad y el botón te baja al piso; al cerrar la sesión
-     (o al cambiar de ciudad) el terminal te sube solo — por eso el estado se
-     resetea con la LLAVE ciudad+día, no con un timer. */
-  const btnB = $('#btnBajar');
-  if(E.tipo !== 'ciudad'){
-    if(ofiBajado || ofiCiudadKey){ ofiBajado = false; ofiCiudadKey = ''; }
-    if(btnB && !btnB.hidden) btnB.hidden = true;
-  }
   if(E.tipo === 'vuelo'){ escenaVuelo(c, W, H, t, E, rr); return; }
   if(E.tipo === 'finde'){ escenaFinde(c, W, H, t, E, rr, PC); return; }
 
-  const llave = E.c + '|' + todayISO();
-  if(llave !== ofiCiudadKey){ ofiCiudadKey = llave; ofiBajado = false; }
-  if(btnB && btnB.hidden !== ofiBajado) btnB.hidden = ofiBajado;
   if(!ofiBajado){
-    /* el crucero: el jet sobre la ciudad de la sesión, con la barra marcando
-       cuánto lleva la sesión — el mismo cartel de los viajes */
     const tr2 = TRAMOS.find(x => x.c === E.c);
     const dur = tr2 ? (tr2.a - tr2.de) : 1;
     const prog2 = tr2 ? Math.max(0, Math.min(1, 1 - (E.restan || 0) / dur)) : .5;
@@ -13991,7 +13998,7 @@ function renderAgentes(){
   animaBalances();
   $$('#agGrid .staff[data-staff]').forEach(b => b.onclick = () => $('#btnSettings').click());
   const bb = $('#btnBajar');
-  if(bb && !bb._listo){ bb._listo = true; bb.addEventListener('click', () => { ofiBajado = true; }); }
+  if(bb && !bb._listo){ bb._listo = true; bb.addEventListener('click', () => { ofiBajado = !ofiBajado; }); }
   pintaAvatares();
   ofiJunta = guionOficina();
   if(typeof animaOficina === 'function') animaOficina();
