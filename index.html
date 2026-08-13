@@ -2290,24 +2290,28 @@ body.doc-open #indice{display:none}
               cx.textAlign = 'left';
             }
           }
-          /* el GRAN SELLO redondo */
+          /* el GRAN SELLO redondo — tamaño relativo a la tarjeta, asentado
+             en .45s y en la esquina inferior IZQUIERDA (el que salió mal
+             escalaba texto gigante y chocaba con la columna de sellos) */
           if (ph >= T_SELLO){
-            var eg = Math.min(1, (ph - T_SELLO) / T_GRAN);
-            var sg = 1 + (1 - suave(eg)) * 1.6;
+            var eg = Math.min(1, (ph - T_SELLO) / .45);
+            var sg = 1 + (1 - suave(eg)) * .9;
+            var R = Math.min(40, cw * .1);
             cx.save();
-            cx.translate(cw * .26, chh * .26); cx.rotate(-.28); cx.scale(sg, sg);
-            cx.globalAlpha = alfaEsc * Math.min(1, eg * 2.5);
-            cx.strokeStyle = '#C9A84C'; cx.lineWidth = 3;
-            cx.beginPath(); cx.arc(0, 0, 46, 0, 6.2832); cx.stroke();
-            cx.lineWidth = 1.2;
-            cx.beginPath(); cx.arc(0, 0, 38, 0, 6.2832); cx.stroke();
+            cx.translate(-cw * .5 + R + 26, chh * .5 - R - 22);
+            cx.rotate(-.2); cx.scale(sg, sg);
+            cx.globalAlpha = alfaEsc * Math.min(1, eg * 3);
+            cx.strokeStyle = '#C9A84C'; cx.lineWidth = 2.6;
+            cx.beginPath(); cx.arc(0, 0, R, 0, 6.2832); cx.stroke();
+            cx.lineWidth = 1;
+            cx.beginPath(); cx.arc(0, 0, R * .8, 0, 6.2832); cx.stroke();
             cx.fillStyle = '#C9A84C';
             cx.textAlign = 'center';
-            cx.font = '700 15px "IBM Plex Mono",monospace';
+            cx.font = '700 ' + Math.round(R * .32) + 'px "IBM Plex Mono",monospace';
             cx.fillText('BACKED', 0, 1);
-            cx.font = '600 7.5px "IBM Plex Mono",monospace';
-            cx.fillText('NORTHPOINT', 0, -16);
-            cx.fillText('★ ★ ★', 0, 17);
+            cx.font = '600 ' + Math.max(6, Math.round(R * .16)) + 'px "IBM Plex Mono",monospace';
+            cx.fillText('NORTHPOINT', 0, -R * .38);
+            cx.fillText('· · ·', 0, R * .42);
             cx.restore();
             cx.textAlign = 'left';
           }
@@ -2331,16 +2335,28 @@ body.doc-open #indice{display:none}
           cx.textAlign = 'center';
           cx.fillStyle = 'rgba(240,220,143,.55)';
           cx.font = '600 9px "IBM Plex Mono",monospace';
-          cx.fillText('N O R T H P O I N T', 0, -chh / 2 + 30);
+          cx.fillText('N O R T H P O I N T', 0, -chh / 2 + 28);
           cx.fillStyle = '#F2F2F2';
-          cx.font = '700 24px "IBM Plex Mono",monospace';
-          cx.fillText('NEXT EVALUATION', 0, -8);
-          cx.fillStyle = '#C9A84C';
-          cx.font = '600 12px "IBM Plex Mono",monospace';
-          cx.fillText('PAID BY NORTHPOINT', 0, 20);
-          cx.fillStyle = 'rgba(240,240,240,.35)';
+          cx.font = '700 ' + Math.min(22, Math.round(cw * .052)) + 'px "IBM Plex Mono",monospace';
+          cx.fillText('WELCOME, TRADER', 0, -chh / 2 + 62);
+          var BEN = ['WE FUND YOUR EVALUATIONS',
+                     'A SEAT AT THE LIVE DESK · MON–FRI',
+                     'THE TERMINAL, JOURNAL & BOOTCAMP',
+                     'PROVEN TRADERS AROUND YOU'];
+          cx.textAlign = 'left';
+          for (var b2 = 0; b2 < BEN.length; b2++){
+            var by2 = -chh / 2 + 100 + b2 * 34;
+            cx.fillStyle = '#C9A84C';
+            cx.font = '700 10px "IBM Plex Mono",monospace';
+            cx.fillText('◆', -cw / 2 + 34, by2);
+            cx.fillStyle = 'rgba(240,240,240,.85)';
+            cx.font = '600 ' + Math.min(12, Math.round(cw * .028)) + 'px "IBM Plex Mono",monospace';
+            cx.fillText(BEN[b2], -cw / 2 + 54, by2);
+          }
+          cx.textAlign = 'center';
+          cx.fillStyle = 'rgba(240,220,143,.6)';
           cx.font = '9px "IBM Plex Mono",monospace';
-          cx.fillText('YOU JUST TRADE', 0, chh / 2 - 24);
+          cx.fillText('THE DOOR IS THE DISCORD', 0, chh / 2 - 20);
           /* el brillo que barre */
           var kb = ((ph - finProof - T_DES) / 1.6) % 1;
           if (kb > 0){
@@ -2402,7 +2418,7 @@ body.doc-open #indice{display:none}
     var quieto = matchMedia('(prefers-reduced-motion: reduce)').matches;
     var tAntes = 0, chispas = [], alfaEsc = 1;
     var leo = null, presas = [], fase = 'acecho', faseAntes = '', faseT = 0, capturaX = 0;
-    var parvadas = [], susto = [], ele = null;
+    var parvadas = [], susto = [];
     function esDia(){ return document.documentElement.getAttribute('data-theme') === 'light'; }
     function seudo(n){ var x = Math.sin(n * 12.9898) * 43758.5453; return x - Math.floor(x); }
 
@@ -2417,13 +2433,12 @@ body.doc-open #indice{display:none}
       fase = 'acecho'; faseT = 0;
       parvadas = [ { x: W * .2, y: H * .16, v: 13, n: 6, sep: 15 },
                    { x: W * .72, y: H * .26, v: -9, n: 5, sep: 13 } ];
-      ele = { x: W * .93, v: -7 };
     }
 
     /* leopardo RELATIVO: (0,0) = el suelo bajo la cadera; dir voltea, carga
        dibuja la presa en el hocico. Así el mismo dibujo camina, trepa
        (rotado) y descansa en la rama. */
-    function leopardo(px, py, c, r, t, alfa, dir, carga, rot){
+    function leon(px, py, c, r, t, alfa, dir, carga, rot){
       var oro = 'rgba(201,168,76,' + alfa.toFixed(2) + ')';
       cx.save(); cx.translate(px, py);
       if (rot) cx.rotate(rot);
@@ -2433,14 +2448,18 @@ body.doc-open #indice{display:none}
       var yb = -alto;
       cx.lineWidth = 11 - 3 * c;
       cx.beginPath(); cx.moveTo(0, yb); cx.lineTo(largo, yb - 2 - 4 * r); cx.stroke();
-      cx.beginPath(); cx.arc(largo + 8, yb - 4 - 4 * r, 6, 0, 6.2832); cx.fill();
-      cx.fillRect(largo + 9, yb - 13 - 4 * r, 2.5, 4);
-      cx.fillRect(largo + 3, yb - 13 - 4 * r, 2.5, 4);
+      /* la MELENA: el círculo grande atrás y la cabeza asomando al frente */
+      cx.beginPath(); cx.arc(largo + 4, yb - 5 - 4 * r, 10.5, 0, 6.2832); cx.fill();
+      cx.beginPath(); cx.arc(largo + 11, yb - 4 - 4 * r, 5.5, 0, 6.2832); cx.fill();
+      cx.fillRect(largo + 6, yb - 17 - 4 * r, 2.5, 4);
+      cx.fillRect(largo + 1, yb - 17 - 4 * r, 2.5, 4);
       cx.lineWidth = 3;
       cx.beginPath(); cx.moveTo(-1, yb);
       cx.quadraticCurveTo(-18, yb - 15 + 8 * c + Math.sin(t * 2.2) * 2.5 * (1 - r),
                           -27, yb - 2 + 9 * c);
       cx.stroke();
+      /* la borla de la cola */
+      cx.beginPath(); cx.arc(-27, yb - 2 + 9 * c, 2.8, 0, 6.2832); cx.fill();
       cx.lineWidth = 3.4;
       for (var pp = 0; pp < 4; pp++){
         var lx = 6 + pp * (largo - 10) / 3;
@@ -2577,33 +2596,44 @@ body.doc-open #indice{display:none}
           cx.lineTo(gx2 + 10, yr + 3 + (gl % 3) * 3); cx.stroke();
         }
 
-        /* fauna lejana: elefante cruzando + jirafa en la acacia chica */
-        ele.x += ele.v * dt;
-        if (ele.x < -90) ele.x = W + 90;
-        cx.fillStyle = cx.strokeStyle = lejos;
-        cx.beginPath(); cx.ellipse(ele.x, suelo - 16, 20, 12, 0, 0, 6.2832); cx.fill();
-        cx.beginPath(); cx.arc(ele.x - 20, suelo - 22, 8, 0, 6.2832); cx.fill();
-        cx.lineWidth = 2.4;
-        cx.beginPath(); cx.moveTo(ele.x - 26, suelo - 20);
-        cx.quadraticCurveTo(ele.x - 32, suelo - 12, ele.x - 30 + Math.sin(t * 2) * 2, suelo - 2);
-        cx.stroke();
-        for (var el2 = 0; el2 < 4; el2++){
-          var elx = ele.x - 12 + el2 * 9;
-          var elw = Math.sin(t * 4 + el2 * 1.6) * 3;
-          cx.lineWidth = 3.4;
-          cx.beginPath(); cx.moveTo(elx, suelo - 10); cx.lineTo(elx + elw, suelo); cx.stroke();
+        /* el PRIMER PLANO ya no está pelón (André): lagos con destellos —
+           el astro reflejado en el grande —, piedras y matas regadas por
+           toda la franja del suelo */
+        function lago(lx, ly, lw, lh){
+          cx.fillStyle = dia ? 'rgba(70,90,105,.35)' : 'rgba(120,160,200,.12)';
+          cx.beginPath(); cx.ellipse(lx, ly, lw, lh, 0, 0, 6.2832); cx.fill();
+          cx.strokeStyle = dia ? 'rgba(255,255,255,.5)' : 'rgba(200,225,255,.2)';
+          cx.lineWidth = 1;
+          for (var g3 = 0; g3 < 3; g3++){
+            var glx = lx - lw * .6 + ((g3 * 97 + t * 18) % (lw * 1.2));
+            cx.beginPath(); cx.moveTo(glx, ly - 2 + g3 * 3);
+            cx.lineTo(glx + 8, ly - 2 + g3 * 3); cx.stroke();
+          }
         }
+        var fondoY = suelo + (H - suelo) * .42;
+        lago(W * .2, fondoY, Math.min(150, W * .13), 13);
+        cx.fillStyle = 'rgba(240,220,143,' + (dia ? .22 : .12) + ')';
+        cx.beginPath(); cx.ellipse(W * .2 + 20, fondoY - 2, 26, 4, 0, 0, 6.2832); cx.fill();
+        lago(W * .76, suelo + (H - suelo) * .68, Math.min(100, W * .085), 10);
+        for (var pi2 = 0; pi2 < 6; pi2++){
+          var prx = (seudo(pi2 * 3.7) * .9 + .05) * W;
+          var pry = suelo + (H - suelo) * (.18 + seudo(pi2 * 7.1) * .72);
+          cx.fillStyle = dia ? 'rgba(90,86,78,.4)' : 'rgba(160,160,170,.1)';
+          cx.beginPath(); cx.arc(prx, pry, 5 + seudo(pi2) * 9, Math.PI, 0); cx.fill();
+        }
+        cx.lineWidth = 1.4;
+        for (var mt = 0; mt < 14; mt++){
+          var mx2 = (seudo(mt * 5.3 + 40) * .94 + .03) * W;
+          var my2 = suelo + (H - suelo) * (.12 + seudo(mt * 9.7) * .8);
+          cx.strokeStyle = dia ? 'rgba(80,76,60,.4)' : 'rgba(170,165,130,.14)';
+          for (var br2 = -2; br2 <= 2; br2++){
+            cx.beginPath(); cx.moveTo(mx2, my2);
+            cx.lineTo(mx2 + br2 * 3 + Math.sin(t * 1.2 + mt) * 2, my2 - 8 - Math.abs(br2)); cx.stroke();
+          }
+        }
+
+        /* acacia lejana */
         acacia(W * .16, suelo, .62, lejos);
-        var jx = W * .2, jcab = Math.sin(t * .9) * 3;
-        cx.strokeStyle = cx.fillStyle = lejos;
-        cx.beginPath(); cx.ellipse(jx, suelo - 22, 11, 6.5, 0, 0, 6.2832); cx.fill();
-        cx.lineWidth = 3;
-        cx.beginPath(); cx.moveTo(jx - 8, suelo - 26); cx.lineTo(jx - 16 + jcab, suelo - 54); cx.stroke();
-        cx.beginPath(); cx.ellipse(jx - 18 + jcab, suelo - 56, 4.5, 2.8, -.4, 0, 6.2832); cx.fill();
-        cx.lineWidth = 2.2;
-        for (var jp = 0; jp < 4; jp++){
-          cx.beginPath(); cx.moveTo(jx - 7 + jp * 5, suelo - 17); cx.lineTo(jx - 7 + jp * 5, suelo); cx.stroke();
-        }
 
         /* las acacias del frente: la GRANDE (el escenario del final) + una más */
         var inkArbol = dia ? 'rgba(50,46,40,.6)' : 'rgba(180,172,150,.22)';
@@ -2691,21 +2721,21 @@ body.doc-open #indice{display:none}
         /* el leopardo, según la fase */
         var agacho = fase === 'acecho' ? (vigilan ? 1 : .8) : 0;
         if (fase === 'carga'){
-          leopardo(leo.x, suelo, 0, 1, t, alfaEsc, 1, false, 0);
+          leon(leo.x, suelo, 0, 1, t, alfaEsc, 1, false, 0);
         } else if (fase === 'premio'){
-          leopardo(leo.x, suelo, 0, 0, t, alfaEsc, 1, true, 0);
+          leon(leo.x, suelo, 0, 0, t, alfaEsc, 1, true, 0);
         } else if (fase === 'acarreo'){
-          leopardo(leo.x, suelo, 0, .25, t, alfaEsc, -1, true, 0);
+          leon(leo.x, suelo, 0, .25, t, alfaEsc, -1, true, 0);
         } else if (fase === 'trepa'){
           var k = faseT / 1.6, kk = k * k * (3 - 2 * k);
           var tx = (ax + 26) + (ax - 2 - (ax + 26)) * kk;
           var ty = suelo + (suelo - 74 - suelo) * kk;
-          leopardo(tx, ty, .5, .3, t, alfaEsc, -1, true, -1.05);
+          leon(tx, ty, .5, .3, t, alfaEsc, -1, true, -1.05);
         } else if (fase === 'rama'){
-          leopardo(ax + 34, suelo - 80, .6, 0, t, alfaEsc, -1, false, .12);
+          leon(ax + 34, suelo - 80, .6, 0, t, alfaEsc, -1, false, .12);
           presaEnRama(ax + 14, suelo - 74, t, ink);
         } else if (fase === 'acecho' || fase === 'entra' || fase === 'fundido'){
-          leopardo(leo.x, suelo, agacho, 0, t, alfaEsc, 1, false, 0);
+          leon(leo.x, suelo, agacho, 0, t, alfaEsc, 1, false, 0);
         }
 
         /* pasto de ENFRENTE */
@@ -2873,7 +2903,30 @@ body.doc-open #indice{display:none}
           cx.beginPath(); cx.moveTo(c, wy0); cx.lineTo(c, wy1); cx.stroke();
           cx.fillStyle = 'rgba(60,58,52,.1)';
           cx.fillRect(ix0, iy1 - 24, ix1 - ix0, 24);
-          var icoY = wy1 + (iy1 - wy1) * .42 + Math.sin(t * 1.6) * 3, ICO = 46;
+          /* la MESA DE TRADING pegada al ventanal: cubierta corrida y tres
+             monitores con su curva — que se vea que es una oficina de
+             trading, no un cuarto vacío */
+          var dkY = wy1 + 26;
+          cx.fillStyle = '#CFCBC2';
+          cx.fillRect(ix0 + 22, dkY, ix1 - ix0 - 44, 5);
+          cx.fillRect(ix0 + 34, dkY + 5, 4, 12);
+          cx.fillRect(ix1 - 38, dkY + 5, 4, 12);
+          for (var mo = -1; mo <= 1; mo++){
+            var mx3 = c + mo * 54;
+            cx.fillStyle = '#1c1c19';
+            cx.fillRect(mx3 - 16, dkY - 24, 32, 20);
+            cx.fillRect(mx3 - 2, dkY - 5, 4, 5);
+            cx.strokeStyle = mo < 0 ? '#C65A4E' : '#2FA57C';
+            cx.lineWidth = 1.2;
+            cx.beginPath();
+            for (var sgx = 0; sgx < 6; sgx++){
+              var vx3 = mx3 - 12 + sgx * 4.4;
+              var vy3 = dkY - 12 + Math.sin(sgx * 1.7 + mo * 2 + t * .8) * 4;
+              sgx === 0 ? cx.moveTo(vx3, vy3) : cx.lineTo(vx3, vy3);
+            }
+            cx.stroke();
+          }
+          var icoY = dkY + (iy1 - dkY) * .48 + Math.sin(t * 1.6) * 3, ICO = 42;
           cx.save();
           cx.translate(c - ICO / 2, icoY - ICO / 2);
           cx.fillStyle = '#5865F2';
@@ -2886,6 +2939,10 @@ body.doc-open #indice{display:none}
           cx.fillStyle = '#fff';
           cx.fill(CLYDE);
           cx.restore();
+          cx.fillStyle = '#4a3f1d';
+          cx.font = '600 9px "IBM Plex Mono",monospace';
+          cx.textAlign = 'center'; cx.textBaseline = 'middle';
+          cx.fillText('E N T E R   T H E   C O M M U N I T Y', c, icoY + ICO / 2 + 16);
         }
         /* puertas doradas */
         function puertaPanel(x, w){
