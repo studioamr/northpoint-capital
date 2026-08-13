@@ -1084,6 +1084,10 @@ body.doc-open #indice{display:none}
 .bc-b:hover{border-color:#C9A84C}
 .bc-temario{position:absolute;inset:0;z-index:5;display:grid;place-items:center;
   background:color-mix(in srgb,var(--bg) 55%,transparent);backdrop-filter:blur(4px)}
+/* OJO: display:grid PISA al atributo hidden (UA display:none pierde contra
+   la clase) — el overlay salía vacío y siempre visible. La regla de abajo
+   es la que lo cierra de verdad. */
+.bc-temario[hidden]{display:none}
 .bc-tem-caja{position:relative;width:min(420px,88vw);border:1px solid var(--line-soft);
   border-radius:16px;background:var(--bg);padding:26px 30px;
   box-shadow:0 30px 80px -30px rgba(0,0,0,.5)}
@@ -1477,10 +1481,8 @@ body.doc-open #indice{display:none}
           <b>SUBMIT YOUR PROFILE</b>
           <p>Upload your trader profile — who you are and how you trade.</p>
           <ul>
-            <li>Funded account statements</li>
             <li>Payout history — 5 payouts minimum</li>
-            <li>Your track record, month by month</li>
-            <li>A short note: how you trade and your rules</li>
+            <li>How you trade — a video and a document</li>
           </ul>
         </div>
       </div>
@@ -1489,12 +1491,6 @@ body.doc-open #indice{display:none}
         <div class="pg-cuerpo">
           <b>NORTHPOINT REVIEWS</b>
           <p>We go through everything and answer — accepted or not.</p>
-          <ul>
-            <li>Withdrawals verified as real</li>
-            <li>Consistency over months, not one lucky run</li>
-            <li>Risk discipline: drawdowns and violations</li>
-            <li>A clear answer, yes or no</li>
-          </ul>
         </div>
       </div>
       <div class="pg-fila">
@@ -1503,10 +1499,8 @@ body.doc-open #indice{display:none}
           <b>YOU'RE IN</b>
           <p>Accepted traders enter the program and everything it carries.</p>
           <ul>
-            <li>Northpoint pays your evaluations</li>
-            <li>A seat at the live desk · Mon–Fri</li>
-            <li>The Terminal, the Journal &amp; the Bootcamp</li>
-            <li>Terms of the partnership, face to face</li>
+            <li>We pay your evaluations</li>
+            <li>Full access to Northpoint</li>
           </ul>
         </div>
       </div>
@@ -2332,7 +2326,10 @@ body.doc-open #indice{display:none}
       for (var i = 0; i < 4; i++){
         presas.push({ x: W * (.64 + .085 * i) + (i % 2) * 12, mira: 0,
                       prox: 1.5 + Math.random() * 3.5, fase: Math.random() * 6.28,
-                      vx: 0, viva: true });
+                      vx: 0, viva: true,
+                      /* todas menos la primera se irán yendo: al final queda
+                         UNA sola — y esa es la que se caza (André) */
+                      parte: i === 0 ? 1e9 : 2.5 + i * 3.4 + Math.random() * 1.5 });
       }
       fase = 'acecho'; faseT = 0;
       parvadas = [ { x: W * .2, y: H * .16, v: 13, n: 6, sep: 15 },
@@ -2399,7 +2396,7 @@ body.doc-open #indice{display:none}
 
     function gacela(g, y, t, ink){
       var alza = g.mira > 0 ? 1 : 0;
-      var brinco = g.vx ? Math.abs(Math.sin(t * 9 + g.fase)) * 12 : 0;
+      var brinco = g.vx ? Math.abs(Math.sin(t * 9 + g.fase)) * (g.vx > 200 ? 12 : 4) : 0;
       var x = g.x, yy = y - brinco;
       cx.fillStyle = cx.strokeStyle = ink; cx.lineCap = 'round';
       cx.beginPath(); cx.ellipse(x, yy - 15, 11, 5.5, 0, 0, 6.2832); cx.fill();
@@ -2558,6 +2555,13 @@ body.doc-open #indice{display:none}
         if (fase === 'acecho'){
           presas.forEach(function(g){
             if (!g.viva) return;
+            if (faseT > g.parte){
+              /* esta ya se va: camina tranquila fuera de escena */
+              g.mira = 0; g.vx = 55;
+              g.x += g.vx * dt;
+              if (g.x > W + 40) g.viva = false;
+              return;
+            }
             if (g.mira > 0){ g.mira -= dt; }
             else { g.prox -= dt; if (g.prox <= 0){ g.mira = .9 + Math.random() * 1.4; g.prox = 2 + Math.random() * 4; } }
           });
@@ -2796,7 +2800,6 @@ body.doc-open #indice{display:none}
           var ryc = pisoY + 38;   /* pegado a las puertas: el deck fijo tapa más abajo */
           cx.save();
           cx.globalAlpha = .9 * g;
-          cx.translate(c, ryc); cx.scale(1, .8); cx.translate(-c, -ryc);
           var ICOF = 40;
           cx.translate(c - ICOF / 2, ryc - ICOF / 2);
           cx.fillStyle = 'rgba(88,101,242,.92)';
@@ -2943,48 +2946,18 @@ body.doc-open #indice{display:none}
             cx.beginPath(); cx.moveTo(c + cs * (ix1 - ix0) * .18, iy1);
             cx.lineTo(c + cs * (bx1 - bx0) * .18, by1); cx.stroke();
           }
-          /* el fondo a DOS PISOS (André): arriba el MEZZANINE con su sala
-             de juntas tras vidrio y barandal; abajo el ventanal a la ciudad */
-          var byMez = by0 + (by1 - by0) * .40;
-          cx.fillStyle = '#E9E6E0';
-          cx.fillRect(bx0, by0, bx1 - bx0, byMez - by0);
-          var sx0 = bx0 + 8, sx1 = bx1 - 8;
-          cx.strokeStyle = 'rgba(60,58,52,.35)'; cx.lineWidth = 1;
-          cx.strokeRect(sx0, by0 + 5, sx1 - sx0, byMez - by0 - 12);
-          cx.fillStyle = '#B9B4AA';
-          cx.fillRect((sx0 + sx1) / 2 - 24, byMez - 15, 48, 3);
-          for (var sj = 0; sj < 3; sj++){
-            var sjx = (sx0 + sx1) / 2 - 16 + sj * 16;
-            var sjb = Math.sin(t * 2.4 + sj * 2) * .8;
-            cx.fillStyle = '#3a362e';
-            cx.beginPath(); cx.arc(sjx, byMez - 22 + sjb, 2.6, 0, 6.2832); cx.fill();
-            cx.fillRect(sjx - 3, byMez - 20 + sjb, 6, 6);
-          }
-          cx.fillStyle = '#15140f';
-          cx.fillRect(sx1 - 16, by0 + 9, 11, 7);
-          cx.fillStyle = 'rgba(155,192,220,.85)';
-          cx.fillRect(sx1 - 15, by0 + 10, 9, 5);
-          /* losa y barandal del mezzanine */
-          cx.fillStyle = '#C8C4BB';
-          cx.fillRect(bx0, byMez - 4, bx1 - bx0, 4);
-          cx.strokeStyle = 'rgba(60,58,52,.55)'; cx.lineWidth = 1;
-          cx.beginPath(); cx.moveTo(bx0, byMez - 13); cx.lineTo(bx1, byMez - 13); cx.stroke();
-          for (var br3 = bx0 + 4; br3 < bx1; br3 += 6){
-            cx.beginPath(); cx.moveTo(br3, byMez - 13); cx.lineTo(br3, byMez - 4); cx.stroke();
-          }
-          /* PB: el ventanal */
-          var gv = cx.createLinearGradient(0, byMez, 0, by1);
+          var gv = cx.createLinearGradient(0, by0, 0, by1);
           gv.addColorStop(0, '#D9E1E8'); gv.addColorStop(1, '#BEC8D1');
-          cx.fillStyle = gv; cx.fillRect(bx0, byMez, bx1 - bx0, by1 - byMez);
+          cx.fillStyle = gv; cx.fillRect(bx0, by0, bx1 - bx0, by1 - by0);
           for (var tw2 = bx0 + 3; tw2 < bx1 - 6; tw2 += 9){
             var th2 = 5 + ((tw2 * 7919) % 15);
             cx.fillStyle = 'rgba(96,104,114,.5)';
             cx.fillRect(tw2, by1 - th2, 6, th2);
           }
           cx.strokeStyle = 'rgba(60,58,52,.45)'; cx.lineWidth = 1.4;
-          cx.strokeRect(bx0, byMez, bx1 - bx0, by1 - byMez);
+          cx.strokeRect(bx0, by0, bx1 - bx0, by1 - by0);
           for (var mu = 1; mu < 3; mu++){
-            cx.beginPath(); cx.moveTo(bx0 + (bx1 - bx0) * mu / 3, byMez);
+            cx.beginPath(); cx.moveTo(bx0 + (bx1 - bx0) * mu / 3, by0);
             cx.lineTo(bx0 + (bx1 - bx0) * mu / 3, by1); cx.stroke();
           }
           function isla(lado){
@@ -3019,62 +2992,6 @@ body.doc-open #indice{display:none}
             cx.fill();
           }
           isla(-1); isla(1);
-          /* la PECERA sobre su mueble, con pececitos DORADOS y burbujas */
-          (function(){
-            var kd3 = .58;
-            var pxq = c + ((1 - kd3) * (ix1 - ix0) + kd3 * (bx1 - bx0)) * .40;
-            var pyq = iy1 + (by1 - iy1) * kd3;
-            cx.fillStyle = '#8a857b';
-            cx.fillRect(pxq - 24, pyq - 12, 48, 12);
-            var aq = { x: pxq - 24, y: pyq - 42, w: 48, h: 30 };
-            var gaq = cx.createLinearGradient(0, aq.y, 0, aq.y + aq.h);
-            gaq.addColorStop(0, 'rgba(150,195,225,.55)');
-            gaq.addColorStop(1, 'rgba(90,140,180,.6)');
-            cx.fillStyle = gaq; cx.fillRect(aq.x, aq.y, aq.w, aq.h);
-            cx.strokeStyle = 'rgba(60,58,52,.5)'; cx.lineWidth = 1.4;
-            cx.strokeRect(aq.x, aq.y, aq.w, aq.h);
-            cx.strokeStyle = 'rgba(255,255,255,.6)'; cx.lineWidth = 1;
-            cx.beginPath(); cx.moveTo(aq.x + 2, aq.y + 4);
-            cx.lineTo(aq.x + aq.w - 2, aq.y + 4); cx.stroke();
-            for (var pz2 = 0; pz2 < 3; pz2++){
-              var fx2 = aq.x + aq.w / 2 + Math.sin(t * (.7 + pz2 * .23) + pz2 * 2.1) * (aq.w / 2 - 8);
-              var fy2 = aq.y + 11 + pz2 * 7 + Math.sin(t * 1.7 + pz2) * 2;
-              var dir2 = Math.cos(t * (.7 + pz2 * .23) + pz2 * 2.1) > 0 ? 1 : -1;
-              cx.save(); cx.translate(fx2, fy2); cx.scale(dir2, 1);
-              cx.fillStyle = '#C9A84C';
-              cx.beginPath(); cx.ellipse(0, 0, 3.2, 1.6, 0, 0, 6.2832); cx.fill();
-              cx.beginPath(); cx.moveTo(-2.8, 0); cx.lineTo(-4.6, -1.6); cx.lineTo(-4.6, 1.6);
-              cx.closePath(); cx.fill();
-              cx.restore();
-            }
-            for (var bu = 0; bu < 2; bu++){
-              var buy = aq.y + aq.h - 3 - ((t * 13 + bu * 17) % (aq.h - 9));
-              cx.fillStyle = 'rgba(255,255,255,.5)';
-              cx.beginPath(); cx.arc(aq.x + 8 + bu * 7, buy, 1.1, 0, 6.2832); cx.fill();
-            }
-          })();
-          /* el rincón LOBBY: tapete, dos sillones y su mesita */
-          (function(){
-            var kd4 = .2;
-            var lxq = c - ((1 - kd4) * (ix1 - ix0) + kd4 * (bx1 - bx0)) * .34;
-            var lyq = iy1 + (by1 - iy1) * kd4;
-            cx.fillStyle = 'rgba(0,0,0,.07)';
-            cx.beginPath(); cx.ellipse(lxq + 8, lyq - 3, 44, 9, 0, 0, 6.2832); cx.fill();
-            function sillon(sxq, volt){
-              cx.fillStyle = '#A6A196';
-              cx.beginPath();
-              cx.roundRect ? cx.roundRect(sxq, lyq - 18, 22, 15, 4) : cx.rect(sxq, lyq - 18, 22, 15);
-              cx.fill();
-              cx.beginPath();
-              cx.roundRect ? cx.roundRect(sxq + (volt > 0 ? 16 : 0), lyq - 30, 6, 16, 3)
-                           : cx.rect(sxq + (volt > 0 ? 16 : 0), lyq - 30, 6, 16);
-              cx.fill();
-            }
-            sillon(lxq - 26, -1); sillon(lxq + 14, 1);
-            cx.fillStyle = '#8a857b';
-            cx.beginPath(); cx.ellipse(lxq + 4, lyq - 12, 9, 3.4, 0, 0, 6.2832); cx.fill();
-            cx.fillRect(lxq + 3, lyq - 12, 2, 9);
-          })();
           /* (el ícono vive ahora en el reflejo del piso del lobby) */
         }
         /* puertas doradas */
