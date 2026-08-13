@@ -1159,11 +1159,6 @@ body.doc-open #indice{display:none}
        horarios del rango, confirmaciones y riesgo, jamás. -->
   <div class="manifiesto rv">
     <p class="k">LIVE ON STREAM · MON–FRI</p>
-    <p>The desk trades the New York session in the open — one market, one
-    window, one trade, the one the system calls. Risk is written before the
-    open and every trade is journaled, win or lose. When the system stays
-    quiet, nobody trades. You see all of it, live.</p>
-    <p class="k2">HOW IT WORKS IS THE HOUSE'S · WHAT IT DOES IS MEASURED DAILY</p>
   </div>
 </section>
 
@@ -1542,74 +1537,88 @@ body.doc-open #indice{display:none}
     return { segs: [], total: 1, rio: [], fijos: [], lor: lor };
   });
 
-  /* ── FUTURES · NUEVA YORK, el skyline en partículas (v2) ──
-     La v1 generaba cajas con una PRNG y se veía a cajas, no a Nueva York. Ésta
-     va DISEÑADA: diez siluetas puestas a mano en un plano de 1000×420 —el
-     Empire escalonado con su aguja, el One WTC alto y delgado, la corona del
-     Chrysler— y el muestreo es del BORDE REAL de las figuras: se pintan
-     rellenas en un lienzo aparte y un píxel es borde si alguno de sus vecinos
-     no tiene tinta. Así las escaleras y las agujas salen nítidas. Las ventanas
-     son puntos del interior en retícula, con PRNG determinista para que no
-     cambien de sitio en cada rearme. Cero azar en el trazado: el plano es fijo. */
+  /* ── FUTURES · NUEVA YORK, las torres (v3) ──
+     La v2 era un skyline a lo lejos y André lo sintió simple. Ésta te para
+     ENTRE las torres: seis rascacielos verticales que cruzan la pantalla
+     entera —ninguno tiene suelo a la vista y uno se sale por arriba, que es
+     lo que hace sentir la altura—, RELLENOS de ventanas (la retícula es lo
+     que domina, prendidas y apagadas con PRNG determinista) y estrellas
+     sembradas en el cielo entre torre y torre. Los bordes se muestrean del
+     relleno real, igual que la v2. Tope global de partículas: el detalle no
+     puede costar el frame. */
   pantalla(document.getElementById('torreCanvas'), function(W, H){
-    var DIS = [
-      { x:18,  w:72,  h:118 },
-      { x:100, w:92,  h:188, pasos:[[62,30],[36,24]] },
-      { x:212, w:98,  h:248, pasos:[[72,40],[46,34],[24,26]], aguja:58 },  /* Empire */
-      { x:330, w:64,  h:148 },
-      { x:404, w:112, h:206, pasos:[[82,30]] },
-      { x:544, w:84,  h:298, aguja:88 },                                    /* One WTC */
-      { x:646, w:72,  h:168 },
-      { x:730, w:80,  h:228, pasos:[[58,26],[38,22],[20,18]], aguja:42 },   /* Chrysler */
-      { x:824, w:102, h:138 },
-      { x:936, w:56,  h:178 }
-    ];
-    var esc = Math.min(W * .86 / 1010, H * .55 / 420);
-    var ox = (W - 1010 * esc) / 2, y0 = H * .66;
+    var R = function(i2){ var v = Math.sin(i2 * 91.7) * 4735.73; return v - Math.floor(v); };
     var off = document.createElement('canvas');
     off.width = Math.max(1, Math.round(W)); off.height = Math.max(1, Math.round(H));
-    var oc = off.getContext('2d');
+    var oc = off.getContext('2d'), iw = off.width, ih = off.height;
     oc.fillStyle = '#fff';
-    DIS.forEach(function(e){
-      var bx = ox + e.x * esc, bw = e.w * esc, bh = e.h * esc;
-      var topY = y0 - bh, cx2 = bx + bw / 2, yy = topY;
-      oc.fillRect(bx, topY, bw, bh);
-      (e.pasos || []).forEach(function(p2){
-        var pw = p2[0] * esc, ph = p2[1] * esc;
-        yy -= ph;
-        oc.fillRect(cx2 - pw / 2, yy, pw, ph);
-      });
-      if(e.aguja) oc.fillRect(cx2 - 1.5 * esc, yy - e.aguja * esc, 3 * esc, e.aguja * esc);
+    /* cinco torres con CIELO de verdad entre ellas: si los huecos son angostos
+       las siluetas se funden en un campo de puntos — le pasó a la primera
+       versión de esta pantalla */
+    var TORRES = [
+      { c:.10, w:.105, top:.26,  tapa:.70, ant:0  },
+      { c:.30, w:.130, top:.06,  tapa:.72, ant:38 },
+      { c:.50, w:.110, top:-.08, tapa:.66, ant:0  },   /* se sale por arriba */
+      { c:.70, w:.135, top:.13,  tapa:.75, ant:28 },
+      { c:.90, w:.100, top:.30,  tapa:.78, ant:0  }
+    ];
+    var cuerpos = [];
+    TORRES.forEach(function(tw){
+      var bw = tw.w * W, bx = tw.c * W - bw / 2, techo = tw.top * H;
+      var capW = bw * tw.tapa, capH = 30 + bw * .12;
+      oc.fillRect(bx, techo, bw, H * 1.08 - techo);
+      oc.fillRect(bx + (bw - capW) / 2, techo - capH, capW, capH);
+      if(tw.ant) oc.fillRect(tw.c * W - 2, techo - capH - tw.ant, 4, tw.ant);
+      cuerpos.push({ bx: bx, bw: bw, techo: techo });
     });
-    oc.fillRect(ox - 26, y0, 1010 * esc + 52, 2);   /* el suelo */
 
-    var iw = off.width, ih = off.height;
     var datos = oc.getImageData(0, 0, iw, ih).data;
     var tinta = function(x, y){
       return x >= 0 && y >= 0 && x < iw && y < ih && datos[(y * iw + x) * 4 + 3] > 120;
     };
-    var borde = [], dentro = [];
+    var borde = [];
     for(var y = 0; y < ih; y += 2)
       for(var x = 0; x < iw; x += 2)
-        if(tinta(x, y)){
-          if(!tinta(x - 2, y) || !tinta(x + 2, y) || !tinta(x, y - 2) || !tinta(x, y + 2)) borde.push([x, y]);
-          else dentro.push([x, y]);
-        }
-    if(borde.length > 1200){
-      var prob = 1200 / borde.length, ralas = [];
+        if(tinta(x, y) && (!tinta(x - 2, y) || !tinta(x + 2, y) || !tinta(x, y - 2) || !tinta(x, y + 2)))
+          borde.push([x, y]);
+    if(borde.length > 1500){
+      var prob = 1500 / borde.length, ralas = [];
       for(var z = 0; z < borde.length; z++) if(Math.random() < prob) ralas.push(borde[z]);
       borde = ralas;
     }
-    var fijos = borde.map(function(c){ return fija(c, .3, .9); });
-    /* las ventanas del interior, en retícula determinista */
-    var R = function(i2){ var v = Math.sin(i2 * 91.7) * 4735.73; return v - Math.floor(v); };
-    dentro.forEach(function(pp){
-      if(pp[0] % 12 === 0 && pp[1] % 14 === 0 && R(pp[0] * 3.1 + pp[1] * 7.7) < .55){
-        var f2 = fija(pp, .2, .6);
-        f2.a *= .32;
-        fijos.push(f2);
-      }
+    var fijos = borde.map(function(c){ return fija(c, .3, .8); });
+
+    /* las ventanas: la retícula que manda. Prendidas contra apagadas, con la
+       misma PRNG para que la ciudad no rebaraje sus luces en cada rearme. */
+    cuerpos.forEach(function(e, ei){
+      var colPaso = Math.max(11, e.bw * .085), filaPaso = 17;
+      for(var wy = Math.max(14, e.techo + 16); wy < H - 4; wy += filaPaso)
+        for(var wx = e.bx + colPaso * .7; wx < e.bx + e.bw - colPaso * .4; wx += colPaso){
+          var rz = R(wx * 3.7 + wy * 7.3 + ei * 13);
+          if(rz < .58){
+            var f2 = fija([wx, wy], .15, .45);
+            f2.a = rz < .30 ? .55 + R(wx + wy) * .45 : .12;
+            fijos.push(f2);
+          }
+        }
     });
+
+    /* el cielo: estrellas sembradas entre torre y torre */
+    for(var q = 0; q < 170; q++){
+      var sx = R(q * 7 + 1) * W, sy = R(q * 13 + 2) * H;
+      if(!tinta(Math.round(sx), Math.round(sy))){
+        var st2 = fija([sx, sy], .2, .5);
+        st2.a = .1 + R(q * 3) * .32;
+        st2.s = R(q * 5) < .82 ? 1 : 1.6;
+        fijos.push(st2);
+      }
+    }
+    /* tope global: el detalle no puede costar el frame */
+    if(fijos.length > 3000){
+      var pr2 = 3000 / fijos.length, f3 = [];
+      for(var z2 = 0; z2 < fijos.length; z2++) if(Math.random() < pr2) f3.push(fijos[z2]);
+      fijos = f3;
+    }
     return { segs: [], total: 1, rio: [], fijos: fijos };
   });
 
