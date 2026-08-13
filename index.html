@@ -1053,10 +1053,12 @@ body.doc-open #indice{display:none}
    relativas de 76vh —no inset:0 de la sección, que ahora crece— y el
    manifiesto vive DENTRO de la banda para anclarse a ella y no al fondo de
    toda la sección */
-.edu-marco{position:relative;height:100vh}
-.jr-marco,.com-marco{position:relative;height:76vh}
-.edu-marco .manifiesto,.jr-marco .manifiesto{bottom:20px}
-#flechaCanvas,#torreCanvas,#eduCanvas,#jrCanvas,#comCanvas{position:absolute;inset:0;width:100%;height:100%;color:var(--txt)}
+.edu-marco{position:relative;height:calc(100vh - 130px)}  /* la sección ya trae 130px de encabezado: con 100vh el fondo del héroe (la línea) caía bajo el pliegue */
+.com-marco{position:relative;height:76vh}
+.edu-marco .manifiesto{bottom:96px}  /* arriba del deck fijo, abajo de la órbita */
+#flechaCanvas,#torreCanvas,#eduCanvas,#comCanvas{position:absolute;inset:0;width:100%;height:100%;color:var(--txt)}
+/* journal ya no tiene héroe: la sección es sólo el demo, centrado a lo alto */
+#journal.doc-active{display:grid;align-content:center}
 
 /* ── EL MANIFIESTO sobre las pantallas de partículas ──
    Texto de verdad (no muestreado): un párrafo en partículas no se lee. Va en
@@ -1076,25 +1078,21 @@ body.doc-open #indice{display:none}
    Los módulos flotan alrededor de la palabra. En pantallas chicas el absoluto
    choca con el rótulo: caen a una fila envuelta abajo, sin animación. */
 .bc-nube{position:absolute;inset:0;z-index:2;pointer-events:none}
-.bc-b{position:absolute;left:var(--bx);top:var(--by);white-space:nowrap;
+.bc-b{position:absolute;left:0;top:0;white-space:nowrap;will-change:transform;
   font-family:var(--mono);font-size:11.5px;letter-spacing:.08em;color:var(--dim);
   border:1px solid var(--line-soft);border-radius:99px;padding:9px 16px;
-  background:color-mix(in srgb,var(--bg) 55%,transparent);backdrop-filter:blur(4px);
-  animation:bcFlota 6s ease-in-out infinite alternate;animation-delay:var(--bd,0s)}
-@keyframes bcFlota{from{transform:translateY(-7px)}to{transform:translateY(9px)}}
+  background:color-mix(in srgb,var(--bg) 55%,transparent);backdrop-filter:blur(4px)}
 @media (max-width:720px){
   .bc-nube{inset:auto 0 96px 0;display:flex;flex-wrap:wrap;gap:8px;justify-content:center;padding:0 14px}
-  .bc-b{position:static;animation:none}
+  .bc-b{position:static;transform:none!important;opacity:1!important}
 }
-@media (prefers-reduced-motion:reduce){ .bc-b{animation:none} }
 
 /* ── EL DEMO DEL JOURNAL, estilo Terminal ── */
 .demo-cont{position:relative;z-index:2;padding:30px 0 96px}
 .jr-demo{--jdup:#2FA57C;--jddn:#C65A4E;
   border:1px solid var(--line-soft);border-radius:14px;background:var(--glass);
   padding:8px 22px 20px}
-.jd-head{display:flex;align-items:baseline;justify-content:space-between;gap:14px;padding:14px 0 12px}
-.jd-head b{font-family:var(--mono);font-size:10px;letter-spacing:.24em;color:var(--faint)}
+.jd-head{display:flex;align-items:baseline;justify-content:flex-end;padding:14px 0 12px}
 .jd-tag{font-family:var(--mono);font-size:9px;letter-spacing:.14em;color:var(--faint);
   border:1px solid var(--line-soft);border-radius:99px;padding:3px 9px}
 /* la cinta infinita de KPIs — el mismo truco de siempre: dos mitades idénticas
@@ -1273,19 +1271,22 @@ body.doc-open #indice{display:none}
 </section>
 
 <section id="educacion">
-  <!-- BOOTCAMP al centro y cada módulo como burbuja flotando alrededor
-       (André). La tabla se fue: las burbujas SON los módulos. -->
+  <!-- BOOTCAMP como el SOL y los módulos como PLANETAS (André): las ocho
+       burbujas giran en una elipse alrededor de la palabra. La órbita la
+       lleva el JS (rotación lenta compartida + respiración radial propia);
+       la mitad de arriba es el lado LEJANO: se encoge y se apaga un poco,
+       y eso es lo que vende la profundidad. -->
   <div class="edu-marco rv">
     <canvas id="eduCanvas" aria-label="The bootcamp"></canvas>
     <div class="bc-nube" aria-label="The modules">
-      <span class="bc-b" style="--bx:10%;--by:18%;--bd:0s">01 · Futures, from zero</span>
-      <span class="bc-b" style="--bx:6%;--by:40%;--bd:.9s">02 · Market structure</span>
-      <span class="bc-b" style="--bx:11%;--by:61%;--bd:1.7s">03 · Liquidity</span>
-      <span class="bc-b" style="--bx:17%;--by:72%;--bd:2.4s">04 · The setup</span>
-      <span class="bc-b" style="--bx:76%;--by:16%;--bd:.5s">05 · The entry</span>
-      <span class="bc-b" style="--bx:82%;--by:38%;--bd:1.3s">06 · Risk</span>
-      <span class="bc-b" style="--bx:77%;--by:60%;--bd:2s">07 · The journal</span>
-      <span class="bc-b" style="--bx:70%;--by:71%;--bd:2.8s">08 · Funded accounts</span>
+      <span class="bc-b">01 · Futures, from zero</span>
+      <span class="bc-b">02 · Market structure</span>
+      <span class="bc-b">03 · Liquidity</span>
+      <span class="bc-b">04 · The setup</span>
+      <span class="bc-b">05 · The entry</span>
+      <span class="bc-b">06 · Risk</span>
+      <span class="bc-b">07 · The journal</span>
+      <span class="bc-b">08 · Funded accounts</span>
     </div>
     <div class="manifiesto rv">
       <p class="k2">RECORDED VIDEO MODULES · FIRST COHORT ANNOUNCED IN THE DISCORD</p>
@@ -1294,19 +1295,13 @@ body.doc-open #indice{display:none}
 </section>
 
 <section id="journal">
-  <!-- JOURNAL: héroe + la previsualización estilo Terminal — cinta infinita de
-       KPIs y el mes de una cuenta de fondeo SIMULADA ($50k eval, target $500,
-       stop -$100). Siempre etiquetada: un demo sin etiqueta es mentira. -->
-  <div class="jr-marco rv">
-    <canvas id="jrCanvas" aria-label="The journal"></canvas>
-    <div class="manifiesto rv">
-      <p class="k">EVERY TRADE, WRITTEN</p>
-      <p class="k2">THE JOURNAL LIVES IN THE TERMINAL</p>
-    </div>
-  </div>
+  <!-- JOURNAL: SOLO la previsualización estilo Terminal (André quitó el héroe
+       y el rótulo) — cinta infinita de KPIs y el mes de una cuenta de fondeo
+       SIMULADA ($50k eval, target $500, stop -$100). La etiqueta SIMULATED se
+       queda: un demo sin etiqueta es mentira. -->
   <div class="wrap demo-cont rv">
     <div class="jr-demo" id="jrDemo">
-      <div class="jd-head"><b>JOURNAL · PREVIEW</b><span class="jd-tag">SIMULATED $50K FUNDED EVAL · NOT LIVE</span></div>
+      <div class="jd-head"><span class="jd-tag">SIMULATED $50K FUNDED EVAL · NOT LIVE</span></div>
       <div class="jd-cinta"><div class="jd-track"><div class="jd-grupo" id="jdGrupo">
         <div class="jd-t"><i>NET P&amp;L</i><b class="v-pnl">—</b><span>august, 21 sessions</span></div>
         <div class="jd-t"><i>ACCOUNT</i><b class="v-acct">—</b><span>from $50,000</span></div>
@@ -1916,14 +1911,6 @@ body.doc-open #indice{display:none}
     requestAnimationFrame(tic);
   })();
 
-  /* ── JOURNAL · la palabra, muestreada ── */
-  pantalla(document.getElementById('jrCanvas'), function(W, H){
-    var ts = Math.max(40, Math.min(122, W * .09));
-    var fijos = textoAPuntos(W, H, 'JOURNAL', ts, ts * .2, H * .46, 2, 1200)
-      .map(function(c){ return fija(c, .5, 1.4); });
-    return { segs: [], total: 1, rio: [], fijos: fijos };
-  });
-
   /* ── COMMUNITY · la palabra, muestreada ── */
   pantalla(document.getElementById('comCanvas'), function(W, H){
     var ts = Math.max(34, Math.min(104, W * .075));
@@ -1931,6 +1918,51 @@ body.doc-open #indice{display:none}
       .map(function(c){ return fija(c, .5, 1.4); });
     return { segs: [], total: 1, rio: [], fijos: fijos };
   });
+
+  /* ── BOOTCAMP · el sol y los planetas ──
+     Las ocho burbujas comparten UNA elipse alrededor de la palabra (mismo
+     giro = separación pareja para siempre), cada una con su respiración
+     radial propia. La mitad de ARRIBA es el lado lejano de la órbita: se
+     encoge y se atenúa, y con eso alcanza para leer profundidad — no hace
+     falta pasar de verdad por detrás del canvas. El centro es el mismo
+     punto donde el muestreador pinta la palabra (W*.5, H*.46). En móvil
+     manda el CSS (fila envuelta, position:static) y aquí no se toca nada. */
+  (function(){
+    var nube = document.querySelector('#educacion .bc-nube');
+    if (!nube) return;
+    var bs = [].slice.call(nube.querySelectorAll('.bc-b'));
+    if (!bs.length) return;
+    var N = bs.length;
+    var movil = matchMedia('(max-width:720px)');
+    var quieto = matchMedia('(prefers-reduced-motion: reduce)');
+    var VUELTA = 52;                       /* segundos por revolución */
+
+    function pinta(t){
+      var W = nube.clientWidth, H = nube.clientHeight;
+      if (!W || !H) return;
+      var cx = W * .5, cy = H * .46;
+      var rx = Math.max(240, Math.min(W * .5 - 110, 520));
+      var ry = Math.max(150, Math.min(H * .30, 300));
+      for (var i = 0; i < N; i++){
+        var a = (i / N) * Math.PI * 2 + t * (Math.PI * 2 / VUELTA);
+        var resp = 1 + .035 * Math.sin(t * .6 + i * 2.1);   /* respiración */
+        var x = cx + Math.cos(a) * rx * resp;
+        var y = cy + Math.sin(a) * ry * resp;
+        var cerca = (Math.sin(a) + 1) / 2;                  /* 0 lejos · 1 cerca */
+        var b = bs[i];
+        b.style.transform = 'translate(-50%,-50%) translate(' + x.toFixed(1) + 'px,' +
+          y.toFixed(1) + 'px) scale(' + (.82 + .18 * cerca).toFixed(3) + ')';
+        b.style.opacity = (.45 + .55 * cerca).toFixed(3);
+        b.style.zIndex = cerca > .5 ? 3 : 1;
+      }
+    }
+
+    if (quieto.matches){ pinta(0); addEventListener('resize', function(){ if(!movil.matches) pinta(0); }); return; }
+    (function gira(){
+      if (!movil.matches) pinta(performance.now() / 1000);
+      requestAnimationFrame(gira);
+    })();
+  })();
 })();
 
 </script>
