@@ -1155,10 +1155,11 @@ body.doc-open #indice{display:none}
   <!-- Cómo opera la mesa SIN regalar el método: cadencia y disciplina, sí;
        horarios del rango, confirmaciones y riesgo, jamás. -->
   <div class="manifiesto rv">
-    <p>One market. One window. One trade — the one the system calls.
-    Risk is written before the open, every trade is journaled win or lose,
-    and when the system stays quiet, nobody trades.
-    <strong>We stream the session live, Monday through Friday.</strong></p>
+    <p class="k">LIVE ON STREAM · MON–FRI</p>
+    <p>The desk trades the New York session in the open — one market, one
+    window, one trade, the one the system calls. Risk is written before the
+    open and every trade is journaled, win or lose. When the system stays
+    quiet, nobody trades. You see all of it, live.</p>
     <p class="k2">HOW IT WORKS IS THE HOUSE'S · WHAT IT DOES IS MEASURED DAILY</p>
   </div>
 </section>
@@ -1520,60 +1521,73 @@ body.doc-open #indice{display:none}
     return { segs: [], total: 1, rio: [], fijos: [], lor: lor };
   });
 
-  /* ── FUTURES · NUEVA YORK, el skyline en partículas ──
-     Muchos edificios (André). El trazado es DETERMINISTA —una PRNG por índice,
-     no Math.random suelto— porque arma() se rearma al redimensionar y al
-     cargar la fuente: con azar puro el skyline brincaría a otra silueta cada
-     vez. Los contornos van en partículas brillantes distribuidas por longitud
-     de segmento, y las ventanas son partículas tenues regadas por dentro. */
+  /* ── FUTURES · NUEVA YORK, el skyline en partículas (v2) ──
+     La v1 generaba cajas con una PRNG y se veía a cajas, no a Nueva York. Ésta
+     va DISEÑADA: diez siluetas puestas a mano en un plano de 1000×420 —el
+     Empire escalonado con su aguja, el One WTC alto y delgado, la corona del
+     Chrysler— y el muestreo es del BORDE REAL de las figuras: se pintan
+     rellenas en un lienzo aparte y un píxel es borde si alguno de sus vecinos
+     no tiene tinta. Así las escaleras y las agujas salen nítidas. Las ventanas
+     son puntos del interior en retícula, con PRNG determinista para que no
+     cambien de sitio en cada rearme. Cero azar en el trazado: el plano es fijo. */
   pantalla(document.getElementById('torreCanvas'), function(W, H){
-    var R = function(i){ var v = Math.sin(i * 91.7) * 4735.73; return v - Math.floor(v); };
-    var y0 = H * .64, anc = W * .80;
-    /* la manzana: 11 edificios, dos de ellos hitos con antena */
-    var n = 11, ws = [], total = 0, i;
-    for(i = 0; i < n; i++){ var w = .6 + R(i) * .5; ws.push(w); total += w * 1.18; }
-    var esc = anc / total, x = (W - anc) / 2, edifs = [];
-    for(i = 0; i < n; i++){
-      var w2 = ws[i] * esc;
-      var h = 70 + R(i + 30) * 170;
-      if(i === 4) h = Math.min(H * .38, 320);
-      if(i === 7) h = Math.min(H * .30, 252);
-      edifs.push({ x: x, w: w2, h: h, hito: i === 4 || i === 7 });
-      x += w2 * 1.18;
-    }
-    var segs = [];
-    var seg = function(a, b, c2, d){ var g = [[a, b], [c2, d]];
-      g.len = Math.hypot(c2 - a, d - b); segs.push(g); };
-    edifs.forEach(function(e){
-      seg(e.x, y0, e.x, y0 - e.h);
-      seg(e.x, y0 - e.h, e.x + e.w, y0 - e.h);
-      seg(e.x + e.w, y0 - e.h, e.x + e.w, y0);
-      if(e.hito) seg(e.x + e.w / 2, y0 - e.h, e.x + e.w / 2, y0 - e.h - 34);
+    var DIS = [
+      { x:18,  w:72,  h:118 },
+      { x:100, w:92,  h:188, pasos:[[62,30],[36,24]] },
+      { x:212, w:98,  h:248, pasos:[[72,40],[46,34],[24,26]], aguja:58 },  /* Empire */
+      { x:330, w:64,  h:148 },
+      { x:404, w:112, h:206, pasos:[[82,30]] },
+      { x:544, w:84,  h:298, aguja:88 },                                    /* One WTC */
+      { x:646, w:72,  h:168 },
+      { x:730, w:80,  h:228, pasos:[[58,26],[38,22],[20,18]], aguja:42 },   /* Chrysler */
+      { x:824, w:102, h:138 },
+      { x:936, w:56,  h:178 }
+    ];
+    var esc = Math.min(W * .86 / 1010, H * .55 / 420);
+    var ox = (W - 1010 * esc) / 2, y0 = H * .66;
+    var off = document.createElement('canvas');
+    off.width = Math.max(1, Math.round(W)); off.height = Math.max(1, Math.round(H));
+    var oc = off.getContext('2d');
+    oc.fillStyle = '#fff';
+    DIS.forEach(function(e){
+      var bx = ox + e.x * esc, bw = e.w * esc, bh = e.h * esc;
+      var topY = y0 - bh, cx2 = bx + bw / 2, yy = topY;
+      oc.fillRect(bx, topY, bw, bh);
+      (e.pasos || []).forEach(function(p2){
+        var pw = p2[0] * esc, ph = p2[1] * esc;
+        yy -= ph;
+        oc.fillRect(cx2 - pw / 2, yy, pw, ph);
+      });
+      if(e.aguja) oc.fillRect(cx2 - 1.5 * esc, yy - e.aguja * esc, 3 * esc, e.aguja * esc);
     });
-    seg((W - anc) / 2 - 30, y0, (W + anc) / 2 + 30, y0);
-    var totalL = 0; segs.forEach(function(g){ totalL += g.len; });
+    oc.fillRect(ox - 26, y0, 1010 * esc + 52, 2);   /* el suelo */
 
-    var fijos = [];
-    var N = Math.round(Math.min(900, Math.max(420, W * .7)));
-    for(i = 0; i < N; i++){
-      var d = Math.random() * totalL, g = segs[segs.length - 1], fr = 1;
-      for(var k = 0; k < segs.length; k++){
-        if(d <= segs[k].len){ g = segs[k]; fr = d / segs[k].len; break; }
-        d -= segs[k].len;
-      }
-      fijos.push(fija([g[0][0] + (g[1][0] - g[0][0]) * fr,
-                       g[0][1] + (g[1][1] - g[0][1]) * fr], .4, 1.2));
+    var iw = off.width, ih = off.height;
+    var datos = oc.getImageData(0, 0, iw, ih).data;
+    var tinta = function(x, y){
+      return x >= 0 && y >= 0 && x < iw && y < ih && datos[(y * iw + x) * 4 + 3] > 120;
+    };
+    var borde = [], dentro = [];
+    for(var y = 0; y < ih; y += 2)
+      for(var x = 0; x < iw; x += 2)
+        if(tinta(x, y)){
+          if(!tinta(x - 2, y) || !tinta(x + 2, y) || !tinta(x, y - 2) || !tinta(x, y + 2)) borde.push([x, y]);
+          else dentro.push([x, y]);
+        }
+    if(borde.length > 1200){
+      var prob = 1200 / borde.length, ralas = [];
+      for(var z = 0; z < borde.length; z++) if(Math.random() < prob) ralas.push(borde[z]);
+      borde = ralas;
     }
-    /* las ventanas: tenues, por dentro, con la misma PRNG para que no cambien
-       de sitio en cada rearme */
-    edifs.forEach(function(e, ei){
-      for(var wy = y0 - e.h + 12; wy < y0 - 8; wy += 15)
-        for(var wx = e.x + 7; wx < e.x + e.w - 6; wx += 13)
-          if(R(wx * 3.1 + wy * 7.7 + ei) < .26){
-            var f2 = fija([wx, wy], .3, .8);
-            f2.a *= .34;
-            fijos.push(f2);
-          }
+    var fijos = borde.map(function(c){ return fija(c, .3, .9); });
+    /* las ventanas del interior, en retícula determinista */
+    var R = function(i2){ var v = Math.sin(i2 * 91.7) * 4735.73; return v - Math.floor(v); };
+    dentro.forEach(function(pp){
+      if(pp[0] % 12 === 0 && pp[1] % 14 === 0 && R(pp[0] * 3.1 + pp[1] * 7.7) < .55){
+        var f2 = fija(pp, .2, .6);
+        f2.a *= .32;
+        fijos.push(f2);
+      }
     });
     return { segs: [], total: 1, rio: [], fijos: fijos };
   });
