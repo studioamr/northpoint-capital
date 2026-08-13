@@ -2453,6 +2453,24 @@ body.doc-open #indice{display:none}
       cx.beginPath(); cx.arc(largo + 11, yb - 4 - 4 * r, 5.5, 0, 6.2832); cx.fill();
       cx.fillRect(largo + 6, yb - 17 - 4 * r, 2.5, 4);
       cx.fillRect(largo + 1, yb - 17 - 4 * r, 2.5, 4);
+      /* detalles (André): sombra interior de la melena, la cabeza re-asoma,
+         OJO con su brillo, nariz, y MOTAS más oscuras por el lomo */
+      cx.fillStyle = 'rgba(130,96,26,' + (.55 * alfa).toFixed(2) + ')';
+      cx.beginPath(); cx.arc(largo + 2, yb - 4 - 4 * r, 7, 0, 6.2832); cx.fill();
+      cx.fillStyle = oro;
+      cx.beginPath(); cx.arc(largo + 11, yb - 4 - 4 * r, 5.5, 0, 6.2832); cx.fill();
+      cx.fillStyle = 'rgba(24,16,4,' + (.9 * alfa).toFixed(2) + ')';
+      cx.beginPath(); cx.arc(largo + 13, yb - 5.5 - 4 * r, 1.15, 0, 6.2832); cx.fill();
+      cx.fillStyle = 'rgba(255,255,255,' + (.8 * alfa).toFixed(2) + ')';
+      cx.fillRect(largo + 13, yb - 6.3 - 4 * r, .7, .7);
+      cx.fillStyle = 'rgba(24,16,4,' + (.85 * alfa).toFixed(2) + ')';
+      cx.fillRect(largo + 15.2, yb - 3.4 - 4 * r, 2.4, 1.7);
+      cx.fillStyle = 'rgba(130,96,26,' + (.5 * alfa).toFixed(2) + ')';
+      for (var mo2 = 0; mo2 < 6; mo2++){
+        cx.beginPath();
+        cx.arc(7 + mo2 * 6.5 + (mo2 % 2) * 2, yb - 4.5 + (mo2 % 3) * 2.2, 1.25, 0, 6.2832);
+        cx.fill();
+      }
       cx.lineWidth = 3;
       cx.beginPath(); cx.moveTo(-1, yb);
       cx.quadraticCurveTo(-18, yb - 15 + 8 * c + Math.sin(t * 2.2) * 2.5 * (1 - r),
@@ -2805,6 +2823,7 @@ body.doc-open #indice{display:none}
     var PISOS = 50;
     function esDia(){ return document.documentElement.getAttribute('data-theme') === 'light'; }
     function suave(k){ return k * k * (3 - 2 * k); }
+    function seudoE(n){ var x = Math.sin(n * 12.9898) * 43758.5453; return x - Math.floor(x); }
 
     function pinta(ts){
       var t = ts / 1000; tAntes = t;
@@ -2834,19 +2853,98 @@ body.doc-open #indice{display:none}
           piso = Math.max(1, Math.round(PISOS * (1 - (ph - (TOT - T.reset)) / T.reset)));
         }
 
-        /* fondo */
-        if (dia){ cx.fillStyle = '#F3F2EE'; cx.fillRect(0, 0, W, H); }
-        else {
-          cx.fillStyle = '#050507'; cx.fillRect(0, 0, W, H);
-          for (var e = 0; e < 80; e++){
-            cx.fillStyle = 'rgba(255,255,255,' + (.08 + (e % 5) * .05) + ')';
-            cx.fillRect((e * 173.2) % W, (e * 97.3) % H, 1.2, 1.2);
-          }
-        }
-
         /* geometría */
         var aw = Math.min(380, W * .56), ah = Math.min(500, H * .6);
         var c = W / 2, y1 = H * .82, y0 = y1 - ah;
+
+        /* ══ EL EDIFICIO DE MÁRMOL BLANCO (André) ══ la fachada VIVA
+           alrededor del elevador: mármol con vetas y juntas de placa, y a
+           los lados el CORTE de las oficinas — pisos con monitos trabajando
+           en sus escritorios, estilo las oficinas del Terminal. De día el
+           lobby es luminoso; de noche baja la luz y los interiores brillan
+           cálidos. En angosto (celular) los cuartos no caben y el mármol
+           queda solo. */
+        var gm = cx.createLinearGradient(0, 0, 0, H);
+        if (dia){ gm.addColorStop(0, '#F4F2ED'); gm.addColorStop(1, '#E2DFD7'); }
+        else { gm.addColorStop(0, '#454341'); gm.addColorStop(1, '#302e2b'); }
+        cx.fillStyle = gm; cx.fillRect(0, 0, W, H);
+        cx.strokeStyle = dia ? 'rgba(140,138,130,.2)' : 'rgba(15,14,13,.35)';
+        cx.lineWidth = 1;
+        for (var ve = 0; ve < 14; ve++){
+          var vx0 = seudoE(ve * 7.3) * W, vy0 = seudoE(ve * 3.1) * H;
+          cx.beginPath(); cx.moveTo(vx0, vy0);
+          cx.bezierCurveTo(vx0 + 60, vy0 + 30 + seudoE(ve) * 40,
+                           vx0 + 90, vy0 + 80,
+                           vx0 + 150, vy0 + 95 + seudoE(ve * 2) * 30);
+          cx.stroke();
+        }
+        cx.strokeStyle = dia ? 'rgba(90,88,82,.12)' : 'rgba(0,0,0,.28)';
+        for (var jx2 = 0; jx2 < W; jx2 += 170){
+          cx.beginPath(); cx.moveTo(jx2, 0); cx.lineTo(jx2, H); cx.stroke();
+        }
+        for (var jy2 = 0; jy2 < H; jy2 += 150){
+          cx.beginPath(); cx.moveTo(0, jy2); cx.lineTo(W, jy2); cx.stroke();
+        }
+
+        /* los cuartos del corte, con su gente */
+        function cuarto(rx0, rx1, ryTop, hR, semilla){
+          var wR = rx1 - rx0;
+          if (wR < 100) return;
+          cx.fillStyle = dia ? '#ECE8E1' : '#2b2925';
+          cx.fillRect(rx0, ryTop, wR, hR - 8);
+          if (!dia){
+            var gluz = cx.createLinearGradient(0, ryTop, 0, ryTop + hR);
+            gluz.addColorStop(0, 'rgba(255,226,160,.18)');
+            gluz.addColorStop(1, 'rgba(255,226,160,.04)');
+            cx.fillStyle = gluz; cx.fillRect(rx0, ryTop, wR, hR - 8);
+          }
+          cx.fillStyle = dia ? '#D9D5CC' : '#3a372f';
+          cx.beginPath();
+          cx.moveTo(rx0, ryTop + hR - 8); cx.lineTo(rx1, ryTop + hR - 8);
+          cx.lineTo(rx1 + 8, ryTop + hR); cx.lineTo(rx0 - 8, ryTop + hR);
+          cx.closePath(); cx.fill();
+          cx.fillStyle = dia ? '#C8C4BB' : '#211f1c';
+          cx.fillRect(rx0 - 10, ryTop + hR, wR + 20, 6);
+          var nD = Math.max(1, Math.floor(wR / 96));
+          for (var d3 = 0; d3 < nD; d3++){
+            var dx3 = rx0 + 22 + d3 * (wR - 40) / nD;
+            var dy3 = ryTop + hR - 12;
+            cx.fillStyle = dia ? '#B9B4AA' : '#4a4539';
+            cx.fillRect(dx3, dy3 - 12, 44, 3);
+            cx.fillRect(dx3 + 4, dy3 - 9, 3, 9); cx.fillRect(dx3 + 37, dy3 - 9, 3, 9);
+            cx.fillStyle = '#191914';
+            cx.fillRect(dx3 + 26, dy3 - 24, 14, 10);
+            cx.fillStyle = dia ? 'rgba(155,192,220,.85)' : 'rgba(255,214,140,.9)';
+            cx.fillRect(dx3 + 27.5, dy3 - 22.5, 11, 7);
+            var bob = Math.sin(t * 3.1 + semilla * 5 + d3 * 2.2) * .9;
+            cx.fillStyle = cx.strokeStyle = dia ? '#3a362e' : '#15130f';
+            cx.lineCap = 'round';
+            cx.beginPath(); cx.arc(dx3 + 13, dy3 - 20 + bob, 3.2, 0, 6.2832); cx.fill();
+            cx.lineWidth = 4.4;
+            cx.beginPath(); cx.moveTo(dx3 + 13, dy3 - 16 + bob); cx.lineTo(dx3 + 13, dy3 - 6); cx.stroke();
+            cx.lineWidth = 1.8;
+            cx.beginPath(); cx.moveTo(dx3 + 14, dy3 - 12 + bob); cx.lineTo(dx3 + 24, dy3 - 10 + bob * .4); cx.stroke();
+            cx.lineWidth = 2.2;
+            cx.beginPath(); cx.moveTo(dx3 + 9, dy3 - 11); cx.lineTo(dx3 + 9, dy3 - 2); cx.stroke();
+          }
+          cx.strokeStyle = dia ? 'rgba(90,105,80,.7)' : 'rgba(120,140,105,.5)';
+          cx.lineWidth = 1.6;
+          for (var hj = -2; hj <= 2; hj++){
+            cx.beginPath(); cx.moveTo(rx1 - 16, ryTop + hR - 8);
+            cx.lineTo(rx1 - 16 + hj * 3.2, ryTop + hR - 22 + Math.abs(hj) * 3); cx.stroke();
+          }
+        }
+        var pisoH = ah / 3;
+        for (var pi3 = 0; pi3 < 3; pi3++){
+          cuarto(20, c - aw / 2 - 26, y0 + pi3 * pisoH + 6, pisoH - 6, pi3);
+          cuarto(c + aw / 2 + 26, W - 20, y0 + pi3 * pisoH + 6, pisoH - 6, pi3 + 7);
+        }
+
+        /* la placa del edificio */
+        cx.fillStyle = 'rgba(201,168,76,.9)';
+        cx.font = '600 10px "IBM Plex Mono",monospace';
+        cx.textAlign = 'center'; cx.textBaseline = 'middle';
+        cx.fillText('N O R T H P O I N T', c, Math.max(16, y0 - 76));
         var tremor = (!quieto && ph < T.sube) ? Math.sin(t * 26) * .6 : 0;
         cx.save(); cx.translate(0, tremor);
 
