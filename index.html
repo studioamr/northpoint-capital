@@ -1228,13 +1228,10 @@ body.doc-open #indice{display:none}
   box-shadow:0 30px 60px -30px rgba(0,0,0,.55),0 0 90px -30px var(--halo)}
 .mon-cuello{margin:0 auto;width:46px;height:26px;background:var(--cuello)}
 .mon-base{margin:0 auto;width:min(190px,60%);height:10px;background:var(--basec);border-radius:99px}
-.mon-h{left:clamp(8px,6vw,120px);z-index:2}
-.mon-h .mon-pant{width:clamp(272px,44vw,600px);aspect-ratio:9/5}
-.mon-v{right:clamp(8px,6vw,120px);z-index:1}
-.mon-v .mon-pant{width:clamp(200px,23vw,320px);aspect-ratio:316/492}
-#povChart{position:absolute;inset:0;width:100%;height:100%}
-.mon-sim{position:absolute;right:8px;top:6px;font-family:var(--mono);font-size:8px;
-  letter-spacing:.2em;color:var(--faint)}
+/* SOLO el monitor vertical, CENTRADO (André) — left/right + margin:auto,
+   nunca transform (la colisión del .rv.on) */
+.mon-v{left:0;right:0;margin:0 auto;width:max-content}
+.mon-v .mon-pant{width:clamp(230px,26vw,330px);aspect-ratio:316/492}
 .mon-esc{width:760px;transform-origin:0 0;padding:6px}
 .pov-teclado{position:absolute;left:50%;transform:translateX(-50%) perspective(300px) rotateX(40deg);
   bottom:17%;width:min(330px,40vw);height:30px;border-radius:6px;
@@ -1424,10 +1421,6 @@ body.doc-open #indice{display:none}
   <div class="pov rv" id="pov" aria-label="A desk in New York — simulated preview">
     <canvas id="povCiudad"></canvas>
         <div class="pov-mesa"></div>
-        <div class="mon mon-h">
-          <div class="mon-pant"><canvas id="povChart"></canvas><span class="mon-sim">SIM</span></div>
-          <div class="mon-cuello"></div><div class="mon-base"></div>
-        </div>
         <div class="mon mon-v">
           <div class="mon-pant"><div class="mon-esc">
     <div class="jr-demo" id="jrDemo">
@@ -1674,7 +1667,7 @@ body.doc-open #indice{display:none}
     try { localStorage.setItem('np_theme', t); } catch(e){}
   }
   var savedTheme = 'dark';
-  try { savedTheme = localStorage.getItem('np_theme') || 'dark'; } catch(e){}
+  try { savedTheme = localStorage.getItem('np_theme') || 'light'; } catch(e){}  /* default BLANCO (André) */
   applyTheme(savedTheme);
   document.addEventListener('DOMContentLoaded', function(){
     applyTheme(savedTheme);
@@ -2101,134 +2094,86 @@ body.doc-open #indice{display:none}
       if (w > 0 && monEsc) monEsc.style.transform = 'scale(' + (w / 772).toFixed(4) + ')';
     }
 
-    /* la ciudad por la ventana */
-    var ciudad = document.getElementById('povCiudad');
-    var cxC = ciudad.getContext('2d');
-    function pintaCiudad(){
-      var W = ciudad.clientWidth, H = ciudad.clientHeight;
+    /* EL CIELO por la ventana (André: fuera los edificios — «se mueven, no
+       sé por qué»: el bug era real, cada repintado por resize los
+       REBARAJABA con Math.random. El cielo nuevo es DETERMINISTA y además
+       VIVE: nubes a la deriva, dos parvadas aleteando y el astro del tema,
+       pintado por rAF). */
+    var cielo = document.getElementById('povCiudad');
+    var cxC = cielo.getContext('2d');
+    var quietoJ = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    function seudoJ(n){ var x = Math.sin(n * 12.9898) * 43758.5453; return x - Math.floor(x); }
+    function pintaCielo(t){
+      var W = cielo.clientWidth, H = cielo.clientHeight;
       if (!W || !H) return;
-      ciudad.width = Math.round(W * dpr); ciudad.height = Math.round(H * dpr);
+      if (cielo.width !== Math.round(W * dpr) || cielo.height !== Math.round(H * dpr)){
+        cielo.width = Math.round(W * dpr); cielo.height = Math.round(H * dpr);
+      }
       cxC.setTransform(dpr, 0, 0, dpr, 0, 0);
-      var dia = esDia(), HORIZ = H * .68;
-      if (dia){
-        var cielo = cxC.createLinearGradient(0, 0, 0, HORIZ);
-        cielo.addColorStop(0, '#F0F0EF'); cielo.addColorStop(1, '#E1E1DF');
-        cxC.fillStyle = cielo; cxC.fillRect(0, 0, W, H);
-        var sol = cxC.createRadialGradient(W * .56, H * .12, 8, W * .56, H * .12, 130);
-        sol.addColorStop(0, 'rgba(255,255,255,.95)'); sol.addColorStop(1, 'rgba(255,255,255,0)');
-        cxC.fillStyle = sol; cxC.fillRect(W * .78 - 140, H * .13 - 140, 280, 280);
-      } else {
-        cxC.fillStyle = '#050507'; cxC.fillRect(0, 0, W, H);
-        for (var i = 0; i < 150; i++){
-          cxC.fillStyle = 'rgba(255,255,255,' + (Math.random() * .5 + .08).toFixed(2) + ')';
-          cxC.fillRect(Math.random() * W, Math.random() * H * .42, 1.3, 1.3);
+      var dia = esDia();
+      var g = cxC.createLinearGradient(0, 0, 0, H);
+      if (dia){ g.addColorStop(0, '#F2F2F0'); g.addColorStop(1, '#DEDEDC'); }
+      else { g.addColorStop(0, '#04040A'); g.addColorStop(1, '#0B0D14'); }
+      cxC.fillStyle = g; cxC.fillRect(0, 0, W, H);
+      if (!dia){
+        for (var e = 0; e < 120; e++){
+          cxC.fillStyle = 'rgba(255,255,255,' + (.08 + (e % 5) * .05).toFixed(2) + ')';
+          cxC.fillRect((e * 173.2) % W, (e * 97.3) % (H * .8), 1.2, 1.2);
         }
       }
-      var x = -20;
-      while (x < W){
-        var bw = 46 + Math.random() * 70;
-        var bh = H * (.2 + Math.random() * .35);
-        var by = HORIZ - bh;
-        cxC.fillStyle = dia ? '#C8C8C6' : '#0b0b0d';
-        cxC.fillRect(x, by, bw, bh);
-        cxC.strokeStyle = dia ? 'rgba(0,0,0,.14)' : 'rgba(255,255,255,.05)';
-        cxC.strokeRect(x + .5, by + .5, bw - 1, bh - 1);
-        var cols = Math.max(2, Math.floor(bw / 15)), filas = Math.floor(bh / 17);
-        for (var f = 0; f < filas; f++) for (var c = 0; c < cols; c++){
-          var rz = Math.random();
-          if (dia){
-            /* de día casi todas las ventanas son vidrio apagado; unas pocas
-               destellan con el sol */
-            cxC.fillStyle = rz < .1 ? 'rgba(255,255,255,.7)' : 'rgba(0,0,0,' + (rz < .6 ? '.1' : '.04') + ')';
-            cxC.fillRect(x + 6 + c * (bw - 10) / cols, by + 7 + f * 16, 5, 7);
-          } else if (rz < .3){
-            cxC.fillStyle = 'rgba(255,222,150,' + (.22 + Math.random() * .5).toFixed(2) + ')';
-            cxC.fillRect(x + 6 + c * (bw - 10) / cols, by + 7 + f * 16, 5, 7);
-          }
+      var ga = cxC.createRadialGradient(W * .78, H * .16, 6, W * .78, H * .16, 90);
+      ga.addColorStop(0, dia ? 'rgba(255,255,255,.95)' : 'rgba(235,240,250,.5)');
+      ga.addColorStop(1, 'rgba(255,255,255,0)');
+      cxC.fillStyle = ga; cxC.fillRect(W * .78 - 100, H * .16 - 100, 200, 200);
+      for (var n = 0; n < 8; n++){
+        var r = 60 + seudoJ(n * 3.3) * 90;
+        var y = H * (.1 + seudoJ(n * 7.7) * .55);
+        var x = ((seudoJ(n * 5.1) * (W + 2 * r) + t * (6 + seudoJ(n) * 9)) % (W + 2 * r)) - r;
+        var gn = cxC.createRadialGradient(x, y, 4, x, y, r);
+        var col = dia ? '255,255,255' : '190,200,215';
+        gn.addColorStop(0, 'rgba(' + col + ',' + (dia ? '.85' : '.10') + ')');
+        gn.addColorStop(1, 'rgba(' + col + ',0)');
+        cxC.fillStyle = gn;
+        cxC.beginPath(); cxC.ellipse(x, y, r, r * .38, 0, 0, 6.2832); cxC.fill();
+      }
+      cxC.lineWidth = 1.5; cxC.lineCap = 'round';
+      cxC.strokeStyle = dia ? 'rgba(60,60,58,.55)' : 'rgba(220,228,240,.4)';
+      for (var p = 0; p < 2; p++){
+        var dirp = p ? -1 : 1;
+        var ancho = W + 240;
+        var bx0 = ((seudoJ(p * 9.1) * ancho + dirp * t * (14 + p * 6)) % ancho + ancho) % ancho - 120;
+        var by0 = H * (.18 + p * .2);
+        for (var b = 0; b < 5 + p; b++){
+          var bx = bx0 + b * 16 - (b % 2) * 7;
+          var by = by0 + (b % 3) * 6 + Math.sin(t * .9 + b) * 3;
+          var ala = Math.sin(t * 7 + b * 1.3 + p * 2) * 4;
+          cxC.beginPath(); cxC.moveTo(bx - 5, by - ala);
+          cxC.lineTo(bx, by); cxC.lineTo(bx + 5, by - ala); cxC.stroke();
         }
-        if (Math.random() < .22){
-          cxC.strokeStyle = dia ? 'rgba(0,0,0,.3)' : 'rgba(255,255,255,.25)';
-          cxC.lineWidth = 1;
-          cxC.beginPath(); cxC.moveTo(x + bw / 2, by); cxC.lineTo(x + bw / 2, by - 26); cxC.stroke();
-          if (!dia){
-            cxC.fillStyle = 'rgba(255,90,90,.8)';
-            cxC.fillRect(x + bw / 2 - 1.5, by - 29, 3, 3);
-          }
-        }
-        x += bw + 4 + Math.random() * 26;
       }
       cxC.strokeStyle = dia ? 'rgba(0,0,0,.12)' : 'rgba(255,255,255,.10)';
       cxC.lineWidth = 6;
       var paso = Math.max(240, W / 4);
-      for (var vx = paso; vx < W; vx += paso){
-        cxC.beginPath(); cxC.moveTo(vx, 0); cxC.lineTo(vx, HORIZ); cxC.stroke();
+      for (var v = paso; v < W; v += paso){
+        cxC.beginPath(); cxC.moveTo(v, 0); cxC.lineTo(v, H * .68); cxC.stroke();
       }
     }
 
-    function todo(){ ajustaMon(); pintaCiudad(); }
-    todo();
-    addEventListener('resize', todo);
-    addEventListener('hashchange', function(){ requestAnimationFrame(todo); });
-    new MutationObserver(todo).observe(document.documentElement,
-      { attributes: true, attributeFilter: ['data-theme'] });
+    ajustaMon();
+    addEventListener('resize', ajustaMon);
+    addEventListener('hashchange', function(){ requestAnimationFrame(ajustaMon); });
+    if (quietoJ){
+      requestAnimationFrame(function(){ pintaCielo(0); });
+      addEventListener('resize', function(){ pintaCielo(0); });
+      new MutationObserver(function(){ pintaCielo(0); })
+        .observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+    } else {
+      (function lazo(ts){
+        pintaCielo(ts / 1000);
+        requestAnimationFrame(lazo);
+      })(0);
+    }
 
-    /* el monitor horizontal: velas sintéticas — peladas, sin overlays; el
-       lienzo se re-mide cada cuadro (responsivo) y el fondo sigue al tema */
-    (function(){
-      var cv = document.getElementById('povChart');
-      if (!cv) return;
-      var cx = cv.getContext('2d');
-      var UP = '#2FA57C', DN = '#C65A4E';
-      var velas = [], p = 100, MAX = 46;
-      function nueva(){
-        var o = p, c = o + (Math.random() - .48) * 1.6;
-        velas.push({ o: o, c: c, h: Math.max(o, c) + Math.random() * .8,
-                     l: Math.min(o, c) - Math.random() * .8 });
-        p = c;
-        if (velas.length > MAX) velas.shift();
-      }
-      for (var i = 0; i < MAX; i++) nueva();
-      var t0 = 0;
-      function pinta(ts){
-        var W = cv.clientWidth, H = cv.clientHeight;
-        if (W && H){
-          if (cv.width !== Math.round(W * dpr) || cv.height !== Math.round(H * dpr)){
-            cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
-          }
-          cx.setTransform(dpr, 0, 0, dpr, 0, 0);
-          var dia = esDia();
-          if (ts - t0 > 800){ t0 = ts; nueva(); }
-          var v = velas[velas.length - 1];
-          v.c += (Math.random() - .5) * .22;
-          v.h = Math.max(v.h, v.c); v.l = Math.min(v.l, v.c); p = v.c;
-          var min = 1e9, max = -1e9;
-          velas.forEach(function(k){ min = Math.min(min, k.l); max = Math.max(max, k.h); });
-          var pad = (max - min) * .12 + .01; min -= pad; max += pad;
-          function Y(val){ return H - (val - min) / (max - min) * H; }
-          cx.fillStyle = dia ? '#FAF9F6' : '#070707'; cx.fillRect(0, 0, W, H);
-          cx.strokeStyle = dia ? 'rgba(0,0,0,.07)' : 'rgba(255,255,255,.05)';
-          cx.lineWidth = 1;
-          for (var g = 1; g < 5; g++){
-            cx.beginPath(); cx.moveTo(0, g * H / 5); cx.lineTo(W, g * H / 5); cx.stroke();
-          }
-          var bw = W / MAX;
-          velas.forEach(function(k, i2){
-            var xx = i2 * bw + bw * .5, up = k.c >= k.o;
-            cx.strokeStyle = cx.fillStyle = up ? UP : DN;
-            cx.beginPath(); cx.moveTo(xx, Y(k.h)); cx.lineTo(xx, Y(k.l)); cx.stroke();
-            var a = Y(k.o), b = Y(k.c);
-            cx.fillRect(xx - bw * .32, Math.min(a, b), bw * .64, Math.max(1, Math.abs(a - b)));
-          });
-          var yp = Y(p);
-          cx.strokeStyle = dia ? 'rgba(0,0,0,.4)' : 'rgba(255,255,255,.35)';
-          cx.setLineDash([3, 4]);
-          cx.beginPath(); cx.moveTo(0, yp); cx.lineTo(W, yp); cx.stroke();
-          cx.setLineDash([]);
-        }
-        requestAnimationFrame(pinta);
-      }
-      requestAnimationFrame(pinta);
-    })();
   })();
 
   /* ── PROGRAM · abrir/cerrar el formulario de aplicación ── */
