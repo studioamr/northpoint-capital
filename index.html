@@ -2711,32 +2711,31 @@ body.doc-open #indice{display:none}
     function suave(k){ return k * k * (3 - 2 * k); }
     function seudoE(n){ var x = Math.sin(n * 12.9898) * 43758.5453; return x - Math.floor(x); }
 
+    var inicio = null;   /* el viaje arranca cuando la sección SE VE */
     function pinta(ts){
-      var t = ts / 1000; tAntes = t;
       var W = cv.clientWidth, H = cv.clientHeight;
       if (W && H){
+        if (inicio === null) inicio = ts;
+        var t = (ts - inicio) / 1000;
         if (cv.width !== Math.round(W * dpr) || cv.height !== Math.round(H * dpr)){
           cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
         }
         cx.setTransform(dpr, 0, 0, dpr, 0, 0);
         var dia = esDia();
 
-        /* fase del ciclo */
-        var ph = quieto ? T.sube + T.llega + T.abre + 1 : t % TOT;
+        /* UN SOLO viaje (André: «cuando abra, que se quede ahí»): sube,
+           llega, abre — y las puertas se quedan abiertas para siempre */
+        var FINA = T.sube + T.llega + T.abre;
+        var ph = quieto ? FINA + 1 : t;
         var g = 0, piso = 1, llegado = false, luzPulsa = 1;
         if (ph < T.sube){ piso = 1 + Math.floor(suave(ph / T.sube) * (PISOS - 1)); }
         else if (ph < T.sube + T.llega){ piso = PISOS; llegado = true; }
-        else if (ph < T.sube + T.llega + T.abre){
+        else if (ph < FINA){
           piso = PISOS; llegado = true;
           g = suave((ph - T.sube - T.llega) / T.abre);
-        } else if (ph < T.sube + T.llega + T.abre + T.abierto){
+        } else {
           piso = PISOS; llegado = true; g = 1;
           luzPulsa = 1 + .06 * Math.sin(t * 2.2);
-        } else if (ph < TOT - T.reset){
-          piso = PISOS; llegado = true;
-          g = 1 - suave((ph - T.sube - T.llega - T.abre - T.abierto) / T.cierra);
-        } else {
-          piso = Math.max(1, Math.round(PISOS * (1 - (ph - (TOT - T.reset)) / T.reset)));
         }
 
         /* geometría */
@@ -2791,6 +2790,33 @@ body.doc-open #indice{display:none}
         gref.addColorStop(1, 'rgba(201,168,76,0)');
         cx.fillStyle = gref;
         cx.fillRect(c - aw / 2 + 8, pisoY, aw - 16, ah * .4);
+        /* EN EL REFLEJO del piso (André): el ícono de Discord y el texto de
+           unirse — aparecen con la apertura, aplastados como proyección */
+        if (g > 0){
+          var ryc = pisoY + 38;   /* pegado a las puertas: el deck fijo tapa más abajo */
+          cx.save();
+          cx.globalAlpha = .9 * g;
+          cx.translate(c, ryc); cx.scale(1, .8); cx.translate(-c, -ryc);
+          var ICOF = 40;
+          cx.translate(c - ICOF / 2, ryc - ICOF / 2);
+          cx.fillStyle = 'rgba(88,101,242,.92)';
+          cx.beginPath();
+          cx.roundRect ? cx.roundRect(0, 0, ICOF, ICOF, 11) : cx.rect(0, 0, ICOF, ICOF);
+          cx.fill();
+          var kIcoF = ICOF * .62 / 24;
+          cx.translate(ICOF * .5 - 12 * kIcoF, ICOF * .5 - 12 * kIcoF);
+          cx.scale(kIcoF, kIcoF);
+          cx.fillStyle = '#fff';
+          cx.fill(CLYDE);
+          cx.restore();
+          cx.save();
+          cx.globalAlpha = .95 * g;
+          cx.fillStyle = 'rgba(201,168,76,.95)';
+          cx.font = '600 9px "IBM Plex Mono",monospace';
+          cx.textAlign = 'center'; cx.textBaseline = 'middle';
+          cx.fillText('J O I N   T H E   D I S C O R D', c, ryc + 33);
+          cx.restore();
+        }
         /* portal: pilastras y dintel */
         function pilastra(px){
           cx.fillStyle = dia ? '#E9E6DF' : '#4a4742';
@@ -2917,18 +2943,48 @@ body.doc-open #indice{display:none}
             cx.beginPath(); cx.moveTo(c + cs * (ix1 - ix0) * .18, iy1);
             cx.lineTo(c + cs * (bx1 - bx0) * .18, by1); cx.stroke();
           }
-          var gv = cx.createLinearGradient(0, by0, 0, by1);
+          /* el fondo a DOS PISOS (André): arriba el MEZZANINE con su sala
+             de juntas tras vidrio y barandal; abajo el ventanal a la ciudad */
+          var byMez = by0 + (by1 - by0) * .40;
+          cx.fillStyle = '#E9E6E0';
+          cx.fillRect(bx0, by0, bx1 - bx0, byMez - by0);
+          var sx0 = bx0 + 8, sx1 = bx1 - 8;
+          cx.strokeStyle = 'rgba(60,58,52,.35)'; cx.lineWidth = 1;
+          cx.strokeRect(sx0, by0 + 5, sx1 - sx0, byMez - by0 - 12);
+          cx.fillStyle = '#B9B4AA';
+          cx.fillRect((sx0 + sx1) / 2 - 24, byMez - 15, 48, 3);
+          for (var sj = 0; sj < 3; sj++){
+            var sjx = (sx0 + sx1) / 2 - 16 + sj * 16;
+            var sjb = Math.sin(t * 2.4 + sj * 2) * .8;
+            cx.fillStyle = '#3a362e';
+            cx.beginPath(); cx.arc(sjx, byMez - 22 + sjb, 2.6, 0, 6.2832); cx.fill();
+            cx.fillRect(sjx - 3, byMez - 20 + sjb, 6, 6);
+          }
+          cx.fillStyle = '#15140f';
+          cx.fillRect(sx1 - 16, by0 + 9, 11, 7);
+          cx.fillStyle = 'rgba(155,192,220,.85)';
+          cx.fillRect(sx1 - 15, by0 + 10, 9, 5);
+          /* losa y barandal del mezzanine */
+          cx.fillStyle = '#C8C4BB';
+          cx.fillRect(bx0, byMez - 4, bx1 - bx0, 4);
+          cx.strokeStyle = 'rgba(60,58,52,.55)'; cx.lineWidth = 1;
+          cx.beginPath(); cx.moveTo(bx0, byMez - 13); cx.lineTo(bx1, byMez - 13); cx.stroke();
+          for (var br3 = bx0 + 4; br3 < bx1; br3 += 6){
+            cx.beginPath(); cx.moveTo(br3, byMez - 13); cx.lineTo(br3, byMez - 4); cx.stroke();
+          }
+          /* PB: el ventanal */
+          var gv = cx.createLinearGradient(0, byMez, 0, by1);
           gv.addColorStop(0, '#D9E1E8'); gv.addColorStop(1, '#BEC8D1');
-          cx.fillStyle = gv; cx.fillRect(bx0, by0, bx1 - bx0, by1 - by0);
+          cx.fillStyle = gv; cx.fillRect(bx0, byMez, bx1 - bx0, by1 - byMez);
           for (var tw2 = bx0 + 3; tw2 < bx1 - 6; tw2 += 9){
             var th2 = 5 + ((tw2 * 7919) % 15);
             cx.fillStyle = 'rgba(96,104,114,.5)';
             cx.fillRect(tw2, by1 - th2, 6, th2);
           }
           cx.strokeStyle = 'rgba(60,58,52,.45)'; cx.lineWidth = 1.4;
-          cx.strokeRect(bx0, by0, bx1 - bx0, by1 - by0);
+          cx.strokeRect(bx0, byMez, bx1 - bx0, by1 - byMez);
           for (var mu = 1; mu < 3; mu++){
-            cx.beginPath(); cx.moveTo(bx0 + (bx1 - bx0) * mu / 3, by0);
+            cx.beginPath(); cx.moveTo(bx0 + (bx1 - bx0) * mu / 3, byMez);
             cx.lineTo(bx0 + (bx1 - bx0) * mu / 3, by1); cx.stroke();
           }
           function isla(lado){
@@ -2963,23 +3019,63 @@ body.doc-open #indice{display:none}
             cx.fill();
           }
           isla(-1); isla(1);
-          var icoY = vpy - 6 + Math.sin(t * 1.6) * 3, ICO = 34;
-          cx.save();
-          cx.translate(c - ICO / 2, icoY - ICO / 2);
-          cx.fillStyle = '#5865F2';
-          cx.beginPath();
-          cx.roundRect ? cx.roundRect(0, 0, ICO, ICO, 9) : cx.rect(0, 0, ICO, ICO);
-          cx.fill();
-          var kIco = ICO * .62 / 24;
-          cx.translate(ICO * .5 - 12 * kIco, ICO * .5 - 12 * kIco);
-          cx.scale(kIco, kIco);
-          cx.fillStyle = '#fff';
-          cx.fill(CLYDE);
-          cx.restore();
-          cx.fillStyle = '#4a3f1d';
-          cx.font = '600 8px "IBM Plex Mono",monospace';
-          cx.textAlign = 'center'; cx.textBaseline = 'middle';
-          cx.fillText('E N T E R   T H E   C O M M U N I T Y', c, icoY + ICO / 2 + 13);
+          /* la PECERA sobre su mueble, con pececitos DORADOS y burbujas */
+          (function(){
+            var kd3 = .58;
+            var pxq = c + ((1 - kd3) * (ix1 - ix0) + kd3 * (bx1 - bx0)) * .40;
+            var pyq = iy1 + (by1 - iy1) * kd3;
+            cx.fillStyle = '#8a857b';
+            cx.fillRect(pxq - 24, pyq - 12, 48, 12);
+            var aq = { x: pxq - 24, y: pyq - 42, w: 48, h: 30 };
+            var gaq = cx.createLinearGradient(0, aq.y, 0, aq.y + aq.h);
+            gaq.addColorStop(0, 'rgba(150,195,225,.55)');
+            gaq.addColorStop(1, 'rgba(90,140,180,.6)');
+            cx.fillStyle = gaq; cx.fillRect(aq.x, aq.y, aq.w, aq.h);
+            cx.strokeStyle = 'rgba(60,58,52,.5)'; cx.lineWidth = 1.4;
+            cx.strokeRect(aq.x, aq.y, aq.w, aq.h);
+            cx.strokeStyle = 'rgba(255,255,255,.6)'; cx.lineWidth = 1;
+            cx.beginPath(); cx.moveTo(aq.x + 2, aq.y + 4);
+            cx.lineTo(aq.x + aq.w - 2, aq.y + 4); cx.stroke();
+            for (var pz2 = 0; pz2 < 3; pz2++){
+              var fx2 = aq.x + aq.w / 2 + Math.sin(t * (.7 + pz2 * .23) + pz2 * 2.1) * (aq.w / 2 - 8);
+              var fy2 = aq.y + 11 + pz2 * 7 + Math.sin(t * 1.7 + pz2) * 2;
+              var dir2 = Math.cos(t * (.7 + pz2 * .23) + pz2 * 2.1) > 0 ? 1 : -1;
+              cx.save(); cx.translate(fx2, fy2); cx.scale(dir2, 1);
+              cx.fillStyle = '#C9A84C';
+              cx.beginPath(); cx.ellipse(0, 0, 3.2, 1.6, 0, 0, 6.2832); cx.fill();
+              cx.beginPath(); cx.moveTo(-2.8, 0); cx.lineTo(-4.6, -1.6); cx.lineTo(-4.6, 1.6);
+              cx.closePath(); cx.fill();
+              cx.restore();
+            }
+            for (var bu = 0; bu < 2; bu++){
+              var buy = aq.y + aq.h - 3 - ((t * 13 + bu * 17) % (aq.h - 9));
+              cx.fillStyle = 'rgba(255,255,255,.5)';
+              cx.beginPath(); cx.arc(aq.x + 8 + bu * 7, buy, 1.1, 0, 6.2832); cx.fill();
+            }
+          })();
+          /* el rincón LOBBY: tapete, dos sillones y su mesita */
+          (function(){
+            var kd4 = .2;
+            var lxq = c - ((1 - kd4) * (ix1 - ix0) + kd4 * (bx1 - bx0)) * .34;
+            var lyq = iy1 + (by1 - iy1) * kd4;
+            cx.fillStyle = 'rgba(0,0,0,.07)';
+            cx.beginPath(); cx.ellipse(lxq + 8, lyq - 3, 44, 9, 0, 0, 6.2832); cx.fill();
+            function sillon(sxq, volt){
+              cx.fillStyle = '#A6A196';
+              cx.beginPath();
+              cx.roundRect ? cx.roundRect(sxq, lyq - 18, 22, 15, 4) : cx.rect(sxq, lyq - 18, 22, 15);
+              cx.fill();
+              cx.beginPath();
+              cx.roundRect ? cx.roundRect(sxq + (volt > 0 ? 16 : 0), lyq - 30, 6, 16, 3)
+                           : cx.rect(sxq + (volt > 0 ? 16 : 0), lyq - 30, 6, 16);
+              cx.fill();
+            }
+            sillon(lxq - 26, -1); sillon(lxq + 14, 1);
+            cx.fillStyle = '#8a857b';
+            cx.beginPath(); cx.ellipse(lxq + 4, lyq - 12, 9, 3.4, 0, 0, 6.2832); cx.fill();
+            cx.fillRect(lxq + 3, lyq - 12, 2, 9);
+          })();
+          /* (el ícono vive ahora en el reflejo del piso del lobby) */
         }
         /* puertas doradas */
         function puertaPanel(x, w){
