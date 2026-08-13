@@ -2455,6 +2455,16 @@ stop[stop-color="#9BC0DC"]{stop-color:var(--txt)}
   .cinta-env{animation:none}
   .px-rail.cinta{overflow-x:auto}
 }
+
+/* ── EL BOTÓN DE BAJAR A LA SESIÓN ──
+   Vive sobre el canvas de la mesa. Centrado con left/right + margin:auto (la
+   regla de la casa: nada de translateX en cosas que se animan o revelan). */
+#btnBajar{position:absolute;left:0;right:0;margin:0 auto;bottom:26px;width:max-content;
+  font-family:var(--mono);font-size:11px;letter-spacing:.16em;padding:12px 24px;
+  border:1px solid rgba(255,255,255,.45);border-radius:99px;background:rgba(8,10,14,.55);
+  color:#F4F4F6;cursor:pointer;backdrop-filter:blur(6px);z-index:3;
+  transition:background .2s,border-color .2s}
+#btnBajar:hover{background:rgba(8,10,14,.8);border-color:#fff}
 </style>
 </head>
 <body>
@@ -2570,6 +2580,9 @@ stop[stop-color="#9BC0DC"]{stop-color:var(--txt)}
         <div class="staff-strip" id="agGrid"></div>
         <div class="ag-oficina-wrap">
           <canvas id="agOficina" width="1800" height="1160" aria-label="The Northpoint office — 88th floor, New York"></canvas>
+          <!-- Entre semana se vive en el jet: este botón te baja a la sesión
+               abierta. Al cerrar la sesión, el terminal te sube solo. -->
+          <button type="button" id="btnBajar" hidden>↓ BAJAR A LA SESIÓN</button>
         </div>
 
         <!-- El tablero del negocio: el camino a payout con el proceso de
@@ -11133,8 +11146,10 @@ function escenaAhora(now = new Date()){
   if(finde){
     /* El estadio se fue (André: «quita el partido de futbol»). Su franja de la
        tarde se queda en casa, que es donde de verdad se está el fin de semana. */
+    /* la tarde del finde ahora es EL YATE (16–19): la casa y el yate son del
+       fin de semana, por orden de André */
     const esc = m < 420 ? 'casa' : m < 600 ? 'gym' : m < 780 ? 'golf'
-              : m < 960 ? 'shopping' : m < 1140 ? 'casa'
+              : m < 960 ? 'shopping' : m < 1140 ? 'yate'
               : m < 1320 ? 'restaurante' : 'casa';
     return { tipo:'finde', esc, c:'nyc', finde:true };
   }
@@ -11650,37 +11665,30 @@ function skylineCiudad(c, W, H, ciudad, osc, rr){
 /* ── EL JET ──
    Entre sesiones el monito va en el aire: se le ve asomado por la ventanilla
    ovalada, con la ciudad de destino escrita en el ala. Las nubes pasan. */
-/* ════════ LOS TRASLADOS · un momento en el jet, otro en el yate, otro en la casa ════════
-   Cada traslado del día tiene SU vehículo, fijo y cuadrado con el horario:
-   de LA CASA a la torre de NY para la apertura (09:05→09:30), EL JET a Tokio
-   tras el halt (17:35→18:00) y EL YATE a Londres en la madrugada (01:35→02:00).
-   Nada es aleatorio: el vehículo lo decide el DESTINO — así el momento del día
-   y el vehículo siempre van de la mano — y E.prog hace que la llegada al
-   edificio se complete EXACTO cuando abre la sesión. */
+/* ════════ EL JET ES LA BASE ENTRE SEMANA ════════
+   Cambio de rumbo de André: la casa y el yate son DEL FIN DE SEMANA. Entre
+   semana se vive en el avión — todos los traslados son en jet, y cuando una
+   sesión está abierta el jet CRUZA sobre su ciudad con el botón para bajar;
+   al cerrar la sesión se sube solo. trasladoCasa y trasladoYate (los viajes
+   de entre semana de esta mañana) se fueron; el dibujo del yate sobrevive en
+   yateDibujo() porque ahora es una escena del finde. */
 function escenaVuelo(c, W, H, t, E, rr){
   const prog = E.finde ? .5 : Math.max(0, Math.min(1, E.prog || 0));
-  if(!E.finde && E.a === 'nyc'){
-    trasladoCasa(c, W, H, t, prog, rr);
-    cartelViaje(c, W, E, bi('DE LA CASA A LA TORRE','HOME TO THE TOWER'), prog);
-    return;
-  }
-  if(!E.finde && E.a === 'londres'){
-    trasladoYate(c, W, H, t, prog, rr);
-    cartelViaje(c, W, E, bi('EN EL YATE','BY YACHT'), prog);
-    return;
-  }
   trasladoJet(c, W, H, t, E, rr, prog);
-  cartelViaje(c, W, E, bi('EN VUELO','IN FLIGHT'), prog);
+  cartelViaje(c, W, E, E.crucero
+    ? bi('SESIÓN ABIERTA · EN EL AIRE','SESSION OPEN · AIRBORNE')
+    : bi('EN VUELO','IN FLIGHT'), prog);
 }
 
-/* ── el cartel del viaje, común a los tres ── */
+/* ── el cartel del viaje (y del crucero sobre la sesión) ── */
 function cartelViaje(c, W, E, modo, prog){
   const A = CIUDADES[E.de], B = CIUDADES[E.a];
   c.textAlign = 'center';
   c.font = '600 30px -apple-system, "Segoe UI", sans-serif';
   c.fillStyle = 'rgba(255,255,255,.92)';
   c.fillText(E.finde ? bi('FIN DE SEMANA · VIAJANDO','WEEKEND · TRAVELING')
-                     : `${loc([A.n, A.en])}  →  ${loc([B.n, B.en])}`, W/2, 150);
+           : E.crucero ? loc([B.n, B.en])
+           : `${loc([A.n, A.en])}  →  ${loc([B.n, B.en])}`, W/2, 150);
   c.font = '15px "IBM Plex Mono", monospace';
   c.fillStyle = 'rgba(255,255,255,.5)';
   c.fillText(E.finde ? bi('mercado cerrado · reabre el domingo 18:00 NY','market closed · reopens Sunday 6 PM NY')
@@ -11732,12 +11740,11 @@ function edificioTokio(c, x, base, s, t){
   c.fillRect(x - 30*s, base - 212*s, 60*s, 8*s);
   c.strokeStyle = '#2E343E'; c.lineWidth = 4*s;
   c.beginPath(); c.moveTo(x, base - 360*s); c.lineTo(x, base - 402*s); c.stroke();
-  /* la baliza late despacio — es un faro, no una alarma */
   c.fillStyle = `rgba(222,106,95,${.35 + .35 * Math.sin(t / 600)})`;
   c.beginPath(); c.arc(x, base - 402*s, 5*s, 0, 7); c.fill();
 }
 
-/* ── EL JET (a Tokio, y los viajes del finde) ── */
+/* ── EL JET: los traslados y el crucero sobre la sesión ── */
 function trasladoJet(c, W, H, t, E, rr, prog){
   const oscil = Math.sin(t / 900) * 14;
   for(let i = 0; i < 9; i++){
@@ -11749,17 +11756,20 @@ function trasladoJet(c, W, H, t, E, rr, prog){
     [[0,0,150,44],[52,-26,110,44],[112,-6,90,40],[26,18,140,34]].forEach(([dx,dy,w,h]) => {
       c.beginPath(); c.ellipse(nx + dx*es, ny + dy*es, w*es/2, h*es/2, 0, 0, 7); c.fill(); });
   }
-  /* la ciudad de destino asoma desde abajo conforme el vuelo avanza */
+  /* la ciudad de destino asoma desde abajo: en traslado conforme avanza el
+     vuelo, y en crucero se queda a la vista — estás justo encima */
   if(!E.finde){
-    const sube = Math.max(0, prog - .35) / .65;
+    const sube = E.crucero ? 1 : Math.max(0, prog - .35) / .65;
     if(sube > 0){
       const base = H + 120 - sube * 220;
       c.fillStyle = '#1B212A';
       c.fillRect(0, base + 60, W, H - base + 60);
-      edificioTokio(c, W * .72, base + 62, .9, t);
+      if(E.a === 'nyc') edificioNY(c, W * .72, base + 62, .9, rr);
+      else if(E.a === 'londres') edificioLondres(c, W * .72, base + 62, .9, rr);
+      else edificioTokio(c, W * .72, base + 62, .9, t);
       c.fillStyle = '#20262E';
-      c.fillRect(W * .48, base - 40 + 102, 90, 200);
-      c.fillRect(W * .88, base - 10 + 102, 70, 160);
+      c.fillRect(W * .48, base + 62, 90, 200);
+      c.fillRect(W * .88, base + 92, 70, 160);
     }
   }
   const cx = W / 2, cy = H / 2 - 60 + oscil;
@@ -11802,100 +11812,33 @@ function trasladoJet(c, W, H, t, E, rr, prog){
   c.restore();
 }
 
-/* ── EL YATE (a Londres, de madrugada) ── */
-function trasladoYate(c, W, H, t, prog, rr){
-  const yA = H * .60;
-  /* el mar */
-  c.fillStyle = '#0E1822'; c.fillRect(0, yA, W, H - yA);
-  c.strokeStyle = 'rgba(255,255,255,.10)'; c.lineWidth = 2;
-  for(let i = 0; i < 14; i++){
-    const wy = yA + 26 + i * ((H - yA) / 14);
-    const off = (t / 40 + i * 90) % 160;
-    for(let wx = -160 + off; wx < W; wx += 160){
-      c.beginPath(); c.moveTo(wx, wy); c.quadraticCurveTo(wx + 24, wy - 5, wx + 48, wy); c.stroke();
-    }
-  }
-  /* Londres asoma en el horizonte conforme se acerca */
-  const sube = Math.max(0, prog - .3) / .7;
-  if(sube > 0){
-    c.save(); c.globalAlpha = Math.min(1, sube * 1.4);
-    edificioLondres(c, W * .82, yA + 2 - (1 - sube) * 40, .78, rr);
-    c.restore();
-  }
-  /* el yate navega hacia allá */
-  const x = W * .18 + (W * .46) * prog;
-  const y = yA + 34 + Math.sin(t / 700) * 6;
-  const s = 1;
-  /* estela */
-  c.fillStyle = 'rgba(255,255,255,.14)';
-  for(let e = 0; e < 5; e++){
-    c.beginPath(); c.ellipse(x - 190*s - e * 46, y + 26, 34 - e * 5, 7 - e, 0, 0, 7); c.fill();
-  }
-  /* casco */
+/* ── EL YATE, en coordenadas locales: ahora es una escena del FINDE ── */
+function yateDibujo(c, x, y, s, t){
+  c.save(); c.translate(x, y); c.scale(s, s);
   c.fillStyle = '#EDF0F4';
   c.beginPath();
-  c.moveTo(x - 170*s, y - 8);
-  c.quadraticCurveTo(x + 70*s, y - 22, x + 180*s, y - 10);
-  c.quadraticCurveTo(x + 160*s, y + 30, x + 120*s, y + 34);
-  c.lineTo(x - 150*s, y + 34);
-  c.quadraticCurveTo(x - 176*s, y + 14, x - 170*s, y - 8);
+  c.moveTo(-170, -8);
+  c.quadraticCurveTo(70, -22, 180, -10);
+  c.quadraticCurveTo(160, 30, 120, 34);
+  c.lineTo(-150, 34);
+  c.quadraticCurveTo(-176, 14, -170, -8);
   c.closePath(); c.fill();
-  c.fillStyle = '#57C79B'; c.fillRect(x - 150*s, y + 6, 300*s, 5);
-  /* cubiertas */
+  c.fillStyle = '#57C79B'; c.fillRect(-150, 6, 300, 5);
   c.fillStyle = '#F5F7FA';
-  c.beginPath(); c.roundRect ? c.roundRect(x - 120*s, y - 46, 200*s, 40, 9) : c.rect(x - 120*s, y - 46, 200*s, 40); c.fill();
-  c.fillStyle = '#2E3844'; c.fillRect(x - 104*s, y - 36, 160*s, 13);
+  c.beginPath(); c.roundRect ? c.roundRect(-120, -46, 200, 40, 9) : c.rect(-120, -46, 200, 40); c.fill();
+  c.fillStyle = '#2E3844'; c.fillRect(-104, -36, 160, 13);
   c.fillStyle = '#F5F7FA';
-  c.beginPath(); c.roundRect ? c.roundRect(x - 78*s, y - 74, 118*s, 30, 8) : c.rect(x - 78*s, y - 74, 118*s, 30); c.fill();
-  c.fillStyle = '#2E3844'; c.fillRect(x - 64*s, y - 66, 88*s, 10);
-  /* el mástil del radar y la bandera de la casa */
+  c.beginPath(); c.roundRect ? c.roundRect(-78, -74, 118, 30, 8) : c.rect(-78, -74, 118, 30); c.fill();
+  c.fillStyle = '#2E3844'; c.fillRect(-64, -66, 88, 10);
   c.strokeStyle = '#C6CBD4'; c.lineWidth = 3;
-  c.beginPath(); c.moveTo(x - 12*s, y - 74); c.lineTo(x - 12*s, y - 98); c.stroke();
-  c.beginPath(); c.moveTo(x - 26*s, y - 92); c.lineTo(x + 2*s, y - 92); c.stroke();
+  c.beginPath(); c.moveTo(-12, -74); c.lineTo(-12, -98); c.stroke();
+  c.beginPath(); c.moveTo(-26, -92); c.lineTo(2, -92); c.stroke();
   c.strokeStyle = '#9AA2AE';
-  c.beginPath(); c.moveTo(x - 168*s, y - 8); c.lineTo(x - 168*s, y - 44); c.stroke();
+  c.beginPath(); c.moveTo(-168, -8); c.lineTo(-168, -44); c.stroke();
   c.fillStyle = '#57C79B';
-  c.beginPath(); c.moveTo(x - 168*s, y - 44); c.lineTo(x - 138*s, y - 37); c.lineTo(x - 168*s, y - 30);
+  c.beginPath(); c.moveTo(-168, -44); c.lineTo(-138, -37); c.lineTo(-168, -30);
   c.closePath(); c.fill();
-}
-
-/* ── LA CASA → LA TORRE (la mañana rumbo a la apertura de NY) ── */
-function trasladoCasa(c, W, H, t, prog, rr){
-  const yG = H * .66;
-  /* el suelo y la carretera */
-  c.fillStyle = '#1C222B'; c.fillRect(0, yG, W, H - yG);
-  c.fillStyle = '#12161C'; c.fillRect(0, yG + 76, W, 52);
-  c.strokeStyle = 'rgba(255,255,255,.35)'; c.lineWidth = 3; c.setLineDash([26, 30]);
-  c.beginPath(); c.moveTo(-((t / 9) % 56), yG + 102); c.lineTo(W, yG + 102); c.stroke();
-  c.setLineDash([]);
-  /* la casa, de donde se sale */
-  const cxs = W * .15;
-  c.fillStyle = '#262C34';
-  c.fillRect(cxs - 120, yG - 92, 150, 92);
-  c.fillRect(cxs + 34, yG - 134, 118, 134);
-  c.fillStyle = '#2E343E';
-  c.fillRect(cxs - 128, yG - 96, 166, 7);
-  c.fillRect(cxs + 26, yG - 138, 134, 7);
-  ventanitas(c, cxs - 108, yG - 82, 126, 66, .6, rr, 71);
-  ventanitas(c, cxs + 46, yG - 124, 94, 108, .6, rr, 83);
-  /* la torre de NY, a donde se llega */
-  edificioNY(c, W * .84, yG, 1, rr);
-  /* el coche de la casa, en camino */
-  const x = (cxs + 130) + (W * .84 - 170 - (cxs + 130)) * prog;
-  const y = yG + 88 + Math.sin(t / 260) * 1.5;
-  c.fillStyle = '#22303E';
-  c.beginPath(); c.roundRect ? c.roundRect(x - 52, y - 26, 104, 24, 9) : c.rect(x - 52, y - 26, 104, 24); c.fill();
-  c.beginPath(); c.roundRect ? c.roundRect(x - 28, y - 44, 56, 24, 8) : c.rect(x - 28, y - 44, 56, 24); c.fill();
-  c.fillStyle = 'rgba(180,206,232,.5)'; c.fillRect(x - 20, y - 40, 40, 14);
-  c.fillStyle = '#0E1116';
-  c.beginPath(); c.arc(x - 30, y, 11, 0, 7); c.fill();
-  c.beginPath(); c.arc(x + 30, y, 11, 0, 7); c.fill();
-  c.fillStyle = '#3A424E';
-  c.beginPath(); c.arc(x - 30, y, 5, 0, 7); c.fill();
-  c.beginPath(); c.arc(x + 30, y, 5, 0, 7); c.fill();
-  /* los faros prendidos: es de mañana temprano */
-  c.fillStyle = 'rgba(255,233,164,.5)';
-  c.beginPath(); c.moveTo(x + 52, y - 20); c.lineTo(x + 118, y - 4); c.lineTo(x + 118, y - 30); c.closePath(); c.fill();
+  c.restore();
 }
 
 /* ════════ LA VIDA 5G · el fin de semana del equipo ════════
@@ -12227,6 +12170,34 @@ function escenaFinde(c, W, H, t, E, rr, PC){
   }
 
   /* ── GOLF · lomas, bandera y el swing en loop ── */
+  if(E.esc === 'yate'){
+    /* la tarde en el mar: el yate fondeado, los socios a bordo, y nada que
+       operar — el mar no tiene velas */
+    const yA = H * .54;
+    c.fillStyle = '#10222F'; c.fillRect(0, yA, W, H - yA);
+    c.strokeStyle = 'rgba(255,255,255,.10)'; c.lineWidth = 2;
+    for(let i = 0; i < 16; i++){
+      const wy = yA + 30 + i * ((H - yA) / 16);
+      const off = (t / 44 + i * 90) % 160;
+      for(let wx = -160 + off; wx < W; wx += 160){
+        c.beginPath(); c.moveTo(wx, wy); c.quadraticCurveTo(wx + 24, wy - 5, wx + 48, wy); c.stroke();
+      }
+    }
+    /* la costa lejos, para que se sienta que se salió de la ciudad */
+    c.fillStyle = 'rgba(32,38,46,.8)';
+    c.fillRect(0, yA - 26, W * .22, 26);
+    c.fillRect(W * .3, yA - 14, W * .1, 14);
+    const yy = yA + 120 + Math.sin(t / 700) * 8;
+    yateDibujo(c, W * .5, yy, 2.1, t);
+    /* los socios en cubierta — sólo los registrados, como en todas partes */
+    if(SOC[0]) monitoPlano(c, W * .5 - 140, yy - 98, SOC[0].look, 1.15, { ropa:'#EFE8D8', pantalon:'#8E5C46', nombre: SOC[0].nom });
+    if(SOC[1]) monitoPlano(c, W * .5 - 10,  yy - 98, SOC[1].look, 1.15, { ropa:'#4A7FA8', pantalon:'#EDEFF2', nombre: SOC[1].nom });
+    if(SOC[2]) monitoPlano(c, W * .5 + 96,  yy - 156, SOC[2].look, 1.05, { ropa:'#F2F4F6', pantalon:'#22262E', nombre: SOC[2].nom });
+    cartel(bi('FIN DE SEMANA · EL YATE', 'WEEKEND · THE YACHT'),
+           bi('el mar no tiene velas', 'no candles at sea'));
+    return;
+  }
+
   if(E.esc === 'golf'){
     c.fillStyle = '#3F7D46'; c.fillRect(0, 560, W, H - 560);
     c.fillStyle = '#46934F';
@@ -12892,6 +12863,9 @@ function sueloDe(c, W, H, ciudad, osc, rr){
   }
 }
 
+/* dónde está parado el usuario en el mundo: arriba (jet) o abajo (sesión) */
+let ofiBajado = false, ofiCiudadKey = '';
+
 function dibujaOficina(t){
   const cv = $('#agOficina'); if(!cv) return;
   const c = cv.getContext('2d');
@@ -12918,8 +12892,31 @@ function dibujaOficina(t){
   c.fillText(`${loc([CI.n, CI.en])}  ·  ${relojLocal}  ·  ${momento.toUpperCase()}`, W - 24, 40);
   c.textAlign = 'left';
 
+  /* ── EL JET ES LA BASE ──
+     Entre semana la vista por defecto es el avión. Con una sesión abierta, el
+     jet cruza SOBRE su ciudad y el botón te baja al piso; al cerrar la sesión
+     (o al cambiar de ciudad) el terminal te sube solo — por eso el estado se
+     resetea con la LLAVE ciudad+día, no con un timer. */
+  const btnB = $('#btnBajar');
+  if(E.tipo !== 'ciudad'){
+    if(ofiBajado || ofiCiudadKey){ ofiBajado = false; ofiCiudadKey = ''; }
+    if(btnB && !btnB.hidden) btnB.hidden = true;
+  }
   if(E.tipo === 'vuelo'){ escenaVuelo(c, W, H, t, E, rr); return; }
   if(E.tipo === 'finde'){ escenaFinde(c, W, H, t, E, rr, PC); return; }
+
+  const llave = E.c + '|' + todayISO();
+  if(llave !== ofiCiudadKey){ ofiCiudadKey = llave; ofiBajado = false; }
+  if(btnB && btnB.hidden !== ofiBajado) btnB.hidden = ofiBajado;
+  if(!ofiBajado){
+    /* el crucero: el jet sobre la ciudad de la sesión, con la barra marcando
+       cuánto lleva la sesión — el mismo cartel de los viajes */
+    const tr2 = TRAMOS.find(x => x.c === E.c);
+    const dur = tr2 ? (tr2.a - tr2.de) : 1;
+    const prog2 = tr2 ? Math.max(0, Math.min(1, 1 - (E.restan || 0) / dur)) : .5;
+    escenaVuelo(c, W, H, t, { crucero:true, de:E.c, a:E.c, prog:prog2 }, rr);
+    return;
+  }
 
   skylineCiudad(c, W, H, E.c, oscuridad, rr);
 
@@ -13993,6 +13990,8 @@ function renderAgentes(){
   grid.innerHTML = (yo ? tarjeta(yo) : '') + balances;
   animaBalances();
   $$('#agGrid .staff[data-staff]').forEach(b => b.onclick = () => $('#btnSettings').click());
+  const bb = $('#btnBajar');
+  if(bb && !bb._listo){ bb._listo = true; bb.addEventListener('click', () => { ofiBajado = true; }); }
   pintaAvatares();
   ofiJunta = guionOficina();
   if(typeof animaOficina === 'function') animaOficina();
