@@ -2468,6 +2468,11 @@ stop[stop-color="#9BC0DC"]{stop-color:var(--txt)}
   color:rgba(244,244,246,.62);margin-bottom:6px}
 #btnBajar span{display:block}
 #btnBajar:hover{background:rgba(8,10,14,.8);border-color:#fff}
+/* la hora de NY, abajo a la izquierda (André) — siempre visible en la mesa */
+#horaNY{position:absolute;left:26px;bottom:26px;z-index:3;font-family:var(--mono);
+  font-size:10px;letter-spacing:.18em;color:rgba(244,244,246,.78);
+  padding:9px 14px;border:1px solid rgba(255,255,255,.22);border-radius:99px;
+  background:rgba(8,10,14,.5);backdrop-filter:blur(6px)}
 </style>
 </head>
 <body>
@@ -2586,6 +2591,7 @@ stop[stop-color="#9BC0DC"]{stop-color:var(--txt)}
           <!-- Entre semana se vive en el jet: este botón te baja a la sesión
                abierta. Al cerrar la sesión, el terminal te sube solo. -->
           <button type="button" id="btnBajar" hidden></button>
+          <div id="horaNY" aria-label="Hora de Nueva York"></div>
         </div>
 
         <!-- El tablero del negocio: el camino a payout con el proceso de
@@ -12887,6 +12893,14 @@ function dibujaOficina(t){
      solo: el estado se resetea con la LLAVE ciudad+día, no con un timer. */
   const E = escenaAhora();
   const btnB = $('#btnBajar');
+  /* la hora de NY, fija abajo a la izquierda — el reloj del MERCADO,
+     independiente del reloj de escena (México en el jet / ciudad al bajar) */
+  const hNY = $('#horaNY');
+  if(hNY){
+    const txtNY = 'NEW YORK · ' + new Date().toLocaleTimeString('en-GB',
+      { timeZone: TZ_MERCADO, hour12: false });
+    if(hNY.textContent !== txtNY) hNY.textContent = txtNY;
+  }
   if(E.tipo === 'ciudad'){
     const llave = E.c + '|' + todayISO();
     if(llave !== ofiCiudadKey){ ofiCiudadKey = llave; ofiBajado = false; }
