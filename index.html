@@ -1228,6 +1228,18 @@ body.doc-open #indice{display:none}
 .pov-pie{position:absolute;left:0;right:0;bottom:110px;margin:0;text-align:center;
   font-family:var(--mono);font-size:9.5px;letter-spacing:.24em;color:var(--faint);z-index:3}
 
+/* ── EL CUENTO de filosofía ── una línea a la vez sobre el Lorenz.
+   OJO: la transición vive en .cu-linea (HIJA del .rv), no en el .rv — el
+   .rv.on termina en transform:none y pisaría un transform propio. */
+.cuento{position:absolute;left:0;right:0;margin:0 auto;bottom:12vh;z-index:2;
+  width:min(680px,88vw);text-align:center}
+.cu-linea{font-size:clamp(18px,2.6vw,26px);line-height:1.45;color:var(--txt);
+  letter-spacing:-.01em;margin:0;min-height:2.9em;
+  transition:opacity .8s ease,transform .8s ease}
+.cu-linea.va{opacity:0;transform:translateY(10px)}
+.cu-paso{margin-top:10px;font-family:var(--mono);font-size:9px;letter-spacing:.3em;color:var(--faint)}
+@media (prefers-reduced-motion:reduce){ .cu-linea{transition:none} .cu-linea.va{opacity:1;transform:none} }
+
 /* ── LOS TICKERS ── llenan el filo de arriba y el de abajo de la página, por
    ENCIMA de la escena (velo del fondo + blur para leerse sobre la ciudad).
    El mismo truco infinito de siempre: dos mitades IDÉNTICAS y -50% exacto. */
@@ -1321,11 +1333,12 @@ body.doc-open #indice{display:none}
   <div class="flecha-marco rv">
     <canvas id="flechaCanvas" aria-label="A Lorenz attractor drawn by particles"></canvas>
   </div>
-  <!-- CÓMO OPERAMOS, dicho desde el caos/orden — QUÉ hacemos, nunca CÓMO. -->
-  <div class="manifiesto rv">
-    <p>Markets never repeat exactly — their structure does. We don't predict.
-    We wait for one structure we know by heart, and we act only when it shows
-    itself. That patience is the edge.</p>
+  <!-- STORYTELLING por partes (André): el párrafo se cuenta en OCHO latidos,
+       uno a la vez sobre el atractor — crossfade, contador, y el último
+       latido aguanta más. QUÉ hacemos, nunca CÓMO. -->
+  <div class="cuento rv">
+    <p class="cu-linea" id="cuLinea">Every day, the market opens as chaos.</p>
+    <div class="cu-paso" id="cuPaso">01 / 08</div>
   </div>
 </section>
 
@@ -2054,6 +2067,44 @@ body.doc-open #indice{display:none}
     (function gira(){
       pinta(performance.now() / 1000);
       requestAnimationFrame(gira);
+    })();
+  })();
+
+  /* ── FILOSOFÍA · el cuento por latidos ── el párrafo contado parte por
+     parte: cada línea entra, respira y cede; la última aguanta más antes de
+     volver a empezar. */
+  (function(){
+    var el = document.getElementById('cuLinea'), paso = document.getElementById('cuPaso');
+    if (!el) return;
+    var LATIDOS = [
+      'Every day, the market opens as chaos.',
+      'Millions of orders. No two days alike.',
+      'But chaos has a shape.',
+      'Structure repeats. It always has.',
+      "We don't predict.",
+      'We wait for one structure — the one we know by heart.',
+      'When it shows itself, we act. Once.',
+      'That patience is the edge.'
+    ];
+    var i = 0;
+    var quieto = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    function pon(n){
+      el.textContent = LATIDOS[n];
+      if (paso) paso.textContent = ('0' + (n + 1)).slice(-2) + ' / 0' + LATIDOS.length;
+    }
+    pon(0);
+    (function ciclo(){
+      var dura = i === LATIDOS.length - 1 ? 6200 : 4200;   /* el cierre aguanta más */
+      setTimeout(function(){
+        if (quieto){ i = (i + 1) % LATIDOS.length; pon(i); ciclo(); return; }
+        el.classList.add('va');
+        setTimeout(function(){
+          i = (i + 1) % LATIDOS.length;
+          pon(i);
+          el.classList.remove('va');
+          ciclo();
+        }, 820);
+      }, dura);
     })();
   })();
 
