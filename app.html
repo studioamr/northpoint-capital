@@ -2460,10 +2460,13 @@ stop[stop-color="#9BC0DC"]{stop-color:var(--txt)}
    Vive sobre el canvas de la mesa. Centrado con left/right + margin:auto (la
    regla de la casa: nada de translateX en cosas que se animan o revelan). */
 #btnBajar{position:absolute;left:0;right:0;margin:0 auto;bottom:26px;width:max-content;
-  font-family:var(--mono);font-size:11px;letter-spacing:.16em;padding:12px 24px;
-  border:1px solid rgba(255,255,255,.45);border-radius:99px;background:rgba(8,10,14,.55);
-  color:#F4F4F6;cursor:pointer;backdrop-filter:blur(6px);z-index:3;
+  font-family:var(--mono);font-size:11px;letter-spacing:.16em;padding:11px 26px;
+  border:1px solid rgba(255,255,255,.45);border-radius:16px;background:rgba(8,10,14,.55);
+  color:#F4F4F6;cursor:pointer;backdrop-filter:blur(6px);z-index:3;text-align:center;
   transition:background .2s,border-color .2s}
+#btnBajar small{display:block;font-size:9px;letter-spacing:.22em;
+  color:rgba(244,244,246,.62);margin-bottom:6px}
+#btnBajar span{display:block}
 #btnBajar:hover{background:rgba(8,10,14,.8);border-color:#fff}
 </style>
 </head>
@@ -2582,7 +2585,7 @@ stop[stop-color="#9BC0DC"]{stop-color:var(--txt)}
           <canvas id="agOficina" width="1800" height="1160" aria-label="The Northpoint office — 88th floor, New York"></canvas>
           <!-- Entre semana se vive en el jet: este botón te baja a la sesión
                abierta. Al cerrar la sesión, el terminal te sube solo. -->
-          <button type="button" id="btnBajar" hidden>↓ BAJAR A LA SESIÓN</button>
+          <button type="button" id="btnBajar" hidden></button>
         </div>
 
         <!-- El tablero del negocio: el camino a payout con el proceso de
@@ -12892,11 +12895,21 @@ function dibujaOficina(t){
     const ver = E.tipo === 'ciudad';
     if(btnB.hidden !== !ver) btnB.hidden = !ver;
     if(ver){
-      /* el mismo botón, dos caras: bajar cuando estás arriba, cerrar cuando
-         estás abajo — y cerrar te regresa al jet */
-      const et = ofiBajado ? bi('↑ CERRAR SESIÓN','↑ CLOSE THE SESSION')
-                           : bi('↓ BAJAR A LA SESIÓN','↓ DESCEND TO THE SESSION');
-      if(btnB.textContent !== et) btnB.textContent = et;
+      /* el botón ahora es PANEL (André): arriba cuánto lleva la sesión y
+         cuánto falta — calculado del TRAMO en hora de NY, con el wrap de
+         Tokio que cruza medianoche — y abajo la acción de entrar/salir */
+      const tr = TRAMOS.find(x => x.c === E.c);
+      let mNY = minutosEn(TZ_MERCADO);
+      if(tr && mNY < tr.de) mNY += 1440;
+      const fmtM = mm => Math.floor(mm / 60) + 'h ' + String(mm % 60).padStart(2, '0') + 'm';
+      const info = tr
+        ? bi('EN SESIÓN ' + fmtM(mNY - tr.de) + ' · FALTAN ' + fmtM(Math.max(0, tr.a - mNY)),
+             fmtM(mNY - tr.de) + ' IN · ' + fmtM(Math.max(0, tr.a - mNY)) + ' LEFT')
+        : '';
+      const et = ofiBajado ? bi('↑ SALIR DE LA SESIÓN','↑ LEAVE THE SESSION')
+                           : bi('↓ ENTRAR A LA SESIÓN','↓ ENTER THE SESSION');
+      const html = '<small>' + info + '</small><span>' + et + '</span>';
+      if(btnB._html !== html){ btnB._html = html; btnB.innerHTML = html; }
     }
   }
   const arriba = E.tipo === 'vuelo' || (E.tipo === 'ciudad' && !ofiBajado);
