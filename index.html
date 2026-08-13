@@ -1213,7 +1213,7 @@ body.doc-open #indice{display:none}
   /* noche */
   --bg:#0a0a0a;--txt:#F2F2F2;--dim:#9a9a9a;--faint:#6f6f6f;
   --line:rgba(255,255,255,.14);--line-soft:rgba(255,255,255,.08);--glass:rgba(255,255,255,.03);
-  --mesaA:#171717;--mesaB:#0b0b0b;--filo:rgba(255,255,255,.10);
+  --mesaA:#181614;--mesaB:#0b0a09;--filo:rgba(255,255,255,.10);
   --bisel:#1b1b1b;--cuello:#161616;--basec:#1c1c1c;--panta:#0d0d0d;
   --tecA:#232323;--tecB:#191919;--tecBorde:#2c2c2c;--tazaA:#262626;--tazaB:#151515;--asa:#222;
   --halo:rgba(150,175,255,.16);
@@ -1858,15 +1858,6 @@ body.doc-open #indice{display:none}
       { x:.765, w:.17,  top:.15,  tapa:1, ant:.035 }
     ];
     var balizas = [], cacheTinta = null;
-    var offV = document.createElement('canvas');
-    offV.width = off.width; offV.height = off.height;
-    var ocv = offV.getContext('2d');
-    var ultimaVent = -1;
-    /* la lluvia, sesgada por un viento que respira */
-    var gotas = [], tLluvia = 0;
-    for (var gi2 = 0; gi2 < 130; gi2++){
-      gotas.push({ x: Math.random() * W, y: Math.random() * H, v: 420 + Math.random() * 260 });
-    }
 
     function torre(t2, prof, tinta, fondoC){
       var bx = t2.x * W, bw = t2.w * W, top = t2.top * H;
@@ -1891,30 +1882,21 @@ body.doc-open #indice{display:none}
         oc.fillRect(bx + bw / 2 - 1, top - (t2.tapa ? capH : 0) - t2.ant * H, 2, t2.ant * H);
         balizas.push({ x: bx + bw / 2, y: top - (t2.tapa ? capH : 0) - t2.ant * H });
       }
-      oc.globalAlpha = 1;
-    }
-    /* LAS VENTANAS viven en su PROPIA capa (André: «anima las ventanas con
-       luces, como si estuviera vivo»): se re-pinta cada medio segundo — no
-       cada cuadro — y ~18% de las ventanas cambian de estado con un periodo
-       PROPIO (2.5–7s), así siempre hay alguna prendiéndose o apagándose. */
-    function ventanasDe(t2, prof, tinta, t){
-      var bx = t2.x * W, bw = t2.w * W, top = t2.top * H;
+      /* LAS VENTANAS: la retícula que hace edificio al edificio. Prendidas y
+         apagadas con PRNG fija; de vez en cuando un piso entero encendido. */
       var cols = Math.max(4, Math.round(bw / 17));
-      var colW = bw / cols, filaH = 15;
-      ocv.fillStyle = tinta;
+      var colW = bw / cols;
+      var filaH = 15;
       for(var fy = Math.max(8, top + 10), fi = 0; fy < H - 2; fy += filaH, fi++){
         var pisoLleno = R(fi * 31 + t2.x * 97) < .07;
         for(var ci = 0; ci < cols; ci++){
           var rz = R(ci * 13.7 + fi * 7.3 + t2.x * 53);
-          var base = pisoLleno || rz < .44;
-          var per = 2.5 + R(ci * 3.3 + fi * 1.9) * 4.5;
-          var flip = R(ci * 3.1 + fi * 9.7 + t2.x * 31 + Math.floor(t / per) * 7.1) < .18;
-          var prendida = flip ? !base : base;
-          ocv.globalAlpha = (prendida ? .28 + R(ci + fi) * .5 : .07) * prof;
-          ocv.fillRect(bx + ci * colW + colW * .24, fy, colW * .5, filaH * .52);
+          var prendida = pisoLleno || rz < .44;
+          oc.globalAlpha = (prendida ? .28 + R(ci + fi) * .5 : .07) * prof;
+          oc.fillRect(bx + ci * colW + colW * .24, fy, colW * .5, filaH * .52);
         }
       }
-      ocv.globalAlpha = 1;
+      oc.globalAlpha = 1;
     }
 
     function renderCiudad(tinta, fondoC){
@@ -1924,39 +1906,17 @@ body.doc-open #indice{display:none}
       FONDOS.forEach(function(t2){ torre(t2, .45, tinta, fondoC); });
       FRENTE.forEach(function(t2){ torre(t2, 1, tinta, fondoC); });
     }
-    function renderVentanas(tinta, t){
-      ocv.setTransform(dpr, 0, 0, dpr, 0, 0);
-      ocv.clearRect(0, 0, W, H);
-      FONDOS.forEach(function(t2){ ventanasDe(t2, .45, tinta, t); });
-      FRENTE.forEach(function(t2){ ventanasDe(t2, 1, tinta, t); });
-    }
 
     var st = { segs: [], total: 1, rio: [], fijos: [] };
     st.fondo = function(cx2, tinta, fondoC, t){
-      if(tinta !== cacheTinta){ renderCiudad(tinta, fondoC); cacheTinta = tinta; ultimaVent = -1; }
-      if(ultimaVent < 0 || t - ultimaVent > .5){ renderVentanas(tinta, t); ultimaVent = t; }
+      if(tinta !== cacheTinta){ renderCiudad(tinta, fondoC); cacheTinta = tinta; }
       cx2.drawImage(off, 0, 0, W, H);
-      cx2.drawImage(offV, 0, 0, W, H);
       /* las balizas de las antenas, latiendo despacio */
       cx2.fillStyle = tinta;
       for(var b2 = 0; b2 < balizas.length; b2++){
         cx2.globalAlpha = .25 + .45 * (.5 + .5 * Math.sin(t * 1.5 + b2 * 2.1));
         cx2.beginPath(); cx2.arc(balizas[b2].x, balizas[b2].y, 3, 0, 7); cx2.fill();
       }
-      /* LA LLUVIA (André: «agrega viento o nieve o lluvia o lo que sea») */
-      var dtl = Math.min(.05, Math.max(.001, t - tLluvia)); tLluvia = t;
-      var viento = 26 + 34 * Math.sin(t * .13);
-      cx2.strokeStyle = tinta; cx2.globalAlpha = .15; cx2.lineWidth = 1;
-      cx2.beginPath();
-      for (var gd = 0; gd < gotas.length; gd++){
-        var go = gotas[gd];
-        go.y += go.v * dtl; go.x += viento * dtl;
-        if (go.y > H + 12){ go.y = -12 - Math.random() * 40; go.x = Math.random() * W; }
-        if (go.x > W + 8) go.x -= W + 16;
-        cx2.moveTo(go.x, go.y);
-        cx2.lineTo(go.x - viento * .03, go.y - go.v * .028);
-      }
-      cx2.stroke();
       cx2.globalAlpha = 1;
     };
     return st;
@@ -2193,9 +2153,7 @@ body.doc-open #indice{display:none}
             cxC.fillStyle = rz < .1 ? 'rgba(255,255,255,.7)' : 'rgba(0,0,0,' + (rz < .6 ? '.1' : '.04') + ')';
             cxC.fillRect(x + 6 + c * (bw - 10) / cols, by + 7 + f * 16, 5, 7);
           } else if (rz < .3){
-            /* tinta fría, la MISMA tonalidad que la ciudad de Futuros —
-               el ámbar se sentía de otra película (André) */
-            cxC.fillStyle = 'rgba(228,234,244,' + (.16 + Math.random() * .38).toFixed(2) + ')';
+            cxC.fillStyle = 'rgba(255,222,150,' + (.22 + Math.random() * .5).toFixed(2) + ')';
             cxC.fillRect(x + 6 + c * (bw - 10) / cols, by + 7 + f * 16, 5, 7);
           }
         }
@@ -2204,7 +2162,7 @@ body.doc-open #indice{display:none}
           cxC.lineWidth = 1;
           cxC.beginPath(); cxC.moveTo(x + bw / 2, by); cxC.lineTo(x + bw / 2, by - 26); cxC.stroke();
           if (!dia){
-            cxC.fillStyle = 'rgba(228,234,244,.8)';
+            cxC.fillStyle = 'rgba(255,90,90,.8)';
             cxC.fillRect(x + bw / 2 - 1.5, by - 29, 3, 3);
           }
         }
