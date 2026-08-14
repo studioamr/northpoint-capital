@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>NORTHPOINT · Stream overlay</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+/* ═══════════════════════════════════════════════════════════════
+   NORTHPOINT · OVERLAY DE STREAM (1920×1080)
+
+   Se pone en OBS / Restream Studio como "Browser source" con FONDO
+   TRANSPARENTE: el chart se ve debajo y esto flota encima. El reloj y
+   la sesión NO son adorno: los calcula el mismo modelo que el Terminal
+   (tramos en hora de NUEVA YORK, que es el único reloj de esta casa).
+
+     ?escena=live      → overlay transparente sobre el chart (default)
+     ?escena=espera    → pantalla completa "EMPEZAMOS EN BREVE"
+     ?escena=pausa     → pantalla completa "VOLVEMOS EN UN MOMENTO"
+     ?escena=cierre    → pantalla completa "SESIÓN CERRADA"
+
+   Regla de la casa que también aplica en cámara: se enseña el QUÉ,
+   nunca el CÓMO. Aquí no va ni un parámetro del método.
+   ═══════════════════════════════════════════════════════════════ */
+:root{
+  --tinta:#F2F2F2; --dim:#A8A8A8; --faint:#787878;
+  --oro:#C9A84C; --up:#2FA57C; --down:#C65A4E;
+  --vidrio:rgba(10,10,10,.72); --linea:rgba(255,255,255,.12);
+  --sans:'Inter',-apple-system,system-ui,sans-serif;
+  --mono:'IBM Plex Mono',ui-monospace,monospace;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{width:1920px;height:1080px;overflow:hidden;background:transparent;
+  font-family:var(--sans);color:var(--tinta);-webkit-font-smoothing:antialiased}
+body.solido{background:#0A0A0A}
+
+/* ── BARRA SUPERIOR ── marca · sesión viva · relojes ── */
+.top{position:absolute;top:0;left:0;right:0;height:74px;display:flex;align-items:center;
+  gap:26px;padding:0 30px;background:var(--vidrio);backdrop-filter:blur(10px);
+  border-bottom:1px solid var(--linea)}
+.marca{font-size:21px;font-weight:700;letter-spacing:.16em}
+.marca small{display:block;font-family:var(--mono);font-size:8.5px;letter-spacing:.34em;
+  color:var(--oro);font-weight:500;margin-top:3px}
+.sep{width:1px;height:34px;background:var(--linea)}
+.ses{display:flex;align-items:center;gap:11px;font-family:var(--mono);font-size:13px;
+  letter-spacing:.2em}
+.punto{width:9px;height:9px;border-radius:50%;background:var(--up);
+  box-shadow:0 0 12px var(--up)}
+.punto.off{background:var(--faint);box-shadow:none}
+.barra{flex:1;height:4px;background:rgba(255,255,255,.10);border-radius:99px;overflow:hidden;
+  max-width:340px}
+.barra i{display:block;height:100%;background:var(--oro);border-radius:99px;width:0}
+.restan{font-family:var(--mono);font-size:11px;color:var(--dim);letter-spacing:.12em}
+.relojes{margin-left:auto;display:flex;gap:26px;text-align:right}
+.reloj b{display:block;font-family:var(--mono);font-size:20px;font-weight:600;letter-spacing:.06em}
+.reloj span{font-family:var(--mono);font-size:8.5px;letter-spacing:.28em;color:var(--faint)}
+
+/* ── TARJETA DE REGLAS ── el contrato del día, a la vista ── */
+.reglas{position:absolute;left:30px;top:100px;width:286px;background:var(--vidrio);
+  backdrop-filter:blur(10px);border:1px solid var(--linea);border-radius:14px;padding:18px 20px}
+.reglas h3{font-family:var(--mono);font-size:9px;letter-spacing:.3em;color:var(--faint);
+  font-weight:500;margin-bottom:13px}
+.reglas div{display:flex;gap:10px;align-items:baseline;padding:7px 0;
+  border-top:1px solid rgba(255,255,255,.06);font-size:12.5px;color:var(--dim)}
+.reglas div:first-of-type{border-top:none}
+.reglas i{font-style:normal;color:var(--oro);font-size:8px}
+.reglas b{color:var(--tinta);font-weight:600}
+
+/* ── BARRA INFERIOR ── el llamado a la comunidad ── */
+.bot{position:absolute;left:0;right:0;bottom:0;height:62px;display:flex;align-items:center;
+  gap:30px;padding:0 30px;background:var(--vidrio);backdrop-filter:blur(10px);
+  border-top:1px solid var(--linea);font-family:var(--mono);font-size:12px;letter-spacing:.18em}
+.bot .oro{color:var(--oro)}
+.bot .cinta{flex:1;overflow:hidden;white-space:nowrap;color:var(--faint);font-size:11px}
+.bot .cinta span{display:inline-block;animation:rueda 34s linear infinite;padding-left:100%}
+@keyframes rueda{from{transform:translateX(0)}to{transform:translateX(-100%)}}
+
+/* ── PANTALLAS COMPLETAS (espera · pausa · cierre) ── */
+.full{position:absolute;inset:0;display:none;flex-direction:column;align-items:center;
+  justify-content:center;text-align:center}
+body.pantalla .full{display:flex}
+body.pantalla .top,body.pantalla .reglas,body.pantalla .bot{display:none}
+#estrellas{position:absolute;inset:0}
+.full .in{position:relative;z-index:2}
+.full h1{font-size:96px;font-weight:700;letter-spacing:.14em;line-height:1}
+.full .sub{font-family:var(--mono);font-size:19px;letter-spacing:.5em;color:var(--oro);
+  margin-top:22px;padding-left:.5em}
+.full .raya{width:76px;height:1px;background:var(--linea);margin:46px auto}
+.full .msg{font-size:34px;font-weight:600;letter-spacing:.02em}
+.full .msg2{font-family:var(--mono);font-size:15px;letter-spacing:.26em;color:var(--dim);
+  margin-top:20px}
+.full .pie{position:absolute;bottom:54px;left:0;right:0;font-family:var(--mono);font-size:13px;
+  letter-spacing:.28em;color:var(--faint)}
+.pulso{animation:lat 2.4s ease-in-out infinite}
+@keyframes lat{0%,100%{opacity:1}50%{opacity:.45}}
+</style>
+</head>
+<body>
+
+<canvas id="estrellas"></canvas>
+
+<!-- ══════════ OVERLAY EN VIVO ══════════ -->
+<div class="top">
+  <div class="marca">NORTHPOINT<small>TRADER BACKING</small></div>
+  <div class="sep"></div>
+  <div class="ses"><i class="punto" id="pt"></i><span id="ses">—</span></div>
+  <div class="barra"><i id="barra"></i></div>
+  <div class="restan" id="restan">—</div>
+  <div class="relojes">
+    <div class="reloj"><b id="rNY">--:--:--</b><span>NEW YORK</span></div>
+    <div class="reloj"><b id="rMX">--:--:--</b><span>MORELIA</span></div>
+  </div>
+</div>
+
+<div class="reglas">
+  <h3>THE RULES OF THE DESK</h3>
+  <div><i>◆</i><span><b>One trade</b> a day</span></div>
+  <div><i>◆</i><span>No alert, <b>no trade</b></span></div>
+  <div><i>◆</i><span>The <b>stop holds</b>, always</span></div>
+  <div><i>◆</i><span>Every trade, <b>written</b></span></div>
+  <div><i>◆</i><span><b>Patience</b> is the edge</span></div>
+</div>
+
+<div class="bot">
+  <span class="oro">JOIN THE DESK</span>
+  <span>discord.gg/TWeVqTTPS</span>
+  <span class="cinta"><span>NORTHPOINT BACKS PROFITABLE TRADERS · YOU PROVE IT, WE PAY YOUR EVALUATIONS · 5 PAYOUTS MINIMUM TO APPLY · THE FIRM: studioamr.github.io/northpoint-capital · LIVE ON THE ASIA AND NEW YORK SESSIONS</span></span>
+  <span class="oro" id="botSes">ASIA SESSION</span>
+</div>
+
+<!-- ══════════ PANTALLAS COMPLETAS ══════════ -->
+<div class="full">
+  <div class="in">
+    <h1>NORTHPOINT</h1>
+    <div class="sub">TRADER BACKING</div>
+    <div class="raya"></div>
+    <div class="msg pulso" id="fMsg">EMPEZAMOS EN BREVE</div>
+    <div class="msg2" id="fMsg2">ASIA SESSION · 18:00 – 02:00 NY</div>
+  </div>
+  <div class="pie">discord.gg/TWeVqTTPS · studioamr.github.io/northpoint-capital</div>
+</div>
+
+<script>
+(function(){
+  var p = new URLSearchParams(location.search);
+  var escena = p.get('escena') || 'live';
+  var TZ = 'America/New_York', TZ_MX = 'America/Mexico_City';
+
+  /* ── LOS TRAMOS, EN HORA DE NY ── el mismo modelo del Terminal:
+     Londres 02:00–09:05 · NY 09:30–17:00 · Asia 18:00–01:35 (cruza
+     medianoche). El único cierre real es el halt 17:00–18:00. */
+  var TRAMOS = [
+    { c:'LONDON SESSION', de:120,  a:545  },
+    { c:'NEW YORK SESSION', de:570, a:1020 },
+    { c:'ASIA SESSION',   de:1080, a:1535 }
+  ];
+  function minutosEn(tz){
+    var d = new Date().toLocaleString('en-US', { timeZone: tz, hour12:false,
+      hour:'2-digit', minute:'2-digit', second:'2-digit' }).split(':');
+    return (+d[0] % 24) * 60 + (+d[1]) + (+d[2]) / 60;
+  }
+  function hora(tz){
+    return new Date().toLocaleTimeString('en-GB', { timeZone: tz, hour12:false });
+  }
+  function fmt(m){
+    m = Math.max(0, Math.round(m));
+    return Math.floor(m/60) + 'h ' + String(m%60).padStart(2,'0') + 'm';
+  }
+  function estado(){
+    var m = minutosEn(TZ);
+    for (var i=0;i<TRAMOS.length;i++){
+      var t = TRAMOS[i], mm = m;
+      if (mm < t.de && t.a > 1440) mm += 1440;          /* wrap de Asia */
+      if (mm >= t.de && mm <= t.a){
+        return { viva:true, n:t.c, va:mm - t.de, falta:t.a - mm, dur:t.a - t.de };
+      }
+    }
+    return { viva:false, n:'MARKET CLOSED', va:0, falta:0, dur:1 };
+  }
+  function pinta(){
+    var e = estado();
+    document.getElementById('rNY').textContent = hora(TZ);
+    document.getElementById('rMX').textContent = hora(TZ_MX);
+    document.getElementById('ses').textContent = e.n;
+    document.getElementById('botSes').textContent = e.viva ? e.n : 'CLOSED';
+    document.getElementById('pt').className = 'punto' + (e.viva ? '' : ' off');
+    document.getElementById('restan').textContent = e.viva
+      ? fmt(e.va) + ' IN · ' + fmt(e.falta) + ' LEFT' : '—';
+    document.getElementById('barra').style.width =
+      (e.viva ? Math.min(100, e.va / e.dur * 100) : 0) + '%';
+    var m2 = document.getElementById('fMsg2');
+    if (m2 && escena !== 'live') m2.textContent = e.viva
+      ? e.n + ' · ' + fmt(e.falta) + ' LEFT' : 'MARKET CLOSED';
+  }
+  setInterval(pinta, 1000); pinta();
+
+  /* ── PANTALLAS COMPLETAS ── fondo sólido + campo de estrellas ── */
+  var MSG = {
+    espera: ['EMPEZAMOS EN BREVE', 'STARTING SOON'],
+    pausa:  ['VOLVEMOS EN UN MOMENTO', 'BE RIGHT BACK'],
+    cierre: ['SESIÓN CERRADA', 'ONE TRADE A DAY · SEE YOU TOMORROW']
+  };
+  if (escena !== 'live'){
+    document.body.classList.add('pantalla','solido');
+    var m = MSG[escena] || MSG.espera;
+    document.getElementById('fMsg').textContent = m[0];
+    var cv = document.getElementById('estrellas');
+    var cx = cv.getContext('2d');
+    cv.width = 1920; cv.height = 1080;
+    var es = [];
+    for (var i=0;i<220;i++){
+      es.push({ x:(i*173.2)%1920, y:(i*97.3)%1080, a:.08+(i%5)*.06, v:.15+(i%7)*.05 });
+    }
+    (function lazo(t){
+      cx.clearRect(0,0,1920,1080);
+      es.forEach(function(s,i){
+        var pul = .6 + .4 * Math.sin(t/1000 * s.v + i);
+        cx.fillStyle = 'rgba(255,255,255,' + (s.a*pul).toFixed(3) + ')';
+        cx.fillRect(s.x, s.y, 2, 2);
+      });
+      requestAnimationFrame(lazo);
+    })(0);
+  } else {
+    document.getElementById('estrellas').style.display = 'none';
+  }
+})();
+</script>
+</body>
+</html>
