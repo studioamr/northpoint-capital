@@ -9021,7 +9021,7 @@ async function doLogin(){
     return;
   }
   S.session = { user:u };
-  try{ localStorage.setItem('np_last_user', u); }catch(e){}
+  /* el último usuario ya NO se guarda: el campo del login abre en blanco */
   S.profile.nombre = usr.nombre;
   S.profile.rol = usr.roles.join(' + ');
   if(!S.profile.metaMes) S.profile.metaMes = 30000;
@@ -14955,15 +14955,15 @@ setInterval(() => cargaMercado().then(m => {
   if(m && $('#v-posiciones').classList.contains('on')) renderPosiciones();
 }), 300000);
 
-/* portón de acceso: SIEMPRE se entra desde el login, sin sesión pegada.
-   Se olvida la sesión y el token guardados; se recuerda sólo el usuario para
-   dejarlo escrito, así basta con teclear la contraseña. */
+/* portón de acceso: SIEMPRE se entra desde el login, sin sesión pegada y con
+   el campo del usuario EN BLANCO. Antes dejaba escrito el último que entró
+   («andre.np»), que era cómodo para André pero desconcertaba a cualquier otro
+   que abriera el terminal — y de paso le decía a quien fuera quién había
+   estado aquí. */
 if(cloudOn()){ cloudTok = null; try{ localStorage.removeItem('np_tok'); }catch(e){} }
 S.session = { user: null };
 lockUI();
-let ultimoUser = '';
-try{ ultimoUser = localStorage.getItem('np_last_user') || ''; }catch(e){}
-if(ultimoUser){ $('#lgUser').value = ultimoUser; setTimeout(()=> $('#lgPass').focus(), 90); }
+try{ localStorage.removeItem('np_last_user'); }catch(e){}
 
 /* QA hook */
 window.__np = { state: () => S, score: computeScore, report: buildReport };
