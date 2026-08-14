@@ -830,6 +830,8 @@ body.locked .app{visibility:hidden;pointer-events:none}
   letter-spacing:-.03em;line-height:1}
 .bal-grande .bg-d{display:flex;gap:22px;flex-wrap:wrap;align-items:flex-end}
 .bal-grande .bg-d div{text-align:right}
+.bal-grande .bg-d b i{font-style:normal;font-size:10px;letter-spacing:.06em;
+  color:var(--faint);margin-left:7px}
 .bal-grande .bg-d b{display:block;font-family:var(--mono);font-size:17px;
   font-weight:400;letter-spacing:-.01em;margin-top:5px}
 @media(max-width:620px){
@@ -5201,7 +5203,13 @@ function computeStats(list){
 }
 
 /* Northpoint Score 0–1000 sobre los últimos 30 trades */
-const SCORE_MIN = 10;      // debajo de esto no hay muestra para calificar a nadie
+/* Debajo de esto no hay muestra para calificar a nadie. Estaba en 10 y el
+   tablero se pasaba las dos primeras semanas diciendo «muestra insuficiente»
+   sin enseñar nada — justo cuando más ganas hay de mirarlo. Con 5 ya se puede
+   decir algo, y entre 5 y 10 la nota sale marcada como PROVISIONAL: mejor una
+   nota que se presenta como incompleta que una pantalla en blanco. */
+const SCORE_MIN = 5;
+const SCORE_FIRME = 10;    // de aquí para arriba la nota deja de ser provisional
 function computeScore(){
   const byDay = tradesByDay();
   const hoy = todayISO(), mes = hoy.slice(0,7);
@@ -5235,8 +5243,14 @@ function computeScore(){
     .filter(x => x==='MICROS' || x==='OUT_OF_WINDOW' || x==='FIRM_LIMIT' || x==='DAY_RISK'));
   const tope = graves.size ? 690 : 1000;
   if(total > tope) total = tope;
-  const grade = total>=850?'INSTITUCIONAL': total>=700?'PROFESIONAL': total>=500?'EN DESARROLLO':'EN RIESGO';
-  return { total, dims, grade, n:last.length, graves:[...graves] };
+  let grade = total>=850?'INSTITUCIONAL': total>=700?'PROFESIONAL': total>=500?'EN DESARROLLO':'EN RIESGO';
+  /* Entre 5 y 10 trades la nota SALE, pero se presenta por lo que es: con esa
+     muestra un solo día raro mueve el número entero. Decirlo vale más que
+     esconder el score o que darlo como si estuviera firme. */
+  const provisional = last.length < SCORE_FIRME;
+  if(provisional) grade = bi('PROVISIONAL · ' + last.length + ' trades',
+                             'PROVISIONAL · ' + last.length + ' trades');
+  return { total, dims, grade, n:last.length, provisional, graves:[...graves] };
 }
 
 /* rangos de P&L */
@@ -6958,7 +6972,18 @@ function repintaCintas(){
    llegó a valer $50,500 en un lado y $47,500 en otro. */
 function renderBalance(){
   const caja = $('#balGrande'); if(!caja) return;
-  const cuentas = acctsSel().filter(a => esViva(a) && !esSim(a));
+  /* Manda el selector: lo que esté marcado arriba es lo que se suma aquí.
+     Las de práctica CUENTAN —André las quiere ver—, pero se avisa cuántas son:
+     el dinero de práctica y el de una cuenta fondeada sumados en una sola cifra,
+     sin decirlo, es un número que engaña. */
+  /* Manda el selector: lo que esté marcado arriba es lo que se suma aquí.
+     Salvo en «todas», donde acctsSel() quita las de práctica a propósito —para
+     que no ensucien KPIs, gráficas ni calendario—. En el BALANCE sí van: André
+     quiere ver todo lo que trae. Se avisa cuántas son, porque dinero de práctica
+     y dinero de una cuenta fondeada sumados sin decirlo es un número que engaña. */
+  const modo = ((S.ui && S.ui.acctSel) || {}).mode || 'all';
+  const cuentas = (modo === 'all' ? cuentasVivas() : acctsSel()).filter(esViva);
+  const nSim = cuentas.filter(esSim).length;
   if(!cuentas.length){
     caja.innerHTML = `<div><span class="bg-l">${tr('ac.balance').toUpperCase()}</span>
       <div class="bg-n">—</div></div>
@@ -6973,10 +6998,11 @@ function renderBalance(){
       <div class="bg-n ${dif>0?'up':dif<0?'down':''}">${fmt$(bal)}</div>
     </div>
     <div class="bg-d">
-      <div><span class="bg-l">${bi('CONTRA EL CAPITAL','VS CAPITAL')}</span>
+      <div><span class="bg-l">PNL</span>
         <b class="${dif>0?'up':dif<0?'down':''}">${fmt$(dif, true)}</b></div>
       <div><span class="bg-l">${bi('CAPITAL','CAPITAL')}</span><b>${fmt$(cap)}</b></div>
-      <div><span class="bg-l">${bi('CUENTAS','ACCOUNTS')}</span><b>${cuentas.length}</b></div>
+      <div><span class="bg-l">${bi('CUENTAS','ACCOUNTS')}</span>
+        <b>${cuentas.length}${nSim ? `<i class="bg-sim">${nSim} ${bi('práctica','practice')}</i>` : ''}</b></div>
     </div>`;
 }
 
