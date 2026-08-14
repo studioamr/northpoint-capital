@@ -4169,9 +4169,18 @@ const sillasActivas = () => {
 const USERS = {
   /* Los tres socios reales, cada quien con su cargo. No es "socios parejos":
      cada uno responde por un cargo distinto. */
-  'pablo.np': { nombre:'Pablo',    roles:['NP-001','NP-010'], correo:'pablo@northpoint.mx' },
-  'mateo.np': { nombre:'Mateo',    roles:['NP-020','NP-030'], correo:'mateo@northpoint.mx' },
-  'andre.np': { nombre:'André',    roles:['NP-040','NP-050'], correo:'andre@northpoint.mx' },
+  /* `correos` son las direcciones REALES con las que cada quien entra a la nube.
+     Vivían sólo en S.correos, o sea en el disco de cada máquina — así que al
+     abrir el terminal en otro equipo, otro navegador o (como el 14-ago-2026) en
+     otro DOMINIO, la app ya no sabía de quién era ese correo y preguntaba
+     «¿quién eres? escribe: pablo, mateo, andre», que es una pregunta que nadie
+     debería tener que contestarle a su propio terminal. Aquí viajan con la app. */
+  'pablo.np': { nombre:'Pablo',    roles:['NP-001','NP-010'], correo:'pablo@northpoint.mx',
+                correos:['pabloochoa8am@outlook.com'] },
+  'mateo.np': { nombre:'Mateo',    roles:['NP-020','NP-030'], correo:'mateo@northpoint.mx',
+                correos:[] },
+  'andre.np': { nombre:'André',    roles:['NP-040','NP-050'], correo:'andre@northpoint.mx',
+                correos:['andremacouzetruiz@gmail.com'] },
   /* 10 invitados para que André reparta acceso sin tocar código. Cada quien entra
      con 1234 la primera vez en SU propio navegador — como no hay nube conectada,
      cada uno arranca con su copia en blanco, sin ver los datos de los demás.
@@ -8997,7 +9006,11 @@ function resuelveUsuario(txt){
   if(porRegistro && USERS[porRegistro]) return porRegistro;
   const porFabrica = Object.keys(USERS)
     .find(k => (USERS[k].correo || '').toLowerCase() === q); // correo @northpoint.mx
-  return porFabrica || null;
+  if(porFabrica) return porFabrica;
+  /* y sus correos de verdad, los que van a la nube: éstos sí viajan con la app,
+     así que funcionan en cualquier equipo y en cualquier dominio */
+  return Object.keys(USERS)
+    .find(k => (USERS[k].correos || []).some(c => c.toLowerCase() === q)) || null;
 }
 /* La nube dijo que sí pero este equipo no sabe de quién es ese correo: se
    pregunta una vez y se recuerda. Sin esto habría que adivinar. */
@@ -10410,28 +10423,15 @@ async function cloudPull(){
       cloudErr = 'sin-acceso'; cloudPaint();
       if(!_avisoSinAcceso){
         _avisoSinAcceso = true;
+        /* Entró bien pero la mesa todavía no lo conoce. Aquí se le pedía un
+           CÓDIGO DE INVITACIÓN — la traba que André mandó quitar el 13-ago y que
+           seguía viva por este camino. Ya no hay códigos: quien se registra
+           entra. Si la nube no lo ve, es que su alta no llegó, y eso se arregla
+           volviendo a entrar, no escribiendo una clave que no existe. */
         const mio = (cloudTok && cloudTok.email) || '';
-        /* Entró bien pero la mesa no lo conoce: casi siempre es que se registró
-           sin código o lo escribió mal. Se le pide aquí mismo en vez de mandarlo
-           a molestar a André — y si de verdad no tiene, entonces sí se le dice. */
-        const cod = prompt(bi(
-          'Tu acceso funciona, pero ' + mio + ' todavía no está en la mesa.\n\nEscribe el código de invitación que te pasó André:',
-          'Your login works, but ' + mio + ' is not on the desk yet.\n\nEnter the invitation code André gave you:'));
-        if(cod && cod.trim()){
-          const res = await canjeaCodigo(cod.trim().toUpperCase());
-          if(res === 'ok'){
-            try{ toast(bi('Listo, ya estás en la mesa. Bajando los datos…','You are on the desk now. Pulling data…')); }catch(e){}
-            cloudErr = null; cloudPaint();
-            return cloudPull();
-          }
-          try{ toast(res === 'codigo-malo'
-            ? bi('Ese código no sirve. Pídele a André el bueno.','That code is not valid. Ask André for the right one.')
-            : bi('No se pudo canjear el código. Intenta otra vez.','Could not redeem the code. Try again.')); }catch(e){}
-        } else {
-          try{ toast(bi(
-            'Sin código no puedo meterte a la mesa. Pídeselo a André.',
-            'Without a code I cannot add you to the desk. Ask André for it.')); }catch(e){}
-        }
+        try{ toast(bi(
+          'Tu acceso funciona, pero ' + mio + ' todavía no aparece en la mesa. Sal y vuelve a entrar; si sigue igual, dile a André.',
+          'Your login works, but ' + mio + ' is not on the desk yet. Sign out and back in; if it persists, tell André.')); }catch(e){}
       }
       return;
     }
