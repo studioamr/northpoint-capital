@@ -820,6 +820,24 @@ body.locked .app{visibility:hidden;pointer-events:none}
   font-family:var(--mono);font-size:11px;color:var(--faint)}
 .mdk-ls b{font-weight:400;margin-left:4px}
 @media(max-width:620px){ .mdk-card{flex-basis:160px} }
+
+/* ════ BALANCE EN GRANDE ════ */
+.bal-grande{display:flex;align-items:flex-end;justify-content:space-between;
+  gap:22px;flex-wrap:wrap;padding:20px 24px 21px;margin-top:14px}
+.bal-grande .bg-l{font-family:var(--mono);font-size:10px;letter-spacing:.22em;
+  color:var(--faint);display:block;margin-bottom:9px}
+.bal-grande .bg-n{font-family:var(--mono);font-size:46px;font-weight:250;
+  letter-spacing:-.03em;line-height:1}
+.bal-grande .bg-d{display:flex;gap:22px;flex-wrap:wrap;align-items:flex-end}
+.bal-grande .bg-d div{text-align:right}
+.bal-grande .bg-d b{display:block;font-family:var(--mono);font-size:17px;
+  font-weight:400;letter-spacing:-.01em;margin-top:5px}
+@media(max-width:620px){
+  .bal-grande{padding:16px 17px 17px;gap:14px}
+  .bal-grande .bg-n{font-size:34px}
+  .bal-grande .bg-d{gap:16px} .bal-grande .bg-d div{text-align:left}
+  .bal-grande .bg-d b{font-size:15px}
+}
 /* En hilera, cada tarjeta manda su propio ancho: los objetivos del plan
    y los gráficos van en la misma cinta arrastrable que las tasas. */
 #dashKpis > .kpi{flex:0 0 196px}
@@ -2778,6 +2796,11 @@ stop[stop-color="#9BC0DC"]{stop-color:var(--txt)}
         <p class="sr-only" id="acctLive" role="status" aria-live="polite"></p>
 
         <div id="dashAlert"></div>
+
+        <!-- El balance, en grande. Es la cifra que se busca al abrir el
+             terminal y estaba escondida en una línea de 11 px de la barra
+             de cuentas, junto al selector. -->
+        <div class="panel bal-grande" id="balGrande"></div>
 
         <!-- Cada sección es UNA hilera que se arrastra: los objetivos del plan,
              las tasas y los gráficos. Nada apilado, nada de rejillas. -->
@@ -6929,8 +6952,37 @@ function repintaCintas(){
   });
 }
 
+/* El balance de la mesa: la suma de lo que hay HOY en las cuentas en vista.
+   Sale de carreraCuenta(), que es la misma fuente que usan Ajustes y el camino
+   a payout — cada pantalla haciendo su propia suma es como la misma cuenta
+   llegó a valer $50,500 en un lado y $47,500 en otro. */
+function renderBalance(){
+  const caja = $('#balGrande'); if(!caja) return;
+  const cuentas = acctsSel().filter(a => esViva(a) && !esSim(a));
+  if(!cuentas.length){
+    caja.innerHTML = `<div><span class="bg-l">${tr('ac.balance').toUpperCase()}</span>
+      <div class="bg-n">—</div></div>
+      <div class="bg-d"><div><span class="bg-l">${bi('SIN CUENTAS','NO ACCOUNTS')}</span></div></div>`;
+    return;
+  }
+  const bal = cuentas.reduce((x,a) => x + (carreraCuenta(a).balance || 0), 0);
+  const cap = cuentas.reduce((x,a) => x + (a.size || 0), 0);
+  const dif = bal - cap;
+  caja.innerHTML = `<div>
+      <span class="bg-l">${tr('ac.balance').toUpperCase()}</span>
+      <div class="bg-n ${dif>0?'up':dif<0?'down':''}">${fmt$(bal)}</div>
+    </div>
+    <div class="bg-d">
+      <div><span class="bg-l">${bi('CONTRA EL CAPITAL','VS CAPITAL')}</span>
+        <b class="${dif>0?'up':dif<0?'down':''}">${fmt$(dif, true)}</b></div>
+      <div><span class="bg-l">${bi('CAPITAL','CAPITAL')}</span><b>${fmt$(cap)}</b></div>
+      <div><span class="bg-l">${bi('CUENTAS','ACCOUNTS')}</span><b>${cuentas.length}</b></div>
+    </div>`;
+}
+
 function renderDashboard(){
   renderAcctPanel();
+  renderBalance();
 
   const todos = Object.values(tradesByDay()).flat();
   const st = computeStats(todos);
@@ -7172,8 +7224,11 @@ function drawEquity(){
   }
   cv.style.display = 'block'; $('#eqEmpty').innerHTML = '';
 
-  /* acumulado tras cada trade, y de paso el pico y el hoyo más hondo */
-  const pts = []; let acc = 0, pico = 0, hoyo = 0;
+  /* El acumulado tras cada trade. El PRIMER punto es el CERO —el origen, antes
+     de operar—, así se ve de dónde salió la curva; antes empezaba pegada al
+     resultado del primer trade y parecía que la cuenta nacía ya ganando.
+     Por eso pts[i] corresponde a fills[i-1]: el punto 0 no tiene trade. */
+  const pts = [0]; let acc = 0, pico = 0, hoyo = 0;
   fills.forEach(t => { acc += (t.pnl||0); pts.push(acc);
     pico = Math.max(pico, acc); hoyo = Math.min(hoyo, acc - pico); });
 
@@ -7184,13 +7239,21 @@ function drawEquity(){
     return c.length ? -Math.min(...c) : -2000;
   })();
 
+  /* EL TECHO: el primer objetivo, el que pasa la evaluación. Se toma el MENOR
+     de las cuentas en vista —es el primero que se alcanza— y si ninguna trae
+     reglas leíbles, los $3,000 de una cuenta de 50K. */
+  const META = (() => {
+    const c = acctsSel().map(a => (reglasDe(a) || {}).target).filter(v => v > 0);
+    return c.length ? Math.min(...c) : 3000;
+  })();
+
   const W = wrap.clientWidth - 36, H = 190, dpr = devicePixelRatio||1;
   cv.width = W*dpr; cv.height = H*dpr; cv.style.height = H+'px';
   const ctx = cv.getContext('2d'); ctx.scale(dpr,dpr); ctx.clearRect(0,0,W,H);
 
   /* la escala SIEMPRE incluye el suelo: si no cabe en el cuadro, la línea que
      importa se queda fuera justo el día que más se necesita */
-  const min = Math.min(0, SUELO, ...pts), max = Math.max(0, ...pts), span = (max-min)||1;
+  const min = Math.min(0, SUELO, ...pts), max = Math.max(0, META, ...pts), span = (max-min)||1;
   const IZQ = 8, DER = W - 10;
   const X = i => IZQ + i*(DER-IZQ)/Math.max(1, pts.length-1);
   const Y = v => 14 + (H-40)*(1-(v-min)/span);
@@ -7207,6 +7270,19 @@ function drawEquity(){
   ctx.font = '9px "IBM Plex Mono"'; ctx.fillStyle = '#DE6A5F';
   ctx.textAlign = 'left'; ctx.textBaseline = 'bottom';
   ctx.fillText('DRAWDOWN ' + fmt$(SUELO), IZQ + 2, Y(SUELO) - 3);
+
+  /* LA META — arriba, en oro, y con la parte ya recorrida sólida: se ve de un
+     vistazo cuánto falta sin tener que leer un número */
+  const llego = pts[pts.length-1] >= META;
+  ctx.strokeStyle = llego ? 'rgba(87,199,155,.60)' : 'rgba(217,164,65,.55)';
+  ctx.setLineDash([5,4]); ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(IZQ, Y(META)); ctx.lineTo(DER, Y(META)); ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.fillStyle = llego ? '#57C79B' : '#D9A441';
+  ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+  const avance = Math.max(0, Math.min(100, Math.round(pts[pts.length-1]/META*100)));
+  ctx.fillText((llego ? '\u2713 ' : '') + bi('OBJETIVO ','TARGET ') + fmt$(META)
+               + (llego ? '' : '  ·  ' + avance + '%'), IZQ + 2, Y(META) + 4);
 
   /* área bajo la curva */
   const verde = pts[pts.length-1] >= 0, rgb = verde ? '87,199,155' : '222,106,95';
@@ -7228,7 +7304,8 @@ function drawEquity(){
   const r = pts.length > 150 ? 1.5 : pts.length > 60 ? 2 : 2.8;
   if(pts.length <= 90){
     pts.forEach((v,i) => {
-      const gano = (fills[i].pnl||0) >= 0;
+      if(i === 0) return;               // el origen no es un trade
+      const gano = (fills[i-1].pnl||0) >= 0;
       ctx.beginPath(); ctx.arc(X(i), Y(v), r, 0, 7);
       ctx.fillStyle = gano ? (cssVar('--bg') || '#080808') : '#DE6A5F';
       ctx.fill();
@@ -7241,7 +7318,8 @@ function drawEquity(){
   ctx.fillStyle = verde ? '#57C79B' : '#DE6A5F'; ctx.fill();
 
   $('#eqLabel').textContent = fills.length + ' ' + tr('j.trades') + ' · '
-    + bi('hoyo ','worst ') + fmt$(hoyo, true);
+    + bi('hoyo ','worst ') + fmt$(hoyo, true)
+    + (pts[pts.length-1] >= META ? ' · ' + bi('OBJETIVO HECHO','TARGET MET') : '');
 }
 function normalizaChk(arr, n){
   const out = [];
