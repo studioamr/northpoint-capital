@@ -3398,10 +3398,6 @@ stop[stop-color="#9BC0DC"]{stop-color:var(--txt)}
       <div class="f-full"><label>Tu correo real</label><input id="alCorreo" type="email" autocomplete="off" placeholder="tucorreo@gmail.com" autocapitalize="none" spellcheck="false"></div>
       <div class="f-full"><label>Tu contraseña de nube (mínimo 6)</label><input id="alPass" type="password" autocomplete="new-password"></div>
       <div class="f-full"><label>Repítela</label><input id="alPass2" type="password" autocomplete="new-password"></div>
-      <div class="f-full" id="alCodigoCaja"><label>Código de invitación</label>
-        <input id="alCodigo" autocomplete="off" placeholder="NORTHPOINT26" autocapitalize="characters" spellcheck="false" style="text-transform:uppercase">
-        <p class="micro" style="margin-top:6px;line-height:1.5;text-transform:none;letter-spacing:.02em">Te lo pasó André. Sin él la mesa no te deja pasar.</p>
-      </div>
       <div id="alErr" class="login-err"></div>
       <button class="btn primary" id="alGo" style="width:100%;margin-top:6px">Crear mi acceso</button>
     </div>
@@ -8825,7 +8821,8 @@ function alPintaNombre(){
   const nuevo = $('#alSocio').value === 'nuevo';
   const caja = $('#alNombreCaja'); if(caja) caja.style.display = nuevo ? '' : 'none';
   /* los tres de casa ya están en la lista blanca: a ellos no se les pide código */
-  const cod = $('#alCodigoCaja'); if(cod) cod.style.display = nuevo ? '' : 'none';
+  /* la caja del código ya no existe: el alta no pide nada más que nombre,
+     correo y contraseña */
 }
 $('#alSocio')?.addEventListener('change', alPintaNombre);
 alPintaNombre();
@@ -8834,12 +8831,10 @@ $('#alGo').addEventListener('click', async () => {
   const elegido = $('#alSocio').value;
   const esNuevo = elegido === 'nuevo';
   const nombre = ($('#alNombre').value || '').trim();
-  const codigo = ($('#alCodigo').value || '').trim().toUpperCase();
   const correo = $('#alCorreo').value.trim().toLowerCase();
   const p1 = $('#alPass').value, p2 = $('#alPass2').value;
   const err = m => { $('#alErr').textContent = m; };
   if(esNuevo && nombre.length < 2) return err('Escribe tu nombre: así te va a ver la firma.');
-  if(esNuevo && codigo.length < 4) return err('Falta el código de invitación que te pasó André.');
   if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(correo)) return err('Ese correo no se ve bien.');
   if(p1.length < 6) return err('La contraseña necesita al menos 6 caracteres.');
   if(p1 !== p2) return err('Las contraseñas no coinciden.');
@@ -8871,8 +8866,11 @@ $('#alGo').addEventListener('click', async () => {
        qué correos tienen cuenta. Se detecta y se dice claro. */
     if(d.identities && d.identities.length === 0)
       throw new Error('Ese correo ya tiene cuenta. Usa Entrar con tu contraseña; si la perdiste, dile a André.');
-    /* confirmado: ahora sí se gana su lugar en la firma */
-    if(esNuevo){ uid2 = altaEnMesa(nombre, correo); guardaCodigo(codigo, nombre); }
+    /* SIN CÓDIGO (André, 13-ago): quien se registra entra DERECHO a la mesa.
+       Antes hacía falta un código que él repartía a mano y era la traba que
+       más gente dejaba fuera. Ahora el alta sola basta — la nube tiene que
+       ir a juego: política de authenticated, ver docs/ABRIR-LA-MESA.sql */
+    if(esNuevo){ uid2 = altaEnMesa(nombre, correo); guardaCodigo('', nombre); }
     S.correos = S.correos || {};
     S.correos[uid2] = correo;
     /* respaldo local de SU contraseña (hash, nunca en texto): sin esto, el día
@@ -10033,9 +10031,12 @@ function guardaCodigo(cod, nombre){
   }catch(e){}
 }
 async function canjeaCodigo(cod){
-  let codigo = cod;
+  /* SIN CÓDIGO: basta con tener sesión. Se sigue llamando a unirse_a_mesa
+     porque es la que registra al socio del lado de la nube; el código viaja
+     vacío y la función lo ignora (ver docs/ABRIR-LA-MESA.sql). */
+  let codigo = cod || '';
   if(!codigo){ try{ codigo = localStorage.getItem(CODIGO_LS) || ''; }catch(e){} }
-  if(!codigo || !cloudTok) return null;
+  if(!cloudTok) return null;
   let nombre = ''; try{ nombre = localStorage.getItem(NOMBRE_LS) || ''; }catch(e){}
   try{
     const r = await fetch(CLOUD.url + '/rest/v1/rpc/unirse_a_mesa', {
