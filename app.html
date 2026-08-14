@@ -2114,6 +2114,15 @@ canvas{display:block;width:100%}
 #jTable td.dim{color:var(--dim)}
 #jTable .j-fila{cursor:pointer;transition:background .12s}
 #jTable .j-fila:hover{background:var(--w05)}
+/* ── BLOQUES ALTERNOS POR DÍA ── un día claro, el siguiente sombreado, para
+   que se vea de un golpe dónde termina un día y empieza el otro. El tinte se
+   saca del texto con color-mix, así funciona igual en tema claro y oscuro
+   (un gris fijo se veía sucio en uno de los dos). */
+#jTable tr.j-par > td{background:color-mix(in srgb, var(--txt) 5%, transparent)}
+#jTable tr.j-dia.j-par > td{background:color-mix(in srgb, var(--txt) 8%, transparent)}
+#jTable tr.j-fila.j-par:hover > td{background:color-mix(in srgb, var(--txt) 10%, transparent)}
+/* la raya que corta entre días: el día nuevo empieza con línea marcada */
+#jTable tr.j-dia > td{border-top:1px solid var(--line)}
 #jTable .j-fila:hover .j-acc{opacity:1}
 #jTable .j-acc{opacity:.35;transition:opacity .12s;white-space:nowrap}
 #jTable .j-clip{color:var(--faint);font-size:11px;margin-right:4px}
@@ -8080,11 +8089,15 @@ function renderTrades(){
     <th class="r">${tr('j.entrada')}</th><th class="r">${tr('j.salida')}</th><th class="r pnl-col">P&L</th>
     <th>${tr('j.setup')}</th><th>${tr('j.disciplina')}</th><th></th>
   </tr></thead><tbody>`;
-  days.forEach(d=>{
+  days.forEach((d, iDia)=>{
+    /* BLOQUES ALTERNOS por día (André): un día claro, el siguiente sombreado.
+       Sin esto, cuatro trades de dos días distintos se leen como una sola
+       lista y no se ve dónde acaba un día y empieza el otro. */
+    const par = iDia % 2 === 1 ? ' j-par' : '';
     const dt = byDay[d];
     const dp = dt.reduce((a,t)=>a+(t.pnl||0),0);
     const gan = dt.filter(x => (x.pnl||0) > 0).length, per = dt.filter(x => (x.pnl||0) < 0).length;
-    html += `<tr class="j-dia">
+    html += `<tr class="j-dia${par}">
       <td colspan="7"><b>${fmtFecha(d)}</b><span>${dt.length} ${dt.length>1?bi('trades','trades'):'trade'} · ${gan}G · ${per}P</span></td>
       <td class="r mono ${dp>0?'up':dp<0?'down':''}">${fmt$(dp,true)}</td>
       <td colspan="3"></td></tr>`;
@@ -8092,7 +8105,7 @@ function renderTrades(){
       /* La disciplina no depende de qué cuentas estés viendo: se evalúa sobre el día
          completo, con todas las cuentas. */
       const v = violations(t, (diasTodos[d] || dt));
-      html += `<tr class="j-fila" onclick="reporteTrade('${t.id}')" title="${bi('Ver el reporte de este trade','See this trade\'s report')}">
+      html += `<tr class="j-fila${par}" onclick="reporteTrade('${t.id}')" title="${bi('Ver el reporte de este trade','See this trade\'s report')}">
         <td class="mono j-fecha">${t.date.slice(8)}/${t.date.slice(5,7)}</td>
         <td class="mono">${t.time||'—'}</td>
         <td class="mono j-sym">${esc(t.sym)}</td>
