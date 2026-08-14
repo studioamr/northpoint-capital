@@ -1302,6 +1302,43 @@ body.doc-open #indice{display:none}
 .pl-copy{margin-top:16px;font-family:var(--mono);font-size:10px;letter-spacing:.12em;
   color:var(--faint)}
 @media(max-width:640px){ .pl-fila{flex-direction:column;gap:22px} .pl-links{gap:14px} }
+
+/* ════ LA COMPRA DEL BOOTCAMP ════
+   Una sola caja, el precio grande y dos botones. La regla del checkout es que
+   nada compita con el precio y con el botón: por eso lo incluido va en lista
+   corta y la letra legal, abajo y chica pero legible. */
+.bc-compra{margin-top:clamp(48px,6vw,80px)}
+.bc-caja{max-width:560px;border:1px solid var(--line);border-radius:3px;
+  padding:clamp(28px,4vw,44px)}
+.bc-eyebrow{font-family:var(--mono);font-size:10px;letter-spacing:.24em;
+  color:var(--faint);text-transform:uppercase}
+.bc-num{font-family:var(--mono);font-size:clamp(44px,7vw,64px);font-weight:250;
+  letter-spacing:-.04em;line-height:1;margin-top:14px;display:flex;
+  align-items:baseline;gap:10px}
+.bc-num i{font-style:normal;font-size:15px;letter-spacing:.14em;color:var(--faint)}
+.bc-sub{font-size:13.5px;color:var(--dim);margin-top:12px;font-weight:300}
+.bc-incluye{list-style:none;margin:30px 0 0;padding:26px 0 0;
+  border-top:1px solid var(--line)}
+.bc-incluye li{font-size:14.5px;color:var(--dim);font-weight:300;padding-left:22px;
+  position:relative;margin-bottom:11px}
+.bc-incluye li::before{content:"—";position:absolute;left:0;color:var(--faint)}
+.bc-incluye b{color:var(--txt);font-weight:500}
+.bc-botones{display:flex;flex-direction:column;gap:10px;margin-top:30px}
+.bc-btn{display:block;text-align:center;text-decoration:none;padding:16px 20px;
+  border-radius:2px;font-family:var(--mono);font-size:12.5px;letter-spacing:.1em;
+  transition:transform .16s,opacity .16s;border:1px solid transparent}
+.bc-btn span{display:block;font-size:9.5px;letter-spacing:.14em;opacity:.6;margin-top:5px}
+.bc-btn:hover{transform:translateY(-1px)}
+.bc-btn-1{background:var(--txt);color:var(--bg)}
+.bc-btn-2{border-color:var(--line);color:var(--txt)}
+.bc-btn-2:hover{border-color:var(--txt)}
+.bc-btn[aria-disabled="true"]{opacity:.45;pointer-events:none}
+.bc-garantia{font-size:13px;color:var(--dim);margin-top:24px;font-weight:300;
+  line-height:1.6}
+.bc-garantia b{color:var(--txt);font-weight:500}
+.bc-legal{font-size:11.5px;color:var(--faint);margin-top:14px;line-height:1.6;
+  font-weight:300}
+.bc-legal a{color:var(--dim)}
 </style>
 </head>
 <body>
@@ -1449,7 +1486,43 @@ body.doc-open #indice{display:none}
       </div></div>
     </div>
   </div>
-</section>
+
+    <!-- ════ LA COMPRA ════
+         Dos formas de pagar a propósito: Stripe cubre tarjeta internacional y
+         MercadoPago abre OXXO y SPEI, que en México es la mitad del mercado.
+         Los enlaces se llenan cuando las cuentas estén creadas — hasta entonces
+         el botón dice la verdad en vez de tronar. -->
+    <div class="wrap bc-compra rv">
+      <div class="bc-caja">
+        <div class="bc-precio">
+          <p class="bc-eyebrow">El Bootcamp completo</p>
+          <div class="bc-num">$17,000<i>MXN</i></div>
+          <p class="bc-sub">Pago único · sin mensualidades · acceso de por vida</p>
+        </div>
+
+        <ul class="bc-incluye">
+          <li>Los 8 módulos · <b>+48 hrs</b> de video grabado</li>
+          <li>El <b>Terminal</b> completo — journal, calendario y métricas</li>
+          <li>La <b>comunidad</b> de Discord</li>
+          <li>La mesa <b>en vivo</b>, lunes a viernes</li>
+          <li>Puerta abierta al <b>Programa de respaldo</b></li>
+        </ul>
+
+        <div class="bc-botones">
+          <a class="bc-btn bc-btn-1" href="#" data-pago="stripe">
+            Pagar con tarjeta <span>Visa · Mastercard · Amex</span></a>
+          <a class="bc-btn bc-btn-2" href="#" data-pago="mercadopago">
+            Pagar con OXXO o SPEI <span>MercadoPago · transferencia</span></a>
+        </div>
+
+        <p class="bc-garantia"><b>7 días de garantía.</b> Si no es para ti, escribes y te
+          devolvemos el dinero — sin preguntas, mientras no hayas visto más del 30%.</p>
+        <p class="bc-legal">Al comprar aceptas los <a href="legal/terminos.html">términos</a>
+          y el <a href="legal/riesgo.html">aviso de riesgo</a>. Operar futuros implica
+          apalancamiento y puedes perder tu capital.</p>
+      </div>
+    </div>
+  </section>
 
 <section id="journal">
   <!-- JOURNAL: el POV de un escritorio en NY (André) — la ciudad por la
@@ -2693,6 +2766,32 @@ body.doc-open #indice{display:none}
     <p class="pl-copy">© 2026 André Macouzet Ruiz. Todos los derechos reservados.</p>
   </div>
 </footer>
+
+<script>
+/* ── LOS BOTONES DE PAGO ──
+   Las ligas viven aquí en una sola constante: cuando existan las cuentas de
+   Stripe y MercadoPago se pegan sus URLs y ya, sin tocar el HTML.
+
+   Mientras estén vacías el botón NO se queda apuntando a "#" fingiendo que
+   funciona: se desactiva y dice que abre en unos días. Un checkout que no
+   cobra y no lo avisa es la peor primera impresión que puede dar una firma
+   que pide $17,000. */
+(function(){
+  var PAGO = {
+    stripe:      '',   // ← pegar aquí el Payment Link de Stripe
+    mercadopago: ''    // ← pegar aquí el link de preferencia de MercadoPago
+  };
+  document.querySelectorAll('[data-pago]').forEach(function(a){
+    var url = PAGO[a.getAttribute('data-pago')];
+    if (url) { a.href = url; a.setAttribute('rel','noopener'); return; }
+    a.setAttribute('aria-disabled','true');
+    a.setAttribute('title','El cobro abre en unos días');
+    var s = a.querySelector('span');
+    if (s) s.textContent = 'ABRE EN UNOS DÍAS';
+    a.addEventListener('click', function(e){ e.preventDefault(); });
+  });
+})();
+</script>
 
 <div class="deck" aria-hidden="false">
   <span class="deck-sec">NORTHPOINT <em id="deckSec">// ÍNDICE /0.0</em></span>
