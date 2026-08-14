@@ -45,19 +45,51 @@ firma. Por eso van las dos.
 
 ## Paso 3 · Pegarlos
 
-En `index.html`, busca `var PAGO = {` y pon los dos enlaces:
+En `index.html`, busca `var PAGO = {` y pon los enlaces:
 
 ```js
 var PAGO = {
-  stripe:      'https://buy.stripe.com/TU_LINK',
-  mercadopago: 'https://mpago.la/TU_LINK'
+  stripeMensual: 'https://buy.stripe.com/...',   // SUSCRIPCIÓN mensual $1,490
+  stripeAnual:   'https://buy.stripe.com/...',   // pago único $11,900
+  mpAnual:       'https://mpago.la/...',         // MercadoPago $11,900
+  stripeVida:    'https://buy.stripe.com/...',   // pago único $17,000
+  mpVida:        'https://mpago.la/...'          // MercadoPago $17,000
 };
 ```
 
-Con eso los botones se activan solos. No hay que tocar nada más — si dejas uno
-vacío, ese botón se queda desactivado y el otro funciona.
+Con eso los botones se activan solos. **Si dejas uno vacío, ese botón se queda
+desactivado y los demás funcionan** — así puedes lanzar con el anual primero y
+agregar los otros después.
+
+> ⚠️ **El mensual es una SUSCRIPCIÓN, no un pago único.** En Stripe se crea con
+> *Product → Recurring → Monthly*, no con un Payment Link normal. Si lo creas
+> como pago único, cobras una sola vez y el acceso queda abierto para siempre a
+> $1,490. MercadoPago también maneja suscripciones, pero su flujo es más
+> engorroso: por eso el mensual va sólo por Stripe.
 
 ---
+
+## Los tres planes y por qué esos precios
+
+| Plan | Precio | Equivale a | Qué suma |
+|---|---|---|---|
+| Mensual | $1,490/mes | — | La puerta de entrada |
+| **Un año** | **$11,900** | $992/mes | 4 meses de regalo · 1 sesión 1a1 |
+| De por vida | $17,000 | pago único | Actualizaciones · 3 sesiones · prioridad |
+
+El razonamiento, para que no se toque a la ligera:
+
+- **El mensual a doce meses cuesta $17,880 — más que el de por vida.** Es a
+  propósito. El mensual existe para que entren, no para que se queden ahí.
+- **El anual es el ancla** y el que más se va a vender: cuatro meses de regalo
+  contra el mensual. Por eso lleva la marca de «el más elegido».
+- **El de por vida son sólo $5,100 más que el anual.** Ese contraste es lo que
+  lo hace ver razonable. Sin el anual en medio, $17,000 sueltos parecen mucho.
+
+Lo que sube con el plan **no es el contenido** —los tres traen los 8 módulos, el
+Terminal y el Discord— sino el compromiso de André: sesiones uno a uno y
+prioridad en el Programa. Retener contenido genera rencor en quien paga menos;
+dar más acceso a la persona, no.
 
 ## Antes de la primera venta
 
