@@ -4900,6 +4900,14 @@ const DIASL  = { es:['DOMINGO','LUNES','MARTES','MIÉRCOLES','JUEVES','VIERNES',
 const idi = () => (typeof IDIOMA !== 'undefined' && IDIOMA === 'en') ? 'en' : 'es';
 /* Para contenido largo que no vale la pena meter al diccionario por clave. */
 const bi = (es, en) => en;
+/* loc(['Nueva York','New York']) — el mismo idioma que bi(), pero recibiendo
+   el par en un arreglo, que es como vienen los nombres de ciudad ([c.n, c.en]).
+
+   Se usaba en ocho lugares y NUNCA SE DEFINIÓ: la oficina y el jet tronaban a
+   media pintura y quedaba sólo el cielo dibujado —que es exactamente lo que
+   André estaba viendo—. El error moría dentro del requestAnimationFrame, así
+   que jamás llegó a la consola. */
+const loc = par => bi(par[0], par[1]);
 /* Blindada: un trade malformado (un respaldo viejo, una edición a mano) no
    debe tirar el render entero por una fecha que no existe. */
 const fmtFecha = iso => {
@@ -12852,6 +12860,7 @@ function sueloDe(c, W, H, ciudad, osc, rr){
 
 /* dónde está parado el usuario en el mundo: arriba (jet) o abajo (sesión) */
 let ofiBajado = false, ofiCiudadKey = '';
+let ofiTronó = false;
 
 function dibujaOficina(t){
   const cv = $('#agOficina'); if(!cv) return;
@@ -13888,9 +13897,27 @@ function animaOficina(){
       const linea = ofiJunta[ofiIdx];
       if(linea) ofiHablando = linea.de;
     }
-    dibujaOficina(t);
+    /* ── POR QUÉ ESTE try/catch ──
+       `loc()` se llamaba en ocho lugares y NUNCA se definió: la oficina y el
+       jet tronaban a media pintura y quedaba sólo el cielo. Como el error
+       ocurría dentro del requestAnimationFrame, moría ahí y jamás llegó a la
+       consola — el bug vivió meses en la app hasta que André lo vio.
+
+       Ahora se atrapa, se avisa UNA vez (repetir 60 veces por segundo no
+       informa, ahoga) y el bucle se detiene: una escena congelada se nota y se
+       reporta; una que se repinta rota 60 veces por segundo, no. */
+    try {
+      dibujaOficina(t);
+    } catch(e){
+      if(!ofiTronó){
+        ofiTronó = true;
+        console.error('[oficina] la escena se detuvo:', e);
+      }
+      return;                        // no se re-agenda: queda congelada, no rota
+    }
     ofiRAF = requestAnimationFrame(loop);
   };
+  ofiTronó = false;                  // cada arranque merece su propio intento
   ofiRAF = requestAnimationFrame(loop);
 }
 
