@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>NORTHPOINT · Marcador de momentos</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+/* ═══════════════════════════════════════════════════════════════
+   NORTHPOINT · MARCADOR DE MOMENTOS
+
+   Corre en la TERCERA pantalla mientras streameas. Cada vez que pasa
+   algo que merece clip, marcas — con el botón o con la BARRA
+   ESPACIADORA — y al final exportas un .json que el cortador usa para
+   sacar los clips solo.
+
+   La pieza que hace esto distinto: si esta página vive en el MISMO
+   dominio que el Terminal (studioamr.github.io), LEE el journal y
+   marca sola cada trade que registras. O sea: tu propio journal es el
+   detector de momentos. Nadie más tiene eso.
+
+   El reloj arranca cuando le das EMPEZAR — dáselo en el MISMO
+   instante que empiezas a grabar en OBS. Todo se guarda en
+   localStorage: si se cierra la pestaña, no se pierde nada.
+   ═══════════════════════════════════════════════════════════════ */
+:root{
+  --bg:#0A0A0A; --tinta:#F2F2F2; --dim:#A8A8A8; --faint:#6E6E6E;
+  --oro:#C9A84C; --up:#2FA57C; --down:#C65A4E; --linea:rgba(255,255,255,.12);
+  --sans:'Inter',-apple-system,system-ui,sans-serif;
+  --mono:'IBM Plex Mono',ui-monospace,monospace;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg);color:var(--tinta);font-family:var(--sans);min-height:100vh;
+  padding:26px;-webkit-font-smoothing:antialiased}
+.cab{display:flex;align-items:baseline;gap:16px;margin-bottom:22px}
+.cab h1{font-size:19px;font-weight:700;letter-spacing:.16em}
+.cab small{font-family:var(--mono);font-size:9px;letter-spacing:.3em;color:var(--oro)}
+.cab .est{margin-left:auto;font-family:var(--mono);font-size:11px;letter-spacing:.2em;
+  color:var(--faint)}
+
+.reloj{font-family:var(--mono);font-size:64px;font-weight:600;letter-spacing:.04em;
+  text-align:center;padding:14px 0 6px}
+.reloj.off{color:var(--faint)}
+.sub{text-align:center;font-family:var(--mono);font-size:10px;letter-spacing:.28em;
+  color:var(--faint);margin-bottom:20px}
+
+.fila{display:flex;gap:10px;margin-bottom:16px}
+.btn{flex:1;padding:14px;border:1px solid var(--linea);border-radius:12px;background:transparent;
+  color:var(--tinta);font-family:var(--mono);font-size:11px;letter-spacing:.16em;cursor:pointer;
+  transition:background .18s,border-color .18s}
+.btn:hover{background:rgba(255,255,255,.05);border-color:var(--tinta)}
+.btn.pri{background:var(--tinta);color:var(--bg);border-color:var(--tinta);font-weight:600}
+.btn.alto{background:var(--down);border-color:var(--down);color:#fff}
+
+.marcar{width:100%;padding:34px;border:2px solid var(--oro);border-radius:18px;
+  background:rgba(201,168,76,.09);color:var(--oro);font-size:26px;font-weight:700;
+  letter-spacing:.14em;cursor:pointer;margin-bottom:8px;transition:transform .1s,background .18s}
+.marcar:hover{background:rgba(201,168,76,.16)}
+.marcar:active{transform:scale(.985)}
+.marcar:disabled{opacity:.3;cursor:not-allowed}
+.marcar small{display:block;font-family:var(--mono);font-size:10px;letter-spacing:.24em;
+  margin-top:9px;opacity:.75;font-weight:400}
+
+.tipos{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:20px}
+.tipo{padding:11px 6px;border:1px solid var(--linea);border-radius:10px;background:transparent;
+  color:var(--dim);font-family:var(--mono);font-size:9.5px;letter-spacing:.1em;cursor:pointer}
+.tipo.on{border-color:var(--oro);color:var(--oro);background:rgba(201,168,76,.08)}
+
+.lista{border-top:1px solid var(--linea);max-height:38vh;overflow:auto}
+.m{display:flex;align-items:center;gap:13px;padding:11px 4px;border-bottom:1px solid rgba(255,255,255,.06)}
+.m b{font-family:var(--mono);font-size:14px;font-weight:600;min-width:74px}
+.m .et{font-family:var(--mono);font-size:9px;letter-spacing:.16em;padding:3px 8px;
+  border:1px solid var(--linea);border-radius:99px;color:var(--dim)}
+.m .et.auto{border-color:var(--up);color:var(--up)}
+.m input{flex:1;background:transparent;border:none;color:var(--tinta);font:13px var(--sans);
+  outline:none;border-bottom:1px solid transparent;padding:3px 0}
+.m input:focus{border-bottom-color:var(--linea)}
+.m .x{background:none;border:none;color:var(--faint);cursor:pointer;font-size:17px;padding:0 5px}
+.vacio{padding:26px 4px;color:var(--faint);font-family:var(--mono);font-size:11px;
+  letter-spacing:.12em}
+.ayuda{margin-top:18px;font-family:var(--mono);font-size:10px;line-height:2;color:var(--faint);
+  letter-spacing:.06em}
+.ayuda b{color:var(--dim)}
+</style>
+</head>
+<body>
+
+<div class="cab">
+  <h1>NORTHPOINT</h1><small>MARCADOR DE MOMENTOS</small>
+  <div class="est" id="est">DETENIDO</div>
+</div>
+
+<div class="reloj off" id="reloj">00:00:00</div>
+<div class="sub" id="sub">DALE EMPEZAR EN EL MISMO INSTANTE QUE GRABAS EN OBS</div>
+
+<div class="fila">
+  <button class="btn pri" id="bEmp">▶ EMPEZAR</button>
+  <button class="btn" id="bFin">■ TERMINAR</button>
+  <button class="btn" id="bExp">↓ EXPORTAR JSON</button>
+  <button class="btn alto" id="bBorra">BORRAR TODO</button>
+</div>
+
+<button class="marcar" id="bMar" disabled>
+  MARCAR MOMENTO
+  <small>O PRESIONA LA BARRA ESPACIADORA</small>
+</button>
+
+<div class="tipos" id="tipos"></div>
+
+<div class="lista" id="lista"></div>
+
+<div class="ayuda">
+  <b>BARRA ESPACIADORA</b> marca · <b>1 2 3 4</b> cambian la etiqueta ·
+  <b>Z</b> deshace el último<br>
+  Cada marca corta desde <b>25 s antes</b> hasta <b>20 s después</b> — el
+  contexto de por qué pasó cabe en el clip.<br>
+  <span id="autoEst">Journal del Terminal: buscando…</span>
+</div>
+
+<script>
+(function(){
+  var LLAVE = 'np_marcador_v1';
+  var TIPOS = ['TRADE', 'SETUP', 'EXPLICA', 'REACCIÓN'];
+  var S = { t0: null, fin: null, marcas: [], tipo: 0 };
+  try { var g = localStorage.getItem(LLAVE); if (g) S = JSON.parse(g); } catch(e){}
+  function guarda(){ try { localStorage.setItem(LLAVE, JSON.stringify(S)); } catch(e){} }
+
+  function hhmmss(seg){
+    seg = Math.max(0, Math.floor(seg));
+    var h = Math.floor(seg/3600), m = Math.floor(seg%3600/60), s = seg%60;
+    return [h,m,s].map(function(x){ return String(x).padStart(2,'0'); }).join(':');
+  }
+  function ahora(){ return S.t0 ? (Date.now() - S.t0)/1000 : 0; }
+
+  /* ── pintado ── */
+  function pintaTipos(){
+    var c = document.getElementById('tipos');
+    c.innerHTML = TIPOS.map(function(t,i){
+      return '<button class="tipo' + (i===S.tipo?' on':'') + '" data-i="' + i + '">' +
+             (i+1) + ' · ' + t + '</button>';
+    }).join('');
+    c.querySelectorAll('.tipo').forEach(function(b){
+      b.onclick = function(){ S.tipo = +b.dataset.i; guarda(); pintaTipos(); };
+    });
+  }
+  function pintaLista(){
+    var c = document.getElementById('lista');
+    if (!S.marcas.length){
+      c.innerHTML = '<div class="vacio">SIN MARCAS TODAVÍA</div>'; return;
+    }
+    c.innerHTML = S.marcas.map(function(m,i){
+      return '<div class="m"><b>' + hhmmss(m.t) + '</b>' +
+        '<span class="et' + (m.auto ? ' auto' : '') + '">' + m.tipo + (m.auto ? ' ·' : '') + '</span>' +
+        '<input data-i="' + i + '" value="' + (m.nota||'').replace(/"/g,'&quot;') +
+        '" placeholder="nota para el clip (opcional)">' +
+        '<button class="x" data-x="' + i + '">×</button></div>';
+    }).join('');
+    c.querySelectorAll('input').forEach(function(inp){
+      inp.oninput = function(){ S.marcas[+inp.dataset.i].nota = inp.value; guarda(); };
+    });
+    c.querySelectorAll('[data-x]').forEach(function(b){
+      b.onclick = function(){ S.marcas.splice(+b.dataset.x, 1); guarda(); pintaLista(); };
+    });
+  }
+  function pintaEstado(){
+    var vivo = S.t0 && !S.fin;
+    document.getElementById('est').textContent =
+      vivo ? 'GRABANDO · ' + S.marcas.length + ' MARCAS'
+           : (S.fin ? 'TERMINADO · ' + S.marcas.length + ' MARCAS' : 'DETENIDO');
+    document.getElementById('bMar').disabled = !vivo;
+    document.getElementById('reloj').className = 'reloj' + (vivo ? '' : ' off');
+  }
+  setInterval(function(){
+    if (S.t0 && !S.fin) document.getElementById('reloj').textContent = hhmmss(ahora());
+  }, 250);
+
+  /* ── marcar ── */
+  function marca(tipo, auto, nota){
+    if (!S.t0 || S.fin) return;
+    S.marcas.push({ t: Math.round(ahora()*10)/10, tipo: tipo || TIPOS[S.tipo],
+                    auto: !!auto, nota: nota || '' });
+    S.marcas.sort(function(a,b){ return a.t - b.t; });
+    guarda(); pintaLista(); pintaEstado();
+    var b = document.getElementById('bMar');
+    b.style.background = 'rgba(201,168,76,.32)';
+    setTimeout(function(){ b.style.background = ''; }, 160);
+  }
+  document.getElementById('bMar').onclick = function(){ marca(); };
+  document.addEventListener('keydown', function(e){
+    if (e.target.tagName === 'INPUT') return;
+    if (e.code === 'Space'){ e.preventDefault(); marca(); }
+    if (e.key >= '1' && e.key <= '4'){ S.tipo = +e.key - 1; guarda(); pintaTipos(); }
+    if (e.key.toLowerCase() === 'z' && S.marcas.length){
+      S.marcas.pop(); guarda(); pintaLista(); pintaEstado();
+    }
+  });
+
+  document.getElementById('bEmp').onclick = function(){
+    S = { t0: Date.now(), fin: null, marcas: [], tipo: 0 };
+    guarda(); pintaLista(); pintaEstado(); pintaTipos();
+    document.getElementById('sub').textContent = 'GRABANDO · MARCA CUANDO PASE ALGO';
+  };
+  document.getElementById('bFin').onclick = function(){
+    if (S.t0){ S.fin = Date.now(); guarda(); pintaEstado(); }
+  };
+  document.getElementById('bBorra').onclick = function(){
+    if (!confirm('¿Borrar todas las marcas de esta sesión?')) return;
+    S = { t0:null, fin:null, marcas:[], tipo:0 };
+    guarda(); pintaLista(); pintaEstado();
+    document.getElementById('reloj').textContent = '00:00:00';
+  };
+
+  /* ── exportar: el archivo que come el cortador ── */
+  document.getElementById('bExp').onclick = function(){
+    var d = new Date(S.t0 || Date.now());
+    var iso = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' +
+              String(d.getDate()).padStart(2,'0');
+    var datos = {
+      sesion: iso,
+      inicio: new Date(S.t0 || Date.now()).toISOString(),
+      duracion: S.fin ? Math.round((S.fin - S.t0)/1000) : Math.round(ahora()),
+      antes: 25, despues: 20,
+      marcas: S.marcas
+    };
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([JSON.stringify(datos, null, 2)],
+      { type:'application/json' }));
+    a.download = 'marcas-' + iso + '.json';
+    a.click();
+  };
+
+  /* ── EL JOURNAL COMO DETECTOR ── si esta página comparte origen con el
+     Terminal, lee sus trades y marca solo los que aparecen DURANTE el
+     stream. Si no hay Terminal (abierto como archivo local), lo dice y
+     el marcado manual sigue igual. */
+  (function(){
+    var est = document.getElementById('autoEst');
+    var LL = 'northpoint_terminal_v3';
+    var vistos = {};
+    function leo(){
+      try { return JSON.parse(localStorage.getItem(LL) || 'null'); } catch(e){ return null; }
+    }
+    if (!leo()){
+      est.textContent = 'Journal del Terminal: no visible (marca a mano — funciona igual). ' +
+        'Para que marque solo, abre esta página en studioamr.github.io, no como archivo.';
+      est.style.color = 'var(--faint)';
+      return;
+    }
+    est.textContent = 'Journal del Terminal: CONECTADO · los trades se marcan solos';
+    est.style.color = 'var(--up)';
+    (leo().trades || []).forEach(function(t){ vistos[t.id || (t.date+'|'+t.hora)] = 1; });
+    setInterval(function(){
+      if (!S.t0 || S.fin) return;
+      var d = leo(); if (!d) return;
+      (d.trades || []).forEach(function(t){
+        var k = t.id || (t.date + '|' + t.hora);
+        if (vistos[k]) return;
+        vistos[k] = 1;
+        marca('TRADE', true, 'trade registrado en el journal');
+      });
+    }, 4000);
+  })();
+
+  pintaTipos(); pintaLista(); pintaEstado();
+  if (S.t0 && !S.fin) document.getElementById('sub').textContent = 'GRABANDO · MARCA CUANDO PASE ALGO';
+})();
+</script>
+</body>
+</html>
