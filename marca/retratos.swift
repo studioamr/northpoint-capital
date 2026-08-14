@@ -96,7 +96,7 @@ func trata(_ base: CIImage, cara: CGRect?) -> CIImage {
        la cara todavía en sombra. Esto trata cada extremo por separado. */
     if let hs = CIFilter(name: "CIHighlightShadowAdjust") {
         hs.setValue(img, forKey: kCIInputImageKey)
-        hs.setValue(0.62, forKey: "inputHighlightAmount")   // <1 baja las luces
+        hs.setValue(0.74, forKey: "inputHighlightAmount")   // <1 baja las luces
         hs.setValue(0.38, forKey: "inputShadowAmount")      // >0 abre las sombras
         img = hs.outputImage ?? img
     }
@@ -126,7 +126,7 @@ func trata(_ base: CIImage, cara: CGRect?) -> CIImage {
        lavadas y sin negro, y eso es lo que las delata como selfie */
     let c = CIFilter(name: "CIColorControls")!
     c.setValue(img, forKey: kCIInputImageKey)
-    c.setValue(1.16, forKey: kCIInputContrastKey)
+    c.setValue(1.09, forKey: kCIInputContrastKey)
     c.setValue(0.012, forKey: kCIInputBrightnessKey)
     c.setValue(COLOR ? 0.82 : 1.0, forKey: kCIInputSaturationKey)
     img = c.outputImage ?? img
@@ -135,7 +135,7 @@ func trata(_ base: CIImage, cara: CGRect?) -> CIImage {
     let t = CIFilter(name: "CIToneCurve")!
     t.setValue(img, forKey: kCIInputImageKey)
     t.setValue(CIVector(x: 0.00, y: 0.00), forKey: "inputPoint0")
-    t.setValue(CIVector(x: 0.24, y: 0.19), forKey: "inputPoint1")
+    t.setValue(CIVector(x: 0.24, y: 0.21), forKey: "inputPoint1")
     t.setValue(CIVector(x: 0.50, y: 0.50), forKey: "inputPoint2")
     t.setValue(CIVector(x: 0.76, y: 0.83), forKey: "inputPoint3")
     t.setValue(CIVector(x: 1.00, y: 1.00), forKey: "inputPoint4")
@@ -146,7 +146,7 @@ func trata(_ base: CIImage, cara: CGRect?) -> CIImage {
     let s = CIFilter(name: "CIUnsharpMask")!
     s.setValue(img, forKey: kCIInputImageKey)
     s.setValue(1.9, forKey: kCIInputRadiusKey)
-    s.setValue(0.42, forKey: kCIInputIntensityKey)
+    s.setValue(0.24, forKey: kCIInputIntensityKey)
     img = s.outputImage ?? img
 
     return img
