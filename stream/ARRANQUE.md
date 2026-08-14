@@ -32,7 +32,7 @@ Un solo archivo, cuatro escenas. **Tamaño 1920×1080** en todas.
 
 También sirven en línea, sin abrir archivos:
 
-- `https://studioamr.github.io/northpoint-capital/stream/overlay.html`
+- `https://northpointcapital.io/stream/overlay.html`
 - `…/overlay.html?escena=espera`
 
 **Cómo montarlo en OBS** (3 minutos):
@@ -75,7 +75,7 @@ Para hoy puedes ponerlo más específico:
 
 **Descripción**
 > The NORTHPOINT desk, live — futures from the New York session, Mon–Fri.
-> The firm: studioamr.github.io/northpoint-capital
+> The firm: northpointcapital.io
 > Join the community: discord.gg/TWeVqTTPS
 
 ---

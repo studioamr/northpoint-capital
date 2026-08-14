@@ -74,7 +74,7 @@ LAS REGLAS DE LA MESA
 NORTHPOINT respalda a traders que YA son rentables: tú demuestras tus
 payouts, nosotros pagamos tus evaluaciones.
 
-La firma → https://studioamr.github.io/northpoint-capital
+La firma → https://northpointcapital.io
 La comunidad → https://discord.gg/TWeVqTTPS
 
 AVISO: no soy asesor financiero y nada de este video es una recomendación

@@ -32,7 +32,7 @@ grabaciones** lo convierte a .mp4 sin recomprimir, en segundos.
 Abre el marcador en la tercera pantalla:
 
 ```
-https://studioamr.github.io/northpoint-capital/stream/marcador.html
+https://northpointcapital.io/stream/marcador.html
 ```
 
 1. Dale **▶ EMPEZAR** en el mismo instante que le das grabar a OBS. Ese

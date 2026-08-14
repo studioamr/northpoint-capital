@@ -78,7 +78,7 @@ usuarios registrados. Sin ella, cualquiera de ellos podría leer la mesa.
 
 ## 3 · Probarlo antes de mandar nada (3 min)
 
-1. Abre https://studioamr.github.io/northpoint-capital/app.html
+1. Abre https://northpointcapital.io/app.html
 2. Entra con `andre.np` y `northpointandre`.
 3. **Mira el indicador junto al reloj, arriba a la derecha.** Ahí está la verdad:
 

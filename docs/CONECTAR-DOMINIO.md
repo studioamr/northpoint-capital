@@ -1,28 +1,21 @@
-# Conectar northpointcapital.io
+# northpointcapital.io · conectado
 
-Brody compró el dominio. Está en **GoDaddy** y ahora mismo apunta a la página de
-aparcado de ellos. Esto es lo que falta para que sea la casa de NORTHPOINT.
+**Hecho el 14 de agosto de 2026.** Brody compró el dominio, cambió el DNS en
+GoDaddy y NORTHPOINT ya vive ahí. Este documento queda como registro de cómo se
+hizo y de lo que falta cuidar.
+
+- **https://northpointcapital.io** — la firma
+- **https://northpointcapital.io/app.html** — el Terminal
+- **https://northpointcapital.io/stream/overlay.html** — el overlay del stream
+
+Las direcciones viejas (`studioamr.github.io/northpoint-capital/…`) siguen
+funcionando: GitHub las redirige solas.
 
 ---
 
-## ⚠️ El orden importa
+## Cómo quedó
 
-**Primero el DNS, después GitHub.** Si se activa el dominio en GitHub antes de
-que el DNS apunte, GitHub empieza a redirigir la dirección vieja a la nueva — y
-como la nueva todavía apunta al parking de GoDaddy, **el sitio se cae** hasta que
-propague. Por eso el archivo `CNAME` no está en el repo todavía.
-
----
-
-## Paso 1 · Los registros DNS · lo hace quien tenga la cuenta de GoDaddy
-
-El dominio está a nombre del correo `segregopt12@gmail.com`, así que esto lo
-tiene que hacer Brody (o darte acceso).
-
-**GoDaddy → Mis productos → northpointcapital.io → DNS → Administrar zonas**
-
-Borrar los registros `A` y `CNAME` que GoDaddy pone de fábrica (los que apuntan
-a su parking) y dejar exactamente esto:
+**En GoDaddy** — cuatro registros A al apex y un CNAME para `www`:
 
 | Tipo | Nombre | Valor | TTL |
 |---|---|---|---|
@@ -32,76 +25,57 @@ a su parking) y dejar exactamente esto:
 | A | `@` | `185.199.111.153` | 600 |
 | CNAME | `www` | `studioamr.github.io` | 600 |
 
-Son **cuatro** registros A (los cuatro, no uno) más **un** CNAME. Las cuatro IP
-son de GitHub Pages y son públicas y fijas.
+**En el repo** — el archivo `CNAME` en la raíz con `northpointcapital.io`, y el
+dominio activado en la configuración de Pages con HTTPS forzado.
 
-**Para copiar y pegar en WhatsApp:**
+### El orden importaba
 
-```
-GoDaddy → northpointcapital.io → DNS
+Primero el DNS, después el `CNAME` del repo. Al revés, GitHub habría empezado a
+redirigir la dirección vieja a la nueva mientras la nueva todavía apuntaba al
+parking de GoDaddy: el sitio se cae hasta que propague. Por eso el archivo no se
+agregó hasta comprobar que los nameservers de GoDaddy ya contestaban con las
+cuatro IP de GitHub.
 
-Borra los A y CNAME que ya están, y pon:
-
-A     @     185.199.108.153
-A     @     185.199.109.153
-A     @     185.199.110.153
-A     @     185.199.111.153
-CNAME www   studioamr.github.io
-
-TTL 600 en todos. Nada más.
-```
-
-## Paso 2 · Esperar
-
-Tarda de 10 minutos a unas horas. Se comprueba así:
+Se comprobó preguntándole al nameserver directo, sin pasar por caché:
 
 ```bash
-dig +short northpointcapital.io A
+dig +short @ns29.domaincontrol.com northpointcapital.io A
 ```
 
-Cuando conteste las cuatro `185.199.x.153`, ya está.
-
-## Paso 3 · GitHub · esto lo hago yo
-
-Cuando el DNS ya apunte:
-
-1. Se agrega el archivo `CNAME` con `northpointcapital.io` al repo
-2. Se activa el dominio en la configuración de Pages
-3. Se espera a que GitHub emita el certificado (unos minutos) y se prende
-   **Enforce HTTPS**
-
-Después de eso:
-
-| Antes | Después |
-|---|---|
-| studioamr.github.io/northpoint-capital | **northpointcapital.io** |
-| …/app.html | **northpointcapital.io/app.html** |
-| …/stream/overlay.html | **northpointcapital.io/stream/overlay.html** |
-
-Las direcciones viejas siguen funcionando: GitHub las redirige solas.
-
-## Paso 4 · Los links de adentro
-
-Hay 13 links absolutos a la dirección vieja repartidos en la landing, el
-bootcamp, el dossier, la invitación y las guías del stream. Se cambian todos de
-una vez cuando el dominio esté vivo — antes no, porque quedarían apuntando a un
-lugar que todavía no responde.
+El resolver local puede seguir dando las IP viejas un rato — eso es su caché, no
+un problema del dominio.
 
 ---
 
-## Una cosa que hay que arreglar, sin prisa pero sin olvidarla
+## Lo que hay que cuidar
 
-**El dominio está en la cuenta de Brody, no en la tuya.** Hoy no pasa nada
+**El dominio está en la cuenta de Brody, no en la de André.** Hoy no pasa nada
 —claramente es un regalo y va en serio—, pero el dominio es la dirección del
-negocio: si un día se pierde el acceso a ese correo, o simplemente no renueva,
+negocio: si un día se pierde el acceso a ese correo, o simplemente no se renueva,
 NORTHPOINT se queda sin casa y sin manera de recuperarla rápido.
 
 Lo que conviene, cuando haya chance y sin hacerlo raro:
 
-- **Lo más limpio:** que te lo transfiera a una cuenta de GoDaddy tuya. Es
+- **Lo más limpio:** que se lo transfiera a una cuenta de GoDaddy de André. Es
   gratis entre cuentas de GoDaddy y tarda unos minutos.
-- **Lo mínimo:** que te dé acceso delegado al dominio, para que tú también
-  puedas tocar el DNS y renovarlo si hace falta.
+- **Lo mínimo:** acceso delegado al dominio, para poder tocar el DNS y renovarlo
+  si hace falta.
 
-Y ponle **renovación automática**. Un `.io` que se vence se libera y lo puede
-comprar cualquiera — hay gente que se dedica justo a eso.
+Y **renovación automática**. Un `.io` que se vence se libera y lo puede comprar
+cualquiera — hay gente que se dedica justo a eso.
+
+---
+
+## Si algún día hay que mover el sitio de lugar
+
+1. Cambiar los cuatro registros A en GoDaddy al destino nuevo.
+2. Esperar a que propague (`dig +short @ns29.domaincontrol.com …`).
+3. Hasta entonces, no tocar el `CNAME` del repo.
+
+Y los links absolutos del proyecto: son **14**, repartidos en la landing, el
+bootcamp, el dossier, la invitación, el overlay y las guías del stream. Se
+encuentran con:
+
+```bash
+grep -rn "northpointcapital.io" --include="*.html" --include="*.md" .
+```
