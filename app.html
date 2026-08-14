@@ -464,6 +464,18 @@ body.tour-on #toast{bottom:calc(40px + var(--tour-h,190px))}
     linear-gradient(180deg,var(--bg),var(--bg) 45%,var(--bg-2));
 ;overflow-y:auto;padding-top:32px;padding-bottom:32px}
 .login.on{display:flex}
+/* ── LOGIN Y ALTA: dos pantallas, no una sola apilada ── */
+.lg-pie{display:flex;align-items:center;justify-content:center;gap:10px;margin-top:16px}
+.lg-pie button{background:none;border:none;color:var(--dim);cursor:pointer;
+  font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;padding:4px}
+.lg-pie button:hover{color:var(--txt)}
+.lg-pie span{color:var(--faint);font-size:10px}
+.lg-volver{background:none;border:none;color:var(--dim);cursor:pointer;padding:0 0 14px;
+  font-family:var(--mono);font-size:10.5px;letter-spacing:.08em}
+.lg-volver:hover{color:var(--txt)}
+.lg-tit{font-size:22px;font-weight:600;letter-spacing:-.01em;margin-bottom:8px}
+.lg-ayuda{color:var(--dim);font-size:12.5px;line-height:1.6;margin-bottom:18px}
+.lg-nota{color:var(--faint);font-size:11px;line-height:1.5;margin-top:6px}
 .login-card{
   width:100%;max-width:400px;border-radius:18px;padding:34px 32px 28px;
   background:var(--bg-2);
@@ -3356,9 +3368,13 @@ stop[stop-color="#9BC0DC"]{stop-color:var(--txt)}
     <div class="login-brand">
       <div>
         <b>NORTHPOINT</b>
-        <span>CAPITAL MANAGEMENT · TERMINAL</span>
+        <span>TRADER BACKING · TERMINAL</span>
       </div>
     </div>
+    <!-- PANTALLA 1 · ENTRAR (todo junto en un contenedor: ocultar campos
+         sueltos dejaba restos en pantalla — el botón y el subtítulo se
+         quedaban colgados sobre el alta) -->
+    <div id="lgEntrar">
     <p class="sub" style="margin-bottom:16px" data-i18n="c.acceso">Your user and your key.</p>
     <div class="f-full"><label data-i18n="c.usuario">Usuario</label><input id="lgUser" autocomplete="off" placeholder="" autocapitalize="none" spellcheck="false"></div>
     <div class="f-full"><label data-i18n="c.clave">Key</label><input id="lgPass" type="password" autocomplete="off" placeholder=""></div>
@@ -3378,26 +3394,31 @@ stop[stop-color="#9BC0DC"]{stop-color:var(--txt)}
       <div id="recErr" class="login-err"></div>
       <button class="btn primary" id="recGo" style="width:100%;margin-top:6px">Guardar y entrar</button>
     </div>
-    <button class="btn" id="lgAlta" style="width:100%;margin-top:10px;font-size:11px">¿Primera vez? Crea tu acceso de nube</button>
-    <button class="btn" id="lgOlvide" style="width:100%;margin-top:8px;font-size:11px">Olvidé mi contraseña</button>
-    <div id="altaNube" hidden style="margin-top:14px;border-top:1px solid var(--line);padding-top:14px">
-      <p class="micro" style="margin-bottom:10px;line-height:1.6">Tu correo REAL y una contraseña que solo tú sabrás.
-        Te llega un correo de confirmación: lo abres y luego entras aquí con tu usuario y esa contraseña.</p>
-      <div class="f-full"><label>Quién eres</label>
-        <select id="alSocio">
-          <option value="nuevo" selected>Soy nuevo en la mesa</option>
-          <option value="pablo.np">Pablo — CIO · Portfolio Manager</option>
-          <option value="mateo.np">Mateo — CRO · Research</option>
-          <option value="andre.np">André — Quant · COO</option>
-        </select>
-      </div>
-      <div class="f-full" id="alNombreCaja"><label>Tu nombre</label>
+    <div class="lg-pie">
+      <button type="button" id="lgAlta">Únete a la mesa</button>
+      <span>·</span>
+      <button type="button" id="lgOlvide">Olvidé mi contraseña</button>
+    </div>
+    </div><!-- /lgEntrar -->
+    <!-- ALTA · pantalla propia. Antes vivía DEBAJO del login, con un selector
+         de «quién eres» que ofrecía a Pablo/Mateo/André: eso confundía a
+         cualquiera que llegara de fuera. Lo que buscamos son TRADERS que se
+         unan a la mesa, así que el alta es una sola cosa: tus datos y ya. -->
+    <div id="altaNube" hidden>
+      <button type="button" id="alVolver" class="lg-volver">← Entrar con mi usuario</button>
+      <h2 class="lg-tit">Únete a la mesa</h2>
+      <p class="lg-ayuda">Tres datos y quedas dentro. Te llega un correo de confirmación:
+        lo abres y ya puedes entrar.</p>
+      <div class="f-full"><label>Tu nombre</label>
         <input id="alNombre" autocomplete="off" placeholder="Jorge" spellcheck="false" maxlength="24">
-        <p class="micro" style="margin-top:6px;line-height:1.5;text-transform:none;letter-spacing:.02em">Así te va a ver la firma en la carrera y en la oficina. Tu usuario sale de aquí.</p>
+        <p class="lg-nota">Así te va a ver la firma en la mesa.</p>
       </div>
-      <div class="f-full"><label>Tu correo real</label><input id="alCorreo" type="email" autocomplete="off" placeholder="tucorreo@gmail.com" autocapitalize="none" spellcheck="false"></div>
-      <div class="f-full"><label>Tu contraseña de nube (mínimo 6)</label><input id="alPass" type="password" autocomplete="new-password"></div>
-      <div class="f-full"><label>Repítela</label><input id="alPass2" type="password" autocomplete="new-password"></div>
+      <div class="f-full"><label>Tu correo</label>
+        <input id="alCorreo" type="email" autocomplete="off" placeholder="tucorreo@gmail.com" autocapitalize="none" spellcheck="false"></div>
+      <div class="f-full"><label>Contraseña</label>
+        <input id="alPass" type="password" autocomplete="new-password" placeholder="mínimo 6 caracteres"></div>
+      <div class="f-full"><label>Repítela</label>
+        <input id="alPass2" type="password" autocomplete="new-password"></div>
       <div id="alErr" class="login-err"></div>
       <button class="btn primary" id="alGo" style="width:100%;margin-top:6px">Crear mi acceso</button>
     </div>
@@ -8812,48 +8833,33 @@ $('#lgGo').addEventListener('click', doLogin);
 /* ── ALTA DE NUBE ── cada socio registra SU correo real y SU contraseña.
    Nadie más la conoce: ni André, ni este terminal la guarda en texto. El correo
    queda mapeado a su usuario para que el login siga siendo pablo.np + su clave. */
-$('#lgAlta').addEventListener('click', () => {
-  const p = $('#altaNube'); p.hidden = !p.hidden;
-});
-/* El campo del nombre sólo aparece cuando alguien viene nuevo: los tres de casa
-   ya tienen el suyo. */
-function alPintaNombre(){
-  const nuevo = $('#alSocio').value === 'nuevo';
-  const caja = $('#alNombreCaja'); if(caja) caja.style.display = nuevo ? '' : 'none';
-  /* los tres de casa ya están en la lista blanca: a ellos no se les pide código */
-  /* la caja del código ya no existe: el alta no pide nada más que nombre,
-     correo y contraseña */
+/* ENTRAR y UNIRSE son DOS PANTALLAS que se turnan — antes se apilaban y la
+   tarjeta terminaba siendo un formulario larguísimo que confundía a
+   cualquiera que llegara de fuera. */
+function pantallaAlta(ver){
+  $('#lgEntrar').hidden = ver;
+  $('#altaNube').hidden = !ver;
+  setTimeout(() => { const e = $(ver ? '#alNombre' : '#lgUser'); if(e) e.focus(); }, 60);
 }
-$('#alSocio')?.addEventListener('change', alPintaNombre);
-alPintaNombre();
+$('#lgAlta').addEventListener('click', () => pantallaAlta(true));
+$('#alVolver').addEventListener('click', () => pantallaAlta(false));
 
 $('#alGo').addEventListener('click', async () => {
-  const elegido = $('#alSocio').value;
-  const esNuevo = elegido === 'nuevo';
+  /* SIEMPRE es alguien nuevo: lo que buscamos son traders que se unan a la
+     mesa, no vincular a los tres de casa (ese selector se fue). */
   const nombre = ($('#alNombre').value || '').trim();
   const correo = $('#alCorreo').value.trim().toLowerCase();
   const p1 = $('#alPass').value, p2 = $('#alPass2').value;
   const err = m => { $('#alErr').textContent = m; };
-  if(esNuevo && nombre.length < 2) return err('Escribe tu nombre: así te va a ver la firma.');
+  if(nombre.length < 2) return err('Escribe tu nombre: así te va a ver la firma.');
   if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(correo)) return err('Ese correo no se ve bien.');
   if(p1.length < 6) return err('La contraseña necesita al menos 6 caracteres.');
   if(p1 !== p2) return err('Las contraseñas no coinciden.');
-  /* Quien llega nuevo se gana su lugar en la mesa aquí mismo: de «Jorge» sale
-     jorge.np y con eso ya es de la firma —carrera, silla y hoja de perfil—.
-     El alta viaja por la nube, así que los demás lo ven al siguiente refresco. */
-  /* El alta en la mesa se escribe HASTA que Supabase confirme: si el correo ya
-     estaba tomado, no queremos dejar un socio fantasma en la firma. */
-  let uid2 = elegido;
-  /* La silla ya ocupada: si este equipo (o la mesa) ya sabe que ese puesto es de
-     otro correo, se avisa. Antes se podía registrar «André» con el correo de
-     Mateo y el mapeo equivocado viajaba a los tres equipos. */
-  const yaEs = esNuevo ? null : (S.correos || {})[uid2];
-  if(yaEs && yaEs !== correo){
-    const seguir = confirm(bi(
-      'Ese puesto ya está a nombre de ' + yaEs + '.\n¿De verdad quieres cambiarlo a ' + correo + '?',
-      'That seat already belongs to ' + yaEs + '.\nReally change it to ' + correo + '?'));
-    if(!seguir) return err(bi('Elige tu propio nombre en la lista.','Pick your own name from the list.'));
-  }
+  /* Quien llega se gana su lugar en la mesa aquí mismo: de «Jorge» sale
+     jorge.np y con eso ya es de la firma. El alta se escribe HASTA que
+     Supabase confirme: si el correo ya estaba tomado, no queremos dejar un
+     socio fantasma en la firma. */
+  let uid2 = '';
   err(''); $('#alGo').textContent = 'Creando…';
   try{
     const r = await fetch(CLOUD.url + '/auth/v1/signup', {
@@ -8870,7 +8876,7 @@ $('#alGo').addEventListener('click', async () => {
        Antes hacía falta un código que él repartía a mano y era la traba que
        más gente dejaba fuera. Ahora el alta sola basta — la nube tiene que
        ir a juego: política de authenticated, ver docs/ABRIR-LA-MESA.sql */
-    if(esNuevo){ uid2 = altaEnMesa(nombre, correo); guardaCodigo('', nombre); }
+    uid2 = altaEnMesa(nombre, correo); guardaCodigo('', nombre);
     S.correos = S.correos || {};
     S.correos[uid2] = correo;
     /* respaldo local de SU contraseña (hash, nunca en texto): sin esto, el día
@@ -8878,18 +8884,17 @@ $('#alGo').addEventListener('click', async () => {
     S.claves = S.claves || {};
     S.claves[uid2] = await hashClave(p1);
     try{ save(); }catch(e){}
-    $('#altaNube').hidden = true;
+    pantallaAlta(false);
     $('#lgErr').textContent = '';
     $('#lgUser').value = uid2;
     $('#lgPass').value = p1;
     /* si Supabase ya devolvió sesión (correo autoconfirmado), se entra solo */
     if(d.access_token || (d.session && d.session.access_token)){
-      toast(esNuevo ? 'Bienvenido a la mesa. Tu usuario es ' + uid2 + '. Entrando…' : 'Acceso creado. Entrando…');
+      toast('Bienvenido a la mesa. Tu usuario es ' + uid2 + '. Entrando…');
       return doLogin();
     }
-    toast(esNuevo
-      ? 'Listo, ya eres de la mesa. Tu usuario es ' + uid2 + '. Abre ' + correo + ', confirma la liga y entra.'
-      : 'Acceso creado. Abre ' + correo + ', confirma la liga y luego pica Entrar — tu contraseña ya quedó puesta.');
+    toast('Listo, ya eres de la mesa. Tu usuario es ' + uid2 +
+          '. Abre ' + correo + ', confirma la liga y entra.');
   }catch(e){
     err((e && e.message) || 'No se pudo crear el acceso.');
   }finally{
