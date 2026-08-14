@@ -31,6 +31,10 @@ struct Marca: Codable {
     let tipo: String
     var auto: Bool?
     var nota: String?
+    // zona a recortar, en FRACCIONES del frame [x, y, ancho, alto].
+    // Sin esto, un stream de tres pantallas queda ilegible en un celular:
+    // el clip vertical enseña sólo el panel que importa.
+    var zona: [Double]?
 }
 struct Marcas: Codable {
     let sesion: String
@@ -122,11 +126,10 @@ func limpio(_ s: String) -> String {
         .lowercased().prefix(28).description
 }
 
-// ── LA MARCA, RASTERIZADA ──
+// ── LA MARCA, RASTERIZADA ── (diseño de la landing)
 //  Los CATextLayer NO se dibujan en un script de línea de comandos (no hay
-//  run loop de AppKit que los rasterice: salen barras vacías — pasó dos
-//  veces). La forma que SÍ funciona siempre: pintar el texto con CoreText
-//  a un CGImage y colgarlo como `contents` de una capa normal.
+//  run loop que los rasterice: salen barras vacías). La forma que SÍ
+//  funciona: pintar con CoreText a un CGImage y colgarlo como `contents`.
 func textoImagen(ancho: CGFloat, alto: CGFloat, videoAlto: CGFloat,
                  titulo: String, etiqueta: String) -> CGImage? {
     let esp = CGColorSpaceCreateDeviceRGB()
@@ -135,10 +138,16 @@ func textoImagen(ancho: CGFloat, alto: CGFloat, videoAlto: CGFloat,
             bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue) else { return nil }
     cx.clear(CGRect(x: 0, y: 0, width: ancho, height: alto))
 
+    let oro   = CGColor(red: 0.788, green: 0.659, blue: 0.298, alpha: 1)
+    let claro = CGColor(gray: 0.95, alpha: 1)
+    let tenue = CGColor(gray: 0.52, alpha: 1)
+    let margen = (alto - videoAlto) / 2          // alto de cada barra
+    let vTop = alto - margen                      // borde superior del video
+    let vBot = margen                             // borde inferior del video
+
     func pinta(_ txt: String, _ fuente: String, _ tam: CGFloat,
                _ color: CGColor, _ y: CGFloat, _ track: CGFloat = 0) {
         let f = CTFontCreateWithName(fuente as CFString, tam, nil)
-        // claves de CoreText (sin AppKit: esto corre en línea de comandos)
         var atts: [NSAttributedString.Key: Any] = [
             kCTFontAttributeName as NSAttributedString.Key: f,
             kCTForegroundColorAttributeName as NSAttributedString.Key: color
@@ -146,52 +155,97 @@ func textoImagen(ancho: CGFloat, alto: CGFloat, videoAlto: CGFloat,
         if track != 0 { atts[kCTKernAttributeName as NSAttributedString.Key] = track }
         let linea = CTLineCreateWithAttributedString(
             NSAttributedString(string: txt, attributes: atts))
-        // OJO: CTLineGetImageBounds devuelve el origen RELATIVO al
-        // textPosition que traiga el contexto — o sea, basura de la línea
-        // anterior, y el texto se va fuera de pantalla. El ancho honesto
-        // para centrar es el tipográfico.
+        // OJO: CTLineGetImageBounds da el origen RELATIVO al textPosition que
+        // traiga el contexto (basura de la línea anterior). Para centrar va el
+        // ancho TIPOGRÁFICO.
         let w = CGFloat(CTLineGetTypographicBounds(linea, nil, nil, nil))
         cx.textPosition = CGPoint(x: (ancho - w)/2, y: y)
         CTLineDraw(linea, cx)
     }
 
-    let margen = (alto - videoAlto) / 2      // alto de cada barra
-    let oro   = CGColor(red: 0.788, green: 0.659, blue: 0.298, alpha: 1)
-    let claro = CGColor(gray: 0.95, alpha: 1)
-    let tenue = CGColor(gray: 0.55, alpha: 1)
+    // ── el fondo: negro con un halo dorado muy contenido, como la landing ──
+    cx.setFillColor(CGColor(red: 0.031, green: 0.031, blue: 0.031, alpha: 1))
+    cx.fill(CGRect(x: 0, y: 0, width: ancho, height: alto))
+    if let g = CGGradient(colorsSpace: esp, colors: [
+            CGColor(red: 0.788, green: 0.659, blue: 0.298, alpha: 0.13),
+            CGColor(red: 0.788, green: 0.659, blue: 0.298, alpha: 0)] as CFArray,
+            locations: [0, 1]) {
+        cx.drawRadialGradient(g, startCenter: CGPoint(x: ancho*0.78, y: alto*0.9),
+            startRadius: 0, endCenter: CGPoint(x: ancho*0.78, y: alto*0.9),
+            endRadius: ancho*0.85, options: [])
+    }
+    // campo de estrellas determinista (el mismo gesto de todas las pantallas)
+    for i in 0..<130 {
+        let d = Double(i)
+        cx.setFillColor(CGColor(gray: 1, alpha: 0.05 + Double(i % 5)*0.035))
+        cx.fill(CGRect(x: (d*173.2).truncatingRemainder(dividingBy: Double(ancho)),
+                       y: (d*97.3).truncatingRemainder(dividingBy: Double(alto)),
+                       width: 2, height: 2))
+    }
 
-    // ── barra de ARRIBA: marca + etiqueta de sesión ──
-    let topBase = alto - margen
-    pinta("NORTHPOINT", "HelveticaNeue-Bold", 60, claro, topBase + margen*0.52, 7)
-    pinta(etiqueta, "Menlo-Bold", 26, oro, topBase + margen*0.30, 5)
+    // ── EL HUECO ── la marca va ENCIMA del video, así que hay que abrirle
+    // la ventana o el fondo lo tapa (pasó: marco perfecto, video invisible).
+    cx.clear(CGRect(x: 0, y: vBot - 8, width: ancho, height: videoAlto + 16))
 
-    // ── barra de ABAJO: el titular del clip + el llamado ──
-    // el titular se parte en dos renglones si no cabe
-    let maxAncho = ancho - 120
+    // ── el marco del video: borde fino + escuadras doradas en las esquinas ──
+    let m: CGFloat = 26
+    cx.setStrokeColor(CGColor(gray: 1, alpha: 0.16)); cx.setLineWidth(1)
+    cx.stroke(CGRect(x: m, y: vBot - 10, width: ancho - m*2, height: videoAlto + 20))
+    cx.setStrokeColor(oro); cx.setLineWidth(3)
+    let e: CGFloat = 46
+    for (px, py, sx, sy) in [(m, vBot-10, 1.0, 1.0), (ancho-m, vBot-10, -1.0, 1.0),
+                             (m, vBot+videoAlto+10, 1.0, -1.0),
+                             (ancho-m, vBot+videoAlto+10, -1.0, -1.0)] {
+        cx.move(to: CGPoint(x: px + e*CGFloat(sx), y: py))
+        cx.addLine(to: CGPoint(x: px, y: py))
+        cx.addLine(to: CGPoint(x: px, y: py + e*CGFloat(sy)))
+        cx.strokePath()
+    }
+
+    // ── ARRIBA: la marca, su bajada y la etiqueta de sesión ──
+    pinta("NORTHPOINT", "HelveticaNeue-Bold", 58, claro, vTop + margen*0.56, 8)
+    pinta("TRADER BACKING", "Menlo-Regular", 20, oro, vTop + margen*0.42, 9)
+    // píldora de la sesión
+    let f = CTFontCreateWithName("Menlo-Bold" as CFString, 21, nil)
+    let l = CTLineCreateWithAttributedString(NSAttributedString(string: etiqueta,
+        attributes: [kCTFontAttributeName as NSAttributedString.Key: f,
+                     kCTKernAttributeName as NSAttributedString.Key: 5]))
+    let wEt = CGFloat(CTLineGetTypographicBounds(l, nil, nil, nil))
+    let py = vTop + margen*0.18
+    cx.setStrokeColor(CGColor(gray: 1, alpha: 0.22)); cx.setLineWidth(1)
+    let pill = CGRect(x: (ancho-wEt)/2 - 22, y: py - 12, width: wEt + 44, height: 44)
+    cx.addPath(CGPath(roundedRect: pill, cornerWidth: 22, cornerHeight: 22, transform: nil))
+    cx.strokePath()
+    pinta(etiqueta, "Menlo-Bold", 21, CGColor(gray: 0.82, alpha: 1), py, 5)
+
+    // ── ABAJO: raya dorada, el titular (hasta dos renglones) y el llamado ──
+    cx.setFillColor(oro)
+    cx.fill(CGRect(x: ancho/2 - 46, y: vBot - margen*0.30, width: 92, height: 4))
+
+    let maxAncho = ancho - 130
     var l1 = titulo, l2 = ""
-    let fTit = CTFontCreateWithName("HelveticaNeue-Bold" as CFString, 52, nil)
+    let fTit = CTFontCreateWithName("HelveticaNeue-Bold" as CFString, 54, nil)
     func mide(_ t: String) -> CGFloat {
-        CTLineGetTypographicBounds(CTLineCreateWithAttributedString(
+        CGFloat(CTLineGetTypographicBounds(CTLineCreateWithAttributedString(
             NSAttributedString(string: t, attributes:
-                [kCTFontAttributeName as NSAttributedString.Key: fTit])), nil, nil, nil)
+                [kCTFontAttributeName as NSAttributedString.Key: fTit])), nil, nil, nil))
     }
     if mide(titulo) > maxAncho {
-        let palabras = titulo.split(separator: " ")
         var a: [String] = [], b: [String] = []
-        for p in palabras {
-            if mide((a + [String(p)]).joined(separator: " ")) <= maxAncho && b.isEmpty {
+        for p in titulo.split(separator: " ") {
+            if b.isEmpty && mide((a + [String(p)]).joined(separator: " ")) <= maxAncho {
                 a.append(String(p))
             } else { b.append(String(p)) }
         }
         l1 = a.joined(separator: " "); l2 = b.joined(separator: " ")
     }
     if l2.isEmpty {
-        pinta(l1, "HelveticaNeue-Bold", 52, claro, margen*0.52)
+        pinta(l1, "HelveticaNeue-Bold", 54, claro, vBot - margen*0.55)
     } else {
-        pinta(l1, "HelveticaNeue-Bold", 48, claro, margen*0.62)
-        pinta(l2, "HelveticaNeue-Bold", 48, claro, margen*0.62 - 60)
+        pinta(l1, "HelveticaNeue-Bold", 50, claro, vBot - margen*0.48)
+        pinta(l2, "HelveticaNeue-Bold", 50, claro, vBot - margen*0.48 - 62)
     }
-    pinta("discord.gg/TWeVqTTPS", "Menlo-Regular", 24, tenue, 58, 3)
+    pinta("discord.gg/TWeVqTTPS", "Menlo-Regular", 23, tenue, 62, 4)
 
     return cx.makeImage()
 }
@@ -199,6 +253,7 @@ func textoImagen(ancho: CGFloat, alto: CGFloat, videoAlto: CGFloat,
 // ── exportar un rango ──
 func exporta(desde: Double, hasta: Double, a destino: URL,
              vertical: Bool, titulo: String, etiqueta: String,
+             zona: [Double]? = nil, musica: URL? = nil,
              listo: @escaping (Bool, String) -> Void) {
 
     let comp = AVMutableComposition()
@@ -224,6 +279,48 @@ func exporta(desde: Double, hasta: Double, a destino: URL,
         listo(false, "\(error.localizedDescription)"); return
     }
 
+    // ── LA MÚSICA ── se mete como segunda pista y se agacha para que la
+    // voz mande. Es un loop ORIGINAL (musica.py): nada con dueño, así no
+    // hay strike en TikTok ni en YouTube.
+    var mezclaAudio: AVMutableAudioMix? = nil
+    if let mus = musica, FileManager.default.fileExists(atPath: mus.path),
+       let cm = comp.addMutableTrack(withMediaType: .audio,
+                  preferredTrackID: kCMPersistentTrackID_Invalid) {
+        let am = AVURLAsset(url: mus)
+        // el .wav es local y ligero: la carga síncrona aquí es honesta y
+        // evita el lío de capturar vars mutables en una Task concurrente
+        let pm = am.tracks(withMediaType: .audio).first
+        let dm = am.duration
+        if let pm = pm, dm.seconds > 0.5 {
+            var puesto = CMTime.zero
+            while puesto < dur {                       // en bucle hasta cubrir
+                let queda = dur - puesto
+                let cacho = CMTimeMinimum(dm, queda)
+                try? cm.insertTimeRange(CMTimeRange(start: .zero, duration: cacho),
+                                        of: pm, at: puesto)
+                puesto = puesto + cacho
+            }
+            let par = AVMutableAudioMixInputParameters(track: cm)
+            par.setVolume(0.11, at: .zero)             // bien atrás de la voz
+            par.setVolumeRamp(fromStartVolume: 0, toEndVolume: 0.11,
+                              timeRange: CMTimeRange(start: .zero,
+                                duration: CMTime(seconds: 1.2, preferredTimescale: 600)))
+            par.setVolumeRamp(fromStartVolume: 0.11, toEndVolume: 0,
+                              timeRange: CMTimeRange(
+                                start: dur - CMTime(seconds: 1.5, preferredTimescale: 600),
+                                duration: CMTime(seconds: 1.5, preferredTimescale: 600)))
+            let mx = AVMutableAudioMix()
+            var pars: [AVAudioMixInputParameters] = [par]
+            if let ca = ca {
+                let po = AVMutableAudioMixInputParameters(track: ca)
+                po.setVolume(1.0, at: .zero)
+                pars.append(po)
+            }
+            mx.inputParameters = pars
+            mezclaAudio = mx
+        }
+    }
+
     let vc = AVMutableVideoComposition()
     vc.frameDuration = CMTime(value: 1, timescale: 30)
 
@@ -232,13 +329,30 @@ func exporta(desde: Double, hasta: Double, a destino: URL,
     let capa = AVMutableVideoCompositionLayerInstruction(assetTrack: cv)
 
     if vertical {
-        // 1080x1920 con el chart centrado a ancho completo y barras de marca
+        // 1080x1920. Si la marca trae ZONA, se recorta ese pedazo y se
+        // agranda a ancho completo — así el panel que importa se lee en un
+        // celular. Sin zona, entra el frame completo.
         let W: CGFloat = 1080, H: CGFloat = 1920
         vc.renderSize = CGSize(width: W, height: H)
-        let escala = W / tamano.width
-        let altoV = tamano.height * escala
+        var escala: CGFloat, altoV: CGFloat, dx: CGFloat = 0, dy: CGFloat
+        if let z = zona, z.count == 4 {
+            let zx = CGFloat(z[0]) * tamano.width
+            let zy = CGFloat(z[1]) * tamano.height
+            let zw = CGFloat(z[2]) * tamano.width
+            let zh = CGFloat(z[3]) * tamano.height
+            escala = W / zw
+            altoV = zh * escala
+            // el eje Y del video crece hacia arriba: la zona se mide desde
+            // arriba, así que hay que voltearla
+            dx = -zx * escala
+            dy = -(tamano.height - zy - zh) * escala + (H - altoV)/2
+        } else {
+            escala = W / tamano.width
+            altoV = tamano.height * escala
+            dy = (H - altoV)/2
+        }
         var t = CGAffineTransform(scaleX: escala, y: escala)
-        t = t.concatenating(CGAffineTransform(translationX: 0, y: (H - altoV)/2))
+        t = t.concatenating(CGAffineTransform(translationX: dx, y: dy))
         capa.setTransform(t, at: .zero)
 
         let padre = CALayer()
@@ -249,7 +363,8 @@ func exporta(desde: Double, hasta: Double, a destino: URL,
         padre.addSublayer(capaVideo)              // el video primero…
         let marca = CALayer()                      // …y la marca ENCIMA
         marca.frame = padre.frame
-        marca.contents = textoImagen(ancho: W, alto: H, videoAlto: altoV,
+        marca.contents = textoImagen(ancho: W, alto: H,
+                                     videoAlto: min(altoV, H * 0.72),
                                      titulo: titulo, etiqueta: etiqueta)
         padre.addSublayer(marca)
         vc.animationTool = AVVideoCompositionCoreAnimationTool(
@@ -269,6 +384,7 @@ func exporta(desde: Double, hasta: Double, a destino: URL,
     ex.outputURL = destino
     ex.outputFileType = .mp4
     ex.videoComposition = vc
+    if let mx = mezclaAudio { ex.audioMix = mx }
     ex.shouldOptimizeForNetworkUse = true
     ex.exportAsynchronously {
         let e = ex.error as NSError?
@@ -277,6 +393,28 @@ func exporta(desde: Double, hasta: Double, a destino: URL,
                 "  ← \(u.domain) \(u.code)" } ?? "") } ?? ""
         listo(ex.status == .completed, msg)
     }
+}
+
+// ── se compone el loop una vez y sirve para todos los clips ──
+var pistaMusica: URL? = nil
+if !soloResumen && !M.marcas.isEmpty {
+    let wav = salida.appendingPathComponent("northpoint-loop.wav")
+    let py = rutaVideo.deletingLastPathComponent()   // musica.py vive con el script
+    let script = URL(fileURLWithPath: #filePath).deletingLastPathComponent()
+        .appendingPathComponent("musica.py")
+    if FileManager.default.fileExists(atPath: script.path) {
+        let p = Process()
+        p.executableURL = URL(fileURLWithPath: "/usr/bin/env")
+        p.arguments = ["python3", script.path, String(Int(ANTES + DESPUES + 6)), wav.path]
+        p.standardOutput = FileHandle.nullDevice
+        p.standardError = FileHandle.nullDevice
+        try? p.run(); p.waitUntilExit()
+        if FileManager.default.fileExists(atPath: wav.path) {
+            pistaMusica = wav
+            print("  ♪ música original compuesta para los clips\n")
+        }
+    }
+    _ = py
 }
 
 // ══ 1 · LOS CLIPS VERTICALES ══
@@ -295,7 +433,8 @@ if !soloResumen && !M.marcas.isEmpty {
         var ok = false, err = ""
         exporta(desde: desde, hasta: hasta, a: destino, vertical: true,
                 titulo: nota.uppercased(),
-                etiqueta: m.tipo + (m.auto == true ? " · JOURNAL" : "")) { o, e in
+                etiqueta: m.tipo + (m.auto == true ? " · JOURNAL" : ""),
+                zona: m.zona, musica: pistaMusica) { o, e in
             ok = o; err = e; s2.signal()
         }
         s2.wait()
