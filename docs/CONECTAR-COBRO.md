@@ -180,3 +180,40 @@ Se arregla en *Configuración → Empresa → Datos públicos* (nombre público 
 descriptor del extracto). **No lo cambié yo a propósito:** si esa misma cuenta
 cobra también «De Cero a Payout», el cambio afecta a los dos productos y ésa es
 decisión de negocio, no de código.
+
+## Actualización · la activación quedó a DOS campos
+
+Entré al formulario y llené todo lo que se puede llenar sin ser André:
+
+| Sección | Estado |
+|---|---|
+| Tipo de empresa | ✅ ya estaba |
+| Datos de la empresa · sitio web `northpointcapital.io` | ✅ |
+| **Productos o servicios** | ✅ «Otros servicios educativos» + descripción |
+| Datos públicos · teléfono de soporte | ✅ |
+| **Cargo en el extracto bancario: `NORTHPOINT`** | ✅ ya estaba |
+| Representante · nombre, fecha de nacimiento, RFC, teléfono | ✅ ya estaba |
+| Representante · **domicilio** | ✅ Pablo Casals 36, 58290 Morelia, Mich. |
+| Autenticación en dos pasos | ✅ activada |
+
+**Falta exactamente esto, y son los dos únicos campos que no puedo tocar:**
+
+1. **La colonia (Barrio) del domicilio.** El CP 58290 da seis opciones y no se
+   adivina un domicilio en una verificación de identidad: BOSQUE CAMELINAS ·
+   CAMELINAS · CAMELINAS INFONAVIT · COMISIÓN FEDERAL DE ELECTRICIDAD ·
+   ELECTRICISTAS · LA LOMA.
+2. **La CLABE** de la cuenta donde Stripe deposita.
+
+Con esos dos, «Revisar y enviar» se destraba.
+
+**Sobre la categoría elegida:** «Otros servicios educativos», no «Servicios
+financieros». Es lo honesto y además lo que menos fricción genera: lo que se
+vende es un programa educativo y el sitio dice explícitamente que no se dan
+señales, no se administra dinero de terceros y no se ofrece asesoría de
+inversión. Declararlo como servicio financiero habría invitado una revisión que
+no corresponde a lo que se cobra.
+
+**Lo que NO toqué a propósito:** los complementos de pago (Radar Standard a
+MXN 0.95 por transacción ya venía activado, Cálculo de impuestos y Climate
+desactivados). Son costos por transacción, y comprometerte a un cobro recurrente
+no me toca.
