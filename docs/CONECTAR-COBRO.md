@@ -137,3 +137,46 @@ Es aceptable para las primeras ventas —y hasta conviene, porque hablas con cad
 comprador—, pero es lo siguiente que hay que automatizar. El camino natural es un
 webhook de la pasarela que dé de alta al comprador en `mesa_socios` de Supabase,
 igual que ya funciona el alta del Terminal.
+
+---
+
+# Estado real de Stripe (15-ago-2026)
+
+Entré a la cuenta y dejé **los tres enlaces armados en el entorno de prueba**.
+Sirven para ver el flujo completo y como plantilla exacta; **no cobran dinero
+real** (llevan `test_` en la URL, y así se distinguen de un vistazo).
+
+| Plan | Tipo | Precio | Enlace de PRUEBA |
+|---|---|---|---|
+| Mensual | **Suscripción mensual** | $1,490 MXN | `https://buy.stripe.com/test_eVqcN4clYc9Df4adLzcMM01` |
+| Un año | Pago único | $11,900 MXN | `https://buy.stripe.com/test_8x228qeu63D73lsePDcMM00` |
+| De por vida | Pago único | $17,000 MXN | `https://buy.stripe.com/test_bJedR8fyaehL9JQ0YNcMM02` |
+
+Los tres ya llevan **Después del pago → No mostrar la página de confirmación →
+`https://northpointcapital.io/gracias.html`**, que es la pieza que casi nadie
+configura y sin la cual la página de gracias no sirve de nada.
+
+## Lo que falta, y por qué no lo puedo hacer yo
+
+**La cuenta activa no está habilitada.** Al cambiar de «Entorno de prueba» a
+«cuenta activa», Stripe abre el formulario de activación y pide **nombre legal,
+fecha de nacimiento, domicilio particular y cuenta bancaria**. Eso es identidad
+y datos bancarios: lo teclea André, no yo. Sin ese paso no existe ningún enlace
+que cobre dinero real.
+
+Cuando esté activada, los tres se rehacen en modo activo con la tabla de arriba
+—los productos de prueba **no se copian solos al modo activo**, es a mano— y los
+enlaces `https://buy.stripe.com/…` (ya sin `test_`) se pegan en `var PAGO` de
+index.html.
+
+## ⚠️ El checkout dice «0 to hero», no NORTHPOINT
+
+La cuenta de Stripe se llama **0 to hero** y ese nombre es el que aparece
+**arriba de la página de pago** y en el estado de cuenta del cliente. Alguien que
+paga $17,000 por NORTHPOINT y ve otro nombre en la pantalla de cobro duda — y esa
+duda es exactamente de donde salen los contracargos.
+
+Se arregla en *Configuración → Empresa → Datos públicos* (nombre público y
+descriptor del extracto). **No lo cambié yo a propósito:** si esa misma cuenta
+cobra también «De Cero a Payout», el cambio afecta a los dos productos y ésa es
+decisión de negocio, no de código.
