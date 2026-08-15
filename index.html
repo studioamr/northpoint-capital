@@ -559,7 +559,8 @@ body.doc-open #indice{display:none}
 /* SOLO el monitor vertical, CENTRADO (André) — left/right + margin:auto,
    nunca transform (la colisión del .rv.on) */
 .mon-v{left:0;right:0;margin:0 auto;width:max-content}
-.mon-v .mon-pant{width:clamp(230px,28vw,368px);aspect-ratio:316/492}
+/* un punto más angosto que antes: la tele de la pared necesita aire arriba */
+.mon-v .mon-pant{width:clamp(218px,25vw,330px);aspect-ratio:316/492}
 /* la altura real la fija ajustaMon() con el contenido ya medido */
 .mon-esc{width:760px;transform-origin:0 0;padding:6px}
 .pov-pie{position:absolute;left:0;right:0;bottom:104px;margin:0;text-align:center;
@@ -2161,7 +2162,114 @@ body.doc-open #indice{display:none}
       lz.addColorStop(1, 'rgba(255,255,255,0)');
       cxC.fillStyle = lz; cxC.fillRect(0, 0, W, MESA);
 
-      /* La pared va DESNUDA (André: «elimina lo que está colgado… en la
+      /* ══ LA TELE DE LA PARED ══ El Nasdaq con su RANGO DE APERTURA marcado:
+         la caja de los primeros minutos, el precio dando vueltas dentro, y la
+         vela que la rompe. Es lo que cualquiera ve en cualquier pantalla de
+         cualquier mesa — el QUÉ, nunca el CÓMO: aquí no hay entrada, ni stop,
+         ni objetivo, ni un solo parámetro. Eso vive en el programa.
+
+         Las velas salen de `seudo` sembrada por índice: la misma pantalla en
+         cada repintado. Con Math.random cambiaría el gráfico en cada resize y
+         se notaría que es de mentiras. */
+      (function(){
+        /* Se dimensiona por la ALTURA disponible, no por el ancho: arriba sólo
+           hay el hueco entre la cinta de arriba y la ceja del monitor, y
+           calcularla desde `W` la hacía chocar con el monitor en cuanto la
+           pantalla era ancha. */
+        var ty = Math.max(H * .105, 96);
+        var th = Math.min(H * .155, 142), tw = th / .5625;
+        var tx = W * .5 - tw / 2;
+        if (th < 78 || tw > W * .5) return;              /* no cabe: no se pinta */
+
+        /* el bisel y su sombra */
+        cxC.fillStyle = 'rgba(0,0,0,' + (dia ? .1 : .28) + ')';
+        cxC.fillRect(tx + 4, ty + th + 3, tw - 8, 4);
+        cxC.fillStyle = dia ? '#262624' : '#1A1A18';
+        cxC.fillRect(tx - 5, ty - 5, tw + 10, th + 10);
+        cxC.fillStyle = '#07090C';
+        cxC.fillRect(tx, ty, tw, th);
+
+        cxC.save();
+        cxC.beginPath(); cxC.rect(tx, ty, tw, th); cxC.clip();
+
+        /* la retícula */
+        cxC.strokeStyle = 'rgba(200,210,230,.07)'; cxC.lineWidth = 1;
+        for (var g = 1; g < 4; g++){
+          var gy = Math.round(ty + th * g / 4) + .5;
+          cxC.beginPath(); cxC.moveTo(tx, gy); cxC.lineTo(tx + tw, gy); cxC.stroke();
+        }
+
+        /* las velas: quietas dentro del rango, y a la 15 lo rompen */
+        var n = 36, pad = tw * .07, ancho = (tw - pad * 2) / n;
+        var alto = th * .74, base = ty + th * .84;
+        var p = .5, vs = [], hi = 0, lo = 1;
+        for (var i = 0; i < n; i++){
+          var d;
+          if (i < 14) d = (seudoJ(i * 3.11 + 5) - .5) * .075;          /* el rango */
+          else if (i === 14) d = .11;                                   /* la ruptura */
+          else d = (seudoJ(i * 3.11 + 5) - .42) * .075;                 /* la tendencia */
+          var a = p, c = Math.max(.06, Math.min(.94, p + d)); p = c;
+          var mecha = .022 + seudoJ(i * 7.7) * .03;
+          vs.push({ a: a, c: c, hi: Math.max(a, c) + mecha, lo: Math.min(a, c) - mecha });
+          if (i < 12){ hi = Math.max(hi, vs[i].hi); lo = Math.min(lo === 1 ? vs[i].lo : lo, vs[i].lo); }
+        }
+        /* Se normaliza la serie para que LLENE la pantalla. Sin esto las velas
+           se apelotonan en la banda de en medio —los saltos son chicos— y
+           media tele queda vacía, que es justo como se ve un gráfico falso. */
+        (function(){
+          var mn = 1, mx = 0;
+          for (var q = 0; q < n; q++){ mn = Math.min(mn, vs[q].lo); mx = Math.max(mx, vs[q].hi); }
+          var d = (mx - mn) || 1, k = .76 / d;
+          for (var r = 0; r < n; r++){
+            var v = vs[r];
+            v.a = .12 + (v.a - mn) * k; v.c = .12 + (v.c - mn) * k;
+            v.hi = .12 + (v.hi - mn) * k; v.lo = .12 + (v.lo - mn) * k;
+          }
+          hi = .12 + (hi - mn) * k; lo = .12 + (lo - mn) * k;
+        })();
+
+        function Y(v){ return base - v * alto; }
+
+        /* LA CAJA DEL RANGO — lo único marcado, y sin un solo número */
+        var cx0 = tx + pad, cx1 = tx + pad + ancho * 12;
+        cxC.fillStyle = 'rgba(200,162,74,.10)';
+        cxC.fillRect(cx0, Y(hi), cx1 - cx0, Y(lo) - Y(hi));
+        cxC.strokeStyle = 'rgba(200,162,74,.55)'; cxC.lineWidth = 1;
+        cxC.strokeRect(cx0 + .5, Y(hi) + .5, cx1 - cx0, Y(lo) - Y(hi));
+        cxC.setLineDash([4, 4]);
+        cxC.beginPath(); cxC.moveTo(cx1, Y(hi)); cxC.lineTo(tx + tw, Y(hi)); cxC.stroke();
+        cxC.beginPath(); cxC.moveTo(cx1, Y(lo)); cxC.lineTo(tx + tw, Y(lo)); cxC.stroke();
+        cxC.setLineDash([]);
+
+        for (var k = 0; k < n; k++){
+          var v = vs[k], vx = tx + pad + k * ancho + ancho * .5;
+          var sube = v.c > v.a;
+          var col = sube ? '124,190,146' : '206,110,100';
+          cxC.strokeStyle = 'rgba(' + col + ',.85)'; cxC.lineWidth = 1;
+          cxC.beginPath(); cxC.moveTo(vx, Y(v.hi)); cxC.lineTo(vx, Y(v.lo)); cxC.stroke();
+          cxC.fillStyle = 'rgba(' + col + ',.95)';
+          cxC.fillRect(vx - ancho * .32, Y(Math.max(v.a, v.c)),
+                       Math.max(1.4, ancho * .64), Math.max(1.4, Math.abs(Y(v.a) - Y(v.c))));
+        }
+
+        /* el rótulo de la pantalla */
+        cxC.font = '600 ' + Math.max(7, Math.round(tw * .028)) +
+                   'px "IBM Plex Mono", ui-monospace, Menlo, monospace';
+        cxC.textAlign = 'left'; cxC.textBaseline = 'alphabetic';
+        cxC.fillStyle = 'rgba(226,234,246,.62)';
+        cxC.fillText('MNQ · NASDAQ', tx + pad, ty + th * .13);
+        cxC.fillStyle = 'rgba(200,162,74,.75)';
+        cxC.fillText('RANGO DE APERTURA', tx + pad, ty + th * .96);
+        cxC.restore();
+
+        /* el brillo del vidrio */
+        var br = cxC.createLinearGradient(tx, ty, tx + tw * .7, ty + th);
+        br.addColorStop(0, 'rgba(255,255,255,.05)');
+        br.addColorStop(.5, 'rgba(255,255,255,0)');
+        cxC.fillStyle = br; cxC.fillRect(tx, ty, tw, th);
+      })();
+
+      /* La pared va casi DESNUDA (André: «elimina lo que está colgado… en la
          pared»). Antes traía banco de pantallas, relojes de NY·LDN·TYO,
          repisa, pósters y reconocimientos; se fueron todos, y con ellos sus
          funciones de dibujo. Queda el muro, su luz y el escritorio: el único
