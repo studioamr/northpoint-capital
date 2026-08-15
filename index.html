@@ -1731,8 +1731,6 @@ body.doc-open #indice{display:none}
         <p>La apertura y lo que sigue, en directo.</p></div>
       <div class="lv-i"><span class="lv-l">Qué se ve</span><b>La mesa entera</b>
         <p>El plan antes de abrir, la ejecución y la revisión al cerrar.</p></div>
-      <div class="lv-i"><span class="lv-l">Y también</span><b>Los días sin trade</b>
-        <p>No se corta la transmisión cuando no hay señal. Ésos enseñan más.</p></div>
     </div>
 
     <p class="lv-redes-tit"><span>DONDE SE TRANSMITE</span></p>
@@ -2006,76 +2004,6 @@ body.doc-open #indice{display:none}
   </div>
 
 
-  <!-- EL PROGRAMA DE TRADER RENTABLE, hasta abajo (André: «en programa sólo
-       muestra de los planes para abajo»). No se borró: es un producto APARTE,
-       gratis, y el formulario de solicitud cuelga de este botón. Bajarlo
-       cumple la instrucción sin tirar una función del negocio. -->
-  <div class="wrap pg-cont rv">
-    <p class="pg-eyebrow">¿YA ERES UN TRADER RENTABLE?</p>
-    <h2 class="pg-titulo">Demuéstralo — únete a Northpoint.</h2>
-    <div class="pg-tabla">
-      <div class="pg-fila">
-        <div class="pg-num">01</div>
-        <div class="pg-cuerpo">
-          <b>MANDA TU PERFIL</b>
-          <p>Sube tu perfil de trader — quién eres y cómo operas.</p>
-          <ul>
-            <li>Historial de payouts — 5 como mínimo</li>
-            <li>Cómo operas — un video y un documento</li>
-          </ul>
-        </div>
-      </div>
-      <div class="pg-fila">
-        <div class="pg-num">02</div>
-        <div class="pg-cuerpo">
-          <b>NORTHPOINT LO REVISA</b>
-          <p>Revisamos todo y te contestamos — aceptado o no.</p>
-        </div>
-      </div>
-      <div class="pg-fila">
-        <div class="pg-num">03</div>
-        <div class="pg-cuerpo">
-          <b>ESTÁS DENTRO</b>
-          <p>Los traders aceptados entran al programa y a todo lo que trae.</p>
-          <ul>
-            <li>Te pagamos tus evaluaciones</li>
-            <li>Acceso completo a Northpoint</li>
-          </ul>
-        </div>
-      </div>
-    </div>
-    <button class="pg-cta" id="pgAplicar" type="button">APLICAR →</button>
-    <p class="pg-pie">O BÚSCANOS EN EL DISCORD</p>
-  </div>
-  <!-- el formulario que se abre al picar APPLY: envía por FormSubmit al
-       correo de André (OJO: el PRIMER envío dispara el correo de activación
-       de FormSubmit a ese buzón — hay que confirmarlo una vez) -->
-  <div class="pg-form" id="pgForm" hidden>
-    <div class="pg-form-caja">
-      <button class="bc-tem-x" id="pgFormX" aria-label="Close">×</button>
-      <p class="pg-form-num">SOLICITUD</p>
-      <h3 class="pg-form-tit">Únete a Northpoint</h3>
-      <form action="https://formsubmit.co/andremacouzetruiz@gmail.com" method="POST">
-        <input type="hidden" name="_subject" value="NORTHPOINT · Solicitud de trader">
-        <input type="hidden" name="_template" value="table">
-        <input type="hidden" name="_captcha" value="false">
-        <input type="hidden" name="_next" value="https://northpointcapital.io/index.html#educacion">
-        <label>NOMBRE
-          <input required name="Nombre" type="text" autocomplete="name"></label>
-        <label>CORREO
-          <input required name="Email" type="email" autocomplete="email"></label>
-        <label>USUARIO DE DISCORD
-          <input name="Discord" type="text"></label>
-        <label>HISTORIAL DE PAYOUTS — LIGAS O RESUMEN (5 MÍNIMO)
-          <textarea required name="Payouts" rows="3"></textarea></label>
-        <label>CÓMO OPERAS — UNA NOTA CORTA
-          <textarea required name="Como_operas" rows="3"></textarea></label>
-        <label>LIGA DEL VIDEO (LOOM · DRIVE · YOUTUBE)
-          <input name="Video" type="url" placeholder="https://"></label>
-        <button class="pg-enviar" type="submit">MANDAR SOLICITUD →</button>
-      </form>
-    </div>
-  </div>
   </section>
 
 <section id="journal">
@@ -2389,9 +2317,24 @@ body.doc-open #indice{display:none}
     var st = null, W = 0, H = 0, dpr = 1, f = 0, tAntes = 0, quieta = true;
     var tinta = '#F4F4F4', fondo = 'rgb(8,8,8)', velo = 'rgba(8,8,8,.15)';
 
+    /* De dónde sale el fondo. Se leía de la <section> y punto: una sección SIN
+       fondo propio resuelve a rgba(0,0,0,0) y esto pintaba NEGRO encima del
+       tema claro — la sección entera se veía en blanco (negro sobre negro).
+       Ahora, si el elemento es transparente, se sube hasta encontrar quien sí
+       tenga color. Vale para cualquier sección que se agregue después. */
+    function fondoReal(){
+      var n = sec;
+      while (n){
+        var v = getComputedStyle(n).backgroundColor;
+        var p = (v || '').match(/[\d.]+/g);
+        if (p && p.length >= 3 && (p.length < 4 || parseFloat(p[3]) > 0)) return p.slice(0, 3);
+        n = n.parentElement;
+      }
+      return ['8', '8', '8'];
+    }
     function colores(){
       var c = getComputedStyle(cv).color;
-      var b = (getComputedStyle(sec).backgroundColor.match(/\d+/g) || ['8','8','8']).slice(0, 3);
+      var b = fondoReal();
       var fo = 'rgb(' + b.join(',') + ')';
       if (c !== tinta || fo !== fondo){
         tinta = c; fondo = fo; velo = 'rgba(' + b.join(',') + ',0.15)';
@@ -2903,15 +2846,6 @@ body.doc-open #indice{display:none}
 
   })();
 
-  /* ── PROGRAM · abrir/cerrar el formulario de aplicación ── */
-  (function(){
-    var fo = document.getElementById('pgForm');
-    var abrir = document.getElementById('pgAplicar');
-    if (!fo || !abrir) return;
-    abrir.addEventListener('click', function(){ fo.hidden = false; });
-    document.getElementById('pgFormX').addEventListener('click', function(){ fo.hidden = true; });
-    fo.addEventListener('click', function(e){ if (e.target === fo) fo.hidden = true; });
-  })();
 
   /* ── FILOSOFÍA · el leopardo, la sabana COMPLETA ── (André: «está muy
      simple… ríos, montañas, más árboles, animales randoms, pájaros — y
