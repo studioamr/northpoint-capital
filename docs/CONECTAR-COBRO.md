@@ -43,7 +43,28 @@ firma. Por eso van las dos.
 4. Activa **OXXO**, **SPEI** y **meses sin intereses** si los quieres ofrecer.
 5. Copia el enlace (`https://mpago.la/xxxx`).
 
-## Paso 3 · Pegarlos
+## Paso 3 · La página de después del pago
+
+Antes de copiar los enlaces, en cada uno pon a dónde llega el que ya pagó:
+
+- **Stripe** → el payment link → *After payment* → **Redirect to a page**
+- **MercadoPago** → el link de pago → **URL de retorno** → *Pago aprobado*
+
+En los dos va la misma:
+
+```
+https://northpointcapital.io/gracias.html
+```
+
+Esa página ya existe y ya está escrita: le da al que acabó de pagar los cuatro
+pasos para arrancar el mismo día (correo, Terminal, Discord, la apertura de las
+8:30). **Si no la configuras, el que paga se queda mirando el recibo de Stripe** y
+nadie le dice qué sigue — que es justo el minuto en el que más ganas tiene de
+empezar y el más caro de desperdiciar.
+
+Lleva `noindex`, así que no aparece en Google ni se la encuentra quien no pagó.
+
+## Paso 4 · Pegar los enlaces
 
 En `index.html`, busca `var PAGO = {` y pon los enlaces:
 
