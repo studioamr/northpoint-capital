@@ -2676,22 +2676,29 @@ body.doc-open #indice{display:none}
     function esDia(){ return document.documentElement.getAttribute('data-theme') === 'light'; }
     function seudo(n){ var x = Math.sin(n * 12.9898) * 43758.5453; return x - Math.floor(x); }
 
-    /* ══ EL PRINCIPIO ═══════════════════════════════════════════════════════
-       Antes de la sabana, el origen: la singularidad, el estallido, la materia
-       que se ordena en un disco, un planeta que se enfría, y una caída hasta
-       África — que es exactamente donde empieza la toma de siempre.
+    /* ══ EL VIAJE ══════════════════════════════════════════════════════════
+       Antes de la sabana, de dónde venimos. La cámara arranca lejísimos de la
+       Vía Láctea y no para hasta el Serengeti:
 
-       Corre UNA sola vez por carga de página (primeraVez): después la cacería
-       se repite sola, sin cosmos, porque un intro que se repite cada 20
-       segundos deja de ser un intro y se vuelve un tic.
+         la galaxia → un brazo → una estrella que se enciende →
+         el disco que se ordena → el tercer planeta → África
 
-       Los continentes son coordenadas REALES (lon/lat) proyectadas en
-       ortográfica. Por eso el globo puede girar de verdad y el zoom aterriza
-       donde debe, en vez de ser un dibujo plano que se estira. El reloj no
-       avanza hasta que la sección está en pantalla: si no, quien baja tarde
-       llega a la mitad del universo.                                        */
-    var COSMOS = 11.6;                 /* duración total, en segundos */
-    var primeraVez = !quieto;          /* con motion reducido, no hay cosmos */
+       Corre UNA sola vez por carga de página (primeraVez): un intro que se
+       repite cada minuto deja de ser un intro y se vuelve un tic.
+
+       Van TRES escenas con reloj propio y fundido cruzado entre ellas. Es más
+       código que un solo reloj corrido, y a cambio se puede alargar la galaxia
+       sin recalcular a mano los otros doce tiempos. El reloj general no avanza
+       mientras la sección esté fuera de pantalla: si no, quien baja tarde
+       llega a la mitad del universo. */
+    var COSMOS = 20.0;
+    /* DOS banderas, no una. `primeraVez` sólo decide si reinicia() arranca en
+       el cosmos, y se apaga en cuanto el viaje termina. `pelicula` dura toda
+       la historia —humanos, marcha, ciudad, oficina— y se apaga hasta el final.
+       Con una sola, el premio ya encontraba la bandera abajo y la cacería se
+       iba directo al árbol: la historia no llegaba a empezar. */
+    var primeraVez = !quieto;          /* con motion reducido, no hay viaje */
+    var pelicula = !quieto;
     var enPantalla = false;
     if (window.IntersectionObserver){
       new IntersectionObserver(function(en){ enPantalla = en[0].isIntersecting; },
@@ -2706,17 +2713,50 @@ body.doc-open #indice{display:none}
                       Math.round(a[1] + (b[1] - a[1]) * t) + ',' +
                       Math.round(a[2] + (b[2] - a[2]) * t) + ')';
     }
+    function rgba(c, al){ return 'rgba(' + c + ',' + (al < 0 ? 0 : al > 1 ? 1 : al).toFixed(3) + ')'; }
 
-    /* La materia del estallido: se guarda una vez y se posiciona por tiempo,
-       no por integración — así el resize o un frame perdido no la desordenan. */
+    /* La galaxia: 1600 estrellas repartidas en cuatro brazos logarítmicos y
+       vista de canto. Se guarda UNA vez y se posiciona por tiempo, nunca por
+       integración: así ni el resize ni un frame perdido la desordenan. */
+    var GAL = [];
+    for (var ig = 0; ig < 2800; ig++){
+      /* El radio se reparte con un hueco al centro (ahí manda el bulbo) y un
+         sesgo suave hacia dentro. Todo al centro y los brazos se hacen papilla;
+         repartido parejo y el borde se vuelve un aro. Es el punto medio. */
+      var gr = .12 + .88 * Math.pow(seudo(ig * 1.71), .72);
+      /* DOS brazos dominantes y dos menores: cuatro iguales parecen molinete,
+         y una galaxia de verdad tiene un par que manda. El 22% suelto es el
+         disco entre brazos — sin él las estrellas se ven peinadas. */
+      var suelta = seudo(ig * 2.13) < .14;
+      var br = (ig % 4);
+      var peso = (br < 2) ? br * Math.PI : br * Math.PI - Math.PI * .52;
+      GAL.push({ r: gr,
+                 a: suelta ? seudo(ig * 4.7) * 6.2832
+                           : peso + gr * 7.4 + (seudo(ig * 3.37) - .5) * (.30 - gr * .12),
+                 z: (seudo(ig * 5.91) - .5) * (.17 - gr * .13),
+                 b: (suelta ? .10 : .18) + seudo(ig * 7.13) * (suelta ? .35 : .82),
+                 c: seudo(ig * 9.29) });
+    }
+    /* La materia que orbitará al sol recién nacido. Antes esto era el polvo del
+       estallido; sirve igual y se ahorra un segundo arreglo. */
     var polvo = [];
-    for (var ip = 0; ip < 320; ip++){
+    for (var ip = 0; ip < 300; ip++){
       polvo.push({ a: seudo(ip * 1.7) * 6.2832,
-                   v: .18 + seudo(ip * 3.1) * 1.02,
-                   incl: (seudo(ip * 5.3) - .5) * .9,
-                   s: .5 + seudo(ip * 7.7) * 1.9,
+                   r: .2 + seudo(ip * 3.1) * .95,
+                   v: .5 + seudo(ip * 4.3) * 1.4,
+                   s: .5 + seudo(ip * 7.7) * 1.7,
                    b: .3 + seudo(ip * 11.3) * .7 });
     }
+    /* Los planetas. El tercero es el nuestro y por eso lleva su propio tamaño
+       y su color: es al que se va la cámara. */
+    var PLANETAS = [
+      { r: .17, t: 3.4, s: .020, c: '188,164,140' },
+      { r: .25, t: 2.6, s: .028, c: '208,176,128' },
+      { r: .34, t: 2.0, s: .032, c: '120,168,206' },   /* la Tierra */
+      { r: .45, t: 1.5, s: .026, c: '190,124,96'  },
+      { r: .62, t: 1.1, s: .046, c: '206,186,150' },
+      { r: .80, t: .85, s: .038, c: '176,190,206' }
+    ];
 
     /* Continentes en [lon, lat]. Groseros a propósito: a este tamaño lo que
        importa es la SILUETA, y África tiene que reconocerse de un vistazo. */
@@ -2730,16 +2770,6 @@ body.doc-open #indice{display:none}
       { c: 'tierra', p: [[113,-22],[114,-26],[116,-32],[120,-34],[126,-32],[132,-32],[137,-33],[140,-38],[146,-39],[150,-37],[153,-29],[153,-25],[148,-20],[143,-13],[136,-12],[131,-11],[125,-14],[120,-20]] },
       { c: 'hielo',  p: [[-45,60],[-52,64],[-53,68],[-58,72],[-62,76],[-55,80],[-45,82],[-30,82],[-22,77],[-25,72],[-32,68],[-40,62]] }
     ];
-    /* Nubes: puntos en lon/lat, así giran CON el planeta en vez de flotar
-       pegadas a la pantalla. */
-    var NUBES = [];
-    for (var inu = 0; inu < 26; inu++){
-      NUBES.push({ lon: seudo(inu * 2.3) * 360 - 180,
-                   lat: (seudo(inu * 4.1) - .5) * 150,
-                   r: .07 + seudo(inu * 6.7) * .12,
-                   al: .10 + seudo(inu * 8.9) * .16 });
-    }
-
     /* A la distancia basta la silueta; a 3000 px de ancho, una costa de seis
        rectas se ve falsa. Se subdivide UNA vez con desplazamiento de punto
        medio sembrado por índice: geografía estable, sin parpadeo entre frames,
@@ -2772,6 +2802,13 @@ body.doc-open #indice{display:none}
                      r: .45 + seudo(im * 19.1) * 2.6,
                      t: seudo(im * 23.9) });
     }
+    var NUBES = [];
+    for (var inu = 0; inu < 26; inu++){
+      NUBES.push({ lon: seudo(inu * 2.3) * 360 - 180,
+                   lat: (seudo(inu * 4.1) - .5) * 150,
+                   r: .07 + seudo(inu * 6.7) * .12,
+                   al: .10 + seudo(inu * 8.9) * .16 });
+    }
 
     /* Ortográfica: (lon,lat) → coordenadas de disco unitario. ve=false cuando
        el punto cayó del otro lado del planeta. */
@@ -2787,11 +2824,10 @@ body.doc-open #indice{display:none}
       var chico = R < Math.min(cv.clientWidth, cv.clientHeight);
       cx.save(); cx.globalAlpha = alfa;
 
-      /* atmósfera: sólo tiene sentido mientras se vea el borde del planeta */
       if (chico && magma < .8){
         var at = cx.createRadialGradient(mx, my, R * .985, mx, my, R * 1.085);
-        at.addColorStop(0, 'rgba(132,192,240,' + (.46 * (1 - magma)).toFixed(3) + ')');
-        at.addColorStop(.42, 'rgba(112,170,226,' + (.17 * (1 - magma)).toFixed(3) + ')');
+        at.addColorStop(0, rgba('132,192,240', .46 * (1 - magma)));
+        at.addColorStop(.42, rgba('112,170,226', .17 * (1 - magma)));
         at.addColorStop(1, 'rgba(96,150,210,0)');
         cx.fillStyle = at;
         cx.fillRect(mx - R * 1.15, my - R * 1.15, R * 2.3, R * 2.3);
@@ -2806,7 +2842,6 @@ body.doc-open #indice{display:none}
       g.addColorStop(1, mez3([124,32,12], [10,38,72], 1 - magma));
       cx.fillStyle = g; cx.fillRect(mx - R, my - R, R * 2, R * 2);
 
-      /* la corteza: al principio es roca quemada, al enfriarse es tierra */
       var tono = {
         calido: mez3([84,44,28], [162,142,88], 1 - magma),   /* África, cálida */
         tierra: mez3([72,40,26], [104,124,78], 1 - magma),
@@ -2829,8 +2864,7 @@ body.doc-open #indice{display:none}
         cx.closePath(); cx.fillStyle = tono[CONT[ic].c]; cx.fill();
       }
 
-      /* el suelo, cuando ya se viene encima: manchas suaves de sabana que
-         rompen el plano de color */
+      /* el suelo, cuando ya se viene encima */
       if (!chico){
         var hondo = c01((R / Math.min(cv.clientWidth, cv.clientHeight) - .9) / 3.5);
         if (hondo > 0){
@@ -2843,19 +2877,18 @@ body.doc-open #indice{display:none}
             if (MY + MR < 0 || MY - MR > cv.clientHeight) continue;
             var gm = cx.createRadialGradient(MX, MY, 0, MX, MY, MR);
             var cm = mn.t < .5 ? '146,128,74' : '184,164,104';
-            gm.addColorStop(0, 'rgba(' + cm + ',' + (.55 * hondo).toFixed(3) + ')');
-            gm.addColorStop(1, 'rgba(' + cm + ',0)');
+            gm.addColorStop(0, rgba(cm, .55 * hondo));
+            gm.addColorStop(1, rgba(cm, 0));
             cx.fillStyle = gm; cx.fillRect(MX - MR, MY - MR, MR * 2, MR * 2);
           }
         }
       }
 
-      /* nubes: sólo cuando ya hay atmósfera que las sostenga */
       if (magma < .55 && chico){
         for (var inb = 0; inb < NUBES.length; inb++){
           var n = NUBES[inb], nq = orto(n.lon, n.lat, lon0, lat0);
           if (!nq.ve) continue;
-          var prof = 1 - Math.hypot(nq.x, nq.y);          /* se aplasta al borde */
+          var prof = 1 - Math.hypot(nq.x, nq.y);
           if (prof <= 0) continue;
           var nr = n.r * R;
           cx.save();
@@ -2863,15 +2896,14 @@ body.doc-open #indice{display:none}
           cx.scale(1, .48 + prof * .38);
           var gn = cx.createRadialGradient(0, 0, 0, 0, 0, nr);
           var an = n.al * (1 - magma / .55) * prof;
-          gn.addColorStop(0, 'rgba(250,252,255,' + an.toFixed(3) + ')');
-          gn.addColorStop(.45, 'rgba(248,250,254,' + (an * .62).toFixed(3) + ')');
+          gn.addColorStop(0, rgba('250,252,255', an));
+          gn.addColorStop(.45, rgba('248,250,254', an * .62));
           gn.addColorStop(1, 'rgba(246,249,253,0)');
           cx.fillStyle = gn; cx.fillRect(-nr, -nr, nr * 2, nr * 2);
           cx.restore();
         }
       }
 
-      /* el terminador: sin él, el planeta es un sticker */
       if (chico){
         var sh = cx.createRadialGradient(mx - R * .42, my - R * .48, R * .08, mx, my, R * 1.28);
         sh.addColorStop(0, 'rgba(255,244,216,.12)');
@@ -2882,125 +2914,243 @@ body.doc-open #indice{display:none}
       cx.restore();
     }
 
-    /* Los rótulos: mismo idioma que la landing — mono, versalitas, una línea. */
-    var ROTULOS = [
-      [ .40, 1.30, 'EL PRINCIPIO' ],
-      [ 1.70, 3.05, 'TODO LO QUE EXISTE, EN UN PUNTO' ],
-      [ 3.35, 5.05, 'LA MATERIA SE ORDENA' ],
-      [ 5.75, 7.25, 'UN PLANETA' ],
-      [ 8.30, 10.40, 'ÁFRICA' ]
-    ];
-
-    function pintaCosmos(T, W, H){
+    /* ── escena 1 · LA GALAXIA (u de 0 a 7.2) ────────────────────────────────
+       Arranca lejísimos y acelera. Pasada la mitad ya vamos entre las estrellas
+       y cada una deja rastro: el rastro sale de la VELOCIDAD de la cámara, no
+       de un número inventado, y por eso el frenado se siente. */
+    function escGalaxia(u, W, H, al){
       var mx = W * .5, my = H * .5, base = Math.min(W, H);
-      var esc = base * .62;
+      var p = c01(u / 7.2);
+      var zoom = .3 + Math.pow(p, 2.6) * 9.5;
+      /* el rastro NO existe hasta que de verdad vamos rápido: de lejos una
+         galaxia son puntos quietos, no un castillo de fuegos */
+      var vel  = Math.pow(c01((p - .48) / .52), 2.1) * 6.0;
+      var R = base * .46 * zoom, rot = u * .085, apl = .34;
 
-      cx.fillStyle = '#04040B'; cx.fillRect(0, 0, W, H);
+      cx.save(); cx.globalAlpha = al;
 
-      /* estrellas: aparecen cuando el estallido ya se apagó lo suficiente */
-      var estr = c01((T - 2.4) / 1.6);
-      if (estr > 0){
-        for (var ie = 0; ie < 110; ie++){
-          var ex = seudo(ie * 3.7) * W, ey = seudo(ie * 9.1) * H;
-          var eb = (.10 + seudo(ie * 5.9) * .5) * estr;
-          cx.fillStyle = 'rgba(226,234,246,' + eb.toFixed(3) + ')';
-          cx.fillRect(ex, ey, 1.2, 1.2);
+      /* el bulbo */
+      cx.save(); cx.translate(mx, my); cx.scale(1, apl); cx.translate(-mx, -my);
+      var rb = R * .62;
+      var gb = cx.createRadialGradient(mx, my, 0, mx, my, rb);
+      gb.addColorStop(0, 'rgba(255,250,236,.9)');
+      gb.addColorStop(.09, 'rgba(255,238,196,.55)');
+      gb.addColorStop(.26, 'rgba(255,208,142,.2)');
+      gb.addColorStop(.62, 'rgba(206,166,120,.06)');
+      gb.addColorStop(1, 'rgba(180,150,110,0)');
+      cx.fillStyle = gb; cx.fillRect(mx - rb, my - rb, rb * 2, rb * 2);
+      cx.restore();
+
+      /* la calina del disco: sin ella los brazos flotan en el vacío */
+      cx.save(); cx.translate(mx, my); cx.scale(1, apl); cx.translate(-mx, -my);
+      var gd = cx.createRadialGradient(mx, my, R * .12, mx, my, R);
+      gd.addColorStop(0, 'rgba(150,164,206,.10)');
+      gd.addColorStop(.55, 'rgba(120,140,190,.055)');
+      gd.addColorStop(1, 'rgba(90,110,166,0)');
+      cx.fillStyle = gd; cx.fillRect(mx - R, my - R, R * 2, R * 2);
+      cx.restore();
+
+      /* las estrellas de los brazos */
+      cx.lineCap = 'round';
+      for (var i = 0; i < GAL.length; i++){
+        var g = GAL[i];
+        var ang = g.a + rot;
+        var x = mx + Math.cos(ang) * g.r * R;
+        var y = my + Math.sin(ang) * g.r * R * apl + g.z * R;
+        if (x < -60 || x > W + 60 || y < -60 || y > H + 60) continue;
+        var dx = x - mx, dy = y - my, d = Math.hypot(dx, dy) || 1;
+        var col = g.c < .06 ? '255,186,196'          /* nebulosas */
+                : g.c < .5  ? '206,222,255'
+                            : '255,238,208';
+        /* se apagan hacia el borde: así el disco muere en degradado y no
+           en un canto duro */
+        var alf = g.b * (.5 + (1 - g.r) * .5) * (1 - g.r * .55);
+        var largo = Math.min(base * .42, d * vel * .05);
+        if (largo > 1.5){
+          cx.strokeStyle = rgba(col, alf * .8);
+          cx.lineWidth = .7 + g.b * 1.5;
+          cx.beginPath(); cx.moveTo(x, y);
+          cx.lineTo(x - dx / d * largo, y - dy / d * largo);
+          cx.stroke();
+        } else {
+          cx.fillStyle = rgba(col, alf);
+          var s = .8 + g.b * 1.5;
+          cx.fillRect(x - s / 2, y - s / 2, s, s);
         }
       }
 
-      var t1 = c01(T / 1.15);
-      var tExp = Math.max(0, T - 1.15);
-      var colapso = sua(c01((T - 3.0) / 2.3));
-      var caida = sua(c01((T - 5.05) / 1.5));
-      var nace = sua(c01((T - 5.0) / 1.8));
-      var magma = 1 - sua(c01((T - 5.5) / 1.8));
-      var apunta = sua(c01((T - 7.0) / 1.5));
-      var clavado = c01((T - 8.0) / 2.6);
-
-      /* 1 · la singularidad */
-      if (T < 1.6){
-        var pr = (1 + t1 * t1 * 10) * (base / 700), gr = pr * 15;
-        var gg = cx.createRadialGradient(mx, my, 0, mx, my, gr);
-        gg.addColorStop(0, 'rgba(255,255,255,' + (.25 + .75 * t1) + ')');
-        gg.addColorStop(.14, 'rgba(255,236,192,' + (.55 * t1) + ')');
-        gg.addColorStop(.42, 'rgba(255,176,84,' + (.20 * t1) + ')');
-        gg.addColorStop(1, 'rgba(255,140,60,0)');
-        cx.fillStyle = gg; cx.fillRect(mx - gr, my - gr, gr * 2, gr * 2);
+      /* las vetas de polvo que cruzan el disco */
+      cx.save(); cx.translate(mx, my); cx.scale(1, apl); cx.translate(-mx, -my);
+      for (var v = 0; v < 2; v++){
+        /* la veta va PEGADA al brazo, un poco por dentro: es el polvo que tapa
+           las estrellas de atrás, y eso es lo que le da fondo al disco */
+        for (var w = 0; w < 16; w++){
+          var wr = .2 + w * .052;
+          var wa = v * Math.PI + wr * 7.4 - .34 + rot;
+          var wx = mx + Math.cos(wa) * wr * R, wy = my + Math.sin(wa) * wr * R;
+          var wR = R * .1;
+          var gv = cx.createRadialGradient(wx, wy, 0, wx, wy, wR);
+          gv.addColorStop(0, 'rgba(10,7,14,.42)');
+          gv.addColorStop(1, 'rgba(10,7,14,0)');
+          cx.fillStyle = gv; cx.fillRect(wx - wR, wy - wR, wR * 2, wR * 2);
+        }
       }
+      cx.restore();
+      cx.restore();
+    }
 
-      /* 2 · el estallido y 3 · el disco que se ordena */
-      if (T > 1.1 && caida < 1){
+    /* ── escena 2 · EL SOL Y SU DISCO (u de 0 a 7.4) ─────────────────────────
+       Las estrellas frenan, una queda al centro y prende. Lo que sobra se
+       aplana en un disco y de ahí salen los planetas. */
+    function escSol(u, W, H, al){
+      var mx = W * .5, my = H * .5, base = Math.min(W, H);
+      var prende = sua(c01((u - .5) / 1.7));
+      var aplana = sua(c01((u - 1.6) / 1.8));
+      var barre  = sua(c01((u - 3.2) / 1.8));      /* el disco se vuelve órbitas */
+      var orbe   = sua(c01((u - 3.6) / 1.5));
+
+      cx.save(); cx.globalAlpha = al;
+
+      /* el polvo que todavía cae */
+      if (barre < 1){
         cx.lineCap = 'round';
-        for (var ib = 0; ib < polvo.length; ib++){
-          var p = polvo[ib];
-          var r0 = Math.pow(tExp, .70) * p.v * esc;
-          var r = r0 * (1 - colapso * .55) * (1 - caida);
-          if (r < 1) continue;
-          var ang = p.a + colapso * 3.1 + tExp * .07;
-          var apl = .30 + .70 * (1 - colapso);
-          var calor = c01(1 - tExp / 2.9);
-          var px = mx + Math.cos(ang) * r;
-          var py = my + Math.sin(ang) * r * apl + p.incl * r * .26 * (1 - colapso);
-          var al = Math.min(1, tExp * 3.4) * (1 - caida) * (.28 + p.b * .62);
-          cx.strokeStyle = mez3([210,74,30], [255,248,230], calor)
-                             .replace('rgb(', 'rgba(').replace(')', ',' + al.toFixed(3) + ')');
-          cx.lineWidth = p.s * (base / 700) * (.55 + calor * 1.0);
-          cx.beginPath();
-          cx.moveTo(px, py);
-          cx.lineTo(mx + Math.cos(ang) * r * .90, my + Math.sin(ang) * r * .90 * apl);
+        for (var i = 0; i < polvo.length; i++){
+          var p = polvo[i];
+          var lejos = base * (1.15 - aplana * .72) * p.r;
+          var ang = p.a + u * p.v * (.25 + aplana * .75);
+          var apl = 1 - aplana * .78;
+          var x = mx + Math.cos(ang) * lejos;
+          var y = my + Math.sin(ang) * lejos * apl;
+          var alf = p.b * .5 * (1 - barre);
+          var col = mez3([214,92,40], [255,238,204], 1 - p.r);
+          cx.strokeStyle = col.replace('rgb(', 'rgba(').replace(')', ',' + alf.toFixed(3) + ')');
+          cx.lineWidth = p.s * (base / 700) * 1.1;
+          cx.beginPath(); cx.moveTo(x, y);
+          cx.lineTo(mx + Math.cos(ang - .07) * lejos * .96,
+                    my + Math.sin(ang - .07) * lejos * .96 * apl);
           cx.stroke();
         }
       }
 
-      /* el fogonazo del instante cero */
-      if (T >= 1.15){
-        var fl = c01(1 - (T - 1.15) / .5);
-        if (fl > 0){
-          cx.fillStyle = 'rgba(255,250,238,' + (fl * fl * .92).toFixed(3) + ')';
-          cx.fillRect(0, 0, W, H);
+      /* las órbitas y sus planetas */
+      if (orbe > 0){
+        cx.save(); cx.translate(mx, my); cx.scale(1, .30); cx.translate(-mx, -my);
+        for (var k = 0; k < PLANETAS.length; k++){
+          var pl = PLANETAS[k], pr = base * .58 * pl.r;
+          cx.strokeStyle = rgba('190,206,236', .10 * orbe);
+          cx.lineWidth = 1;
+          cx.beginPath(); cx.arc(mx, my, pr, 0, 6.2832); cx.stroke();
+        }
+        cx.restore();
+        for (var k2 = 0; k2 < PLANETAS.length; k2++){
+          var p2 = PLANETAS[k2], pr2 = base * .58 * p2.r;
+          var pa = u * p2.t * .55 + k2 * 1.9;
+          var px = mx + Math.cos(pa) * pr2, py = my + Math.sin(pa) * pr2 * .30;
+          var ps = base * p2.s * orbe;
+          var gp = cx.createRadialGradient(px - ps * .3, py - ps * .3, 0, px, py, ps);
+          gp.addColorStop(0, rgba(p2.c, orbe));
+          gp.addColorStop(1, rgba(p2.c, orbe * .35));
+          cx.fillStyle = gp;
+          cx.beginPath(); cx.arc(px, py, ps, 0, 6.2832); cx.fill();
         }
       }
 
-      /* 4 · el planeta · 5 · el clavado a África */
-      if (nace > 0){
-        var R = base * .21 * nace * (1 + Math.pow(clavado, 2.7) * 34);
-        var libre = 128 - (T - 5.0) * 15;
-        var lon0 = libre * (1 - apunta) + 34 * apunta;
-        var lat0 = -2 * apunta;
-        dibujaTierra(mx, my, R, lon0, lat0, magma, Math.min(1, nace * 1.4));
+      /* la estrella */
+      if (prende > 0){
+        var rs = base * (.035 + prende * .045);
+        var gc = cx.createRadialGradient(mx, my, 0, mx, my, rs * 9);
+        gc.addColorStop(0, rgba('255,255,250', .95 * prende));
+        gc.addColorStop(.06, rgba('255,246,214', .85 * prende));
+        gc.addColorStop(.2, rgba('255,206,128', .3 * prende));
+        gc.addColorStop(.55, rgba('255,164,74', .09 * prende));
+        gc.addColorStop(1, 'rgba(255,140,60,0)');
+        cx.fillStyle = gc; cx.fillRect(mx - rs * 9, my - rs * 9, rs * 18, rs * 18);
       }
+      cx.restore();
+    }
 
-      /* 5b · la bajada: se atraviesan nubes y aire. Sin esto, el último
-         segundo es un polígono de color plano y se rompe el hechizo. */
+    /* ── escena 3 · EL TERCERO (u de 0 a 8.0) ────────────────────────────────
+       La cámara se va al tercer planeta: crece, se enfría, gira hasta poner
+       África de frente y se clava. */
+    function escTierra(u, W, H, al){
+      var mx = W * .5, my = H * .5, base = Math.min(W, H);
+      var nace    = sua(c01(u / 1.5));
+      var magma   = 1 - sua(c01((u - .9) / 1.9));
+      var apunta  = sua(c01((u - 2.0) / 1.6));
+      var clavado = c01((u - 3.4) / 2.9);
+
+      cx.save(); cx.globalAlpha = al;
+      var R = base * .21 * nace * (1 + Math.pow(clavado, 2.7) * 34);
+      var libre = 128 - u * 15;
+      dibujaTierra(mx, my, R, libre * (1 - apunta) + 34 * apunta, -2 * apunta,
+                   magma, 1);
+
+      /* la bajada: se atraviesan nubes y aire. Sin esto, el último segundo es
+         un polígono de color plano y se rompe el hechizo. */
       if (clavado > .22){
         var apr = sua(c01((clavado - .22) / .78));
         for (var ik = 0; ik < 10; ik++){
-          var kx = seudo(ik * 31.1) * W;
-          var ky = seudo(ik * 37.7) * H;
+          var kx = seudo(ik * 31.1) * W, ky = seudo(ik * 37.7) * H;
           var kr = W * (.10 + seudo(ik * 41.3) * .20) * (1 + apr * 5.2);
           var ka = .34 * Math.sin(Math.min(1, apr * 1.15) * Math.PI);
           cx.save();
           cx.translate(kx, ky); cx.scale(1, .26);
           var gk = cx.createRadialGradient(0, 0, 0, 0, 0, kr);
-          gk.addColorStop(0, 'rgba(255,253,248,' + ka.toFixed(3) + ')');
-          gk.addColorStop(.5, 'rgba(253,248,238,' + (ka * .5).toFixed(3) + ')');
+          gk.addColorStop(0, rgba('255,253,248', ka));
+          gk.addColorStop(.5, rgba('253,248,238', ka * .5));
           gk.addColorStop(1, 'rgba(252,246,234,0)');
           cx.fillStyle = gk; cx.fillRect(-kr, -kr, kr * 2, kr * 2);
           cx.restore();
         }
-        cx.fillStyle = 'rgba(230,201,146,' + (apr * .56).toFixed(3) + ')';
+        cx.fillStyle = rgba('230,201,146', apr * .56);
         cx.fillRect(0, 0, W, H);
       }
 
-      /* 6 · la entrega: el clavado se abre en la luz de la sabana */
-      if (T > 10.35){
-        var k = sua(c01((T - 10.35) / .58));
-        var k2 = sua(c01((T - 10.7) / .72));
-        var cielo = esDia() ? [243,242,238] : [5,5,7];
-        cx.globalAlpha = k;
-        cx.fillStyle = mez3([238,208,150], cielo, k2);
+      /* la entrega: el clavado se abre en la luz de la sabana */
+      if (u > 6.6){
+        var k = sua(c01((u - 6.6) / .58));
+        var k2 = sua(c01((u - 6.95) / .72));
+        cx.globalAlpha = al * k;
+        cx.fillStyle = mez3([238,208,150], esDia() ? [243,242,238] : [5,5,7], k2);
         cx.fillRect(0, 0, W, H);
-        cx.globalAlpha = 1;
+      }
+      cx.restore();
+    }
+
+    /* Las tres escenas y su fundido cruzado. Cada una tiene su reloj local. */
+    var VIAJE = [
+      { t0: 0.0,  dur: 7.2, pinta: escGalaxia },
+      { t0: 6.6,  dur: 7.4, pinta: escSol },
+      { t0: 13.2, dur: 8.0, pinta: escTierra }
+    ];
+    /* Los rótulos: mismo idioma que la landing — mono, versalitas, una línea. */
+    var ROTULOS = [
+      [  .8,  3.0, 'LA VÍA LÁCTEA' ],
+      [ 3.6,  6.0, 'CIEN MIL MILLONES DE SOLES' ],
+      [ 7.4,  9.4, 'UNO SE ENCIENDE' ],
+      [ 10.4, 12.6, 'Y A SU ALREDEDOR, MATERIA' ],
+      [ 13.8, 15.6, 'EL TERCERO' ],
+      [ 16.4, 18.8, 'ÁFRICA' ]
+    ];
+
+    function pintaCosmos(T, W, H){
+      cx.fillStyle = '#04040B'; cx.fillRect(0, 0, W, H);
+
+      /* estrellas de fondo: aparecen cuando ya estamos dentro de la galaxia */
+      var estr = c01((T - 5.5) / 2.0) * (1 - c01((T - 17.5) / 1.5));
+      if (estr > 0){
+        for (var ie = 0; ie < 110; ie++){
+          cx.fillStyle = rgba('226,234,246', (.10 + seudo(ie * 5.9) * .5) * estr);
+          cx.fillRect(seudo(ie * 3.7) * W, seudo(ie * 9.1) * H, 1.2, 1.2);
+        }
+      }
+
+      for (var v = 0; v < VIAJE.length; v++){
+        var e = VIAJE[v], u = T - e.t0;
+        if (u < -.6 || u > e.dur + .6) continue;
+        var al = Math.min(sua(c01(u / .7)), sua(c01((e.dur - u) / .7)));
+        if (al <= 0) continue;
+        e.pinta(u, W, H, al);
       }
 
       /* los rótulos */
@@ -3013,9 +3163,9 @@ body.doc-open #indice{display:none}
         var av = Math.min(c01((T - rr[0]) / .45), c01((rr[1] - T) / .45));
         if (av <= 0) continue;
         var rx = Math.max(18, W * .062), ry = H - Math.max(22, H * .085);
-        cx.fillStyle = 'rgba(255,255,255,' + (av * .22).toFixed(3) + ')';
+        cx.fillStyle = rgba('255,255,255', av * .22);
         cx.fillRect(rx, ry - 15, 16, 1);
-        cx.fillStyle = 'rgba(246,248,252,' + (av * .66).toFixed(3) + ')';
+        cx.fillStyle = rgba('246,248,252', av * .66);
         cx.fillText(rr[2], rx + 24, ry - 11);
       }
       if ('letterSpacing' in cx) cx.letterSpacing = '0px';
@@ -3134,6 +3284,749 @@ body.doc-open #indice{display:none}
       cx.beginPath(); cx.ellipse(x - 10 * esc, suelo - 92 * esc, 58 * esc, 12 * esc, 0, 0, 6.2832); cx.fill();
     }
 
+    /* la presa en el suelo, entre que cae y que se la llevan */
+    function presaEnSuelo(px, suelo, col, alfa){
+      if (alfa <= 0) return;
+      cx.save(); cx.globalAlpha = alfa;
+      cx.fillStyle = col;
+      cx.beginPath(); cx.ellipse(px, suelo - 5, 20, 6, 0, 0, 6.2832); cx.fill();
+      cx.strokeStyle = col; cx.lineWidth = 2; cx.lineCap = 'round';
+      cx.beginPath(); cx.moveTo(px + 14, suelo - 8); cx.lineTo(px + 26, suelo - 16); cx.stroke();
+      cx.beginPath(); cx.moveTo(px - 8, suelo - 2); cx.lineTo(px - 16, suelo); cx.stroke();
+      cx.restore();
+    }
+
+    /* ══ EL CAMINANTE ══════════════════════════════════════════════════════
+       La MISMA figura sirve para el cazador encorvado y para el que entra a la
+       oficina de traje: `avance` (0 a 1) endereza la espalda, sube la cabeza,
+       alarga la zancada y cambia lo que trae en la mano. Dibujar cinco
+       monigotes distintos habría sido más rápido y se habría notado — la
+       evolución tiene que ser la misma criatura cambiando, no cinco calcomanías
+       puestas en fila. */
+    function humano(px, suelo, A, ciclo, alfa, dir, avance, objeto, col, arriba){
+      var LP = A * .50;                        /* largo de pierna */
+      var LB = A * .34;                        /* largo de brazo */
+      var caderaY = suelo - LP;
+      var torso = A * (.32 + avance * .03);
+      var lean = (1 - avance) * .42;           /* encorvado → erguido */
+      var zanc = A * (.12 + avance * .07);
+      var f1 = Math.sin(ciclo), f2 = Math.sin(ciclo + Math.PI);
+      var cabR = A * .072;
+
+      /* Una extremidad de dos huesos. La rodilla y el codo salen de la
+         GEOMETRÍA —el punto que cierra el triángulo—, no de un punto medio
+         corrido a ojo. Es lo que hace que el paso se lea como un paso y no
+         como una tijera. */
+      function hueso(x0, y0, x1, y1, largo, ancho, lado){
+        var dx = x1 - x0, dy = y1 - y0, L = Math.hypot(dx, dy) || 1;
+        var d = Math.min(largo * .985, L);
+        var ux = dx / L, uy = dy / L;
+        var h = Math.sqrt(Math.max(0, largo * largo / 4 - d * d / 4));
+        var kx = x0 + ux * d / 2 + (-uy) * h * lado;
+        var ky = y0 + uy * d / 2 + ( ux) * h * lado;
+        cx.lineWidth = ancho;
+        cx.beginPath(); cx.moveTo(x0, y0); cx.lineTo(kx, ky); cx.lineTo(x1, y1); cx.stroke();
+        return [kx, ky];
+      }
+
+      cx.save();
+      cx.translate(px, 0); cx.scale(dir, 1);
+      cx.globalAlpha = alfa;
+      cx.strokeStyle = col; cx.fillStyle = col;
+      cx.lineCap = 'round'; cx.lineJoin = 'round';
+
+      /* piernas — la de atrás más tenue, para que se lea la profundidad */
+      var anchoP = A * .085;
+      cx.globalAlpha = alfa * .55;
+      hueso(0, caderaY, f2 * zanc, suelo - Math.max(0, Math.sin(ciclo + Math.PI)) * A * .05,
+            LP, anchoP, -1);
+      cx.globalAlpha = alfa;
+      hueso(0, caderaY, f1 * zanc, suelo - Math.max(0, Math.sin(ciclo)) * A * .05,
+            LP, anchoP, -1);
+
+      /* de la cadera para arriba todo gira junto: la inclinación ES la
+         evolución, y girando el bloque no hay que recalcular cada punto */
+      cx.save();
+      cx.translate(0, caderaY); cx.rotate(lean); cx.translate(0, -caderaY);
+      var hombroY = caderaY - torso;
+
+      cx.lineWidth = A * (.135 - avance * .03);
+      cx.beginPath(); cx.moveTo(0, caderaY); cx.lineTo(0, hombroY); cx.stroke();
+
+      /* el pelambre del principio */
+      if (avance < .5){
+        cx.save();
+        cx.globalAlpha = alfa * (1 - avance / .5) * .55;
+        cx.lineWidth = A * .022;
+        for (var h2 = 0; h2 < 6; h2++){
+          var hy = hombroY + torso * (h2 / 6);
+          cx.beginPath(); cx.moveTo(-A * .05, hy);
+          cx.lineTo(-A * .12, hy + A * .035); cx.stroke();
+        }
+        cx.restore();
+      }
+      /* y el cuello de la camisa del final */
+      if (avance > .7){
+        cx.save();
+        cx.globalAlpha = alfa * (avance - .7) / .3;
+        cx.lineWidth = A * .02;
+        cx.beginPath();
+        cx.moveTo(-A * .045, hombroY + A * .015);
+        cx.lineTo(0, hombroY + A * .075);
+        cx.lineTo(A * .045, hombroY + A * .015); cx.stroke();
+        cx.restore();
+      }
+
+      /* brazos: el de adelante puede alzarse (la lanza en alto) */
+      var manoX, manoY;
+      if (arriba > 0){
+        manoX = A * .10 + A * .16 * arriba;
+        manoY = hombroY + LB * .8 - (LB * 1.5) * arriba;
+      } else {
+        manoX = f2 * A * .17;
+        manoY = hombroY + LB * .82;
+      }
+      cx.globalAlpha = alfa * .55;
+      hueso(0, hombroY, f1 * A * .17, hombroY + LB * .82, LB, A * .062, 1);
+      cx.globalAlpha = alfa;
+      hueso(0, hombroY, manoX, manoY, LB, A * .062, arriba > .3 ? -1 : 1);
+
+      /* Cabeza y cuello. El cuello lleva SU PROPIA inclinación: si sólo se
+         inclina el tronco, el encorvado se lee como pecho sacado y mentón
+         arriba. La cabeza tiene que ir adelante y abajo. */
+      cx.save();
+      cx.translate(0, hombroY); cx.rotate((1 - avance) * .62); cx.translate(0, -hombroY);
+      cx.lineWidth = A * .05;
+      cx.beginPath(); cx.moveTo(0, hombroY);
+      cx.lineTo(A * .015, hombroY - A * .055); cx.stroke();
+      var cabY = hombroY - A * .055 - cabR;
+      cx.beginPath(); cx.arc(A * .02, cabY, cabR, 0, 6.2832); cx.fill();
+      if (avance < .5){                                /* melena, atrás nomás */
+        cx.save();
+        cx.globalAlpha = alfa * (1 - avance / .5) * .85;
+        cx.lineWidth = A * .016;
+        for (var m2 = 0; m2 < 3; m2++){
+          var ma = 2.5 + m2 * .48;
+          cx.beginPath();
+          cx.moveTo(A * .02 + Math.cos(ma) * cabR * .9, cabY + Math.sin(ma) * cabR * .9);
+          cx.lineTo(A * .02 + Math.cos(ma) * cabR * 1.45, cabY + Math.sin(ma) * cabR * 1.45);
+          cx.stroke();
+        }
+        cx.restore();
+      }
+      cx.restore();
+
+      /* lo que trae en la mano */
+      cx.lineWidth = A * .028;
+      if (objeto === 1){                               /* lanza */
+        /* en reposo va casi vertical y por FUERA del cuerpo: apuntada hacia
+           adelante cruzaba la cara y parecía un pico */
+        var lx = manoX + A * .05, ly = manoY;
+        var ang = arriba > .3 ? -1.42 : -1.30;
+        cx.beginPath();
+        cx.moveTo(lx - Math.cos(ang) * A * .22, ly - Math.sin(ang) * A * .22);
+        cx.lineTo(lx + Math.cos(ang) * A * .5, ly + Math.sin(ang) * A * .5);
+        cx.stroke();
+        var px2 = lx + Math.cos(ang) * A * .5, py2 = ly + Math.sin(ang) * A * .5;
+        cx.beginPath();
+        cx.moveTo(px2, py2);
+        cx.lineTo(px2 - Math.cos(ang + .5) * A * .1, py2 - Math.sin(ang + .5) * A * .1);
+        cx.lineTo(px2 - Math.cos(ang - .5) * A * .1, py2 - Math.sin(ang - .5) * A * .1);
+        cx.closePath(); cx.fill();
+      } else if (objeto === 2){                        /* azada */
+        cx.beginPath();
+        cx.moveTo(manoX - A * .16, manoY + A * .34);
+        cx.lineTo(manoX + A * .12, manoY - A * .18); cx.stroke();
+        cx.fillRect(manoX - A * .25, manoY + A * .3, A * .16, A * .045);
+      } else if (objeto === 3){                        /* martillo */
+        cx.beginPath();
+        cx.moveTo(manoX - A * .04, manoY + A * .2);
+        cx.lineTo(manoX + A * .05, manoY - A * .12); cx.stroke();
+        cx.fillRect(manoX + A * .0, manoY - A * .19, A * .15, A * .06);
+      } else if (objeto === 4){                        /* portafolio */
+        cx.fillRect(manoX - A * .085, manoY + A * .02, A * .19, A * .13);
+        cx.lineWidth = A * .016;
+        cx.beginPath();
+        cx.arc(manoX + A * .01, manoY + A * .02, A * .042, Math.PI, 0); cx.stroke();
+      } else if (objeto === 5){                        /* la presa al hombro */
+        cx.save(); cx.globalAlpha = alfa * .9;
+        cx.beginPath();
+        cx.ellipse(A * .02, hombroY - A * .07, A * .25, A * .075, -.18, 0, 6.2832);
+        cx.fill();
+        cx.lineWidth = A * .026;
+        cx.beginPath();
+        cx.moveTo(A * .2, hombroY - A * .03);
+        cx.lineTo(A * .3, hombroY + A * .12); cx.stroke();
+        cx.beginPath();
+        cx.moveTo(-A * .2, hombroY - A * .03);
+        cx.lineTo(-A * .3, hombroY + A * .1); cx.stroke();
+        cx.restore();
+      }
+      cx.restore();
+      cx.restore();
+    }
+
+    /* ══ LOS CAZADORES ═════════════════════════════════════════════════════
+       Entran por la derecha, alzan las lanzas, el leopardo cede, y se llevan
+       la presa. No hay violencia dibujada: la escena es de POSTURA — quién
+       aguanta y quién se retira. */
+    function cazadores(u, suelo, W, t, col, presaX){
+      var A = Math.max(46, Math.min(78, suelo * .13));
+      for (var i = 0; i < 3; i++){
+        /* se plantan A LA IZQUIERDA de la presa, o sea ENTRE ella y el
+           leopardo. Puestos del otro lado quedaban fuera de cuadro cuando la
+           captura caía cerca del borde, y además no contaban nada: lo que se
+           está viendo es quién se interpone. */
+        var destino = presaX - A * (.75 + i * .58);
+        var fuera = W + A * 1.4 + i * A * .8;
+        var x, dir = -1, anda = true, alza = 0, obj = 1;
+        if (u < 2.4){
+          x = fuera + (destino - fuera) * sua(c01(u / 2.4));
+        } else if (u < 5.4){
+          x = destino; anda = false;
+          alza = Math.min(sua(c01((u - 2.4) / .8)), sua(c01((5.0 - u) / .7)));
+        } else {
+          x = destino + (W + A * 3 - destino) * sua(c01((u - 5.4) / 2.4));
+          dir = 1;
+          if (i === 1) obj = 5;                    /* el de en medio la carga */
+        }
+        var alfa = 1 - c01((u - 7.2) / .9);
+        humano(x, suelo, A, anda ? t * 7.5 + i * 1.9 : 0, alfa, dir,
+               .12 + i * .02, obj, col, alza);
+      }
+    }
+
+    /* ══ LA MARCHA ═════════════════════════════════════════════════════════
+       El caminante se queda en su sitio y lo que cambia es el mundo detrás.
+       Seis épocas encadenadas con fundido cruzado; el mismo cuerpo se endereza
+       y cambia de herramienta. Al fondo va una capa lenta y al frente una
+       rápida: sin ese desfase el paisaje se ve pegado a un vidrio. */
+    var CIELOS = [
+      [[236,214,168],[248,238,214]],   /* sabana */
+      [[214,150,96], [244,206,150]],   /* la hoguera, atardecer */
+      [[190,206,196],[236,240,226]],   /* labranza, mañana */
+      [[186,196,208],[232,236,238]],   /* aldea */
+      [[158,156,150],[206,202,192]],   /* industria, humo */
+      [[152,172,196],[222,232,240]]    /* ciudad */
+    ];
+    function pintaMarcha(u, W, H, t){
+      var dia = esDia(), suelo = H * .78;
+      var era = c01(u / 16.4) * 5;
+      var e0 = Math.min(5, Math.floor(era)), e1 = Math.min(5, e0 + 1);
+      var k = sua(era - e0);
+
+      /* el cielo, mezclado entre las dos épocas */
+      var c0a = CIELOS[e0][0], c0b = CIELOS[e0][1];
+      var c1a = CIELOS[e1][0], c1b = CIELOS[e1][1];
+      function mzc(a, b){ return [a[0]+(b[0]-a[0])*k, a[1]+(b[1]-a[1])*k, a[2]+(b[2]-a[2])*k]; }
+      var arr = mzc(c0a, c1a), aba = mzc(c0b, c1b);
+      /* de noche el cielo se apaga, pero NO se apaga a negro: a .16 el
+         paisaje entero desaparecía y la marcha era un monigote en el vacío */
+      if (!dia){ arr = arr.map(function(v){ return v * .26; }); aba = aba.map(function(v){ return v * .38; }); }
+      var g = cx.createLinearGradient(0, 0, 0, suelo);
+      g.addColorStop(0, 'rgb(' + arr.map(Math.round).join(',') + ')');
+      g.addColorStop(1, 'rgb(' + aba.map(Math.round).join(',') + ')');
+      cx.fillStyle = g; cx.fillRect(0, 0, W, suelo);
+
+      var tinta = dia ? '40,38,32' : '196,192,176';
+      var desp = u * 78;
+      escenario(e0, desp, 1 - k, W, H, suelo, t, tinta, dia);
+      escenario(e1, desp, k,     W, H, suelo, t, tinta, dia);
+
+      /* el suelo */
+      var gs = cx.createLinearGradient(0, suelo, 0, H);
+      gs.addColorStop(0, dia ? 'rgba(198,188,160,.95)' : 'rgba(58,54,46,.95)');
+      gs.addColorStop(1, dia ? 'rgba(162,152,126,.95)' : 'rgba(26,24,20,.98)');
+      cx.fillStyle = gs; cx.fillRect(0, suelo, W, H - suelo);
+      cx.fillStyle = rgba(tinta, .22); cx.fillRect(0, suelo, W, 1);
+      /* el suelo también corre: piedras y matas que pasan de largo. Sin esto
+         el caminante parecía andar sobre una banda pintada. */
+      for (var sp = 0; sp < 34; sp++){
+        var sq = seudo(sp * 5.7), sq2 = seudo(sp * 9.3);
+        var vsp = .55 + sq2 * .9;
+        var sxp = ((sp * 137 - desp * vsp) % (W + 200) + W + 200) % (W + 200) - 100;
+        var syp = suelo + (H - suelo) * (.08 + sq * .8);
+        var prof = .3 + (syp - suelo) / (H - suelo) * .7;
+        if (sq2 > .5){
+          cx.fillStyle = rgba(tinta, .14 * prof);
+          cx.beginPath();
+          cx.arc(sxp, syp, (3 + sq * 8) * prof, Math.PI, 0); cx.fill();
+        } else {
+          cx.strokeStyle = rgba(tinta, .18 * prof); cx.lineWidth = 1.5 * prof;
+          for (var bz = -2; bz <= 2; bz++){
+            cx.beginPath(); cx.moveTo(sxp, syp);
+            cx.lineTo(sxp + bz * 3 * prof, syp - (9 + sq * 7) * prof); cx.stroke();
+          }
+        }
+      }
+
+      /* el astro cruzando: son eras, no una tarde. Sin él el cielo es una
+         pared de color y no se siente que pase el tiempo. */
+      var ax2 = W * (.12 + (era / 5) * .76), ay2 = suelo - H * (.34 + Math.sin(era / 5 * 3.14) * .2);
+      var ra2 = H * .028;
+      var ga2 = cx.createRadialGradient(ax2, ay2, ra2 * .6, ax2, ay2, ra2 * 5);
+      ga2.addColorStop(0, rgba(dia ? '255,244,206' : '200,214,242', dia ? .38 : .2));
+      ga2.addColorStop(1, rgba(dia ? '255,240,190' : '190,206,238', 0));
+      cx.fillStyle = ga2; cx.fillRect(ax2 - ra2 * 5, ay2 - ra2 * 5, ra2 * 10, ra2 * 10);
+      cx.fillStyle = rgba(dia ? '255,248,222' : '228,234,246', dia ? .92 : .7);
+      cx.beginPath(); cx.arc(ax2, ay2, ra2, 0, 6.2832); cx.fill();
+
+      /* el caminante */
+      var A = Math.max(70, Math.min(132, H * .17));
+      var avance = c01(era / 5);
+      var obj = [1, 1, 2, 2, 3, 4][Math.round(era)];
+      /* la sombra, difuminada: un óvalo negro macizo sobre suelo oscuro se ve
+         como un agujero, no como una sombra */
+      cx.save();
+      var sw = A * .34, sh = A * .05;
+      cx.translate(W * .40, suelo + 3); cx.scale(1, sh / sw);
+      var gsom = cx.createRadialGradient(0, 0, 0, 0, 0, sw);
+      gsom.addColorStop(0, rgba('0,0,0', dia ? .2 : .34));
+      gsom.addColorStop(1, 'rgba(0,0,0,0)');
+      cx.fillStyle = gsom; cx.fillRect(-sw, -sw, sw * 2, sw * 2);
+      cx.restore();
+      humano(W * .40, suelo, A, t * 6.2, 1, 1, avance, obj, rgba(tinta, .92), 0);
+
+      /* el rótulo de la época */
+      var NOM = ['LA SABANA','EL FUEGO','LA SIEMBRA','LA ALDEA','LA MÁQUINA','LA CIUDAD'];
+      var cual = Math.round(era);
+      var dentro = 1 - Math.abs(era - cual) * 2.4;
+      if (dentro > 0) rotuloEsc(NOM[cual], dentro * .7, W, H, dia);
+    }
+
+    /* Cada época es una silueta al horizonte. Va en DOS planos —uno lento y
+       chico atrás, otro rápido y grande adelante— y cada instancia trae su
+       propia semilla estable, atada a su índice: sin eso el escenario se
+       repetía idéntico cada pantalla y se veía papel tapiz. */
+    function escenario(e, desp, al, W, H, suelo, t, tinta, dia){
+      if (al <= .003) return;
+      cx.save(); cx.globalAlpha = al;
+
+      /* el horizonte de siempre, atrás de todo */
+      cx.fillStyle = rgba(tinta, dia ? .14 : .14);
+      cx.beginPath(); cx.moveTo(0, suelo);
+      for (var mxq = 0; mxq <= W + 60; mxq += 60){
+        cx.lineTo(mxq, suelo - H * .05 - seudo(mxq * .11 + e) * H * .05);
+      }
+      cx.lineTo(W, suelo); cx.closePath(); cx.fill();
+
+      function repite(anchoP, vel, dibuja){
+        var d2 = desp * vel, base = Math.floor(d2 / anchoP);
+        for (var n2 = -1; n2 <= Math.ceil(W / anchoP) + 1; n2++){
+          var idx = base + n2, xx = idx * anchoP - d2 + anchoP * .5;
+          if (xx < -anchoP || xx > W + anchoP) continue;
+          dibuja(xx, seudo(idx * 7.31 + e * 13.7), seudo(idx * 3.19 + e * 5.3));
+        }
+      }
+
+      /* el mismo decorado dos veces: lejos chico y tenue, cerca grande y firme */
+      for (var capa = 0; capa < 2; capa++){
+        var esc = capa ? 1 : .55;
+        var vel = capa ? .62 : .26;
+        var yy = capa ? suelo : suelo - H * .035;
+        cx.fillStyle = cx.strokeStyle = rgba(tinta, dia ? (capa ? .42 : .2) : (capa ? .36 : .18));
+        var col = cx.fillStyle;
+
+        if (e === 0){
+          repite(W * (capa ? .38 : .5), vel, function(x, q){
+            acacia(x, yy, (.42 + q * .34) * esc, col);
+          });
+        } else if (e === 1){
+          repite(W * (capa ? .34 : .46), vel, function(x, q, q2){
+            var w2 = (26 + q * 22) * esc, h2 = (40 + q2 * 26) * esc;
+            cx.fillStyle = col;
+            cx.beginPath(); cx.moveTo(x - w2, yy);
+            cx.lineTo(x, yy - h2); cx.lineTo(x + w2, yy); cx.closePath(); cx.fill();
+            if (capa && q > .45){
+              cx.fillStyle = rgba('232,150,60', dia ? .5 : .38);
+              cx.beginPath();
+              cx.ellipse(x + w2 * 1.6, yy - 6, 7 * esc, (10 + Math.sin(t * 9 + x) * 3) * esc,
+                         0, 0, 6.2832);
+              cx.fill();
+              cx.fillStyle = col;
+            }
+            cx.strokeStyle = rgba(tinta, .1); cx.lineWidth = 4 * esc;
+            cx.beginPath(); cx.moveTo(x, yy - h2);
+            cx.quadraticCurveTo(x + 12 * esc, yy - h2 - 34 * esc, x + 3 * esc, yy - h2 - 66 * esc);
+            cx.stroke();
+          });
+        } else if (e === 2){
+          if (capa){
+            cx.strokeStyle = rgba(tinta, dia ? .2 : .18); cx.lineWidth = 1.4;
+            for (var s2 = 0; s2 < 40; s2++){
+              var sx = ((s2 * 47 - desp * .78) % (W + 120) + W + 120) % (W + 120) - 60;
+              cx.beginPath(); cx.moveTo(sx, yy);
+              cx.lineTo(sx + 3, yy - 22 - (s2 % 5) * 6); cx.stroke();
+            }
+          }
+          repite(W * (capa ? .44 : .6), vel, function(x, q){
+            cx.strokeStyle = col; cx.lineWidth = 3 * esc;
+            var n3 = 3 + Math.round(q * 3);
+            for (var p2 = 0; p2 < n3; p2++){
+              cx.beginPath();
+              cx.moveTo(x + p2 * 22 * esc, yy);
+              cx.lineTo(x + p2 * 22 * esc, yy - 28 * esc); cx.stroke();
+            }
+            cx.beginPath(); cx.moveTo(x - 6 * esc, yy - 20 * esc);
+            cx.lineTo(x + (n3 - 1) * 22 * esc + 6 * esc, yy - 20 * esc); cx.stroke();
+          });
+        } else if (e === 3){
+          repite(W * (capa ? .3 : .42), vel, function(x, q, q2){
+            cx.fillStyle = col;
+            var w3 = (42 + q * 26) * esc, h3 = (48 + q2 * 34) * esc;
+            cx.fillRect(x - w3 / 2, yy - h3, w3, h3);
+            cx.beginPath(); cx.moveTo(x - w3 / 2 - 6 * esc, yy - h3);
+            cx.lineTo(x, yy - h3 - 22 * esc);
+            cx.lineTo(x + w3 / 2 + 6 * esc, yy - h3); cx.closePath(); cx.fill();
+            if (q2 > .62){                                  /* la torre */
+              var tw2 = 22 * esc, th2 = (96 + q * 46) * esc;
+              cx.fillRect(x + w3 * .8, yy - th2, tw2, th2);
+              cx.beginPath(); cx.moveTo(x + w3 * .8 - 4 * esc, yy - th2);
+              cx.lineTo(x + w3 * .8 + tw2 / 2, yy - th2 - 24 * esc);
+              cx.lineTo(x + w3 * .8 + tw2 + 4 * esc, yy - th2); cx.closePath(); cx.fill();
+            }
+          });
+        } else if (e === 4){
+          repite(W * (capa ? .34 : .46), vel, function(x, q, q2){
+            cx.fillStyle = col;
+            cx.fillRect(x - 52 * esc, yy - (58 + q * 28) * esc, 92 * esc, (58 + q * 28) * esc);
+            var nch = 1 + Math.round(q2);
+            for (var ch = 0; ch < nch; ch++){
+              var cxh = x + (46 + ch * 24) * esc;
+              var hh = (118 + q * 70 + ch * 20) * esc;
+              cx.fillRect(cxh, yy - hh, 13 * esc, hh);
+              var gh = cx.createRadialGradient(cxh + 6 * esc, yy - hh - 10 * esc, 2,
+                                               cxh + 6 * esc, yy - hh - 20 * esc, 48 * esc);
+              gh.addColorStop(0, rgba(tinta, .18));
+              gh.addColorStop(1, rgba(tinta, 0));
+              cx.fillStyle = gh;
+              cx.fillRect(cxh - 44 * esc, yy - hh - 70 * esc, 96 * esc, 96 * esc);
+              cx.fillStyle = col;
+            }
+          });
+        } else {
+          repite(W * (capa ? .26 : .36), vel, function(x, q, q2){
+            for (var b2 = 0; b2 < 4; b2++){
+              var bw = (22 + seudo(b2 * 7.3 + q * 40) * 24) * esc;
+              var bh = (70 + seudo(b2 * 3.1 + q2 * 30) * H * .34) * esc;
+              var bx = x - 56 * esc + b2 * 36 * esc;
+              cx.fillStyle = col; cx.fillRect(bx, yy - bh, bw, bh);
+              if (capa){
+                cx.fillStyle = rgba(dia ? '255,246,210' : '212,226,255', dia ? .28 : .34);
+                for (var vy = yy - bh + 9; vy < yy - 10; vy += 12){
+                  for (var vx2 = bx + 3; vx2 < bx + bw - 4; vx2 += 8){
+                    if (seudo(vx2 * 1.7 + vy * .9) > .45) cx.fillRect(vx2, vy, 3, 5);
+                  }
+                }
+              }
+            }
+          });
+        }
+      }
+      cx.restore();
+    }
+
+    function rotuloEsc(txt, al, W, H, dia){
+      cx.save();
+      cx.textAlign = 'left'; cx.textBaseline = 'alphabetic';
+      if ('letterSpacing' in cx) cx.letterSpacing = '.26em';
+      cx.font = '600 ' + Math.max(9, Math.min(11.5, W * .0092)).toFixed(1) +
+                'px "IBM Plex Mono", ui-monospace, Menlo, monospace';
+      var rx = Math.max(18, W * .062), ry = H - Math.max(22, H * .085);
+      var c = dia ? '26,26,24' : '246,248,252';
+      cx.fillStyle = rgba(c, al * .3); cx.fillRect(rx, ry - 15, 16, 1);
+      cx.fillStyle = rgba(c, al * .8); cx.fillText(txt, rx + 24, ry - 11);
+      if ('letterSpacing' in cx) cx.letterSpacing = '0px';
+      cx.restore();
+    }
+
+    /* ══ NUEVA YORK ════════════════════════════════════════════════════════
+       La ciudad se levanta, la cámara encuentra la torre de la firma y se mete
+       por una ventana encendida. La torre NO lleva nombre a tamaño legible:
+       es una silueta con la corona prendida. */
+    function pintaCiudad(u, W, H, t){
+      var dia = esDia(), suelo = H * .84;
+      var sube = sua(c01(u / 3.2));
+      var busca = sua(c01((u - 3.0) / 1.8));
+      var entra = c01((u - 5.4) / 2.2);
+      var tinta = dia ? '38,36,32' : '198,196,184';
+
+      var g = cx.createLinearGradient(0, 0, 0, suelo);
+      if (dia){ g.addColorStop(0, '#9FB6CC'); g.addColorStop(1, '#E4E9EC'); }
+      else { g.addColorStop(0, '#070B14'); g.addColorStop(.6, '#0C1420'); g.addColorStop(1, '#1A2436'); }
+      cx.fillStyle = g; cx.fillRect(0, 0, W, suelo);
+      if (!dia){
+        for (var e2 = 0; e2 < 60; e2++){
+          cx.fillStyle = rgba('255,255,255', .06 + (e2 % 5) * .04);
+          cx.fillRect((e2 * 173.2) % W, (e2 * 57.3) % (suelo * .55), 1.2, 1.2);
+        }
+      }
+
+      /* el zoom se centra en la torre */
+      var escala = 1 + Math.pow(entra, 2.2) * 7;
+      var torreX = W * .62;
+      cx.save();
+      cx.translate(torreX, suelo);
+      cx.scale(escala, escala);
+      cx.translate(-torreX, -suelo);
+
+      /* dos filas de edificios: atrás tenue, adelante firme */
+      for (var capa = 0; capa < 2; capa++){
+        var al = capa ? (dia ? .5 : .34) : (dia ? .2 : .14);
+        var basea = capa ? suelo : suelo - H * .02;
+        cx.fillStyle = rgba(tinta, al);
+        for (var b3 = 0; b3 < 30; b3++){
+          var bx3 = (b3 * (W / 26)) - W * .06 + capa * 14;
+          var bw3 = W / 34 + seudo(b3 * 3.1 + capa) * (W / 40);
+          var bh3 = (H * (capa ? .16 : .12) + seudo(b3 * 7.7 + capa * 3) * H * (capa ? .34 : .24)) * sube;
+          if (Math.abs(bx3 - torreX) < W * .045) continue;   /* el hueco de la torre */
+          cx.fillRect(bx3, basea - bh3, bw3, bh3);
+          if (capa && !dia){
+            cx.fillStyle = rgba('214,228,255', .3);
+            for (var wy = basea - bh3 + 8; wy < basea - 8; wy += 11){
+              for (var wx = bx3 + 3; wx < bx3 + bw3 - 4; wx += 8){
+                if (seudo(wx * 1.3 + wy * .7) > .5) cx.fillRect(wx, wy, 3, 5);
+              }
+            }
+            cx.fillStyle = rgba(tinta, al);
+          }
+        }
+      }
+
+      /* LA TORRE */
+      var th = H * .62 * sube, tw = W * .052;
+      cx.fillStyle = rgba(tinta, dia ? .72 : .5);
+      cx.fillRect(torreX - tw / 2, suelo - th, tw, th);
+      cx.beginPath();
+      cx.moveTo(torreX - tw / 2, suelo - th);
+      cx.lineTo(torreX, suelo - th - H * .07);
+      cx.lineTo(torreX + tw / 2, suelo - th); cx.closePath(); cx.fill();
+      /* la corona encendida */
+      var cor = rgba('240,220,143', (.5 + busca * .5) * (dia ? .7 : 1));
+      cx.fillStyle = cor;
+      cx.fillRect(torreX - tw / 2, suelo - th - 3, tw, 3);
+      var gc2 = cx.createRadialGradient(torreX, suelo - th, 2, torreX, suelo - th, tw * 2.4);
+      gc2.addColorStop(0, rgba('240,220,143', .3 * busca));
+      gc2.addColorStop(1, 'rgba(240,220,143,0)');
+      cx.fillStyle = gc2;
+      cx.fillRect(torreX - tw * 2.4, suelo - th - tw * 2.4, tw * 4.8, tw * 4.8);
+      /* las ventanas, y UNA que es a la que entramos */
+      var vent = suelo - th * .62;
+      cx.fillStyle = rgba('236,240,250', dia ? .3 : .4);
+      for (var vy2 = suelo - th + 16; vy2 < suelo - 14; vy2 += 15){
+        for (var vx3 = torreX - tw / 2 + 5; vx3 < torreX + tw / 2 - 6; vx3 += 11){
+          if (seudo(vx3 * .9 + vy2 * 1.1) > .42) cx.fillRect(vx3, vy2, 5, 8);
+        }
+      }
+      cx.fillStyle = rgba('255,246,214', .55 + busca * .45);
+      cx.fillRect(torreX - 9, vent, 18, 12);
+      cx.restore();
+
+      if (busca > 0 && entra < .3){
+        cx.strokeStyle = rgba(tinta, .3 * busca * (1 - entra / .3));
+        cx.lineWidth = 1;
+        cx.strokeRect(torreX - tw * .9, suelo - th - H * .1, tw * 1.8, th + H * .12);
+      }
+
+      /* la calle */
+      cx.fillStyle = dia ? 'rgba(150,146,138,.5)' : 'rgba(20,22,28,.9)';
+      cx.fillRect(0, suelo, W, H - suelo);
+      cx.fillStyle = rgba(tinta, .2); cx.fillRect(0, suelo, W, 1);
+
+      if (u > 1.0 && u < 3.4) rotuloEsc('WALL STREET', Math.min(c01((u - 1.0) / .5), c01((3.4 - u) / .5)) * .9, W, H, dia);
+      if (u > 3.6 && u < 5.6) rotuloEsc('NORTHPOINT', Math.min(c01((u - 3.6) / .5), c01((5.6 - u) / .5)) * .9, W, H, dia);
+
+      if (entra > .55){
+        cx.fillStyle = rgba('255,246,220', sua(c01((entra - .55) / .45)));
+        cx.fillRect(0, 0, W, H);
+      }
+    }
+
+    /* ══ LA OFICINA ════════════════════════════════════════════════════════
+       El capítulo final. La cámara está detrás de él. Casi todo el tiempo NO
+       pasa nada: eso es lo que se está contando. Cuando llega la señal, se
+       inclina y toma UNA decisión. */
+    function pintaOficina(u, W, H, t){
+      var dia = esDia();
+      var abre = sua(c01(u / .9));
+      var senal = c01((u - 5.2) / .6);
+      var mueve = sua(c01((u - 6.4) / .8));
+      var sube = sua(c01((u - 7.0) / 1.6));
+      var tinta = dia ? '34,32,28' : '206,204,192';
+      var suelo = H * .93;
+
+      cx.fillStyle = dia ? '#E6E5E0' : '#0A0A0C';
+      cx.fillRect(0, 0, W, H);
+      cx.globalAlpha = abre;
+
+      /* la pared y su luz */
+      var gp = cx.createRadialGradient(W * .5, H * .3, 0, W * .5, H * .3, H * 1.1);
+      gp.addColorStop(0, dia ? 'rgba(255,255,255,.5)' : 'rgba(120,150,210,.09)');
+      gp.addColorStop(1, 'rgba(255,255,255,0)');
+      cx.fillStyle = gp; cx.fillRect(0, 0, W, H);
+
+      /* la ventana: la misma ciudad del capítulo de antes, ahora vista desde
+         adentro. Es lo que amarra el final con Wall Street. */
+      var vx4 = W * .016, vw4 = Math.min(W * .105, 140), vy4 = H * .13, vh4 = H * .42;
+      cx.fillStyle = dia ? 'rgba(176,196,214,.5)' : 'rgba(12,18,30,.9)';
+      cx.fillRect(vx4, vy4, vw4, vh4);
+      cx.save(); cx.beginPath(); cx.rect(vx4, vy4, vw4, vh4); cx.clip();
+      for (var eb = 0; eb < 11; eb++){
+        var ex4 = vx4 + eb * (vw4 / 10) - 4;
+        var eh4 = vh4 * (.24 + seudo(eb * 6.1) * .5);
+        cx.fillStyle = dia ? 'rgba(120,130,142,.5)' : 'rgba(28,36,52,.95)';
+        cx.fillRect(ex4, vy4 + vh4 - eh4, vw4 / 12, eh4);
+        cx.fillStyle = rgba('232,222,180', dia ? .3 : .42);
+        for (var wy4 = vy4 + vh4 - eh4 + 5; wy4 < vy4 + vh4 - 4; wy4 += 8){
+          if (seudo(ex4 * .9 + wy4 * 1.3) > .5) cx.fillRect(ex4 + 3, wy4, 3, 4);
+        }
+      }
+      cx.restore();
+      cx.strokeStyle = rgba(tinta, .22); cx.lineWidth = 2;
+      cx.strokeRect(vx4, vy4, vw4, vh4);
+      cx.beginPath();
+      cx.moveTo(vx4 + vw4 / 2, vy4); cx.lineTo(vx4 + vw4 / 2, vy4 + vh4); cx.stroke();
+
+      /* tres pantallas */
+      var mw = Math.min(W * .225, 274), mh = mw * .62;
+      var my3 = H * .24, sep = mw * 1.08;
+      for (var m = 0; m < 3; m++){
+        var mx3 = W * .5 + (m - 1) * sep - mw / 2;
+        var incl = (m - 1) * .06;
+        cx.save();
+        cx.translate(mx3 + mw / 2, my3 + mh / 2); cx.rotate(incl);
+        cx.translate(-(mx3 + mw / 2), -(my3 + mh / 2));
+        cx.fillStyle = dia ? '#2A2A28' : '#1C1C1A';
+        cx.fillRect(mx3 - 4, my3 - 4, mw + 8, mh + 8);
+        cx.fillStyle = dia ? '#0E1218' : '#080C12';
+        cx.fillRect(mx3, my3, mw, mh);
+        cx.save(); cx.beginPath(); cx.rect(mx3, my3, mw, mh); cx.clip();
+        cx.strokeStyle = rgba(tinta, .07); cx.lineWidth = 1;
+        for (var r3 = 1; r3 < 4; r3++){
+          var ry3 = Math.round(my3 + mh * r3 / 4) + .5;
+          cx.beginPath(); cx.moveTo(mx3, ry3); cx.lineTo(mx3 + mw, ry3); cx.stroke();
+        }
+        /* la del centro es la que importa */
+        var n = 22, paso3 = mw / n, prev = mh * .55;
+        for (var i3 = 0; i3 < n; i3++){
+          var lim = m === 1 ? Math.min(n, 6 + Math.floor(u * 2.2)) : n;
+          if (i3 > lim) break;
+          var d3 = (seudo(i3 * 3.11 + m * 40) - .48) * mh * .2;
+          var ab = prev, ci = Math.max(mh * .12, Math.min(mh * .86, prev + d3));
+          prev = ci;
+          var cxx = mx3 + i3 * paso3 + paso3 * .5;
+          var arriba2 = ci < ab;
+          var col3 = arriba2 ? '124,178,138' : '196,116,106';
+          cx.strokeStyle = rgba(col3, .75); cx.lineWidth = 1;
+          cx.beginPath();
+          cx.moveTo(cxx, my3 + Math.min(ab, ci) - mh * .04);
+          cx.lineTo(cxx, my3 + Math.max(ab, ci) + mh * .04); cx.stroke();
+          cx.fillStyle = rgba(col3, .95);
+          cx.fillRect(cxx - paso3 * .3, my3 + Math.min(ab, ci),
+                      Math.max(1.4, paso3 * .6), Math.max(1.6, Math.abs(ci - ab)));
+        }
+        /* la señal: una marca en la pantalla de en medio */
+        if (m === 1 && senal > 0){
+          var sx2 = mx3 + mw * .62, sy2 = my3 + mh * .5;
+          cx.strokeStyle = rgba('240,220,143', senal);
+          cx.lineWidth = 1.4;
+          cx.setLineDash([4, 4]);
+          cx.beginPath(); cx.moveTo(mx3, sy2); cx.lineTo(mx3 + mw, sy2); cx.stroke();
+          cx.setLineDash([]);
+          var pulso = .5 + Math.sin(t * 6) * .5;
+          cx.fillStyle = rgba('240,220,143', senal * (.4 + pulso * .6));
+          cx.beginPath(); cx.arc(sx2, sy2, 3.5 + pulso * 2, 0, 6.2832); cx.fill();
+        }
+        /* y la línea que sube cuando ya decidió */
+        if (m === 1 && sube > 0){
+          cx.strokeStyle = rgba('124,200,150', .9);
+          cx.lineWidth = 2;
+          cx.beginPath();
+          var pasos = Math.max(2, Math.round(18 * sube));
+          for (var q3 = 0; q3 <= pasos; q3++){
+            var qx = mx3 + mw * .58 + (mw * .40) * (q3 / 18);
+            var qy = my3 + mh * (.5 - .34 * (q3 / 18)) + Math.sin(q3) * mh * .015;
+            if (q3) cx.lineTo(qx, qy); else cx.moveTo(qx, qy);
+          }
+          cx.stroke();
+        }
+        cx.restore();
+        cx.restore();
+      }
+
+      /* el escritorio */
+      var mesaY = H * .66;
+      var gm2 = cx.createLinearGradient(0, mesaY, 0, suelo);
+      gm2.addColorStop(0, dia ? '#C9C7C0' : '#1A1815');
+      gm2.addColorStop(1, dia ? '#B2B0A9' : '#0C0B0A');
+      cx.fillStyle = gm2; cx.fillRect(0, mesaY, W, suelo - mesaY);
+      cx.fillStyle = rgba(tinta, .16); cx.fillRect(0, mesaY, W, 1);
+
+      /* ÉL, de espaldas: hombros, cabeza y el respaldo de la silla. La
+         inclinación es toda la actuación — se echa adelante en el momento
+         en que decide, y sólo entonces. */
+      var hx2 = W * .5, base = H * .995;
+      var lean2 = mueve * .05;
+      cx.save();
+      cx.translate(hx2, base); cx.rotate(-lean2); cx.translate(-hx2, -base);
+      cx.fillStyle = dia ? 'rgba(30,29,26,.92)' : 'rgba(6,6,8,.96)';
+      /* respaldo */
+      cx.beginPath();
+      cx.moveTo(hx2 - H * .215, base);
+      cx.lineTo(hx2 - H * .2, H * .70);
+      cx.quadraticCurveTo(hx2, H * .655, hx2 + H * .2, H * .70);
+      cx.lineTo(hx2 + H * .215, base); cx.closePath(); cx.fill();
+      /* hombros y cabeza */
+      cx.beginPath();
+      cx.moveTo(hx2 - H * .17, base);
+      cx.quadraticCurveTo(hx2 - H * .158, H * .655, hx2 - H * .072, H * .615);
+      cx.quadraticCurveTo(hx2, H * .59, hx2 + H * .072, H * .615);
+      cx.quadraticCurveTo(hx2 + H * .158, H * .655, hx2 + H * .17, base);
+      cx.closePath(); cx.fill();
+      cx.beginPath();
+      cx.ellipse(hx2, H * .535, H * .066, H * .078, 0, 0, 6.2832); cx.fill();
+      cx.restore();
+
+      /* el reflejo de las pantallas sobre él */
+      var gr2 = cx.createRadialGradient(W * .5, H * .6, 0, W * .5, H * .6, H * .3);
+      gr2.addColorStop(0, rgba(sube > 0 ? '124,200,150' : '150,180,240', (dia ? .07 : .13)));
+      gr2.addColorStop(1, 'rgba(0,0,0,0)');
+      cx.fillStyle = gr2; cx.fillRect(0, H * .4, W, H * .6);
+
+      /* viñeta */
+      var vg2 = cx.createRadialGradient(W * .5, H * .45, Math.min(W, H) * .3,
+                                        W * .5, H * .45, Math.max(W, H) * .8);
+      vg2.addColorStop(0, 'rgba(0,0,0,0)');
+      vg2.addColorStop(1, dia ? 'rgba(110,108,102,.3)' : 'rgba(0,0,0,.72)');
+      cx.fillStyle = vg2; cx.fillRect(0, 0, W, H);
+
+      if (u > .6 && u < 4.6) rotuloEsc('ESPERA', Math.min(c01((u - .6) / .5), c01((4.6 - u) / .5)) * .8, W, H, dia);
+      if (u > 5.4 && u < 6.8) rotuloEsc('LA SEÑAL', Math.min(c01((u - 5.4) / .4), c01((6.8 - u) / .4)) * .85, W, H, dia);
+
+      /* el cierre */
+      if (u > 8.2){
+        var tt = Math.min(sua(c01((u - 8.2) / .8)), c01((11.2 - u) / .7));
+        /* velo antes del título: encima del gráfico ni se leía la frase ni se
+           veía el gráfico */
+        cx.fillStyle = rgba(dia ? '243,242,238' : '6,6,8', tt * .72);
+        cx.fillRect(0, 0, W, H);
+        cx.save();
+        cx.textAlign = 'center'; cx.textBaseline = 'middle';
+        if ('letterSpacing' in cx) cx.letterSpacing = '.3em';
+        cx.font = '600 ' + Math.round(Math.min(28, W * .022)) +
+                  'px "IBM Plex Mono", ui-monospace, Menlo, monospace';
+        cx.fillStyle = rgba(dia ? '26,26,24' : '246,246,242', tt * .9);
+        cx.fillText('CAZANDO CON PACIENCIA', W * .5, H * .48);
+        if ('letterSpacing' in cx) cx.letterSpacing = '0px';
+        cx.restore();
+      }
+      if (u > 10.6){
+        cx.fillStyle = rgba(dia ? '243,242,238' : '5,5,7', sua(c01((u - 10.6) / .8)));
+        cx.fillRect(0, 0, W, H);
+      }
+      cx.globalAlpha = 1;
+    }
+
     function pinta(ts){
       var t = ts / 1000, dt = Math.min(.05, t - tAntes); tAntes = t;
       var W = cv.clientWidth, H = cv.clientHeight;
@@ -3154,6 +4047,26 @@ body.doc-open #indice{display:none}
           if (faseT >= COSMOS){
             primeraVez = false; reinicia(W, H);
             fase = 'entra'; faseT = 0; alfaEsc = 0;
+          }
+          requestAnimationFrame(pinta); return;
+        }
+
+        /* Los tres capítulos que NO son la sabana se pintan solos y se salen:
+           no comparten cielo, suelo ni actores con ella. */
+        if (fase === 'marcha' || fase === 'ciudad' || fase === 'oficina'){
+          faseT += dt;
+          if (fase === 'marcha'){
+            pintaMarcha(faseT, W, H, t);
+            if (faseT >= 16.4){ fase = 'ciudad'; faseT = 0; }
+          } else if (fase === 'ciudad'){
+            pintaCiudad(faseT, W, H, t);
+            if (faseT >= 7.8){ fase = 'oficina'; faseT = 0; }
+          } else {
+            pintaOficina(faseT, W, H, t);
+            if (faseT >= 11.6){
+              pelicula = false; primeraVez = false; reinicia(W, H);
+              fase = 'entra'; faseT = 0; alfaEsc = 0;
+            }
           }
           requestAnimationFrame(pinta); return;
         }
@@ -3301,7 +4214,13 @@ body.doc-open #indice{display:none}
           if (leo.x > W + 80){ fase = 'fundido'; faseT = 0; }
         } else if (fase === 'premio'){
           presas.forEach(function(g){ if (g.viva){ g.x += g.vx * dt; } });
-          if (faseT > 1.2){ fase = 'acarreo'; faseT = 0; }
+          /* La PRIMERA vuelta no termina en el árbol: llegan los hombres y de
+             ahí arranca el resto de la historia. De la segunda en adelante el
+             leopardo se lleva su presa a la rama y la escena vuelve a empezar,
+             como siempre. */
+          if (faseT > 1.2){ fase = pelicula ? 'humanos' : 'acarreo'; faseT = 0; }
+        } else if (fase === 'humanos'){
+          if (faseT > 8.1){ fase = 'marcha'; faseT = 0; }
         } else if (fase === 'acarreo'){
           leo.x -= 90 * dt;                        /* camina a la acacia, presa al hocico */
           if (leo.x <= ax + 26){ fase = 'trepa'; faseT = 0; }
@@ -3356,6 +4275,18 @@ body.doc-open #indice{display:none}
         } else if (fase === 'rama'){
           leon(ax + 34, suelo - 80, .6, 0, t, alfaEsc, -1, false, .12);
           presaEnRama(ax + 14, suelo - 74, t, ink);
+        } else if (fase === 'humanos'){
+          /* el leopardo NO pelea: aguanta parado hasta que las lanzas suben,
+             y entonces cede el terreno y se va. Ésa es la escena. */
+          var cede = sua(c01((faseT - 2.6) / 3.0));
+          var lx2 = leo.x - cede * (leo.x + 140);
+          leon(lx2, suelo, .55 * (1 - cede), cede > .02 ? .45 : 0, t,
+               alfaEsc * (1 - c01((faseT - 5.4) / 1.1)), -1, false, 0);
+          if (faseT < 5.4) presaEnSuelo(capturaX, suelo, ink, 1 - c01((faseT - 4.6) / .8));
+          /* los hombres van un punto más apagados que la fauna: tres siluetas
+             al blanco del `ink` se comían la escena */
+          cazadores(faseT, suelo, W, t,
+                    dia ? 'rgba(30,28,24,.88)' : 'rgba(198,204,214,.68)', capturaX);
         } else if (fase === 'acecho' || fase === 'entra' || fase === 'fundido'){
           leon(leo.x, suelo, agacho, 0, t, alfaEsc, 1, false, 0);
         }
