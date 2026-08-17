@@ -9074,7 +9074,31 @@ async function doLogin(){
        terminal: entra en local con su clave de siempre y el indicador lo dice. */
     $('#lgErr').textContent = tr('lg.entrando');
     try{
-      await cloudLogin(((S.correos || {})[u]) || usr.correo || (u + '@northpoint.local'), p);
+      /* CUÁL correo se le manda a la nube. AQUÍ estaba el bug que dejó a Pablo
+         fuera durante semanas. `resuelveUsuario` sí lo reconocía por su correo
+         real —vive en `correos[]` y viaja con la app—, pero para entrar a
+         Supabase se usaba `usr.correo`, que es el de FÁBRICA
+         (pablo@northpoint.mx). O sea: te reconozco por tu correo y acto seguido
+         intento entrar con otro distinto. Supabase contestaba «invalid
+         credentials» y el terminal lo traducía a «ésa no es tu contraseña de
+         nube» — mandando a Pablo a resetear, una y otra vez, una contraseña que
+         siempre estuvo bien. El mensaje era honesto y la causa era otra: por eso
+         costó tanto verlo.
+
+         El orden va del más específico al más genérico, y lo que la persona
+         ESCRIBIÓ manda sobre cualquier valor por omisión. Con esto también entra
+         quien teclea sólo su usuario corto: cae en `correos[0]`, que es su
+         correo de verdad, no el de fábrica. */
+      const correoNube =
+            (/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(escrito) ? escrito : null)
+         || (S.correos || {})[u]
+         || (usr.correos || [])[0]
+         || usr.correo
+         || (u + '@northpoint.local');
+      await cloudLogin(correoNube, p);
+      /* Se aprende para la próxima: así el que entró con su correo puede entrar
+         con su usuario corto y viceversa, en este equipo. */
+      S.correos = S.correos || {}; S.correos[u] = correoNube;
       /* La clave que sirve con la nube queda guardada como respaldo local. Sin esto,
          quien entra con su clave de Supabase se queda FUERA el día que la nube falle:
          el respaldo sólo conocía el 1234 provisional. */
