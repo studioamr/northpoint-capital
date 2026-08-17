@@ -124,3 +124,69 @@ select correo, nombre, alta from public.mesa_socios order by alta;
 --  PARA SACAR A ALGUIEN:
 --    delete from public.mesa_socios where correo = 'quien@sea.com';
 -- ═══════════════════════════════════════════════════════════════
+
+
+-- ═══════════════════════════════════════════════════════════════
+--  ⚠️  CORRECCIÓN (17-ago-2026) · EL SCRIPT DE ARRIBA TENÍA UN BUG
+--
+--  La política de `mesa_socios` preguntaba «¿estoy en mesa_socios?»
+--  CONSULTANDO mesa_socios. Para contestar eso hay que evaluar la
+--  política otra vez, que vuelve a preguntar lo mismo:
+--
+--      ERROR 42P17: infinite recursion detected in policy
+--                   for relation "mesa_socios"
+--
+--  Postgres corta el bucle y PostgREST lo devuelve como **HTTP 500**.
+--  Ése fue el «CLOUD · ERROR 500» que sacó a Pablo de la mesa. Y como
+--  las políticas de northpoint_estado también consultaban mesa_socios,
+--  el bucle se disparaba en CUALQUIER lectura de la mesa: no era un
+--  problema de un socio, la nube estaba muerta para todos.
+--
+--  Cómo se encontró, por si vuelve a pasar: hay que reproducir la
+--  petición DENTRO de la base, con la identidad de la persona —
+--
+--      set local role authenticated;
+--      select set_config('request.jwt.claims',
+--        '{"sub":"<uid>","email":"<correo>","role":"authenticated"}', true);
+--      select * from public.northpoint_estado where id = 1;
+--
+--  Desde fuera sólo se ve «500». Desde adentro, el error dice qué pasa.
+--  Ojo con el andamio de la propia prueba: leer auth.users o una tabla
+--  temporal DESPUÉS del `set role` falla por permisos y te manda a
+--  perseguir un error que inventaste tú.
+-- ═══════════════════════════════════════════════════════════════
+
+-- 1 · cada quien se ve a sí mismo. Sin subconsulta, sin bucle.
+drop policy if exists "socios se ven entre ellos" on public.mesa_socios;
+drop policy if exists "cada quien se ve"          on public.mesa_socios;
+create policy "cada quien se ve"
+  on public.mesa_socios for select to authenticated
+  using (uid = auth.uid());
+
+-- 2 · el patrón canónico de Supabase: una función SECURITY DEFINER que
+--     consulta la lista SIN pasar por RLS, para que preguntar «¿es socio?»
+--     no dispare la política de mesa_socios.
+create or replace function public.es_de_la_mesa()
+returns boolean
+language sql stable security definer set search_path = public as $$
+  select exists (select 1 from public.mesa_socios m where m.uid = auth.uid());
+$$;
+grant execute on function public.es_de_la_mesa() to authenticated;
+
+-- 3 · las políticas de la mesa, ya sin recursión
+drop policy if exists "mesa lee"       on public.northpoint_estado;
+drop policy if exists "mesa inserta"   on public.northpoint_estado;
+drop policy if exists "mesa actualiza" on public.northpoint_estado;
+create policy "mesa lee"       on public.northpoint_estado for select to authenticated
+  using (public.es_de_la_mesa());
+create policy "mesa inserta"   on public.northpoint_estado for insert to authenticated
+  with check (public.es_de_la_mesa());
+create policy "mesa actualiza" on public.northpoint_estado for update to authenticated
+  using (public.es_de_la_mesa()) with check (public.es_de_la_mesa());
+
+-- 4 · los permisos de tabla, que también faltaban. Sin GRANT, PostgREST
+--     truena con 42501 (permission denied) — otro 500 disfrazado. La RLS
+--     sigue filtrando fila por fila, así que esto NO abre nada: un usuario
+--     de SPOTTER con sesión sigue recibiendo [].
+grant select, insert, update on public.northpoint_estado to authenticated;
+grant select on public.mesa_socios to authenticated;
