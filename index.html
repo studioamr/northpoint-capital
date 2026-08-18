@@ -585,7 +585,16 @@ body.doc-open #indice{display:none}
    detiene el scroll y lo que dice que detrás hay gente, no una marca sola. */
 .funds{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));
   gap:clamp(30px,4vw,58px)}
-.fund-foto{margin:0 0 24px;overflow:hidden;aspect-ratio:3/4;border:1px solid var(--line)}
+.fund-foto{margin:0 0 24px;overflow:hidden;aspect-ratio:3/4;border:1px solid var(--line);
+  position:relative;background:linear-gradient(160deg,#141414,#0a0a0a)}
+/* El retrato que falta. Antes, una foto ausente dejaba el icono de imagen rota
+   justo en la sección donde el visitante decide si confía en quién está detrás
+   — el peor lugar posible para que algo se vea descuidado. Ahora el hueco se ve
+   intencional y dice qué falta, igual que en perfil.html. */
+.fund-foto.sin-foto::after{content:attr(data-falta);position:absolute;inset:0;
+  display:grid;place-content:center;text-align:center;padding:24px;
+  font-family:var(--mono);font-size:10.5px;letter-spacing:.22em;color:#4E4E4E}
+.fund-foto.sin-foto img{display:none}
 .fund-foto img{width:100%;height:100%;object-fit:cover;display:block}
 .fund h3{font-size:clamp(26px,3vw,34px);font-weight:600;line-height:1.05;
   letter-spacing:-.025em;margin:0}
@@ -2736,5 +2745,24 @@ body.doc-open #indice{display:none}
     <a class="deck-cta" href="app.html">Terminal →</a>
   </div>
 </div>
+<script>
+/* Si un retrato de fundador no carga, la tarjeta NO se rompe: la figura se marca
+   y el CSS pinta el hueco con su leyenda. Vale para los tres — el que se agregue
+   mañana también queda cubierto sin tocar nada.
+   Se revisa `complete && naturalWidth===0` además del onerror porque una imagen
+   que YA falló antes de que corra este script nunca dispara el evento. */
+(function(){
+  document.querySelectorAll('.fund-foto img').forEach(function(img){
+    function falta(){
+      var f = img.closest('.fund-foto');
+      if(!f) return;
+      f.classList.add('sin-foto');
+      f.setAttribute('data-falta', 'RETRATO PENDIENTE');
+    }
+    if(img.complete && img.naturalWidth === 0) falta();
+    img.addEventListener('error', falta);
+  });
+})();
+</script>
 </body>
 </html>
