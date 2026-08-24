@@ -4693,6 +4693,19 @@ function socioEnSesion(){
   const uid = S.session && S.session.user;
   return uid && SOCIOS_REALES.includes(uid) ? uid : null;
 }
+/* Por qué existe esto: TODO el corte de «lo mío» cuelga de socioEnSesion(). Si
+   devuelve null —porque la sesión se guardó con un id que no está en la lista de
+   socios— el filtro no falla ruidosamente: se APAGA, y la app enseña la mesa
+   completa como si fuera tuya. Desde fuera se ve idéntico a «no hay filtro».
+   `__quienSoy()` en la consola contesta cuál de las dos es en un segundo. */
+window.__quienSoy = () => ({
+  sesion:    (S.session && S.session.user) || null,
+  reconocido: socioEnSesion(),
+  socios:    [...SOCIOS_REALES],
+  filtroActivo: !!socioEnSesion(),
+  mios:      { trades: misTrades().length, cuentas: mias(S.accounts||[]).length },
+  mesa:      { trades: (S.trades||[]).length, cuentas: (S.accounts||[]).length },
+});
 function mias(lista){
   const uid = socioEnSesion();
   return uid ? lista.filter(a => (a.owner || DUENO_ORIGEN) === uid) : lista;
@@ -5732,7 +5745,12 @@ function renderAcctPanel(){
 /* ── gestor ── */
 function renderAcctMgr(){
   const planes = Object.keys(FIRM_CATALOG.Tradeify.plans);
-  const huerf = S.trades.filter(t => !Array.isArray(t.accts) || t.accts.includes(SIN_CUENTA)).length;
+  /* misTrades(), no S.trades: el resto de esta pantalla ya usa mias(S.accounts),
+     así que contar los huérfanos sobre la mesa entera le enseñaba a André un
+     número de trades sin cuenta que incluía los de Pablo — y lo invitaba a
+     «asignar» trades que no son suyos. La línea 5480 ya lo hacía bien; ésta se
+     había quedado atrás. */
+  const huerf = misTrades().filter(t => !Array.isArray(t.accts) || t.accts.includes(SIN_CUENTA)).length;
   $('#acList').innerHTML = mias(S.accounts).length ? ordenar(mias(S.accounts)).map(a=>{
     const R = reglasDe(a), h = saludDe(a);
     const tallas = R ? Object.keys((FIRM_CATALOG[a.firm].plans[a.plan]||{}).sizes||{}) : [String(a.size)];
