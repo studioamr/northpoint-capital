@@ -764,30 +764,7 @@ function render(){
     var d=neto-prev.v, pc= prev.v!==0? (d/Math.abs(prev.v)*100):0;
     L.push('<span class="lx '+(d>=0?'mint':'rojo')+'">'+(d>=0?'▲ +':'▼ ')+mxn(d).replace('−$','−$')+' ('+(d>=0?'+':'')+pc.toFixed(1)+'%) DESDE TU CORTE DEL '+fCorta(prev.f)+'</span>');
   }
-  if(S.gasto>0){
-    var liq=porCapa().liquidez, meses=liq/S.gasto;
-    L.push('<span class="lx'+(meses<3?' rojo':'')+'">FONDO DE EMERGENCIA: '+meses.toFixed(1)+' MESES DE TU GASTO'
-      +(meses>12?' — MÁS DE 12 MESES EN LIQUIDEZ; COMPÁRALA CONTRA TU META DE CAPA':'')+'</span>');
-  } else if(S.activos.length){
-    L.push('<button class="lx" data-go="ajustes">¿CUÁNTO GASTAN AL MES? CAPTÚRALO EN AJUSTES Y TE DIGO CUÁNTOS MESES AGUANTA TU LIQUIDEZ.</button>');
-  }
-  if(S.cortes.length){
-    var ult=S.cortes[S.cortes.length-1], dd=diasDesde(ult.f);
-    if(dd>31) L.push('<span class="lx">HAN PASADO '+dd+' DÍAS DESDE TU ÚLTIMO CORTE — TOCA HACER EL CORTE DEL MES.</span>');
-  }
-  var viejos=S.activos.filter(function(x){return x.act&&diasDesde(x.act)>365}).length;
-  if(viejos) L.push('<button class="lx rosa" data-go="activos">'+viejos+' ACTIVO'+(viejos>1?'S':'')+' CON VALOR DE HACE MÁS DE UN AÑO — ¿SIGUE'+(viejos>1?'N':'')+' VALIENDO ESO?</button>');
-  if(hayUSD&&(!S.fxFecha||diasDesde(S.fxFecha)>30))
-    L.push('<button class="lx rosa" data-go="ajustes">TC VIEJO — CHECA EL FIX DE BANXICO Y ACTUALÍZALO EN AJUSTES.</button>');
-  if(S.activos.length){
-    var den=S.activos.filter(function(x){return x.benef!=='na'}).length;
-    var okS=S.activos.filter(function(x){return x.benef==='si'&&x.doc}).length;
-    L.push('<button class="lx" data-go="activos">SUCESIÓN: '+okS+' DE '+den+' ACTIVOS CON BENEFICIARIO Y DOCUMENTO UBICADO · CHECKLIST INFORMATIVO, NO ASESORÍA LEGAL</button>');
-  }
   $('netoExtra').innerHTML=L.join('');
-  $('netoExtra').querySelectorAll('[data-go]').forEach(function(b){
-    b.addEventListener('click',function(){verVista(b.getAttribute('data-go'))});
-  });
 
   /* chip de respaldo en el sidebar */
   var cr=$('chipResp');
@@ -1262,26 +1239,30 @@ function cargarDemo(){
   function hace(dias){ var d=new Date(); d.setDate(d.getDate()-dias);
     return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
   S.activos=[
-    {id:uid(),nombre:'Cetes directo',inst:'CETES',capa:'liquidez',moneda:'MXN',valor:180000,lib:true,act:hace(12),titular:'Papá',veh:'directo',benef:'si',benefNombre:'Mamá',doc:'Portal cetesdirecto'},
-    {id:uid(),nombre:'Cuenta de nómina',inst:'BBVA',capa:'liquidez',moneda:'MXN',valor:64000,lib:true,act:hace(4),titular:'Papá',veh:'directo',benef:'no',benefNombre:'',doc:''},
-    {id:uid(),nombre:'Afore',inst:'XXI Banorte',capa:'retiro',moneda:'MXN',valor:310000,lib:false,act:hace(35),titular:'Papá',veh:'directo',benef:'si',benefNombre:'Mamá',doc:'Estado de cuenta Afore'},
-    {id:uid(),nombre:'PPR',inst:'Aseguradora',capa:'retiro',moneda:'MXN',valor:95000,lib:true,act:hace(60),titular:'Mamá',veh:'directo',benef:'si',benefNombre:'Hijos',doc:'Póliza en caja fuerte'},
-    {id:uid(),nombre:'Depto en renta · Roma Norte',inst:'Escriturado',capa:'pasivos',moneda:'MXN',valor:2850000,lib:true,act:hace(200),titular:'Copropiedad',veh:'copropiedad',benef:'no',benefNombre:'',doc:'Escritura · Notaría 12'},
-    {id:uid(),nombre:'ETF S&P 500',inst:'GBM+',capa:'acciones',moneda:'USD',valor:21500,lib:true,act:hace(2),titular:'Papá',veh:'directo',benef:'si',benefNombre:'Mamá',doc:'Designación en GBM+'},
-    {id:uid(),nombre:'ETF Nasdaq 100',inst:'GBM+',capa:'acciones',moneda:'USD',valor:8300,lib:true,act:hace(2),titular:'Papá',veh:'directo',benef:'si',benefNombre:'Mamá',doc:'Designación en GBM+'},
-    {id:uid(),nombre:'Participación negocio familiar',inst:'Privado',capa:'alt',moneda:'MXN',valor:600000,lib:false,act:hace(430),titular:'SAPI familiar',veh:'empresa',benef:'na',benefNombre:'',doc:''}
+    {id:uid(),nombre:'Cetes directo',inst:'CETES',capa:'liquidez',moneda:'MXN',valor:420000,lib:true,act:hace(6),titular:'Papá',veh:'directo',benef:'si',benefNombre:'Mamá',doc:'Portal cetesdirecto'},
+    {id:uid(),nombre:'Cuenta eje',inst:'BBVA',capa:'liquidez',moneda:'MXN',valor:185000,lib:true,act:hace(3),titular:'Papá',veh:'directo',benef:'si',benefNombre:'Mamá',doc:'Designación en sucursal'},
+    {id:uid(),nombre:'Afore',inst:'XXI Banorte',capa:'retiro',moneda:'MXN',valor:680000,lib:false,act:hace(28),titular:'Papá',veh:'directo',benef:'si',benefNombre:'Mamá',doc:'Estado de cuenta Afore'},
+    {id:uid(),nombre:'PPR',inst:'Allianz',capa:'retiro',moneda:'MXN',valor:520000,lib:true,act:hace(45),titular:'Mamá',veh:'directo',benef:'si',benefNombre:'Hijos',doc:'Póliza en caja fuerte'},
+    {id:uid(),nombre:'Depto en renta · Roma Norte',inst:'Escriturado',capa:'pasivos',moneda:'MXN',valor:3850000,lib:true,act:hace(150),titular:'Copropiedad',veh:'copropiedad',benef:'si',benefNombre:'Hijos',doc:'Escritura · Notaría 12'},
+    {id:uid(),nombre:'Local comercial · Centro',inst:'Escriturado',capa:'pasivos',moneda:'MXN',valor:2400000,lib:true,act:hace(150),titular:'Papá',veh:'directo',benef:'si',benefNombre:'Mamá',doc:'Escritura · Notaría 4'},
+    {id:uid(),nombre:'ETF S&P 500',inst:'GBM+',capa:'acciones',moneda:'USD',valor:38500,lib:true,act:hace(1),titular:'Papá',veh:'directo',benef:'si',benefNombre:'Mamá',doc:'Designación en GBM+'},
+    {id:uid(),nombre:'ETF Nasdaq 100',inst:'GBM+',capa:'acciones',moneda:'USD',valor:12200,lib:true,act:hace(1),titular:'Mamá',veh:'directo',benef:'si',benefNombre:'Papá',doc:'Designación en GBM+'},
+    {id:uid(),nombre:'Fondo global',inst:'GBM+',capa:'acciones',moneda:'MXN',valor:350000,lib:true,act:hace(1),titular:'Papá',veh:'directo',benef:'si',benefNombre:'Mamá',doc:'Designación en GBM+'},
+    {id:uid(),nombre:'Negocio familiar',inst:'SAPI',capa:'alt',moneda:'MXN',valor:1800000,lib:false,act:hace(90),titular:'SAPI familiar',veh:'empresa',benef:'na',benefNombre:'',doc:'Acta constitutiva · Notaría 4'}
   ];
   S.deudas=[
-    {id:uid(),nombre:'Hipoteca del depto',moneda:'MXN',valor:1250000,tasa:10.5,pago:14500,titular:'Copropiedad',act:hace(12)},
-    {id:uid(),nombre:'Tarjeta de crédito',moneda:'MXN',valor:38000,tasa:62,pago:1900,titular:'Papá',act:hace(3)}
+    {id:uid(),nombre:'Hipoteca del depto',moneda:'MXN',valor:1680000,tasa:10.2,pago:19800,titular:'Copropiedad',act:hace(6)},
+    {id:uid(),nombre:'Crédito del auto',moneda:'MXN',valor:180000,tasa:12.9,pago:8400,titular:'Mamá',act:hace(6)},
+    {id:uid(),nombre:'Tarjeta de crédito',moneda:'MXN',valor:22000,tasa:61,pago:4000,titular:'Papá',act:hace(2)}
   ];
-  S.aporta=25000; S.ingreso=120000; S.tasa=4; S.gasto=65000; S.fxFecha=hoyD;
-  /* cortes de ejemplo: seis meses hacia atrás desde hoy */
+  S.aporta=40000; S.ingreso=150000; S.tasa=4; S.gasto=85000; S.fxFecha=hoyD;
+  /* cortes de ejemplo: ocho meses subiendo con respiración natural */
   var hoy=new Date(); S.cortes=[];
-  for(var i=6;i>=1;i--){
+  var base=[7420000,7610000,7545000,7780000,8080000,8360000,8690000,9060000];
+  for(var i=8;i>=1;i--){
     var d=new Date(hoy.getFullYear(),hoy.getMonth()-i,1);
     var f=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-01';
-    S.cortes.push({f:f,v:2450000+ (6-i)*140000 + (i%2?38000:-22000)});
+    S.cortes.push({f:f,v:base[8-i]});
   }
   save(); sync(); render(); toast('Modo demo — datos de ejemplo');
 }
