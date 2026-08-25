@@ -93,9 +93,10 @@ body.demo .chip-demo{display:block}
 .velo{display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:65}
 body.menuAbierto .velo{display:block}
 /* ── ENRUTADO DE VISTAS ── */
-.resumen,#portafolio,#plan,#libertad,#activos,#deudas,.ajustes{display:none}
+.resumen,#portafolio,#concentracion,#plan,#libertad,#activos,#deudas,.ajustes{display:none}
 body[data-v="resumen"] .resumen{display:block}
 body[data-v="portafolio"] #portafolio{display:block}
+body[data-v="portafolio"] #concentracion{display:block}
 body[data-v="plan"] #plan{display:block}
 body[data-v="libertad"] #libertad{display:block}
 body[data-v="activos"] #activos{display:block}
@@ -252,7 +253,7 @@ input[type=range]::-moz-range-thumb{width:14px;height:14px;border-radius:50%;bac
 
 /* ajustes / pie */
 .ajustes{padding:6px 0 26px}
-.aj-g{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.aj-g{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;max-width:780px}
 .aj{background:var(--vidrio);border:1px solid var(--borde);border-radius:12px;padding:14px;
   display:flex;flex-direction:column;gap:8px}
 .aj label{font-family:var(--fm);font-size:7.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--tenue)}
@@ -268,6 +269,17 @@ body.vacia[data-v="resumen"] .resumen{display:none}
 .onboard h1{font-family:var(--fd);font-weight:700;font-size:clamp(26px,5vw,40px);letter-spacing:-.02em;margin:14px 0 8px}
 .onboard p{color:var(--dim);font-size:14px;max-width:440px;margin:0 auto 24px}
 .onboard .btns{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
+
+/* líneas informativas del resumen y matices */
+#netoExtra{margin-top:10px;display:flex;flex-direction:column;gap:5px}
+.lx{font-family:var(--fm);font-size:8.5px;letter-spacing:.06em;color:var(--tenue);
+  text-align:left;background:none;border:none;padding:0;line-height:1.55}
+.lx.mint{color:var(--mint)} .lx.rojo{color:var(--rojo)} .lx.rosa{color:var(--rosa)}
+button.lx{cursor:pointer;text-decoration:underline;text-underline-offset:3px}
+button.lx:hover{color:var(--cream)}
+.rosaTxt{color:var(--rosa)} .rojoTxt{color:var(--rojo)} .mintTxt{color:var(--mint)}
+.lib-inv{font-family:var(--fm);font-size:8.5px;letter-spacing:.06em;color:var(--tenue);margin:2px 0 8px}
+.aj small{font-family:var(--fm);font-size:8px;letter-spacing:.06em;color:var(--tenue)}
 
 .toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%) translateY(80px);
   background:var(--cream);color:var(--negro);font-size:12.5px;font-weight:600;
@@ -300,6 +312,7 @@ body.vacia[data-v="resumen"] .resumen{display:none}
   </nav>
   <div class="lado-pie">
     <button class="chip-demo" id="chipDemo" style="border:none;cursor:pointer">DEMO · SALIR ×</button>
+    <button class="nav-out" id="chipResp" style="display:none;background:none"></button>
     <button class="pill-add" id="navActivo">+ Activo</button>
     <a class="nav-out" href="family-office.html">&larr; FAMILY OFFICE</a>
   </div>
@@ -336,6 +349,7 @@ body.vacia[data-v="resumen"] .resumen{display:none}
       <p class="eb">PATRIMONIO NETO</p>
       <p class="neto-big" id="netoBig">$0<small>MXN</small></p>
       <p class="neto-sub" id="netoSub">Activos $0 · Deudas $0</p>
+      <div id="netoExtra"></div>
       <div class="res-actions">
         <button class="btn" id="btnCorte">Guardar corte de hoy</button>
         <button class="btn btn-g" id="btnAgregar">+ Activo</button>
@@ -347,6 +361,11 @@ body.vacia[data-v="resumen"] .resumen{display:none}
       <canvas id="spark"></canvas>
       <p class="spark-note"><span id="sparkDesde">—</span><span id="sparkCortes">0 cortes</span></p>
     </div>
+  </div>
+  <div class="card" id="histCortes" style="margin-top:14px;display:none"><svg class="spk" viewBox="0 0 64 64" fill="currentColor" aria-hidden="true"><path d="M32 1 37.2 26.8 63 32 37.2 37.2 32 63 26.8 37.2 1 32 26.8 26.8Z"/></svg>
+    <h2>Historial de cortes</h2>
+    <p class="sub">La fotografía de cada mes. Un corte mal capturado vive para siempre — bórralo y repítelo.</p>
+    <div class="lista" id="listaCortes"></div>
   </div>
 </header>
 
@@ -362,6 +381,16 @@ body.vacia[data-v="resumen"] .resumen{display:none}
       <div class="seg" id="segMeta"></div>
       <div id="capaRows" style="margin-top:12px"></div>
       <p class="meta-warn" id="metaWarn">Las metas suman <b id="metaSuma"></b>% — ajústalas para llegar a 100%.</p>
+      <div id="titularBloque" style="display:none">
+        <p class="seg-lab" style="margin-top:18px">POR TITULAR</p>
+        <div id="porTitular"></div>
+      </div>
+    </div>
+
+    <div class="card" id="concentracion"><svg class="spk" viewBox="0 0 64 64" fill="currentColor" aria-hidden="true"><path d="M32 1 37.2 26.8 63 32 37.2 37.2 32 63 26.8 37.2 1 32 26.8 26.8Z"/></svg>
+      <h2>Concentración</h2>
+      <p class="sub">Tres números tuyos — sin juicios. Aritmética, no asesoría.</p>
+      <div id="concRows"></div>
     </div>
 
     <div class="card" id="plan"><svg class="spk" viewBox="0 0 64 64" fill="currentColor" aria-hidden="true"><path d="M32 1 37.2 26.8 63 32 37.2 37.2 32 63 26.8 37.2 1 32 26.8 26.8Z"/></svg>
@@ -382,18 +411,21 @@ body.vacia[data-v="resumen"] .resumen{display:none}
       <h2>Libertad financiera</h2>
       <p class="sub">Regla del 4%: tu meta patrimonial es 300 veces tu ingreso mensual deseado.</p>
       <div class="in-box">
-        <label for="inIngreso">Ingreso mensual deseado</label>
+        <label for="inIngreso">Ingreso mensual deseado (bruto, antes de ISR)</label>
         <div class="fila"><input type="number" id="inIngreso" min="0" step="5000" value="100000"><span class="ud">MXN /MES</span></div>
       </div>
       <div class="lib-pct"><b id="libPct">0%</b><span id="libNums">$0 / $0</span></div>
       <div class="lib-bar"><i id="libBarra" style="width:0%"></i></div>
+      <p class="lib-inv" id="libInv"></p>
       <p class="lib-anios" id="libAnios">—</p>
-      <label class="eb" for="inTasa">TASA ANUAL HIPOTÉTICA — LA ELIGES TÚ: <b id="tasaVal" style="color:var(--cream)">7.0%</b></label>
-      <input type="range" id="inTasa" min="0" max="15" step="0.5" value="7">
+      <p class="lib-anios" id="libRitmo" style="margin-top:-8px"></p>
+      <label class="eb" for="inTasa">TASA REAL ANUAL, YA DESCONTADA LA INFLACIÓN — LA ELIGES TÚ: <b id="tasaVal" style="color:var(--cream)">4.0%</b></label>
+      <input type="range" id="inTasa" min="0" max="15" step="0.5" value="4">
       <div id="hitos" style="margin-top:12px"></div>
-      <p class="lib-disc">CÁLCULO HIPOTÉTICO CON LA TASA Y APORTACIÓN QUE TÚ INGRESAS. NO ES PROYECCIÓN,
-        RECOMENDACIÓN NI PROMESA DE NORTHPOINT. LA META ESTÁ EN PESOS DE HOY — EL CÁLCULO NO AJUSTA
-        INFLACIÓN. LA REGLA DEL 4% ES UNA HEURÍSTICA, NO UNA GARANTÍA.</p>
+      <p class="lib-disc">CÁLCULO HIPOTÉTICO CON LA TASA Y APORTACIÓN QUE TÚ INGRESAS — NO ES PROYECCIÓN,
+        RECOMENDACIÓN NI PROMESA DE NORTHPOINT. LA META ESTÁ EN PESOS DE HOY: POR ESO LA TASA ES REAL,
+        POR ENCIMA DE INFLACIÓN. LOS RETIROS PAGAN IMPUESTOS EN MÉXICO — EL NETO PARA GASTAR SERÁ MENOR.
+        LA REGLA DEL 4% ES UNA HEURÍSTICA, NO UNA GARANTÍA.</p>
     </div>
 
     <div class="card" id="activos"><svg class="spk" viewBox="0 0 64 64" fill="currentColor" aria-hidden="true"><path d="M32 1 37.2 26.8 63 32 37.2 37.2 32 63 26.8 37.2 1 32 26.8 26.8Z"/></svg>
@@ -408,6 +440,15 @@ body.vacia[data-v="resumen"] .resumen{display:none}
           <div><label>Capa</label><select name="capa"></select></div>
           <div><label>Moneda</label><select name="moneda"><option value="MXN">MXN</option><option value="USD">USD</option></select></div>
           <div><label>Valor</label><input name="valor" type="number" min="0" step="0.01" required placeholder="0"></div>
+          <div><label>Titular (opcional)</label><input name="titular" maxlength="40" placeholder="Papá / Mamá / SAPI familiar"></div>
+          <div><label>Vehículo</label><select name="veh"><option value="directo">Directo</option><option value="copropiedad">Copropiedad</option><option value="empresa">Empresa</option><option value="fideicomiso">Fideicomiso</option></select></div>
+          <div><label>¿Beneficiario designado?</label><select name="benef"><option value="">—</option><option value="si">Sí</option><option value="no">No</option><option value="na">No aplica</option></select></div>
+          <div><label>Beneficiario (nombre, opcional)</label><input name="benefNombre" maxlength="40" placeholder="Quién hereda esto"></div>
+          <div style="grid-column:1/-1"><label>Dónde está el documento (opcional)</label><input name="doc" maxlength="60" placeholder="Escritura en caja fuerte / Notaría 12 / contrato en Drive familiar"></div>
+          <div style="grid-column:1/-1;display:flex;align-items:center;gap:9px">
+            <input type="checkbox" name="lib" id="faLib" checked style="width:auto;accent-color:#A6EEDA">
+            <label for="faLib" style="margin:0;font-size:9px">Cuenta para libertad financiera (apágalo en la casa donde vives, la Afore bloqueada o el negocio que no venderías)</label>
+          </div>
         </div>
         <div class="acciones">
           <button type="button" class="btn btn-g" data-cerrar>Cancelar</button>
@@ -426,6 +467,9 @@ body.vacia[data-v="resumen"] .resumen{display:none}
           <div><label>Nombre</label><input name="nombre" required maxlength="40" placeholder="Hipoteca / TDC"></div>
           <div><label>Moneda</label><select name="moneda"><option value="MXN">MXN</option><option value="USD">USD</option></select></div>
           <div><label>Saldo</label><input name="valor" type="number" min="0" step="0.01" required placeholder="0"></div>
+          <div><label>Tasa anual % (opcional)</label><input name="tasa" type="number" min="0" max="200" step="0.1" placeholder="60 si es TDC"></div>
+          <div><label>Pago mensual (opcional)</label><input name="pago" type="number" min="0" step="100" placeholder="0"></div>
+          <div><label>Titular (opcional)</label><input name="titular" maxlength="40" placeholder="Papá / Mamá"></div>
         </div>
         <div class="acciones">
           <button type="button" class="btn btn-g" data-cerrar>Cancelar</button>
@@ -442,10 +486,17 @@ body.vacia[data-v="resumen"] .resumen{display:none}
     <div class="aj aj-fx">
       <label for="inFx">Tipo de cambio USD → MXN</label>
       <input type="number" id="inFx" min="1" step="0.05" value="17">
+      <small id="fxNota"></small>
+    </div>
+    <div class="aj">
+      <label for="inGasto">Gasto familiar mensual (MXN)</label>
+      <input type="number" id="inGasto" min="0" step="1000" value="0">
+      <small>Alimenta el fondo de emergencia en meses.</small>
     </div>
     <div class="aj">
       <label>Respaldo</label>
       <button class="btn btn-g" id="btnExporta" style="justify-content:center">Exportar JSON</button>
+      <small id="ultExp">Nunca has exportado un respaldo.</small>
     </div>
     <div class="aj">
       <label>Restaurar</label>
@@ -488,13 +539,15 @@ var CAPA_BY={}; CAPAS.forEach(function(c){CAPA_BY[c.k]=c});
 
 function fresh(){
   var metas={}; CAPAS.forEach(function(c){metas[c.k]=c.meta});
-  return {v:1,demo:false,fx:17,aporta:10000,ingreso:100000,tasa:7,
+  return {v:1,demo:false,fx:17,fxFecha:null,gasto:0,ultimoExport:null,
+          aporta:10000,ingreso:100000,tasa:4,
           metas:metas,activos:[],deudas:[],cortes:[]};
 }
 /* saneador: TODO lo que entra de fuera (localStorage o un archivo importado)
    pasa por aquí — tipos forzados, ids regenerados, listas acotadas. Sin esto,
    un respaldo malicioso podía inyectar HTML o brickear la app al recargar. */
 function num(v,d){ v=(typeof v==='string')?parseFloat(v):v; return (typeof v==='number'&&isFinite(v))?v:d; }
+function fechaOk(v){ v=String(v||''); return /^\d{4}-\d{2}-\d{2}$/.test(v)?v:null; }
 function sanea(p){
   var s=fresh();
   if(!p||typeof p!=='object') return s;
@@ -502,7 +555,10 @@ function sanea(p){
   s.fx=Math.max(1,num(p.fx,17));
   s.aporta=Math.max(0,num(p.aporta,10000));
   s.ingreso=Math.max(0,num(p.ingreso,100000));
-  s.tasa=Math.min(15,Math.max(0,num(p.tasa,7)));
+  s.tasa=Math.min(15,Math.max(0,num(p.tasa,4)));
+  s.gasto=Math.max(0,num(p.gasto,0));
+  s.fxFecha=fechaOk(p.fxFecha);
+  s.ultimoExport=fechaOk(p.ultimoExport);
   if(p.metas&&typeof p.metas==='object'){
     CAPAS.forEach(function(c){ s.metas[c.k]=Math.min(100,Math.max(0,num(p.metas[c.k],c.meta))); });
   }
@@ -511,19 +567,36 @@ function sanea(p){
       return {id:uid(),nombre:String(x.nombre||'Sin nombre').slice(0,60),
         inst:String(x.inst||'').slice(0,60),
         capa:CAPA_BY[x.capa]?String(x.capa):CAPAS[0].k,
-        moneda:x.moneda==='USD'?'USD':'MXN',valor:Math.max(0,num(x.valor,0))};
+        moneda:x.moneda==='USD'?'USD':'MXN',valor:Math.max(0,num(x.valor,0)),
+        lib:x.lib!==false, act:fechaOk(x.act),
+        titular:String(x.titular||'').slice(0,40),
+        veh:['directo','copropiedad','empresa','fideicomiso'].indexOf(x.veh)>=0?x.veh:'directo',
+        benef:['si','no','na'].indexOf(x.benef)>=0?x.benef:'',
+        benefNombre:String(x.benefNombre||'').slice(0,40),
+        doc:String(x.doc||'').slice(0,60)};
     });
   }
   if(Array.isArray(p.deudas)){
     s.deudas=p.deudas.filter(function(x){return x&&typeof x==='object'}).slice(0,200).map(function(x){
       return {id:uid(),nombre:String(x.nombre||'Sin nombre').slice(0,60),
-        moneda:x.moneda==='USD'?'USD':'MXN',valor:Math.max(0,num(x.valor,0))};
+        moneda:x.moneda==='USD'?'USD':'MXN',valor:Math.max(0,num(x.valor,0)),
+        tasa:Math.min(200,Math.max(0,num(x.tasa,0))),pago:Math.max(0,num(x.pago,0)),
+        act:fechaOk(x.act),titular:String(x.titular||'').slice(0,40)};
     });
   }
   if(Array.isArray(p.cortes)){
     s.cortes=p.cortes.filter(function(c){
       return c&&typeof c==='object'&&/^\d{4}-\d{2}-\d{2}$/.test(String(c.f))&&isFinite(num(c.v,NaN));
-    }).slice(-240).map(function(c){return {f:String(c.f),v:num(c.v,0)}});
+    }).slice(-240).map(function(c){
+      var o={f:String(c.f),v:num(c.v,0)};
+      if(isFinite(num(c.act,NaN))) o.act=num(c.act,0);
+      if(isFinite(num(c.deu,NaN))) o.deu=num(c.deu,0);
+      if(isFinite(num(c.fx,NaN))) o.fx=num(c.fx,0);
+      if(c.capas&&typeof c.capas==='object'){
+        o.capas={}; CAPAS.forEach(function(k){ if(isFinite(num(c.capas[k.k],NaN))) o.capas[k.k]=num(c.capas[k.k],0); });
+      }
+      return o;
+    });
     s.cortes.sort(function(a,b){return a.f<b.f?-1:1});
   }
   return s;
@@ -539,6 +612,11 @@ function mxn(v){
   return (n<0?'−$':'$')+abs;
 }
 function enMXN(x){ return x.moneda==='USD' ? x.valor*S.fx : x.valor; }
+function hoyISO(){ var h=new Date(); return h.getFullYear()+'-'+String(h.getMonth()+1).padStart(2,'0')+'-'+String(h.getDate()).padStart(2,'0'); }
+var MES_C=['ENE','FEB','MAR','ABR','MAY','JUN','JUL','AGO','SEP','OCT','NOV','DIC'];
+function fCorta(iso){ if(!iso)return ''; var p=iso.split('-'); return parseInt(p[2],10)+' '+MES_C[parseInt(p[1],10)-1]; }
+function diasDesde(iso){ if(!iso)return null; return Math.round((new Date(hoyISO())-new Date(iso))/864e5); }
+function invertibleLib(){ return S.activos.reduce(function(a,x){return a+(x.lib!==false?enMXN(x):0)},0)-totalDeudas(); }
 function totalActivos(){ return S.activos.reduce(function(a,x){return a+enMXN(x)},0); }
 function totalDeudas(){ return S.deudas.reduce(function(a,x){return a+enMXN(x)},0); }
 function porCapa(){
@@ -556,13 +634,57 @@ function render(){
   document.body.classList.toggle('demo', !!S.demo);
   $('btnDemo').textContent = S.demo ? 'Salir del demo' : 'Modo demo';
 
-  var ctv=Math.round(Math.abs(neto)*100)%100;
-  $('netoBig').innerHTML=mxn(neto)+'<small>.'+String(ctv).padStart(2,'0')+' MXN</small>';
+  $('netoBig').innerHTML=mxn(neto)+'<small>MXN</small>';
+  var hayUSD=S.activos.some(function(x){return x.moneda==='USD'})||S.deudas.some(function(x){return x.moneda==='USD'});
   $('netoSub').innerHTML='Activos <b>'+mxn(act)+'</b> · Deudas <i>'+mxn(deu)+'</i>'
-    +(S.activos.some(function(x){return x.moneda==='USD'})||S.deudas.some(function(x){return x.moneda==='USD'})
-      ?' · USD @ '+S.fx.toFixed(2):'');
+    +(hayUSD?' · USD @ '+S.fx.toFixed(2)+(S.fxFecha?' · FIJADO '+fCorta(S.fxFecha):''):'');
 
-  renderSeg(); renderPlan(); renderLibertad(); renderListas(); renderSpark();
+  /* líneas informativas del resumen */
+  var L=[];
+  var hoy=hoyISO();
+  var prev=null;
+  for(var ci=S.cortes.length-1;ci>=0;ci--){ if(S.cortes[ci].f<hoy){ prev=S.cortes[ci]; break; } }
+  if(prev){
+    var d=neto-prev.v, pc= prev.v!==0? (d/Math.abs(prev.v)*100):0;
+    L.push('<span class="lx '+(d>=0?'mint':'rojo')+'">'+(d>=0?'▲ +':'▼ ')+mxn(d).replace('−$','−$')+' ('+(d>=0?'+':'')+pc.toFixed(1)+'%) DESDE TU CORTE DEL '+fCorta(prev.f)+'</span>');
+  }
+  if(S.gasto>0){
+    var liq=porCapa().liquidez, meses=liq/S.gasto;
+    L.push('<span class="lx'+(meses<3?' rojo':'')+'">FONDO DE EMERGENCIA: '+meses.toFixed(1)+' MESES DE TU GASTO'
+      +(meses>12?' — MÁS DE 12 MESES EN LIQUIDEZ; COMPÁRALA CONTRA TU META DE CAPA':'')+'</span>');
+  } else if(S.activos.length){
+    L.push('<button class="lx" data-go="ajustes">¿CUÁNTO GASTAN AL MES? CAPTÚRALO EN AJUSTES Y TE DIGO CUÁNTOS MESES AGUANTA TU LIQUIDEZ.</button>');
+  }
+  if(S.cortes.length){
+    var ult=S.cortes[S.cortes.length-1], dd=diasDesde(ult.f);
+    if(dd>31) L.push('<span class="lx">HAN PASADO '+dd+' DÍAS DESDE TU ÚLTIMO CORTE — TOCA HACER EL CORTE DEL MES.</span>');
+  }
+  var viejos=S.activos.filter(function(x){return x.act&&diasDesde(x.act)>365}).length;
+  if(viejos) L.push('<button class="lx rosa" data-go="activos">'+viejos+' ACTIVO'+(viejos>1?'S':'')+' CON VALOR DE HACE MÁS DE UN AÑO — ¿SIGUE'+(viejos>1?'N':'')+' VALIENDO ESO?</button>');
+  if(hayUSD&&(!S.fxFecha||diasDesde(S.fxFecha)>30))
+    L.push('<button class="lx rosa" data-go="ajustes">TC VIEJO — CHECA EL FIX DE BANXICO Y ACTUALÍZALO EN AJUSTES.</button>');
+  if(S.activos.length){
+    var den=S.activos.filter(function(x){return x.benef!=='na'}).length;
+    var okS=S.activos.filter(function(x){return x.benef==='si'&&x.doc}).length;
+    L.push('<button class="lx" data-go="activos">SUCESIÓN: '+okS+' DE '+den+' ACTIVOS CON BENEFICIARIO Y DOCUMENTO UBICADO · CHECKLIST INFORMATIVO, NO ASESORÍA LEGAL</button>');
+  }
+  $('netoExtra').innerHTML=L.join('');
+  $('netoExtra').querySelectorAll('[data-go]').forEach(function(b){
+    b.addEventListener('click',function(){verVista(b.getAttribute('data-go'))});
+  });
+
+  /* chip de respaldo en el sidebar */
+  var cr=$('chipResp');
+  if(!S.demo && S.activos.length){
+    var de=S.ultimoExport?diasDesde(S.ultimoExport):null;
+    if(de===null){ cr.style.display='block'; cr.style.color='var(--rojo)'; cr.style.borderColor='var(--rojo)'; cr.textContent='SIN RESPALDO — EXPORTAR AHORA'; }
+    else if(de>30){ cr.style.display='block'; cr.style.color='var(--dim)'; cr.style.borderColor='var(--borde)'; cr.textContent='RESPALDO: HACE '+de+' DÍAS'; }
+    else cr.style.display='none';
+  } else cr.style.display='none';
+  $('ultExp').textContent= S.ultimoExport? 'Último respaldo: '+fCorta(S.ultimoExport)+' '+S.ultimoExport.slice(0,4) : 'Nunca has exportado un respaldo.';
+  $('fxNota').textContent= S.fxFecha? 'Fijado el '+fCorta(S.fxFecha)+'. Referencia: el FIX de Banxico.' : 'Tecléalo tú — referencia: el FIX de Banxico.';
+
+  renderSeg(); renderPlan(); renderLibertad(); renderListas(); renderConc(); renderCortes(); renderSpark();
 }
 
 function renderSeg(){
@@ -572,8 +694,9 @@ function renderSeg(){
     var v=m[c.k]||0, pr=act>0? v/act*100 : 0;
     segR+='<i style="flex:'+Math.max(pr,0.001)+';background:'+c.c+'"></i>';
     segM+='<i style="flex:'+Math.max(S.metas[c.k]||0,0.001)+';background:'+c.c+'"></i>';
+    var extraCapa= (c.k==='liquidez'&&S.gasto>0)? ' · '+(v/S.gasto).toFixed(1)+' MESES DE GASTO':'';
     rows+='<div class="capa-row"><u style="background:'+c.c+'"></u>'
-      +'<span class="nom">'+c.n+'<small>'+c.s+'</small></span>'
+      +'<span class="nom">'+c.n+'<small>'+c.s+extraCapa+'</small></span>'
       +'<span class="val"><b>'+mxn(v)+'</b>'+pr.toFixed(1)+'%</span>'
       +'<span class="meta-in"><input type="number" min="0" max="100" step="1" value="'+(S.metas[c.k]||0)+'" data-meta="'+c.k+'" aria-label="Meta '+c.n+'"><span>% META</span></span>'
       +'</div>';
@@ -590,6 +713,76 @@ function renderSeg(){
       S.metas[inp.getAttribute('data-meta')]=v; save(); render();
     });
   });
+  /* por titular */
+  var tb=$('titularBloque');
+  if(S.activos.length===0){ tb.style.display='none'; }
+  else{
+    tb.style.display='block';
+    var g={}; S.activos.forEach(function(x){
+      var t=(x.titular||'').trim()||'Sin titular';
+      var k=t.toLowerCase(); if(!g[k])g[k]={n:t,v:0}; g[k].v+=enMXN(x);
+    });
+    var tot=totalActivos()||1;
+    $('porTitular').innerHTML=Object.keys(g).map(function(k){
+      return '<div class="plan-row"><u style="background:rgba(239,236,231,.5)"></u>'
+        +'<span>'+esc(g[k].n)+'</span>'
+        +'<span class="monto">'+mxn(g[k].v)+' · '+(g[k].v/tot*100).toFixed(0)+'%</span></div>';
+    }).join('');
+  }
+}
+
+/* ── concentración: tres números propios, sin juicios ── */
+function renderConc(){
+  var el=$('concRows'), act=totalActivos();
+  if(!S.activos.length){ el.innerHTML='<div class="vacio">Registra activos y aquí aparecen tus concentraciones.</div>'; return; }
+  var filas=[];
+  /* mayor activo */
+  var top=S.activos.reduce(function(a,b){return enMXN(b)>enMXN(a)?b:a});
+  var pTop=enMXN(top)/act*100;
+  filas.push('<div class="capa-row" style="grid-template-columns:14px 1fr auto"><u style="background:'+(CAPA_BY[top.capa]||CAPAS[0]).c+'"></u>'
+    +'<span class="nom">Mayor activo<small>'+esc(top.nombre).toUpperCase()+'</small></span>'
+    +'<span class="val"><b class="'+(pTop>25?'rosaTxt':'')+'">'+pTop.toFixed(1)+'%</b>del total de activos</span></div>');
+  /* mayor institución */
+  var gi={}; S.activos.forEach(function(x){
+    var k=(x.inst||'').trim().toLowerCase()||'sin institución';
+    if(!gi[k])gi[k]={n:(x.inst||'').trim()||'Sin institución',v:0}; gi[k].v+=enMXN(x);
+  });
+  var ti=null; Object.keys(gi).forEach(function(k){ if(!ti||gi[k].v>gi[ti].v)ti=k; });
+  var pInst=gi[ti].v/act*100;
+  var ipab= gi[ti].v>3300000? '<small style="display:block;margin-top:3px">EL IPAB CUBRE ~400 MIL UDIS (≈$3.3M) POR PERSONA POR BANCO — DATO INFORMATIVO; APLICA SOLO A DEPÓSITOS BANCARIOS.</small>':'';
+  filas.push('<div class="capa-row" style="grid-template-columns:14px 1fr auto"><u style="background:rgba(239,236,231,.5)"></u>'
+    +'<span class="nom">Mayor institución<small>'+esc(gi[ti].n).toUpperCase()+'</small>'+ipab+'</span>'
+    +'<span class="val"><b class="'+(pInst>40?'rosaTxt':'')+'">'+pInst.toFixed(1)+'%</b>del total de activos</span></div>');
+  /* exposición USD */
+  var usd=S.activos.reduce(function(a,x){return a+(x.moneda==='USD'?enMXN(x):0)},0);
+  var pUsd=usd/act*100;
+  filas.push('<div class="capa-row" style="grid-template-columns:14px 1fr auto"><u style="background:#9FB4C8"></u>'
+    +'<span class="nom">Exposición a dólares<small>UN PESO 10% MÁS FUERTE TE RESTA ~'+mxn(usd*0.10)+'</small></span>'
+    +'<span class="val"><b>'+pUsd.toFixed(1)+'%</b>en USD</span></div>');
+  el.innerHTML=filas.join('');
+}
+
+/* ── historial de cortes ── */
+function renderCortes(){
+  var card=$('histCortes'), el=$('listaCortes');
+  if(!S.cortes.length){ card.style.display='none'; return; }
+  card.style.display='block';
+  var filas=S.cortes.slice().reverse().map(function(c,idx,arr){
+    var prev=arr[idx+1];
+    var delta= prev? c.v-prev.v : null;
+    var dTxt= delta===null? '' : '<small class="'+(delta>=0?'mintTxt':'rojoTxt')+'">'+(delta>=0?'+':'')+mxn(delta)+' VS CORTE ANTERIOR</small>';
+    return '<div class="item" style="grid-template-columns:14px 1fr auto auto"><u style="background:rgba(239,236,231,.4)"></u>'
+      +'<span class="nom"><b>'+fCorta(c.f)+' '+c.f.slice(0,4)+'</b>'+dTxt+'</span>'
+      +'<span class="val">'+mxn(c.v)+'</span>'
+      +'<span class="ops"><button class="op rojo" data-delc="'+esc(c.f)+'" aria-label="Eliminar corte">×</button></span></div>';
+  }).join('');
+  el.innerHTML=filas;
+  el.querySelectorAll('[data-delc]').forEach(function(b){b.addEventListener('click',function(){
+    var f=b.getAttribute('data-delc');
+    if(!confirm('¿Eliminar el corte del '+f+'?'))return;
+    S.cortes=S.cortes.filter(function(c){return c.f!==f}); save(); render();
+    toast('Corte eliminado');
+  })});
 }
 
 function renderPlan(){
@@ -616,7 +809,18 @@ function renderPlan(){
   var resto=Math.round(M-red.reduce(function(a,b){return a+b},0));
   if(resto>0){ var mx=0; asig.forEach(function(v,i){ if(v>asig[mx])mx=i }); red[mx]+=resto; }
   var maxA=Math.max.apply(null,red.concat([1]));
-  $('planRows').innerHTML=CAPAS.map(function(c,i){
+  var paso0='';
+  var caras=S.deudas.filter(function(x){return (x.tasa||0)>S.tasa});
+  if(caras.length){
+    var topD=caras.reduce(function(a,b){return (b.tasa||0)>(a.tasa||0)?b:a});
+    paso0='<div class="plan-row" style="border-bottom:1px solid rgba(255,255,255,.14);padding-bottom:12px;margin-bottom:4px">'
+      +'<u style="background:var(--rojo)"></u>'
+      +'<span><b style="font-weight:600">Paso 0 — tu deuda «'+esc(topD.nombre)+'»</b>'
+      +'<small style="display:block;font-family:var(--fm);font-size:8.5px;color:var(--tenue);margin-top:3px;line-height:1.55">'
+      +'CUESTA '+(topD.tasa||0)+'% ANUAL; TU SUPUESTO DE INVERSIÓN ES '+S.tasa.toFixed(1)+'%. ABONARLE RINDE MÁS QUE CUALQUIER CAPA. ARITMÉTICA DE TU PROPIA DEUDA, NO UNA RECOMENDACIÓN.</small></span>'
+      +'<span class="monto" style="color:var(--rojo)">'+(topD.tasa||0)+'%</span></div>';
+  }
+  $('planRows').innerHTML=paso0+CAPAS.map(function(c,i){
     return '<div class="plan-row"><u style="background:'+c.c+'"></u>'
       +'<span>'+c.n+'<span class="bar"><i style="width:'+(red[i]/maxA*100)+'%;background:'+c.c+'"></i></span></span>'
       +'<span class="monto">'+mxn(red[i])+'</span></div>';
@@ -625,24 +829,42 @@ function renderPlan(){
 
 function renderLibertad(){
   var neto=totalActivos()-totalDeudas();
+  var inv=invertibleLib();          /* solo activos marcados «cuenta para libertad» */
+  var base=Math.max(0,inv);
   var meta=(S.ingreso||0)*300;   /* regla del 4%: ingreso*12/0.04 */
-  var pct= meta>0? Math.max(0,neto)/meta*100 : 0;
+  var pct= meta>0? base/meta*100 : 0;
   $('libPct').textContent=(pct>=100?'100':pct.toFixed(1))+'%';
-  $('libNums').textContent=mxn(Math.max(0,neto))+' / '+mxn(meta);
+  $('libNums').textContent=mxn(base)+' / '+mxn(meta);
   $('libBarra').style.width=Math.min(100,pct)+'%';
+  $('libInv').textContent='PATRIMONIO TOTAL '+mxn(neto)+' · INVERTIBLE PARA LIBERTAD '+mxn(inv)
+    +(inv!==neto?' (SIN LOS ACTIVOS QUE APAGASTE)':'');
   $('tasaVal').textContent=S.tasa.toFixed(1)+'%';
-  /* años a la meta, con aportación y tasa hipotética */
+  /* años a la meta, con aportación y tasa REAL hipotética */
   var anios='—';
   if(meta>0){
-    if(neto>=meta){ anios='META ALCANZADA'; }
+    if(base>=meta){ anios='META ALCANZADA'; }
     else{
-      var v=Math.max(0,neto), r=Math.pow(1+S.tasa/100,1/12)-1, M=Math.max(0,S.aporta||0), mes=0;
+      var v=base, r=Math.pow(1+S.tasa/100,1/12)-1, M=Math.max(0,S.aporta||0), mes=0;
       while(v<meta && mes<1200){ v=v*(1+r)+M; mes++; }
       anios= mes>=1200? 'MÁS DE 100 AÑOS CON ESTOS SUPUESTOS'
-        : '~'+(mes/12).toFixed(mes<24?1:0)+' AÑOS · CON '+mxn(M)+'/MES Y '+S.tasa.toFixed(1)+'% HIPOTÉTICO';
+        : '~'+(mes/12).toFixed(mes<24?1:0)+' AÑOS · CON '+mxn(M)+'/MES Y '+S.tasa.toFixed(1)+'% REAL HIPOTÉTICO';
     }
   }
   $('libAnios').textContent=anios;
+  /* el ritmo observado: tus cortes contra tu meta — dato, no proyección */
+  var rTxt='';
+  if(S.cortes.length>=3 && meta>0 && base<meta){
+    var a=S.cortes[0], b=S.cortes[S.cortes.length-1];
+    var meses=Math.max(0.5,(new Date(b.f)-new Date(a.f))/(30.44*864e5));
+    var ritmo=(b.v-a.v)/meses;
+    if(ritmo>0){
+      var xa=((meta-base)/ritmo)/12;
+      rTxt='A TU RITMO REAL DE LOS ÚLTIMOS '+Math.round(meses)+' MESES: ~'+xa.toFixed(xa<20?1:0)+' AÑOS · EXTRAPOLACIÓN DE TU PASADO, NO PROYECCIÓN';
+    } else {
+      rTxt='A TU RITMO REAL DE LOS ÚLTIMOS '+Math.round(meses)+' MESES, EL PATRIMONIO NO CRECE.';
+    }
+  }
+  $('libRitmo').textContent=rTxt;
   var hitos=[
     ['Primer paso', Math.round(meta*0.01)],
     ['Primer millón', 1000000],
@@ -651,7 +873,7 @@ function renderLibertad(){
     ['Libertad financiera', meta]
   ];
   $('hitos').innerHTML=hitos.map(function(h){
-    var ok=Math.max(0,neto)>=h[1]&&h[1]>0;
+    var ok=base>=h[1]&&h[1]>0;
     return '<div class="hito'+(ok?' ok':'')+'"><u>'+(ok?'✓':'')+'</u>'+h[0]+'<s>'+mxn(h[1])+'</s></div>';
   }).join('');
 }
@@ -662,8 +884,18 @@ function renderListas(){
     ? '<div class="vacio">Sin activos todavía. Agrega el primero con «+ Activo».</div>'
     : S.activos.map(function(x){
         var c=CAPA_BY[x.capa]||CAPAS[0];
+        var linea2=esc(x.inst||'')+(x.inst?' · ':'')+c.n.toUpperCase()
+          +(x.titular?' · '+esc(x.titular).toUpperCase():'')
+          +(x.lib===false?' · FUERA DE LIBERTAD':'');
+        var fresc='';
+        if(x.act){
+          var dv=diasDesde(x.act);
+          fresc= dv>365
+            ? '<small class="rosaTxt">VALOR DE HACE '+Math.round(dv/30.44)+' MESES</small>'
+            : '<small>ACT. '+fCorta(x.act)+'</small>';
+        }
         return '<div class="item"><u style="background:'+c.c+'"></u>'
-          +'<span class="nom"><b>'+esc(x.nombre)+'</b><small>'+esc(x.inst||'')+(x.inst?' · ':'')+c.n.toUpperCase()+'</small></span>'
+          +'<span class="nom"><b>'+esc(x.nombre)+'</b><small>'+linea2+'</small>'+fresc+'</span>'
           +'<span class="val">'+mxn(enMXN(x))+(x.moneda==='USD'?'<small>US$'+x.valor.toLocaleString('en-US')+'</small>':'')+'</span>'
           +'<span class="ops"><button class="op" data-ed="'+esc(x.id)+'">EDITAR</button>'
           +'<button class="op rojo" data-del="'+esc(x.id)+'" aria-label="Eliminar '+esc(x.nombre)+'">×</button></span></div>';
@@ -674,8 +906,22 @@ function renderListas(){
   ld.innerHTML= S.deudas.length===0
     ? '<div class="vacio">Sin deudas registradas.</div>'
     : S.deudas.map(function(x){
+        var extra='';
+        if((x.tasa||0)>0){
+          extra+='<small>CUESTA ~'+mxn(enMXN(x)*x.tasa/100)+'/AÑO · '+x.tasa+'% ANUAL</small>';
+          if((x.pago||0)>0){
+            var i=x.tasa/100/12, saldo=enMXN(x), interesMes=saldo*i;
+            if(x.pago<=interesMes){
+              extra+='<small class="rojoTxt">ESTE PAGO NO CUBRE NI LOS INTERESES — EL SALDO CRECE</small>';
+            }else{
+              var nM=Math.ceil(-Math.log(1-i*saldo/x.pago)/Math.log(1+i));
+              extra+='<small>LIBRE EN ~'+nM+' MESES · INTERESES RESTANTES ~'+mxn(Math.max(0,x.pago*nM-saldo))+'</small>';
+            }
+          }
+        }
+        if(x.titular) extra+='<small>TITULAR: '+esc(x.titular).toUpperCase()+'</small>';
         return '<div class="item"><u style="background:var(--rojo)"></u>'
-          +'<span class="nom"><b>'+esc(x.nombre)+'</b></span>'
+          +'<span class="nom"><b>'+esc(x.nombre)+'</b>'+extra+'</span>'
           +'<span class="val">'+mxn(enMXN(x))+(x.moneda==='USD'?'<small>US$'+x.valor.toLocaleString('en-US')+'</small>':'')+'</span>'
           +'<span class="ops"><button class="op" data-edd="'+esc(x.id)+'">EDITAR</button>'
           +'<button class="op rojo" data-deld="'+esc(x.id)+'" aria-label="Eliminar '+esc(x.nombre)+'">×</button></span></div>';
@@ -709,7 +955,13 @@ function renderSpark(){
   ctx.clearRect(0,0,r.width,110);
   var pts=S.cortes.slice(-24);
   $('sparkCortes').textContent=S.cortes.length+' corte'+(S.cortes.length===1?'':'s');
-  $('sparkDesde').textContent= pts.length? 'DESDE '+pts[0].f : 'GUARDA TU PRIMER CORTE';
+  if(pts.length>=2){
+    var pv=pts[0].v, uv=pts[pts.length-1].v;
+    var vp= pv!==0? ((uv-pv)/Math.abs(pv)*100):0;
+    $('sparkDesde').textContent='DESDE '+pts[0].f+' · '+mxn(pv)+' → '+mxn(uv)+' · '+(vp>=0?'+':'')+vp.toFixed(1)+'%';
+  } else {
+    $('sparkDesde').textContent= pts.length? 'DESDE '+pts[0].f : 'GUARDA TU PRIMER CORTE';
+  }
   if(pts.length<2){
     ctx.fillStyle='rgba(239,236,231,.25)';
     ctx.font='9px ui-monospace,monospace'; ctx.textAlign='center';
@@ -750,9 +1002,14 @@ function abrirForma(tipo, item){
     f.nombre.value=item?item.nombre:''; f.inst.value=item?(item.inst||''):'';
     f.capa.value=item?item.capa:CAPAS[0].k; f.moneda.value=item?item.moneda:'MXN';
     f.valor.value=item?item.valor:'';
+    f.titular.value=item?(item.titular||''):''; f.veh.value=item?(item.veh||'directo'):'directo';
+    f.benef.value=item?(item.benef||''):''; f.benefNombre.value=item?(item.benefNombre||''):'';
+    f.doc.value=item?(item.doc||''):''; f.lib.checked= item? item.lib!==false : true;
   }else{
     f.nombre.value=item?item.nombre:''; f.moneda.value=item?item.moneda:'MXN';
     f.valor.value=item?item.valor:'';
+    f.tasa.value=item&&item.tasa?item.tasa:''; f.pago.value=item&&item.pago?item.pago:'';
+    f.titular.value=item?(item.titular||''):'';
   }
   f.scrollIntoView({block:'center',behavior:'smooth'}); f.nombre.focus();
 }
@@ -763,8 +1020,12 @@ $('formActivo').capa.innerHTML=CAPAS.map(function(c){return '<option value="'+c.
 $('formActivo').addEventListener('submit',function(e){
   e.preventDefault(); var f=e.target;
   var v=parseFloat(f.valor.value); if(!(v>=0)) return;
-  var d={nombre:f.nombre.value.trim(),inst:f.inst.value.trim(),capa:f.capa.value,moneda:f.moneda.value,valor:v};
+  var d={nombre:f.nombre.value.trim(),inst:f.inst.value.trim(),capa:f.capa.value,moneda:f.moneda.value,valor:v,
+    titular:f.titular.value.trim(),veh:f.veh.value,benef:f.benef.value,
+    benefNombre:f.benefNombre.value.trim(),doc:f.doc.value.trim(),lib:f.lib.checked};
   if(!d.nombre) return;
+  /* la fecha del valor se estampa cuando el valor cambia — nunca se inventa */
+  d.act=(!editando||v!==editando.valor)?hoyISO():(editando.act||null);
   if(editando && editTipo==='activo' && S.activos.indexOf(editando)!==-1){
     Object.assign(editando,d); toast('Activo actualizado');
   } else { d.id=uid(); S.activos.push(d); toast('Activo agregado'); }
@@ -773,8 +1034,12 @@ $('formActivo').addEventListener('submit',function(e){
 $('formDeuda').addEventListener('submit',function(e){
   e.preventDefault(); var f=e.target;
   var v=parseFloat(f.valor.value); if(!(v>=0)) return;
-  var d={nombre:f.nombre.value.trim(),moneda:f.moneda.value,valor:v};
+  var d={nombre:f.nombre.value.trim(),moneda:f.moneda.value,valor:v,
+    tasa:Math.min(200,Math.max(0,parseFloat(f.tasa.value)||0)),
+    pago:Math.max(0,parseFloat(f.pago.value)||0),
+    titular:f.titular.value.trim()};
   if(!d.nombre) return;
+  d.act=(!editando||v!==editando.valor)?hoyISO():(editando.act||null);
   if(editando && editTipo==='deuda' && S.deudas.indexOf(editando)!==-1){
     Object.assign(editando,d); toast('Deuda actualizada');
   } else { d.id=uid(); S.deudas.push(d); toast('Deuda agregada'); }
@@ -791,28 +1056,40 @@ $('obAgregar').addEventListener('click',function(){
 });
 $('btnDeuda').addEventListener('click',function(){verVista('deudas');abrirForma('deuda')});
 $('btnCorte').addEventListener('click',function(){
-  var hoy=new Date(), f=hoy.getFullYear()+'-'+String(hoy.getMonth()+1).padStart(2,'0')+'-'+String(hoy.getDate()).padStart(2,'0');
-  var neto=totalActivos()-totalDeudas();
+  var f=hoyISO();
+  var act=totalActivos(), deu=totalDeudas(), neto=act-deu;
+  var snap={f:f,v:neto,act:act,deu:deu,capas:porCapa(),fx:S.fx};
   var ya=S.cortes.find(function(c){return c.f===f});
-  if(ya){ ya.v=neto; toast('Corte de hoy actualizado'); }
-  else{ S.cortes.push({f:f,v:neto}); toast('Corte guardado — '+f); }
+  if(ya){ Object.assign(ya,snap); toast('Corte de hoy actualizado'); }
+  else{ S.cortes.push(snap); toast('Corte guardado — '+f); }
   save(); render();
+  /* el corte es el ritual del mes; el respaldo se cuelga de él */
+  if(!S.demo && S.activos.length){
+    var de=S.ultimoExport?diasDesde(S.ultimoExport):null;
+    if(de===null||de>30){
+      if(confirm('Tu último respaldo '+(de===null?'no existe':'es de hace '+de+' días')+'. ¿Descargar respaldo de hoy? Tus datos solo viven en este navegador.')) exporta();
+    }
+  }
 });
 $('inAporta').addEventListener('input',function(){ S.aporta=Math.max(0,parseFloat(this.value)||0); save(); renderPlan(); renderLibertad(); });
 $('inIngreso').addEventListener('input',function(){ S.ingreso=Math.max(0,parseFloat(this.value)||0); save(); renderLibertad(); });
 $('inTasa').addEventListener('input',function(){ S.tasa=parseFloat(this.value)||0; save(); renderLibertad(); });
-$('inFx').addEventListener('change',function(){ S.fx=Math.max(1,parseFloat(this.value)||17); this.value=S.fx; save(); render(); });
+$('inFx').addEventListener('change',function(){ S.fx=Math.max(1,parseFloat(this.value)||17); S.fxFecha=hoyISO(); this.value=S.fx; save(); render(); });
+$('inGasto').addEventListener('change',function(){ S.gasto=Math.max(0,parseFloat(this.value)||0); this.value=S.gasto; save(); render(); });
 $('inAporta').addEventListener('change',function(){ this.value=S.aporta; });
 $('inIngreso').addEventListener('change',function(){ this.value=S.ingreso; });
 
-$('btnExporta').addEventListener('click',function(){
+function exporta(){
+  S.ultimoExport=hoyISO(); save();
   var blob=new Blob([JSON.stringify(S,null,2)],{type:'application/json'});
   var a=document.createElement('a');
   a.href=URL.createObjectURL(blob);
-  a.download='northpoint-oficina-respaldo.json';
+  a.download='northpoint-oficina-'+S.ultimoExport+'.json';
   a.click(); URL.revokeObjectURL(a.href);
-  toast('Respaldo exportado');
-});
+  toast('Respaldo exportado'); render();
+}
+$('btnExporta').addEventListener('click',exporta);
+$('chipResp').addEventListener('click',exporta);
 $('btnImporta').addEventListener('click',function(){ $('fileImporta').click(); });
 $('fileImporta').addEventListener('change',function(){
   var file=this.files[0]; if(!file)return;
@@ -833,21 +1110,24 @@ $('btnBorrar').addEventListener('click',function(){
 
 function cargarDemo(){
   S=fresh(); S.demo=true;
+  var hoyD=hoyISO();
+  function hace(dias){ var d=new Date(); d.setDate(d.getDate()-dias);
+    return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
   S.activos=[
-    {id:uid(),nombre:'Cetes directo',inst:'CETES',capa:'liquidez',moneda:'MXN',valor:180000},
-    {id:uid(),nombre:'Cuenta de nómina',inst:'BBVA',capa:'liquidez',moneda:'MXN',valor:64000},
-    {id:uid(),nombre:'Afore',inst:'XXI Banorte',capa:'retiro',moneda:'MXN',valor:310000},
-    {id:uid(),nombre:'PPR',inst:'Aseguradora',capa:'retiro',moneda:'MXN',valor:95000},
-    {id:uid(),nombre:'Depto en renta · Roma Norte',inst:'Escriturado',capa:'pasivos',moneda:'MXN',valor:2850000},
-    {id:uid(),nombre:'ETF S&P 500',inst:'GBM+',capa:'acciones',moneda:'USD',valor:21500},
-    {id:uid(),nombre:'ETF Nasdaq 100',inst:'GBM+',capa:'acciones',moneda:'USD',valor:8300},
-    {id:uid(),nombre:'Participación negocio familiar',inst:'Privado',capa:'alt',moneda:'MXN',valor:600000}
+    {id:uid(),nombre:'Cetes directo',inst:'CETES',capa:'liquidez',moneda:'MXN',valor:180000,lib:true,act:hace(12),titular:'Papá',veh:'directo',benef:'si',benefNombre:'Mamá',doc:'Portal cetesdirecto'},
+    {id:uid(),nombre:'Cuenta de nómina',inst:'BBVA',capa:'liquidez',moneda:'MXN',valor:64000,lib:true,act:hace(4),titular:'Papá',veh:'directo',benef:'no',benefNombre:'',doc:''},
+    {id:uid(),nombre:'Afore',inst:'XXI Banorte',capa:'retiro',moneda:'MXN',valor:310000,lib:false,act:hace(35),titular:'Papá',veh:'directo',benef:'si',benefNombre:'Mamá',doc:'Estado de cuenta Afore'},
+    {id:uid(),nombre:'PPR',inst:'Aseguradora',capa:'retiro',moneda:'MXN',valor:95000,lib:true,act:hace(60),titular:'Mamá',veh:'directo',benef:'si',benefNombre:'Hijos',doc:'Póliza en caja fuerte'},
+    {id:uid(),nombre:'Depto en renta · Roma Norte',inst:'Escriturado',capa:'pasivos',moneda:'MXN',valor:2850000,lib:true,act:hace(200),titular:'Copropiedad',veh:'copropiedad',benef:'no',benefNombre:'',doc:'Escritura · Notaría 12'},
+    {id:uid(),nombre:'ETF S&P 500',inst:'GBM+',capa:'acciones',moneda:'USD',valor:21500,lib:true,act:hace(2),titular:'Papá',veh:'directo',benef:'si',benefNombre:'Mamá',doc:'Designación en GBM+'},
+    {id:uid(),nombre:'ETF Nasdaq 100',inst:'GBM+',capa:'acciones',moneda:'USD',valor:8300,lib:true,act:hace(2),titular:'Papá',veh:'directo',benef:'si',benefNombre:'Mamá',doc:'Designación en GBM+'},
+    {id:uid(),nombre:'Participación negocio familiar',inst:'Privado',capa:'alt',moneda:'MXN',valor:600000,lib:false,act:hace(430),titular:'SAPI familiar',veh:'empresa',benef:'na',benefNombre:'',doc:''}
   ];
   S.deudas=[
-    {id:uid(),nombre:'Hipoteca del depto',moneda:'MXN',valor:1250000},
-    {id:uid(),nombre:'Tarjeta de crédito',moneda:'MXN',valor:38000}
+    {id:uid(),nombre:'Hipoteca del depto',moneda:'MXN',valor:1250000,tasa:10.5,pago:14500,titular:'Copropiedad',act:hace(12)},
+    {id:uid(),nombre:'Tarjeta de crédito',moneda:'MXN',valor:38000,tasa:62,pago:1900,titular:'Papá',act:hace(3)}
   ];
-  S.aporta=25000; S.ingreso=120000; S.tasa=7;
+  S.aporta=25000; S.ingreso=120000; S.tasa=4; S.gasto=65000; S.fxFecha=hoyD;
   /* cortes de ejemplo: seis meses hacia atrás desde hoy */
   var hoy=new Date(); S.cortes=[];
   for(var i=6;i>=1;i--){
@@ -873,7 +1153,7 @@ $('obDemo').addEventListener('click',cargarDemo);
 
 function sync(){
   $('inAporta').value=S.aporta; $('inIngreso').value=S.ingreso;
-  $('inTasa').value=S.tasa; $('inFx').value=S.fx;
+  $('inTasa').value=S.tasa; $('inFx').value=S.fx; $('inGasto').value=S.gasto;
 }
 
 var toastT=null;
