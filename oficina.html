@@ -26,7 +26,7 @@
 
 <style>
 :root{
-  --negro:#090A07; --panel:#0E0F0C; --cream:#EFECE7; --mint:#A6EEDA; --gold:#C9A84C;
+  --negro:#090A07; --panel:#0E0F0C; --cream:#EFECE7; --mint:#A6EEDA;
   --steel:#9FB4C8; --rosa:#D8A5B4; --lila:#B8A9D9;
   --vidrio:rgba(255,255,255,.05); --vidrio2:rgba(255,255,255,.08);
   --borde:rgba(255,255,255,.1); --borde2:rgba(255,255,255,.16);
@@ -36,8 +36,12 @@
 }
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 html{scroll-behavior:smooth}
-body{background:var(--negro);color:var(--cream);font-family:var(--fb);font-size:15px;
+body{background:#050505;color:var(--cream);font-family:var(--fb);font-size:15px;
   line-height:1.55;-webkit-font-smoothing:antialiased;min-height:100vh}
+body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
+  background:radial-gradient(900px 520px at 72% -12%,rgba(255,255,255,.07),transparent 62%),
+             radial-gradient(720px 520px at 8% 112%,rgba(255,255,255,.045),transparent 62%)}
+body>*{position:relative;z-index:1}
 a{color:inherit;text-decoration:none}
 button{font-family:inherit;cursor:pointer}
 input,select{font-family:inherit}
@@ -49,19 +53,39 @@ input,select{font-family:inherit}
   border-bottom:1px solid var(--borde)}
 .nav-in{max-width:1080px;margin:0 auto;padding:0 20px;height:58px;display:flex;align-items:center;gap:12px}
 .brand{display:flex;align-items:center;gap:9px;font-weight:700;font-size:13.5px;letter-spacing:.02em}
-.brand svg{width:16px;height:16px;color:var(--gold)}
+.brand svg{width:16px;height:16px;color:var(--cream)}
 .brand small{font-family:var(--fm);font-size:8px;letter-spacing:.24em;color:var(--tenue);display:block;font-weight:400}
 .chip-demo{display:none;font-family:var(--fm);font-size:8.5px;letter-spacing:.18em;color:var(--negro);
-  background:var(--gold);border-radius:20px;padding:5px 11px}
+  background:var(--cream);border-radius:20px;padding:5px 11px}
 body.demo .chip-demo{display:inline-block}
-.nav-out{margin-left:auto;font-family:var(--fm);font-size:9.5px;letter-spacing:.14em;color:var(--dim);
+.tabs{display:flex;gap:18px;margin-left:14px}
+.tab{font-size:11.5px;font-weight:500;color:var(--dim);transition:color .2s}
+.tab:hover{color:var(--cream)}
+.pill-add{position:relative;overflow:hidden;margin-left:auto;background:var(--cream);color:var(--negro);
+  border:none;border-radius:20px;padding:8px 15px;font-size:11.5px;font-weight:600;white-space:nowrap}
+.pill-add::after{content:'';position:absolute;top:0;left:-70%;width:50%;height:100%;
+  background:linear-gradient(105deg,transparent,rgba(255,255,255,.75),transparent);
+  transform:skewX(-18deg);transition:left .8s cubic-bezier(.16,1,.3,1);pointer-events:none}
+.pill-add:hover::after{left:145%}
+.nav-out{font-family:var(--fm);font-size:9.5px;letter-spacing:.14em;color:var(--dim);
   border:1px solid var(--borde);border-radius:6px;padding:8px 13px;transition:color .2s,border-color .2s}
 .nav-out:hover{color:var(--cream);border-color:var(--borde2)}
+@media(max-width:900px){.tabs{display:none}}
 
 /* ── CARDS ── */
-.card{background:var(--vidrio);border:1px solid var(--borde);border-radius:16px;
-  backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
-  box-shadow:0 30px 70px -30px rgba(0,0,0,.8);padding:20px 20px 22px}
+.card{position:relative;overflow:hidden;
+  background:linear-gradient(180deg,rgba(255,255,255,.075),rgba(255,255,255,.035));
+  border:1px solid rgba(255,255,255,.13);border-radius:18px;
+  backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.16),0 34px 80px -32px rgba(0,0,0,.95);
+  padding:20px 20px 22px}
+/* el brillo blanco que barre al pasar el mouse — mismo gesto que la landing */
+.card::after{content:'';position:absolute;top:0;left:-70%;width:50%;height:100%;
+  background:linear-gradient(105deg,transparent,rgba(255,255,255,.14),transparent);
+  transform:skewX(-18deg);transition:left 1s cubic-bezier(.16,1,.3,1);pointer-events:none}
+.card:hover::after{left:145%}
+.spk{position:absolute;top:16px;right:16px;width:12px;height:12px;color:rgba(239,236,231,.4)}
+@media(prefers-reduced-motion:reduce){.card::after{display:none}}
 .card h2{font-family:var(--fb);font-weight:700;font-size:14px;letter-spacing:.01em;margin-bottom:2px}
 .card .sub{font-size:11.5px;color:var(--tenue);margin-bottom:16px;line-height:1.5}
 .eb{font-family:var(--fm);font-size:8px;letter-spacing:.2em;text-transform:uppercase;color:var(--tenue)}
@@ -76,9 +100,14 @@ body.demo .chip-demo{display:inline-block}
 .neto-sub b{color:var(--mint);font-weight:500}
 .neto-sub i{font-style:normal;color:var(--rojo)}
 .res-actions{display:flex;gap:10px;margin-top:18px;flex-wrap:wrap}
-.btn{display:inline-flex;align-items:center;gap:8px;background:var(--cream);color:var(--negro);
+.btn{position:relative;overflow:hidden;display:inline-flex;align-items:center;gap:8px;
+  background:var(--cream);color:var(--negro);
   border:none;border-radius:8px;padding:11px 16px;font-size:12.5px;font-weight:600;
   transition:opacity .2s,transform .2s}
+.btn::after{content:'';position:absolute;top:0;left:-70%;width:50%;height:100%;
+  background:linear-gradient(105deg,transparent,rgba(255,255,255,.75),transparent);
+  transform:skewX(-18deg);transition:left .8s cubic-bezier(.16,1,.3,1);pointer-events:none}
+.btn:hover::after{left:145%}
 .btn:hover{opacity:.9;transform:translateY(-1px)}
 .btn-g{background:transparent;color:var(--dim);border:1px solid var(--borde)}
 .btn-g:hover{color:var(--cream);border-color:var(--borde2)}
@@ -106,7 +135,7 @@ body.demo .chip-demo{display:inline-block}
 .meta-in input{width:46px;background:var(--vidrio);border:1px solid var(--borde);border-radius:6px;
   color:var(--cream);font-family:var(--fm);font-size:11px;padding:6px 6px;text-align:right}
 .meta-in span{font-family:var(--fm);font-size:9px;color:var(--tenue)}
-.meta-warn{font-family:var(--fm);font-size:8.5px;letter-spacing:.08em;color:var(--gold);margin-top:8px;display:none}
+.meta-warn{font-family:var(--fm);font-size:8.5px;letter-spacing:.08em;color:var(--cream);margin-top:8px;display:none}
 
 /* inputs grandes */
 .in-box{background:var(--vidrio);border:1px solid var(--borde);border-radius:10px;padding:10px 14px;margin-bottom:14px}
@@ -218,8 +247,17 @@ body.vacia .tablero,body.vacia .resumen{display:none}
       <svg viewBox="0 0 64 64" fill="currentColor" aria-hidden="true"><path d="M32 1 37.2 26.8 63 32 37.2 37.2 32 63 26.8 37.2 1 32 26.8 26.8Z"/></svg>
       <span>NORTHPOINT<small>LA OFICINA · FAMILY OFFICE</small></span>
     </a>
+    <span class="tabs">
+      <a class="tab" href="#top">Resumen</a>
+      <a class="tab" href="#portafolio">Portafolio</a>
+      <a class="tab" href="#plan">Plan</a>
+      <a class="tab" href="#libertad">Libertad</a>
+      <a class="tab" href="#activos">Activos</a>
+      <a class="tab" href="#deudas">Deudas</a>
+    </span>
     <button class="chip-demo" id="chipDemo" style="border:none;cursor:pointer">DEMO · SALIR ×</button>
-    <a class="nav-out" href="family-office.html">&larr; FAMILY OFFICE</a>
+    <button class="pill-add" id="navActivo">+ Activo</button>
+    <a class="nav-out" href="family-office.html">&larr; SALIR</a>
   </div>
 </nav>
 
@@ -238,7 +276,7 @@ body.vacia .tablero,body.vacia .resumen{display:none}
 </section>
 
 <!-- RESUMEN -->
-<header class="resumen w">
+<header class="resumen w" id="top">
   <div class="res-g">
     <div class="card">
       <p class="eb">PATRIMONIO NETO</p>
@@ -261,7 +299,7 @@ body.vacia .tablero,body.vacia .resumen{display:none}
 <main class="tablero w">
   <div class="col">
 
-    <div class="card">
+    <div class="card" id="portafolio"><svg class="spk" viewBox="0 0 64 64" fill="currentColor" aria-hidden="true"><path d="M32 1 37.2 26.8 63 32 37.2 37.2 32 63 26.8 37.2 1 32 26.8 26.8Z"/></svg>
       <h2>Composición del portafolio</h2>
       <p class="sub">Lo que tienes contra tu estrategia por capas. La meta la defines tú.</p>
       <p class="seg-lab">TU PORTAFOLIO</p>
@@ -272,7 +310,7 @@ body.vacia .tablero,body.vacia .resumen{display:none}
       <p class="meta-warn" id="metaWarn">Las metas suman <b id="metaSuma"></b>% — ajústalas para llegar a 100%.</p>
     </div>
 
-    <div class="card">
+    <div class="card" id="plan"><svg class="spk" viewBox="0 0 64 64" fill="currentColor" aria-hidden="true"><path d="M32 1 37.2 26.8 63 32 37.2 37.2 32 63 26.8 37.2 1 32 26.8 26.8Z"/></svg>
       <h2>Plan de acción mensual</h2>
       <p class="sub">Reparte tu aportación del mes hacia las capas que van más lejos de su meta.</p>
       <div class="in-box">
@@ -286,7 +324,7 @@ body.vacia .tablero,body.vacia .resumen{display:none}
   </div>
   <div class="col">
 
-    <div class="card">
+    <div class="card" id="libertad"><svg class="spk" viewBox="0 0 64 64" fill="currentColor" aria-hidden="true"><path d="M32 1 37.2 26.8 63 32 37.2 37.2 32 63 26.8 37.2 1 32 26.8 26.8Z"/></svg>
       <h2>Libertad financiera</h2>
       <p class="sub">Regla del 4%: tu meta patrimonial es 300 veces tu ingreso mensual deseado.</p>
       <div class="in-box">
@@ -304,7 +342,7 @@ body.vacia .tablero,body.vacia .resumen{display:none}
         INFLACIÓN. LA REGLA DEL 4% ES UNA HEURÍSTICA, NO UNA GARANTÍA.</p>
     </div>
 
-    <div class="card">
+    <div class="card" id="activos"><svg class="spk" viewBox="0 0 64 64" fill="currentColor" aria-hidden="true"><path d="M32 1 37.2 26.8 63 32 37.2 37.2 32 63 26.8 37.2 1 32 26.8 26.8Z"/></svg>
       <h2>Activos</h2>
       <p class="sub">Cuentas, casas de bolsa, inmuebles, negocio — cada uno en su capa.</p>
       <div class="lista" id="listaActivos"></div>
@@ -324,7 +362,7 @@ body.vacia .tablero,body.vacia .resumen{display:none}
       </form>
     </div>
 
-    <div class="card">
+    <div class="card" id="deudas"><svg class="spk" viewBox="0 0 64 64" fill="currentColor" aria-hidden="true"><path d="M32 1 37.2 26.8 63 32 37.2 37.2 32 63 26.8 37.2 1 32 26.8 26.8Z"/></svg>
       <h2>Deudas</h2>
       <p class="sub">Hipoteca, crédito, tarjetas. Restan del patrimonio neto.</p>
       <div class="lista" id="listaDeudas"></div>
@@ -387,7 +425,7 @@ body.vacia .tablero,body.vacia .resumen{display:none}
 var K='np_oficina_v1';
 var CAPAS=[
   {k:'liquidez', n:'Liquidez',        s:'CAPA 01 · EFECTIVO Y EQUIVALENTES', c:'#A6EEDA', meta:10},
-  {k:'retiro',   n:'Retiro',          s:'CAPA 02 · CUENTAS DE RETIRO',       c:'#C9A84C', meta:15},
+  {k:'retiro',   n:'Retiro',          s:'CAPA 02 · CUENTAS DE RETIRO',       c:'#B8A9D9', meta:15},
   {k:'pasivos',  n:'Ingresos pasivos',s:'CAPA 03 · INMUEBLES Y FLUJO',       c:'#9FB4C8', meta:20},
   {k:'acciones', n:'Acciones',        s:'CAPA 04 · RENTA VARIABLE',          c:'#EFECE7', meta:45},
   {k:'alt',      n:'Alternativos',    s:'CAPA 05 · PRIVADOS Y REALES',       c:'#D8A5B4', meta:10}
@@ -464,7 +502,8 @@ function render(){
   document.body.classList.toggle('demo', !!S.demo);
   $('btnDemo').textContent = S.demo ? 'Salir del demo' : 'Modo demo';
 
-  $('netoBig').innerHTML=mxn(neto)+'<small>MXN</small>';
+  var ctv=Math.round(Math.abs(neto)*100)%100;
+  $('netoBig').innerHTML=mxn(neto)+'<small>.'+String(ctv).padStart(2,'0')+' MXN</small>';
   $('netoSub').innerHTML='Activos <b>'+mxn(act)+'</b> · Deudas <i>'+mxn(deu)+'</i>'
     +(S.activos.some(function(x){return x.moneda==='USD'})||S.deudas.some(function(x){return x.moneda==='USD'})
       ?' · USD @ '+S.fx.toFixed(2):'');
@@ -631,11 +670,11 @@ function renderSpark(){
   function Y(v){return 12+ (1-(v-mn)/(mx-mn))*H}
   ctx.beginPath();
   pts.forEach(function(p,i){ i?ctx.lineTo(X(i),Y(p.v)):ctx.moveTo(X(i),Y(p.v)); });
-  ctx.strokeStyle='#C9A84C'; ctx.lineWidth=2; ctx.stroke();
+  ctx.strokeStyle='#EFECE7'; ctx.lineWidth=2; ctx.shadowColor='rgba(239,236,231,.5)'; ctx.shadowBlur=8; ctx.stroke(); ctx.shadowBlur=0;
   ctx.lineTo(X(pts.length-1),110); ctx.lineTo(X(0),110); ctx.closePath();
-  ctx.fillStyle='rgba(201,168,76,.12)'; ctx.fill();
+  ctx.fillStyle='rgba(239,236,231,.09)'; ctx.fill();
   var u=pts[pts.length-1];
-  ctx.beginPath(); ctx.arc(X(pts.length-1),Y(u.v),3.5,0,7); ctx.fillStyle='#C9A84C'; ctx.fill();
+  ctx.beginPath(); ctx.arc(X(pts.length-1),Y(u.v),3.5,0,7); ctx.fillStyle='#EFECE7'; ctx.fill();
 }
 
 function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,function(ch){
@@ -690,6 +729,7 @@ $('formDeuda').addEventListener('submit',function(e){
 
 /* ── controles ── */
 $('btnAgregar').addEventListener('click',function(){abrirForma('activo')});
+$('navActivo').addEventListener('click',function(){document.body.classList.remove('vacia');abrirForma('activo')});
 $('obAgregar').addEventListener('click',function(){document.body.classList.remove('vacia');abrirForma('activo')});
 $('btnDeuda').addEventListener('click',function(){abrirForma('deuda')});
 $('btnCorte').addEventListener('click',function(){
