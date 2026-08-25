@@ -465,8 +465,8 @@ button.lx:hover{color:var(--cream)}
     </div>
   </div>
   <div class="card" id="sistemaCard" style="margin-top:14px"><svg class="spk" viewBox="0 0 64 64" fill="currentColor" aria-hidden="true"><path d="M32 1 37.2 26.8 63 32 37.2 37.2 32 63 26.8 37.2 1 32 26.8 26.8Z"/></svg>
-    <h2>Cómo está repartido tu dinero</h2>
-    <p class="sub">Cada rebanada es uno de tus cinco tipos de inversión (tus capas). Entre más grande la rebanada, más dinero tienes ahí. Pasa el cursor para ver el monto.</p>
+    <h2>El sistema</h2>
+    <p class="sub">Todo lo que tienes, visto como un sistema: cada esfera es una de tus cosas — entre más grande, más vale. Pasa el cursor para ver cuál es.</p>
     <canvas id="sys" style="width:100%;height:320px;display:block"></canvas>
     <div class="cap-chips" id="sysLeyenda" style="margin:12px 0 0"></div>
   </div>
@@ -810,7 +810,7 @@ function render(){
   renderSeg(); renderPlan(); renderLibertad(); renderListas(); renderConc(); renderCortes(); renderSpark();
   sysDatos(); leyendaCapas('sysLeyenda');
   $('sistemaCard').style.display= S.activos.length? 'block':'none';
-  pintaViz();
+  if(REDUCIDO){ dibujaSistema(0); dibujaFlujo(0); dibujaMareas(0); }
 }
 
 function renderSeg(){
@@ -1431,63 +1431,83 @@ function leyendaCapas(id){
   el.addEventListener('mouseleave',tipFuera);
 })();
 
-/* ════ GRÁFICAS CLÁSICAS · dona + barras, estáticas y calmadas ════
-   Nada de órbitas, líquido ni partículas: reparto en dona y barras contra
-   meta, que cualquiera reconoce. Paleta validada por capa, tooltips al hover. */
-function rectR(ctx,x,y,w,h,r){
-  ctx.beginPath();               /* SIEMPRE reinicia el path — si w<=0 queda vacío y fill() no pinta nada */
-  if(w<=0) return;
-  r=Math.min(r,h/2,w/2);
-  ctx.moveTo(x+r,y); ctx.lineTo(x+w-r,y); ctx.arcTo(x+w,y,x+w,y+r,r);
-  ctx.lineTo(x+w,y+h-r); ctx.arcTo(x+w,y+h,x+w-r,y+h,r);
-  ctx.lineTo(x+r,y+h); ctx.arcTo(x,y+h,x,y+h-r,r);
-  ctx.lineTo(x,y+r); ctx.arcTo(x,y,x+r,y,r); ctx.closePath();
-}
-
-/* ── LAS BARRAS (Portafolio) · lo que tienes en cada capa vs su meta ── */
+/* ── LAS MAREAS · cinco vasos de vidrio: el líquido es lo real, la punteada la meta ── */
 var marMouse=null;
-function dibujaMareas(){
+function dibujaMareas(t){
   var cv=$('mareas'); if(!cv||document.body.getAttribute('data-v')!=='portafolio')return;
   var L=lienzo(cv,260); if(!L)return;
   var ctx=L.ctx, w=L.w, h=260;
   var m=porCapa(), act=totalActivos();
   if(!act){
-    ctx.fillStyle='rgba(239,236,231,.35)'; ctx.font='11px ui-monospace,monospace'; ctx.textAlign='center'; ctx.textBaseline='middle';
-    ctx.fillText('Registra lo que tienes y aquí verás el reparto',w/2,h/2); return;
+    ctx.fillStyle='rgba(239,236,231,.35)'; ctx.font='9px ui-monospace,monospace'; ctx.textAlign='center';
+    ctx.fillText('REGISTRA ACTIVOS Y LAS MAREAS SUBEN',w/2,h/2); return;
   }
-  var filas=CAPAS.map(function(c){ var v=m[c.k]||0; return {c:c, v:v, pr:v/act*100, meta:S.metas[c.k]||0}; });
-  var padT=10, padB=10, gutL=104, gutR=64, n=filas.length;
-  var x0=gutL, x1=w-gutR, rowH=(h-padT-padB)/n;
-  var maxPct=10; filas.forEach(function(f){ maxPct=Math.max(maxPct,f.pr,f.meta); }); maxPct=maxPct*1.06;
+  var n=CAPAS.length, tubW=Math.min(64,(w-30)/(n*1.7));
+  var gap=(w-n*tubW)/(n+1), top=30, bot=h-36, tubH=bot-top;
+  /* una sola escala para los cinco vasos: llena el máximo entre real y metas */
+  var maxPct=10;
+  CAPAS.forEach(function(c){ maxPct=Math.max(maxPct,(m[c.k]||0)/act*100,S.metas[c.k]||0); });
+  maxPct=Math.min(100,maxPct*1.12+3);
+  var CORTO=['LIQUIDEZ','RETIRO','PASIVOS','ACCIONES','ALT'];
   var hoverI=-1;
-  if(marMouse){ var idx=Math.floor((marMouse.y-padT)/rowH);
-    if(idx>=0&&idx<n&&marMouse.x>=6) hoverI=idx; }
-  filas.forEach(function(f,i){
-    var cy=padT+i*rowH+rowH/2, barH=Math.min(18,rowH-18), by=cy-barH/2;
-    /* etiqueta de la capa */
-    ctx.textAlign='left'; ctx.textBaseline='middle';
-    ctx.fillStyle= i===hoverI? '#EFECE7':'rgba(239,236,231,.82)';
-    ctx.font='11px ui-monospace,monospace';
-    ctx.fillText(f.c.n, 4, cy);
-    /* riel */
-    ctx.fillStyle='rgba(255,255,255,.05)'; rectR(ctx,x0,by,x1-x0,barH,5); ctx.fill();
-    /* barra real */
-    var bw=Math.max(0,(f.pr/maxPct))*(x1-x0);
-    if(i===hoverI){ ctx.shadowColor=f.c.c; ctx.shadowBlur=12; }
-    ctx.fillStyle=f.c.c; rectR(ctx,x0,by,Math.max(bw,f.pr>0?4:0),barH,5); ctx.fill(); ctx.shadowBlur=0;
-    /* marca de meta */
-    if(f.meta>0){
-      var mx=x0+(f.meta/maxPct)*(x1-x0);
-      ctx.setLineDash([3,3]); ctx.strokeStyle='rgba(239,236,231,.85)'; ctx.lineWidth=1.5;
-      ctx.beginPath(); ctx.moveTo(mx,by-5); ctx.lineTo(mx,by+barH+5); ctx.stroke(); ctx.setLineDash([]);
+  if(marMouse){
+    CAPAS.forEach(function(c,i){
+      var x=gap+i*(tubW+gap);
+      if(marMouse.x>=x-4&&marMouse.x<=x+tubW+4&&marMouse.y>=top-6&&marMouse.y<=bot+26) hoverI=i;
+    });
+  }
+  function vaso(x){
+    var rr=13;
+    ctx.beginPath();
+    ctx.moveTo(x+rr,top); ctx.lineTo(x+tubW-rr,top); ctx.arcTo(x+tubW,top,x+tubW,top+rr,rr);
+    ctx.lineTo(x+tubW,bot-rr); ctx.arcTo(x+tubW,bot,x+tubW-rr,bot,rr);
+    ctx.lineTo(x+rr,bot); ctx.arcTo(x,bot,x,bot-rr,rr);
+    ctx.lineTo(x,top+rr); ctx.arcTo(x,top,x+rr,top,rr);
+    ctx.closePath();
+  }
+  CAPAS.forEach(function(c,i){
+    var x=gap+i*(tubW+gap);
+    var v=m[c.k]||0, pr=v/act*100;
+    var lvl=Math.max(0.015,pr/maxPct), yS=bot-tubH*lvl;
+    vaso(x);
+    ctx.fillStyle='rgba(255,255,255,.035)'; ctx.fill();
+    ctx.strokeStyle= i===hoverI? 'rgba(255,255,255,.45)':'rgba(255,255,255,.14)';
+    ctx.lineWidth=1; ctx.stroke();
+    ctx.save(); vaso(x); ctx.clip();
+    ctx.beginPath(); ctx.moveTo(x,bot);
+    for(var px=0;px<=tubW;px+=2){
+      var ola= REDUCIDO?0: Math.sin(t*1.7+i*1.3+px*0.12)*2.4+Math.sin(t*0.9+i*0.7+px*0.05)*1.5;
+      ctx.lineTo(x+px, yS+ola);
     }
-    /* valor a la derecha */
-    ctx.textAlign='right'; ctx.fillStyle='rgba(239,236,231,.92)'; ctx.font='11px ui-monospace,monospace';
-    ctx.fillText(f.pr.toFixed(1)+'%', w-4, cy);
+    ctx.lineTo(x+tubW,bot); ctx.closePath();
+    var gr=ctx.createLinearGradient(0,yS,0,bot);
+    gr.addColorStop(0,c.c+'e6'); gr.addColorStop(1,c.c+'59');
+    ctx.fillStyle=gr;
+    ctx.shadowColor=c.c; ctx.shadowBlur= i===hoverI?22:12;
+    ctx.fill(); ctx.shadowBlur=0;
+    if(!REDUCIDO&&lvl>0.06){
+      for(var b=0;b<2;b++){
+        var ciclo=Math.max(10,tubH*lvl-10);
+        var yb=bot-6-((t*(9+i*2.4+b*5)+b*31+i*17)%ciclo);
+        ctx.fillStyle='rgba(255,255,255,.4)';
+        ctx.beginPath(); ctx.arc(x+tubW*(0.3+b*0.4)+Math.sin(t*2+b+i)*2, yb, 1.4,0,7); ctx.fill();
+      }
+    }
+    ctx.restore();
+    var yM=bot-tubH*Math.min(1,(S.metas[c.k]||0)/maxPct);
+    ctx.setLineDash([4,3]);
+    ctx.strokeStyle='rgba(239,236,231,.85)'; ctx.lineWidth=1.5;
+    ctx.beginPath(); ctx.moveTo(x-4,yM); ctx.lineTo(x+tubW+4,yM); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.textAlign='center';
+    ctx.fillStyle='rgba(239,236,231,.5)'; ctx.font='7.5px ui-monospace,monospace';
+    ctx.fillText(CORTO[i],x+tubW/2,h-22);
+    ctx.fillStyle='rgba(239,236,231,.92)'; ctx.font='10px ui-monospace,monospace';
+    ctx.fillText(pr.toFixed(1)+'%',x+tubW/2,h-8);
   });
   if(hoverI>=0&&marMouse){
-    var f=filas[hoverI], dm=f.pr-f.meta;
-    tipVer(marMouse.cx,marMouse.cy,'<b>'+f.c.n+'</b><br>'+mxn(f.v)+' · '+f.pr.toFixed(1)+'%<br>META '+f.meta+'% · '+(dm>=0?'+':'')+dm.toFixed(1)+' PP');
+    var cH=CAPAS[hoverI], vH=m[cH.k]||0, prH=vH/act*100, dm=prH-(S.metas[cH.k]||0);
+    tipVer(marMouse.cx,marMouse.cy,'<b>'+cH.n+'</b><br>'+mxn(vH)+' · '+prH.toFixed(1)+'%<br>META '+(S.metas[cH.k]||0)+'% · '+(dm>=0?'+':'')+dm.toFixed(1)+' PP');
     cv.style.cursor='pointer';
   } else if(marMouse){ tipFuera(); cv.style.cursor='default'; }
 }
@@ -1496,118 +1516,190 @@ function dibujaMareas(){
   cv.addEventListener('mousemove',function(e){
     var r=cv.getBoundingClientRect();
     marMouse={x:e.clientX-r.left,y:e.clientY-r.top,cx:e.clientX,cy:e.clientY};
-    dibujaMareas();
+    if(REDUCIDO) dibujaMareas(0);
   });
-  cv.addEventListener('mouseleave',function(){ marMouse=null; tipFuera(); cv.style.cursor='default'; dibujaMareas(); });
+  cv.addEventListener('mouseleave',function(){ marMouse=null; tipFuera(); cv.style.cursor='default'; if(REDUCIDO)dibujaMareas(0); });
 })();
 
-/* ── LA DONA (Resumen) · cómo está repartido tu dinero entre las capas ── */
-var sysHover=-1, sysMouse=null;
-function sysDatos(){ sysHover=-1; }  /* la dona lee porCapa() al vuelo */
-function dibujaSistema(){
+/* ── EL SISTEMA · el patrimonio como sistema orbital ── */
+var sysOrbes=[], sysHover=-1, sysMouse=null;
+function sysDatos(){
+  sysHover=-1;
+  var vmax=1; S.activos.forEach(function(x){ vmax=Math.max(vmax,enMXN(x)); });
+  sysOrbes=S.activos.map(function(x,i){
+    var ci=CAPAS.findIndex(function(c){return c.k===x.capa}); if(ci<0)ci=0;
+    return {x:x, ci:ci, v:enMXN(x),
+      r:5+13*Math.sqrt(enMXN(x)/vmax),
+      a0:(i*2.399963)%(Math.PI*2),          /* ángulo áureo: se reparten solos */
+      vel:(0.16-ci*0.022)*(i%2?1:-1),
+      jit:((i*7919)%23-11)};
+  });
+}
+function dibujaSistema(t){
   var cv=$('sys'); if(!cv||document.body.getAttribute('data-v')!=='resumen')return;
   var L=lienzo(cv,320); if(!L)return;
   var ctx=L.ctx, w=L.w, h=320, cx=w/2, cy=h/2;
-  var m=porCapa(), total=totalActivos();
-  if(!total){
-    ctx.fillStyle='rgba(239,236,231,.35)'; ctx.font='11px ui-monospace,monospace'; ctx.textAlign='center'; ctx.textBaseline='middle';
-    ctx.fillText('Registra lo que tienes y aquí verás la dona',cx,cy); return;
-  }
-  var segs=CAPAS.map(function(c){ return {c:c, v:m[c.k]||0}; }).filter(function(s){return s.v>0;});
-  var R=Math.min(w/2,h/2)-16, ri=R*0.60, gap=0.028;
-  /* hit-test por ángulo */
-  if(sysMouse){
-    var dx=sysMouse.x-cx, dy=sysMouse.y-cy, dist=Math.hypot(dx,dy);
-    sysHover=-1;
-    if(dist>=ri-6&&dist<=R+6){
-      var ang=Math.atan2(dy,dx)+Math.PI/2; if(ang<0)ang+=Math.PI*2;
-      var acc=0;
-      for(var k=0;k<segs.length;k++){ var frac=segs[k].v/total;
-        if(ang>=acc*Math.PI*2&&ang<(acc+frac)*Math.PI*2){ sysHover=k; break; } acc+=frac; }
-    }
-  }
-  var a0=-Math.PI/2;
-  segs.forEach(function(s,idx){
-    var frac=s.v/total, a1=a0+frac*2*Math.PI;
-    var b0=a0+gap/2, b1=Math.max(b0+0.01,a1-gap/2);
-    ctx.beginPath(); ctx.arc(cx,cy,(R+ri)/2,b0,b1);
-    ctx.lineWidth= idx===sysHover? (R-ri)+6 : (R-ri);
-    ctx.strokeStyle=s.c.c; ctx.lineCap='butt';
-    if(idx===sysHover){ ctx.shadowColor=s.c.c; ctx.shadowBlur=16; }
-    ctx.stroke(); ctx.shadowBlur=0;
-    a0=a1;
+  var rMax=Math.min(w/2,h/2)-24, paso=rMax/5;
+  /* anillos de capa */
+  CAPAS.forEach(function(c,i){
+    ctx.beginPath(); ctx.arc(cx,cy,paso*(i+0.8),0,7);
+    ctx.strokeStyle='rgba(255,255,255,'+(sysHover>=0&&sysOrbes[sysHover]&&sysOrbes[sysHover].ci===i?'.22':'.06')+')';
+    ctx.lineWidth=1; ctx.stroke();
   });
-  /* centro: total */
-  ctx.textAlign='center'; ctx.textBaseline='middle';
-  ctx.fillStyle='#EFECE7'; ctx.font='700 22px Archivo, sans-serif';
-  ctx.fillText(mxnC(total),cx,cy-6);
-  ctx.fillStyle='rgba(239,236,231,.55)'; ctx.font='8px ui-monospace,monospace';
-  ctx.fillText('TOTAL',cx,cy+14);
-  if(sysHover>=0&&sysMouse){ var sh=segs[sysHover];
-    tipVer(sysMouse.cx,sysMouse.cy,'<b>'+sh.c.n+'</b><br>'+mxn(sh.v)+' · '+(sh.v/total*100).toFixed(1)+'%');
-    cv.style.cursor='pointer';
-  } else if(sysMouse){ tipFuera(); cv.style.cursor='default'; }
+  /* núcleo: la estrella de la casa, latiendo apenas */
+  var lat=REDUCIDO?1:(1+Math.sin(t*1.4)*0.12);
+  ctx.save(); ctx.translate(cx,cy); ctx.scale(lat,lat);
+  ctx.fillStyle='rgba(239,236,231,.9)';
+  ctx.beginPath();
+  ctx.moveTo(0,-7);ctx.lineTo(1.6,-1.6);ctx.lineTo(7,0);ctx.lineTo(1.6,1.6);
+  ctx.lineTo(0,7);ctx.lineTo(-1.6,1.6);ctx.lineTo(-7,0);ctx.lineTo(-1.6,-1.6);
+  ctx.closePath(); ctx.fill(); ctx.restore();
+  /* las esferas — posiciones primero, luego el hit-test del frame */
+  sysOrbes.forEach(function(o){
+    var rad=paso*(o.ci+0.8)+o.jit*0.35;
+    var ang=o.a0+(REDUCIDO?0:t*o.vel);
+    o.px=cx+Math.cos(ang)*rad; o.py=cy+Math.sin(ang)*rad;
+  });
+  if(sysMouse){
+    var best=-1,bd=1e9;
+    sysOrbes.forEach(function(o,i){
+      var d=Math.hypot(sysMouse.x-o.px,sysMouse.y-o.py);
+      if(d<o.r+8&&d<bd){bd=d;best=i}
+    });
+    sysHover=best;
+    if(best>=0){ var ob=sysOrbes[best];
+      tipVer(sysMouse.cx,sysMouse.cy,'<b>'+esc(ob.x.nombre)+'</b><br>'+mxn(ob.v)+' · '+CAPAS[ob.ci].n.toUpperCase());
+      cv.style.cursor='pointer';
+    } else { tipFuera(); cv.style.cursor='default'; }
+  }
+  sysOrbes.forEach(function(o,i){
+    var col=CAPAS[o.ci].c;
+    ctx.save();
+    ctx.shadowColor=col; ctx.shadowBlur= i===sysHover?26:14;
+    ctx.fillStyle=col; ctx.globalAlpha= sysHover>=0&&i!==sysHover?0.45:1;
+    ctx.beginPath(); ctx.arc(o.px,o.py,o.r,0,7); ctx.fill();
+    /* anillo de superficie: separa esferas encimadas */
+    ctx.shadowBlur=0; ctx.globalAlpha=1;
+    ctx.strokeStyle='#0E0F0C'; ctx.lineWidth=2;
+    ctx.beginPath(); ctx.arc(o.px,o.py,o.r,0,7); ctx.stroke();
+    ctx.restore();
+  });
 }
 (function(){
   var cv=$('sys'); if(!cv)return;
   cv.addEventListener('mousemove',function(e){
     var r=cv.getBoundingClientRect();
     sysMouse={x:e.clientX-r.left,y:e.clientY-r.top,cx:e.clientX,cy:e.clientY};
-    dibujaSistema();
+    if(REDUCIDO) dibujaSistema(0);
   });
-  cv.addEventListener('mouseleave',function(){ sysMouse=null; sysHover=-1; tipFuera(); cv.style.cursor='default'; dibujaSistema(); });
+  cv.addEventListener('mouseleave',function(){ sysMouse=null; sysHover=-1; tipFuera(); cv.style.cursor='default'; if(REDUCIDO)dibujaSistema(0); });
 })();
 
-/* ── LAS BARRAS DEL PLAN · a dónde va lo que ahorras este mes ── */
-var fluDatos=null, fluHover=-1;
-function flujoDatos(M,red){ fluDatos= M>0? {M:M,red:red} : null; }
-function dibujaFlujo(){
+/* ── EL FLUJO · la aportación viajando a sus capas, con partículas de luz ── */
+var fluDatos=null, fluHover=-1, fluParts=[];
+function flujoDatos(M,red){
+  fluDatos= M>0? {M:M,red:red} : null;
+  fluParts=[];
+  if(fluDatos){
+    CAPAS.forEach(function(c,i){
+      var n=Math.round((red[i]/M)*16);
+      for(var k=0;k<n;k++) fluParts.push({ci:i,ph:Math.random(),vel:0.10+Math.random()*0.08,os:(Math.random()-0.5)});
+    });
+  }
+}
+function fluGeom(w,h){
+  var x0=86, x1=w-150, ys=h/2;
+  var yT=CAPAS.map(function(c,i){ return 26+i*((h-52)/4); });
+  return {x0:x0,x1:x1,ys:ys,yT:yT};
+}
+function fluPunto(g,ci,tt){
+  var y1=g.yT[ci], mx=(g.x0+g.x1)/2;
+  var x=Math.pow(1-tt,3)*g.x0+3*Math.pow(1-tt,2)*tt*mx+3*(1-tt)*tt*tt*mx+Math.pow(tt,3)*g.x1;
+  var y=Math.pow(1-tt,3)*g.ys+3*Math.pow(1-tt,2)*tt*g.ys+3*(1-tt)*tt*tt*y1+Math.pow(tt,3)*y1;
+  return [x,y];
+}
+var fluDt=0.016;
+function dibujaFlujo(t){
   var cv=$('flujo'); if(!cv||document.body.getAttribute('data-v')!=='plan')return;
   var L=lienzo(cv,200); if(!L)return;
-  var ctx=L.ctx, w=L.w, h=200;
+  var ctx=L.ctx, w=L.w, h=200, g=fluGeom(w,h);
   if(!fluDatos){
-    ctx.fillStyle='rgba(239,236,231,.35)'; ctx.font='11px ui-monospace,monospace'; ctx.textAlign='center'; ctx.textBaseline='middle';
-    ctx.fillText('Define tu aportación y aquí verás el reparto',w/2,h/2); return;
+    ctx.fillStyle='rgba(239,236,231,.35)'; ctx.font='9px ui-monospace,monospace'; ctx.textAlign='center';
+    ctx.fillText('DEFINE UNA APORTACIÓN Y EL FLUJO SE ENCIENDE',w/2,h/2); return;
   }
-  var M=fluDatos.M, red=fluDatos.red;
-  var padT=6, padB=6, gutL=104, gutR=88, n=CAPAS.length;
-  var x0=gutL, x1=w-gutR, rowH=(h-padT-padB)/n;
-  var maxV=Math.max.apply(null,red.concat([1]));
-  var hoverI=-1;
-  if(fluDatos.mouse){ var idx=Math.floor((fluDatos.mouse.y-padT)/rowH);
-    if(idx>=0&&idx<n&&fluDatos.mouse.x>=6) hoverI=idx; }
-  fluHover=hoverI;
+  var M=fluDatos.M, red=fluDatos.red, maxV=Math.max.apply(null,red.concat([1]));
+  /* bandas */
   CAPAS.forEach(function(c,i){
-    var cy=padT+i*rowH+rowH/2, barH=Math.min(16,rowH-14), by=cy-barH/2;
-    ctx.textAlign='left'; ctx.textBaseline='middle';
-    ctx.fillStyle= i===hoverI? '#EFECE7':'rgba(239,236,231,'+(red[i]>0?'.82':'.4')+')';
-    ctx.font='11px ui-monospace,monospace';
-    ctx.fillText(c.n, 4, cy);
-    ctx.fillStyle='rgba(255,255,255,.05)'; rectR(ctx,x0,by,x1-x0,barH,5); ctx.fill();
-    var bw=Math.max(0,(red[i]/maxV))*(x1-x0);
-    if(i===hoverI){ ctx.shadowColor=c.c; ctx.shadowBlur=12; }
-    ctx.fillStyle=c.c; rectR(ctx,x0,by,Math.max(bw,red[i]>0?4:0),barH,5); ctx.fill(); ctx.shadowBlur=0;
-    ctx.textAlign='right'; ctx.fillStyle='rgba(239,236,231,'+(red[i]>0?'.92':'.4')+')'; ctx.font='11px ui-monospace,monospace';
-    ctx.fillText(mxn(red[i]), w-4, cy);
+    if(red[i]<=0)return;
+    var esp=2+16*(red[i]/maxV);
+    ctx.beginPath();
+    for(var s=0;s<=24;s++){ var p=fluPunto(g,i,s/24); s?ctx.lineTo(p[0],p[1]):ctx.moveTo(p[0],p[1]); }
+    ctx.strokeStyle= i===fluHover? c.c : c.c+'59';
+    ctx.lineWidth=esp; ctx.lineCap='round'; ctx.stroke();
   });
-  if(hoverI>=0&&fluDatos.mouse){
-    tipVer(fluDatos.mouse.cx,fluDatos.mouse.cy,'<b>'+CAPAS[hoverI].n+'</b><br>'+mxn(red[hoverI])+' DE '+mxn(M)+' ESTE MES');
-    cv.style.cursor='pointer';
-  } else if(fluDatos.mouse){ tipFuera(); cv.style.cursor='default'; }
+  /* partículas de luz recorriendo su banda */
+  if(!REDUCIDO){
+    fluParts.forEach(function(p){
+      p.ph=(p.ph+p.vel*fluDt)%1;
+      var pt=fluPunto(g,p.ci,p.ph);
+      ctx.save();
+      ctx.shadowColor=CAPAS[p.ci].c; ctx.shadowBlur=10;
+      ctx.fillStyle='rgba(255,255,255,.95)';
+      ctx.beginPath(); ctx.arc(pt[0],pt[1]+p.os*3,1.6,0,7); ctx.fill();
+      ctx.restore();
+    });
+  }
+  /* nodo fuente */
+  ctx.fillStyle='rgba(239,236,231,.95)';
+  ctx.beginPath(); ctx.arc(g.x0,g.ys,7,0,7); ctx.fill();
+  ctx.fillStyle='rgba(239,236,231,.55)'; ctx.font='8px ui-monospace,monospace'; ctx.textAlign='center';
+  ctx.fillText('APORTACIÓN',g.x0,g.ys-20);
+  ctx.fillStyle='rgba(239,236,231,.9)'; ctx.font='10px ui-monospace,monospace';
+  ctx.fillText(mxn(M),g.x0,g.ys+27);
+  /* nodos destino con etiqueta directa */
+  ctx.textAlign='left';
+  CAPAS.forEach(function(c,i){
+    ctx.fillStyle=c.c;
+    ctx.beginPath(); ctx.arc(g.x1,g.yT[i],4.5,0,7); ctx.fill();
+    ctx.strokeStyle='#0E0F0C'; ctx.lineWidth=2; ctx.stroke();
+    ctx.fillStyle='rgba(239,236,231,'+(red[i]>0?'.85':'.35')+')';
+    ctx.font='8.5px ui-monospace,monospace';
+    ctx.fillText(c.n.toUpperCase()+'  '+mxn(red[i]),g.x1+12,g.yT[i]+3);
+  });
 }
 (function(){
   var cv=$('flujo'); if(!cv)return;
   cv.addEventListener('mousemove',function(e){
-    if(!fluDatos)return;
-    var r=cv.getBoundingClientRect();
-    fluDatos.mouse={x:e.clientX-r.left,y:e.clientY-r.top,cx:e.clientX,cy:e.clientY};
-    dibujaFlujo();
+    if(!fluDatos){tipFuera();return}
+    var r=cv.getBoundingClientRect(), mx=e.clientX-r.left, my=e.clientY-r.top;
+    var g=fluGeom(r.width,200), best=-1, bd=14;
+    CAPAS.forEach(function(c,i){
+      if(fluDatos.red[i]<=0)return;
+      for(var s=0;s<=24;s++){ var p=fluPunto(g,i,s/24);
+        var d=Math.hypot(mx-p[0],my-p[1]); if(d<bd){bd=d;best=i} }
+    });
+    fluHover=best;
+    if(best>=0) tipVer(e.clientX,e.clientY,'<b>'+CAPAS[best].n+'</b><br>'+mxn(fluDatos.red[best])+' DE '+mxn(fluDatos.M)+' ESTE MES');
+    else tipFuera();
+    if(REDUCIDO) dibujaFlujo(0);
   });
-  cv.addEventListener('mouseleave',function(){ if(fluDatos)fluDatos.mouse=null; tipFuera(); cv.style.cursor='default'; dibujaFlujo(); });
+  cv.addEventListener('mouseleave',function(){ fluHover=-1; tipFuera(); if(REDUCIDO)dibujaFlujo(0); });
 })();
 
-/* pinta la gráfica de la vista activa (cada una se auto-descarta si no toca) */
-function pintaViz(){ dibujaSistema(); dibujaMareas(); dibujaFlujo(); }
+/* un solo reloj para todo lo que se mueve */
+(function(){
+  var prev=null;
+  function marco(ts){
+    var t=ts/1000;
+    fluDt= prev===null? 0.016 : Math.min(0.05,(ts-prev)/1000);
+    prev=ts;
+    dibujaSistema(t); dibujaFlujo(t); dibujaMareas(t);
+    if(document.body.getAttribute('data-v')==='resumen'){ renderSpark(t,true); }
+    requestAnimationFrame(marco);
+  }
+  if(REDUCIDO){ setTimeout(function(){dibujaSistema(0);dibujaFlujo(0);dibujaMareas(0)},80); }
+  else requestAnimationFrame(marco);
+})();
 
 /* ── enrutador del menú lateral ── */
 var VISTAS={resumen:'Resumen',portafolio:'Portafolio',plan:'Plan mensual',
@@ -1638,9 +1730,9 @@ function verVista(v,primerCarga,desdeHistorial){
   $('cabTitulo').textContent=VISTAS[v];
   $('cabSub').textContent=SUBS[v]||'';
   document.body.classList.remove('menuAbierto');
-  if(v==='resumen'){ setTimeout(function(){renderSpark();dibujaSistema()},40); if(!primerCarga) animarNeto(); }
-  if(v==='plan') setTimeout(function(){dibujaFlujo()},40);
-  if(v==='portafolio') setTimeout(function(){dibujaMareas()},40);
+  if(v==='resumen'){ setTimeout(function(){renderSpark();dibujaSistema(performance.now()/1000)},40); if(!primerCarga) animarNeto(); }
+  if(v==='plan') setTimeout(function(){dibujaFlujo(performance.now()/1000)},40);
+  if(v==='portafolio') setTimeout(function(){dibujaMareas(performance.now()/1000)},40);
   if(location.hash!=='#/'+v){
     try{
       if(primerCarga||desdeHistorial) history.replaceState(null,'','#/'+v);
@@ -1657,7 +1749,8 @@ $('velo').addEventListener('click',function(){document.body.classList.remove('me
 $('tbActivo').addEventListener('click',function(){ verVista('activos'); abrirForma('activo'); });
 addEventListener('hashchange',function(){verVista(location.hash.replace('#/',''),false,true)});
 addEventListener('resize',function(){
-  renderSpark(); pintaViz();
+  renderSpark();
+  if(REDUCIDO){ dibujaSistema(0); dibujaFlujo(0); dibujaMareas(0); }
 });
 /* ?demo=1 abre directo en modo demo — solo si la oficina está en cero,
    nunca pisa datos reales sin preguntar */
