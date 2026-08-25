@@ -3789,6 +3789,13 @@ const FIRM_CATALOG = {
   }
 };
 
+/* Las firmas que ofrece el alta. OJO: esta lista es MÁS LARGA que
+   FIRM_CATALOG a propósito —se puede registrar una cuenta de una firma cuyo
+   reglamento no tenemos— y por eso vive pegada al catálogo: para que se vea de
+   un golpe cuáles traen reglas y cuáles no. Las que no, guardan `plan:'—'`,
+   cuentan como capital y no calculan drawdown ni colchón. */
+const NC_FIRMAS = ['Tradeify','Apex','Lucid Trading','TakeProfitTrader','MyFundedFutures','Otra'];
+
 const POINT_VALUE = { NQ:20, ES:50, YM:5, RTY:50, GC:100, CL:1000, MNQ:2, MES:5, MYM:0.5, M2K:5,
                       BTC:5, MBT:0.1 };   // CME: BTC = 5 bitcoin/contrato · MBT = 0.1
 const MICROS = ['MNQ','MES','MYM','M2K'];
@@ -5754,7 +5761,16 @@ function renderAcctPanel(){
 
 /* ── gestor ── */
 function renderAcctMgr(){
-  const planes = Object.keys(FIRM_CATALOG.Tradeify.plans);
+  /* El desplegable de Plan estaba CLAVADO a los planes de Tradeify
+     (`Object.keys(FIRM_CATALOG.Tradeify.plans)`) y no había campo de Firm en
+     ninguna parte. En una cuenta de otra firma el plan guardado es '—', ninguna
+     opción coincidía y el navegador marcaba la primera: la ficha enseñaba
+     «Growth Evaluation · $50,000» junto a «PLAN NOT VERIFIED» — dos cosas que
+     se contradicen, y el usuario sin manera de arreglarlo porque la firma no se
+     podía ni ver. Ahora las opciones salen de la firma DE LA CUENTA, y el valor
+     que trae siempre aparece en la lista aunque no esté en el catálogo. */
+  const conActual = (lista, actual) =>
+    lista.includes(String(actual)) ? lista : [String(actual)].concat(lista);
   /* misTrades(), no S.trades: el resto de esta pantalla ya usa mias(S.accounts),
      así que contar los huérfanos sobre la mesa entera le enseñaba a André un
      número de trades sin cuenta que incluía los de Pablo — y lo invitaba a
@@ -5763,7 +5779,12 @@ function renderAcctMgr(){
   const huerf = misTrades().filter(t => !Array.isArray(t.accts) || t.accts.includes(SIN_CUENTA)).length;
   $('#acList').innerHTML = mias(S.accounts).length ? ordenar(mias(S.accounts)).map(a=>{
     const R = reglasDe(a), h = saludDe(a);
-    const tallas = R ? Object.keys((FIRM_CATALOG[a.firm].plans[a.plan]||{}).sizes||{}) : [String(a.size)];
+    const cat    = FIRM_CATALOG[a.firm];
+    const planes = conActual(cat ? Object.keys(cat.plans) : [], a.plan || '—');
+    const firmas = conActual(NC_FIRMAS, a.firm || '—');
+    const tallas = conActual(
+      (cat && cat.plans[a.plan] && cat.plans[a.plan].sizes) ? Object.keys(cat.plans[a.plan].sizes) : [],
+      a.size);
     return `<div class="panel" style="margin-bottom:10px"><div class="p-body">
       <div class="acct-row">
         <div><label>Alias</label><input data-f="alias" data-id="${a.id}" value="${esc(a.alias)}"></div>
@@ -5779,10 +5800,12 @@ function renderAcctMgr(){
           <option value=""${!a.owner?' selected':''}>Unassigned</option>
           ${SOCIOS_REALES.map(u=>`<option value="${u}"${a.owner===u?' selected':''}>${esc(USERS[u].nombre)}</option>`).join('')}
         </select></div>
-        <div></div>
+        ${(esLive(a)||esSim(a)) ? '<div></div>' : `<div><label>Firm</label><select data-f="firm" data-id="${a.id}">
+          ${firmas.map(f=>`<option${f===a.firm?' selected':''}>${esc(f)}</option>`).join('')}
+        </select></div>`}
       </div>
       ${(esLive(a)||esSim(a)) ? '' : `<div class="acct-row" style="margin-top:10px">
-        <div><label>Plan</label><select data-f="plan" data-id="${a.id}">
+        <div><label>Plan</label><select data-f="plan" data-id="${a.id}"${cat?'':' disabled'}>
           ${planes.map(p=>`<option${p===a.plan?' selected':''}>${esc(p)}</option>`).join('')}
         </select></div>
         <div><label>Starting balance</label><input type="number" data-f="start" data-id="${a.id}" value="${a.start}" step="100"></div>
@@ -5842,6 +5865,25 @@ function renderAcctMgr(){
     const f = el.dataset.f;
     a[f] = (f==='size'||f==='start') ? (parseFloat(el.value)||0) : el.value.trim();
     if(f==='alias' && !a.alias) a.alias = 'T'+a.orden;
+    /* Cambiar la firma o el plan puede dejar guardado un plan o un tamaño que
+       esa firma no ofrece, y entonces reglasDe() vuelve a devolver null: la
+       cuenta se quedaría «sin verificar» por un valor huérfano, no porque
+       falten reglas. Se acomoda al vuelo. */
+    if(f==='firm' || f==='plan'){
+      const cat = FIRM_CATALOG[a.firm];
+      if(!cat){ a.plan = '\u2014'; }
+      else {
+        if(!cat.plans[a.plan]) a.plan = planPorFase(a.firm, a.fase) || Object.keys(cat.plans)[0];
+        const t = Object.keys(cat.plans[a.plan].sizes);
+        if(!t.includes(String(a.size))){
+          const antes = a.size, nuevo = +t[0];
+          /* el balance de arranque sólo sigue al tamaño si nadie lo había
+             movido a mano — si no, un cambio de plan borraría un reinicio */
+          if(a.start === antes) a.start = nuevo;
+          a.size = nuevo;
+        }
+      }
+    }
     save(); renderAcctMgr(); renderDashboard(); renderAgentes(); renderAgentes();
   });
 }
@@ -8782,7 +8824,6 @@ $('#pSave').addEventListener('click', ()=>{
    fase, y sólo aparece lo que aplica. Tradeify trae el catálogo verificado;
    las demás firmas se dan de alta con su tamaño a mano (la app las marca
    PLAN NO VERIFICADO y no les calcula drawdown, que es lo honesto). */
-const NC_FIRMAS = ['Tradeify','Apex','Lucid Trading','TakeProfitTrader','MyFundedFutures','Otra'];
 const nc = { tipo:'prop', firm:'Tradeify', plan:null, size:null, fase:'eval' };
 function ncChips(cont, lista, activo, onPick, fmt){
   cont.innerHTML = lista.map(v =>
