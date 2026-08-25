@@ -5025,7 +5025,7 @@ const bi = (es, en) => en;
    media pintura y quedaba sólo el cielo dibujado —que es exactamente lo que
    André estaba viendo—. El error moría dentro del requestAnimationFrame, así
    que jamás llegó a la consola. */
-const loc = par => bi(par[0], par[1]);
+const loc = par => Array.isArray(par) ? bi(par[0], par[1]) : par;
 /* Blindada: un trade malformado (un respaldo viejo, una edición a mano) no
    debe tirar el render entero por una fecha que no existe. */
 const fmtFecha = iso => {
@@ -7508,6 +7508,55 @@ function normalizaChk(arr, n){
   }
   return out;
 }
+/* ── LOS TRES CHECKLISTS DE LA SESIÓN ──
+   Restaurados el 25-ago-2026. El revert del journal (6333cd7) borró estas tres
+   listas junto con el rediseño que André rechazó, pero se llevó de más: el
+   panel «01 · Preparar» y sus #preList/#setupList siguen en el HTML y
+   getSession() los lee en su primera línea. Resultado: `PRE_RAW is not
+   defined` en cuanto se abría la vista de Sesión — la pestaña entera tronaba,
+   y con ella la hoja del día. Van pegadas a getSession(), que es quien las
+   necesita, para que un borrado no vuelva a dejar al consumidor huérfano. */
+const PRE_RAW = [
+  [['Plataforma lista','Platform ready'],
+   ['TradingView abierto y los gráficos en su sitio.','TradingView open and the charts where they belong.'],'7:00'],
+  [['Noticias del día','Today\u2019s news'],
+   ['Calendario macro revisado: sé si hay evento y a qué hora.','Macro calendar checked: I know if there is an event and when.'],'7:05'],
+  [['Mapa de niveles','Level map'],
+   ['H/L de Asia y Londres, PDH y PDL marcados en el gráfico.','Asia and London highs and lows, PDH and PDL marked on the chart.'],'7:10'],
+  [['Estado de cuentas','Account status'],
+   ['Balance, colchón y cuánto puedo perder hoy sin romper nada.','Balance, cushion and how much I can lose today without breaking anything.'],'7:15'],
+  [['Bias for the day','Bias for the day'],
+   ['A favor de qué voy a buscar, y por qué.','Which way I am looking, and why.'],'7:20'],
+  [['Riesgo escrito','Risk written down'],
+   ['Contratos, stop y objetivo definidos ANTES de ver la apertura.','Size, stop and target set BEFORE seeing the open.'],'7:25'],
+];
+/* El validador no se toca antes de las 7:45: el primer punto es justamente
+   haber dejado correr el rango sin meter la mano. */
+const SETUP_RAW = [
+  [['El rango ya se formó','The range has formed'],
+   ['Dejé correr 9:30\u20139:45 NY sin tocar nada. Ya hay techo y piso.','I let 9:30\u20139:45 NY run without touching anything. There is a high and a low.']],
+  [['Queda liquidez sin tomar','Liquidity still untaken'],
+   ['Alguno de los niveles de mi mapa sigue intacto.','One of the levels on my map is still untouched.']],
+  [['El break va hacia esa liquidez','The break points at it'],
+   ['Rompe hacia el nivel, no hacia el vacío.','It breaks toward the level, not into empty space.']],
+  [['Confirmación en el gráfico','Confirmation on the chart'],
+   ['BOS, FVG de 5m y las EMAs 14/50 a favor.','Break of structure, 5m fair value gap and the 14/50 EMAs in favour.']],
+  [['Entro sin perseguir','I enter without chasing'],
+   ['En el break o tantito antes, con el stop del plan.','On the break or just before, with the stop from the plan.']],
+];
+const POST_RAW = [
+  [['Trades registrados','Trades logged'],
+   ['Screenshot, setup, resultado y análisis de cada operación.','Screenshot, setup, result and analysis for every trade.']],
+  [['Dashboard verificado','Dashboard checked'],
+   ['Consistencia, drawdown y progreso acumulado revisados.','Consistency, drawdown and running progress reviewed.']],
+  [['Cierre escrito','Close written'],
+   ['Resultado del día + estado de cada cuenta, por escrito.','Result of the day plus where each account stands, in writing.']],
+];
+const traduce = raw => raw.map(f => f.map(loc));
+const PRE_ITEMS_   = () => traduce(PRE_RAW);
+const SETUP_ITEMS_ = () => traduce(SETUP_RAW);
+const POST_ITEMS_  = () => traduce(POST_RAW);
+
 function getSession(iso){
   const k = claveSesion(iso);
   const s = S.sessions[k] = S.sessions[k] || {};
