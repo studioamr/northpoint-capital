@@ -103,10 +103,9 @@ body[data-v="activos"]{--acc:#EFECE7}
 body[data-v="deudas"]{--acc:#D8A5B4}
 body[data-v="ajustes"]{--acc:#efece78c}
 @keyframes vistaIn{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
-.resumen,#portafolio,#concentracion,#evoCard,#plan,#libertad,#activos,#deudas,.ajustes{display:none}
+.resumen,#portafolio,#concentracion,#plan,#libertad,#activos,#deudas,.ajustes{display:none}
 body[data-v="resumen"] .resumen{display:block;animation:vistaIn .45s ease both}
 body[data-v="portafolio"] #portafolio{display:block;animation:vistaIn .45s ease both}
-body[data-v="portafolio"] #evoCard{display:block;animation:vistaIn .5s ease both}
 body[data-v="portafolio"] #concentracion{display:block;animation:vistaIn .55s ease both}
 body[data-v="plan"] #plan{display:block;animation:vistaIn .45s ease both}
 body[data-v="libertad"] #libertad{display:block;animation:vistaIn .45s ease both}
@@ -493,13 +492,6 @@ button.lx:hover{color:var(--cream)}
       </div>
     </div>
 
-    <div class="card" id="evoCard" style="margin-top:14px;display:none"><svg class="spk" viewBox="0 0 64 64" fill="currentColor" aria-hidden="true"><path d="M32 1 37.2 26.8 63 32 37.2 37.2 32 63 26.8 37.2 1 32 26.8 26.8Z"/></svg>
-    <h2>El collar</h2>
-    <p class="sub">Cada hilo es una capa; cada cuenta, un corte del mes — sube, baja y engorda con el valor. Recórrelo.</p>
-    <canvas id="evo" style="width:100%;height:230px;display:block"></canvas>
-    <div class="cap-chips" id="evoLeyenda" style="margin:12px 0 0"></div>
-  </div>
-
     <div class="card" id="concentracion"><svg class="spk" viewBox="0 0 64 64" fill="currentColor" aria-hidden="true"><path d="M32 1 37.2 26.8 63 32 37.2 37.2 32 63 26.8 37.2 1 32 26.8 26.8Z"/></svg>
       <h2>Concentración</h2>
       <p class="sub">Tres números tuyos — sin juicios. Aritmética, no asesoría.</p>
@@ -816,7 +808,7 @@ function render(){
   $('fxNota').textContent= S.fxFecha? 'Fijado el '+fCorta(S.fxFecha)+'. Referencia: el FIX de Banxico.' : 'Tecléalo tú — referencia: el FIX de Banxico.';
 
   renderSeg(); renderPlan(); renderLibertad(); renderListas(); renderConc(); renderCortes(); renderSpark();
-  sysDatos(); leyendaCapas('sysLeyenda'); leyendaCapas('evoLeyenda'); dibujaEvo();
+  sysDatos(); leyendaCapas('sysLeyenda');
   $('sistemaCard').style.display= S.activos.length? 'block':'none';
   if(REDUCIDO){ dibujaSistema(0); dibujaFlujo(0); dibujaMareas(0); }
 }
@@ -1603,126 +1595,6 @@ function dibujaSistema(t){
   cv.addEventListener('mouseleave',function(){ sysMouse=null; sysHover=-1; tipFuera(); cv.style.cursor='default'; if(REDUCIDO)dibujaSistema(0); });
 })();
 
-/* ── EL COLLAR · un hilo de luz por capa; cada cuenta es un corte del mes.
-   Múltiplos pequeños: cada hilo trae su propia banda (como un sparkline);
-   el TAMAÑO de la cuenta es comparable entre hilos — escala global. ── */
-var evoHoverI=null;
-function evoPuntos(){ return S.cortes.filter(function(c){return c.capas}); }
-function dibujaEvo(t){
-  t=t||0;
-  var card=$('evoCard'), pts=S.cortes;
-  if(pts.length<2){ card.style.display='none'; return null; }
-  card.style.display='';
-  if(document.body.getAttribute('data-v')!=='portafolio') return null;
-  var CORTO_C=['LIQUIDEZ','RETIRO','PASIVOS','ACCIONES','ALT'];
-  /* solo carriles con historia: una capa sin dos cortes con capas no pinta
-     un carril vacío — el NETO crece y un solo aviso lo explica */
-  var cortesConCapas=pts.filter(function(p){return p.capas}).length;
-  var capasConDatos= cortesConCapas>=2? CAPAS.slice() : [];
-  var soloNeto=capasConDatos.length===0;
-  var carriles=[{n:'NETO',c:'#EFECE7',get:function(p){return p.v},H:soloNeto?120:52}]
-    .concat(capasConDatos.map(function(c){
-      var i=CAPAS.indexOf(c);
-      return {n:CORTO_C[i],c:c.c,get:function(p){return p.capas[c.k]||0},H:32};
-    }));
-  var hCss=12+carriles.reduce(function(a,cr){return a+cr.H+7},0)+(soloNeto?34:20);
-  var cv=$('evo'); cv.style.height=hCss+'px';
-  var L=lienzo(cv,hCss); if(!L)return null;
-  var ctx=L.ctx, w=L.w, h=hCss, padL=92, padR=22;
-  var vmaxCapas=1, vmaxNeto=1;
-  pts.forEach(function(p){
-    vmaxNeto=Math.max(vmaxNeto,p.v);
-    if(p.capas) CAPAS.forEach(function(c){ vmaxCapas=Math.max(vmaxCapas,p.capas[c.k]||0); });
-  });
-  function X(i){ return padL+i/(pts.length-1)*(w-padL-padR); }
-  if(evoHoverI!==null){
-    ctx.strokeStyle='rgba(239,236,231,.18)'; ctx.lineWidth=1;
-    ctx.setLineDash([3,4]); ctx.beginPath();
-    ctx.moveTo(X(evoHoverI),8); ctx.lineTo(X(evoHoverI),h-20); ctx.stroke(); ctx.setLineDash([]);
-  }
-  var y0=12;
-  carriles.forEach(function(cr,li){
-    var yT=y0, yB=y0+cr.H, cyM=(yT+yB)/2; y0=yB+7;
-    /* el NETO existe en todo corte; las capas solo en los cortes nuevos */
-    var idxs=[]; pts.forEach(function(p,i){ if(li===0||p.capas) idxs.push(i); });
-    var vals=idxs.map(function(i){return cr.get(pts[i])});
-    var mn=vals.length?Math.min.apply(null,vals):0, mx=vals.length?Math.max.apply(null,vals):0;
-    function Y(v){ return mx===mn? cyM : yB-5-((v-mn)/(mx-mn))*(cr.H-10); }
-    var vmax= li===0? vmaxNeto : vmaxCapas;
-    ctx.fillStyle='rgba(239,236,231,.55)'; ctx.font='8px ui-monospace,monospace'; ctx.textAlign='right';
-    ctx.fillText(cr.n.toUpperCase(),padL-22,cyM+3);
-    ctx.fillStyle=cr.c; ctx.beginPath(); ctx.arc(padL-13,cyM,3,0,7); ctx.fill();
-    ctx.strokeStyle='rgba(255,255,255,.05)'; ctx.lineWidth=1;
-    ctx.beginPath(); ctx.moveTo(padL,cyM); ctx.lineTo(w-padR,cyM); ctx.stroke();
-    if(idxs.length<2) return;
-    ctx.save();
-    ctx.strokeStyle=cr.c; ctx.globalAlpha=.75; ctx.lineWidth=1.4;
-    ctx.shadowColor=cr.c; ctx.shadowBlur=6;
-    ctx.beginPath();
-    idxs.forEach(function(pi,k){
-      var x=X(pi), y=Y(cr.get(pts[pi]));
-      if(!k) ctx.moveTo(x,y);
-      else { var xp=X(idxs[k-1]), yp=Y(cr.get(pts[idxs[k-1]])), mxp=(xp+x)/2;
-             ctx.bezierCurveTo(mxp,yp,mxp,y,x,y); }
-    });
-    ctx.stroke(); ctx.restore();
-    if(!REDUCIDO){
-      var ph=((t*0.10)+li*0.16)%1, seg=ph*(idxs.length-1), i0=Math.floor(seg), fr=seg-i0;
-      var i1=Math.min(idxs.length-1,i0+1);
-      var pa=idxs[i0], pb=idxs[i1];
-      var sx=X(pa)+(X(pb)-X(pa))*fr;
-      var sy=Y(cr.get(pts[pa]))+(Y(cr.get(pts[pb]))-Y(cr.get(pts[pa])))*fr;
-      ctx.save(); ctx.shadowColor='#fff'; ctx.shadowBlur=9;
-      ctx.fillStyle='rgba(255,255,255,.95)';
-      ctx.beginPath(); ctx.arc(sx,sy,1.5,0,7); ctx.fill(); ctx.restore();
-    }
-    idxs.forEach(function(i){
-      var p=pts[i];
-      var x=X(i), y=Y(cr.get(p));
-      var r=2.4+6.2*Math.sqrt(cr.get(p)/vmax);
-      ctx.save();
-      ctx.shadowColor=cr.c; ctx.shadowBlur= i===evoHoverI?16:8;
-      ctx.fillStyle=cr.c;
-      ctx.beginPath(); ctx.arc(x,y,r,0,7); ctx.fill();
-      ctx.shadowBlur=0;
-      ctx.strokeStyle='#0E0F0C'; ctx.lineWidth=2;
-      ctx.beginPath(); ctx.arc(x,y,r,0,7); ctx.stroke();
-      if(i===evoHoverI){
-        ctx.strokeStyle='rgba(255,255,255,.85)'; ctx.lineWidth=1.2;
-        ctx.beginPath(); ctx.arc(x,y,r+2.5,0,7); ctx.stroke();
-      }
-      ctx.fillStyle='rgba(255,255,255,.5)';
-      ctx.beginPath(); ctx.arc(x-r/3,y-r/3,Math.max(0.8,r/4),0,7); ctx.fill();
-      ctx.restore();
-    });
-  });
-  ctx.fillStyle='rgba(239,236,231,.4)'; ctx.font='8px ui-monospace,monospace';
-  ctx.textAlign='left';  ctx.fillText(pts[0].f,padL,h-6);
-  ctx.textAlign='right'; ctx.fillText(pts[pts.length-1].f,w-padR,h-6);
-  if(soloNeto){
-    ctx.fillStyle='rgba(239,236,231,.32)'; ctx.font='7.5px ui-monospace,monospace'; ctx.textAlign='center';
-    ctx.fillText('LOS HILOS POR CAPA SE LLENAN CON TUS PRÓXIMOS CORTES',(padL+w-padR)/2,h-6);
-  }
-  return evoHoverI;
-}
-(function(){
-  var cv=$('evo'); if(!cv)return;
-  cv.addEventListener('mousemove',function(e){
-    var r=cv.getBoundingClientRect(), pts=S.cortes;
-    if(pts.length<2){tipFuera();return}
-    var padL=92, padR=22, mx=e.clientX-r.left;
-    var i=Math.round((mx-padL)/((r.width-padL-padR)/(pts.length-1)));
-    evoHoverI=Math.max(0,Math.min(pts.length-1,i));
-    var p=pts[evoHoverI];
-    var filas= p.capas? CAPAS.map(function(c){
-      return '<u style="display:inline-block;width:7px;height:7px;border-radius:50%;background:'+c.c+';margin-right:6px"></u>'+c.n+' — '+mxn(p.capas[c.k]||0);
-    }).join('<br>')+'<br>' : 'CORTE ANTERIOR AL DESGLOSE POR CAPAS<br>';
-    tipVer(e.clientX,e.clientY,'<b>'+p.f+'</b><br>'+filas+'<b>NETO '+mxn(p.v)+'</b>');
-    if(REDUCIDO) dibujaEvo(0);
-  });
-  cv.addEventListener('mouseleave',function(){ evoHoverI=null; tipFuera(); if(REDUCIDO)dibujaEvo(0); });
-})();
-
 /* ── EL FLUJO · la aportación viajando a sus capas, con partículas de luz ── */
 var fluDatos=null, fluHover=-1, fluParts=[];
 function flujoDatos(M,red){
@@ -1823,7 +1695,6 @@ function dibujaFlujo(t){
     prev=ts;
     dibujaSistema(t); dibujaFlujo(t); dibujaMareas(t);
     if(document.body.getAttribute('data-v')==='resumen'){ renderSpark(t,true); }
-    dibujaEvo(t);
     requestAnimationFrame(marco);
   }
   if(REDUCIDO){ setTimeout(function(){dibujaSistema(0);dibujaFlujo(0);dibujaMareas(0)},80); }
@@ -1861,7 +1732,7 @@ function verVista(v,primerCarga,desdeHistorial){
   document.body.classList.remove('menuAbierto');
   if(v==='resumen'){ setTimeout(function(){renderSpark();dibujaSistema(performance.now()/1000)},40); if(!primerCarga) animarNeto(); }
   if(v==='plan') setTimeout(function(){dibujaFlujo(performance.now()/1000)},40);
-  if(v==='portafolio') setTimeout(function(){dibujaMareas(performance.now()/1000);dibujaEvo(performance.now()/1000)},40);
+  if(v==='portafolio') setTimeout(function(){dibujaMareas(performance.now()/1000)},40);
   if(location.hash!=='#/'+v){
     try{
       if(primerCarga||desdeHistorial) history.replaceState(null,'','#/'+v);
@@ -1878,7 +1749,7 @@ $('velo').addEventListener('click',function(){document.body.classList.remove('me
 $('tbActivo').addEventListener('click',function(){ verVista('activos'); abrirForma('activo'); });
 addEventListener('hashchange',function(){verVista(location.hash.replace('#/',''),false,true)});
 addEventListener('resize',function(){
-  renderSpark(); dibujaEvo();
+  renderSpark();
   if(REDUCIDO){ dibujaSistema(0); dibujaFlujo(0); dibujaMareas(0); }
 });
 sync(); render();
