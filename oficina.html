@@ -447,7 +447,7 @@ button.lx:hover{color:var(--cream)}
       <p class="neto-sub" id="netoSub">Activos $0 · Deudas $0</p>
       <div id="netoExtra"></div>
       <div class="res-actions">
-        <button class="btn" id="btnCorte">Guardar corte de hoy</button>
+        <button class="btn" id="btnCorte">Guardar la foto de hoy</button>
         <button class="btn btn-g" id="btnAgregar">+ Activo</button>
         <button class="btn btn-g" id="btnDeuda">+ Deuda</button>
       </div>
@@ -461,18 +461,18 @@ button.lx:hover{color:var(--cream)}
         <span class="spark-chip" id="sparkChip" hidden>+0%</span>
       </div>
       <canvas id="spark"></canvas>
-      <p class="spark-note" id="sparkPie">GUARDA TU PRIMER CORTE</p>
+      <p class="spark-note" id="sparkPie">GUARDA TU PRIMERA FOTO</p>
     </div>
   </div>
   <div class="card" id="sistemaCard" style="margin-top:14px"><svg class="spk" viewBox="0 0 64 64" fill="currentColor" aria-hidden="true"><path d="M32 1 37.2 26.8 63 32 37.2 37.2 32 63 26.8 37.2 1 32 26.8 26.8Z"/></svg>
     <h2>El sistema</h2>
-    <p class="sub">Tu patrimonio como sistema: cada esfera es un activo — tamaño = valor, órbita = capa. Pasa el cursor.</p>
+    <p class="sub">Todo lo que tienes, visto como un sistema: cada esfera es una de tus cosas — entre más grande, más vale. Pasa el cursor para ver cuál es.</p>
     <canvas id="sys" style="width:100%;height:320px;display:block"></canvas>
     <div class="cap-chips" id="sysLeyenda" style="margin:12px 0 0"></div>
   </div>
   <div class="card" id="histCortes" style="margin-top:14px;display:none"><svg class="spk" viewBox="0 0 64 64" fill="currentColor" aria-hidden="true"><path d="M32 1 37.2 26.8 63 32 37.2 37.2 32 63 26.8 37.2 1 32 26.8 26.8Z"/></svg>
-    <h2>Historial de cortes</h2>
-    <p class="sub">La fotografía de cada mes. Un corte mal capturado vive para siempre — bórralo y repítelo.</p>
+    <h2>Tus fotos, mes a mes</h2>
+    <p class="sub">Cada vez que guardas, la oficina le toma una foto a tu patrimonio: cuánto tienes y cuánto debes ese día. Junta una por mes y aquí ves tu avance. ¿Una salió mal? Bórrala y tómala de nuevo.</p>
     <div class="lista" id="listaCortes"></div>
   </div>
 </header>
@@ -500,7 +500,7 @@ button.lx:hover{color:var(--cream)}
 
     <div class="card" id="plan"><svg class="spk" viewBox="0 0 64 64" fill="currentColor" aria-hidden="true"><path d="M32 1 37.2 26.8 63 32 37.2 37.2 32 63 26.8 37.2 1 32 26.8 26.8Z"/></svg>
       <h2>Plan de acción mensual</h2>
-      <p class="sub">Reparte tu aportación del mes hacia las capas que van más lejos de su meta.</p>
+      <p class="sub">Reparte lo que ahorras este mes entre tus capas (tus 5 tipos de inversión), empezando por las que van más atrás de su meta.</p>
       <div class="in-box">
         <label for="inAporta">Aportación mensual</label>
         <div class="fila"><input type="number" id="inAporta" min="0" step="500" value="10000"><span class="ud">MXN /MES</span></div>
@@ -516,7 +516,7 @@ button.lx:hover{color:var(--cream)}
 
     <div class="card" id="libertad"><svg class="spk" viewBox="0 0 64 64" fill="currentColor" aria-hidden="true"><path d="M32 1 37.2 26.8 63 32 37.2 37.2 32 63 26.8 37.2 1 32 26.8 26.8Z"/></svg>
       <h2>Libertad financiera</h2>
-      <p class="sub">Regla del 4%: tu meta patrimonial es 300 veces tu ingreso mensual deseado.</p>
+      <p class="sub">La cuenta es simple: junta 300 veces lo que quieres gastar al mes y podrás vivir de tus inversiones — eso es la «regla del 4%».</p>
       <div class="in-box">
         <label for="inIngreso">Ingreso mensual deseado (bruto, antes de ISR)</label>
         <div class="fila"><input type="number" id="inIngreso" min="0" step="5000" value="100000"><span class="ud">MXN /MES</span></div>
@@ -779,8 +779,8 @@ function render(){
 
   $('netoBig').innerHTML=mxn(neto)+'<small>MXN</small>';
   var hayUSD=S.activos.some(function(x){return x.moneda==='USD'})||S.deudas.some(function(x){return x.moneda==='USD'});
-  $('netoSub').innerHTML='Activos <b>'+mxn(act)+'</b> · Deudas <i>'+mxn(deu)+'</i>'
-    +(hayUSD?' · USD @ '+S.fx.toFixed(2)+(S.fxFecha?' · FIJADO '+fCorta(S.fxFecha):''):'');
+  $('netoSub').innerHTML='Tienes <b>'+mxn(act)+'</b> · Debes <i>'+mxn(deu)+'</i>'
+    +(hayUSD?' · DÓLAR A $'+S.fx.toFixed(2)+(S.fxFecha?' DEL '+fCorta(S.fxFecha):''):'');
 
   /* líneas informativas del resumen */
   var L=[];
@@ -789,7 +789,7 @@ function render(){
   for(var ci=S.cortes.length-1;ci>=0;ci--){ if(S.cortes[ci].f<hoy){ prev=S.cortes[ci]; break; } }
   if(prev){
     var d=neto-prev.v, pc= prev.v!==0? (d/Math.abs(prev.v)*100):0;
-    L.push('<span class="lx '+(d>=0?'mint':'rojo')+'">'+(d>=0?'▲ +':'▼ ')+mxn(d).replace('−$','−$')+' ('+(d>=0?'+':'')+pc.toFixed(1)+'%) DESDE TU CORTE DEL '+fCorta(prev.f)+'</span>');
+    L.push('<span class="lx '+(d>=0?'mint':'rojo')+'">'+(d>=0?'▲ +':'▼ ')+mxn(d).replace('−$','−$')+' ('+(d>=0?'+':'')+pc.toFixed(1)+'%) DESDE TU FOTO DEL '+fCorta(prev.f)+'</span>');
   }
   $('netoExtra').innerHTML=L.join('');
 
@@ -900,18 +900,18 @@ function renderCortes(){
   var filas=S.cortes.slice().reverse().map(function(c,idx,arr){
     var prev=arr[idx+1];
     var delta= prev? c.v-prev.v : null;
-    var dTxt= delta===null? '' : '<small class="'+(delta>=0?'mintTxt':'rojoTxt')+'">'+(delta>=0?'+':'')+mxn(delta)+' VS CORTE ANTERIOR</small>';
+    var dTxt= delta===null? '' : '<small class="'+(delta>=0?'mintTxt':'rojoTxt')+'">'+(delta>=0?'+':'')+mxn(delta)+' VS TU FOTO ANTERIOR</small>';
     return '<div class="item" style="grid-template-columns:14px 1fr auto auto"><u style="background:rgba(239,236,231,.4)"></u>'
       +'<span class="nom"><b>'+fCorta(c.f)+' '+c.f.slice(0,4)+'</b>'+dTxt+'</span>'
       +'<span class="val">'+mxn(c.v)+'</span>'
-      +'<span class="ops"><button class="op rojo" data-delc="'+esc(c.f)+'" aria-label="Eliminar corte">×</button></span></div>';
+      +'<span class="ops"><button class="op rojo" data-delc="'+esc(c.f)+'" aria-label="Eliminar foto">×</button></span></div>';
   }).join('');
   el.innerHTML=filas;
   el.querySelectorAll('[data-delc]').forEach(function(b){b.addEventListener('click',function(){
     var f=b.getAttribute('data-delc');
-    if(!confirm('¿Eliminar el corte del '+f+'?'))return;
+    if(!confirm('¿Eliminar la foto del '+f+'?'))return;
     S.cortes=S.cortes.filter(function(c){return c.f!==f}); save(); render();
-    toast('Corte eliminado');
+    toast('Foto eliminada');
   })});
 }
 
@@ -1119,10 +1119,10 @@ function renderSpark(t,soloCanvas){
       var ch=$('sparkChip'); ch.hidden=false;
       ch.textContent=(pc>=0?'\u25b2 +':'\u25bc ')+pc.toFixed(1)+'%';
       ch.classList.toggle('baja',pc<0);
-      $('sparkPie').textContent=S.cortes.length+' CORTES \u00b7 '+fMesA(pts[0].f)+' \u2014 '+fMesA(pts[pts.length-1].f);
+      $('sparkPie').textContent=S.cortes.length+' FOTOS \u00b7 '+fMesA(pts[0].f)+' \u2014 '+fMesA(pts[pts.length-1].f);
     } else {
       $('sparkRango').textContent='\u2014'; $('sparkChip').hidden=true;
-      $('sparkPie').textContent= pts.length? '1 CORTE \u00b7 LA CURVA NACE CON DOS' : 'GUARDA TU PRIMER CORTE';
+      $('sparkPie').textContent= pts.length? '1 FOTO \u00b7 LA CURVA NACE CON DOS' : 'GUARDA TU PRIMERA FOTO';
     }
   }
   var L=lienzo(cv,96); if(!L)return;
@@ -1130,7 +1130,7 @@ function renderSpark(t,soloCanvas){
   if(pts.length<2){
     ctx.fillStyle='rgba(239,236,231,.25)';
     ctx.font='9px ui-monospace,monospace'; ctx.textAlign='center';
-    ctx.fillText(pts.length===0?'La curva nace con dos cortes':'Un corte m\u00e1s y hay curva', w/2, 52);
+    ctx.fillText(pts.length===0?'La curva nace con dos fotos':'Una foto m\u00e1s y hay curva', w/2, 52);
     return;
   }
   var vals=pts.map(function(p){return p.v});
@@ -1244,13 +1244,13 @@ $('btnDeuda').addEventListener('click',function(){verVista('deudas');abrirForma(
 $('btnActivo2').addEventListener('click',function(){abrirForma('activo')});
 $('btnDeuda2').addEventListener('click',function(){abrirForma('deuda')});
 $('btnCorte').addEventListener('click',function(){
-  if(!S.activos.length&&!S.deudas.length){ toast('Registra tus activos antes de guardar un corte'); return; }
+  if(!S.activos.length&&!S.deudas.length){ toast('Registra lo que tienes antes de guardar tu primera foto'); return; }
   var f=hoyISO();
   var act=totalActivos(), deu=totalDeudas(), neto=act-deu;
   var snap={f:f,v:neto,act:act,deu:deu,capas:porCapa(),fx:S.fx};
   var ya=S.cortes.find(function(c){return c.f===f});
-  if(ya){ Object.assign(ya,snap); toast('Corte de hoy actualizado'); }
-  else{ S.cortes.push(snap); toast('Corte guardado — '+f); }
+  if(ya){ Object.assign(ya,snap); toast('Foto de hoy actualizada'); }
+  else{ S.cortes.push(snap); toast('Foto guardada — '+f); }
   save(); render();
   /* el corte es el ritual del mes; el respaldo se cuelga de él */
   if(!S.demo && S.activos.length){
@@ -1707,7 +1707,7 @@ var VISTAS={resumen:'Resumen',portafolio:'Portafolio',plan:'Plan mensual',
 var SUBS={resumen:'La fotografía de hoy — y cómo has llegado hasta aquí.',
   portafolio:'Lo que tienes contra la estrategia que tú decidiste.',
   plan:'A dónde va el dinero nuevo de este mes.',
-  libertad:'La regla del 4% y tu camino, con tus propios supuestos.',
+  libertad:'Cuánto necesitas para ya no depender de tu trabajo — y qué tan cerca vas.',
   activos:'Todo lo que la familia posee, capa por capa.',
   deudas:'Lo que resta — y lo que de verdad cuesta.',
   ajustes:'Moneda, gasto, respaldo y datos.'};
