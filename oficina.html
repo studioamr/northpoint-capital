@@ -176,9 +176,15 @@ body:not([data-v="resumen"]) #cabResumen{display:none}
 .btn:hover{opacity:.9;transform:translateY(-1px)}
 .btn-g{background:transparent;color:var(--dim);border:1px solid var(--borde)}
 .btn-g:hover{color:var(--cream);border-color:var(--borde2)}
-#spark{width:100%;height:110px;display:block}
+#spark{width:100%;height:96px;display:block}
+.spark-cab{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:4px}
+.spark-rango{font-family:var(--fm);font-size:11px;letter-spacing:.05em;color:var(--dim);margin-top:7px}
+.spark-chip{font-family:var(--fm);font-size:9.5px;letter-spacing:.08em;white-space:nowrap;
+  padding:5px 11px;border-radius:20px;background:rgba(166,238,218,.13);color:var(--mint);
+  border:1px solid rgba(166,238,218,.3)}
+.spark-chip.baja{background:rgba(216,138,128,.13);color:var(--rojo);border-color:rgba(216,138,128,.35)}
 .spark-note{font-family:var(--fm);font-size:8px;letter-spacing:.14em;color:var(--tenue);
-  text-transform:uppercase;margin-top:8px;display:flex;justify-content:space-between}
+  text-transform:uppercase;margin-top:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 
 /* ── GRID PRINCIPAL ── */
 .tablero{padding:14px 0 30px;display:grid;grid-template-columns:1fr 1fr;gap:14px}
@@ -444,9 +450,15 @@ button.lx:hover{color:var(--cream)}
       </div>
     </div>
     <div class="card">
-      <p class="eb">EVOLUCIÓN</p>
+      <div class="spark-cab">
+        <div>
+          <p class="eb">EVOLUCIÓN</p>
+          <p class="spark-rango" id="sparkRango">—</p>
+        </div>
+        <span class="spark-chip" id="sparkChip" hidden>+0%</span>
+      </div>
       <canvas id="spark"></canvas>
-      <p class="spark-note"><span id="sparkDesde">—</span><span id="sparkCortes">0 cortes</span></p>
+      <p class="spark-note" id="sparkPie">GUARDA TU PRIMER CORTE</p>
     </div>
   </div>
   <div class="card" id="sistemaCard" style="margin-top:14px"><svg class="spk" viewBox="0 0 64 64" fill="currentColor" aria-hidden="true"><path d="M32 1 37.2 26.8 63 32 37.2 37.2 32 63 26.8 37.2 1 32 26.8 26.8Z"/></svg>
@@ -473,7 +485,6 @@ button.lx:hover{color:var(--cream)}
 
     <div class="card" id="portafolio"><svg class="spk" viewBox="0 0 64 64" fill="currentColor" aria-hidden="true"><path d="M32 1 37.2 26.8 63 32 37.2 37.2 32 63 26.8 37.2 1 32 26.8 26.8Z"/></svg>
       <h2>Las mareas</h2>
-      <p class="sub">Cada vaso es una capa: el líquido es lo que tienes; la línea punteada, tu meta. Pasa el cursor.</p>
       <canvas id="mareas" style="width:100%;height:260px;display:block"></canvas>
       <div id="capaRows" style="margin-top:12px"></div>
       <p class="meta-warn" id="metaWarn">Las metas suman <b id="metaSuma"></b>% — ajústalas para llegar a 100%.</p>
@@ -1070,39 +1081,74 @@ function renderListas(){
   })});
 }
 
-function renderSpark(){
-  var cv=$('spark'), ctx=cv.getContext('2d');
-  var r=cv.getBoundingClientRect(), dpr=Math.min(2,devicePixelRatio||1);
-  cv.width=r.width*dpr; cv.height=110*dpr; ctx.setTransform(dpr,0,0,dpr,0,0);
-  ctx.clearRect(0,0,r.width,110);
-  var pts=S.cortes.slice(-24);
-  $('sparkCortes').textContent=S.cortes.length+' corte'+(S.cortes.length===1?'':'s');
-  if(pts.length>=2){
-    var pv=pts[0].v, uv=pts[pts.length-1].v;
-    var vp= pv!==0? ((uv-pv)/Math.abs(pv)*100):0;
-    $('sparkDesde').textContent='DESDE '+pts[0].f+' · '+mxn(pv)+' → '+mxn(uv)+' · '+(vp>=0?'+':'')+vp.toFixed(1)+'%';
-  } else {
-    $('sparkDesde').textContent= pts.length? 'DESDE '+pts[0].f : 'GUARDA TU PRIMER CORTE';
+function mxnC(v){
+  var a=Math.abs(v);
+  if(a>=1e6) return (v<0?'\u2212$':'$')+(a/1e6).toFixed(2)+'M';
+  if(a>=1e3) return (v<0?'\u2212$':'$')+Math.round(a/1e3)+'K';
+  return mxn(v);
+}
+function fMesA(iso){ var p=iso.split('-'); return MES_C[parseInt(p[1],10)-1]+' '+p[0]; }
+function renderSpark(t,soloCanvas){
+  t=t||0;
+  var cv=$('spark'), pts=S.cortes.slice(-24);
+  if(!soloCanvas){
+    if(pts.length>=2){
+      var pa=pts[0].v, pb=pts[pts.length-1].v;
+      var pc= pa!==0? (pb-pa)/Math.abs(pa)*100 : 0;
+      $('sparkRango').textContent=mxnC(pa)+' \u2192 '+mxnC(pb);
+      var ch=$('sparkChip'); ch.hidden=false;
+      ch.textContent=(pc>=0?'\u25b2 +':'\u25bc ')+pc.toFixed(1)+'%';
+      ch.classList.toggle('baja',pc<0);
+      $('sparkPie').textContent=S.cortes.length+' CORTES \u00b7 '+fMesA(pts[0].f)+' \u2014 '+fMesA(pts[pts.length-1].f);
+    } else {
+      $('sparkRango').textContent='\u2014'; $('sparkChip').hidden=true;
+      $('sparkPie').textContent= pts.length? '1 CORTE \u00b7 LA CURVA NACE CON DOS' : 'GUARDA TU PRIMER CORTE';
+    }
   }
+  var L=lienzo(cv,96); if(!L)return;
+  var ctx=L.ctx, w=L.w, h=96;
   if(pts.length<2){
     ctx.fillStyle='rgba(239,236,231,.25)';
     ctx.font='9px ui-monospace,monospace'; ctx.textAlign='center';
-    ctx.fillText(pts.length===0?'La curva nace con dos cortes':'Un corte más y hay curva', r.width/2, 58);
+    ctx.fillText(pts.length===0?'La curva nace con dos cortes':'Un corte m\u00e1s y hay curva', w/2, 52);
     return;
   }
   var vals=pts.map(function(p){return p.v});
   var mn=Math.min.apply(null,vals), mx=Math.max.apply(null,vals);
   if(mx===mn){mx+=1}
-  var pad=10, W=r.width-pad*2, H=86;
+  var pad=8, top=12, base=h-12, W=w-pad*2;
   function X(i){return pad+i/(pts.length-1)*W}
-  function Y(v){return 12+ (1-(v-mn)/(mx-mn))*H}
+  function Y(v){return top+(1-(v-mn)/(mx-mn))*(base-top)}
+  /* relleno: velo blanco que se disuelve */
   ctx.beginPath();
   pts.forEach(function(p,i){ i?ctx.lineTo(X(i),Y(p.v)):ctx.moveTo(X(i),Y(p.v)); });
-  ctx.strokeStyle='#EFECE7'; ctx.lineWidth=2; ctx.shadowColor='rgba(239,236,231,.5)'; ctx.shadowBlur=8; ctx.stroke(); ctx.shadowBlur=0;
-  ctx.lineTo(X(pts.length-1),110); ctx.lineTo(X(0),110); ctx.closePath();
-  ctx.fillStyle='rgba(239,236,231,.09)'; ctx.fill();
-  var u=pts[pts.length-1];
-  ctx.beginPath(); ctx.arc(X(pts.length-1),Y(u.v),3.5,0,7); ctx.fillStyle='#EFECE7'; ctx.fill();
+  ctx.lineTo(X(pts.length-1),h); ctx.lineTo(X(0),h); ctx.closePath();
+  var gr=ctx.createLinearGradient(0,top,0,h);
+  gr.addColorStop(0,'rgba(239,236,231,.16)'); gr.addColorStop(1,'rgba(239,236,231,0)');
+  ctx.fillStyle=gr; ctx.fill();
+  /* la l\u00ednea, con su glow */
+  ctx.beginPath();
+  pts.forEach(function(p,i){ i?ctx.lineTo(X(i),Y(p.v)):ctx.moveTo(X(i),Y(p.v)); });
+  ctx.strokeStyle='#EFECE7'; ctx.lineWidth=2;
+  ctx.shadowColor='rgba(239,236,231,.5)'; ctx.shadowBlur=8; ctx.stroke(); ctx.shadowBlur=0;
+  /* una perla por corte */
+  pts.forEach(function(p,i){
+    ctx.fillStyle='#EFECE7';
+    ctx.beginPath(); ctx.arc(X(i),Y(p.v),2.2,0,7); ctx.fill();
+    ctx.strokeStyle='#0E0F0C'; ctx.lineWidth=1.5;
+    ctx.beginPath(); ctx.arc(X(i),Y(p.v),2.2,0,7); ctx.stroke();
+  });
+  /* el \u00faltimo corte late */
+  var ux=X(pts.length-1), uy=Y(pts[pts.length-1].v);
+  if(!REDUCIDO){
+    var halo=4+(Math.sin(t*2.4)+1)*3;
+    ctx.strokeStyle='rgba(239,236,231,'+(0.4-(halo-4)/6*0.3).toFixed(2)+')';
+    ctx.lineWidth=1.5;
+    ctx.beginPath(); ctx.arc(ux,uy,halo,0,7); ctx.stroke();
+  }
+  ctx.save(); ctx.shadowColor='#EFECE7'; ctx.shadowBlur=10;
+  ctx.fillStyle='#EFECE7';
+  ctx.beginPath(); ctx.arc(ux,uy,3.4,0,7); ctx.fill(); ctx.restore();
 }
 
 function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,function(ch){
@@ -1702,7 +1748,7 @@ function dibujaFlujo(t){
     fluDt= prev===null? 0.016 : Math.min(0.05,(ts-prev)/1000);
     prev=ts;
     dibujaSistema(t); dibujaFlujo(t); dibujaMareas(t);
-    if(document.body.getAttribute('data-v')==='resumen') dibujaEvo(t);
+    if(document.body.getAttribute('data-v')==='resumen'){ dibujaEvo(t); renderSpark(t,true); }
     requestAnimationFrame(marco);
   }
   if(REDUCIDO){ setTimeout(function(){dibujaSistema(0);dibujaFlujo(0);dibujaMareas(0)},80); }
