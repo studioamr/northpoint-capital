@@ -101,9 +101,10 @@ body[data-v="activos"]{--acc:#EFECE7}
 body[data-v="deudas"]{--acc:#D8A5B4}
 body[data-v="ajustes"]{--acc:#efece78c}
 @keyframes vistaIn{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
-.resumen,#portafolio,#concentracion,#plan,#libertad,#activos,#deudas,.ajustes{display:none}
+.resumen,#portafolio,#concentracion,#evoCard,#plan,#libertad,#activos,#deudas,.ajustes{display:none}
 body[data-v="resumen"] .resumen{display:block;animation:vistaIn .45s ease both}
 body[data-v="portafolio"] #portafolio{display:block;animation:vistaIn .45s ease both}
+body[data-v="portafolio"] #evoCard{display:block;animation:vistaIn .5s ease both}
 body[data-v="portafolio"] #concentracion{display:block;animation:vistaIn .55s ease both}
 body[data-v="plan"] #plan{display:block;animation:vistaIn .45s ease both}
 body[data-v="libertad"] #libertad{display:block;animation:vistaIn .45s ease both}
@@ -466,12 +467,6 @@ button.lx:hover{color:var(--cream)}
     <canvas id="sys" style="width:100%;height:320px;display:block"></canvas>
     <div class="cap-chips" id="sysLeyenda" style="margin:12px 0 0"></div>
   </div>
-  <div class="card" id="evoCard" style="margin-top:14px;display:none"><svg class="spk" viewBox="0 0 64 64" fill="currentColor" aria-hidden="true"><path d="M32 1 37.2 26.8 63 32 37.2 37.2 32 63 26.8 37.2 1 32 26.8 26.8Z"/></svg>
-    <h2>El collar</h2>
-    <p class="sub">Cada hilo es una capa; cada cuenta, un corte del mes — sube, baja y engorda con el valor. Recórrelo.</p>
-    <canvas id="evo" style="width:100%;height:230px;display:block"></canvas>
-    <div class="cap-chips" id="evoLeyenda" style="margin:12px 0 0"></div>
-  </div>
   <div class="card" id="histCortes" style="margin-top:14px;display:none"><svg class="spk" viewBox="0 0 64 64" fill="currentColor" aria-hidden="true"><path d="M32 1 37.2 26.8 63 32 37.2 37.2 32 63 26.8 37.2 1 32 26.8 26.8Z"/></svg>
     <h2>Historial de cortes</h2>
     <p class="sub">La fotografía de cada mes. Un corte mal capturado vive para siempre — bórralo y repítelo.</p>
@@ -493,6 +488,13 @@ button.lx:hover{color:var(--cream)}
         <div id="porTitular"></div>
       </div>
     </div>
+
+    <div class="card" id="evoCard" style="margin-top:14px;display:none"><svg class="spk" viewBox="0 0 64 64" fill="currentColor" aria-hidden="true"><path d="M32 1 37.2 26.8 63 32 37.2 37.2 32 63 26.8 37.2 1 32 26.8 26.8Z"/></svg>
+    <h2>El collar</h2>
+    <p class="sub">Cada hilo es una capa; cada cuenta, un corte del mes — sube, baja y engorda con el valor. Recórrelo.</p>
+    <canvas id="evo" style="width:100%;height:230px;display:block"></canvas>
+    <div class="cap-chips" id="evoLeyenda" style="margin:12px 0 0"></div>
+  </div>
 
     <div class="card" id="concentracion"><svg class="spk" viewBox="0 0 64 64" fill="currentColor" aria-hidden="true"><path d="M32 1 37.2 26.8 63 32 37.2 37.2 32 63 26.8 37.2 1 32 26.8 26.8Z"/></svg>
       <h2>Concentración</h2>
@@ -1556,9 +1558,10 @@ var evoHoverI=null;
 function evoPuntos(){ return S.cortes.filter(function(c){return c.capas}); }
 function dibujaEvo(t){
   t=t||0;
-  var card=$('evoCard'), pts=evoPuntos();
+  var card=$('evoCard'), pts=S.cortes;
   if(pts.length<2){ card.style.display='none'; return null; }
-  card.style.display='block';
+  card.style.display='';
+  if(document.body.getAttribute('data-v')!=='portafolio') return null;
   var cv=$('evo'), L=lienzo(cv,270); if(!L)return null;
   var ctx=L.ctx, w=L.w, h=270, padL=92, padR=22;
   var CORTO_C=['LIQUIDEZ','RETIRO','PASIVOS','ACCIONES','ALT'];
@@ -1567,7 +1570,7 @@ function dibujaEvo(t){
   var vmaxCapas=1, vmaxNeto=1;
   pts.forEach(function(p){
     vmaxNeto=Math.max(vmaxNeto,p.v);
-    CAPAS.forEach(function(c){ vmaxCapas=Math.max(vmaxCapas,p.capas[c.k]||0); });
+    if(p.capas) CAPAS.forEach(function(c){ vmaxCapas=Math.max(vmaxCapas,p.capas[c.k]||0); });
   });
   function X(i){ return padL+i/(pts.length-1)*(w-padL-padR); }
   if(evoHoverI!==null){
@@ -1578,8 +1581,10 @@ function dibujaEvo(t){
   var y0=12;
   carriles.forEach(function(cr,li){
     var yT=y0, yB=y0+cr.H, cyM=(yT+yB)/2; y0=yB+7;
-    var vals=pts.map(cr.get);
-    var mn=Math.min.apply(null,vals), mx=Math.max.apply(null,vals);
+    /* el NETO existe en todo corte; las capas solo en los cortes nuevos */
+    var idxs=[]; pts.forEach(function(p,i){ if(li===0||p.capas) idxs.push(i); });
+    var vals=idxs.map(function(i){return cr.get(pts[i])});
+    var mn=vals.length?Math.min.apply(null,vals):0, mx=vals.length?Math.max.apply(null,vals):0;
     function Y(v){ return mx===mn? cyM : yB-5-((v-mn)/(mx-mn))*(cr.H-10); }
     var vmax= li===0? vmaxNeto : vmaxCapas;
     ctx.fillStyle='rgba(239,236,231,.55)'; ctx.font='8px ui-monospace,monospace'; ctx.textAlign='right';
@@ -1587,27 +1592,42 @@ function dibujaEvo(t){
     ctx.fillStyle=cr.c; ctx.beginPath(); ctx.arc(padL-13,cyM,3,0,7); ctx.fill();
     ctx.strokeStyle='rgba(255,255,255,.05)'; ctx.lineWidth=1;
     ctx.beginPath(); ctx.moveTo(padL,cyM); ctx.lineTo(w-padR,cyM); ctx.stroke();
+    if(idxs.length<2){
+      /* la capa se llena con los cortes nuevos — hasta entonces, lo dice */
+      ctx.fillStyle='rgba(239,236,231,.28)'; ctx.font='7px ui-monospace,monospace'; ctx.textAlign='center';
+      ctx.fillText('SE LLENA CON TUS PRÓXIMOS CORTES',(padL+w-padR)/2,cyM-6);
+      if(idxs.length===1){
+        var iU=idxs[0], vU=cr.get(pts[iU]);
+        var rU=2.4+6.2*Math.sqrt(vU/vmax);
+        ctx.fillStyle=cr.c; ctx.beginPath(); ctx.arc(X(iU),cyM,rU,0,7); ctx.fill();
+        ctx.strokeStyle='#0E0F0C'; ctx.lineWidth=2;
+        ctx.beginPath(); ctx.arc(X(iU),cyM,rU,0,7); ctx.stroke();
+      }
+      return;
+    }
     ctx.save();
     ctx.strokeStyle=cr.c; ctx.globalAlpha=.75; ctx.lineWidth=1.4;
     ctx.shadowColor=cr.c; ctx.shadowBlur=6;
     ctx.beginPath();
-    pts.forEach(function(p,i){
-      var x=X(i), y=Y(cr.get(p));
-      if(!i) ctx.moveTo(x,y);
-      else { var xp=X(i-1), yp=Y(cr.get(pts[i-1])), mxp=(xp+x)/2;
+    idxs.forEach(function(pi,k){
+      var x=X(pi), y=Y(cr.get(pts[pi]));
+      if(!k) ctx.moveTo(x,y);
+      else { var xp=X(idxs[k-1]), yp=Y(cr.get(pts[idxs[k-1]])), mxp=(xp+x)/2;
              ctx.bezierCurveTo(mxp,yp,mxp,y,x,y); }
     });
     ctx.stroke(); ctx.restore();
     if(!REDUCIDO){
-      var ph=((t*0.10)+li*0.16)%1, seg=ph*(pts.length-1), i0=Math.floor(seg), fr=seg-i0;
-      var i1=Math.min(pts.length-1,i0+1);
-      var sx=X(i0)+(X(i1)-X(i0))*fr;
-      var sy=Y(cr.get(pts[i0]))+(Y(cr.get(pts[i1]))-Y(cr.get(pts[i0])))*fr;
+      var ph=((t*0.10)+li*0.16)%1, seg=ph*(idxs.length-1), i0=Math.floor(seg), fr=seg-i0;
+      var i1=Math.min(idxs.length-1,i0+1);
+      var pa=idxs[i0], pb=idxs[i1];
+      var sx=X(pa)+(X(pb)-X(pa))*fr;
+      var sy=Y(cr.get(pts[pa]))+(Y(cr.get(pts[pb]))-Y(cr.get(pts[pa])))*fr;
       ctx.save(); ctx.shadowColor='#fff'; ctx.shadowBlur=9;
       ctx.fillStyle='rgba(255,255,255,.95)';
       ctx.beginPath(); ctx.arc(sx,sy,1.5,0,7); ctx.fill(); ctx.restore();
     }
-    pts.forEach(function(p,i){
+    idxs.forEach(function(i){
+      var p=pts[i];
       var x=X(i), y=Y(cr.get(p));
       var r=2.4+6.2*Math.sqrt(cr.get(p)/vmax);
       ctx.save();
@@ -1634,15 +1654,16 @@ function dibujaEvo(t){
 (function(){
   var cv=$('evo'); if(!cv)return;
   cv.addEventListener('mousemove',function(e){
-    var r=cv.getBoundingClientRect(), pts=evoPuntos();
+    var r=cv.getBoundingClientRect(), pts=S.cortes;
     if(pts.length<2){tipFuera();return}
     var padL=92, padR=22, mx=e.clientX-r.left;
     var i=Math.round((mx-padL)/((r.width-padL-padR)/(pts.length-1)));
     evoHoverI=Math.max(0,Math.min(pts.length-1,i));
-    var p=pts[evoHoverI], filas=CAPAS.map(function(c){
+    var p=pts[evoHoverI];
+    var filas= p.capas? CAPAS.map(function(c){
       return '<u style="display:inline-block;width:7px;height:7px;border-radius:50%;background:'+c.c+';margin-right:6px"></u>'+c.n+' — '+mxn(p.capas[c.k]||0);
-    }).join('<br>');
-    tipVer(e.clientX,e.clientY,'<b>'+p.f+'</b><br>'+filas+'<br><b>NETO '+mxn(p.v)+'</b>');
+    }).join('<br>')+'<br>' : 'CORTE ANTERIOR AL DESGLOSE POR CAPAS<br>';
+    tipVer(e.clientX,e.clientY,'<b>'+p.f+'</b><br>'+filas+'<b>NETO '+mxn(p.v)+'</b>');
     if(REDUCIDO) dibujaEvo(0);
   });
   cv.addEventListener('mouseleave',function(){ evoHoverI=null; tipFuera(); if(REDUCIDO)dibujaEvo(0); });
@@ -1747,7 +1768,8 @@ function dibujaFlujo(t){
     fluDt= prev===null? 0.016 : Math.min(0.05,(ts-prev)/1000);
     prev=ts;
     dibujaSistema(t); dibujaFlujo(t); dibujaMareas(t);
-    if(document.body.getAttribute('data-v')==='resumen'){ dibujaEvo(t); renderSpark(t,true); }
+    if(document.body.getAttribute('data-v')==='resumen'){ renderSpark(t,true); }
+    dibujaEvo(t);
     requestAnimationFrame(marco);
   }
   if(REDUCIDO){ setTimeout(function(){dibujaSistema(0);dibujaFlujo(0);dibujaMareas(0)},80); }
@@ -1787,9 +1809,9 @@ function verVista(v,primerCarga){
     /* si navega desde el onboarding, que vea la vista aunque esté vacía */
     document.body.classList.remove('vacia');
   }
-  if(v==='resumen'){ setTimeout(function(){renderSpark();dibujaEvo();dibujaSistema(performance.now()/1000)},40); if(!primerCarga) animarNeto(); }
+  if(v==='resumen'){ setTimeout(function(){renderSpark();dibujaSistema(performance.now()/1000)},40); if(!primerCarga) animarNeto(); }
   if(v==='plan') setTimeout(function(){dibujaFlujo(performance.now()/1000)},40);
-  if(v==='portafolio') setTimeout(function(){dibujaMareas(performance.now()/1000)},40);
+  if(v==='portafolio') setTimeout(function(){dibujaMareas(performance.now()/1000);dibujaEvo(performance.now()/1000)},40);
   if(location.hash!=='#/'+v){ try{history.replaceState(null,'','#/'+v)}catch(e){} }
   window.scrollTo(0,0);
 }
