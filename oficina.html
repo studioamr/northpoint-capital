@@ -449,6 +449,18 @@ button.lx:hover{color:var(--cream)}
       <p class="spark-note"><span id="sparkDesde">—</span><span id="sparkCortes">0 cortes</span></p>
     </div>
   </div>
+  <div class="card" id="sistemaCard" style="margin-top:14px"><svg class="spk" viewBox="0 0 64 64" fill="currentColor" aria-hidden="true"><path d="M32 1 37.2 26.8 63 32 37.2 37.2 32 63 26.8 37.2 1 32 26.8 26.8Z"/></svg>
+    <h2>El sistema</h2>
+    <p class="sub">Tu patrimonio como sistema: cada esfera es un activo — tamaño = valor, órbita = capa. Pasa el cursor.</p>
+    <canvas id="sys" style="width:100%;height:320px;display:block"></canvas>
+    <div class="cap-chips" id="sysLeyenda" style="margin:12px 0 0"></div>
+  </div>
+  <div class="card" id="evoCard" style="margin-top:14px;display:none"><svg class="spk" viewBox="0 0 64 64" fill="currentColor" aria-hidden="true"><path d="M32 1 37.2 26.8 63 32 37.2 37.2 32 63 26.8 37.2 1 32 26.8 26.8Z"/></svg>
+    <h2>Evolución por capas</h2>
+    <p class="sub">Cómo se ha movido cada capa, corte a corte. Recorre la línea con el cursor.</p>
+    <canvas id="evo" style="width:100%;height:230px;display:block"></canvas>
+    <div class="cap-chips" id="evoLeyenda" style="margin:12px 0 0"></div>
+  </div>
   <div class="card" id="histCortes" style="margin-top:14px;display:none"><svg class="spk" viewBox="0 0 64 64" fill="currentColor" aria-hidden="true"><path d="M32 1 37.2 26.8 63 32 37.2 37.2 32 63 26.8 37.2 1 32 26.8 26.8Z"/></svg>
     <h2>Historial de cortes</h2>
     <p class="sub">La fotografía de cada mes. Un corte mal capturado vive para siempre — bórralo y repítelo.</p>
@@ -495,6 +507,7 @@ button.lx:hover{color:var(--cream)}
         <label for="inAporta">Aportación mensual</label>
         <div class="fila"><input type="number" id="inAporta" min="0" step="500" value="10000"><span class="ud">MXN /MES</span></div>
       </div>
+      <canvas id="flujo" style="width:100%;height:200px;display:block;margin-bottom:6px"></canvas>
       <div class="seg" id="planSeg" style="height:9px;margin-bottom:12px"></div>
       <div id="planRows"></div>
       <p class="plan-nota">Sugerencia aritmética según tus propias metas — no es una recomendación de inversión.</p>
@@ -639,17 +652,23 @@ button.lx:hover{color:var(--cream)}
 </footer>
 
 <div class="toast" id="toast"></div>
+<div id="tipviz" style="position:fixed;z-index:120;display:none;pointer-events:none;
+  background:rgba(10,10,10,.92);border:1px solid rgba(255,255,255,.16);border-radius:10px;
+  backdrop-filter:blur(10px);padding:9px 12px;font-family:var(--fm);font-size:9.5px;
+  letter-spacing:.04em;color:var(--cream);line-height:1.7;box-shadow:0 18px 40px rgba(0,0,0,.6)"></div>
 
 <script>
 'use strict';
 /* ════ LA OFICINA · motor ════ */
 var K='np_oficina_v1';
+/* colores de DATOS validados (CVD-safe sobre #0E0F0C, seis checks en verde) —
+   los pasteles de marca quedan para acentos de UI, nunca para codificar datos */
 var CAPAS=[
-  {k:'liquidez', n:'Liquidez',        s:'CAPA 01 · EFECTIVO Y EQUIVALENTES', c:'#A6EEDA', meta:10},
-  {k:'retiro',   n:'Retiro',          s:'CAPA 02 · CUENTAS DE RETIRO',       c:'#B8A9D9', meta:15},
-  {k:'pasivos',  n:'Ingresos pasivos',s:'CAPA 03 · INMUEBLES Y FLUJO',       c:'#9FB4C8', meta:20},
-  {k:'acciones', n:'Acciones',        s:'CAPA 04 · RENTA VARIABLE',          c:'#EFECE7', meta:45},
-  {k:'alt',      n:'Alternativos',    s:'CAPA 05 · PRIVADOS Y REALES',       c:'#D8A5B4', meta:10}
+  {k:'liquidez', n:'Liquidez',        s:'CAPA 01 · EFECTIVO Y EQUIVALENTES', c:'#10A87E', meta:10},
+  {k:'retiro',   n:'Retiro',          s:'CAPA 02 · CUENTAS DE RETIRO',       c:'#8F63DE', meta:15},
+  {k:'pasivos',  n:'Ingresos pasivos',s:'CAPA 03 · INMUEBLES Y FLUJO',       c:'#D97434', meta:20},
+  {k:'acciones', n:'Acciones',        s:'CAPA 04 · RENTA VARIABLE',          c:'#3E93D6', meta:45},
+  {k:'alt',      n:'Alternativos',    s:'CAPA 05 · PRIVADOS Y REALES',       c:'#DE4A8C', meta:10}
 ];
 var CAPA_BY={}; CAPAS.forEach(function(c){CAPA_BY[c.k]=c});
 
@@ -778,6 +797,9 @@ function render(){
   $('fxNota').textContent= S.fxFecha? 'Fijado el '+fCorta(S.fxFecha)+'. Referencia: el FIX de Banxico.' : 'Tecléalo tú — referencia: el FIX de Banxico.';
 
   renderSeg(); renderPlan(); renderLibertad(); renderListas(); renderConc(); renderCortes(); renderSpark();
+  sysDatos(); leyendaCapas('sysLeyenda'); leyendaCapas('evoLeyenda'); dibujaEvo();
+  $('sistemaCard').style.display= S.activos.length? 'block':'none';
+  if(REDUCIDO){ dibujaSistema(0); dibujaFlujo(0); }
 }
 
 function renderSeg(){
@@ -785,8 +807,8 @@ function renderSeg(){
   var segR='',segM='',rows='';
   CAPAS.forEach(function(c){
     var v=m[c.k]||0, pr=act>0? v/act*100 : 0;
-    segR+='<i style="flex:'+Math.max(pr,0.001)+';background:'+c.c+'"></i>';
-    segM+='<i style="flex:'+Math.max(S.metas[c.k]||0,0.001)+';background:'+c.c+'"></i>';
+    segR+='<i data-tip="'+c.n+' — '+mxn(v)+' ('+pr.toFixed(1)+'%)" style="flex:'+Math.max(pr,0.001)+';background:'+c.c+'"></i>';
+    segM+='<i data-tip="'+c.n+' — META '+(S.metas[c.k]||0)+'%" style="flex:'+Math.max(S.metas[c.k]||0,0.001)+';background:'+c.c+'"></i>';
     var extraCapa= (c.k==='liquidez'&&S.gasto>0)? ' · '+(v/S.gasto).toFixed(1)+' MESES DE GASTO':'';
     rows+='<div class="capa-row"><u style="background:'+c.c+'"></u>'
       +'<span class="nom">'+c.n+'<small>'+c.s+extraCapa+'</small></span>'
@@ -797,11 +819,18 @@ function renderSeg(){
   $('segReal').innerHTML= act>0? segR : '<i style="flex:1;background:rgba(255,255,255,.08)"></i>';
   $('segMeta').innerHTML=segM;
   /* la dona: conic-gradient con los mismos colores de capa */
+  donutPorciones=[];
   if(act>0){
-    var acum=0, stops=[];
+    var acum=0, stops=[], GAP=0.6; /* ~2px de superficie entre segmentos */
     CAPAS.forEach(function(c){
       var p=(m[c.k]||0)/act*100;
-      if(p>0.05){ stops.push(c.c+' '+acum.toFixed(2)+'% '+(acum+p).toFixed(2)+'%'); acum+=p; }
+      if(p>0.05){
+        donutPorciones.push({n:c.n,v:m[c.k]||0,de:acum,a:acum+p});
+        stops.push('#0E0F0C '+acum.toFixed(2)+'% '+(acum+GAP/2).toFixed(2)+'%');
+        stops.push(c.c+' '+(acum+GAP/2).toFixed(2)+'% '+(acum+p-GAP/2).toFixed(2)+'%');
+        stops.push('#0E0F0C '+(acum+p-GAP/2).toFixed(2)+'% '+(acum+p).toFixed(2)+'%');
+        acum+=p;
+      }
     });
     $('donut').style.background='conic-gradient('+stops.join(',')+')';
   } else {
@@ -926,9 +955,10 @@ function renderPlan(){
       +'<span class="monto" style="color:var(--rojo)">'+(topD.tasa||0)+'%</span></div>';
   }
   $('planSeg').innerHTML= M>0
-    ? CAPAS.map(function(c,i){ return red[i]>0?'<i style="flex:'+red[i]+';background:'+c.c+'"></i>':'' }).join('')
+    ? CAPAS.map(function(c,i){ return red[i]>0?'<i data-tip="'+c.n+' — '+mxn(red[i])+'" style="flex:'+red[i]+';background:'+c.c+'"></i>':'' }).join('')
       ||'<i style="flex:1;background:rgba(255,255,255,.08)"></i>'
     : '<i style="flex:1;background:rgba(255,255,255,.08)"></i>';
+  flujoDatos(M,red);
   $('planRows').innerHTML=paso0+CAPAS.map(function(c,i){
     return '<div class="plan-row"><u style="background:'+c.c+'"></u>'
       +'<span>'+c.n+'<span class="bar"><i style="width:'+(red[i]/maxA*100)+'%;background:'+c.c+'"></i></span></span>'
@@ -1259,10 +1289,16 @@ function cargarDemo(){
   /* cortes de ejemplo: ocho meses subiendo con respiración natural */
   var hoy=new Date(); S.cortes=[];
   var base=[7420000,7610000,7545000,7780000,8080000,8360000,8690000,9060000];
+  var deuDemo=1882000;
   for(var i=8;i>=1;i--){
     var d=new Date(hoy.getFullYear(),hoy.getMonth()-i,1);
     var f=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-01';
-    S.cortes.push({f:f,v:base[8-i]});
+    var vC=base[8-i], actC=vC+deuDemo, t=(8-i)/7;
+    /* la mezcla deriva: acciones crece, pasivos afloja — como una familia real */
+    var w={liquidez:.075-.02*t, retiro:.115-.007*t, pasivos:.64-.075*t,
+           acciones:.055+.087*t, alt:.115+.015*t};
+    var capasC={}; CAPAS.forEach(function(c){ capasC[c.k]=Math.round(actC*w[c.k]); });
+    S.cortes.push({f:f,v:vC,act:actC,deu:deuDemo,capas:capasC,fx:S.fx});
   }
   save(); sync(); render(); toast('Modo demo — datos de ejemplo');
 }
@@ -1290,6 +1326,302 @@ function toast(msg){
   var t=$('toast'); t.textContent=msg; t.classList.add('ver');
   clearTimeout(toastT); toastT=setTimeout(function(){t.classList.remove('ver')},2400);
 }
+
+/* ════ VISUALIZACIONES · EL SISTEMA / EVOLUCIÓN POR CAPAS / EL FLUJO ════
+   Reglas de la casa gráfica: paleta categórica VALIDADA en orden fijo de capa,
+   un solo eje, tooltips al hover, texto siempre en tinta — nunca del color de
+   la serie — y el movimiento se apaga con prefers-reduced-motion. */
+var REDUCIDO=matchMedia('(prefers-reduced-motion: reduce)').matches;
+var tip=$('tipviz');
+function tipVer(x,y,html){
+  tip.innerHTML=html; tip.style.display='block';
+  var W=innerWidth, tw=tip.offsetWidth, th=tip.offsetHeight;
+  tip.style.left=Math.min(W-tw-12,x+14)+'px';
+  tip.style.top=Math.min(innerHeight-th-8,Math.max(8,y-10))+'px';
+}
+function tipFuera(){ tip.style.display='none'; }
+function lienzo(cv,hCss){
+  var r=cv.getBoundingClientRect(), dpr=Math.min(2,devicePixelRatio||1);
+  if(r.width<10) return null;
+  var ctx=cv.getContext('2d');
+  /* realocar el backing store solo cuando el tamaño cambió — hacerlo cada
+     frame destruye y recrea un bitmap de megapíxeles 60 veces por segundo */
+  if(cv.__w!==r.width||cv.__dpr!==dpr||cv.__h!==hCss){
+    cv.__w=r.width; cv.__dpr=dpr; cv.__h=hCss;
+    cv.width=r.width*dpr; cv.height=hCss*dpr;
+  }
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  ctx.clearRect(0,0,r.width,hCss);
+  return {ctx:ctx,w:r.width,h:hCss};
+}
+function leyendaCapas(id){
+  $(id).innerHTML=CAPAS.map(function(c){
+    return '<span class="cap-chip"><u style="background:'+c.c+'"></u>'+c.n+'</span>';
+  }).join('');
+}
+
+/* ── tooltips por-marca: dona y barras de composición ── */
+var donutPorciones=[];
+(function(){
+  var d=$('donut'); if(!d)return;
+  d.addEventListener('mousemove',function(e){
+    var r=d.getBoundingClientRect(), cx=r.width/2, cy=r.height/2;
+    var dx=e.clientX-r.left-cx, dy=e.clientY-r.top-cy;
+    var dist=Math.hypot(dx,dy), R=r.width/2;
+    if(dist<R*0.56||dist>R){ tipFuera(); return; }
+    var ang=(Math.atan2(dy,dx)*180/Math.PI+90+360)%360;
+    var p=donutPorciones.find(function(s){return ang>=s.de&&ang<s.a});
+    if(p) tipVer(e.clientX,e.clientY,'<b>'+p.n+'</b><br>'+mxn(p.v)+' · '+(p.a-p.de).toFixed(1)+'%');
+    else tipFuera();
+  });
+  d.addEventListener('mouseleave',tipFuera);
+  ['segReal','segMeta','planSeg'].forEach(function(id){
+    var el=$(id); if(!el)return;
+    el.addEventListener('mousemove',function(e){
+      var t=e.target;
+      if(t&&t.tagName==='I'&&t.getAttribute('data-tip')) tipVer(e.clientX,e.clientY,t.getAttribute('data-tip'));
+      else tipFuera();
+    });
+    el.addEventListener('mouseleave',tipFuera);
+  });
+})();
+
+/* ── EL SISTEMA · el patrimonio como sistema orbital ── */
+var sysOrbes=[], sysHover=-1, sysMouse=null;
+function sysDatos(){
+  sysHover=-1;
+  var vmax=1; S.activos.forEach(function(x){ vmax=Math.max(vmax,enMXN(x)); });
+  sysOrbes=S.activos.map(function(x,i){
+    var ci=CAPAS.findIndex(function(c){return c.k===x.capa}); if(ci<0)ci=0;
+    return {x:x, ci:ci, v:enMXN(x),
+      r:5+13*Math.sqrt(enMXN(x)/vmax),
+      a0:(i*2.399963)%(Math.PI*2),          /* ángulo áureo: se reparten solos */
+      vel:(0.16-ci*0.022)*(i%2?1:-1),
+      jit:((i*7919)%23-11)};
+  });
+}
+function dibujaSistema(t){
+  var cv=$('sys'); if(!cv||document.body.getAttribute('data-v')!=='resumen')return;
+  var L=lienzo(cv,320); if(!L)return;
+  var ctx=L.ctx, w=L.w, h=320, cx=w/2, cy=h/2;
+  var rMax=Math.min(w/2,h/2)-24, paso=rMax/5;
+  /* anillos de capa */
+  CAPAS.forEach(function(c,i){
+    ctx.beginPath(); ctx.arc(cx,cy,paso*(i+0.8),0,7);
+    ctx.strokeStyle='rgba(255,255,255,'+(sysHover>=0&&sysOrbes[sysHover]&&sysOrbes[sysHover].ci===i?'.22':'.06')+')';
+    ctx.lineWidth=1; ctx.stroke();
+  });
+  /* núcleo: la estrella de la casa, latiendo apenas */
+  var lat=REDUCIDO?1:(1+Math.sin(t*1.4)*0.12);
+  ctx.save(); ctx.translate(cx,cy); ctx.scale(lat,lat);
+  ctx.fillStyle='rgba(239,236,231,.9)';
+  ctx.beginPath();
+  ctx.moveTo(0,-7);ctx.lineTo(1.6,-1.6);ctx.lineTo(7,0);ctx.lineTo(1.6,1.6);
+  ctx.lineTo(0,7);ctx.lineTo(-1.6,1.6);ctx.lineTo(-7,0);ctx.lineTo(-1.6,-1.6);
+  ctx.closePath(); ctx.fill(); ctx.restore();
+  /* las esferas — posiciones primero, luego el hit-test del frame */
+  sysOrbes.forEach(function(o){
+    var rad=paso*(o.ci+0.8)+o.jit*0.35;
+    var ang=o.a0+(REDUCIDO?0:t*o.vel);
+    o.px=cx+Math.cos(ang)*rad; o.py=cy+Math.sin(ang)*rad;
+  });
+  if(sysMouse){
+    var best=-1,bd=1e9;
+    sysOrbes.forEach(function(o,i){
+      var d=Math.hypot(sysMouse.x-o.px,sysMouse.y-o.py);
+      if(d<o.r+8&&d<bd){bd=d;best=i}
+    });
+    sysHover=best;
+    if(best>=0){ var ob=sysOrbes[best];
+      tipVer(sysMouse.cx,sysMouse.cy,'<b>'+esc(ob.x.nombre)+'</b><br>'+mxn(ob.v)+' · '+CAPAS[ob.ci].n.toUpperCase());
+      cv.style.cursor='pointer';
+    } else { tipFuera(); cv.style.cursor='default'; }
+  }
+  sysOrbes.forEach(function(o,i){
+    var col=CAPAS[o.ci].c;
+    ctx.save();
+    ctx.shadowColor=col; ctx.shadowBlur= i===sysHover?26:14;
+    ctx.fillStyle=col; ctx.globalAlpha= sysHover>=0&&i!==sysHover?0.45:1;
+    ctx.beginPath(); ctx.arc(o.px,o.py,o.r,0,7); ctx.fill();
+    /* anillo de superficie: separa esferas encimadas */
+    ctx.shadowBlur=0; ctx.globalAlpha=1;
+    ctx.strokeStyle='#0E0F0C'; ctx.lineWidth=2;
+    ctx.beginPath(); ctx.arc(o.px,o.py,o.r,0,7); ctx.stroke();
+    ctx.restore();
+  });
+}
+(function(){
+  var cv=$('sys'); if(!cv)return;
+  cv.addEventListener('mousemove',function(e){
+    var r=cv.getBoundingClientRect();
+    sysMouse={x:e.clientX-r.left,y:e.clientY-r.top,cx:e.clientX,cy:e.clientY};
+    if(REDUCIDO) dibujaSistema(0);
+  });
+  cv.addEventListener('mouseleave',function(){ sysMouse=null; sysHover=-1; tipFuera(); cv.style.cursor='default'; if(REDUCIDO)dibujaSistema(0); });
+})();
+
+/* ── EVOLUCIÓN POR CAPAS · área apilada con crosshair ── */
+var evoHoverX=null;
+function evoPuntos(){ return S.cortes.filter(function(c){return c.capas}); }
+function dibujaEvo(){
+  var card=$('evoCard'), pts=evoPuntos();
+  if(pts.length<2){ card.style.display='none'; return null; }
+  card.style.display='block';
+  var cv=$('evo'), L=lienzo(cv,230); if(!L)return null;
+  var ctx=L.ctx, w=L.w, h=230, padL=10, padR=10, top=16, base=h-26;
+  var maxA=1; pts.forEach(function(p){ var s=0; CAPAS.forEach(function(c){s+=p.capas[c.k]||0}); maxA=Math.max(maxA,s); });
+  function X(i){ return padL+i/(pts.length-1)*(w-padL-padR); }
+  function Y(v){ return base-(v/maxA)*(base-top); }
+  /* bandas apiladas, orden fijo de capa, de abajo hacia arriba */
+  var acumAbajo=pts.map(function(){return 0});
+  CAPAS.forEach(function(c){
+    var arr=pts.map(function(p,i){ return acumAbajo[i]+(p.capas[c.k]||0); });
+    ctx.beginPath();
+    arr.forEach(function(v,i){ i?ctx.lineTo(X(i),Y(v)):ctx.moveTo(X(0),Y(v)); });
+    for(var i=pts.length-1;i>=0;i--) ctx.lineTo(X(i),Y(acumAbajo[i]));
+    ctx.closePath();
+    ctx.fillStyle=c.c+'3d'; ctx.fill();
+    ctx.beginPath();
+    arr.forEach(function(v,i){ i?ctx.lineTo(X(i),Y(v)):ctx.moveTo(X(0),Y(v)); });
+    ctx.strokeStyle='#0E0F0C'; ctx.lineWidth=4; ctx.stroke();  /* separador de superficie */
+    ctx.strokeStyle=c.c; ctx.lineWidth=2; ctx.stroke();
+    acumAbajo=arr;
+  });
+  /* fechas de los extremos, en tinta tenue */
+  ctx.fillStyle='rgba(239,236,231,.4)'; ctx.font='8px ui-monospace,monospace';
+  ctx.textAlign='left';  ctx.fillText(pts[0].f,padL,h-8);
+  ctx.textAlign='right'; ctx.fillText(pts[pts.length-1].f,w-padR,h-8);
+  /* crosshair */
+  if(evoHoverX!==null){
+    var i=Math.round((evoHoverX-padL)/((w-padL-padR)/(pts.length-1)));
+    i=Math.max(0,Math.min(pts.length-1,i));
+    ctx.strokeStyle='rgba(239,236,231,.35)'; ctx.lineWidth=1;
+    ctx.setLineDash([3,4]); ctx.beginPath();
+    ctx.moveTo(X(i),top); ctx.lineTo(X(i),base); ctx.stroke(); ctx.setLineDash([]);
+    return i;
+  }
+  return null;
+}
+(function(){
+  var cv=$('evo'); if(!cv)return;
+  cv.addEventListener('mousemove',function(e){
+    var r=cv.getBoundingClientRect();
+    evoHoverX=e.clientX-r.left;
+    var i=dibujaEvo();
+    if(typeof i==='number'){
+      var p=evoPuntos()[i], filas=CAPAS.map(function(c){
+        return '<u style="display:inline-block;width:7px;height:7px;border-radius:50%;background:'+c.c+';margin-right:6px"></u>'+c.n+' — '+mxn(p.capas[c.k]||0);
+      }).join('<br>');
+      tipVer(e.clientX,e.clientY,'<b>'+p.f+'</b><br>'+filas+'<br><b>NETO '+mxn(p.v)+'</b>');
+    }
+  });
+  cv.addEventListener('mouseleave',function(){ evoHoverX=null; tipFuera(); dibujaEvo(); });
+})();
+
+/* ── EL FLUJO · la aportación viajando a sus capas, con partículas de luz ── */
+var fluDatos=null, fluHover=-1, fluParts=[];
+function flujoDatos(M,red){
+  fluDatos= M>0? {M:M,red:red} : null;
+  fluParts=[];
+  if(fluDatos){
+    CAPAS.forEach(function(c,i){
+      var n=Math.round((red[i]/M)*16);
+      for(var k=0;k<n;k++) fluParts.push({ci:i,ph:Math.random(),vel:0.10+Math.random()*0.08,os:(Math.random()-0.5)});
+    });
+  }
+}
+function fluGeom(w,h){
+  var x0=86, x1=w-150, ys=h/2;
+  var yT=CAPAS.map(function(c,i){ return 26+i*((h-52)/4); });
+  return {x0:x0,x1:x1,ys:ys,yT:yT};
+}
+function fluPunto(g,ci,tt){
+  var y1=g.yT[ci], mx=(g.x0+g.x1)/2;
+  var x=Math.pow(1-tt,3)*g.x0+3*Math.pow(1-tt,2)*tt*mx+3*(1-tt)*tt*tt*mx+Math.pow(tt,3)*g.x1;
+  var y=Math.pow(1-tt,3)*g.ys+3*Math.pow(1-tt,2)*tt*g.ys+3*(1-tt)*tt*tt*y1+Math.pow(tt,3)*y1;
+  return [x,y];
+}
+var fluDt=0.016;
+function dibujaFlujo(t){
+  var cv=$('flujo'); if(!cv||document.body.getAttribute('data-v')!=='plan')return;
+  var L=lienzo(cv,200); if(!L)return;
+  var ctx=L.ctx, w=L.w, h=200, g=fluGeom(w,h);
+  if(!fluDatos){
+    ctx.fillStyle='rgba(239,236,231,.35)'; ctx.font='9px ui-monospace,monospace'; ctx.textAlign='center';
+    ctx.fillText('DEFINE UNA APORTACIÓN Y EL FLUJO SE ENCIENDE',w/2,h/2); return;
+  }
+  var M=fluDatos.M, red=fluDatos.red, maxV=Math.max.apply(null,red.concat([1]));
+  /* bandas */
+  CAPAS.forEach(function(c,i){
+    if(red[i]<=0)return;
+    var esp=2+16*(red[i]/maxV);
+    ctx.beginPath();
+    for(var s=0;s<=24;s++){ var p=fluPunto(g,i,s/24); s?ctx.lineTo(p[0],p[1]):ctx.moveTo(p[0],p[1]); }
+    ctx.strokeStyle= i===fluHover? c.c : c.c+'59';
+    ctx.lineWidth=esp; ctx.lineCap='round'; ctx.stroke();
+  });
+  /* partículas de luz recorriendo su banda */
+  if(!REDUCIDO){
+    fluParts.forEach(function(p){
+      p.ph=(p.ph+p.vel*fluDt)%1;
+      var pt=fluPunto(g,p.ci,p.ph);
+      ctx.save();
+      ctx.shadowColor=CAPAS[p.ci].c; ctx.shadowBlur=10;
+      ctx.fillStyle='rgba(255,255,255,.95)';
+      ctx.beginPath(); ctx.arc(pt[0],pt[1]+p.os*3,1.6,0,7); ctx.fill();
+      ctx.restore();
+    });
+  }
+  /* nodo fuente */
+  ctx.fillStyle='rgba(239,236,231,.95)';
+  ctx.beginPath(); ctx.arc(g.x0,g.ys,7,0,7); ctx.fill();
+  ctx.fillStyle='rgba(239,236,231,.55)'; ctx.font='8px ui-monospace,monospace'; ctx.textAlign='center';
+  ctx.fillText('APORTACIÓN',g.x0,g.ys-20);
+  ctx.fillStyle='rgba(239,236,231,.9)'; ctx.font='10px ui-monospace,monospace';
+  ctx.fillText(mxn(M),g.x0,g.ys+27);
+  /* nodos destino con etiqueta directa */
+  ctx.textAlign='left';
+  CAPAS.forEach(function(c,i){
+    ctx.fillStyle=c.c;
+    ctx.beginPath(); ctx.arc(g.x1,g.yT[i],4.5,0,7); ctx.fill();
+    ctx.strokeStyle='#0E0F0C'; ctx.lineWidth=2; ctx.stroke();
+    ctx.fillStyle='rgba(239,236,231,'+(red[i]>0?'.85':'.35')+')';
+    ctx.font='8.5px ui-monospace,monospace';
+    ctx.fillText(c.n.toUpperCase()+'  '+mxn(red[i]),g.x1+12,g.yT[i]+3);
+  });
+}
+(function(){
+  var cv=$('flujo'); if(!cv)return;
+  cv.addEventListener('mousemove',function(e){
+    if(!fluDatos){tipFuera();return}
+    var r=cv.getBoundingClientRect(), mx=e.clientX-r.left, my=e.clientY-r.top;
+    var g=fluGeom(r.width,200), best=-1, bd=14;
+    CAPAS.forEach(function(c,i){
+      if(fluDatos.red[i]<=0)return;
+      for(var s=0;s<=24;s++){ var p=fluPunto(g,i,s/24);
+        var d=Math.hypot(mx-p[0],my-p[1]); if(d<bd){bd=d;best=i} }
+    });
+    fluHover=best;
+    if(best>=0) tipVer(e.clientX,e.clientY,'<b>'+CAPAS[best].n+'</b><br>'+mxn(fluDatos.red[best])+' DE '+mxn(fluDatos.M)+' ESTE MES');
+    else tipFuera();
+    if(REDUCIDO) dibujaFlujo(0);
+  });
+  cv.addEventListener('mouseleave',function(){ fluHover=-1; tipFuera(); if(REDUCIDO)dibujaFlujo(0); });
+})();
+
+/* un solo reloj para todo lo que se mueve */
+(function(){
+  var prev=null;
+  function marco(ts){
+    var t=ts/1000;
+    fluDt= prev===null? 0.016 : Math.min(0.05,(ts-prev)/1000);
+    prev=ts;
+    dibujaSistema(t); dibujaFlujo(t);
+    requestAnimationFrame(marco);
+  }
+  if(REDUCIDO){ setTimeout(function(){dibujaSistema(0);dibujaFlujo(0)},80); }
+  else requestAnimationFrame(marco);
+})();
 
 /* ── enrutador del menú lateral ── */
 var VISTAS={resumen:'Resumen',portafolio:'Portafolio',plan:'Plan mensual',
@@ -1324,7 +1656,8 @@ function verVista(v,primerCarga){
     /* si navega desde el onboarding, que vea la vista aunque esté vacía */
     document.body.classList.remove('vacia');
   }
-  if(v==='resumen'){ setTimeout(renderSpark,40); if(!primerCarga) animarNeto(); }
+  if(v==='resumen'){ setTimeout(function(){renderSpark();dibujaEvo();dibujaSistema(performance.now()/1000)},40); if(!primerCarga) animarNeto(); }
+  if(v==='plan') setTimeout(function(){dibujaFlujo(performance.now()/1000)},40);
   if(location.hash!=='#/'+v){ try{history.replaceState(null,'','#/'+v)}catch(e){} }
   window.scrollTo(0,0);
 }
@@ -1337,7 +1670,10 @@ $('tbActivo').addEventListener('click',function(){
   document.body.classList.remove('vacia'); verVista('activos'); abrirForma('activo');
 });
 addEventListener('hashchange',function(){verVista(location.hash.replace('#/',''))});
-addEventListener('resize',function(){renderSpark()});
+addEventListener('resize',function(){
+  renderSpark(); dibujaEvo();
+  if(REDUCIDO){ dibujaSistema(0); dibujaFlujo(0); }
+});
 sync(); render();
 verVista((location.hash||'#/resumen').replace('#/',''), true);
 </script>
