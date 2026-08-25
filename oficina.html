@@ -185,6 +185,7 @@ body:not([data-v="resumen"]) #cabResumen{display:none}
 .spark-chip.baja{background:rgba(216,138,128,.13);color:var(--rojo);border-color:rgba(216,138,128,.35)}
 .spark-note{font-family:var(--fm);font-size:8px;letter-spacing:.14em;color:var(--tenue);
   text-transform:uppercase;margin-top:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mareas-tot{font-family:var(--fd);font-weight:700;font-size:22px;letter-spacing:-.015em;margin:2px 0 4px}
 
 /* ── GRID PRINCIPAL ── */
 .tablero{padding:14px 0 30px;display:grid;grid-template-columns:1fr 1fr;gap:14px}
@@ -484,7 +485,8 @@ button.lx:hover{color:var(--cream)}
   <div class="col">
 
     <div class="card" id="portafolio"><svg class="spk" viewBox="0 0 64 64" fill="currentColor" aria-hidden="true"><path d="M32 1 37.2 26.8 63 32 37.2 37.2 32 63 26.8 37.2 1 32 26.8 26.8Z"/></svg>
-      <h2>Las mareas</h2>
+      <h2>Activos</h2>
+      <p class="mareas-tot" id="mareasTot">$0</p>
       <canvas id="mareas" style="width:100%;height:260px;display:block"></canvas>
       <div id="capaRows" style="margin-top:12px"></div>
       <p class="meta-warn" id="metaWarn">Las metas suman <b id="metaSuma"></b>% — ajústalas para llegar a 100%.</p>
@@ -815,6 +817,7 @@ function renderSeg(){
       +'</div>';
   });
   $('capaRows').innerHTML=rows;
+  $('mareasTot').textContent=mxn(act);
   dibujaMareas(REDUCIDO?0:performance.now()/1000);
   var suma=CAPAS.reduce(function(a,c){return a+(S.metas[c.k]||0)},0);
   $('metaWarn').style.display= suma===100?'none':'block';
@@ -1401,8 +1404,6 @@ function dibujaMareas(t){
   var maxPct=10;
   CAPAS.forEach(function(c){ maxPct=Math.max(maxPct,(m[c.k]||0)/act*100,S.metas[c.k]||0); });
   maxPct=Math.min(100,maxPct*1.12+3);
-  ctx.fillStyle='rgba(239,236,231,.5)'; ctx.font='9px ui-monospace,monospace'; ctx.textAlign='right';
-  ctx.fillText('ACTIVOS '+mxn(act),w-6,14);
   var CORTO=['LIQUIDEZ','RETIRO','PASIVOS','ACCIONES','ALT'];
   var hoverI=-1;
   if(marMouse){
