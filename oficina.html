@@ -72,6 +72,8 @@ body{padding-left:232px}
 .chip-demo{display:none;font-family:var(--fm);font-size:8.5px;letter-spacing:.14em;color:var(--negro);
   background:var(--cream);border-radius:20px;padding:6px 11px;text-align:center}
 body.demo .chip-demo{display:block}
+.topbar #tbActivo{margin-left:auto}
+body.demo .topbar #tbActivo{margin-left:0}
 .pill-add{position:relative;overflow:hidden;background:var(--cream);color:var(--negro);
   border:none;border-radius:10px;padding:11px 15px;font-size:12px;font-weight:600;white-space:nowrap}
 .pill-add::after{content:'';position:absolute;top:0;left:-70%;width:50%;height:100%;
@@ -91,7 +93,7 @@ body.demo .chip-demo{display:block}
   width:36px;height:36px;display:flex;flex-direction:column;gap:4px;align-items:center;justify-content:center}
 .burger i{display:block;width:16px;height:1.5px;background:currentColor;border-radius:1px}
 .velo{display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:65}
-body.menuAbierto .velo{display:block}
+@media(max-width:900px){ body.menuAbierto .velo{display:block} }
 /* ── ENRUTADO DE VISTAS · cada sección con su acento y su entrada ── */
 body{--acc:#EFECE7}
 body[data-v="portafolio"]{--acc:#A6EEDA}
@@ -411,7 +413,8 @@ button.lx:hover{color:var(--cream)}
     <svg viewBox="0 0 64 64" fill="currentColor" aria-hidden="true"><path d="M32 1 37.2 26.8 63 32 37.2 37.2 32 63 26.8 37.2 1 32 26.8 26.8Z"/></svg>
     <span>NORTHPOINT<small>LA OFICINA</small></span>
   </a>
-  <button class="pill-add" id="tbActivo" style="margin-left:auto">+ Activo</button>
+  <button class="chip-demo" id="chipDemoM" style="border:none;cursor:pointer;margin-left:auto">DEMO ×</button>
+  <button class="pill-add" id="tbActivo">+ Activo</button>
 </header>
 <div class="vista-cab w" id="cabVista">
   <span class="eb" id="cabEb">LA OFICINA</span>
@@ -431,6 +434,7 @@ button.lx:hover{color:var(--cream)}
   <div class="btns">
     <button class="btn" id="obAgregar">Registrar mi primer activo</button>
     <button class="btn btn-g" id="obDemo">Ver con datos de ejemplo</button>
+    <button class="btn btn-g" id="obImporta">Restaurar un respaldo</button>
   </div>
 </section>
 
@@ -557,6 +561,7 @@ button.lx:hover{color:var(--cream)}
     <div class="card" id="activos"><svg class="spk" viewBox="0 0 64 64" fill="currentColor" aria-hidden="true"><path d="M32 1 37.2 26.8 63 32 37.2 37.2 32 63 26.8 37.2 1 32 26.8 26.8Z"/></svg>
       <h2>Activos</h2>
       <p class="sub">Cuentas, casas de bolsa, inmuebles, negocio — cada uno en su capa.</p>
+      <button class="btn btn-g" id="btnActivo2" style="margin-bottom:14px">+ Agregar activo</button>
       <div class="cap-chips" id="capChips"></div>
       <div class="lista" id="listaActivos"></div>
       <div class="tot-row"><span>Total activos</span><b id="totActivos">$0</b></div>
@@ -587,6 +592,7 @@ button.lx:hover{color:var(--cream)}
     <div class="card" id="deudas"><svg class="spk" viewBox="0 0 64 64" fill="currentColor" aria-hidden="true"><path d="M32 1 37.2 26.8 63 32 37.2 37.2 32 63 26.8 37.2 1 32 26.8 26.8Z"/></svg>
       <h2>Deudas</h2>
       <p class="sub">Hipoteca, crédito, tarjetas. Restan del patrimonio neto.</p>
+      <button class="btn btn-g" id="btnDeuda2" style="margin-bottom:14px">+ Agregar deuda</button>
       <div class="deuda-ratio" id="deudaRatio" style="display:none">
         <small id="deudaRatioTxt"></small>
         <div class="bar"><i id="deudaRatioBar" style="width:0%"></i></div>
@@ -663,6 +669,7 @@ button.lx:hover{color:var(--cream)}
 'use strict';
 /* ════ LA OFICINA · motor ════ */
 var K='np_oficina_v1';
+var K_REAL='np_oficina_real_v1';   /* aquí se apartan los datos reales mientras corre el demo */
 /* colores de DATOS validados (CVD-safe sobre #0E0F0C, seis checks en verde) —
    los pasteles de marca quedan para acentos de UI, nunca para codificar datos */
 var CAPAS=[
@@ -741,7 +748,14 @@ function sanea(p){
 var S=fresh();
 try{ var raw=localStorage.getItem(K); if(raw){ S=sanea(JSON.parse(raw)); save(); } }catch(e){}
 
-function save(){ try{localStorage.setItem(K,JSON.stringify(S))}catch(e){} }
+var saveFallo=false;
+function save(){
+  try{ localStorage.setItem(K,JSON.stringify(S)); }
+  catch(e){
+    saveFallo=true;
+    toast('⚠ NO PUDE GUARDAR EN ESTE NAVEGADOR — EXPORTA TU RESPALDO YA');
+  }
+}
 function uid(){ return Math.random().toString(36).slice(2,9); }
 function mxn(v){
   var n=Math.round(v);
@@ -789,7 +803,10 @@ function render(){
 
   /* chip de respaldo en el sidebar */
   var cr=$('chipResp');
-  if(!S.demo && S.activos.length){
+  if(saveFallo){
+    cr.style.display='block'; cr.style.color='var(--rojo)'; cr.style.borderColor='var(--rojo)';
+    cr.textContent='NO SE PUDO GUARDAR — EXPORTA YA';
+  } else if(!S.demo && S.activos.length){
     var de=S.ultimoExport?diasDesde(S.ultimoExport):null;
     if(de===null){ cr.style.display='block'; cr.style.color='var(--rojo)'; cr.style.borderColor='var(--rojo)'; cr.textContent='SIN RESPALDO — EXPORTAR AHORA'; }
     else if(de>30){ cr.style.display='block'; cr.style.color='var(--dim)'; cr.style.borderColor='var(--borde)'; cr.textContent='RESPALDO: HACE '+de+' DÍAS'; }
@@ -825,7 +842,13 @@ function renderSeg(){
   document.querySelectorAll('[data-meta]').forEach(function(inp){
     inp.addEventListener('change',function(){
       var v=Math.max(0,Math.min(100,parseFloat(inp.value)||0));
-      S.metas[inp.getAttribute('data-meta')]=v; save(); render();
+      S.metas[inp.getAttribute('data-meta')]=v; inp.value=v; save();
+      /* refresco quirúrgico: los inputs de meta NO se reconstruyen (se iría el foco) */
+      var suma=CAPAS.reduce(function(a,c){return a+(S.metas[c.k]||0)},0);
+      $('metaWarn').style.display= suma===100?'none':'block';
+      $('metaSuma').textContent=suma;
+      dibujaMareas(REDUCIDO?0:performance.now()/1000);
+      renderPlan(); renderLibertad();
     });
   });
   /* por titular */
@@ -905,7 +928,9 @@ function renderPlan(){
   var m=porCapa(), act=totalActivos(), futuro=act+M;
   var sumaMetas=CAPAS.reduce(function(a,c){return a+(S.metas[c.k]||0)},0);
   if(sumaMetas<=0){
-    $('planRows').innerHTML='<div class="vacio">Define tus metas por capa (arriba) y el plan se arma solo.</div>';
+    $('planRows').innerHTML='<div class="vacio">Define tus metas por capa (en Portafolio) y el plan se arma solo.</div>';
+    $('planSeg').innerHTML='<i style="flex:1;background:rgba(255,255,255,.08)"></i>';
+    flujoDatos(0,[0,0,0,0,0]);
     return;
   }
   /* brecha de cada capa contra su meta sobre el patrimonio futuro */
@@ -1025,7 +1050,7 @@ function renderListas(){
 
   var ld=$('listaDeudas');
   ld.innerHTML= S.deudas.length===0
-    ? '<div class="vacio">Sin deudas registradas.</div>'
+    ? '<div class="vacio">Sin deudas registradas. Agrégala con el botón de arriba.</div>'
     : S.deudas.map(function(x){
         var extra='';
         if((x.tasa||0)>0){
@@ -1190,11 +1215,12 @@ document.querySelectorAll('[data-cerrar]').forEach(function(b){
 $('formActivo').capa.innerHTML=CAPAS.map(function(c){return '<option value="'+c.k+'">'+c.n+'</option>'}).join('');
 $('formActivo').addEventListener('submit',function(e){
   e.preventDefault(); var f=e.target;
-  var v=parseFloat(f.valor.value); if(!(v>=0)) return;
+  var v=parseFloat(f.valor.value);
+  if(!(v>=0)){ toast('Ponle un valor al activo'); f.valor.focus(); return; }
   var d={nombre:f.nombre.value.trim(),inst:f.inst.value.trim(),capa:f.capa.value,moneda:f.moneda.value,valor:v,
     titular:f.titular.value.trim(),veh:f.veh.value,benef:f.benef.value,
     benefNombre:f.benefNombre.value.trim(),doc:f.doc.value.trim(),lib:f.lib.checked};
-  if(!d.nombre) return;
+  if(!d.nombre){ toast('Ponle nombre al activo'); f.nombre.focus(); return; }
   /* la fecha del valor se estampa cuando el valor cambia — nunca se inventa */
   d.act=(!editando||v!==editando.valor)?hoyISO():(editando.act||null);
   if(editando && editTipo==='activo' && S.activos.indexOf(editando)!==-1){
@@ -1204,12 +1230,13 @@ $('formActivo').addEventListener('submit',function(e){
 });
 $('formDeuda').addEventListener('submit',function(e){
   e.preventDefault(); var f=e.target;
-  var v=parseFloat(f.valor.value); if(!(v>=0)) return;
+  var v=parseFloat(f.valor.value);
+  if(!(v>=0)){ toast('Ponle un saldo a la deuda'); f.valor.focus(); return; }
   var d={nombre:f.nombre.value.trim(),moneda:f.moneda.value,valor:v,
     tasa:Math.min(200,Math.max(0,parseFloat(f.tasa.value)||0)),
     pago:Math.max(0,parseFloat(f.pago.value)||0),
     titular:f.titular.value.trim()};
-  if(!d.nombre) return;
+  if(!d.nombre){ toast('Ponle nombre a la deuda'); f.nombre.focus(); return; }
   d.act=(!editando||v!==editando.valor)?hoyISO():(editando.act||null);
   if(editando && editTipo==='deuda' && S.deudas.indexOf(editando)!==-1){
     Object.assign(editando,d); toast('Deuda actualizada');
@@ -1219,14 +1246,13 @@ $('formDeuda').addEventListener('submit',function(e){
 
 /* ── controles ── */
 $('btnAgregar').addEventListener('click',function(){verVista('activos');abrirForma('activo')});
-$('navActivo').addEventListener('click',function(){
-  document.body.classList.remove('vacia'); verVista('activos'); abrirForma('activo');
-});
-$('obAgregar').addEventListener('click',function(){
-  document.body.classList.remove('vacia'); verVista('activos'); abrirForma('activo');
-});
+$('navActivo').addEventListener('click',function(){ verVista('activos'); abrirForma('activo'); });
+$('obAgregar').addEventListener('click',function(){ verVista('activos'); abrirForma('activo'); });
 $('btnDeuda').addEventListener('click',function(){verVista('deudas');abrirForma('deuda')});
+$('btnActivo2').addEventListener('click',function(){abrirForma('activo')});
+$('btnDeuda2').addEventListener('click',function(){abrirForma('deuda')});
 $('btnCorte').addEventListener('click',function(){
+  if(!S.activos.length&&!S.deudas.length){ toast('Registra tus activos antes de guardar un corte'); return; }
   var f=hoyISO();
   var act=totalActivos(), deu=totalDeudas(), neto=act-deu;
   var snap={f:f,v:neto,act:act,deu:deu,capas:porCapa(),fx:S.fx};
@@ -1244,19 +1270,21 @@ $('btnCorte').addEventListener('click',function(){
 });
 $('inAporta').addEventListener('input',function(){ S.aporta=Math.max(0,parseFloat(this.value)||0); save(); renderPlan(); renderLibertad(); });
 $('inIngreso').addEventListener('input',function(){ S.ingreso=Math.max(0,parseFloat(this.value)||0); save(); renderLibertad(); });
-$('inTasa').addEventListener('input',function(){ S.tasa=parseFloat(this.value)||0; save(); renderLibertad(); });
+$('inTasa').addEventListener('input',function(){ S.tasa=parseFloat(this.value)||0; save(); renderLibertad(); renderPlan(); });
 $('inFx').addEventListener('change',function(){ S.fx=Math.max(1,parseFloat(this.value)||17); S.fxFecha=hoyISO(); this.value=S.fx; save(); render(); });
 $('inGasto').addEventListener('change',function(){ S.gasto=Math.max(0,parseFloat(this.value)||0); this.value=S.gasto; save(); render(); });
 $('inAporta').addEventListener('change',function(){ this.value=S.aporta; });
 $('inIngreso').addEventListener('change',function(){ this.value=S.ingreso; });
 
 function exporta(){
-  S.ultimoExport=hoyISO(); save();
+  document.body.classList.remove('menuAbierto');
+  var f=hoyISO();
   var blob=new Blob([JSON.stringify(S,null,2)],{type:'application/json'});
   var a=document.createElement('a');
   a.href=URL.createObjectURL(blob);
-  a.download='northpoint-oficina-'+S.ultimoExport+'.json';
+  a.download='northpoint-oficina-'+f+'.json';
   a.click(); URL.revokeObjectURL(a.href);
+  S.ultimoExport=f; save();
   toast('Respaldo exportado'); render();
 }
 $('btnExporta').addEventListener('click',exporta);
@@ -1269,6 +1297,9 @@ $('fileImporta').addEventListener('change',function(){
     try{
       var p=JSON.parse(rd.result);
       if(!p||typeof p!=='object'||p.v!==1) throw 0;
+      if((S.activos.length||S.deudas.length||S.cortes.length)
+        && !confirm('Importar REEMPLAZA todos tus datos actuales por los del archivo. ¿Continuar?')) return;
+      cerrarFormas();
       S=sanea(p); save(); sync(); render(); toast('Respaldo importado');
     }catch(e){ toast('Ese archivo no es un respaldo válido'); }
   };
@@ -1276,10 +1307,18 @@ $('fileImporta').addEventListener('change',function(){
 });
 $('btnBorrar').addEventListener('click',function(){
   if(!confirm('¿Borrar TODO? Tus datos solo viven aquí — si no exportaste respaldo, no hay vuelta.'))return;
+  cerrarFormas();
+  try{ localStorage.removeItem(K_REAL); }catch(e){}
   S=fresh(); save(); sync(); render(); toast('Oficina en cero');
 });
 
 function cargarDemo(){
+  cerrarFormas();
+  document.body.classList.remove('menuAbierto');
+  /* apartar los datos reales antes de pisarlos — regresan al salir del demo */
+  if(!S.demo && (S.activos.length||S.deudas.length||S.cortes.length)){
+    try{ localStorage.setItem(K_REAL, JSON.stringify(S)); }catch(e){}
+  }
   S=fresh(); S.demo=true;
   var hoyD=hoyISO();
   function hace(dias){ var d=new Date(); d.setDate(d.getDate()-dias);
@@ -1319,18 +1358,31 @@ function cargarDemo(){
   save(); sync(); render(); toast('Modo demo — datos de ejemplo');
 }
 function toggleDemo(){
+  document.body.classList.remove('menuAbierto');
   if(S.demo){
-    if(!confirm('Salir del demo borra los datos de ejemplo. ¿Continuar?'))return;
-    S=fresh(); save(); sync(); render(); toast('Demo cerrado — oficina en cero');
+    var hayReal=false; try{ hayReal=!!localStorage.getItem(K_REAL); }catch(e){}
+    if(!confirm('Salir del demo descarta TODO lo hecho en el demo — incluyendo lo que hayas capturado tú aquí adentro'
+      +(hayReal?' — y restaura tus datos reales.':'.')+'\n¿Continuar?'))return;
+    cerrarFormas();
+    var raw=null; try{ raw=localStorage.getItem(K_REAL); }catch(e){}
+    if(raw){
+      try{ S=sanea(JSON.parse(raw)); }catch(e){ S=fresh(); }
+      try{ localStorage.removeItem(K_REAL); }catch(e){}
+      save(); sync(); render(); toast('Demo cerrado — tus datos reales están de vuelta');
+    } else {
+      S=fresh(); save(); sync(); render(); toast('Demo cerrado — oficina en cero');
+    }
   }else{
     if((S.activos.length||S.deudas.length)
-      && !confirm('El modo demo REEMPLAZA tus datos actuales por datos de ejemplo.\nExporta tu respaldo antes si los quieres conservar. ¿Continuar?'))return;
+      && !confirm('El demo APARTA tus datos actuales y te los devuelve al salir.\n¿Continuar?'))return;
     cargarDemo();
   }
 }
 $('btnDemo').addEventListener('click',toggleDemo);
 $('chipDemo').addEventListener('click',toggleDemo);
+$('chipDemoM').addEventListener('click',toggleDemo);
 $('obDemo').addEventListener('click',cargarDemo);
+$('obImporta').addEventListener('click',function(){ $('fileImporta').click(); });
 
 function sync(){
   $('inAporta').value=S.aporta; $('inIngreso').value=S.ingreso;
@@ -1800,21 +1852,22 @@ function animarNeto(){
   }
   requestAnimationFrame(paso);
 }
-function verVista(v,primerCarga){
+function verVista(v,primerCarga,desdeHistorial){
   if(!VISTAS[v]) v='resumen';
   document.body.setAttribute('data-v',v);
   document.querySelectorAll('.mn').forEach(function(b){b.classList.toggle('on',b.getAttribute('data-v')===v)});
   $('cabTitulo').textContent=VISTAS[v];
   $('cabSub').textContent=SUBS[v]||'';
   document.body.classList.remove('menuAbierto');
-  if(!primerCarga && document.body.classList.contains('vacia') && v!=='resumen'){
-    /* si navega desde el onboarding, que vea la vista aunque esté vacía */
-    document.body.classList.remove('vacia');
-  }
   if(v==='resumen'){ setTimeout(function(){renderSpark();dibujaSistema(performance.now()/1000)},40); if(!primerCarga) animarNeto(); }
   if(v==='plan') setTimeout(function(){dibujaFlujo(performance.now()/1000)},40);
   if(v==='portafolio') setTimeout(function(){dibujaMareas(performance.now()/1000);dibujaEvo(performance.now()/1000)},40);
-  if(location.hash!=='#/'+v){ try{history.replaceState(null,'','#/'+v)}catch(e){} }
+  if(location.hash!=='#/'+v){
+    try{
+      if(primerCarga||desdeHistorial) history.replaceState(null,'','#/'+v);
+      else history.pushState(null,'','#/'+v);
+    }catch(e){}
+  }
   window.scrollTo(0,0);
 }
 document.querySelectorAll('.mn').forEach(function(b){
@@ -1822,10 +1875,8 @@ document.querySelectorAll('.mn').forEach(function(b){
 });
 $('burger').addEventListener('click',function(){document.body.classList.toggle('menuAbierto')});
 $('velo').addEventListener('click',function(){document.body.classList.remove('menuAbierto')});
-$('tbActivo').addEventListener('click',function(){
-  document.body.classList.remove('vacia'); verVista('activos'); abrirForma('activo');
-});
-addEventListener('hashchange',function(){verVista(location.hash.replace('#/',''))});
+$('tbActivo').addEventListener('click',function(){ verVista('activos'); abrirForma('activo'); });
+addEventListener('hashchange',function(){verVista(location.hash.replace('#/',''),false,true)});
 addEventListener('resize',function(){
   renderSpark(); dibujaEvo();
   if(REDUCIDO){ dibujaSistema(0); dibujaFlujo(0); dibujaMareas(0); }
