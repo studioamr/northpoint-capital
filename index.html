@@ -366,6 +366,9 @@ body{padding-bottom:56px}
    Renombrar o agregar una sección ya no puede romper esto. */
 section[id]:not(#indice){display:none}
 section[id]:not(#indice).doc-active{display:block;border-top:none;padding-top:130px}
+/* apiladas: sólo la primera carga el aire del encabezado; las demás se
+   separan con una línea suave, como capítulos del mismo documento */
+section.doc-active ~ section.doc-active{padding-top:64px;border-top:1px solid var(--line-soft)}
 body.doc-open .hero,
 body.doc-open #indice{display:none}
 
@@ -902,30 +905,15 @@ body.doc-open #indice{display:none}
 <section id="indice" style="padding-top:80px">
   <div class="wrap">
     <p class="micro rv" style="margin-bottom:26px">Índice</p>
+    <!-- DOS entradas, por orden de André (24-ago): «solo dejarás como
+         secciones academia y family office». La academia es UN documento
+         que apila lo que antes eran seis secciones sueltas. -->
     <div class="index-list rv">
-      <a class="ix" href="#filosofia">
-        <span class="nm"><em>Filosofía</em></span><span class="fr">/0.1</span>
-      </a>
-      <a class="ix" href="#mesa">
-        <span class="nm"><em>Futuros</em></span><span class="fr">/0.2</span>
-      </a>
-      <a class="ix" href="#comunidad">
-        <span class="nm"><em>Comunidad</em></span><span class="fr">/0.3</span>
-      </a>
-      <a class="ix" href="#educacion">
-        <span class="nm"><em>Academia</em></span><span class="fr">/0.4</span>
-      </a>
-      <a class="ix" href="#journal">
-        <span class="nm"><em>Journal</em></span><span class="fr">/0.5</span>
-      </a>
-      <a class="ix" href="#fundadores">
-        <span class="nm"><em>Fundadores</em></span><span class="fr">/0.6</span>
-      </a>
-      <a class="ix" href="app.html">
-        <span class="nm"><em>Terminal</em></span><span class="fr">/0.7</span>
+      <a class="ix" href="#academia">
+        <span class="nm"><em>Academia</em></span><span class="fr">/0.1</span>
       </a>
       <a class="ix" href="family-office.html">
-        <span class="nm"><em>Family Office</em></span><span class="fr">/0.8</span>
+        <span class="nm"><em>Family Office</em></span><span class="fr">/0.2</span>
       </a>
     </div>
   </div>
@@ -986,7 +974,7 @@ body.doc-open #indice{display:none}
           <li>DISCORD PRIVADO</li>
         </ul>
         <div class="casa-cta">
-          <a class="casa-btn" href="#mesa">Ver la academia ↓</a>
+          <a class="casa-btn" href="#academia">Ver la academia →</a>
           <a class="casa-lnk" href="#educacion">Los planes</a>
         </div>
       </div>
@@ -1606,7 +1594,10 @@ body.doc-open #indice{display:none}
   /* CUATRO listas tienen que decir lo mismo: ésta, DECK_MAP, `mapa` y las
      filas del índice. Agregar una sección y olvidar DOC_SECS deja una fila que
      no abre nada — el enrutador simplemente no la reconoce. */
-  var DOC_SECS = ['filosofia','mesa','comunidad','educacion','journal','fundadores'];
+  /* 'academia' agrupa lo que antes eran seis documentos sueltos; los ids
+     viejos siguen aquí para que cualquier link profundo (#educacion, #mesa…)
+     abra la academia completa y aterrice en su sección. */
+  var DOC_SECS = ['academia','filosofia','mesa','comunidad','educacion','journal','fundadores'];
   document.querySelectorAll('a[href^="#"]').forEach(function(a){
     a.addEventListener('click', function(e){
       var href = a.getAttribute('href');
@@ -1711,29 +1702,25 @@ body.doc-open #indice{display:none}
     }
   })();
 
-  /* ---------- Router de documentos: el índice ES la navegación ---------- */
-  var DECK_MAP = {
-    filosofia: '// PHILOSOPHY /0.1',
-    mesa:      '// FUTURES /0.2',
-    comunidad: '// COMUNIDAD /0.3',
-    educacion: '// PROGRAMA /0.4',
-    journal:   '// JOURNAL /0.5',
-    fundadores:'// FUNDADORES /0.6'
-  };
+  /* ---------- Router de documentos: el índice ES la navegación ----------
+     Un solo documento: LA ACADEMIA. Cualquier hash del grupo activa TODAS las
+     secciones apiladas; si el hash es un id concreto, además aterriza ahí. */
+  var ACADEMIA_SECS = ['filosofia','mesa','comunidad','educacion','journal','fundadores'];
   function routeDoc(){
     var h = location.hash.slice(1);
     var open = DOC_SECS.indexOf(h) !== -1;
     document.body.classList.toggle('doc-open', open);
-    DOC_SECS.forEach(function(id){
+    ACADEMIA_SECS.forEach(function(id){
       var el = document.getElementById(id);
-      if (el) el.classList.toggle('doc-active', open && id === h);
+      if (el) el.classList.toggle('doc-active', open);
     });
     var deckSecEl = document.getElementById('deckSec');
     if (open) {
-      window.scrollTo(0, 0);
-      var sec = document.getElementById(h);
-      sec.querySelectorAll('.rv').forEach(function(el){ el.classList.add('on'); });
-      if (deckSecEl && DECK_MAP[h]) deckSecEl.textContent = DECK_MAP[h];
+      document.querySelectorAll('section.doc-active .rv').forEach(function(el){ el.classList.add('on'); });
+      var target = h !== 'academia' ? document.getElementById(h) : null;
+      if (target) { setTimeout(function(){ target.scrollIntoView(); }, 40); }
+      else window.scrollTo(0, 0);
+      if (deckSecEl) deckSecEl.textContent = '// ACADEMIA /0.1';
     } else {
       if (deckSecEl) deckSecEl.textContent = '// ÍNDICE /0.0';
     }
@@ -1752,12 +1739,12 @@ body.doc-open #indice{display:none}
        en silencio. Queda podado y en inglés. */
     var mapa = [
       ['indice','// ÍNDICE /0.0'],
-      ['filosofia','// PHILOSOPHY /0.1'],
-      ['mesa','// FUTURES /0.2'],
-      ['comunidad','// COMUNIDAD /0.3'],
-      ['educacion','// PROGRAMA /0.4'],
-      ['journal','// JOURNAL /0.5'],
-      ['fundadores','// FUNDADORES /0.6']
+      ['filosofia','// ACADEMIA · FILOSOFÍA'],
+      ['mesa','// ACADEMIA · FUTUROS'],
+      ['comunidad','// ACADEMIA · COMUNIDAD'],
+      ['educacion','// ACADEMIA · PLANES'],
+      ['journal','// ACADEMIA · JOURNAL'],
+      ['fundadores','// ACADEMIA · FUNDADORES']
     ];
     var ioSec = new IntersectionObserver(function(es){
       es.forEach(function(e){
