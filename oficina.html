@@ -1,0 +1,791 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>LA OFICINA — NORTHPOINT Family Office</title>
+<meta name="description" content="La plataforma del family office NORTHPOINT: tu patrimonio completo — activos, deudas, capas, plan mensual y libertad financiera — en una sola pantalla. Tus datos viven en tu dispositivo.">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<meta name="robots" content="noindex">
+
+<!--
+  LA OFICINA · plataforma del Family Office · 24-ago-2026
+  App real, no mockup: los datos son del usuario y viven en SU dispositivo
+  (localStorage). Nada viaja a ningún servidor — no hay servidor.
+  Estética: el dark glass de la sección LA PLATAFORMA de family-office.html.
+  Arquitectura: las 5 capas del método de la casa.
+  Honestidad: la única proyección que existe es hipotética, con la tasa que
+  el usuario elige, y está etiquetada como tal. El modo demo se marca DEMO.
+-->
+
+<link rel="preconnect" href="https://api.fontshare.com" crossorigin>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://api.fontshare.com/v2/css?f[]=general-sans@400,500,600,700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:ital,wght@0,400;0,600;0,700;1,700&display=swap" rel="stylesheet">
+
+<style>
+:root{
+  --negro:#090A07; --panel:#0E0F0C; --cream:#EFECE7; --mint:#A6EEDA; --gold:#C9A84C;
+  --steel:#9FB4C8; --rosa:#D8A5B4; --lila:#B8A9D9;
+  --vidrio:rgba(255,255,255,.05); --vidrio2:rgba(255,255,255,.08);
+  --borde:rgba(255,255,255,.1); --borde2:rgba(255,255,255,.16);
+  --dim:#efece7ab; --tenue:#efece78c; --rojo:#D88A80;
+  --fd:"Archivo",sans-serif; --fb:"General Sans",sans-serif;
+  --fm:ui-monospace,"SF Mono",Menlo,monospace;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{background:var(--negro);color:var(--cream);font-family:var(--fb);font-size:15px;
+  line-height:1.55;-webkit-font-smoothing:antialiased;min-height:100vh}
+a{color:inherit;text-decoration:none}
+button{font-family:inherit;cursor:pointer}
+input,select{font-family:inherit}
+.w{max-width:1080px;margin:0 auto;padding:0 20px}
+
+/* ── NAV ── */
+.nav{position:sticky;top:0;z-index:60;background:rgba(9,10,7,.8);
+  backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
+  border-bottom:1px solid var(--borde)}
+.nav-in{max-width:1080px;margin:0 auto;padding:0 20px;height:58px;display:flex;align-items:center;gap:12px}
+.brand{display:flex;align-items:center;gap:9px;font-weight:700;font-size:13.5px;letter-spacing:.02em}
+.brand svg{width:16px;height:16px;color:var(--gold)}
+.brand small{font-family:var(--fm);font-size:8px;letter-spacing:.24em;color:var(--tenue);display:block;font-weight:400}
+.chip-demo{display:none;font-family:var(--fm);font-size:8.5px;letter-spacing:.18em;color:var(--negro);
+  background:var(--gold);border-radius:20px;padding:5px 11px}
+body.demo .chip-demo{display:inline-block}
+.nav-out{margin-left:auto;font-family:var(--fm);font-size:9.5px;letter-spacing:.14em;color:var(--dim);
+  border:1px solid var(--borde);border-radius:6px;padding:8px 13px;transition:color .2s,border-color .2s}
+.nav-out:hover{color:var(--cream);border-color:var(--borde2)}
+
+/* ── CARDS ── */
+.card{background:var(--vidrio);border:1px solid var(--borde);border-radius:16px;
+  backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+  box-shadow:0 30px 70px -30px rgba(0,0,0,.8);padding:20px 20px 22px}
+.card h2{font-family:var(--fb);font-weight:700;font-size:14px;letter-spacing:.01em;margin-bottom:2px}
+.card .sub{font-size:11.5px;color:var(--tenue);margin-bottom:16px;line-height:1.5}
+.eb{font-family:var(--fm);font-size:8px;letter-spacing:.2em;text-transform:uppercase;color:var(--tenue)}
+
+/* ── RESUMEN ── */
+.resumen{padding:34px 0 8px}
+.res-g{display:grid;grid-template-columns:1.35fr 1fr;gap:14px;align-items:stretch}
+.neto-big{font-family:var(--fd);font-weight:700;font-size:clamp(34px,6vw,54px);
+  letter-spacing:-.025em;line-height:1;margin:8px 0 4px}
+.neto-big small{font-size:.4em;color:var(--dim);font-weight:600;margin-left:6px}
+.neto-sub{font-family:var(--fm);font-size:9.5px;letter-spacing:.08em;color:var(--tenue)}
+.neto-sub b{color:var(--mint);font-weight:500}
+.neto-sub i{font-style:normal;color:var(--rojo)}
+.res-actions{display:flex;gap:10px;margin-top:18px;flex-wrap:wrap}
+.btn{display:inline-flex;align-items:center;gap:8px;background:var(--cream);color:var(--negro);
+  border:none;border-radius:8px;padding:11px 16px;font-size:12.5px;font-weight:600;
+  transition:opacity .2s,transform .2s}
+.btn:hover{opacity:.9;transform:translateY(-1px)}
+.btn-g{background:transparent;color:var(--dim);border:1px solid var(--borde)}
+.btn-g:hover{color:var(--cream);border-color:var(--borde2)}
+#spark{width:100%;height:110px;display:block}
+.spark-note{font-family:var(--fm);font-size:8px;letter-spacing:.14em;color:var(--tenue);
+  text-transform:uppercase;margin-top:8px;display:flex;justify-content:space-between}
+
+/* ── GRID PRINCIPAL ── */
+.tablero{padding:14px 0 30px;display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.col{display:flex;flex-direction:column;gap:14px}
+
+/* composición */
+.seg{display:flex;gap:3px;height:7px;margin:6px 0 4px}
+.seg i{border-radius:4px;min-width:2px}
+.seg-lab{font-family:var(--fm);font-size:7.5px;letter-spacing:.14em;color:var(--tenue);text-transform:uppercase}
+.capa-row{display:grid;grid-template-columns:14px 1fr auto 84px;gap:10px;align-items:center;
+  padding:9px 0;border-bottom:1px solid rgba(255,255,255,.05);font-size:12.5px}
+.capa-row:last-child{border-bottom:none}
+.capa-row u{width:8px;height:8px;border-radius:50%;text-decoration:none}
+.capa-row .nom{color:var(--cream);font-weight:500}
+.capa-row .nom small{display:block;font-family:var(--fm);font-size:8px;color:var(--tenue);letter-spacing:.06em}
+.capa-row .val{font-family:var(--fm);font-size:11.5px;color:var(--dim);text-align:right}
+.capa-row .val b{display:block;color:var(--cream);font-weight:500;font-size:12.5px}
+.meta-in{display:flex;align-items:center;gap:5px;justify-content:flex-end}
+.meta-in input{width:46px;background:var(--vidrio);border:1px solid var(--borde);border-radius:6px;
+  color:var(--cream);font-family:var(--fm);font-size:11px;padding:6px 6px;text-align:right}
+.meta-in span{font-family:var(--fm);font-size:9px;color:var(--tenue)}
+.meta-warn{font-family:var(--fm);font-size:8.5px;letter-spacing:.08em;color:var(--gold);margin-top:8px;display:none}
+
+/* inputs grandes */
+.in-box{background:var(--vidrio);border:1px solid var(--borde);border-radius:10px;padding:10px 14px;margin-bottom:14px}
+.in-box label{display:block;font-family:var(--fm);font-size:7.5px;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--tenue);margin-bottom:4px}
+.in-box .fila{display:flex;align-items:baseline;gap:8px}
+.in-box input[type=number]{background:none;border:none;outline:none;color:var(--cream);
+  font-family:var(--fd);font-weight:700;font-size:22px;width:100%;letter-spacing:-.01em}
+.in-box .ud{font-family:var(--fm);font-size:9px;color:var(--tenue);white-space:nowrap}
+input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:3px;border-radius:2px;
+  background:rgba(255,255,255,.18);outline:none;cursor:pointer;margin:8px 0 2px}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;border-radius:50%;
+  background:var(--cream);border:3px solid var(--negro);box-shadow:0 0 0 1px var(--borde2)}
+input[type=range]::-moz-range-thumb{width:14px;height:14px;border-radius:50%;background:var(--cream);border:2px solid var(--negro)}
+
+/* plan */
+.plan-row{display:grid;grid-template-columns:14px 1fr 90px;gap:10px;align-items:center;
+  padding:8px 0;border-bottom:1px solid rgba(255,255,255,.05);font-size:12.5px}
+.plan-row:last-child{border-bottom:none}
+.plan-row u{width:8px;height:8px;border-radius:50%;text-decoration:none}
+.plan-row .bar{height:4px;border-radius:3px;background:rgba(255,255,255,.08);margin-top:5px;overflow:hidden}
+.plan-row .bar i{display:block;height:100%;border-radius:3px}
+.plan-row .monto{font-family:var(--fm);font-size:12px;color:var(--cream);text-align:right}
+.plan-nota{font-family:var(--fm);font-size:8.5px;letter-spacing:.06em;color:var(--tenue);margin-top:10px;line-height:1.6}
+
+/* libertad */
+.lib-pct{display:flex;justify-content:space-between;align-items:baseline;margin-top:2px}
+.lib-pct b{font-family:var(--fd);font-weight:700;font-size:26px;letter-spacing:-.02em}
+.lib-pct span{font-family:var(--fm);font-size:8.5px;color:var(--tenue)}
+.lib-bar{height:6px;border-radius:4px;background:rgba(255,255,255,.1);overflow:hidden;margin:8px 0 4px}
+.lib-bar i{display:block;height:100%;border-radius:4px;background:var(--mint);transition:width .5s ease}
+.lib-anios{font-family:var(--fm);font-size:8.5px;letter-spacing:.1em;color:var(--tenue);text-transform:uppercase;margin:8px 0 14px}
+.hito{display:flex;align-items:center;gap:10px;font-size:12.5px;color:var(--dim);padding:6px 0}
+.hito u{width:15px;height:15px;border-radius:50%;border:1px solid var(--borde2);flex:0 0 auto;
+  text-decoration:none;display:flex;align-items:center;justify-content:center;font-size:8px}
+.hito.ok{color:var(--cream)}
+.hito.ok u{background:rgba(166,238,218,.16);border-color:rgba(166,238,218,.55);color:var(--mint)}
+.hito s{text-decoration:none;margin-left:auto;font-family:var(--fm);font-size:9.5px;color:var(--tenue)}
+.lib-disc{font-family:var(--fm);font-size:8px;letter-spacing:.05em;color:var(--tenue);line-height:1.7;margin-top:12px}
+
+/* activos y deudas */
+.lista{display:flex;flex-direction:column}
+.item{display:grid;grid-template-columns:14px 1fr auto auto;gap:10px;align-items:center;
+  padding:10px 0;border-bottom:1px solid rgba(255,255,255,.05);font-size:12.5px}
+.item u{width:8px;height:8px;border-radius:50%;text-decoration:none}
+.item .nom b{font-weight:600}
+.item .nom small{display:block;font-family:var(--fm);font-size:8.5px;color:var(--tenue);letter-spacing:.05em}
+.item .val{font-family:var(--fm);font-size:12px;text-align:right}
+.item .val small{display:block;font-size:8px;color:var(--tenue)}
+.item .ops{display:flex;gap:6px}
+.op{background:none;border:1px solid var(--borde);border-radius:6px;color:var(--dim);
+  font-family:var(--fm);font-size:9px;padding:5px 8px;transition:color .2s,border-color .2s}
+.op:hover{color:var(--cream);border-color:var(--borde2)}
+.op.rojo:hover{color:var(--rojo);border-color:var(--rojo)}
+.vacio{padding:22px 0;text-align:center;font-size:12.5px;color:var(--tenue)}
+.form{display:none;background:var(--vidrio);border:1px solid var(--borde);border-radius:12px;
+  padding:14px;margin-top:12px}
+.form.abierto{display:block}
+.form .fg{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}
+.form label{display:block;font-family:var(--fm);font-size:7.5px;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--tenue);margin-bottom:4px}
+.form input,.form select{width:100%;background:rgba(0,0,0,.35);border:1px solid var(--borde);
+  border-radius:8px;color:var(--cream);font-size:13px;padding:9px 11px;outline:none}
+.form input:focus,.form select:focus{border-color:var(--borde2)}
+.form select option{background:#16170F;color:var(--cream)}
+.form .acciones{display:flex;gap:8px;justify-content:flex-end;margin-top:4px}
+.tot-row{display:flex;justify-content:space-between;align-items:baseline;padding-top:12px;
+  margin-top:4px;border-top:1px solid var(--borde)}
+.tot-row span{font-family:var(--fm);font-size:8.5px;letter-spacing:.16em;color:var(--tenue);text-transform:uppercase}
+.tot-row b{font-family:var(--fd);font-size:17px;font-weight:700}
+
+/* ajustes / pie */
+.ajustes{padding:6px 0 26px}
+.aj-g{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.aj{background:var(--vidrio);border:1px solid var(--borde);border-radius:12px;padding:14px;
+  display:flex;flex-direction:column;gap:8px}
+.aj label{font-family:var(--fm);font-size:7.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--tenue)}
+.aj input{background:rgba(0,0,0,.35);border:1px solid var(--borde);border-radius:8px;
+  color:var(--cream);font-family:var(--fm);font-size:13px;padding:8px 10px;outline:none;width:100%}
+.pie{border-top:1px solid var(--borde);padding:22px 0 42px}
+.pie p{font-size:10px;color:var(--tenue);line-height:1.7;max-width:760px}
+
+/* onboarding */
+.onboard{display:none;padding:60px 0 40px;text-align:center}
+body.vacia .onboard{display:block}
+body.vacia .tablero,body.vacia .resumen{display:none}
+.onboard h1{font-family:var(--fd);font-weight:700;font-size:clamp(26px,5vw,40px);letter-spacing:-.02em;margin:14px 0 8px}
+.onboard p{color:var(--dim);font-size:14px;max-width:440px;margin:0 auto 24px}
+.onboard .btns{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
+
+.toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%) translateY(80px);
+  background:var(--cream);color:var(--negro);font-size:12.5px;font-weight:600;
+  border-radius:10px;padding:11px 18px;z-index:100;opacity:0;transition:all .3s ease;pointer-events:none}
+.toast.ver{opacity:1;transform:translateX(-50%) translateY(0)}
+
+@media(max-width:860px){
+  .res-g{grid-template-columns:1fr}
+  .tablero{grid-template-columns:1fr}
+  .aj-g{grid-template-columns:repeat(2,1fr)}
+  .form .fg{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-in">
+    <a class="brand" href="family-office.html">
+      <svg viewBox="0 0 64 64" fill="currentColor" aria-hidden="true"><path d="M32 1 37.2 26.8 63 32 37.2 37.2 32 63 26.8 37.2 1 32 26.8 26.8Z"/></svg>
+      <span>NORTHPOINT<small>LA OFICINA · FAMILY OFFICE</small></span>
+    </a>
+    <button class="chip-demo" id="chipDemo" style="border:none;cursor:pointer">DEMO · SALIR ×</button>
+    <a class="nav-out" href="family-office.html">&larr; FAMILY OFFICE</a>
+  </div>
+</nav>
+
+<!-- onboarding cuando no hay datos -->
+<section class="onboard w">
+  <p class="eb">LA OFICINA</p>
+  <h1>Tu patrimonio, en una sola pantalla.</h1>
+  <p>Registra tus cuentas, inmuebles y deudas; la oficina los ordena por capas,
+    compara contra tu estrategia y te dice cuánto te falta para tu libertad
+    financiera. <b style="color:var(--cream)">Tus datos se quedan en tu navegador</b> —
+    no hay cuentas ni base de datos: NORTHPOINT no los recibe.</p>
+  <div class="btns">
+    <button class="btn" id="obAgregar">Registrar mi primer activo</button>
+    <button class="btn btn-g" id="obDemo">Ver con datos de ejemplo</button>
+  </div>
+</section>
+
+<!-- RESUMEN -->
+<header class="resumen w">
+  <div class="res-g">
+    <div class="card">
+      <p class="eb">PATRIMONIO NETO</p>
+      <p class="neto-big" id="netoBig">$0<small>MXN</small></p>
+      <p class="neto-sub" id="netoSub">Activos $0 · Deudas $0</p>
+      <div class="res-actions">
+        <button class="btn" id="btnCorte">Guardar corte de hoy</button>
+        <button class="btn btn-g" id="btnAgregar">+ Activo</button>
+        <button class="btn btn-g" id="btnDeuda">+ Deuda</button>
+      </div>
+    </div>
+    <div class="card">
+      <p class="eb">EVOLUCIÓN</p>
+      <canvas id="spark"></canvas>
+      <p class="spark-note"><span id="sparkDesde">—</span><span id="sparkCortes">0 cortes</span></p>
+    </div>
+  </div>
+</header>
+
+<main class="tablero w">
+  <div class="col">
+
+    <div class="card">
+      <h2>Composición del portafolio</h2>
+      <p class="sub">Lo que tienes contra tu estrategia por capas. La meta la defines tú.</p>
+      <p class="seg-lab">TU PORTAFOLIO</p>
+      <div class="seg" id="segReal"></div>
+      <p class="seg-lab" style="margin-top:8px">TU ESTRATEGIA</p>
+      <div class="seg" id="segMeta"></div>
+      <div id="capaRows" style="margin-top:12px"></div>
+      <p class="meta-warn" id="metaWarn">Las metas suman <b id="metaSuma"></b>% — ajústalas para llegar a 100%.</p>
+    </div>
+
+    <div class="card">
+      <h2>Plan de acción mensual</h2>
+      <p class="sub">Reparte tu aportación del mes hacia las capas que van más lejos de su meta.</p>
+      <div class="in-box">
+        <label for="inAporta">Aportación mensual</label>
+        <div class="fila"><input type="number" id="inAporta" min="0" step="500" value="10000"><span class="ud">MXN /MES</span></div>
+      </div>
+      <div id="planRows"></div>
+      <p class="plan-nota">Sugerencia aritmética según tus propias metas — no es una recomendación de inversión.</p>
+    </div>
+
+  </div>
+  <div class="col">
+
+    <div class="card">
+      <h2>Libertad financiera</h2>
+      <p class="sub">Regla del 4%: tu meta patrimonial es 300 veces tu ingreso mensual deseado.</p>
+      <div class="in-box">
+        <label for="inIngreso">Ingreso mensual deseado</label>
+        <div class="fila"><input type="number" id="inIngreso" min="0" step="5000" value="100000"><span class="ud">MXN /MES</span></div>
+      </div>
+      <div class="lib-pct"><b id="libPct">0%</b><span id="libNums">$0 / $0</span></div>
+      <div class="lib-bar"><i id="libBarra" style="width:0%"></i></div>
+      <p class="lib-anios" id="libAnios">—</p>
+      <label class="eb" for="inTasa">TASA ANUAL HIPOTÉTICA — LA ELIGES TÚ: <b id="tasaVal" style="color:var(--cream)">7.0%</b></label>
+      <input type="range" id="inTasa" min="0" max="15" step="0.5" value="7">
+      <div id="hitos" style="margin-top:12px"></div>
+      <p class="lib-disc">CÁLCULO HIPOTÉTICO CON LA TASA Y APORTACIÓN QUE TÚ INGRESAS. NO ES PROYECCIÓN,
+        RECOMENDACIÓN NI PROMESA DE NORTHPOINT. LA META ESTÁ EN PESOS DE HOY — EL CÁLCULO NO AJUSTA
+        INFLACIÓN. LA REGLA DEL 4% ES UNA HEURÍSTICA, NO UNA GARANTÍA.</p>
+    </div>
+
+    <div class="card">
+      <h2>Activos</h2>
+      <p class="sub">Cuentas, casas de bolsa, inmuebles, negocio — cada uno en su capa.</p>
+      <div class="lista" id="listaActivos"></div>
+      <div class="tot-row"><span>Total activos</span><b id="totActivos">$0</b></div>
+      <form class="form" id="formActivo">
+        <div class="fg">
+          <div><label>Nombre</label><input name="nombre" required maxlength="40" placeholder="Cetes / BBVA / Depto Roma"></div>
+          <div><label>Institución (opcional)</label><input name="inst" maxlength="40" placeholder="GBM, banco, notaría…"></div>
+          <div><label>Capa</label><select name="capa"></select></div>
+          <div><label>Moneda</label><select name="moneda"><option value="MXN">MXN</option><option value="USD">USD</option></select></div>
+          <div><label>Valor</label><input name="valor" type="number" min="0" step="0.01" required placeholder="0"></div>
+        </div>
+        <div class="acciones">
+          <button type="button" class="btn btn-g" data-cerrar>Cancelar</button>
+          <button type="submit" class="btn">Guardar</button>
+        </div>
+      </form>
+    </div>
+
+    <div class="card">
+      <h2>Deudas</h2>
+      <p class="sub">Hipoteca, crédito, tarjetas. Restan del patrimonio neto.</p>
+      <div class="lista" id="listaDeudas"></div>
+      <div class="tot-row"><span>Total deudas</span><b id="totDeudas" style="color:var(--rojo)">$0</b></div>
+      <form class="form" id="formDeuda">
+        <div class="fg">
+          <div><label>Nombre</label><input name="nombre" required maxlength="40" placeholder="Hipoteca / TDC"></div>
+          <div><label>Moneda</label><select name="moneda"><option value="MXN">MXN</option><option value="USD">USD</option></select></div>
+          <div><label>Saldo</label><input name="valor" type="number" min="0" step="0.01" required placeholder="0"></div>
+        </div>
+        <div class="acciones">
+          <button type="button" class="btn btn-g" data-cerrar>Cancelar</button>
+          <button type="submit" class="btn">Guardar</button>
+        </div>
+      </form>
+    </div>
+
+  </div>
+</main>
+
+<section class="ajustes w">
+  <div class="aj-g">
+    <div class="aj aj-fx">
+      <label for="inFx">Tipo de cambio USD → MXN</label>
+      <input type="number" id="inFx" min="1" step="0.05" value="17">
+    </div>
+    <div class="aj">
+      <label>Respaldo</label>
+      <button class="btn btn-g" id="btnExporta" style="justify-content:center">Exportar JSON</button>
+    </div>
+    <div class="aj">
+      <label>Restaurar</label>
+      <button class="btn btn-g" id="btnImporta" style="justify-content:center">Importar JSON</button>
+      <input type="file" id="fileImporta" accept="application/json" hidden>
+    </div>
+    <div class="aj">
+      <label>Datos</label>
+      <button class="btn btn-g" id="btnDemo" style="justify-content:center">Modo demo</button>
+      <button class="btn btn-g" id="btnBorrar" style="justify-content:center;color:var(--rojo)">Borrar todo</button>
+    </div>
+  </div>
+</section>
+
+<footer class="pie">
+  <div class="w">
+    <p>LA OFICINA es una herramienta de organización patrimonial de NORTHPOINT. No es asesoría de
+      inversión ni recomendación de comprar o vender; los cálculos hipotéticos usan los supuestos que
+      tú ingresas. Tus datos se guardan únicamente en este dispositivo (localStorage de tu navegador):
+      NORTHPOINT no los recibe, no los ve y no puede recuperarlos — exporta tu respaldo. ·
+      <a href="legal/terminos.html" style="text-decoration:underline;text-underline-offset:3px">Términos</a> ·
+      <a href="legal/privacidad.html" style="text-decoration:underline;text-underline-offset:3px">Privacidad</a></p>
+  </div>
+</footer>
+
+<div class="toast" id="toast"></div>
+
+<script>
+'use strict';
+/* ════ LA OFICINA · motor ════ */
+var K='np_oficina_v1';
+var CAPAS=[
+  {k:'liquidez', n:'Liquidez',        s:'CAPA 01 · EFECTIVO Y EQUIVALENTES', c:'#A6EEDA', meta:10},
+  {k:'retiro',   n:'Retiro',          s:'CAPA 02 · CUENTAS DE RETIRO',       c:'#C9A84C', meta:15},
+  {k:'pasivos',  n:'Ingresos pasivos',s:'CAPA 03 · INMUEBLES Y FLUJO',       c:'#9FB4C8', meta:20},
+  {k:'acciones', n:'Acciones',        s:'CAPA 04 · RENTA VARIABLE',          c:'#EFECE7', meta:45},
+  {k:'alt',      n:'Alternativos',    s:'CAPA 05 · PRIVADOS Y REALES',       c:'#D8A5B4', meta:10}
+];
+var CAPA_BY={}; CAPAS.forEach(function(c){CAPA_BY[c.k]=c});
+
+function fresh(){
+  var metas={}; CAPAS.forEach(function(c){metas[c.k]=c.meta});
+  return {v:1,demo:false,fx:17,aporta:10000,ingreso:100000,tasa:7,
+          metas:metas,activos:[],deudas:[],cortes:[]};
+}
+/* saneador: TODO lo que entra de fuera (localStorage o un archivo importado)
+   pasa por aquí — tipos forzados, ids regenerados, listas acotadas. Sin esto,
+   un respaldo malicioso podía inyectar HTML o brickear la app al recargar. */
+function num(v,d){ v=(typeof v==='string')?parseFloat(v):v; return (typeof v==='number'&&isFinite(v))?v:d; }
+function sanea(p){
+  var s=fresh();
+  if(!p||typeof p!=='object') return s;
+  s.demo=p.demo===true;
+  s.fx=Math.max(1,num(p.fx,17));
+  s.aporta=Math.max(0,num(p.aporta,10000));
+  s.ingreso=Math.max(0,num(p.ingreso,100000));
+  s.tasa=Math.min(15,Math.max(0,num(p.tasa,7)));
+  if(p.metas&&typeof p.metas==='object'){
+    CAPAS.forEach(function(c){ s.metas[c.k]=Math.min(100,Math.max(0,num(p.metas[c.k],c.meta))); });
+  }
+  if(Array.isArray(p.activos)){
+    s.activos=p.activos.filter(function(x){return x&&typeof x==='object'}).slice(0,500).map(function(x){
+      return {id:uid(),nombre:String(x.nombre||'Sin nombre').slice(0,60),
+        inst:String(x.inst||'').slice(0,60),
+        capa:CAPA_BY[x.capa]?String(x.capa):CAPAS[0].k,
+        moneda:x.moneda==='USD'?'USD':'MXN',valor:Math.max(0,num(x.valor,0))};
+    });
+  }
+  if(Array.isArray(p.deudas)){
+    s.deudas=p.deudas.filter(function(x){return x&&typeof x==='object'}).slice(0,200).map(function(x){
+      return {id:uid(),nombre:String(x.nombre||'Sin nombre').slice(0,60),
+        moneda:x.moneda==='USD'?'USD':'MXN',valor:Math.max(0,num(x.valor,0))};
+    });
+  }
+  if(Array.isArray(p.cortes)){
+    s.cortes=p.cortes.filter(function(c){
+      return c&&typeof c==='object'&&/^\d{4}-\d{2}-\d{2}$/.test(String(c.f))&&isFinite(num(c.v,NaN));
+    }).slice(-240).map(function(c){return {f:String(c.f),v:num(c.v,0)}});
+    s.cortes.sort(function(a,b){return a.f<b.f?-1:1});
+  }
+  return s;
+}
+var S=fresh();
+try{ var raw=localStorage.getItem(K); if(raw){ S=sanea(JSON.parse(raw)); save(); } }catch(e){}
+
+function save(){ try{localStorage.setItem(K,JSON.stringify(S))}catch(e){} }
+function uid(){ return Math.random().toString(36).slice(2,9); }
+function mxn(v){
+  var n=Math.round(v);
+  var abs=Math.abs(n).toLocaleString('en-US');
+  return (n<0?'−$':'$')+abs;
+}
+function enMXN(x){ return x.moneda==='USD' ? x.valor*S.fx : x.valor; }
+function totalActivos(){ return S.activos.reduce(function(a,x){return a+enMXN(x)},0); }
+function totalDeudas(){ return S.deudas.reduce(function(a,x){return a+enMXN(x)},0); }
+function porCapa(){
+  var m={}; CAPAS.forEach(function(c){m[c.k]=0});
+  S.activos.forEach(function(x){ if(m[x.capa]==null)m[x.capa]=0; m[x.capa]+=enMXN(x); });
+  return m;
+}
+
+/* ── render ── */
+function $(id){return document.getElementById(id)}
+
+function render(){
+  var act=totalActivos(), deu=totalDeudas(), neto=act-deu;
+  document.body.classList.toggle('vacia', S.activos.length===0 && S.deudas.length===0 && !S.demo);
+  document.body.classList.toggle('demo', !!S.demo);
+  $('btnDemo').textContent = S.demo ? 'Salir del demo' : 'Modo demo';
+
+  $('netoBig').innerHTML=mxn(neto)+'<small>MXN</small>';
+  $('netoSub').innerHTML='Activos <b>'+mxn(act)+'</b> · Deudas <i>'+mxn(deu)+'</i>'
+    +(S.activos.some(function(x){return x.moneda==='USD'})||S.deudas.some(function(x){return x.moneda==='USD'})
+      ?' · USD @ '+S.fx.toFixed(2):'');
+
+  renderSeg(); renderPlan(); renderLibertad(); renderListas(); renderSpark();
+}
+
+function renderSeg(){
+  var m=porCapa(), act=totalActivos();
+  var segR='',segM='',rows='';
+  CAPAS.forEach(function(c){
+    var v=m[c.k]||0, pr=act>0? v/act*100 : 0;
+    segR+='<i style="flex:'+Math.max(pr,0.001)+';background:'+c.c+'"></i>';
+    segM+='<i style="flex:'+Math.max(S.metas[c.k]||0,0.001)+';background:'+c.c+'"></i>';
+    rows+='<div class="capa-row"><u style="background:'+c.c+'"></u>'
+      +'<span class="nom">'+c.n+'<small>'+c.s+'</small></span>'
+      +'<span class="val"><b>'+mxn(v)+'</b>'+pr.toFixed(1)+'%</span>'
+      +'<span class="meta-in"><input type="number" min="0" max="100" step="1" value="'+(S.metas[c.k]||0)+'" data-meta="'+c.k+'" aria-label="Meta '+c.n+'"><span>% META</span></span>'
+      +'</div>';
+  });
+  $('segReal').innerHTML= act>0? segR : '<i style="flex:1;background:rgba(255,255,255,.08)"></i>';
+  $('segMeta').innerHTML=segM;
+  $('capaRows').innerHTML=rows;
+  var suma=CAPAS.reduce(function(a,c){return a+(S.metas[c.k]||0)},0);
+  $('metaWarn').style.display= suma===100?'none':'block';
+  $('metaSuma').textContent=suma;
+  document.querySelectorAll('[data-meta]').forEach(function(inp){
+    inp.addEventListener('change',function(){
+      var v=Math.max(0,Math.min(100,parseFloat(inp.value)||0));
+      S.metas[inp.getAttribute('data-meta')]=v; save(); render();
+    });
+  });
+}
+
+function renderPlan(){
+  var M=Math.max(0,S.aporta||0);
+  var m=porCapa(), act=totalActivos(), futuro=act+M;
+  var sumaMetas=CAPAS.reduce(function(a,c){return a+(S.metas[c.k]||0)},0);
+  if(sumaMetas<=0){
+    $('planRows').innerHTML='<div class="vacio">Define tus metas por capa (arriba) y el plan se arma solo.</div>';
+    return;
+  }
+  /* brecha de cada capa contra su meta sobre el patrimonio futuro */
+  var brechas=CAPAS.map(function(c){
+    var objetivo=futuro*(S.metas[c.k]||0)/sumaMetas;
+    return Math.max(0, objetivo-(m[c.k]||0));
+  });
+  var tb=brechas.reduce(function(a,b){return a+b},0);
+  var asig=CAPAS.map(function(c,i){
+    if(M===0) return 0;
+    if(tb>0.005) return M*brechas[i]/tb;
+    return M*(S.metas[c.k]||0)/sumaMetas;  /* sin brechas: por meta */
+  });
+  /* redondeo a pesos, el residuo a la mayor asignación */
+  var red=asig.map(function(v){return Math.floor(v)});
+  var resto=Math.round(M-red.reduce(function(a,b){return a+b},0));
+  if(resto>0){ var mx=0; asig.forEach(function(v,i){ if(v>asig[mx])mx=i }); red[mx]+=resto; }
+  var maxA=Math.max.apply(null,red.concat([1]));
+  $('planRows').innerHTML=CAPAS.map(function(c,i){
+    return '<div class="plan-row"><u style="background:'+c.c+'"></u>'
+      +'<span>'+c.n+'<span class="bar"><i style="width:'+(red[i]/maxA*100)+'%;background:'+c.c+'"></i></span></span>'
+      +'<span class="monto">'+mxn(red[i])+'</span></div>';
+  }).join('');
+}
+
+function renderLibertad(){
+  var neto=totalActivos()-totalDeudas();
+  var meta=(S.ingreso||0)*300;   /* regla del 4%: ingreso*12/0.04 */
+  var pct= meta>0? Math.max(0,neto)/meta*100 : 0;
+  $('libPct').textContent=(pct>=100?'100':pct.toFixed(1))+'%';
+  $('libNums').textContent=mxn(Math.max(0,neto))+' / '+mxn(meta);
+  $('libBarra').style.width=Math.min(100,pct)+'%';
+  $('tasaVal').textContent=S.tasa.toFixed(1)+'%';
+  /* años a la meta, con aportación y tasa hipotética */
+  var anios='—';
+  if(meta>0){
+    if(neto>=meta){ anios='META ALCANZADA'; }
+    else{
+      var v=Math.max(0,neto), r=Math.pow(1+S.tasa/100,1/12)-1, M=Math.max(0,S.aporta||0), mes=0;
+      while(v<meta && mes<1200){ v=v*(1+r)+M; mes++; }
+      anios= mes>=1200? 'MÁS DE 100 AÑOS CON ESTOS SUPUESTOS'
+        : '~'+(mes/12).toFixed(mes<24?1:0)+' AÑOS · CON '+mxn(M)+'/MES Y '+S.tasa.toFixed(1)+'% HIPOTÉTICO';
+    }
+  }
+  $('libAnios').textContent=anios;
+  var hitos=[
+    ['Primer paso', Math.round(meta*0.01)],
+    ['Primer millón', 1000000],
+    ['Un cuarto del camino', Math.round(meta*0.25)],
+    ['Mitad del camino', Math.round(meta*0.5)],
+    ['Libertad financiera', meta]
+  ];
+  $('hitos').innerHTML=hitos.map(function(h){
+    var ok=Math.max(0,neto)>=h[1]&&h[1]>0;
+    return '<div class="hito'+(ok?' ok':'')+'"><u>'+(ok?'✓':'')+'</u>'+h[0]+'<s>'+mxn(h[1])+'</s></div>';
+  }).join('');
+}
+
+function renderListas(){
+  var la=$('listaActivos');
+  la.innerHTML= S.activos.length===0
+    ? '<div class="vacio">Sin activos todavía. Agrega el primero con «+ Activo».</div>'
+    : S.activos.map(function(x){
+        var c=CAPA_BY[x.capa]||CAPAS[0];
+        return '<div class="item"><u style="background:'+c.c+'"></u>'
+          +'<span class="nom"><b>'+esc(x.nombre)+'</b><small>'+esc(x.inst||'')+(x.inst?' · ':'')+c.n.toUpperCase()+'</small></span>'
+          +'<span class="val">'+mxn(enMXN(x))+(x.moneda==='USD'?'<small>US$'+x.valor.toLocaleString('en-US')+'</small>':'')+'</span>'
+          +'<span class="ops"><button class="op" data-ed="'+esc(x.id)+'">EDITAR</button>'
+          +'<button class="op rojo" data-del="'+esc(x.id)+'" aria-label="Eliminar '+esc(x.nombre)+'">×</button></span></div>';
+      }).join('');
+  $('totActivos').textContent=mxn(totalActivos());
+
+  var ld=$('listaDeudas');
+  ld.innerHTML= S.deudas.length===0
+    ? '<div class="vacio">Sin deudas registradas.</div>'
+    : S.deudas.map(function(x){
+        return '<div class="item"><u style="background:var(--rojo)"></u>'
+          +'<span class="nom"><b>'+esc(x.nombre)+'</b></span>'
+          +'<span class="val">'+mxn(enMXN(x))+(x.moneda==='USD'?'<small>US$'+x.valor.toLocaleString('en-US')+'</small>':'')+'</span>'
+          +'<span class="ops"><button class="op" data-edd="'+esc(x.id)+'">EDITAR</button>'
+          +'<button class="op rojo" data-deld="'+esc(x.id)+'" aria-label="Eliminar '+esc(x.nombre)+'">×</button></span></div>';
+      }).join('');
+  $('totDeudas').textContent=mxn(totalDeudas());
+
+  la.querySelectorAll('[data-del]').forEach(function(b){b.addEventListener('click',function(){
+    var x=S.activos.find(function(y){return y.id===b.getAttribute('data-del')});
+    if(!x||!confirm('¿Eliminar «'+x.nombre+'»?'))return;
+    S.activos=S.activos.filter(function(y){return y!==x}); cerrarFormas(); save(); render();
+    toast('Activo eliminado');
+  })});
+  la.querySelectorAll('[data-ed]').forEach(function(b){b.addEventListener('click',function(){
+    abrirForma('activo', S.activos.find(function(x){return x.id===b.getAttribute('data-ed')}));
+  })});
+  ld.querySelectorAll('[data-deld]').forEach(function(b){b.addEventListener('click',function(){
+    var x=S.deudas.find(function(y){return y.id===b.getAttribute('data-deld')});
+    if(!x||!confirm('¿Eliminar «'+x.nombre+'»?'))return;
+    S.deudas=S.deudas.filter(function(y){return y!==x}); cerrarFormas(); save(); render();
+    toast('Deuda eliminada');
+  })});
+  ld.querySelectorAll('[data-edd]').forEach(function(b){b.addEventListener('click',function(){
+    abrirForma('deuda', S.deudas.find(function(x){return x.id===b.getAttribute('data-edd')}));
+  })});
+}
+
+function renderSpark(){
+  var cv=$('spark'), ctx=cv.getContext('2d');
+  var r=cv.getBoundingClientRect(), dpr=Math.min(2,devicePixelRatio||1);
+  cv.width=r.width*dpr; cv.height=110*dpr; ctx.setTransform(dpr,0,0,dpr,0,0);
+  ctx.clearRect(0,0,r.width,110);
+  var pts=S.cortes.slice(-24);
+  $('sparkCortes').textContent=S.cortes.length+' corte'+(S.cortes.length===1?'':'s');
+  $('sparkDesde').textContent= pts.length? 'DESDE '+pts[0].f : 'GUARDA TU PRIMER CORTE';
+  if(pts.length<2){
+    ctx.fillStyle='rgba(239,236,231,.25)';
+    ctx.font='9px ui-monospace,monospace'; ctx.textAlign='center';
+    ctx.fillText(pts.length===0?'La curva nace con dos cortes':'Un corte más y hay curva', r.width/2, 58);
+    return;
+  }
+  var vals=pts.map(function(p){return p.v});
+  var mn=Math.min.apply(null,vals), mx=Math.max.apply(null,vals);
+  if(mx===mn){mx+=1}
+  var pad=10, W=r.width-pad*2, H=86;
+  function X(i){return pad+i/(pts.length-1)*W}
+  function Y(v){return 12+ (1-(v-mn)/(mx-mn))*H}
+  ctx.beginPath();
+  pts.forEach(function(p,i){ i?ctx.lineTo(X(i),Y(p.v)):ctx.moveTo(X(i),Y(p.v)); });
+  ctx.strokeStyle='#C9A84C'; ctx.lineWidth=2; ctx.stroke();
+  ctx.lineTo(X(pts.length-1),110); ctx.lineTo(X(0),110); ctx.closePath();
+  ctx.fillStyle='rgba(201,168,76,.12)'; ctx.fill();
+  var u=pts[pts.length-1];
+  ctx.beginPath(); ctx.arc(X(pts.length-1),Y(u.v),3.5,0,7); ctx.fillStyle='#C9A84C'; ctx.fill();
+}
+
+function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,function(ch){
+  return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]; }); }
+
+/* ── formas ── */
+var editando=null, editTipo=null;
+function cerrarFormas(){
+  $('formActivo').classList.remove('abierto');
+  $('formDeuda').classList.remove('abierto');
+  editando=null; editTipo=null;
+}
+function abrirForma(tipo, item){
+  cerrarFormas();
+  editando=item||null; editTipo=tipo;
+  var f= tipo==='activo'? $('formActivo') : $('formDeuda');
+  f.classList.add('abierto');
+  if(tipo==='activo'){
+    f.nombre.value=item?item.nombre:''; f.inst.value=item?(item.inst||''):'';
+    f.capa.value=item?item.capa:CAPAS[0].k; f.moneda.value=item?item.moneda:'MXN';
+    f.valor.value=item?item.valor:'';
+  }else{
+    f.nombre.value=item?item.nombre:''; f.moneda.value=item?item.moneda:'MXN';
+    f.valor.value=item?item.valor:'';
+  }
+  f.scrollIntoView({block:'center',behavior:'smooth'}); f.nombre.focus();
+}
+document.querySelectorAll('[data-cerrar]').forEach(function(b){
+  b.addEventListener('click',cerrarFormas);
+});
+$('formActivo').capa.innerHTML=CAPAS.map(function(c){return '<option value="'+c.k+'">'+c.n+'</option>'}).join('');
+$('formActivo').addEventListener('submit',function(e){
+  e.preventDefault(); var f=e.target;
+  var v=parseFloat(f.valor.value); if(!(v>=0)) return;
+  var d={nombre:f.nombre.value.trim(),inst:f.inst.value.trim(),capa:f.capa.value,moneda:f.moneda.value,valor:v};
+  if(!d.nombre) return;
+  if(editando && editTipo==='activo' && S.activos.indexOf(editando)!==-1){
+    Object.assign(editando,d); toast('Activo actualizado');
+  } else { d.id=uid(); S.activos.push(d); toast('Activo agregado'); }
+  cerrarFormas(); save(); render();
+});
+$('formDeuda').addEventListener('submit',function(e){
+  e.preventDefault(); var f=e.target;
+  var v=parseFloat(f.valor.value); if(!(v>=0)) return;
+  var d={nombre:f.nombre.value.trim(),moneda:f.moneda.value,valor:v};
+  if(!d.nombre) return;
+  if(editando && editTipo==='deuda' && S.deudas.indexOf(editando)!==-1){
+    Object.assign(editando,d); toast('Deuda actualizada');
+  } else { d.id=uid(); S.deudas.push(d); toast('Deuda agregada'); }
+  cerrarFormas(); save(); render();
+});
+
+/* ── controles ── */
+$('btnAgregar').addEventListener('click',function(){abrirForma('activo')});
+$('obAgregar').addEventListener('click',function(){document.body.classList.remove('vacia');abrirForma('activo')});
+$('btnDeuda').addEventListener('click',function(){abrirForma('deuda')});
+$('btnCorte').addEventListener('click',function(){
+  var hoy=new Date(), f=hoy.getFullYear()+'-'+String(hoy.getMonth()+1).padStart(2,'0')+'-'+String(hoy.getDate()).padStart(2,'0');
+  var neto=totalActivos()-totalDeudas();
+  var ya=S.cortes.find(function(c){return c.f===f});
+  if(ya){ ya.v=neto; toast('Corte de hoy actualizado'); }
+  else{ S.cortes.push({f:f,v:neto}); toast('Corte guardado — '+f); }
+  save(); render();
+});
+$('inAporta').addEventListener('input',function(){ S.aporta=Math.max(0,parseFloat(this.value)||0); save(); renderPlan(); renderLibertad(); });
+$('inIngreso').addEventListener('input',function(){ S.ingreso=Math.max(0,parseFloat(this.value)||0); save(); renderLibertad(); });
+$('inTasa').addEventListener('input',function(){ S.tasa=parseFloat(this.value)||0; save(); renderLibertad(); });
+$('inFx').addEventListener('change',function(){ S.fx=Math.max(1,parseFloat(this.value)||17); this.value=S.fx; save(); render(); });
+$('inAporta').addEventListener('change',function(){ this.value=S.aporta; });
+$('inIngreso').addEventListener('change',function(){ this.value=S.ingreso; });
+
+$('btnExporta').addEventListener('click',function(){
+  var blob=new Blob([JSON.stringify(S,null,2)],{type:'application/json'});
+  var a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download='northpoint-oficina-respaldo.json';
+  a.click(); URL.revokeObjectURL(a.href);
+  toast('Respaldo exportado');
+});
+$('btnImporta').addEventListener('click',function(){ $('fileImporta').click(); });
+$('fileImporta').addEventListener('change',function(){
+  var file=this.files[0]; if(!file)return;
+  var rd=new FileReader();
+  rd.onload=function(){
+    try{
+      var p=JSON.parse(rd.result);
+      if(!p||typeof p!=='object'||p.v!==1) throw 0;
+      S=sanea(p); save(); sync(); render(); toast('Respaldo importado');
+    }catch(e){ toast('Ese archivo no es un respaldo válido'); }
+  };
+  rd.readAsText(file); this.value='';
+});
+$('btnBorrar').addEventListener('click',function(){
+  if(!confirm('¿Borrar TODO? Tus datos solo viven aquí — si no exportaste respaldo, no hay vuelta.'))return;
+  S=fresh(); save(); sync(); render(); toast('Oficina en cero');
+});
+
+function cargarDemo(){
+  S=fresh(); S.demo=true;
+  S.activos=[
+    {id:uid(),nombre:'Cetes directo',inst:'CETES',capa:'liquidez',moneda:'MXN',valor:180000},
+    {id:uid(),nombre:'Cuenta de nómina',inst:'BBVA',capa:'liquidez',moneda:'MXN',valor:64000},
+    {id:uid(),nombre:'Afore',inst:'XXI Banorte',capa:'retiro',moneda:'MXN',valor:310000},
+    {id:uid(),nombre:'PPR',inst:'Aseguradora',capa:'retiro',moneda:'MXN',valor:95000},
+    {id:uid(),nombre:'Depto en renta · Roma Norte',inst:'Escriturado',capa:'pasivos',moneda:'MXN',valor:2850000},
+    {id:uid(),nombre:'ETF S&P 500',inst:'GBM+',capa:'acciones',moneda:'USD',valor:21500},
+    {id:uid(),nombre:'ETF Nasdaq 100',inst:'GBM+',capa:'acciones',moneda:'USD',valor:8300},
+    {id:uid(),nombre:'Participación negocio familiar',inst:'Privado',capa:'alt',moneda:'MXN',valor:600000}
+  ];
+  S.deudas=[
+    {id:uid(),nombre:'Hipoteca del depto',moneda:'MXN',valor:1250000},
+    {id:uid(),nombre:'Tarjeta de crédito',moneda:'MXN',valor:38000}
+  ];
+  S.aporta=25000; S.ingreso=120000; S.tasa=7;
+  /* cortes de ejemplo: seis meses hacia atrás desde hoy */
+  var hoy=new Date(); S.cortes=[];
+  for(var i=6;i>=1;i--){
+    var d=new Date(hoy.getFullYear(),hoy.getMonth()-i,1);
+    var f=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-01';
+    S.cortes.push({f:f,v:2450000+ (6-i)*140000 + (i%2?38000:-22000)});
+  }
+  save(); sync(); render(); toast('Modo demo — datos de ejemplo');
+}
+function toggleDemo(){
+  if(S.demo){
+    if(!confirm('Salir del demo borra los datos de ejemplo. ¿Continuar?'))return;
+    S=fresh(); save(); sync(); render(); toast('Demo cerrado — oficina en cero');
+  }else{
+    if((S.activos.length||S.deudas.length)
+      && !confirm('El modo demo REEMPLAZA tus datos actuales por datos de ejemplo.\nExporta tu respaldo antes si los quieres conservar. ¿Continuar?'))return;
+    cargarDemo();
+  }
+}
+$('btnDemo').addEventListener('click',toggleDemo);
+$('chipDemo').addEventListener('click',toggleDemo);
+$('obDemo').addEventListener('click',cargarDemo);
+
+function sync(){
+  $('inAporta').value=S.aporta; $('inIngreso').value=S.ingreso;
+  $('inTasa').value=S.tasa; $('inFx').value=S.fx;
+}
+
+var toastT=null;
+function toast(msg){
+  var t=$('toast'); t.textContent=msg; t.classList.add('ver');
+  clearTimeout(toastT); toastT=setTimeout(function(){t.classList.remove('ver')},2400);
+}
+
+addEventListener('resize',function(){renderSpark()});
+sync(); render();
+</script>
+</body>
+</html>
