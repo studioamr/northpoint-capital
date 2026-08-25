@@ -1562,11 +1562,21 @@ function dibujaEvo(t){
   if(pts.length<2){ card.style.display='none'; return null; }
   card.style.display='';
   if(document.body.getAttribute('data-v')!=='portafolio') return null;
-  var cv=$('evo'), L=lienzo(cv,270); if(!L)return null;
-  var ctx=L.ctx, w=L.w, h=270, padL=92, padR=22;
   var CORTO_C=['LIQUIDEZ','RETIRO','PASIVOS','ACCIONES','ALT'];
-  var carriles=[{n:'NETO',c:'#EFECE7',get:function(p){return p.v},H:52}]
-    .concat(CAPAS.map(function(c,i){return {n:CORTO_C[i],c:c.c,get:function(p){return p.capas[c.k]||0},H:32}}));
+  /* solo carriles con historia: una capa sin dos cortes con capas no pinta
+     un carril vacío — el NETO crece y un solo aviso lo explica */
+  var cortesConCapas=pts.filter(function(p){return p.capas}).length;
+  var capasConDatos= cortesConCapas>=2? CAPAS.slice() : [];
+  var soloNeto=capasConDatos.length===0;
+  var carriles=[{n:'NETO',c:'#EFECE7',get:function(p){return p.v},H:soloNeto?120:52}]
+    .concat(capasConDatos.map(function(c){
+      var i=CAPAS.indexOf(c);
+      return {n:CORTO_C[i],c:c.c,get:function(p){return p.capas[c.k]||0},H:32};
+    }));
+  var hCss=12+carriles.reduce(function(a,cr){return a+cr.H+7},0)+(soloNeto?34:20);
+  var cv=$('evo'); cv.style.height=hCss+'px';
+  var L=lienzo(cv,hCss); if(!L)return null;
+  var ctx=L.ctx, w=L.w, h=hCss, padL=92, padR=22;
   var vmaxCapas=1, vmaxNeto=1;
   pts.forEach(function(p){
     vmaxNeto=Math.max(vmaxNeto,p.v);
@@ -1592,19 +1602,7 @@ function dibujaEvo(t){
     ctx.fillStyle=cr.c; ctx.beginPath(); ctx.arc(padL-13,cyM,3,0,7); ctx.fill();
     ctx.strokeStyle='rgba(255,255,255,.05)'; ctx.lineWidth=1;
     ctx.beginPath(); ctx.moveTo(padL,cyM); ctx.lineTo(w-padR,cyM); ctx.stroke();
-    if(idxs.length<2){
-      /* la capa se llena con los cortes nuevos — hasta entonces, lo dice */
-      ctx.fillStyle='rgba(239,236,231,.28)'; ctx.font='7px ui-monospace,monospace'; ctx.textAlign='center';
-      ctx.fillText('SE LLENA CON TUS PRÓXIMOS CORTES',(padL+w-padR)/2,cyM-6);
-      if(idxs.length===1){
-        var iU=idxs[0], vU=cr.get(pts[iU]);
-        var rU=2.4+6.2*Math.sqrt(vU/vmax);
-        ctx.fillStyle=cr.c; ctx.beginPath(); ctx.arc(X(iU),cyM,rU,0,7); ctx.fill();
-        ctx.strokeStyle='#0E0F0C'; ctx.lineWidth=2;
-        ctx.beginPath(); ctx.arc(X(iU),cyM,rU,0,7); ctx.stroke();
-      }
-      return;
-    }
+    if(idxs.length<2) return;
     ctx.save();
     ctx.strokeStyle=cr.c; ctx.globalAlpha=.75; ctx.lineWidth=1.4;
     ctx.shadowColor=cr.c; ctx.shadowBlur=6;
@@ -1649,6 +1647,10 @@ function dibujaEvo(t){
   ctx.fillStyle='rgba(239,236,231,.4)'; ctx.font='8px ui-monospace,monospace';
   ctx.textAlign='left';  ctx.fillText(pts[0].f,padL,h-6);
   ctx.textAlign='right'; ctx.fillText(pts[pts.length-1].f,w-padR,h-6);
+  if(soloNeto){
+    ctx.fillStyle='rgba(239,236,231,.32)'; ctx.font='7.5px ui-monospace,monospace'; ctx.textAlign='center';
+    ctx.fillText('LOS HILOS POR CAPA SE LLENAN CON TUS PRÓXIMOS CORTES',(padL+w-padR)/2,h-6);
+  }
   return evoHoverI;
 }
 (function(){
