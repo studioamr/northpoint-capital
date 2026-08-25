@@ -456,8 +456,8 @@ button.lx:hover{color:var(--cream)}
     <div class="cap-chips" id="sysLeyenda" style="margin:12px 0 0"></div>
   </div>
   <div class="card" id="evoCard" style="margin-top:14px;display:none"><svg class="spk" viewBox="0 0 64 64" fill="currentColor" aria-hidden="true"><path d="M32 1 37.2 26.8 63 32 37.2 37.2 32 63 26.8 37.2 1 32 26.8 26.8Z"/></svg>
-    <h2>Evolución por capas</h2>
-    <p class="sub">Cómo se ha movido cada capa, corte a corte. Recorre la línea con el cursor.</p>
+    <h2>El collar</h2>
+    <p class="sub">Cada hilo es una capa; cada cuenta, un corte del mes — sube, baja y engorda con el valor. Recórrelo.</p>
     <canvas id="evo" style="width:100%;height:230px;display:block"></canvas>
     <div class="cap-chips" id="evoLeyenda" style="margin:12px 0 0"></div>
   </div>
@@ -472,20 +472,9 @@ button.lx:hover{color:var(--cream)}
   <div class="col">
 
     <div class="card" id="portafolio"><svg class="spk" viewBox="0 0 64 64" fill="currentColor" aria-hidden="true"><path d="M32 1 37.2 26.8 63 32 37.2 37.2 32 63 26.8 37.2 1 32 26.8 26.8Z"/></svg>
-      <h2>Composición del portafolio</h2>
-      <p class="sub">Lo que tienes contra tu estrategia por capas. La meta la defines tú.</p>
-      <div class="port-hero">
-        <div class="donut-wrap" aria-hidden="true">
-          <div class="donut" id="donut"></div>
-          <div class="donut-c"><b id="donutTot">$0</b><span>ACTIVOS</span></div>
-        </div>
-        <div class="port-segs">
-          <p class="seg-lab">TU PORTAFOLIO</p>
-          <div class="seg" id="segReal"></div>
-          <p class="seg-lab" style="margin-top:12px">TU ESTRATEGIA</p>
-          <div class="seg" id="segMeta"></div>
-        </div>
-      </div>
+      <h2>Las mareas</h2>
+      <p class="sub">Cada vaso es una capa: el líquido es lo que tienes; la línea punteada, tu meta. Pasa el cursor.</p>
+      <canvas id="mareas" style="width:100%;height:260px;display:block"></canvas>
       <div id="capaRows" style="margin-top:12px"></div>
       <p class="meta-warn" id="metaWarn">Las metas suman <b id="metaSuma"></b>% — ajústalas para llegar a 100%.</p>
       <div id="titularBloque" style="display:none">
@@ -799,16 +788,14 @@ function render(){
   renderSeg(); renderPlan(); renderLibertad(); renderListas(); renderConc(); renderCortes(); renderSpark();
   sysDatos(); leyendaCapas('sysLeyenda'); leyendaCapas('evoLeyenda'); dibujaEvo();
   $('sistemaCard').style.display= S.activos.length? 'block':'none';
-  if(REDUCIDO){ dibujaSistema(0); dibujaFlujo(0); }
+  if(REDUCIDO){ dibujaSistema(0); dibujaFlujo(0); dibujaMareas(0); }
 }
 
 function renderSeg(){
   var m=porCapa(), act=totalActivos();
-  var segR='',segM='',rows='';
+  var rows='';
   CAPAS.forEach(function(c){
     var v=m[c.k]||0, pr=act>0? v/act*100 : 0;
-    segR+='<i data-tip="'+c.n+' — '+mxn(v)+' ('+pr.toFixed(1)+'%)" style="flex:'+Math.max(pr,0.001)+';background:'+c.c+'"></i>';
-    segM+='<i data-tip="'+c.n+' — META '+(S.metas[c.k]||0)+'%" style="flex:'+Math.max(S.metas[c.k]||0,0.001)+';background:'+c.c+'"></i>';
     var extraCapa= (c.k==='liquidez'&&S.gasto>0)? ' · '+(v/S.gasto).toFixed(1)+' MESES DE GASTO':'';
     rows+='<div class="capa-row"><u style="background:'+c.c+'"></u>'
       +'<span class="nom">'+c.n+'<small>'+c.s+extraCapa+'</small></span>'
@@ -816,28 +803,8 @@ function renderSeg(){
       +'<span class="meta-in"><input type="number" min="0" max="100" step="1" value="'+(S.metas[c.k]||0)+'" data-meta="'+c.k+'" aria-label="Meta '+c.n+'"><span>% META</span></span>'
       +'</div>';
   });
-  $('segReal').innerHTML= act>0? segR : '<i style="flex:1;background:rgba(255,255,255,.08)"></i>';
-  $('segMeta').innerHTML=segM;
-  /* la dona: conic-gradient con los mismos colores de capa */
-  donutPorciones=[];
-  if(act>0){
-    var acum=0, stops=[], GAP=0.6; /* ~2px de superficie entre segmentos */
-    CAPAS.forEach(function(c){
-      var p=(m[c.k]||0)/act*100;
-      if(p>0.05){
-        donutPorciones.push({n:c.n,v:m[c.k]||0,de:acum,a:acum+p});
-        stops.push('#0E0F0C '+acum.toFixed(2)+'% '+(acum+GAP/2).toFixed(2)+'%');
-        stops.push(c.c+' '+(acum+GAP/2).toFixed(2)+'% '+(acum+p-GAP/2).toFixed(2)+'%');
-        stops.push('#0E0F0C '+(acum+p-GAP/2).toFixed(2)+'% '+(acum+p).toFixed(2)+'%');
-        acum+=p;
-      }
-    });
-    $('donut').style.background='conic-gradient('+stops.join(',')+')';
-  } else {
-    $('donut').style.background='conic-gradient(rgba(255,255,255,.08) 0 100%)';
-  }
-  $('donutTot').textContent=mxn(act);
   $('capaRows').innerHTML=rows;
+  dibujaMareas(REDUCIDO?0:performance.now()/1000);
   var suma=CAPAS.reduce(function(a,c){return a+(S.metas[c.k]||0)},0);
   $('metaWarn').style.display= suma===100?'none':'block';
   $('metaSuma').textContent=suma;
@@ -1360,30 +1327,107 @@ function leyendaCapas(id){
   }).join('');
 }
 
-/* ── tooltips por-marca: dona y barras de composición ── */
-var donutPorciones=[];
+/* ── tooltips por-marca en la píldora del plan ── */
 (function(){
-  var d=$('donut'); if(!d)return;
-  d.addEventListener('mousemove',function(e){
-    var r=d.getBoundingClientRect(), cx=r.width/2, cy=r.height/2;
-    var dx=e.clientX-r.left-cx, dy=e.clientY-r.top-cy;
-    var dist=Math.hypot(dx,dy), R=r.width/2;
-    if(dist<R*0.56||dist>R){ tipFuera(); return; }
-    var ang=(Math.atan2(dy,dx)*180/Math.PI+90+360)%360;
-    var p=donutPorciones.find(function(s){return ang>=s.de&&ang<s.a});
-    if(p) tipVer(e.clientX,e.clientY,'<b>'+p.n+'</b><br>'+mxn(p.v)+' · '+(p.a-p.de).toFixed(1)+'%');
+  var el=$('planSeg'); if(!el)return;
+  el.addEventListener('mousemove',function(e){
+    var t=e.target;
+    if(t&&t.tagName==='I'&&t.getAttribute('data-tip')) tipVer(e.clientX,e.clientY,t.getAttribute('data-tip'));
     else tipFuera();
   });
-  d.addEventListener('mouseleave',tipFuera);
-  ['segReal','segMeta','planSeg'].forEach(function(id){
-    var el=$(id); if(!el)return;
-    el.addEventListener('mousemove',function(e){
-      var t=e.target;
-      if(t&&t.tagName==='I'&&t.getAttribute('data-tip')) tipVer(e.clientX,e.clientY,t.getAttribute('data-tip'));
-      else tipFuera();
+  el.addEventListener('mouseleave',tipFuera);
+})();
+
+/* ── LAS MAREAS · cinco vasos de vidrio: el líquido es lo real, la punteada la meta ── */
+var marMouse=null;
+function dibujaMareas(t){
+  var cv=$('mareas'); if(!cv||document.body.getAttribute('data-v')!=='portafolio')return;
+  var L=lienzo(cv,260); if(!L)return;
+  var ctx=L.ctx, w=L.w, h=260;
+  var m=porCapa(), act=totalActivos();
+  if(!act){
+    ctx.fillStyle='rgba(239,236,231,.35)'; ctx.font='9px ui-monospace,monospace'; ctx.textAlign='center';
+    ctx.fillText('REGISTRA ACTIVOS Y LAS MAREAS SUBEN',w/2,h/2); return;
+  }
+  var n=CAPAS.length, tubW=Math.min(64,(w-30)/(n*1.7));
+  var gap=(w-n*tubW)/(n+1), top=30, bot=h-36, tubH=bot-top;
+  /* una sola escala para los cinco vasos: llena el máximo entre real y metas */
+  var maxPct=10;
+  CAPAS.forEach(function(c){ maxPct=Math.max(maxPct,(m[c.k]||0)/act*100,S.metas[c.k]||0); });
+  maxPct=Math.min(100,maxPct*1.12+3);
+  ctx.fillStyle='rgba(239,236,231,.5)'; ctx.font='9px ui-monospace,monospace'; ctx.textAlign='right';
+  ctx.fillText('ACTIVOS '+mxn(act),w-6,14);
+  var CORTO=['LIQUIDEZ','RETIRO','PASIVOS','ACCIONES','ALT'];
+  var hoverI=-1;
+  if(marMouse){
+    CAPAS.forEach(function(c,i){
+      var x=gap+i*(tubW+gap);
+      if(marMouse.x>=x-4&&marMouse.x<=x+tubW+4&&marMouse.y>=top-6&&marMouse.y<=bot+26) hoverI=i;
     });
-    el.addEventListener('mouseleave',tipFuera);
+  }
+  function vaso(x){
+    var rr=13;
+    ctx.beginPath();
+    ctx.moveTo(x+rr,top); ctx.lineTo(x+tubW-rr,top); ctx.arcTo(x+tubW,top,x+tubW,top+rr,rr);
+    ctx.lineTo(x+tubW,bot-rr); ctx.arcTo(x+tubW,bot,x+tubW-rr,bot,rr);
+    ctx.lineTo(x+rr,bot); ctx.arcTo(x,bot,x,bot-rr,rr);
+    ctx.lineTo(x,top+rr); ctx.arcTo(x,top,x+rr,top,rr);
+    ctx.closePath();
+  }
+  CAPAS.forEach(function(c,i){
+    var x=gap+i*(tubW+gap);
+    var v=m[c.k]||0, pr=v/act*100;
+    var lvl=Math.max(0.015,pr/maxPct), yS=bot-tubH*lvl;
+    vaso(x);
+    ctx.fillStyle='rgba(255,255,255,.035)'; ctx.fill();
+    ctx.strokeStyle= i===hoverI? 'rgba(255,255,255,.45)':'rgba(255,255,255,.14)';
+    ctx.lineWidth=1; ctx.stroke();
+    ctx.save(); vaso(x); ctx.clip();
+    ctx.beginPath(); ctx.moveTo(x,bot);
+    for(var px=0;px<=tubW;px+=2){
+      var ola= REDUCIDO?0: Math.sin(t*1.7+i*1.3+px*0.12)*2.4+Math.sin(t*0.9+i*0.7+px*0.05)*1.5;
+      ctx.lineTo(x+px, yS+ola);
+    }
+    ctx.lineTo(x+tubW,bot); ctx.closePath();
+    var gr=ctx.createLinearGradient(0,yS,0,bot);
+    gr.addColorStop(0,c.c+'e6'); gr.addColorStop(1,c.c+'59');
+    ctx.fillStyle=gr;
+    ctx.shadowColor=c.c; ctx.shadowBlur= i===hoverI?22:12;
+    ctx.fill(); ctx.shadowBlur=0;
+    if(!REDUCIDO&&lvl>0.06){
+      for(var b=0;b<2;b++){
+        var ciclo=Math.max(10,tubH*lvl-10);
+        var yb=bot-6-((t*(9+i*2.4+b*5)+b*31+i*17)%ciclo);
+        ctx.fillStyle='rgba(255,255,255,.4)';
+        ctx.beginPath(); ctx.arc(x+tubW*(0.3+b*0.4)+Math.sin(t*2+b+i)*2, yb, 1.4,0,7); ctx.fill();
+      }
+    }
+    ctx.restore();
+    var yM=bot-tubH*Math.min(1,(S.metas[c.k]||0)/maxPct);
+    ctx.setLineDash([4,3]);
+    ctx.strokeStyle='rgba(239,236,231,.85)'; ctx.lineWidth=1.5;
+    ctx.beginPath(); ctx.moveTo(x-4,yM); ctx.lineTo(x+tubW+4,yM); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.textAlign='center';
+    ctx.fillStyle='rgba(239,236,231,.5)'; ctx.font='7.5px ui-monospace,monospace';
+    ctx.fillText(CORTO[i],x+tubW/2,h-22);
+    ctx.fillStyle='rgba(239,236,231,.92)'; ctx.font='10px ui-monospace,monospace';
+    ctx.fillText(pr.toFixed(1)+'%',x+tubW/2,h-8);
   });
+  if(hoverI>=0&&marMouse){
+    var cH=CAPAS[hoverI], vH=m[cH.k]||0, prH=vH/act*100, dm=prH-(S.metas[cH.k]||0);
+    tipVer(marMouse.cx,marMouse.cy,'<b>'+cH.n+'</b><br>'+mxn(vH)+' · '+prH.toFixed(1)+'%<br>META '+(S.metas[cH.k]||0)+'% · '+(dm>=0?'+':'')+dm.toFixed(1)+' PP');
+    cv.style.cursor='pointer';
+  } else if(marMouse){ tipFuera(); cv.style.cursor='default'; }
+}
+(function(){
+  var cv=$('mareas'); if(!cv)return;
+  cv.addEventListener('mousemove',function(e){
+    var r=cv.getBoundingClientRect();
+    marMouse={x:e.clientX-r.left,y:e.clientY-r.top,cx:e.clientX,cy:e.clientY};
+    if(REDUCIDO) dibujaMareas(0);
+  });
+  cv.addEventListener('mouseleave',function(){ marMouse=null; tipFuera(); cv.style.cursor='default'; if(REDUCIDO)dibujaMareas(0); });
 })();
 
 /* ── EL SISTEMA · el patrimonio como sistema orbital ── */
@@ -1460,62 +1504,102 @@ function dibujaSistema(t){
   cv.addEventListener('mouseleave',function(){ sysMouse=null; sysHover=-1; tipFuera(); cv.style.cursor='default'; if(REDUCIDO)dibujaSistema(0); });
 })();
 
-/* ── EVOLUCIÓN POR CAPAS · área apilada con crosshair ── */
-var evoHoverX=null;
+/* ── EL COLLAR · un hilo de luz por capa; cada cuenta es un corte del mes.
+   Múltiplos pequeños: cada hilo trae su propia banda (como un sparkline);
+   el TAMAÑO de la cuenta es comparable entre hilos — escala global. ── */
+var evoHoverI=null;
 function evoPuntos(){ return S.cortes.filter(function(c){return c.capas}); }
-function dibujaEvo(){
+function dibujaEvo(t){
+  t=t||0;
   var card=$('evoCard'), pts=evoPuntos();
   if(pts.length<2){ card.style.display='none'; return null; }
   card.style.display='block';
-  var cv=$('evo'), L=lienzo(cv,230); if(!L)return null;
-  var ctx=L.ctx, w=L.w, h=230, padL=10, padR=10, top=16, base=h-26;
-  var maxA=1; pts.forEach(function(p){ var s=0; CAPAS.forEach(function(c){s+=p.capas[c.k]||0}); maxA=Math.max(maxA,s); });
-  function X(i){ return padL+i/(pts.length-1)*(w-padL-padR); }
-  function Y(v){ return base-(v/maxA)*(base-top); }
-  /* bandas apiladas, orden fijo de capa, de abajo hacia arriba */
-  var acumAbajo=pts.map(function(){return 0});
-  CAPAS.forEach(function(c){
-    var arr=pts.map(function(p,i){ return acumAbajo[i]+(p.capas[c.k]||0); });
-    ctx.beginPath();
-    arr.forEach(function(v,i){ i?ctx.lineTo(X(i),Y(v)):ctx.moveTo(X(0),Y(v)); });
-    for(var i=pts.length-1;i>=0;i--) ctx.lineTo(X(i),Y(acumAbajo[i]));
-    ctx.closePath();
-    ctx.fillStyle=c.c+'3d'; ctx.fill();
-    ctx.beginPath();
-    arr.forEach(function(v,i){ i?ctx.lineTo(X(i),Y(v)):ctx.moveTo(X(0),Y(v)); });
-    ctx.strokeStyle='#0E0F0C'; ctx.lineWidth=4; ctx.stroke();  /* separador de superficie */
-    ctx.strokeStyle=c.c; ctx.lineWidth=2; ctx.stroke();
-    acumAbajo=arr;
+  var cv=$('evo'), L=lienzo(cv,270); if(!L)return null;
+  var ctx=L.ctx, w=L.w, h=270, padL=92, padR=22;
+  var carriles=[{n:'NETO',c:'#EFECE7',get:function(p){return p.v},H:52}]
+    .concat(CAPAS.map(function(c){return {n:c.n,c:c.c,get:function(p){return p.capas[c.k]||0},H:32}}));
+  var vmaxCapas=1, vmaxNeto=1;
+  pts.forEach(function(p){
+    vmaxNeto=Math.max(vmaxNeto,p.v);
+    CAPAS.forEach(function(c){ vmaxCapas=Math.max(vmaxCapas,p.capas[c.k]||0); });
   });
-  /* fechas de los extremos, en tinta tenue */
-  ctx.fillStyle='rgba(239,236,231,.4)'; ctx.font='8px ui-monospace,monospace';
-  ctx.textAlign='left';  ctx.fillText(pts[0].f,padL,h-8);
-  ctx.textAlign='right'; ctx.fillText(pts[pts.length-1].f,w-padR,h-8);
-  /* crosshair */
-  if(evoHoverX!==null){
-    var i=Math.round((evoHoverX-padL)/((w-padL-padR)/(pts.length-1)));
-    i=Math.max(0,Math.min(pts.length-1,i));
-    ctx.strokeStyle='rgba(239,236,231,.35)'; ctx.lineWidth=1;
+  function X(i){ return padL+i/(pts.length-1)*(w-padL-padR); }
+  if(evoHoverI!==null){
+    ctx.strokeStyle='rgba(239,236,231,.18)'; ctx.lineWidth=1;
     ctx.setLineDash([3,4]); ctx.beginPath();
-    ctx.moveTo(X(i),top); ctx.lineTo(X(i),base); ctx.stroke(); ctx.setLineDash([]);
-    return i;
+    ctx.moveTo(X(evoHoverI),8); ctx.lineTo(X(evoHoverI),h-20); ctx.stroke(); ctx.setLineDash([]);
   }
-  return null;
+  var y0=12;
+  carriles.forEach(function(cr,li){
+    var yT=y0, yB=y0+cr.H, cyM=(yT+yB)/2; y0=yB+7;
+    var vals=pts.map(cr.get);
+    var mn=Math.min.apply(null,vals), mx=Math.max.apply(null,vals);
+    function Y(v){ return mx===mn? cyM : yB-5-((v-mn)/(mx-mn))*(cr.H-10); }
+    var vmax= li===0? vmaxNeto : vmaxCapas;
+    ctx.fillStyle='rgba(239,236,231,.55)'; ctx.font='8px ui-monospace,monospace'; ctx.textAlign='right';
+    ctx.fillText(cr.n.toUpperCase(),padL-22,cyM+3);
+    ctx.fillStyle=cr.c; ctx.beginPath(); ctx.arc(padL-13,cyM,3,0,7); ctx.fill();
+    ctx.strokeStyle='rgba(255,255,255,.05)'; ctx.lineWidth=1;
+    ctx.beginPath(); ctx.moveTo(padL,cyM); ctx.lineTo(w-padR,cyM); ctx.stroke();
+    ctx.save();
+    ctx.strokeStyle=cr.c; ctx.globalAlpha=.75; ctx.lineWidth=1.4;
+    ctx.shadowColor=cr.c; ctx.shadowBlur=6;
+    ctx.beginPath();
+    pts.forEach(function(p,i){
+      var x=X(i), y=Y(cr.get(p));
+      if(!i) ctx.moveTo(x,y);
+      else { var xp=X(i-1), yp=Y(cr.get(pts[i-1])), mxp=(xp+x)/2;
+             ctx.bezierCurveTo(mxp,yp,mxp,y,x,y); }
+    });
+    ctx.stroke(); ctx.restore();
+    if(!REDUCIDO){
+      var ph=((t*0.10)+li*0.16)%1, seg=ph*(pts.length-1), i0=Math.floor(seg), fr=seg-i0;
+      var i1=Math.min(pts.length-1,i0+1);
+      var sx=X(i0)+(X(i1)-X(i0))*fr;
+      var sy=Y(cr.get(pts[i0]))+(Y(cr.get(pts[i1]))-Y(cr.get(pts[i0])))*fr;
+      ctx.save(); ctx.shadowColor='#fff'; ctx.shadowBlur=9;
+      ctx.fillStyle='rgba(255,255,255,.95)';
+      ctx.beginPath(); ctx.arc(sx,sy,1.5,0,7); ctx.fill(); ctx.restore();
+    }
+    pts.forEach(function(p,i){
+      var x=X(i), y=Y(cr.get(p));
+      var r=2.4+6.2*Math.sqrt(cr.get(p)/vmax);
+      ctx.save();
+      ctx.shadowColor=cr.c; ctx.shadowBlur= i===evoHoverI?16:8;
+      ctx.fillStyle=cr.c;
+      ctx.beginPath(); ctx.arc(x,y,r,0,7); ctx.fill();
+      ctx.shadowBlur=0;
+      ctx.strokeStyle='#0E0F0C'; ctx.lineWidth=2;
+      ctx.beginPath(); ctx.arc(x,y,r,0,7); ctx.stroke();
+      if(i===evoHoverI){
+        ctx.strokeStyle='rgba(255,255,255,.85)'; ctx.lineWidth=1.2;
+        ctx.beginPath(); ctx.arc(x,y,r+2.5,0,7); ctx.stroke();
+      }
+      ctx.fillStyle='rgba(255,255,255,.5)';
+      ctx.beginPath(); ctx.arc(x-r/3,y-r/3,Math.max(0.8,r/4),0,7); ctx.fill();
+      ctx.restore();
+    });
+  });
+  ctx.fillStyle='rgba(239,236,231,.4)'; ctx.font='8px ui-monospace,monospace';
+  ctx.textAlign='left';  ctx.fillText(pts[0].f,padL,h-6);
+  ctx.textAlign='right'; ctx.fillText(pts[pts.length-1].f,w-padR,h-6);
+  return evoHoverI;
 }
 (function(){
   var cv=$('evo'); if(!cv)return;
   cv.addEventListener('mousemove',function(e){
-    var r=cv.getBoundingClientRect();
-    evoHoverX=e.clientX-r.left;
-    var i=dibujaEvo();
-    if(typeof i==='number'){
-      var p=evoPuntos()[i], filas=CAPAS.map(function(c){
-        return '<u style="display:inline-block;width:7px;height:7px;border-radius:50%;background:'+c.c+';margin-right:6px"></u>'+c.n+' — '+mxn(p.capas[c.k]||0);
-      }).join('<br>');
-      tipVer(e.clientX,e.clientY,'<b>'+p.f+'</b><br>'+filas+'<br><b>NETO '+mxn(p.v)+'</b>');
-    }
+    var r=cv.getBoundingClientRect(), pts=evoPuntos();
+    if(pts.length<2){tipFuera();return}
+    var padL=92, padR=22, mx=e.clientX-r.left;
+    var i=Math.round((mx-padL)/((r.width-padL-padR)/(pts.length-1)));
+    evoHoverI=Math.max(0,Math.min(pts.length-1,i));
+    var p=pts[evoHoverI], filas=CAPAS.map(function(c){
+      return '<u style="display:inline-block;width:7px;height:7px;border-radius:50%;background:'+c.c+';margin-right:6px"></u>'+c.n+' — '+mxn(p.capas[c.k]||0);
+    }).join('<br>');
+    tipVer(e.clientX,e.clientY,'<b>'+p.f+'</b><br>'+filas+'<br><b>NETO '+mxn(p.v)+'</b>');
+    if(REDUCIDO) dibujaEvo(0);
   });
-  cv.addEventListener('mouseleave',function(){ evoHoverX=null; tipFuera(); dibujaEvo(); });
+  cv.addEventListener('mouseleave',function(){ evoHoverI=null; tipFuera(); if(REDUCIDO)dibujaEvo(0); });
 })();
 
 /* ── EL FLUJO · la aportación viajando a sus capas, con partículas de luz ── */
@@ -1616,10 +1700,11 @@ function dibujaFlujo(t){
     var t=ts/1000;
     fluDt= prev===null? 0.016 : Math.min(0.05,(ts-prev)/1000);
     prev=ts;
-    dibujaSistema(t); dibujaFlujo(t);
+    dibujaSistema(t); dibujaFlujo(t); dibujaMareas(t);
+    if(document.body.getAttribute('data-v')==='resumen') dibujaEvo(t);
     requestAnimationFrame(marco);
   }
-  if(REDUCIDO){ setTimeout(function(){dibujaSistema(0);dibujaFlujo(0)},80); }
+  if(REDUCIDO){ setTimeout(function(){dibujaSistema(0);dibujaFlujo(0);dibujaMareas(0)},80); }
   else requestAnimationFrame(marco);
 })();
 
@@ -1658,6 +1743,7 @@ function verVista(v,primerCarga){
   }
   if(v==='resumen'){ setTimeout(function(){renderSpark();dibujaEvo();dibujaSistema(performance.now()/1000)},40); if(!primerCarga) animarNeto(); }
   if(v==='plan') setTimeout(function(){dibujaFlujo(performance.now()/1000)},40);
+  if(v==='portafolio') setTimeout(function(){dibujaMareas(performance.now()/1000)},40);
   if(location.hash!=='#/'+v){ try{history.replaceState(null,'','#/'+v)}catch(e){} }
   window.scrollTo(0,0);
 }
@@ -1672,7 +1758,7 @@ $('tbActivo').addEventListener('click',function(){
 addEventListener('hashchange',function(){verVista(location.hash.replace('#/',''))});
 addEventListener('resize',function(){
   renderSpark(); dibujaEvo();
-  if(REDUCIDO){ dibujaSistema(0); dibujaFlujo(0); }
+  if(REDUCIDO){ dibujaSistema(0); dibujaFlujo(0); dibujaMareas(0); }
 });
 sync(); render();
 verVista((location.hash||'#/resumen').replace('#/',''), true);
