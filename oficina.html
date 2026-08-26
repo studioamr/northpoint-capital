@@ -327,11 +327,15 @@ input[type=range]::-moz-range-thumb{width:14px;height:14px;border-radius:50%;bac
 .plan-row .bar{height:4px;border-radius:3px;background:rgba(16,17,10,.08);margin-top:5px;overflow:hidden}
 .plan-row .bar i{display:block;height:100%;border-radius:3px}
 .plan-row .monto{font-family:var(--fm);font-size:12px;color:var(--cream);text-align:right}
-.chat-hilo{display:flex;flex-direction:column;gap:12px;margin-bottom:14px}
-.burbuja{background:rgba(85,70,240,.08);border:1px solid rgba(85,70,240,.18);border-radius:16px 16px 16px 4px;padding:13px 15px;position:relative}
+.chat-hilo{display:flex;flex-direction:column;gap:12px;margin-bottom:14px;max-height:440px;overflow-y:auto;padding-right:4px}
+.burbuja{padding:13px 15px;position:relative;max-width:min(560px,86%)}
+.burbuja.cliente{align-self:flex-end;background:rgba(85,70,240,.10);border:1px solid rgba(85,70,240,.20);border-radius:16px 16px 4px 16px}
+.burbuja.analista{align-self:flex-start;background:rgba(255,255,255,.72);border:1px solid var(--borde);border-radius:16px 16px 16px 4px}
+.burbuja.analista em{display:block;font-style:normal;font-family:var(--fm);font-size:8px;letter-spacing:.14em;color:var(--indigo);margin-bottom:6px}
 .burbuja p{font-size:13.5px;color:var(--cream);line-height:1.55;margin:0 0 6px}
 .burbuja small{font-family:var(--fm);font-size:8.5px;letter-spacing:.06em;color:var(--tenue)}
-.burbuja-ops{position:absolute;top:10px;right:10px;display:flex;gap:6px}
+.burbuja-ops{position:absolute;top:10px;right:10px;display:flex;gap:6px;opacity:0;transition:opacity .2s}
+.burbuja.cliente:hover .burbuja-ops,.burbuja.cliente:focus-within .burbuja-ops{opacity:1}
 .chat-txt{width:100%;min-height:84px;resize:vertical;border-radius:12px;padding:12px 14px;font-size:13.5px;line-height:1.5;margin-bottom:10px}
 .chat-acc{display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap}
 .plan-intro{font-size:13.5px;color:var(--suave);margin:2px 0 14px}
@@ -555,6 +559,8 @@ body.tema-negro .fruta-velo{background:rgba(0,0,0,.6)}
 body.tema-negro .form input,body.tema-negro .form select,body.tema-negro .form textarea{background:rgba(255,255,255,.08);color:var(--cream);border:1px solid var(--borde)}
 body.tema-negro .form select option{background:#15160F;color:var(--cream)}
 body.tema-negro .chat-txt{background:rgba(255,255,255,.07);color:var(--cream)}
+body.tema-negro .burbuja.analista{background:rgba(255,255,255,.08)}
+body.tema-negro .burbuja.analista em{color:#8B7FF0}
 body.tema-negro .tema-opt{background:rgba(255,255,255,.06)}
 body.tema-negro .ley2-row{border-bottom-color:rgba(255,255,255,.09)}
 body.tema-negro .pr2-aldia{background:rgba(255,255,255,.06)}
@@ -723,13 +729,12 @@ body.tema-negro .num-meta{color:#8B7FF0}
     </div>
 
     <div class="card" id="chat"><svg class="spk" viewBox="0 0 64 64" fill="currentColor" aria-hidden="true"><path d="M32 1 37.2 26.8 63 32 37.2 37.2 32 63 26.8 37.2 1 32 26.8 26.8Z"/></svg>
-      <h2>Chat con tu asesor</h2>
-      <p class="sub">Apunta aquí tus dudas — tu asesor NORTHPOINT las revisa contigo en tu sesión. O mándalas ahora por WhatsApp.</p>
+      <h2>Chat con tu analista</h2>
+      <p class="sub">Escribe tu duda y tu analista NORTHPOINT te contesta aquí mismo.</p>
       <div class="chat-hilo" id="chatHilo"></div>
       <textarea id="chatTxt" class="chat-txt" maxlength="600" placeholder="Escribe tu duda… por ejemplo: ¿por qué bajó mi capa de acciones este mes?"></textarea>
       <div class="chat-acc">
-        <button class="btn btn-g" id="chatGuardar">Guardar para mi sesión</button>
-        <button class="btn" id="chatWa">Enviar por WhatsApp →</button>
+        <button class="btn" id="chatEnviar">Enviar →</button>
       </div>
     </div>
 
@@ -834,8 +839,8 @@ function sanea(p){
   s.fxFecha=fechaOk(p.fxFecha);
   s.ultimoExport=fechaOk(p.ultimoExport);
   s.tema= p.tema==='negro'?'negro':'blanco';
-  if(Array.isArray(p.chat)) s.chat=p.chat.filter(function(m){return m&&typeof m.txt==='string';}).slice(-50)
-    .map(function(m){return {f:fechaOk(m.f)||hoyISO(), txt:String(m.txt).slice(0,600)};});
+  if(Array.isArray(p.chat)) s.chat=p.chat.filter(function(m){return m&&typeof m.txt==='string';}).slice(-80)
+    .map(function(m){return {f:fechaOk(m.f)||hoyISO(), de:m.de==='analista'?'analista':'cliente', txt:String(m.txt).slice(0,600)};});
   if(p.metas&&typeof p.metas==='object'){
     CAPAS.forEach(function(c){ s.metas[c.k]=Math.min(100,Math.max(0,num(p.metas[c.k],c.meta))); });
   }
@@ -1236,18 +1241,22 @@ function renderChat(){
   var h=$('chatHilo'); if(!h) return;
   S.chat=S.chat||[];
   h.innerHTML= S.chat.length? S.chat.map(function(msg,i){
-    return '<div class="burbuja"><p>'+esc(msg.txt)+'</p><small>'+esc(fCorta(msg.f))+' · guardada para tu asesor</small>'
-      +'<span class="burbuja-ops"><a class="op" target="_blank" rel="noopener" href="https://api.whatsapp.com/send?text='+encodeURIComponent('Duda para mi asesor NORTHPOINT: '+msg.txt)+'">WHATSAPP</a>'
-      +'<button class="op rojo" data-delmsg="'+i+'" aria-label="Borrar duda">×</button></span></div>';
-  }).join('') : '<div class="vacio">Sin dudas guardadas todavía. Escribe la primera abajo.</div>';
+    if(msg.de==='analista'){
+      return '<div class="burbuja analista"><em>NORTHPOINT · TU ANALISTA</em><p>'+esc(msg.txt)+'</p><small>'+esc(fCorta(msg.f))+'</small></div>';
+    }
+    var nota=(i===S.chat.length-1)?' · enviada — tu analista te contesta aquí mismo':'';
+    return '<div class="burbuja cliente"><p>'+esc(msg.txt)+'</p><small>'+esc(fCorta(msg.f))+nota+'</small>'
+      +'<span class="burbuja-ops"><button class="op rojo" data-delmsg="'+i+'" aria-label="Borrar mensaje">×</button></span></div>';
+  }).join('') : '<div class="vacio">Sin mensajes todavía. Escribe tu primera duda abajo.</div>';
   h.querySelectorAll('[data-delmsg]').forEach(function(b){ b.addEventListener('click',function(){
     S.chat.splice(+b.getAttribute('data-delmsg'),1); save(); renderChat();
   }); });
+  h.scrollTop=h.scrollHeight;
 }
-$('chatGuardar').addEventListener('click',function(){
+$('chatEnviar').addEventListener('click',function(){
   var tx=$('chatTxt').value.trim(); if(!tx){ toast('Escribe tu duda primero'); return; }
-  S.chat=S.chat||[]; S.chat.push({f:hoyISO(), txt:tx}); if(S.chat.length>50) S.chat.shift();
-  $('chatTxt').value=''; save(); renderChat(); toast('Guardada — tu asesor la revisa contigo');
+  S.chat=S.chat||[]; S.chat.push({f:hoyISO(), de:'cliente', txt:tx}); if(S.chat.length>80) S.chat.shift();
+  $('chatTxt').value=''; save(); renderChat(); toast('Enviada — tu analista te contesta aquí mismo');
 });
 function aplicaTema(){
   var neg=S.tema==='negro';
@@ -1257,11 +1266,6 @@ function aplicaTema(){
 }
 $('temaBlanco').addEventListener('click',function(){ S.tema='blanco'; save(); aplicaTema(); });
 $('temaNegro').addEventListener('click',function(){ S.tema='negro'; save(); aplicaTema(); });
-$('chatWa').addEventListener('click',function(){
-  var tx=$('chatTxt').value.trim() || (S.chat&&S.chat.length? S.chat[S.chat.length-1].txt:'');
-  if(!tx){ toast('Escribe tu duda primero'); return; }
-  open('https://api.whatsapp.com/send?text='+encodeURIComponent('Duda para mi asesor NORTHPOINT: '+tx),'_blank');
-});
 /* foto mensual automática: una por mes, silenciosa e idempotente */
 function histRegistra(x){
   x.hist=x.hist||[];
@@ -1373,6 +1377,12 @@ function cargarDemo(){
     var capasC={}; CAPAS.forEach(function(c){ capasC[c.k]=Math.round(actC*w[c.k]); });
     S.cortes.push({f:f,v:vC,act:actC,deu:deuDemo,capas:capasC,fx:S.fx});
   }
+  S.chat=[
+    {f:hace(9), de:'cliente',  txt:'¿Por qué bajó mi capa de acciones este mes?'},
+    {f:hace(8), de:'analista', txt:'Buena pregunta. El ETF de S&P 500 corrigió ~3% tras el dato de inflación en EE.UU.; como tu capa de acciones pesa 11% del total, el efecto en tu patrimonio fue menor al 0.4%. El plan no cambia: la aportación de este mes entra igual a acciones — compras más barato.'},
+    {f:hace(3), de:'cliente',  txt:'¿Conviene adelantar la aportación de septiembre?'},
+    {f:hace(2), de:'analista', txt:'No hace falta. Tu fondo de emergencia está completo y el calendario mensual ya captura estos movimientos. Lo revisamos con calma en tu sesión del día 5.'}
+  ];
   save(); sync(); render(); toast('Modo demo — datos de ejemplo');
 }
 function toggleDemo(){
@@ -1661,7 +1671,7 @@ function dibujaMosaico(){
       s+='<text x="'+(x+pad).toFixed(1)+'" y="'+(y+pad+10).toFixed(1)+'" class="mz-nom'+(grande?'':' mz-chico')+'">'+esc(d.n)+'</text>';
       if(grande) s+='<text x="'+(x+pad).toFixed(1)+'" y="'+(y+pad+30).toFixed(1)+'" class="mz-sub">'+d.nAct+' activo'+(d.nAct===1?'':'s')+(d.mayor?' · mayor: '+esc(d.mayor.length>22?d.mayor.slice(0,21)+'…':d.mayor):'')+'</text>';
       s+='<text x="'+(x+pad).toFixed(1)+'" y="'+(y+h-pad).toFixed(1)+'" class="mz-val">'+esc(mxn(d.value))+'</text>';
-      s+='<text x="'+(x+w-pad).toFixed(1)+'" y="'+(y+pad+(grande?16:12)).toFixed(1)+'" text-anchor="end" class="mz-wm'+(grande?'':' mz-wm-chico')+'">'+d.pr.toFixed(0)+'%</text>';
+      s+='<text x="'+(x+w/2).toFixed(1)+'" y="'+(y+h/2+(grande?11:6)).toFixed(1)+'" text-anchor="middle" class="mz-wm'+(grande?'':' mz-wm-chico')+'">'+d.pr.toFixed(0)+'%</text>';
       /* mini-curva de la capa, foto a foto */
       if(d.serie.length>=2 && (grande||h>110)){
         var sv=d.serie, smn=Math.min.apply(null,sv), smx=Math.max.apply(null,sv); if(smx===smn) smx+=1;
@@ -1691,7 +1701,7 @@ var VISTAS={resumen:'Resumen',portafolio:'Portafolio',plan:'El plan',
 var SUBS={resumen:'La fotografía de hoy — y cómo has llegado hasta aquí.',
   portafolio:'Cómo se reparte tu patrimonio entre tus 5 capas.',
   plan:'Cuánto ahorras cada mes, a dónde va — y a dónde te lleva.',
-  chat:'Tus dudas, listas para tu asesor NORTHPOINT.',
+  chat:'Tu analista NORTHPOINT te contesta aquí mismo.',
   ajustes:'Elige cómo quieres ver tu oficina.'};
 function animarNeto(){
   var el=$('netoBig'), neto=totalActivos()-totalDeudas();
