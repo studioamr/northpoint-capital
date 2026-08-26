@@ -195,6 +195,19 @@ body:not([data-v="resumen"]) #cabResumen{display:none}
 .waffle-svg g:hover rect{opacity:.75}
 .waffle-ley{flex:1;min-width:210px;display:flex;flex-direction:column;gap:13px}
 .waffle-nota{font-family:var(--fb);font-size:12px;color:var(--dim);margin:12px 0 2px}
+.cinta{overflow:hidden;margin-top:16px;
+  -webkit-mask-image:linear-gradient(90deg,transparent,#000 7%,#000 93%,transparent);
+  mask-image:linear-gradient(90deg,transparent,#000 7%,#000 93%,transparent)}
+.cinta-track{display:flex;width:max-content;animation:cintaMove 24s linear infinite}
+.cinta:hover .cinta-track{animation-play-state:paused}
+@keyframes cintaMove{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+.cinta-grp{display:flex;gap:10px;padding-right:10px}
+.cinta-card{display:flex;align-items:center;gap:10px;background:var(--vidrio);border:1px solid var(--borde);
+  border-radius:12px;padding:10px 14px;white-space:nowrap}
+.cinta-card u{width:8px;height:8px;border-radius:50%;text-decoration:none;flex:0 0 auto}
+.cinta-card b{display:block;font-size:12.5px;font-weight:600;color:var(--cream)}
+.cinta-card span{display:block;font-family:var(--fm);font-size:9.5px;color:var(--tenue);margin-top:2px}
+@media(prefers-reduced-motion:reduce){.cinta-track{animation:none}.cinta{overflow-x:auto;mask-image:none;-webkit-mask-image:none}}
 .hint-campo{display:block;font-family:var(--fb);font-size:11px;line-height:1.5;color:var(--dim);margin-top:6px}
 .treemap{border-radius:10px;overflow:hidden;background:var(--vidrio)}
 .tm-svg{display:block}
@@ -1541,12 +1554,24 @@ function dibujaMareas(){
     s+='</g>';
   });
   s+='</svg><div class="waffle-ley">';
-  segs.forEach(function(seg,si){
+  segs.forEach(function(seg){
     var sub= (seg.k==='liquidez'&&S.gasto>0)? '<small class="pl-sub">cubre '+(seg.v/S.gasto).toFixed(1)+' meses de tu gasto</small>':'';
     s+='<div class="pl-row"><u style="background:'+seg.col+'"></u><span class="pl-n">'+esc(seg.n)+sub+'</span>'
-      +'<span class="pl-p">'+celdas[si]+' de 100</span><b class="pl-v">'+esc(mxn(seg.v))+'</b></div>';
+      +'<b class="pl-v">'+esc(mxn(seg.v))+'</b></div>';
   });
   s+='</div></div><p class="waffle-nota">Cada cuadrito es 1 de cada 100 pesos de tus activos.</p>';
+  /* cinta infinita de tus activos */
+  var items=S.activos.slice().sort(function(a,b){return enMXN(b)-enMXN(a);});
+  if(items.length){
+    var tarj=items.map(function(x){
+      var c=CAPA_BY[x.capa]||CAPAS[0];
+      return '<div class="cinta-card"><u style="background:'+c.c+'"></u><div><b>'+esc(x.nombre)+'</b>'
+        +'<span>'+esc(mxn(enMXN(x)))+' · '+esc(c.n)+'</span></div></div>';
+    }).join('');
+    var dur=Math.max(20, items.length*4);
+    s+='<div class="cinta"><div class="cinta-track" style="animation-duration:'+dur+'s">'
+      +'<div class="cinta-grp">'+tarj+'</div><div class="cinta-grp">'+tarj+'</div></div></div>';
+  }
   host.innerHTML=s;
 }
 function dibujaSistema(){ donaCapas('sys','resumen'); }
