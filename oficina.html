@@ -187,11 +187,27 @@ body:not([data-v="resumen"]) #cabResumen{display:none}
 .spark-note{font-family:var(--fm);font-size:8px;letter-spacing:.14em;color:var(--tenue);
   text-transform:uppercase;margin-top:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .mareas-tot{font-family:var(--fd);font-weight:700;font-size:22px;letter-spacing:-.015em;margin:2px 0 4px}
-.waffle-wrap{display:flex;gap:34px;align-items:center;flex-wrap:wrap;padding:8px 0 2px}
-.waffle-svg{width:255px;max-width:100%;flex:0 0 auto;display:block}
-.waffle-svg rect{transition:opacity .15s ease}
-.waffle-svg g:hover rect{opacity:.75}
-.waffle-ley{flex:1;min-width:210px;display:flex;flex-direction:column;gap:13px}
+.waffle-ley{display:flex;flex-direction:column;gap:13px}
+.jardin-svg{display:block}
+.fruta{cursor:pointer}
+.fruta .fruta-c{transition:filter .16s ease}
+.fruta:hover .fruta-c{filter:brightness(1.2)}
+.fruta:focus{outline:none}
+.fruta:focus .fruta-c{stroke:#EFECE7;stroke-width:2.5}
+.fruta-pct{font-family:var(--fd);font-weight:700;font-size:12px;pointer-events:none}
+.jardin-hint{font-family:var(--fb);font-size:12px;color:var(--tenue);margin:4px 0 8px;text-align:center}
+.fruta-velo{position:fixed;inset:0;z-index:90;display:flex;align-items:center;justify-content:center;padding:20px;
+  background:rgba(6,7,5,.72);backdrop-filter:blur(7px);-webkit-backdrop-filter:blur(7px)}
+.fruta-velo[hidden]{display:none}
+.fruta-card{background:var(--panel);border:1px solid var(--borde2);border-top:2px solid var(--cream);border-radius:18px;
+  padding:26px;max-width:430px;width:100%;box-shadow:0 30px 80px rgba(0,0,0,.65)}
+.fruta-icono{display:block;width:36px;height:36px;border-radius:50%;margin-bottom:14px;box-shadow:inset -5px -7px 12px rgba(0,0,0,.28)}
+.fruta-card h2{font-size:18px;margin:0 0 2px}
+.fruta-monto{font-family:var(--fd);font-weight:700;font-size:27px;letter-spacing:-.012em;margin:0 0 14px}
+.fruta-fila{display:flex;justify-content:space-between;gap:14px;padding:9px 0;border-bottom:1px solid var(--borde);font-size:13px}
+.fruta-fila span{color:var(--tenue)}
+.fruta-fila b{color:var(--cream);font-weight:500;text-align:right}
+.fruta-acciones{display:flex;gap:10px;justify-content:flex-end;margin-top:18px}
 .cinta{overflow:hidden;margin-top:16px;
   -webkit-mask-image:linear-gradient(90deg,transparent,#000 7%,#000 93%,transparent);
   mask-image:linear-gradient(90deg,transparent,#000 7%,#000 93%,transparent)}
@@ -604,7 +620,6 @@ button.lx:hover{color:var(--cream)}
         </div>
       </div>
       <p class="lib-anios" id="libAnios">—</p>
-      <p class="lib-anios" id="libRitmo" style="margin-top:-8px"></p>
       <label class="eb" for="inTasa">TASA REAL ANUAL, YA DESCONTADA LA INFLACIÓN — LA ELIGES TÚ: <b id="tasaVal" style="color:var(--cream)">4.0%</b></label>
       <input type="range" id="inTasa" min="0" max="15" step="0.5" value="4">
       <small class="hint-campo">Cuánto crecen tus inversiones al año por encima de la inflación. 4% es prudente; 15% muy optimista.</small>
@@ -980,20 +995,7 @@ function renderLibertad(){
     }
   }
   $('libAnios').innerHTML=anios;
-  /* el ritmo observado: tus cortes contra tu meta — dato, no proyección */
-  var rTxt='';
-  if(S.cortes.length>=3 && meta>0 && base<meta){
-    var a=S.cortes[0], b=S.cortes[S.cortes.length-1];
-    var meses=Math.max(0.5,(new Date(b.f)-new Date(a.f))/(30.44*864e5));
-    var ritmo=(b.v-a.v)/meses;
-    if(ritmo>0){
-      var xa=((meta-base)/ritmo)/12;
-      rTxt='A tu ritmo real de los últimos '+Math.round(meses)+' meses: ~'+xa.toFixed(xa<20?1:0)+' años · extrapolación de tu pasado, no proyección.';
-    } else {
-      rTxt='A tu ritmo real de los últimos '+Math.round(meses)+' meses, el patrimonio no crece.';
-    }
-  }
-  $('libRitmo').textContent=rTxt;
+
   var hitos=[
     ['Primer paso', Math.round(meta*0.01)],
     ['Primer millón', 1000000],
@@ -1473,44 +1475,79 @@ function donaCapas(hostId, guardV){
   s+='</div></div>';
   host.innerHTML=s;
 }
+/* ── PORTAFOLIO · el jardín: un árbol, y cada activo es una fruta a escala. Pícala y entras a su detalle. ── */
 function dibujaMareas(){
   var host=$('mareas'); if(!host || document.body.getAttribute('data-v')!=='portafolio') return;
   var m=porCapa(), act=totalActivos();
-  if(!act){ host.innerHTML='<div class="tm-vacio">Registra tus activos y verás cómo se reparte tu patrimonio.</div>'; return; }
-  var segs=CAPAS.map(function(c){ var v=m[c.k]||0; return {k:c.k,n:c.n,col:c.c,v:v,pr:v/act*100}; })
-    .filter(function(x){return x.v>0;}).sort(function(a,b){return b.v-a.v;});
-  /* reparto de 100 cuadritos por resto mayor (siempre suman 100; toda capa con dinero recibe al menos 1) */
-  var celdas=segs.map(function(s){return Math.floor(s.pr);});
-  var falta=100-celdas.reduce(function(a,b){return a+b;},0);
-  var orden=segs.map(function(s,i){return {i:i,f:s.pr-Math.floor(s.pr)};}).sort(function(a,b){return b.f-a.f;});
-  for(var k=0;k<falta;k++) celdas[orden[k%orden.length].i]++;
-  segs.forEach(function(s,i){ if(celdas[i]===0){ var mx=celdas.indexOf(Math.max.apply(null,celdas)); celdas[mx]--; celdas[i]++; } });
-  /* cuadrícula 10×10: se llena de abajo hacia arriba, columna por columna */
-  var cell=21, gap=5, size=10*cell+9*gap;
-  var s='<div class="waffle-wrap"><svg viewBox="0 0 '+size+' '+size+'" class="waffle-svg" role="img" aria-label="Cada cuadrito es 1 de cada 100 pesos de tus activos">';
-  var idx=0;
-  segs.forEach(function(seg,si){
-    s+='<g><title>'+esc(seg.n+' — '+mxn(seg.v)+' · '+seg.pr.toFixed(1)+'%')+'</title>';
-    for(var c2=0;c2<celdas[si];c2++){
-      var col=Math.floor(idx/10), row=9-(idx%10);
-      s+='<rect x="'+(col*(cell+gap))+'" y="'+(row*(cell+gap))+'" width="'+cell+'" height="'+cell+'" rx="5" fill="'+seg.col+'"/>';
-      idx++;
+  if(!act){ host.innerHTML='<div class="tm-vacio">Registra tus activos y tu jardín florece.</div>'; return; }
+  var W=Math.round(host.clientWidth||host.getBoundingClientRect().width);
+  if(!W){ requestAnimationFrame(dibujaMareas); return; }
+  var H=Math.min(430, Math.max(330, W*0.42));
+  var cx=W/2, cy=H*0.34, rx=Math.min(W*0.38,330), ry=H*0.28, sueloY=H-24;
+  var items=S.activos.map(function(x){return {x:x, v:enMXN(x)};}).filter(function(d){return d.v>0;}).sort(function(a,b){return b.v-a.v;});
+  var vMax=items[0].v, rMax=Math.min(42, rx*0.36), rMin=Math.max(9, rMax*0.24);
+  /* frutas en espiral áurea (determinista) dentro de la copa */
+  var fr=items.map(function(d,i){
+    var r=Math.max(rMin, rMax*Math.sqrt(d.v/vMax));
+    var ang=i*2.399963, rad=Math.sqrt((i+0.55)/items.length);
+    return {d:d.x, v:d.v, r:r, px:cx+Math.cos(ang)*rx*0.75*rad, py:cy+Math.sin(ang)*ry*0.75*rad};
+  });
+  /* relajación de choques + contención en la copa */
+  for(var it=0; it<70; it++){
+    var mov=false;
+    for(var a2=0;a2<fr.length;a2++) for(var b2=a2+1;b2<fr.length;b2++){
+      var A=fr[a2],B=fr[b2],dx=B.px-A.px,dy=B.py-A.py,dd=Math.sqrt(dx*dx+dy*dy)||0.01,min=A.r+B.r+5;
+      if(dd<min){ var e=(min-dd)/2, ux=dx/dd, uy=dy/dd; A.px-=ux*e;A.py-=uy*e;B.px+=ux*e;B.py+=uy*e; mov=true; }
     }
+    fr.forEach(function(F){
+      var nx=(F.px-cx)/rx, ny=(F.py-cy)/ry, dl=Math.sqrt(nx*nx+ny*ny)||0.01;
+      var lim=Math.max(0.15, 1-(F.r/Math.min(rx,ry))*0.85);
+      if(dl>lim){ F.px=cx+nx/dl*lim*rx; F.py=cy+ny/dl*lim*ry; }
+    });
+    if(!mov) break;
+  }
+  var s='<svg viewBox="0 0 '+W+' '+H+'" width="100%" height="'+H+'" class="jardin-svg" role="img" aria-label="Tu portafolio como un jardín: cada fruta es un activo y su tamaño es su peso">';
+  /* suelo con pasto discreto */
+  s+='<line x1="'+Math.max(6,cx-rx-40).toFixed(1)+'" y1="'+sueloY+'" x2="'+Math.min(W-6,cx+rx+40).toFixed(1)+'" y2="'+sueloY+'" stroke="#EFECE7" stroke-opacity="0.16"/>';
+  [-0.9,-0.62,-0.34,-0.08,0.2,0.48,0.74,0.95].forEach(function(g,gi){
+    var gx=cx+g*(rx+22);
+    s+='<path d="M'+gx.toFixed(1)+' '+sueloY+' q '+(gi%2?3:-3)+' -6 '+(gi%2?5:-4)+' -10" fill="none" stroke="#EFECE7" stroke-opacity="0.13"/>';
+  });
+  /* tronco (forma rellena que se afina) + raíces */
+  var tTop=cy+ry*0.6;
+  s+='<path d="M'+(cx-10).toFixed(1)+' '+sueloY+' C '+(cx-8).toFixed(1)+' '+(sueloY-44).toFixed(1)+' '+(cx-4.5).toFixed(1)+' '+(tTop+40).toFixed(1)+' '+(cx-2.4).toFixed(1)+' '+tTop.toFixed(1)
+    +' L '+(cx+2.4).toFixed(1)+' '+tTop.toFixed(1)+' C '+(cx+4.5).toFixed(1)+' '+(tTop+40).toFixed(1)+' '+(cx+8).toFixed(1)+' '+(sueloY-44).toFixed(1)+' '+(cx+10).toFixed(1)+' '+sueloY
+    +' Z" fill="rgba(239,236,231,0.10)" stroke="rgba(239,236,231,0.30)"/>';
+  s+='<path d="M'+(cx-10).toFixed(1)+' '+sueloY+' q -9 1 -15 5 M'+(cx+10).toFixed(1)+' '+sueloY+' q 9 1 15 5" fill="none" stroke="rgba(239,236,231,0.22)"/>';
+  /* ramas hacia la copa */
+  [[-0.74,-0.5],[-0.32,-0.86],[0.05,-0.98],[0.34,-0.84],[0.74,-0.48]].forEach(function(br){
+    s+='<path d="M'+cx.toFixed(1)+' '+tTop.toFixed(1)+' C '+(cx+br[0]*rx*0.3).toFixed(1)+' '+(cy+ry*0.3).toFixed(1)+' '+(cx+br[0]*rx*0.65).toFixed(1)+' '+(cy+br[1]*ry*0.35).toFixed(1)+' '+(cx+br[0]*rx*0.88).toFixed(1)+' '+(cy+br[1]*ry*0.8).toFixed(1)+'" fill="none" stroke="rgba(239,236,231,0.18)"/>';
+  });
+  /* frutas: tallo + hoja + esfera con brillo; clic = entrar */
+  fr.forEach(function(F){
+    var col=(CAPA_BY[F.d.capa]||CAPAS[0]).c, pr=F.v/act*100;
+    s+='<g class="fruta" data-fruta="'+esc(F.d.id)+'" tabindex="0" role="button" aria-label="'+esc(F.d.nombre+', '+mxn(F.v)+', '+pr.toFixed(1)+' por ciento')+'">';
+    s+='<title>'+esc(F.d.nombre+' — '+mxn(F.v)+' · '+pr.toFixed(1)+'% · pícala para entrar')+'</title>';
+    s+='<path d="M'+F.px.toFixed(1)+' '+(F.py-F.r).toFixed(1)+' q 2 -7 7 -10" fill="none" stroke="rgba(239,236,231,0.35)"/>';
+    s+='<ellipse cx="'+(F.px+9).toFixed(1)+'" cy="'+(F.py-F.r-9).toFixed(1)+'" rx="5" ry="2.6" transform="rotate(-28 '+(F.px+9).toFixed(1)+' '+(F.py-F.r-9).toFixed(1)+')" fill="'+col+'" fill-opacity="0.4"/>';
+    s+='<circle class="fruta-c" cx="'+F.px.toFixed(1)+'" cy="'+F.py.toFixed(1)+'" r="'+F.r.toFixed(1)+'" fill="'+col+'" stroke="#0E0F0C" stroke-width="2"/>';
+    s+='<circle cx="'+(F.px-F.r*0.32).toFixed(1)+'" cy="'+(F.py-F.r*0.36).toFixed(1)+'" r="'+(F.r*0.2).toFixed(1)+'" fill="rgba(255,255,255,0.26)" style="pointer-events:none"/>';
+    if(F.r>=19) s+='<text x="'+F.px.toFixed(1)+'" y="'+(F.py+4).toFixed(1)+'" text-anchor="middle" class="fruta-pct" fill="'+txtSobre(col)+'">'+pr.toFixed(0)+'%</text>';
     s+='</g>';
   });
-  s+='</svg><div class="waffle-ley">';
-  segs.forEach(function(seg){
-    s+='<div class="pl-row"><u style="background:'+seg.col+'"></u><span class="pl-n">'+esc(seg.n)+'</span>'
-      +'<b class="pl-v">'+esc(mxn(seg.v))+'</b></div>';
-  });
-  s+='</div></div>';
+  s+='</svg>';
+  s+='<p class="jardin-hint">Pícale a una fruta para entrar a su detalle.</p>';
+  /* leyenda por capa */
+  var segs=CAPAS.map(function(c){var v=m[c.k]||0; return {n:c.n,col:c.c,v:v};}).filter(function(x){return x.v>0;}).sort(function(a,b){return b.v-a.v;});
+  s+='<div class="waffle-ley" style="margin-top:10px">';
+  segs.forEach(function(seg){ s+='<div class="pl-row"><u style="background:'+seg.col+'"></u><span class="pl-n">'+esc(seg.n)+'</span><b class="pl-v">'+esc(mxn(seg.v))+'</b></div>'; });
+  s+='</div>';
   /* cinta infinita de tus activos */
-  var items=S.activos.slice().sort(function(a,b){return enMXN(b)-enMXN(a);});
   if(items.length){
-    var tarj=items.map(function(x){
-      var c=CAPA_BY[x.capa]||CAPAS[0];
-      return '<div class="cinta-card"><u style="background:'+c.c+'"></u><div><b>'+esc(x.nombre)+'</b>'
-        +'<span>'+esc(mxn(enMXN(x)))+' · '+esc(c.n)+'</span></div></div>';
+    var tarj=items.map(function(d){
+      var c=CAPA_BY[d.x.capa]||CAPAS[0];
+      return '<div class="cinta-card"><u style="background:'+c.c+'"></u><div><b>'+esc(d.x.nombre)+'</b>'
+        +'<span>'+esc(mxn(d.v))+' · '+esc(c.n)+'</span></div></div>';
     }).join('');
     var dur=Math.max(20, items.length*4);
     s+='<div class="cinta"><div class="cinta-track" style="animation-duration:'+dur+'s">'
@@ -1518,6 +1555,46 @@ function dibujaMareas(){
   }
   host.innerHTML=s;
 }
+/* entrar a la fruta: la ficha del activo */
+function abrirFruta(id){
+  var x=S.activos.find(function(a){return a.id===id}); if(!x) return;
+  var c=CAPA_BY[x.capa]||CAPAS[0], v=enMXN(x), act=totalActivos(), pr=act>0? v/act*100:0;
+  var vel=$('frutaVelo');
+  if(!vel){
+    vel=document.createElement('div'); vel.id='frutaVelo'; vel.className='fruta-velo'; vel.hidden=true;
+    document.body.appendChild(vel);
+    vel.addEventListener('click',function(e){ if(e.target===vel) cerrarFruta(); });
+    document.addEventListener('keydown',function(e){ if(e.key==='Escape') cerrarFruta(); });
+  }
+  var VEH={copropiedad:'Copropiedad',empresa:'A través de una empresa',fideicomiso:'En fideicomiso'};
+  var filas=[
+    ['Capa', c.n],
+    ['Del total de activos', pr.toFixed(1)+'%'],
+    x.inst?['Institución',x.inst]:null,
+    x.moneda==='USD'?['Moneda','USD · '+Number(x.valor).toLocaleString('en-US')+' USD']:null,
+    x.titular?['Titular',x.titular]:null,
+    (x.veh&&x.veh!=='directo')?['Cómo lo tienes',VEH[x.veh]||x.veh]:null,
+    x.benef?['¿Quién lo hereda?', x.benef==='si'?(x.benefNombre||'Ya está definido'): x.benef==='no'?'Aún sin definir':'No aplica']:null,
+    x.doc?['Documento',x.doc]:null
+  ].filter(Boolean);
+  vel.innerHTML='<div class="fruta-card" style="border-top-color:'+c.c+'">'
+    +'<span class="fruta-icono" style="background:'+c.c+'"></span>'
+    +'<h2>'+esc(x.nombre)+'</h2>'
+    +'<p class="fruta-monto">'+esc(mxn(v))+'</p>'
+    +filas.map(function(f){ return '<div class="fruta-fila"><span>'+esc(f[0])+'</span><b>'+esc(f[1])+'</b></div>'; }).join('')
+    +'<div class="fruta-acciones"><button class="btn btn-g" id="frutaCerrar">Cerrar</button>'
+    +'<button class="btn" id="frutaEditar">Editar</button></div></div>';
+  vel.hidden=false;
+  $('frutaCerrar').addEventListener('click',cerrarFruta);
+  $('frutaEditar').addEventListener('click',function(){ cerrarFruta(); verVista('activos'); abrirForma('activo',x); });
+}
+function cerrarFruta(){ var v=$('frutaVelo'); if(v) v.hidden=true; }
+(function(){
+  var h=$('mareas'); if(!h) return;
+  h.addEventListener('click',function(e){ var g=e.target.closest&&e.target.closest('[data-fruta]'); if(g) abrirFruta(g.getAttribute('data-fruta')); });
+  h.addEventListener('keydown',function(e){ if(e.key==='Enter'||e.key===' '){ var g=e.target.closest&&e.target.closest('[data-fruta]'); if(g){ e.preventDefault(); abrirFruta(g.getAttribute('data-fruta')); } } });
+})();
+
 function dibujaSistema(){ donaCapas('sys','resumen'); }
 addEventListener('resize', function(){ var v=document.body.getAttribute('data-v'); if(v==='portafolio')dibujaMareas(); else if(v==='resumen')dibujaSistema(); });
 
