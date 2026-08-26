@@ -5868,7 +5868,8 @@ function renderAcctMgr(){
       </div>
       ${(esLive(a)||esSim(a)) ? '' : `<div class="acct-row" style="margin-top:10px">
         <div><label>Size</label><input type="number" data-f="size" data-id="${a.id}" value="${a.size}" step="100"></div>
-        <div><label>Starting balance</label><input type="number" data-f="start" data-id="${a.id}" value="${a.start}" step="100"></div>
+        <div><label>Balance now</label><input type="number" data-f="start" data-id="${a.id}" value="${a.start}" step="100"
+             title="${bi('El saldo con el que corre hoy. Si ya la venías operando antes de registrarla, ponlo aquí: la diferencia contra el tamaño cuenta como ganancia hecha.','The balance it is running at today. If you were already trading it before registering, put it here: the gap against the size counts as profit already made.')}"></div>
       </div>`}
       ${(esLive(a)||esSim(a)) ? `<div class="acct-row" style="margin-top:10px">
         <div><label>${esLive(a)?'Capital inicial':'Practice balance'}</label><input type="number" data-f="start" data-id="${a.id}" value="${a.start}" step="100"></div>
@@ -6071,15 +6072,35 @@ function carreraCuenta(a){
      una sola suma y un día bueno de +$6,200 pintaba «PAGO MÁXIMO» sobre una
      cuenta de la que no se podía retirar un peso. El colchón y el tramo de pago
      se construyen con lo ganado DESPUÉS del día del pase. */
-  let p = 0, pico = 0, mEval = null;
+  /* LO QUE YA TRAÍAS GANADO AL REGISTRARLA.
+     La app sólo sabía de los trades capturados AQUÍ, así que una cuenta que ya
+     venías operando entraba con su saldo correcto y con la barra en 0% — sin
+     forma de decirle dónde vas de verdad salvo recapturar meses de historial.
+     Ahora la diferencia entre el saldo de arranque y el tamaño de la cuenta
+     cuenta como ganancia hecha: pones tu saldo de hoy en «Starting balance» y
+     la barra arranca de ahí.
+     Cuando arranque y tamaño coinciden —toda cuenta nueva— esto vale 0 y nada
+     cambia respecto a antes. */
+  const tam = (a.size > 0) ? a.size : (a.start || 0);
+  const previo = Math.max(0, (a.start || 0) - tam);
+  let p = previo, pico = previo, mEval = null;
   dias.forEach(d => {
     p += porDia[d]; pico = Math.max(pico, p);
     if(!mEval && target > 0 && pico >= target) mEval = d;
   });
-  const pasoEval = yaFondeada || !!mEval;
+  /* El pase se marcaba SÓLO recorriendo días de trades, así que una cuenta
+     registrada con un saldo que ya alcanza el objetivo seguía diciendo «en
+     evaluación» con la barra pasada del corte. Lo previo también pasa el
+     examen: no hay día que marcar, pero sí etapa que reconocer. */
+  const evalPrevio = target > 0 && previo >= target;
+  const pasoEval = yaFondeada || evalPrevio || !!mEval;
   /* lo ganado ya fondeado: desde el día siguiente al pase — o TODO, si la
      cuenta nació fondeada y por lo tanto no hay día de pase que recortar. */
-  let pDesp = 0, picoDesp = 0, mBuffer = null, mPago = null;
+  /* De lo previo, cuánto cuenta ya como colchón: si la registraste fondeada,
+     todo; si el examen se pasó con lo previo, sólo el excedente sobre el
+     objetivo —el resto se queda en la fondeadora al reiniciar. */
+  let pDesp = yaFondeada ? previo : (evalPrevio ? previo - target : 0);
+  let picoDesp = pDesp, mBuffer = null, mPago = null;
   if(pasoEval){
     dias.forEach(d => {
       if(mEval && d <= mEval) return;
@@ -6088,7 +6109,11 @@ function carreraCuenta(a){
       if(!mPago   && pago   > 0 && picoDesp >= buffer + pago) mPago = d;
     });
   }
-  const pasoBuffer = !!mBuffer, pasoPago = !!mPago;
+  /* Igual que el pase del examen: los hitos del colchón y del tramo de pago se
+     marcaban SÓLO al recorrer días de trades, así que con saldo previo la barra
+     los cruzaba sin cambiar de etiqueta. Se leen también del pico acumulado. */
+  const pasoBuffer = !!mBuffer || (buffer > 0 && picoDesp >= buffer);
+  const pasoPago   = !!mPago   || (pago   > 0 && picoDesp >= buffer + pago);
 
   /* la barra no retrocede de un hito ya pasado */
   const avance = !pasoEval
@@ -6098,7 +6123,10 @@ function carreraCuenta(a){
 
   /* el balance: antes del pase corre sobre el acumulado; ya fondeada, arranca
      de nuevo en el tamaño de la cuenta */
-  const balance = pasoEval ? a.start + pDesp : a.start + p;
+  /* Se cuenta desde el TAMAÑO y no desde el arranque, porque `p` ya trae
+     dentro lo previo: sumar `a.start` lo contaría dos veces. Al pasar el examen
+     la cuenta reinicia en su tamaño. */
+  const balance = pasoEval ? tam + pDesp : tam + p;
 
   return { target, buffer, pago, total, p, pico, pDesp, picoDesp, avance, pct, balance,
            pasoEval, pasoBuffer, pasoPago, mEval, mBuffer, mPago,
@@ -6867,6 +6895,11 @@ function pintaPerfilSocio(){
           <span>${Math.round(cc.pct)}% ${bi('del camino','of the road')}</span>
           <span>${fmt$(cc.avance)} ${bi('de','of')} ${fmt$(cc.total)}</span>
         </div>
+        <!-- Una barra en cero no dice si es que no has ganado nada o si la app
+             no se enteró. Ahora lo dice, y dice qué hacer. -->
+        ${cc.pct === 0 ? `<p class="micro" style="text-transform:none;letter-spacing:.03em;color:var(--faint);margin-top:4px">${bi(
+            'Sin trades. ¿Ya la venías operando? Pon tu saldo en Ajustes → Cuentas → Balance now.',
+            'No trades yet. Already running it? Put its balance in Settings → Accounts → Balance now.')}</p>` : ''}
       </div>`;
     }).join('') + `</div>`;
   };
