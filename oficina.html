@@ -833,7 +833,7 @@ function cAnillo(){ return esNegro()? '#0E0F0C' : '#FBFAF6'; }
 function fresh(){
   var metas={}; CAPAS.forEach(function(c){metas[c.k]=c.meta});
   return {v:1,demo:false,fx:17,fxFecha:null,gasto:0,ultimoExport:null,
-          aporta:10000,ingreso:100000,tasa:4,tema:'negro',
+          aporta:10000,ingreso:100000,tasa:4,tema:'negro',temaElegido:false,
           metas:metas,activos:[],deudas:[],cortes:[],chat:[]};
 }
 /* saneador: TODO lo que entra de fuera (localStorage o un archivo importado)
@@ -852,7 +852,10 @@ function sanea(p){
   s.gasto=Math.max(0,num(p.gasto,0));
   s.fxFecha=fechaOk(p.fxFecha);
   s.ultimoExport=fechaOk(p.ultimoExport);
-  s.tema= p.tema==='blanco'?'blanco':'negro';
+  s.temaElegido= p.temaElegido===true;
+  /* el blanco guardado solo vale si el cliente lo ELIGIÓ en Personalizar;
+     el default viejo guardado en localStorage se migra a negro */
+  s.tema= (s.temaElegido && p.tema==='blanco')? 'blanco':'negro';
   if(Array.isArray(p.chat)) s.chat=p.chat.filter(function(m){return m&&typeof m.txt==='string';}).slice(-80)
     .map(function(m){return {f:fechaOk(m.f)||hoyISO(), de:m.de==='analista'?'analista':'cliente', txt:String(m.txt).slice(0,600)};});
   if(p.metas&&typeof p.metas==='object'){
@@ -1260,8 +1263,8 @@ function aplicaTema(){
   var b=$('temaBlanco'), g=$('temaNegro');
   if(b){ b.setAttribute('aria-pressed',String(!neg)); g.setAttribute('aria-pressed',String(neg)); }
 }
-$('temaBlanco').addEventListener('click',function(){ S.tema='blanco'; save(); aplicaTema(); render(); });
-$('temaNegro').addEventListener('click',function(){ S.tema='negro'; save(); aplicaTema(); render(); });
+$('temaBlanco').addEventListener('click',function(){ S.tema='blanco'; S.temaElegido=true; save(); aplicaTema(); render(); });
+$('temaNegro').addEventListener('click',function(){ S.tema='negro'; S.temaElegido=true; save(); aplicaTema(); render(); });
 /* foto mensual automática: una por mes, silenciosa e idempotente */
 function histRegistra(x){
   x.hist=x.hist||[];
