@@ -225,6 +225,7 @@ body:not([data-v="resumen"]) #cabResumen{display:none}
 .pastel-svg{flex:0 0 auto}
 .pastel-tot{font-family:var(--fd);font-weight:700;font-size:17px;fill:var(--cream)}
 .pastel-sub{font-family:var(--fm);font-size:7px;letter-spacing:.14em;fill:var(--tenue)}
+.pastel-pct{font-family:var(--fd);font-weight:700;font-size:14px;pointer-events:none}
 .acv-svg,.cal-svg{display:block}
 .acv-tick{font-family:var(--fm);font-size:8px;letter-spacing:.05em;fill:#efece78c}
 .acv-tot{font-family:var(--fd);font-weight:700;font-size:11px;fill:var(--cream)}
@@ -251,7 +252,6 @@ body:not([data-v="resumen"]) #cabResumen{display:none}
 .pl-row{display:grid;grid-template-columns:11px 1fr auto auto;gap:14px;align-items:baseline;font-size:13.5px}
 .pl-row u{width:9px;height:9px;border-radius:3px;text-decoration:none;align-self:center}
 .pl-n{color:var(--cream)}
-.pl-p{font-family:var(--fm);font-size:11px;color:var(--tenue)}
 .pl-v{font-family:var(--fm);font-size:12px;color:var(--cream);text-align:right;min-width:78px}
 .tm-leyenda{display:flex;flex-wrap:wrap;gap:14px;align-items:center;margin:10px 0 2px;font-family:var(--fm);font-size:8.5px;letter-spacing:.08em;color:var(--tenue);text-transform:uppercase}
 .tm-leyenda i{display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:5px;vertical-align:middle;opacity:.75}
@@ -542,8 +542,8 @@ button.lx:hover{color:var(--cream)}
     </div>
   </div>
   <div class="card" id="sistemaCard" style="margin-top:14px"><svg class="spk" viewBox="0 0 64 64" fill="currentColor" aria-hidden="true"><path d="M32 1 37.2 26.8 63 32 37.2 37.2 32 63 26.8 37.2 1 32 26.8 26.8Z"/></svg>
-    <h2>Composición</h2>
-    <p class="sub">Cómo se reparten tus activos entre tus 5 capas.</p>
+    <h2>El reparto</h2>
+    <p class="sub">En qué está tu dinero, de un vistazo.</p>
     <div id="sys" style="width:100%;min-height:280px"></div>
   </div>
   <div class="card" id="histCortes" style="margin-top:14px;display:none"><svg class="spk" viewBox="0 0 64 64" fill="currentColor" aria-hidden="true"><path d="M32 1 37.2 26.8 63 32 37.2 37.2 32 63 26.8 37.2 1 32 26.8 26.8Z"/></svg>
@@ -1424,19 +1424,29 @@ function donaCapas(hostId, guardV){
   if(!act){ host.innerHTML='<div class="tm-vacio">Registra tus activos y verás cómo se reparte tu patrimonio.</div>'; return; }
   var segs=CAPAS.map(function(c){ return {n:c.n,col:c.c,value:m[c.k]||0}; }).filter(function(x){return x.value>0;});
   var total=segs.reduce(function(a,b){return a+b.value},0);
-  var size=200, cx=size/2, cy=size/2, R=size/2-2, a0=-Math.PI/2, gap=0.028;
-  var uno=segs.length<=1;
+  var size=220, cx=size/2, cy=size/2, R=size/2-2, a0=-Math.PI/2, gap=0.028;
+  var uno=segs.length<=1, labels=[];
   var s='<div class="pastel-wrap"><svg viewBox="0 0 '+size+' '+size+'" width="'+size+'" height="'+size+'" class="pastel-svg" role="img" aria-label="Reparto del patrimonio por capa">';
-  if(uno){ s+='<circle cx="'+cx+'" cy="'+cy+'" r="'+R+'" fill="'+segs[0].col+'"/>'; }
+  if(uno){
+    s+='<circle cx="'+cx+'" cy="'+cy+'" r="'+R+'" fill="'+segs[0].col+'"><title>'+esc(segs[0].n+' — '+mxn(segs[0].value)+' · 100%')+'</title></circle>';
+    labels.push({x:cx,y:cy,pct:'100%',col:segs[0].col});
+  }
   else segs.forEach(function(seg){
     var frac=seg.value/total, a1=a0+frac*2*Math.PI, b0=a0+gap/2, b1=Math.max(b0+0.01,a1-gap/2), large=(b1-b0)>Math.PI?1:0;
     var x0=cx+R*Math.cos(b0), y0=cy+R*Math.sin(b0), x1=cx+R*Math.cos(b1), y1=cy+R*Math.sin(b1);
-    s+='<path d="M'+cx+' '+cy+' L'+x0.toFixed(1)+' '+y0.toFixed(1)+' A'+R+' '+R+' 0 '+large+' 1 '+x1.toFixed(1)+' '+y1.toFixed(1)+' Z" fill="'+seg.col+'" stroke="#0E0F0C" stroke-width="1.5" stroke-linejoin="round"/>';
+    s+='<path d="M'+cx+' '+cy+' L'+x0.toFixed(1)+' '+y0.toFixed(1)+' A'+R+' '+R+' 0 '+large+' 1 '+x1.toFixed(1)+' '+y1.toFixed(1)+' Z" fill="'+seg.col+'" stroke="#0E0F0C" stroke-width="1.5" stroke-linejoin="round"><title>'+esc(seg.n+' — '+mxn(seg.value)+' · '+(frac*100).toFixed(1)+'%')+'</title></path>';
+    if(frac>=0.07){
+      var mid=(a0+a1)/2, lr=R*(frac>=0.25?0.55:0.68);
+      labels.push({x:cx+Math.cos(mid)*lr, y:cy+Math.sin(mid)*lr, pct:(frac*100).toFixed(frac>=0.1?0:1)+'%', col:seg.col});
+    }
     a0=a1;
+  });
+  labels.forEach(function(L){
+    s+='<text x="'+L.x.toFixed(1)+'" y="'+(L.y+4.5).toFixed(1)+'" text-anchor="middle" class="pastel-pct" fill="'+txtSobre(L.col)+'">'+L.pct+'</text>';
   });
   s+='</svg><div class="pastel-ley"><div class="pl-tot"><b>'+esc(mxn(total))+'</b><span>TOTAL EN ACTIVOS</span></div>';
   segs.slice().sort(function(a,b){return b.value-a.value;}).forEach(function(seg){
-    s+='<div class="pl-row"><u style="background:'+seg.col+'"></u><span class="pl-n">'+esc(seg.n)+'</span><span class="pl-p">'+(seg.value/total*100).toFixed(1)+'%</span><b class="pl-v">'+esc(mxn(seg.value))+'</b></div>';
+    s+='<div class="pl-row"><u style="background:'+seg.col+'"></u><span class="pl-n">'+esc(seg.n)+'</span><b class="pl-v">'+esc(mxn(seg.value))+'</b></div>';
   });
   s+='</div></div>';
   host.innerHTML=s;
