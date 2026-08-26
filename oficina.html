@@ -314,6 +314,20 @@ input[type=range]::-moz-range-thumb{width:14px;height:14px;border-radius:50%;bac
 .plan-row .bar{height:4px;border-radius:3px;background:rgba(16,17,10,.08);margin-top:5px;overflow:hidden}
 .plan-row .bar i{display:block;height:100%;border-radius:3px}
 .plan-row .monto{font-family:var(--fm);font-size:12px;color:var(--cream);text-align:right}
+.plan-intro{font-size:13.5px;color:var(--suave);margin:2px 0 14px}
+.plan-intro b{color:var(--cream)}
+.pr2{padding:12px 0;border-bottom:1px solid rgba(16,17,10,.07)}
+.pr2:last-of-type{border-bottom:none}
+.pr2-cab{display:flex;justify-content:space-between;align-items:baseline;gap:12px}
+.pr2-nom{display:flex;align-items:center;gap:9px;font-size:14px;font-weight:600;color:var(--cream)}
+.pr2-nom u{width:10px;height:10px;border-radius:3px;text-decoration:none;flex:0 0 auto}
+.pr2-cab b{font-family:var(--fd);font-weight:700;font-size:16px}
+.pr2-track{position:relative;height:10px;border-radius:5px;background:rgba(16,17,10,.07);margin:9px 0 6px;overflow:visible}
+.pr2-track i{display:block;height:100%;border-radius:5px;transition:width .5s cubic-bezier(.16,1,.3,1)}
+.pr2-track s{position:absolute;top:-3px;bottom:-3px;width:2.5px;border-radius:2px;background:var(--tinta);text-decoration:none}
+.pr2-cap{font-family:var(--fb);font-size:12px;color:var(--tenue)}
+.pr2-aldia{font-family:var(--fb);font-size:12.5px;color:var(--suave);background:rgba(16,17,10,.045);border-radius:12px;padding:12px 14px;margin-top:12px;line-height:1.55}
+.pr2-aldia b{color:var(--cream)}
 .plan-nota{font-family:var(--fm);font-size:8.5px;letter-spacing:.06em;color:var(--tenue);margin-top:10px;line-height:1.6}
 
 /* libertad */
@@ -573,15 +587,14 @@ body::before{background:
       <div id="mareas" style="width:100%;min-height:280px"></div>
     </div>
 
-    <div class="card" id="plan">    <div class="card" id="plan"><svg class="spk" viewBox="0 0 64 64" fill="currentColor" aria-hidden="true"><path d="M32 1 37.2 26.8 63 32 37.2 37.2 32 63 26.8 37.2 1 32 26.8 26.8Z"/></svg>
+    <div class="card" id="plan"><svg class="spk" viewBox="0 0 64 64" fill="currentColor" aria-hidden="true"><path d="M32 1 37.2 26.8 63 32 37.2 37.2 32 63 26.8 37.2 1 32 26.8 26.8Z"/></svg>
       <h2>Plan de acción mensual</h2>
-      <p class="sub">Reparte lo que ahorras este mes entre tus capas (tus 5 tipos de inversión), empezando por las que van más atrás de su meta.</p>
+      <p class="sub">Una regla simple: tu ahorro del mes va primero a las capas que van más atrás de su referencia.</p>
       <div class="in-box">
         <label for="inAporta">Aportación mensual</label>
         <div class="fila"><input type="number" id="inAporta" min="0" step="500" value="10000"><span class="ud">MXN /MES</span></div>
       </div>
-      <canvas id="flujo" style="width:100%;height:200px;display:block;margin-bottom:6px"></canvas>
-      <div class="seg" id="planSeg" style="height:9px;margin-bottom:12px"></div>
+      <p class="plan-intro" id="planIntro"></p>
       <div id="planRows"></div>
       <p class="plan-nota">Sugerencia aritmética según una estrategia de referencia de la casa — no es una recomendación de inversión.</p>
     </div>
@@ -860,7 +873,7 @@ function render(){
   renderSeg(); renderPlan(); renderLibertad(); renderListas(); renderCortes(); renderSpark();
   dibujaMosaico();
   $('sistemaCard').style.display= S.activos.length? 'block':'none';
-  if(REDUCIDO){  dibujaFlujo(0); dibujaMareas(0); }
+  if(REDUCIDO){ dibujaMareas(0); }
 }
 
 function renderSeg(){
@@ -896,13 +909,12 @@ function renderPlan(){
   var M=Math.max(0,S.aporta||0);
   var m=porCapa(), act=totalActivos(), futuro=act+M;
   var sumaMetas=CAPAS.reduce(function(a,c){return a+(S.metas[c.k]||0)},0);
-  if(sumaMetas<=0){
-    $('planRows').innerHTML='<div class="vacio">En cuanto registres tus activos, el plan mensual se arma solo.</div>';
-    $('planSeg').innerHTML='<i style="flex:1;background:rgba(16,17,10,.08)"></i>';
-    flujoDatos(0,[0,0,0,0,0]);
+  if(sumaMetas<=0 || (!act && !M)){
+    $('planIntro').textContent='';
+    $('planRows').innerHTML='<div class="vacio">Registra tus activos y escribe cuánto ahorras al mes — el plan se arma solo.</div>';
     return;
   }
-  /* brecha de cada capa contra su meta sobre el patrimonio futuro */
+  /* la misma aritmética de siempre: brecha de cada capa contra su referencia */
   var brechas=CAPAS.map(function(c){
     var objetivo=futuro*(S.metas[c.k]||0)/sumaMetas;
     return Math.max(0, objetivo-(m[c.k]||0));
@@ -911,23 +923,42 @@ function renderPlan(){
   var asig=CAPAS.map(function(c,i){
     if(M===0) return 0;
     if(tb>0.005) return M*brechas[i]/tb;
-    return M*(S.metas[c.k]||0)/sumaMetas;  /* sin brechas: por meta */
+    return M*(S.metas[c.k]||0)/sumaMetas;
   });
-  /* redondeo a pesos, el residuo a la mayor asignación */
   var red=asig.map(function(v){return Math.floor(v)});
   var resto=Math.round(M-red.reduce(function(a,b){return a+b},0));
   if(resto>0){ var mx=0; asig.forEach(function(v,i){ if(v>asig[mx])mx=i }); red[mx]+=resto; }
-  var maxA=Math.max.apply(null,red.concat([1]));
-  $('planSeg').innerHTML= M>0
-    ? CAPAS.map(function(c,i){ return red[i]>0?'<i data-tip="'+c.n+' — '+mxn(red[i])+'" style="flex:'+red[i]+';background:'+c.c+'"></i>':'' }).join('')
-      ||'<i style="flex:1;background:rgba(16,17,10,.08)"></i>'
-    : '<i style="flex:1;background:rgba(16,17,10,.08)"></i>';
-  flujoDatos(M,red);
-  $('planRows').innerHTML=CAPAS.map(function(c,i){
-    return '<div class="plan-row"><u style="background:'+c.c+'"></u>'
-      +'<span>'+c.n+'<span class="bar"><i style="width:'+(red[i]/maxA*100)+'%;background:'+c.c+'"></i></span></span>'
-      +'<span class="monto">'+mxn(red[i])+'</span></div>';
+  $('planIntro').innerHTML= M>0
+    ? 'Este mes guardas <b>'+mxn(M)+'</b>. La oficina sugiere repartirlo así:'
+    : 'Escribe cuánto ahorras al mes y aquí ves a dónde conviene que vaya.';
+  var maxPct=10;
+  CAPAS.forEach(function(c){ maxPct=Math.max(maxPct, act>0?(m[c.k]||0)/act*100:0, (S.metas[c.k]||0)/sumaMetas*100); });
+  maxPct=Math.ceil(maxPct/10)*10;
+  var conDinero=[], alDia=[];
+  CAPAS.forEach(function(c,i){
+    var hoy= act>0? (m[c.k]||0)/act*100 : 0;
+    var ref=(S.metas[c.k]||0)/sumaMetas*100;
+    var fila={c:c, monto:red[i], hoy:hoy, ref:ref};
+    if(red[i]>0) conDinero.push(fila); else alDia.push(fila);
+  });
+  conDinero.sort(function(a,b){return b.monto-a.monto;});
+  var html=conDinero.map(function(f){
+    return '<div class="pr2">'
+      +'<div class="pr2-cab"><span class="pr2-nom"><u style="background:'+f.c.c+'"></u>'+esc(f.c.n)+'</span><b>'+mxn(f.monto)+'</b></div>'
+      +'<div class="pr2-track"><i style="width:'+Math.min(100,f.hoy/maxPct*100).toFixed(1)+'%;background:'+f.c.c+'"></i>'
+      +'<s style="left:'+Math.min(100,f.ref/maxPct*100).toFixed(1)+'%"></s></div>'
+      +'<div class="pr2-cap">hoy tiene '+f.hoy.toFixed(1)+'% de tus activos — la referencia sugiere '+f.ref.toFixed(0)+'% (la rayita)</div>'
+      +'</div>';
   }).join('');
+  if(M>0 && act>0){
+    var lista=alDia.filter(function(f){ return (m[f.c.k]||0)>0; });
+    if(lista.length){
+      html+='<div class="pr2-aldia"><b>Ya van adelante:</b> '+lista.map(function(f){
+        return esc(f.c.n)+' ('+f.hoy.toFixed(0)+'% — referencia '+f.ref.toFixed(0)+'%)';
+      }).join(' · ')+'. Este mes no necesitan dinero nuevo.</div>';
+    }
+  }
+  $('planRows').innerHTML=html || '<div class="vacio">Escribe una aportación y el reparto aparece aquí.</div>';
 }
 
 function renderLibertad(){
@@ -1382,16 +1413,6 @@ function leyendaCapas(id){
   }).join('');
 }
 
-/* ── tooltips por-marca en la píldora del plan ── */
-(function(){
-  var el=$('planSeg'); if(!el)return;
-  el.addEventListener('mousemove',function(e){
-    var t=e.target;
-    if(t&&t.tagName==='I'&&t.getAttribute('data-tip')) tipVer(e.clientX,e.clientY,t.getAttribute('data-tip'));
-    else tipFuera();
-  });
-  el.addEventListener('mouseleave',tipFuera);
-})();
 
 /* ── MATRIZ DE ASIGNACIÓN · treemap: el tamaño es el valor ($), el color es la desviación vs meta ── */
 /* treemap squarificado (Bruls/Huizing/van Wijk): mosaicos lo más cuadrados posible */
@@ -1612,110 +1633,6 @@ function dibujaMosaico(){
 addEventListener('resize', function(){ var v=document.body.getAttribute('data-v'); if(v==='portafolio')dibujaMareas(); else if(v==='resumen')dibujaMosaico(); else if(v==='plan')renderLibertad(); });
 (function(){ var mz=$('mosaico'); if(mz) mz.addEventListener('click',function(){ verVista('portafolio'); }); })();
 
-/* ── EL FLUJO · la aportación viajando a sus capas, con partículas de luz ── */
-var fluDatos=null, fluHover=-1, fluParts=[];
-function flujoDatos(M,red){
-  fluDatos= M>0? {M:M,red:red} : null;
-  fluParts=[];
-  if(fluDatos){
-    CAPAS.forEach(function(c,i){
-      var n=Math.round((red[i]/M)*16);
-      for(var k=0;k<n;k++) fluParts.push({ci:i,ph:Math.random(),vel:0.10+Math.random()*0.08,os:(Math.random()-0.5)});
-    });
-  }
-}
-function fluGeom(w,h){
-  var x0=86, x1=w-150, ys=h/2;
-  var yT=CAPAS.map(function(c,i){ return 26+i*((h-52)/4); });
-  return {x0:x0,x1:x1,ys:ys,yT:yT};
-}
-function fluPunto(g,ci,tt){
-  var y1=g.yT[ci], mx=(g.x0+g.x1)/2;
-  var x=Math.pow(1-tt,3)*g.x0+3*Math.pow(1-tt,2)*tt*mx+3*(1-tt)*tt*tt*mx+Math.pow(tt,3)*g.x1;
-  var y=Math.pow(1-tt,3)*g.ys+3*Math.pow(1-tt,2)*tt*g.ys+3*(1-tt)*tt*tt*y1+Math.pow(tt,3)*y1;
-  return [x,y];
-}
-var fluDt=0.016;
-function dibujaFlujo(t){
-  var cv=$('flujo'); if(!cv||document.body.getAttribute('data-v')!=='plan')return;
-  var L=lienzo(cv,200); if(!L)return;
-  var ctx=L.ctx, w=L.w, h=200, g=fluGeom(w,h);
-  if(!fluDatos){
-    ctx.fillStyle='rgba(18,19,12,.35)'; ctx.font='9px ui-monospace,monospace'; ctx.textAlign='center';
-    ctx.fillText('DEFINE UNA APORTACIÓN Y EL FLUJO SE ENCIENDE',w/2,h/2); return;
-  }
-  var M=fluDatos.M, red=fluDatos.red, maxV=Math.max.apply(null,red.concat([1]));
-  /* bandas */
-  CAPAS.forEach(function(c,i){
-    if(red[i]<=0)return;
-    var esp=2+16*(red[i]/maxV);
-    ctx.beginPath();
-    for(var s=0;s<=24;s++){ var p=fluPunto(g,i,s/24); s?ctx.lineTo(p[0],p[1]):ctx.moveTo(p[0],p[1]); }
-    ctx.strokeStyle= i===fluHover? c.c : c.c+'59';
-    ctx.lineWidth=esp; ctx.lineCap='round'; ctx.stroke();
-  });
-  /* partículas de luz recorriendo su banda */
-  if(!REDUCIDO){
-    fluParts.forEach(function(p){
-      p.ph=(p.ph+p.vel*fluDt)%1;
-      var pt=fluPunto(g,p.ci,p.ph);
-      ctx.save();
-      ctx.shadowColor=CAPAS[p.ci].c; ctx.shadowBlur=10;
-      ctx.fillStyle='rgba(255,255,255,.95)';
-      ctx.beginPath(); ctx.arc(pt[0],pt[1]+p.os*3,1.6,0,7); ctx.fill();
-      ctx.restore();
-    });
-  }
-  /* nodo fuente */
-  ctx.fillStyle='rgba(18,19,12,.95)';
-  ctx.beginPath(); ctx.arc(g.x0,g.ys,7,0,7); ctx.fill();
-  ctx.fillStyle='rgba(18,19,12,.55)'; ctx.font='8px ui-monospace,monospace'; ctx.textAlign='center';
-  ctx.fillText('APORTACIÓN',g.x0,g.ys-20);
-  ctx.fillStyle='rgba(18,19,12,.9)'; ctx.font='10px ui-monospace,monospace';
-  ctx.fillText(mxn(M),g.x0,g.ys+27);
-  /* nodos destino con etiqueta directa */
-  ctx.textAlign='left';
-  CAPAS.forEach(function(c,i){
-    ctx.fillStyle=c.c;
-    ctx.beginPath(); ctx.arc(g.x1,g.yT[i],4.5,0,7); ctx.fill();
-    ctx.strokeStyle='#EDEAE2'; ctx.lineWidth=2; ctx.stroke();
-    ctx.fillStyle='rgba(18,19,12,'+(red[i]>0?'.85':'.35')+')';
-    ctx.font='8.5px ui-monospace,monospace';
-    ctx.fillText(c.n.toUpperCase()+'  '+mxn(red[i]),g.x1+12,g.yT[i]+3);
-  });
-}
-(function(){
-  var cv=$('flujo'); if(!cv)return;
-  cv.addEventListener('mousemove',function(e){
-    if(!fluDatos){tipFuera();return}
-    var r=cv.getBoundingClientRect(), mx=e.clientX-r.left, my=e.clientY-r.top;
-    var g=fluGeom(r.width,200), best=-1, bd=14;
-    CAPAS.forEach(function(c,i){
-      if(fluDatos.red[i]<=0)return;
-      for(var s=0;s<=24;s++){ var p=fluPunto(g,i,s/24);
-        var d=Math.hypot(mx-p[0],my-p[1]); if(d<bd){bd=d;best=i} }
-    });
-    fluHover=best;
-    if(best>=0) tipVer(e.clientX,e.clientY,'<b>'+CAPAS[best].n+'</b><br>'+mxn(fluDatos.red[best])+' DE '+mxn(fluDatos.M)+' ESTE MES');
-    else tipFuera();
-    if(REDUCIDO) dibujaFlujo(0);
-  });
-  cv.addEventListener('mouseleave',function(){ fluHover=-1; tipFuera(); if(REDUCIDO)dibujaFlujo(0); });
-})();
-
-/* un solo reloj para todo lo que se mueve */
-(function(){
-  var prev=null;
-  function marco(ts){
-    var t=ts/1000;
-    fluDt= prev===null? 0.016 : Math.min(0.05,(ts-prev)/1000);
-    prev=ts;
-    dibujaFlujo(t);
-    requestAnimationFrame(marco);
-  }
-  if(REDUCIDO){ setTimeout(function(){dibujaFlujo(0);dibujaMareas(0)},80); }
-  else requestAnimationFrame(marco);
-})();
 
 /* ── enrutador del menú lateral ── */
 var VISTAS={resumen:'Resumen',portafolio:'Portafolio',plan:'El plan',
@@ -1745,7 +1662,7 @@ function verVista(v,primerCarga,desdeHistorial){
   $('cabSub').textContent=SUBS[v]||'';
   document.body.classList.remove('menuAbierto');
   if(v==='resumen'){ setTimeout(function(){renderSpark();dibujaMosaico()},40); if(!primerCarga) animarNeto(); }
-  if(v==='plan') setTimeout(function(){dibujaFlujo(performance.now()/1000);renderLibertad()},40);
+  if(v==='plan') setTimeout(renderLibertad,40);
   if(v==='portafolio') setTimeout(function(){dibujaMareas(performance.now()/1000)},40);
   if(location.hash!=='#/'+v){
     try{
@@ -1764,7 +1681,7 @@ $('tbActivo').addEventListener('click',function(){ verVista('portafolio'); abrir
 addEventListener('hashchange',function(){verVista(location.hash.replace('#/',''),false,true)});
 addEventListener('resize',function(){
   renderSpark();
-  if(REDUCIDO){  dibujaFlujo(0); dibujaMareas(0); }
+  if(REDUCIDO){ dibujaMareas(0); }
 });
 /* ?demo=1 abre directo en modo demo — solo si la oficina está en cero,
    nunca pisa datos reales sin preguntar */
