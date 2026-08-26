@@ -4924,7 +4924,7 @@ function saludDe(a){
      reinicio; en evaluación, sobre el acumulado */
   let corrido = cc.pasoEval ? a.start : a.start;
   dias.forEach(d => {
-    if(cc.pasoEval && d <= cc.mEval) return;
+    if(cc.pasoEval && cc.mEval && d <= cc.mEval) return;
     corrido += porDia[d]; pico = Math.max(pico, corrido);
   });
   pico = Math.max(pico, a.start);
@@ -6022,6 +6022,20 @@ window.desdePrimerTrade = function(id){
 };
 function carreraCuenta(a){
   const Re = reglasEval(a), Rf = reglasFondeadas(a);
+  /* LA ETAPA CON LA QUE SE REGISTRÓ MANDA SOBRE LOS TRADES.
+     Antes el examen SIEMPRE formaba parte del camino y sólo se daba por
+     pasado cuando los trades registrados AQUÍ llegaban al objetivo. Así que
+     una cuenta dada de alta como ya fondeada —comprada pasada, o que ya venías
+     operando— aparecía «EN EVALUACIÓN» y en 0%, teniendo que volver a ganar un
+     examen que ya estaba ganado. Si la registraste fondeada, esa etapa es
+     historia: no cuenta en la vara ni hay que repetirla. */
+  const yaFondeada = !!a.fase && a.fase !== 'eval';
+  /* El tramo del examen SIGUE en la vara y se pinta como ya recorrido, en vez
+     de desaparecer. Dos razones: se ve que esa parte ya está ganada —que es lo
+     que quieres leer de un golpe—, y todas las cuentas comparten la misma
+     escala, así que el porcentaje de una fondeada y el de una en evaluación se
+     pueden comparar y sumar en la carrera de la firma. Si la borráramos, cada
+     cuenta mediría una vara de distinto largo. */
   const target = Re ? (Re.target || 0) : 0;
   const buffer = Rf ? (Rf.maxDD || 0) + (Rf.lockAtProfit || 0) : 0;
   const pago = TRAMO_PAGO;
@@ -6045,12 +6059,13 @@ function carreraCuenta(a){
     p += porDia[d]; pico = Math.max(pico, p);
     if(!mEval && target > 0 && pico >= target) mEval = d;
   });
-  const pasoEval = !!mEval;
-  /* lo ganado ya fondeado: desde el día siguiente al pase */
+  const pasoEval = yaFondeada || !!mEval;
+  /* lo ganado ya fondeado: desde el día siguiente al pase — o TODO, si la
+     cuenta nació fondeada y por lo tanto no hay día de pase que recortar. */
   let pDesp = 0, picoDesp = 0, mBuffer = null, mPago = null;
   if(pasoEval){
     dias.forEach(d => {
-      if(d <= mEval) return;
+      if(mEval && d <= mEval) return;
       pDesp += porDia[d]; picoDesp = Math.max(picoDesp, pDesp);
       if(!mBuffer && buffer > 0 && picoDesp >= buffer) mBuffer = d;
       if(!mPago   && pago   > 0 && picoDesp >= buffer + pago) mPago = d;
