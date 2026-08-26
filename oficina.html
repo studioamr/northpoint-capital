@@ -99,7 +99,6 @@ body.demo .topbar #tbActivo{margin-left:0}
 body{--acc:#12130C}
 body[data-v="portafolio"]{--acc:#1FA97E}
 body[data-v="plan"]{--acc:#6C7A89}
-body[data-v="libertad"]{--acc:#5546F0}
 body[data-v="activos"]{--acc:#12130C}
 body[data-v="deudas"]{--acc:#C77BA2}
 body[data-v="ajustes"]{--acc:rgba(18,19,12,.5)}
@@ -108,7 +107,7 @@ body[data-v="ajustes"]{--acc:rgba(18,19,12,.5)}
 body[data-v="resumen"] .resumen{display:block;animation:vistaIn .45s ease both}
 body[data-v="portafolio"] #portafolio{display:block;animation:vistaIn .45s ease both}
 body[data-v="plan"] #plan{display:block;animation:vistaIn .45s ease both}
-body[data-v="libertad"] #libertad{display:block;animation:vistaIn .45s ease both}
+body[data-v="plan"] #libertad{display:block;animation:vistaIn .45s ease both}
 body[data-v="activos"] #activos{display:block;animation:vistaIn .45s ease both}
 body[data-v="deudas"] #deudas{display:block;animation:vistaIn .45s ease both}
 body[data-v="ajustes"] .ajustes{display:block;animation:vistaIn .45s ease both}
@@ -455,12 +454,6 @@ body::before{background:
 .card{background:rgba(255,255,255,.55);border:1px solid var(--borde);
   box-shadow:inset 0 1px 0 rgba(255,255,255,.9),0 24px 60px -30px rgba(16,17,10,.25)}
 .card::after{background:linear-gradient(105deg,transparent,rgba(255,255,255,.5),transparent)}
-/* la tarjeta de EVOLUCIÓN, oscura como la referencia */
-.card:has(#spark){background:var(--tinta);border-color:transparent;
-  box-shadow:0 24px 60px -26px rgba(16,17,10,.5)}
-.card:has(#spark) .eb{color:rgba(239,236,231,.55)}
-.card:has(#spark) .spark-rango{color:#EFECE7}
-.card:has(#spark) .spark-note,.card:has(#spark) .foto-hint{color:rgba(239,236,231,.6)}
 .in-box{background:rgba(255,255,255,.6)}
 .btn:focus-visible,button:focus-visible,a:focus-visible{outline:2px solid rgba(85,70,240,.55);outline-offset:2px}
 .num-meta{color:var(--indigo)}
@@ -480,8 +473,7 @@ body::before{background:
   <nav class="menu" aria-label="Menú principal">
     <button class="mn" data-v="resumen"><u></u>Resumen</button>
     <button class="mn" data-v="portafolio"><u></u>Portafolio</button>
-    <button class="mn" data-v="plan"><u></u>Plan mensual</button>
-    <button class="mn" data-v="libertad"><u></u>Libertad financiera</button>
+    <button class="mn" data-v="plan"><u></u>El plan</button>
     <button class="mn" data-v="activos"><u></u>Activos</button>
     <button class="mn" data-v="deudas"><u></u>Deudas</button>
     <button class="mn" data-v="ajustes"><u></u>Ajustes</button>
@@ -572,7 +564,7 @@ body::before{background:
       <div id="mareas" style="width:100%;min-height:280px"></div>
     </div>
 
-    <div class="card" id="plan">    <div class="card" id="plan"><svg class="spk" viewBox="0 0 64 64" fill="currentColor" aria-hidden="true"><path d="M32 1 37.2 26.8 63 32 37.2 37.2 32 63 26.8 37.2 1 32 26.8 26.8Z"/></svg>
+    <div class="card" id="plan"><svg class="spk" viewBox="0 0 64 64" fill="currentColor" aria-hidden="true"><path d="M32 1 37.2 26.8 63 32 37.2 37.2 32 63 26.8 37.2 1 32 26.8 26.8Z"/></svg>
       <h2>Plan de acción mensual</h2>
       <p class="sub">Reparte lo que ahorras este mes entre tus capas (tus 5 tipos de inversión), empezando por las que van más atrás de su meta.</p>
       <div class="in-box">
@@ -589,7 +581,7 @@ body::before{background:
   <div class="col">
 
     <div class="card" id="libertad"><svg class="spk" viewBox="0 0 64 64" fill="currentColor" aria-hidden="true"><path d="M32 1 37.2 26.8 63 32 37.2 37.2 32 63 26.8 37.2 1 32 26.8 26.8Z"/></svg>
-      <h2>Libertad financiera</h2>
+      <h2>Tu camino a la libertad</h2>
       <p class="sub">Junta 300 veces tu retiro mensual y podrás vivir de tus inversiones.</p>
       <div class="in-box">
         <label for="inIngreso">Retiro mensual deseado</label>
@@ -949,6 +941,7 @@ function renderLibertad(){
 /* el camino: una ruta con tus hitos y tu posición */
 function dibujaCamino(base, meta, pct){
   var host=$('camino'); if(!host) return;
+  if(document.body.getAttribute('data-v')!=='plan'){ return; }
   if(!(meta>0)){ host.innerHTML=''; return; }
   var W=Math.round(host.clientWidth||host.getBoundingClientRect().width);
   if(!W){ requestAnimationFrame(function(){ dibujaCamino(base,meta,pct); }); return; }
@@ -1088,7 +1081,7 @@ function renderSpark(t,soloCanvas){
   var L=lienzo(cv,96); if(!L)return;
   var ctx=L.ctx, w=L.w, h=96;
   if(pts.length<2){
-    ctx.fillStyle='rgba(239,236,231,.25)';
+    ctx.fillStyle='rgba(18,19,12,.25)';
     ctx.font='9px ui-monospace,monospace'; ctx.textAlign='center';
     ctx.fillText(pts.length===0?'La curva nace con dos fotos':'Una foto m\u00e1s y hay curva', w/2, 52);
     return;
@@ -1104,13 +1097,13 @@ function renderSpark(t,soloCanvas){
   pts.forEach(function(p,i){ i?ctx.lineTo(X(i),Y(p.v)):ctx.moveTo(X(i),Y(p.v)); });
   ctx.lineTo(X(pts.length-1),h); ctx.lineTo(X(0),h); ctx.closePath();
   var gr=ctx.createLinearGradient(0,top,0,h);
-  gr.addColorStop(0,'rgba(239,236,231,.16)'); gr.addColorStop(1,'rgba(239,236,231,0)');
+  gr.addColorStop(0,'rgba(18,19,12,.16)'); gr.addColorStop(1,'rgba(18,19,12,0)');
   ctx.fillStyle=gr; ctx.fill();
   /* la l\u00ednea, con su glow */
   ctx.beginPath();
   pts.forEach(function(p,i){ i?ctx.lineTo(X(i),Y(p.v)):ctx.moveTo(X(i),Y(p.v)); });
   ctx.strokeStyle='#12130C'; ctx.lineWidth=2;
-  ctx.shadowColor='rgba(239,236,231,.5)'; ctx.shadowBlur=8; ctx.stroke(); ctx.shadowBlur=0;
+  ctx.shadowColor='rgba(18,19,12,.5)'; ctx.shadowBlur=8; ctx.stroke(); ctx.shadowBlur=0;
   /* una perla por corte */
   pts.forEach(function(p,i){
     ctx.fillStyle='#12130C';
@@ -1122,7 +1115,7 @@ function renderSpark(t,soloCanvas){
   var ux=X(pts.length-1), uy=Y(pts[pts.length-1].v);
   if(!REDUCIDO){
     var halo=4+(Math.sin(t*2.4)+1)*3;
-    ctx.strokeStyle='rgba(239,236,231,'+(0.4-(halo-4)/6*0.3).toFixed(2)+')';
+    ctx.strokeStyle='rgba(18,19,12,'+(0.4-(halo-4)/6*0.3).toFixed(2)+')';
     ctx.lineWidth=1.5;
     ctx.beginPath(); ctx.arc(ux,uy,halo,0,7); ctx.stroke();
   }
@@ -1454,8 +1447,12 @@ function dibujaMareas(){
       +esc(g.c.n+' — '+mxn(g.v)+' · '+(frac*100).toFixed(1)+'%')+'</title></path>';
     if(frac>=0.085){
       var mid=(b0+b1)/2, lr=(rHueco+r1)/2;
-      s+='<text x="'+(cx+Math.cos(mid)*lr).toFixed(1)+'" y="'+(cy+Math.sin(mid)*lr).toFixed(1)+'" text-anchor="middle" class="sb-capa" fill="'+txtSobre(g.c.c)+'">'
-        +esc(g.c.n.length>12? g.c.n.slice(0,11)+'…':g.c.n)+'<tspan x="'+(cx+Math.cos(mid)*lr).toFixed(1)+'" dy="13" class="sb-pct">'+(frac*100).toFixed(1)+'%</tspan></text>';
+      var lx=(cx+Math.cos(mid)*lr).toFixed(1), ly=(cy+Math.sin(mid)*lr).toFixed(1);
+      var pal=g.c.n.split(' '), l1=pal[0], l2=pal.slice(1).join(' ');
+      s+='<text x="'+lx+'" y="'+ly+'" text-anchor="middle" class="sb-capa" fill="'+txtSobre(g.c.c)+'"'+(l2?' dy="-7"':'')+'>'
+        +esc(l1)
+        +(l2?'<tspan x="'+lx+'" dy="14">'+esc(l2)+'</tspan>':'')
+        +'<tspan x="'+lx+'" dy="14" class="sb-pct">'+(frac*100).toFixed(1)+'%</tspan></text>';
     }
     /* anillo exterior: sus activos */
     var aa=b0;
@@ -1577,7 +1574,7 @@ function dibujaSistema(){
   s+='</svg>';
   host.innerHTML=s;
 }
-addEventListener('resize', function(){ var v=document.body.getAttribute('data-v'); if(v==='portafolio')dibujaMareas(); else if(v==='resumen')dibujaSistema(); else if(v==='libertad')renderLibertad(); });
+addEventListener('resize', function(){ var v=document.body.getAttribute('data-v'); if(v==='portafolio')dibujaMareas(); else if(v==='resumen')dibujaSistema(); else if(v==='plan')renderLibertad(); });
 
 /* ── EL FLUJO · la aportación viajando a sus capas, con partículas de luz ── */
 var fluDatos=null, fluHover=-1, fluParts=[];
@@ -1686,12 +1683,11 @@ function dibujaFlujo(t){
 })();
 
 /* ── enrutador del menú lateral ── */
-var VISTAS={resumen:'Resumen',portafolio:'Portafolio',plan:'Plan mensual',
-  libertad:'Libertad financiera',activos:'Activos',deudas:'Deudas',ajustes:'Ajustes'};
+var VISTAS={resumen:'Resumen',portafolio:'Portafolio',plan:'El plan',
+  activos:'Activos',deudas:'Deudas',ajustes:'Ajustes'};
 var SUBS={resumen:'La fotografía de hoy — y cómo has llegado hasta aquí.',
   portafolio:'Cómo se reparte tu patrimonio entre tus 5 capas.',
-  plan:'A dónde va el dinero nuevo de este mes.',
-  libertad:'Cuánto necesitas para ya no depender de tu trabajo — y qué tan cerca vas.',
+  plan:'Cuánto ahorras cada mes, a dónde va — y a dónde te lleva.',
   activos:'Todo lo que la familia posee, capa por capa.',
   deudas:'Lo que resta — y lo que de verdad cuesta.',
   ajustes:'Moneda, gasto, respaldo y datos.'};
@@ -1715,7 +1711,7 @@ function verVista(v,primerCarga,desdeHistorial){
   $('cabSub').textContent=SUBS[v]||'';
   document.body.classList.remove('menuAbierto');
   if(v==='resumen'){ setTimeout(function(){renderSpark();dibujaSistema(performance.now()/1000)},40); if(!primerCarga) animarNeto(); }
-  if(v==='plan') setTimeout(function(){dibujaFlujo(performance.now()/1000)},40);
+  if(v==='plan') setTimeout(function(){dibujaFlujo(performance.now()/1000);renderLibertad()},40);
   if(v==='portafolio') setTimeout(function(){dibujaMareas(performance.now()/1000)},40);
   if(location.hash!=='#/'+v){
     try{
