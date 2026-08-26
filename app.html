@@ -3132,6 +3132,12 @@ stop[stop-color="#9BC0DC"]{stop-color:var(--txt)}
         <div><label class="micro">Daily loss limit USD</label>
           <input type="number" id="ncDaily" min="0" step="50" placeholder="optional"></div>
       </div>
+      <div class="f-row" style="margin-top:10px">
+        <div><label class="micro">Payout stretch USD</label>
+          <input type="number" id="ncPago" min="0" step="100" placeholder="1000"></div>
+        <div><label class="micro">Goal</label>
+          <input id="ncMeta" disabled value="—"></div>
+      </div>
       <p class="micro" id="ncReglasNota" style="color:var(--faint);margin-top:8px;line-height:1.55"></p>
     </div>
 
@@ -4888,7 +4894,12 @@ function reglasManuales(a){
   /* lock null NO es lock 0: null significa «el piso nunca se congela» (una
      evaluación) y 0 significaría «se congela desde el primer peso». */
   const lock = (m.lock === '' || m.lock == null) ? null : num(m.lock);
+  /* El tramo de pago era TRAMO_PAGO, una constante de $1,000 igual para todas.
+     Es regla de NORTHPOINT, no de la fondeadora: André lleva $2,500 en Apex, y
+     con $1,000 clavados la meta salía $1,500 abajo de la real. Vacío = la
+     regla de la casa, para no obligar a llenarlo a quien no lo sabe. */
   return { target, maxDD, dailyLoss:num(m.dailyLoss), lockAtProfit:lock,
+           pago: (m.pago === '' || m.pago == null) ? null : num(m.pago),
            consistency:num(m.consistency), minDays:num(m.minDays),
            note:null, src:'manual', checked:null, manual:true };
 }
@@ -5886,6 +5897,12 @@ function renderAcctMgr(){
           <input type="number" data-f="r.lock" data-id="${a.id}" value="${rg.lock == null ? '' : rg.lock}" step="50" placeholder="never"></div>
         <div><label class="micro">Daily loss limit USD</label>
           <input type="number" data-f="r.dailyLoss" data-id="${a.id}" value="${rg.dailyLoss || ''}" step="50" placeholder="none"></div>
+      </div>
+      <div class="acct-row" style="margin-top:10px">
+        <div><label class="micro">Payout stretch USD</label>
+          <input type="number" data-f="r.pago" data-id="${a.id}" value="${rg.pago == null ? '' : rg.pago}" step="100" placeholder="${TRAMO_PAGO}"></div>
+        <div><label class="micro">Goal</label>
+          <input disabled value="${metaDe(a)}"></div>
       </div>`}
       ${(!esLive(a) && !esSim(a) && a.fase !== 'eval' && R && R.lockAtProfit == null)
         ? `<div class="cal-pace" style="margin-top:10px;border-left-color:var(--warn)">
@@ -6038,7 +6055,7 @@ function carreraCuenta(a){
      cuenta mediría una vara de distinto largo. */
   const target = Re ? (Re.target || 0) : 0;
   const buffer = Rf ? (Rf.maxDD || 0) + (Rf.lockAtProfit || 0) : 0;
-  const pago = TRAMO_PAGO;
+  const pago = (a.reglas && a.reglas.pago) ? +a.reglas.pago : TRAMO_PAGO;
   const total = target + buffer + pago;
 
   const porDia = {};
@@ -6086,6 +6103,18 @@ function carreraCuenta(a){
   return { target, buffer, pago, total, p, pico, pDesp, picoDesp, avance, pct, balance,
            pasoEval, pasoBuffer, pasoPago, mEval, mBuffer, mPago,
            arranque: dias[0] || null };
+}
+
+/* LA META: el saldo al que llegas cuando el colchón está hecho y el tramo de
+   pago recorrido. Se cuenta desde el TAMAÑO de la cuenta y no desde lo que
+   llevas en la evaluación, porque al pasar el examen la cuenta se reinicia y
+   el excedente de ese día se queda en la fondeadora. Se pinta en la ficha para
+   poder cotejar de un vistazo el número que da la app contra el que te dice tu
+   fondeadora — que es justo donde se descubren los dedazos. */
+function metaDe(a){
+  const cc = carreraCuenta(a);
+  if(!cc.buffer && !cc.pago) return '—';
+  return fmt$((a.start || 0) + cc.buffer + cc.pago);
 }
 
 /* ── LA CARRERA DE LA FIRMA ──
@@ -8998,7 +9027,17 @@ function ncAuto(cambioDeFirma){
   $('#ncLock').value   = pl.lockAtProfit == null ? '' : pl.lockAtProfit;
   $('#ncDaily').value  = z.dailyLoss || '';
 }
+/* La meta se recalcula con cada tecla: es la comprobación de que los cuatro
+   números de arriba son los correctos. */
+function ncMetaPinta(){
+  const n = id => parseFloat($('#'+id).value) || 0;
+  const size = n('ncStart');
+  const pago = parseFloat($('#ncPago').value);
+  const total = n('ncDD') + n('ncLock') + (isFinite(pago) ? pago : TRAMO_PAGO);
+  $('#ncMeta').value = (size > 0 && total > 0) ? fmt$(size + total) : '—';
+}
 function ncNotaReglas(){
+  ncMetaPinta();
   const F = FIRM_CATALOG[nc.firm];
   const plan = F && planPorFase(nc.firm, nc.fase);
   const size = parseFloat($('#ncStart').value);
@@ -9034,13 +9073,18 @@ function ncPinta(){
 function ncAbrir(){
   nc.tipo = 'prop'; nc.firm = 'Tradeify'; nc.fase = 'eval'; nc.plan = null;
   $('#ncAlias').value = ''; $('#ncErr').textContent = '';
-  ['ncStart','ncTarget','ncDD','ncLock','ncDaily'].forEach(id => $('#'+id).value = '');
+  ['ncStart','ncTarget','ncDD','ncLock','ncDaily','ncPago'].forEach(id => $('#'+id).value = '');
   ncAuto(true);      /* Tradeify sí está en el catálogo: abre ya prellenada */
   ncPinta();
   $('#ncDesde').value = todayISO();
   openOv('ovNuevaCuenta');
 }
 $$('#ncTipo button').forEach(b => b.onclick = () => { nc.tipo = b.dataset.t; ncPinta(); });
+/* Teclear un número recalcula la meta al vuelo. Y si el tamaño cae justo en
+   una talla del catálogo, se vuelven a proponer sus reglas. */
+['ncTarget','ncDD','ncLock','ncPago'].forEach(id =>
+  $('#'+id).addEventListener('input', ncMetaPinta));
+$('#ncStart').addEventListener('input', () => { ncAuto(false); ncNotaReglas(); });
 $('#ncSave').addEventListener('click', ()=>{
   /* El nombre lo pone quien la crea — sin autonombrar "T3" en silencio, que
      luego nadie sabe cuál cuenta es cuál. */
@@ -9065,7 +9109,8 @@ $('#ncSave').addEventListener('click', ()=>{
   const cuenta = nc.tipo === 'prop'
     ? { ...base, tipo:'prop', firm:nc.firm, plan:nc.plan || '—', size:cap, start:cap, fase:nc.fase,
         reglas:{ target:num('ncTarget') || 0, maxDD:num('ncDD') || 0,
-                 lock:num('ncLock'), dailyLoss:num('ncDaily') || 0 } }
+                 lock:num('ncLock'), dailyLoss:num('ncDaily') || 0,
+                 pago:num('ncPago') } }
     : { ...base, tipo:nc.tipo, firm:'—', plan:'—', size:cap, start:cap, fase:'payout' };
   S.accounts.push(cuenta);
   /* renderAll() en vez de tres renders sueltos: registrar una cuenta tiene que
