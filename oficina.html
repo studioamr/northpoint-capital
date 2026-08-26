@@ -102,16 +102,17 @@ body[data-v="plan"]{--acc:#6C7A89}
 body[data-v="deudas"]{--acc:#C77BA2}
 body[data-v="ajustes"]{--acc:rgba(18,19,12,.5)}
 @keyframes vistaIn{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
-.resumen,#portafolio,#plan,#libertad,#activos,#deudas,.ajustes{display:none}
+.resumen,#portafolio,#plan,#libertad,#flujoPat,#activos,#deudas,.ajustes{display:none}
 body[data-v="resumen"] .resumen{display:block;animation:vistaIn .45s ease both}
 body[data-v="portafolio"] #portafolio{display:block;animation:vistaIn .45s ease both}
-body[data-v="plan"] #plan{display:block;animation:vistaIn .45s ease both}
+body[data-v="plan"] #flujoPat{display:block;animation:vistaIn .45s ease both}
+body[data-v="plan"] #plan{display:block;animation:vistaIn .45s ease both .04s}
 body[data-v="plan"] #libertad{display:block;animation:vistaIn .45s ease both}
 body[data-v="portafolio"] #activos{display:block;animation:vistaIn .45s ease both .05s}
 body[data-v="deudas"] #deudas{display:block;animation:vistaIn .45s ease both}
 body[data-v="ajustes"] .ajustes{display:block;animation:vistaIn .45s ease both}
 @media(prefers-reduced-motion:reduce){
-  .resumen,#portafolio,#plan,#libertad,#activos,#deudas,.ajustes{animation:none!important}
+  .resumen,#portafolio,#plan,#libertad,#flujoPat,#activos,#deudas,.ajustes{animation:none!important}
 }
 .vista-cab{position:relative;padding:34px 0 12px;animation:vistaIn .4s ease both}
 .vista-cab::before{content:'';position:absolute;left:-70px;top:-30px;width:300px;height:170px;
@@ -206,6 +207,13 @@ body:not([data-v="resumen"]) #cabResumen{display:none}
 .sk-val{font-family:var(--fm);font-size:10px;font-weight:400;fill:var(--tenue)}
 .sk-big{font-family:var(--fd);font-size:19px;font-weight:700;fill:var(--cream);letter-spacing:-.01em}
 .sk-eje{font-family:var(--fm);font-size:9px;letter-spacing:.12em;fill:var(--tenue)}
+.mz-svg{display:block}
+.mz-tile{cursor:pointer}
+.mz-tile:hover rect{filter:brightness(1.07)}
+.mz-nom{font-family:var(--fb);font-size:16px;font-weight:700;fill:#FFFFFF}
+.mz-nom.mz-chico{font-size:13px}
+.mz-val{font-family:var(--fm);font-size:12.5px;fill:rgba(255,255,255,.92)}
+.mz-pct{font-family:var(--fd);font-size:13px;font-weight:700;fill:rgba(255,255,255,.85)}
 .sk-flow{fill:none;stroke-linecap:round;stroke-dasharray:4 18;opacity:.7;pointer-events:none;animation:skFlow 1.5s linear infinite}
 @keyframes skFlow{to{stroke-dashoffset:-44}}
 @media(prefers-reduced-motion:reduce){.sk-flow{animation:none;opacity:.35}}
@@ -221,6 +229,11 @@ body:not([data-v="resumen"]) #cabResumen{display:none}
 .fruta-icono{display:block;width:36px;height:36px;border-radius:50%;margin-bottom:14px;box-shadow:inset -5px -7px 12px rgba(0,0,0,.28)}
 .fruta-card h2{font-size:18px;margin:0 0 2px}
 .fruta-monto{font-family:var(--fd);font-weight:700;font-size:27px;letter-spacing:-.012em;margin:0 0 14px}
+.fruta-delta{font-family:var(--fb);font-size:13px;font-weight:600;margin:-6px 0 6px}
+.fruta-delta.sube{color:#1FA97E}
+.fruta-delta.baja{color:#C9564A}
+.fruta-svg{display:block;margin-bottom:4px}
+.fruta-nota{font-family:var(--fb);font-size:11px;color:var(--tenue);margin:0 0 10px}
 .fruta-fila{display:flex;justify-content:space-between;gap:14px;padding:9px 0;border-bottom:1px solid var(--borde);font-size:13px}
 .fruta-fila span{color:var(--tenue)}
 .fruta-fila b{color:var(--cream);font-weight:500;text-align:right}
@@ -549,9 +562,9 @@ body::before{background:
     </div>
   </div>
   <div class="card" id="sistemaCard" style="margin-top:14px"><svg class="spk" viewBox="0 0 64 64" fill="currentColor" aria-hidden="true"><path d="M32 1 37.2 26.8 63 32 37.2 37.2 32 63 26.8 37.2 1 32 26.8 26.8Z"/></svg>
-    <h2>El flujo patrimonial</h2>
-    <p class="sub">De tus capas a tu patrimonio neto — y lo que se lleva la deuda.</p>
-    <div id="sys" style="width:100%;min-height:280px"></div>
+    <h2>El sistema</h2>
+    <p class="sub">Todo lo que tienes, a escala — entre más grande el bloque, más pesa. Pícale y vas al portafolio.</p>
+    <div id="mosaico" style="width:100%;min-height:300px"></div>
   </div>
   <div class="card" id="histCortes" style="margin-top:14px;display:none"><svg class="spk" viewBox="0 0 64 64" fill="currentColor" aria-hidden="true"><path d="M32 1 37.2 26.8 63 32 37.2 37.2 32 63 26.8 37.2 1 32 26.8 26.8Z"/></svg>
     <h2>Historial</h2>
@@ -568,6 +581,11 @@ body::before{background:
       <div id="mareas" style="width:100%;min-height:280px"></div>
     </div>
 
+    <div class="card" id="flujoPat"><svg class="spk" viewBox="0 0 64 64" fill="currentColor" aria-hidden="true"><path d="M32 1 37.2 26.8 63 32 37.2 37.2 32 63 26.8 37.2 1 32 26.8 26.8Z"/></svg>
+      <h2>El flujo patrimonial</h2>
+      <p class="sub">De tus capas a tu patrimonio neto — pasa el cursor para ver los montos.</p>
+      <div id="sys" style="width:100%;min-height:300px"></div>
+    </div>
     <div class="card" id="plan"><svg class="spk" viewBox="0 0 64 64" fill="currentColor" aria-hidden="true"><path d="M32 1 37.2 26.8 63 32 37.2 37.2 32 63 26.8 37.2 1 32 26.8 26.8Z"/></svg>
       <h2>Plan de acción mensual</h2>
       <p class="sub">Reparte lo que ahorras este mes entre tus capas (tus 5 tipos de inversión), empezando por las que van más atrás de su meta.</p>
@@ -761,7 +779,9 @@ function sanea(p){
         veh:['directo','copropiedad','empresa','fideicomiso'].indexOf(x.veh)>=0?x.veh:'directo',
         benef:['si','no','na'].indexOf(x.benef)>=0?x.benef:'',
         benefNombre:String(x.benefNombre||'').slice(0,40),
-        doc:String(x.doc||'').slice(0,60)};
+        doc:String(x.doc||'').slice(0,60),
+        hist:Array.isArray(x.hist)? x.hist.filter(function(h){return h&&fechaOk(h.f)&&isFinite(num(h.v,NaN));})
+          .slice(-36).map(function(h){return {f:h.f, v:Math.max(0,num(h.v,0))};}):[]};
     });
   }
   if(Array.isArray(p.deudas)){
@@ -851,7 +871,7 @@ function render(){
   $('fxNota').textContent= S.fxFecha? 'Fijado el '+fCorta(S.fxFecha)+'. Referencia: el FIX de Banxico.' : 'Tecléalo tú — referencia: el FIX de Banxico.';
 
   renderSeg(); renderPlan(); renderLibertad(); renderListas(); renderCortes(); renderSpark();
-  dibujaSistema();
+  dibujaSistema(); dibujaMosaico();
   $('sistemaCard').style.display= S.activos.length? 'block':'none';
   if(REDUCIDO){ dibujaSistema(0); dibujaFlujo(0); dibujaMareas(0); }
 }
@@ -1163,8 +1183,8 @@ $('formActivo').addEventListener('submit',function(e){
   /* la fecha del valor se estampa cuando el valor cambia — nunca se inventa */
   d.act=(!editando||v!==editando.valor)?hoyISO():(editando.act||null);
   if(editando && editTipo==='activo' && S.activos.indexOf(editando)!==-1){
-    Object.assign(editando,d); toast('Activo actualizado');
-  } else { d.id=uid(); S.activos.push(d); toast('Activo agregado'); }
+    Object.assign(editando,d); histRegistra(editando); toast('Activo actualizado');
+  } else { d.id=uid(); S.activos.push(d); histRegistra(d); toast('Activo agregado'); }
   cerrarFormas(); save(); render();
 });
 $('formDeuda').addEventListener('submit',function(e){
@@ -1191,11 +1211,19 @@ $('btnDeuda').addEventListener('click',function(){verVista('deudas');abrirForma(
 $('btnActivo2').addEventListener('click',function(){abrirForma('activo')});
 $('btnDeuda2').addEventListener('click',function(){abrirForma('deuda')});
 /* foto mensual automática: una por mes, silenciosa e idempotente */
+function histRegistra(x){
+  x.hist=x.hist||[];
+  var f=hoyISO(), mes=f.slice(0,7);
+  var ya=x.hist.find(function(h){return String(h.f).slice(0,7)===mes;});
+  if(ya){ ya.f=f; ya.v=enMXN(x); }
+  else { x.hist.push({f:f, v:enMXN(x)}); if(x.hist.length>36) x.hist.shift(); }
+}
 function autoFotoMensual(){
   if(S.demo || !S.activos.length) return;
   var f=hoyISO(), mes=f.slice(0,7);
   if(S.cortes.some(function(c){return String(c.f).slice(0,7)===mes;})) return;
   var act=totalActivos(), deu=totalDeudas();
+  S.activos.forEach(histRegistra);
   S.cortes.push({f:f,v:act-deu,act:act,deu:deu,capas:porCapa(),fx:S.fx});
   save(); toast('Foto de '+fMesA(f)+' guardada — automática, una por mes');
 }
@@ -1266,6 +1294,14 @@ function cargarDemo(){
     {id:uid(),nombre:'Fondo global',inst:'GBM+',capa:'acciones',moneda:'MXN',valor:350000,lib:true,act:hace(1),titular:'Papá',veh:'directo',benef:'si',benefNombre:'Mamá',doc:'Designación en GBM+'},
     {id:uid(),nombre:'Negocio familiar',inst:'SAPI',capa:'alt',moneda:'MXN',valor:1800000,lib:false,act:hace(90),titular:'SAPI familiar',veh:'empresa',benef:'na',benefNombre:'',doc:'Acta constitutiva · Notaría 4'}
   ];
+  S.activos.forEach(function(x,i){
+    var v=enMXN(x); x.hist=[];
+    for(var m=7;m>=0;m--){
+      var factor=1-0.09*(m/7)+Math.sin(i*2.7+m)*0.018;
+      x.hist.push({f:hace(m*30+2), v:Math.round(v*factor)});
+    }
+    x.hist[x.hist.length-1]={f:hace(2), v:Math.round(v)};
+  });
   S.deudas=[
     {id:uid(),nombre:'Hipoteca del depto',moneda:'MXN',valor:1680000,tasa:10.2,pago:19800,titular:'Copropiedad',act:hace(6)},
     {id:uid(),nombre:'Crédito del auto',moneda:'MXN',valor:180000,tasa:12.9,pago:8400,titular:'Mamá',act:hace(6)},
@@ -1466,6 +1502,38 @@ function dibujaMareas(){
   host.innerHTML=s;
 }
 
+function grafHist(x, col){
+  var h=(x.hist||[]).slice(-24);
+  if(h.length<2) return '<p class="fruta-nota">Su historia empieza hoy — cada mes le tomamos una foto y aquí verás su curva.</p>';
+  var W=380, H=120, padL=6, padR=10, top=12, base=H-22;
+  var vals=h.map(function(p){return p.v;});
+  var mn=Math.min.apply(null,vals), mx=Math.max.apply(null,vals); if(mx===mn) mx+=1;
+  function X(i){ return padL+i/(h.length-1)*(W-padL-padR); }
+  function Y(v){ return top+(1-(v-mn)/(mx-mn))*(base-top); }
+  var d='M'+X(0).toFixed(1)+' '+Y(vals[0]).toFixed(1);
+  for(var i=0;i<h.length-1;i++){
+    var x0=X(Math.max(0,i-1)), y0=Y(vals[Math.max(0,i-1)]);
+    var x1=X(i), y1=Y(vals[i]), x2=X(i+1), y2=Y(vals[i+1]);
+    var x3=X(Math.min(h.length-1,i+2)), y3=Y(vals[Math.min(h.length-1,i+2)]);
+    d+=' C'+(x1+(x2-x0)/6).toFixed(1)+' '+(y1+(y2-y0)/6).toFixed(1)+' '+(x2-(x3-x1)/6).toFixed(1)+' '+(y2-(y3-y1)/6).toFixed(1)+' '+x2.toFixed(1)+' '+y2.toFixed(1);
+  }
+  var area=d+' L'+X(h.length-1).toFixed(1)+' '+base+' L'+X(0).toFixed(1)+' '+base+' Z';
+  var del=vals[vals.length-1]-vals[0], pc= vals[0]!==0? del/Math.abs(vals[0])*100:0;
+  var gid='fg'+String(x.id).replace(/[^a-z0-9]/gi,'');
+  var s='<p class="fruta-delta '+(del>=0?'sube':'baja')+'">'+(del>=0?'▲ +':'▼ −')+mxn(Math.abs(del))+' ('+(del>=0?'+':'−')+Math.abs(pc).toFixed(1)+'%) desde '+esc(fMesA(h[0].f))+'</p>';
+  s+='<svg viewBox="0 0 '+W+' '+H+'" width="100%" height="'+H+'" class="fruta-svg" role="img" aria-label="Valor del activo, foto a foto">';
+  s+='<defs><linearGradient id="'+gid+'" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="'+col+'" stop-opacity="0.24"/><stop offset="1" stop-color="'+col+'" stop-opacity="0"/></linearGradient></defs>';
+  s+='<line x1="'+padL+'" y1="'+base+'" x2="'+(W-padR)+'" y2="'+base+'" stroke="rgba(18,19,12,.14)"/>';
+  s+='<path d="'+area+'" fill="url(#'+gid+')"/>';
+  s+='<path d="'+d+'" fill="none" stroke="'+col+'" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"/>';
+  h.forEach(function(p,i){
+    s+='<circle cx="'+X(i).toFixed(1)+'" cy="'+Y(p.v).toFixed(1)+'" r="'+(i===h.length-1?4.5:2.2)+'" fill="'+col+'" stroke="#FFFFFF" stroke-width="'+(i===h.length-1?1.8:1)+'"><title>'+esc(fMesA(p.f)+' — '+mxn(p.v))+'</title></circle>';
+  });
+  s+='<text x="'+padL+'" y="'+(H-6)+'" class="ev-mes">'+esc(fMesA(h[0].f))+'</text>';
+  s+='<text x="'+(W-padR)+'" y="'+(H-6)+'" text-anchor="end" class="ev-mes">'+esc(fMesA(h[h.length-1].f))+'</text>';
+  s+='</svg><p class="fruta-nota">Valor que tú registras, foto a foto — no es cotización de mercado.</p>';
+  return s;
+}
 function abrirFruta(id){
   var x=S.activos.find(function(a){return a.id===id}); if(!x) return;
   var c=CAPA_BY[x.capa]||CAPAS[0], v=enMXN(x), act=totalActivos(), pr=act>0? v/act*100:0;
@@ -1491,6 +1559,7 @@ function abrirFruta(id){
     +'<span class="fruta-icono" style="background:'+c.c+'"></span>'
     +'<h2>'+esc(x.nombre)+'</h2>'
     +'<p class="fruta-monto">'+esc(mxn(v))+'</p>'
+    +grafHist(x, c.c)
     +filas.map(function(f){ return '<div class="fruta-fila"><span>'+esc(f[0])+'</span><b>'+esc(f[1])+'</b></div>'; }).join('')
     +'<div class="fruta-acciones"><button class="btn btn-g" id="frutaCerrar">Cerrar</button>'
     +'<button class="btn" id="frutaEditar">Editar</button></div></div>';
@@ -1506,8 +1575,55 @@ function cerrarFruta(){ var v=$('frutaVelo'); if(v) v.hidden=true; }
 })();
 
 /* ── RESUMEN · Sankey del flujo patrimonial: capas → activos → neto (y lo que se lleva la deuda) ── */
+function squarify(items, X, Y, W, H){
+  items=items.filter(function(d){return d.value>0}).slice().sort(function(a,b){return b.value-a.value});
+  var total=items.reduce(function(s,d){return s+d.value},0); if(total<=0||W<=0||H<=0) return [];
+  var esc2=(W*H)/total, out=[], i=0;
+  function peor(row,len){ var s=0,mx=0,mn=Infinity; for(var k=0;k<row.length;k++){ s+=row[k]; if(row[k]>mx)mx=row[k]; if(row[k]<mn)mn=row[k]; }
+    return Math.max((len*len*mx)/(s*s),(s*s)/(len*len*mn)); }
+  while(i<items.length){
+    var len=Math.min(W,H), start=i, row=[];
+    while(i<items.length){ var a=items[i].value*esc2; if(row.length && peor(row.concat(a),len)>peor(row,len)) break; row.push(a); i++; }
+    var suma=0,k; for(k=0;k<row.length;k++) suma+=row[k]; var gr=suma/len;
+    if(W>=H){ var yy=Y; for(k=0;k<row.length;k++){ var hh=row[k]/gr; out.push({d:items[start+k],x:X,y:yy,w:gr,h:hh}); yy+=hh; } X+=gr; W-=gr; }
+    else     { var xx=X; for(k=0;k<row.length;k++){ var ww=row[k]/gr; out.push({d:items[start+k],x:xx,y:Y,w:ww,h:gr}); xx+=ww; } Y+=gr; H-=gr; }
+  }
+  return out;
+}
+function dibujaMosaico(){
+  var host=$('mosaico'); if(!host || document.body.getAttribute('data-v')!=='resumen') return;
+  var m=porCapa(), act=totalActivos();
+  if(!act){ host.innerHTML='<div class="tm-vacio">Registra tus activos y tu sistema aparece aquí.</div>'; return; }
+  var W=Math.round(host.clientWidth||host.getBoundingClientRect().width);
+  if(!W){ requestAnimationFrame(dibujaMosaico); return; }
+  var H=Math.min(420, Math.max(300, W*0.4));
+  var items=CAPAS.map(function(c){ var v=m[c.k]||0; return {n:c.n, c:c.c, value:v, pr:v/act*100}; }).filter(function(d){return d.value>0;});
+  var tiles=squarify(items,0,0,W,H), G=10;
+  var s='<svg viewBox="0 0 '+W+' '+H+'" width="100%" height="'+H+'" class="mz-svg" role="img" aria-label="Tus capas a escala real">';
+  tiles.forEach(function(ti,i){
+    var d=ti.d, x=ti.x+G/2, y=ti.y+G/2, w=Math.max(2,ti.w-G), h=Math.max(2,ti.h-G);
+    var gid='mz'+i;
+    s+='<defs><linearGradient id="'+gid+'" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="'+aclara(d.c,0.22)+'"/><stop offset="1" stop-color="'+d.c+'"/></linearGradient></defs>';
+    s+='<g class="mz-tile"><title>'+esc(d.n+' — '+mxn(d.value)+' · '+d.pr.toFixed(1)+'%')+'</title>';
+    s+='<rect x="'+x.toFixed(1)+'" y="'+y.toFixed(1)+'" width="'+w.toFixed(1)+'" height="'+h.toFixed(1)+'" rx="18" fill="url(#'+gid+')" stroke="rgba(255,255,255,.45)" stroke-width="1"/>';
+    var cx2=x+w/2, cy2=y+h/2;
+    if(w>150&&h>96){
+      s+='<text x="'+cx2.toFixed(1)+'" y="'+(cy2-14).toFixed(1)+'" text-anchor="middle" class="mz-nom">'+esc(d.n)+'</text>';
+      s+='<text x="'+cx2.toFixed(1)+'" y="'+(cy2+7).toFixed(1)+'" text-anchor="middle" class="mz-val">'+esc(mxn(d.value))+'</text>';
+      s+='<text x="'+cx2.toFixed(1)+'" y="'+(cy2+27).toFixed(1)+'" text-anchor="middle" class="mz-pct">'+d.pr.toFixed(1)+'%</text>';
+    } else if(w>96&&h>60){
+      s+='<text x="'+cx2.toFixed(1)+'" y="'+(cy2-3).toFixed(1)+'" text-anchor="middle" class="mz-nom mz-chico">'+esc(d.n)+'</text>';
+      s+='<text x="'+cx2.toFixed(1)+'" y="'+(cy2+15).toFixed(1)+'" text-anchor="middle" class="mz-pct">'+d.pr.toFixed(1)+'%</text>';
+    } else {
+      s+='<text x="'+cx2.toFixed(1)+'" y="'+(cy2+4).toFixed(1)+'" text-anchor="middle" class="mz-pct">'+d.pr.toFixed(0)+'%</text>';
+    }
+    s+='</g>';
+  });
+  s+='</svg>';
+  host.innerHTML=s;
+}
 function dibujaSistema(){
-  var host=$('sys'); if(!host || document.body.getAttribute('data-v')!=='resumen') return;
+  var host=$('sys'); if(!host || document.body.getAttribute('data-v')!=='plan') return;
   var m=porCapa(), act=totalActivos();
   if(!act){ host.innerHTML='<div class="tm-vacio">Registra tus activos y aquí verás el flujo completo de tu patrimonio.</div>'; return; }
   var W=Math.round(host.clientWidth||host.getBoundingClientRect().width);
@@ -1558,7 +1674,7 @@ function dibujaSistema(){
   s+='</svg>';
   host.innerHTML=s;
 }
-addEventListener('resize', function(){ var v=document.body.getAttribute('data-v'); if(v==='portafolio')dibujaMareas(); else if(v==='resumen')dibujaSistema(); else if(v==='plan')renderLibertad(); });
+addEventListener('resize', function(){ var v=document.body.getAttribute('data-v'); if(v==='portafolio')dibujaMareas(); else if(v==='resumen')dibujaMosaico(); else if(v==='plan'){renderLibertad();dibujaSistema();} });
 (function(){
   var h=$('sys'); if(!h) return;
   h.addEventListener('mousemove',function(e){
@@ -1568,6 +1684,7 @@ addEventListener('resize', function(){ var v=document.body.getAttribute('data-v'
   });
   h.addEventListener('mouseleave',tipFuera);
 })();
+(function(){ var mz=$('mosaico'); if(mz) mz.addEventListener('click',function(){ verVista('portafolio'); }); })();
 
 /* ── EL FLUJO · la aportación viajando a sus capas, con partículas de luz ── */
 var fluDatos=null, fluHover=-1, fluParts=[];
@@ -1701,8 +1818,8 @@ function verVista(v,primerCarga,desdeHistorial){
   $('cabTitulo').textContent=VISTAS[v];
   $('cabSub').textContent=SUBS[v]||'';
   document.body.classList.remove('menuAbierto');
-  if(v==='resumen'){ setTimeout(function(){renderSpark();dibujaSistema()},40); if(!primerCarga) animarNeto(); }
-  if(v==='plan') setTimeout(function(){dibujaFlujo(performance.now()/1000);renderLibertad()},40);
+  if(v==='resumen'){ setTimeout(function(){renderSpark();dibujaMosaico()},40); if(!primerCarga) animarNeto(); }
+  if(v==='plan') setTimeout(function(){dibujaFlujo(performance.now()/1000);renderLibertad();dibujaSistema()},40);
   if(v==='portafolio') setTimeout(function(){dibujaMareas(performance.now()/1000)},40);
   if(location.hash!=='#/'+v){
     try{
