@@ -2013,6 +2013,10 @@ button.tag.quemada{text-decoration:line-through;text-decoration-color:var(--down
 .fc-info em{font-style:normal;font-family:var(--mono);font-size:10px;color:var(--faint);
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .fc-linea.vacia .fc-info b{color:var(--faint)}
+/* El aviso SÍ se envuelve: es la única línea de este panel que explica por qué
+   una barra está en cero, y cortarla la vuelve inútil. */
+.fc-falta{font-style:normal;font-family:var(--mono);font-size:9.5px;line-height:1.45;
+  color:var(--dim);white-space:normal;overflow:visible;max-width:34ch}
 .fc-ver{font-style:normal;font-family:var(--mono);font-size:8.5px;letter-spacing:.14em;
   color:var(--faint);opacity:0;transition:opacity .2s ease}
 .fc-linea:hover .fc-ver,.fc-linea:focus-visible .fc-ver{opacity:1}
@@ -6452,10 +6456,17 @@ function renderFirmaCarrera(){
                    /* una cuenta que se quemó sale de la carrera, pero se dice:
                       que el número baje sin explicación se siente a error */
                    + (x.quemadas ? ' · ' + x.quemadas + bi(' quemada',' burned') + (x.quemadas > 1 ? 's' : '') : '')
-                   /* sin reglamento la barra no puede avanzar: si no se dice,
-                      un 0% con capital puesto se lee como que va perdiendo */
-                   + (x.sinVara ? ' · ' + x.sinVara + bi(' sin plan verificado',' with no verified plan') : '')
                    + sello(x.uid)}</em>
+              <!-- EL AVISO VA APARTE, y es la única línea de este panel que se
+                   envuelve. Estaba pegado al final del renglón de arriba, que
+                   lleva nowrap + ellipsis: se cortaba SIEMPRE —«$150,000 under
+                   managem…»— y la única pista de por qué la barra estaba en
+                   cero no se leía nunca. -->
+              ${x.sinVara ? `<i class="fc-falta">${x.sinVara} ${
+                 x.sinVara === 1 ? bi('cuenta sin reglas','account with no rules')
+                                 : bi('cuentas sin reglas','accounts with no rules')} — ${
+                 bi('escríbelas en Ajustes → Cuentas y la barra empieza a moverse',
+                    'type them in Settings → Accounts and the bar starts moving')}</i>` : ''}
               <i class="fc-ver">${bi('VER PERFIL →','SEE PROFILE →')}</i>
             </span>
           </button>`).join('')}
