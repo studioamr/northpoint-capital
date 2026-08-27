@@ -5877,8 +5877,16 @@ function renderAcctMgr(){
           ${['activa','pausada','quemada'].map(e=>`<option value="${e}"${e===a.estado?' selected':''}>${({activa:'Active',pausada:'Paused',quemada:'Burned'})[e]}</option>`).join('')}
         </select></div>
       </div>` : `<div class="acct-row" style="margin-top:10px">
-        <div><label>Phase</label><select data-f="fase" data-id="${a.id}">
-          ${Object.keys(FASES).map(f=>`<option value="${f}"${f===a.fase?' selected':''}>${FASES[f].t}</option>`).join('')}
+        <!-- El alta dice «Evaluation / Funded» y aquí decía «Evaluation /
+             Cushion / Payout»: la misma etapa con dos nombres, así que quien
+             registraba una cuenta como Funded no encontraba esa palabra al
+             venir a corregirla. Ahora se llama igual en las dos pantallas. -->
+        <div><label>Stage</label><select data-f="fase" data-id="${a.id}">
+          ${Object.keys(FASES).map(f=>`<option value="${f}"${f===a.fase?' selected':''}>${
+            ({ eval:  bi('Examen','Evaluation'),
+               buffer:bi('Fondeada · haciendo colchón','Funded · building cushion'),
+               payout:bi('Fondeada · tramo de pago','Funded · payout stretch') })[f] || FASES[f].t
+          }</option>`).join('')}
         </select></div>
         <div><label>Status</label><select data-f="estado" data-id="${a.id}">
           ${['activa','pausada','quemada'].map(e=>`<option value="${e}"${e===a.estado?' selected':''}>${({activa:'Active',pausada:'Paused',quemada:'Burned'})[e]}</option>`).join('')}
@@ -5922,7 +5930,18 @@ function renderAcctMgr(){
           : esSim(a) ? `Balance ${fmt$(h.balance)} · practice money: does not count on The Desk or your targets`
           : R ? `Balance ${fmt$(h.balance)} · DD line ${fmt$(h.linea)}${h.fija?' (locked)':''} · cushion ${fmt$(h.colchon)}
                · firm daily limit ${R.dailyLoss ? fmt$(R.dailyLoss) : 'none'}
-               · since ${fmtFecha(a.desde)}`
+               · since ${fmtFecha(a.desde)}
+               ${(()=>{ /* EL CAMINO QUE LA APP ESTÁ CALCULANDO, en una línea.
+                    Sin esto, un porcentaje que no cuadra sólo se puede depurar
+                    a preguntas: no había manera de ver desde qué tramos salía. */
+                  const cc = carreraCuenta(a);
+                  return `<br><b style="color:var(--dim)">${bi('CAMINO','ROAD')}</b>
+                    ${bi('examen','exam')} ${fmt$(cc.target)}
+                    → ${bi('colchón','cushion')} ${fmt$(cc.buffer)}
+                    → ${bi('tramo de pago','payout stretch')} ${fmt$(cc.pago)}
+                    · ${bi('meta','goal')} <b style="color:var(--dim)">${metaDe(a)}</b>
+                    · ${bi('vas en','you are at')} <b style="color:var(--dim)">${Math.round(cc.pct)}%</b>`;
+               })()}`
             : `Balance ${fmt$(h.balance)} · since ${fmtFecha(a.desde)}
                <br><span class="tag wr">NO RULES YET</span> it counts as capital on The Desk.
                Fill in its target and max drawdown above and it starts computing its
