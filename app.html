@@ -5948,6 +5948,8 @@ function renderAcctMgr(){
                drawdown line, cushion and road to payout`}
       </div>
       <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
+        ${(!esLive(a) && !esSim(a) && a.reglas && mias(S.accounts).filter(x => x.id !== a.id && !esLive(x) && !esSim(x)).length)
+          ? `<button class="btn sm" onclick="copiarReglas('${a.id}')">${bi('Copiar sus reglas a las demás','Copy its rules to my other accounts')}</button>` : ''}
         <button class="btn sm" onclick="reiniciarCuenta('${a.id}')">Reset balance</button>
         <button class="btn sm danger" onclick="borrarCuenta('${a.id}')">Delete</button>
       </div>
@@ -5993,6 +5995,20 @@ window.corregirPlan = id => {
   a.plan = Rf.plan;
   save(); renderAcctMgr(); renderDashboard(); renderAgentes();
   toast('Plan updated to ' + Rf.plan);
+};
+/* Tres cuentas iguales son quince campos tecleados a mano, y basta un dedazo en
+   uno para que la línea de drawdown de esa cuenta quede mal sin que se note.
+   Se llena una, se revisa su META contra la fondeadora, y se copia. */
+window.copiarReglas = id => {
+  const a = S.accounts.find(x => x.id === id); if(!a || !a.reglas) return;
+  const otras = mias(S.accounts).filter(x => x.id !== id && !esLive(x) && !esSim(x));
+  if(!otras.length) return;
+  if(!confirm(bi(
+      'Copiar las reglas de «' + a.alias + '» —objetivo, drawdown, colchón, límite diario y tramo de pago— a las otras ' + otras.length + ' cuenta(s).\n\nNO se copia el tamaño, ni el saldo, ni la etapa: eso es de cada cuenta.\n\n¿Copiar?',
+      'Copy the rules of "' + a.alias + '" — target, drawdown, cushion, daily limit and payout stretch — to your other ' + otras.length + ' account(s).\n\nSize, balance and stage are NOT copied: those belong to each account.\n\nCopy?'))) return;
+  otras.forEach(x => { x.reglas = { ...a.reglas }; });
+  save(); renderAcctMgr(); renderAll();
+  toast(bi('Reglas copiadas a ' + otras.length, 'Rules copied to ' + otras.length));
 };
 window.reiniciarCuenta = id => {
   const a = S.accounts.find(x=>x.id===id); if(!a) return;
