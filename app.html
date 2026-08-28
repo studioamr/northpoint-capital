@@ -3805,6 +3805,18 @@ const FIRM_CATALOG = {
   }
 };
 
+/* LOS VALORES DE FÁBRICA de una cuenta, en la referencia de 50k que usa André:
+   pasa el examen en +3,000, hace colchón en +2,100 y cobra el máximo en +3,100.
+   Para otros tamaños se escalan en proporción. Son OBJETIVOS, no la línea de
+   riesgo —el drawdown se queda en blanco mientras nadie lo escriba— así que
+   equivocarlos se corrige en Ajustes y no cuesta una cuenta. */
+const REGLAS_DEF = { size:50000, target:3000, colchon:2100, maximo:3100 };
+const reglasPorTamano = tam => {
+  const k = (tam > 0 ? tam : REGLAS_DEF.size) / REGLAS_DEF.size;
+  const r = v => Math.round(v * k / 100) * 100;
+  return { target:r(REGLAS_DEF.target), colchon:r(REGLAS_DEF.colchon), maximo:r(REGLAS_DEF.maximo) };
+};
+
 /* Las firmas que ofrece el alta. OJO: esta lista es MÁS LARGA que
    FIRM_CATALOG a propósito —se puede registrar una cuenta de una firma cuyo
    reglamento no tenemos— y por eso vive pegada al catálogo: para que se vea de
@@ -4618,6 +4630,19 @@ function migrar(s){
     a.reglas = { target: z.target || 0, maxDD: z.maxDD || 0,
                  dailyLoss: z.dailyLoss || 0, lock: pl.lockAtProfit,
                  consistency: pl.consistency || 0, minDays: pl.minDays || 0 };
+  });
+  /* Y las que NO estaban en el catálogo se quedaban sin nada: su barra en cero
+     para siempre y el aviso «sin reglas» pidiéndole al usuario que llenara
+     cinco cajas por cuenta. Nadie lo hizo — ése fue el problema de la semana.
+     Ahora arrancan con los valores de fábrica de su tamaño, visibles y
+     editables en Ajustes → Cuentas. Una cuenta con un objetivo aproximado dice
+     más que una barra en cero que no dice nada. */
+  (s.accounts||[]).forEach(a => {
+    if(!a || a.tipo === 'live' || a.tipo === 'sim') return;
+    const r = a.reglas || {};
+    const tieneAlgo = (+r.target > 0) || (+r.maxDD > 0) || (+r.colchon > 0);
+    if(tieneAlgo) return;
+    a.reglas = { ...r, ...reglasPorTamano(+a.size || +a.start || 0) };
   });
   if((s.schema||0) >= SCHEMA) return s;      // idempotente: sin esto se re-migra en cada carga
   s.accounts = s.accounts || [];
@@ -6218,7 +6243,7 @@ function carreraSocio(uid){
   const suyas = todas.filter(cuentaEnPie);
   const quemadas = todas.length - suyas.length;
   if(!suyas.length) return { uid, cuentas:0, avance:0, total:0, pct:0, cobrado:0,
-                             capital:0, quemadas, sinVara:0, sinDatos: !todas.length };
+                             capital:0, balance:0, quemadas, sinVara:0, sinDatos: !todas.length };
   let avance = 0, total = 0, pagos = 0, sinVara = 0;
   /* El CAPITAL de una cuenta se sabe siempre (es su tamaño); el AVANCE no: sin
      reglamento no hay objetivo ni colchón contra qué medir. Así que la cuenta
@@ -6232,7 +6257,13 @@ function carreraSocio(uid){
      balance de FUTUROS, y tenía que ser la misma aquí para no decir dos cosas
      distintas del mismo dinero en dos pantallas. */
   const capital = suyas.reduce((x, a) => x + (a.size || 0), 0);
-  return { uid, cuentas:suyas.length, avance, total, capital, sinVara,
+  /* Y el SALDO, que es distinto: Gerardo escribió que iba en $51,000 y la pista
+     le seguía diciendo $50,000 porque enseñaba el tamaño de la cuenta. El
+     tamaño se queda para ordenar la carrera —quien trae más capital puesto va
+     primero— pero lo que se lee es el saldo, que es el número que él tecleó y
+     el que se mueve. */
+  const balance = suyas.reduce((x, a) => x + carreraCuenta(a).balance, 0);
+  return { uid, cuentas:suyas.length, avance, total, capital, balance, sinVara,
            pct: total > 0 ? Math.max(0, Math.min(100, avance / total * 100)) : 0,
            pagos, quemadas, sinDatos:false };
 }
@@ -6470,7 +6501,7 @@ function renderFirmaCarrera(){
                    lo que le falta no es sincronía: es dar de alta su cuenta -->
               <em>${x.sinDatos
                  ? bi('registrado · todavía sin cuentas','registered · no accounts yet')
-                 : fmt$(x.capital) + bi(' manejados · ',' under management · ')
+                 : fmt$(x.balance) + bi(' en cuenta · ',' on account · ')
                    + x.cuentas + (x.cuentas === 1 ? bi(' cuenta',' account') : bi(' cuentas',' accounts'))
                    + (x.pagos ? ' · ' + x.pagos + bi(' cobrada',' paid') + (x.pagos > 1 ? 's' : '') : '')
                    /* una cuenta que se quemó sale de la carrera, pero se dice:
@@ -9088,10 +9119,9 @@ function planPorFase(firm, fase){
    Ajustes, cuando de verdad llegas ahí. */
 const NC_FASES = { eval:['Examen','Evaluation'], buffer:['Fondeada','Funded'] };
 
-/* LOS VALORES DE FÁBRICA de una cuenta de 50k, los de André. Se pueden cambiar
-   en la caja; están aquí para que dar de alta una cuenta sea escribir el nombre
-   y darle a Create. */
-const NC_DEF = { start:50000, target:3000, colchon:2100, maximo:3100 };
+/* Los valores con los que abre el alta: la referencia de 50k de REGLAS_DEF,
+   para no tener el mismo número escrito en dos lugares. */
+const NC_DEF = { start: REGLAS_DEF.size, ...reglasPorTamano(REGLAS_DEF.size) };
 
 const nc = { fase:'eval', firm:'' };
 function ncChips(cont, lista, activo, onPick, fmt){
