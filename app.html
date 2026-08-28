@@ -3088,61 +3088,51 @@ stop[stop-color="#9BC0DC"]{stop-color:var(--txt)}
 </div>
 
 <div class="overlay" id="ovNuevaCuenta">
-  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="ncTitle" style="max-width:560px">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="ncTitle" style="max-width:480px">
     <h3 id="ncTitle">New account</h3>
-    <p class="sub">Pick and go — only what applies shows up.</p>
-    <div class="seg" id="ncTipo" style="margin-bottom:14px">
-      <button type="button" data-t="prop" class="on">Funded</button>
-      <button type="button" data-t="live">Own account</button>
-      <button type="button" data-t="sim">Practice</button>
+    <p class="sub">Stage, balance and its target. Nothing else.</p>
+
+    <!-- SÓLO CUENTA FONDEADA (André, 28-ago-2026). Se fueron el selector de
+         tipo —fondeada / propia / práctica—, los chips de seis firmas, el
+         drawdown, el desbloqueo del colchón, el límite diario y el tramo de
+         pago, y la nota del catálogo. Eran once cajas para dar de alta una
+         cuenta y por eso nadie las llenaba: sin reglas escritas la barra se
+         queda en cero, que fue el problema de toda la semana.
+         Quedan tres números, con su valor puesto de fábrica. -->
+    <div class="f-full"><label>Account name</label>
+      <input id="ncAlias" placeholder="Name it whatever you want" maxlength="24"></div>
+
+    <div class="f-row" style="margin-top:12px">
+      <div><label>Firm</label><input id="ncFirma" placeholder="Apex" maxlength="20"></div>
+      <div><label>Balance USD</label>
+        <input type="number" id="ncStart" min="0" step="100" value="50000"></div>
     </div>
 
-    <div id="ncFirmZona">
-      <label>Firm</label>
-      <div class="chips" id="ncFirm"></div>
-    </div>
-
-    <div class="f-full" style="margin-top:12px"><label>Account name</label><input id="ncAlias" placeholder="Name it whatever you want" maxlength="24"></div>
-
-    <!-- La fase va ANTES de los números porque es la que decide el autollenado:
-         un examen trae objetivo y no congela el piso; una fondeada es al revés. -->
-    <div id="ncFaseZona" style="margin-top:12px">
+    <div style="margin-top:12px">
       <label>Stage</label>
       <div class="chips" id="ncFase"></div>
     </div>
 
-    <div id="ncCamposSimple" style="margin-top:12px">
-      <div class="f-full">
-        <label id="ncStartLbl">Account size USD</label>
-        <input type="number" id="ncStart" min="0" step="100" placeholder="50000">
-      </div>
-      <p class="micro" id="ncNota" style="color:var(--faint);margin-top:4px"></p>
+    <!-- EXAMEN: un solo número, el objetivo. -->
+    <div class="f-full" id="ncZonaEval" style="margin-top:12px">
+      <label>Profit target USD</label>
+      <input type="number" id="ncTarget" min="0" step="100" value="3000">
     </div>
 
-    <!-- LOS CUATRO NÚMEROS. Se escriben a mano: así una cuenta de cualquier
-         firma calcula su drawdown, su colchón y su camino a payout sin
-         depender de que su reglamento esté guardado en el código. -->
-    <div id="ncReglas" style="margin-top:14px">
-      <label>Its rules</label>
-      <div class="f-row" style="margin-top:6px">
-        <div><label class="micro">Profit target USD</label>
-          <input type="number" id="ncTarget" min="0" step="100" placeholder="3000"></div>
-        <div><label class="micro">Max drawdown USD</label>
-          <input type="number" id="ncDD" min="0" step="100" placeholder="2000"></div>
-      </div>
-      <div class="f-row" style="margin-top:10px">
-        <div><label class="micro">Cushion unlocks at USD</label>
-          <input type="number" id="ncLock" min="0" step="50" placeholder="optional"></div>
-        <div><label class="micro">Daily loss limit USD</label>
-          <input type="number" id="ncDaily" min="0" step="50" placeholder="optional"></div>
-      </div>
-      <div class="f-row" style="margin-top:10px">
-        <div><label class="micro">Payout stretch USD</label>
-          <input type="number" id="ncPago" min="0" step="100" placeholder="1000"></div>
-        <div><label class="micro">Goal</label>
-          <input id="ncMeta" disabled value="—"></div>
-      </div>
-      <p class="micro" id="ncReglasNota" style="color:var(--faint);margin-top:8px;line-height:1.55"></p>
+    <!-- FONDEADA: el colchón y el pago máximo, los dos editables. -->
+    <div class="f-row" id="ncZonaFund" style="margin-top:12px;display:none">
+      <div><label>Cushion USD</label>
+        <input type="number" id="ncColchon" min="0" step="100" value="2100"></div>
+      <div><label>Max payout USD</label>
+        <input type="number" id="ncMaximo" min="0" step="100" value="3100"></div>
+    </div>
+
+    <div class="f-full" style="margin-top:12px">
+      <label>Goal</label>
+      <input id="ncMeta" disabled value="—">
+      <p class="micro" style="color:var(--faint);margin-top:5px;line-height:1.5">
+        El saldo al que llegas cuando terminas esta etapa. Si no cuadra con lo que
+        dice tu fondeadora, algún número de arriba está mal.</p>
     </div>
 
     <div class="f-full" style="margin-top:12px">
@@ -4904,16 +4894,24 @@ function reglasManuales(a){
   const m = a && a.reglas; if(!m) return null;
   const num = v => { const n = parseFloat(v); return isFinite(n) ? n : 0; };
   const target = num(m.target), maxDD = num(m.maxDD);
-  if(maxDD <= 0 && target <= 0) return null;   // vacías = como si no hubiera
-  /* lock null NO es lock 0: null significa «el piso nunca se congela» (una
+  const colchon = num(m.colchon), maximo = num(m.maximo);
+  if(maxDD <= 0 && target <= 0 && colchon <= 0) return null;   // vacías = como si no hubiera
+  /* EL COLCHÓN SE ESCRIBE DIRECTO. Adentro el motor lo pide como
+     `maxDD + lockAtProfit`, así que lo que no cubra el drawdown lo pone el
+     lock y la suma da exactamente el número tecleado. Las cuentas viejas, que
+     guardaban `lock` en vez de `colchon`, siguen por su camino.
+     lock null NO es lock 0: null significa «el piso nunca se congela» (una
      evaluación) y 0 significaría «se congela desde el primer peso». */
-  const lock = (m.lock === '' || m.lock == null) ? null : num(m.lock);
+  const lock = colchon > 0 ? Math.max(0, colchon - maxDD)
+             : ((m.lock === '' || m.lock == null) ? null : num(m.lock));
   /* El tramo de pago era TRAMO_PAGO, una constante de $1,000 igual para todas.
      Es regla de NORTHPOINT, no de la fondeadora: André lleva $2,500 en Apex, y
      con $1,000 clavados la meta salía $1,500 abajo de la real. Vacío = la
      regla de la casa, para no obligar a llenarlo a quien no lo sabe. */
   return { target, maxDD, dailyLoss:num(m.dailyLoss), lockAtProfit:lock,
-           pago: (m.pago === '' || m.pago == null) ? null : num(m.pago),
+           /* el tramo de pago es lo que falta del colchón al pago máximo */
+           pago: (colchon > 0 && maximo > colchon) ? maximo - colchon
+               : ((m.pago === '' || m.pago == null) ? null : num(m.pago)),
            consistency:num(m.consistency), minDays:num(m.minDays),
            note:null, src:'manual', checked:null, manual:true };
 }
@@ -4955,7 +4953,11 @@ function saludDe(a){
   pico = Math.max(pico, a.start);
   const hoy = todayISO();
   const base = { balance:bal, pico, dias:dias.length, hoy:porDia[hoy]||0, reglas:R };
-  if(!R) return { ...base, linea:null, fija:false, colchon:null, maxDD:null, hito:null };
+  /* Sin drawdown escrito no hay línea que dibujar, y dibujar una de todos
+     modos —con pico menos cero— pondría el piso justo bajo los pies y un
+     colchón de cero. Se dice que no se sabe, que es lo honesto. */
+  if(!R || !(R.maxDD > 0))
+    return { ...base, linea:null, fija:false, colchon:null, maxDD:null, hito:null };
   let linea = pico - R.maxDD, fija = false;
   if(R.lockAtProfit != null && linea >= a.start + R.lockAtProfit){
     linea = a.start + R.lockAtProfit; fija = true;
@@ -5906,26 +5908,26 @@ function renderAcctMgr(){
           ${['activa','pausada','quemada'].map(e=>`<option value="${e}"${e===a.estado?' selected':''}>${({activa:'Active',pausada:'Paused',quemada:'Burned'})[e]}</option>`).join('')}
         </select></div>
       </div>
-      <!-- LOS CUATRO NÚMEROS, editables aquí igual que en el alta. Son los que
-           mandan: si están escritos, el catálogo ni se consulta. -->
+      <!-- LOS MISMOS NÚMEROS DEL ALTA, editables. El drawdown vive SÓLO aquí:
+           se quitó del alta por ruidoso, pero sin él no hay línea de riesgo que
+           dibujar, así que queda a mano para quien la quiera. -->
       <div style="margin-top:12px"><label>Its rules</label></div>
       <div class="acct-row" style="margin-top:6px">
         <div><label class="micro">Profit target USD</label>
-          <input type="number" data-f="r.target" data-id="${a.id}" value="${rg.target != null ? rg.target : ''}" step="100" placeholder="0"></div>
+          <input type="number" data-f="r.target" data-id="${a.id}" value="${rg.target != null ? rg.target : ''}" step="100" placeholder="3000"></div>
         <div><label class="micro">Max drawdown USD</label>
-          <input type="number" data-f="r.maxDD" data-id="${a.id}" value="${rg.maxDD != null ? rg.maxDD : ''}" step="100" placeholder="0"></div>
+          <input type="number" data-f="r.maxDD" data-id="${a.id}" value="${rg.maxDD || ''}" step="100" placeholder="${bi('no se sabe','unknown')}"></div>
       </div>
       <div class="acct-row" style="margin-top:10px">
-        <div><label class="micro">Cushion unlocks at USD</label>
-          <input type="number" data-f="r.lock" data-id="${a.id}" value="${rg.lock == null ? '' : rg.lock}" step="50" placeholder="never"></div>
-        <div><label class="micro">Daily loss limit USD</label>
-          <input type="number" data-f="r.dailyLoss" data-id="${a.id}" value="${rg.dailyLoss || ''}" step="50" placeholder="none"></div>
+        <div><label class="micro">Cushion USD</label>
+          <input type="number" data-f="r.colchon" data-id="${a.id}" value="${rg.colchon || ''}" step="100" placeholder="2100"></div>
+        <div><label class="micro">Max payout USD</label>
+          <input type="number" data-f="r.maximo" data-id="${a.id}" value="${rg.maximo || ''}" step="100" placeholder="3100"></div>
       </div>
       <div class="acct-row" style="margin-top:10px">
-        <div><label class="micro">Payout stretch USD</label>
-          <input type="number" data-f="r.pago" data-id="${a.id}" value="${rg.pago == null ? '' : rg.pago}" step="100" placeholder="${TRAMO_PAGO}"></div>
         <div><label class="micro">Goal</label>
           <input disabled value="${metaDe(a)}"></div>
+        <div></div>
       </div>`}
       ${(!esLive(a) && !esSim(a) && a.fase !== 'eval' && R && R.lockAtProfit == null)
         ? `<div class="cal-pace" style="margin-top:10px;border-left-color:var(--warn)">
@@ -6105,7 +6107,7 @@ function carreraCuenta(a){
      cuenta mediría una vara de distinto largo. */
   const target = Re ? (Re.target || 0) : 0;
   const buffer = Rf ? (Rf.maxDD || 0) + (Rf.lockAtProfit || 0) : 0;
-  const pago = (a.reglas && a.reglas.pago) ? +a.reglas.pago : TRAMO_PAGO;
+  const pago = (Rf && Rf.pago) ? +Rf.pago : TRAMO_PAGO;
   const total = target + buffer + pago;
 
   const porDia = {};
@@ -6190,8 +6192,16 @@ function carreraCuenta(a){
    fondeadora — que es justo donde se descubren los dedazos. */
 function metaDe(a){
   const cc = carreraCuenta(a);
-  if(!cc.buffer && !cc.pago) return '—';
-  return fmt$((a.start || 0) + cc.buffer + cc.pago);
+  /* Se mide desde el TAMAÑO de la cuenta, no desde el saldo de hoy: el punto
+     de pase de una de 50k son 53,000 vayas donde vayas, y al pasar el examen la
+     cuenta reinicia en su tamaño de todos modos. */
+  const tam = (a.size > 0) ? a.size : (a.start || 0);
+  /* La meta es la de SU etapa. En examen es el saldo al que pasas; ya fondeada,
+     el del pago máximo. Antes siempre daba la segunda, así que el alta decía
+     $53,000 para un examen y su ficha decía $53,100 — el mismo número contado
+     de dos formas, que es justo lo que hace dudar de los dos. */
+  if(a.fase === 'eval') return cc.target > 0 ? fmt$(tam + cc.target) : '—';
+  return (cc.buffer || cc.pago) ? fmt$(tam + cc.buffer + cc.pago) : '—';
 }
 
 /* ── LA CARRERA DE LA FIRMA ──
@@ -9064,16 +9074,6 @@ $('#pSave').addEventListener('click', ()=>{
    práctica sólo piden un balance de arranque. Cada cuenta que se da de alta
    queda etiquetada con quién la creó (S.session.user), para que en El
    negocio cada socio vea las suyas, no las de todos revueltas. */
-/* Alta de cuenta a puros chips, como la app vieja: firma → plan → tamaño →
-   fase, y sólo aparece lo que aplica. Tradeify trae el catálogo verificado;
-   las demás firmas se dan de alta con su tamaño a mano (la app las marca
-   PLAN NO VERIFICADO y no les calcula drawdown, que es lo honesto). */
-const nc = { tipo:'prop', firm:'Tradeify', plan:null, size:null, fase:'eval' };
-function ncChips(cont, lista, activo, onPick, fmt){
-  cont.innerHTML = lista.map(v =>
-    `<button type="button" data-v="${esc(String(v))}" class="${String(v)===String(activo)?'on':''}">${fmt?fmt(v):esc(String(v))}</button>`).join('');
-  cont.querySelectorAll('button').forEach(b => b.onclick = () => onPick(b.dataset.v));
-}
 /* Qué plan del catálogo le toca a una fase: 'eval' pide un plan de evaluación
    y cualquier otra fase (colchón, pago) pide uno fondeado. Se toma el primero
    que cuadre, que es el más común de esa firma. */
@@ -9088,120 +9088,74 @@ function planPorFase(firm, fase){
    Ajustes, cuando de verdad llegas ahí. */
 const NC_FASES = { eval:['Examen','Evaluation'], buffer:['Fondeada','Funded'] };
 
-/* AUTOLLENADO, NO CANDADO. Si la firma y el tamaño están en el catálogo se
-   escriben los cuatro números por ti; si no, los escribes tú. En los dos casos
-   lo que queda guardado es lo que diga la caja — el catálogo sugiere, la cuenta
-   manda. Ésa es toda la diferencia con el modelo anterior, donde el catálogo
-   decidía si la cuenta tenía reglas o no tenía ninguna. */
-function ncAuto(cambioDeFirma){
-  const F = FIRM_CATALOG[nc.firm];
-  const plan = F && planPorFase(nc.firm, nc.fase);
-  const pl = plan && F.plans[plan];
-  let size = parseFloat($('#ncStart').value);
-  if(pl && (!isFinite(size) || !pl.sizes[size])) size = +Object.keys(pl.sizes)[0];
-  const z = pl && pl.sizes[size];
-  if(!z){
-    /* Firma sin reglamento guardado: se BORRAN los cuatro números al cambiar de
-       firma. Dejar los de la casa anterior sería lo más peligroso de todo esto
-       —son los que dibujan la línea de drawdown— y bastaría con darle Create
-       sin mirar. Al cambiar sólo de etapa no se borra nada: ahí lo escrito es
-       suyo y nadie más lo puso. */
-    if(cambioDeFirma) ['ncTarget','ncDD','ncLock','ncDaily'].forEach(id => $('#'+id).value = '');
-    return;
-  }
-  nc.plan = plan;
-  $('#ncStart').value  = size;
-  $('#ncTarget').value = z.target || '';
-  $('#ncDD').value     = z.maxDD  || '';
-  $('#ncLock').value   = pl.lockAtProfit == null ? '' : pl.lockAtProfit;
-  $('#ncDaily').value  = z.dailyLoss || '';
+/* LOS VALORES DE FÁBRICA de una cuenta de 50k, los de André. Se pueden cambiar
+   en la caja; están aquí para que dar de alta una cuenta sea escribir el nombre
+   y darle a Create. */
+const NC_DEF = { start:50000, target:3000, colchon:2100, maximo:3100 };
+
+const nc = { fase:'eval', firm:'' };
+function ncChips(cont, lista, activo, onPick, fmt){
+  cont.innerHTML = lista.map(v =>
+    `<button type="button" data-v="${esc(String(v))}" class="${String(v)===String(activo)?'on':''}">${fmt?fmt(v):esc(String(v))}</button>`).join('');
+  cont.querySelectorAll('button').forEach(b => b.onclick = () => onPick(b.dataset.v));
 }
-/* La meta se recalcula con cada tecla: es la comprobación de que los cuatro
-   números de arriba son los correctos. */
+const ncNum = id => { const v = ($('#'+id).value || '').trim();
+  return v === '' ? 0 : (parseFloat(v) || 0); };
+/* LA META: en examen, el saldo al que pasas; ya fondeada, el saldo del pago
+   máximo. Es la comprobación de que los números de arriba son los correctos. */
 function ncMetaPinta(){
-  const n = id => parseFloat($('#'+id).value) || 0;
-  const size = n('ncStart');
-  const pago = parseFloat($('#ncPago').value);
-  const total = n('ncDD') + n('ncLock') + (isFinite(pago) ? pago : TRAMO_PAGO);
-  $('#ncMeta').value = (size > 0 && total > 0) ? fmt$(size + total) : '—';
-}
-function ncNotaReglas(){
-  ncMetaPinta();
-  const F = FIRM_CATALOG[nc.firm];
-  const plan = F && planPorFase(nc.firm, nc.fase);
-  const size = parseFloat($('#ncStart').value);
-  const z = plan && F.plans[plan].sizes[size];
-  $('#ncReglasNota').innerHTML = z
-    ? bi(`Llenados desde <b>${esc(nc.firm)} · ${esc(plan)}</b> (revisado ${esc(F.checked)}). Cambia el número que quieras: lo que quede escrito es lo que usa la cuenta.`,
-         `Filled in from <b>${esc(nc.firm)} · ${esc(plan)}</b> (checked ${esc(F.checked)}). Change any number you like: whatever is typed here is what the account uses.`)
-    : bi('Cópialos del reglamento de tu fondeadora. El <b>desbloqueo del colchón</b> es la ganancia sobre el arranque a partir de la cual el piso deja de arrastrarse; déjalo vacío si nunca se congela.',
-         'Copy them from your firm\'s rulebook. <b>Cushion unlocks at</b> is the profit over the starting balance where the drawdown floor stops trailing; leave it empty if it never freezes.');
+  const base = ncNum('ncStart');
+  const sube = nc.fase === 'eval' ? ncNum('ncTarget') : ncNum('ncMaximo');
+  $('#ncMeta').value = (base > 0 && sube > 0) ? fmt$(base + sube) : '—';
 }
 function ncPinta(){
-  $$('#ncTipo button').forEach(b => b.classList.toggle('on', b.dataset.t === nc.tipo));
-  const esProp = nc.tipo === 'prop';
-  $('#ncFirmZona').hidden = !esProp;
-  $('#ncFaseZona').hidden = !esProp;
-  $('#ncReglas').hidden   = !esProp;
-
-  $('#ncStartLbl').textContent = nc.tipo === 'live' ? 'Your own capital USD'
-    : nc.tipo === 'sim' ? 'Practice balance USD' : 'Account size USD';
-  $('#ncNota').textContent = nc.tipo === 'live'
-    ? 'Your own capital, no phases, no prop firm. Counts as real money on The Desk and in your targets.'
-    : nc.tipo === 'sim'
-    ? 'Practice money: it does not count on The Desk or your targets. It is only for keeping the journal.'
-    : '';
-
-  if(esProp){
-    ncChips($('#ncFirm'), NC_FIRMAS, nc.firm, v => { nc.firm = v; ncAuto(true); ncPinta(); });
-    ncChips($('#ncFase'), Object.keys(NC_FASES), nc.fase,
-            v => { nc.fase = v; ncAuto(false); ncPinta(); }, k => loc(NC_FASES[k]));
-    ncNotaReglas();
-  }
+  ncChips($('#ncFase'), Object.keys(NC_FASES), nc.fase,
+          v => { nc.fase = v; ncPinta(); }, k => loc(NC_FASES[k]));
+  /* display en vez del atributo `hidden`: .f-row lleva display:flex en la hoja
+     de estilos y eso le gana a hidden, así que las cajas de la etapa fondeada
+     se veían aunque estuviera elegido Examen — las seis cajas otra vez. */
+  const esEval = nc.fase === 'eval';
+  $('#ncZonaEval').style.display = esEval ? '' : 'none';
+  $('#ncZonaFund').style.display = esEval ? 'none' : '';
+  ncMetaPinta();
 }
 function ncAbrir(){
-  nc.tipo = 'prop'; nc.firm = 'Tradeify'; nc.fase = 'eval'; nc.plan = null;
-  $('#ncAlias').value = ''; $('#ncErr').textContent = '';
-  ['ncStart','ncTarget','ncDD','ncLock','ncDaily','ncPago'].forEach(id => $('#'+id).value = '');
-  ncAuto(true);      /* Tradeify sí está en el catálogo: abre ya prellenada */
+  nc.fase = 'eval';
+  $('#ncAlias').value = ''; $('#ncFirma').value = ''; $('#ncErr').textContent = '';
+  $('#ncStart').value   = NC_DEF.start;
+  $('#ncTarget').value  = NC_DEF.target;
+  $('#ncColchon').value = NC_DEF.colchon;
+  $('#ncMaximo').value  = NC_DEF.maximo;
+  $('#ncDesde').value   = todayISO();
   ncPinta();
-  $('#ncDesde').value = todayISO();
   openOv('ovNuevaCuenta');
 }
-$$('#ncTipo button').forEach(b => b.onclick = () => { nc.tipo = b.dataset.t; ncPinta(); });
-/* Teclear un número recalcula la meta al vuelo. Y si el tamaño cae justo en
-   una talla del catálogo, se vuelven a proponer sus reglas. */
-['ncTarget','ncDD','ncLock','ncPago'].forEach(id =>
+['ncStart','ncTarget','ncColchon','ncMaximo'].forEach(id =>
   $('#'+id).addEventListener('input', ncMetaPinta));
-$('#ncStart').addEventListener('input', () => { ncAuto(false); ncNotaReglas(); });
+
 $('#ncSave').addEventListener('click', ()=>{
   /* El nombre lo pone quien la crea — sin autonombrar "T3" en silencio, que
      luego nadie sabe cuál cuenta es cuál. */
   const alias = $('#ncAlias').value.trim();
   if(!alias){ $('#ncErr').textContent = 'Give the account a name.'; return; }
+  const cap = ncNum('ncStart');
+  if(cap <= 0){ $('#ncErr').textContent = 'Enter a balance greater than zero.'; return; }
   /* `desde` es la línea de salida de la carrera: sólo cuentan los trades de
      esa fecha en adelante. Si el usuario no la toca, es hoy. */
   const desde = ($('#ncDesde') && $('#ncDesde').value) || todayISO();
-  const base = { id:'ac_'+uid(), alias, orden:(S.accounts.length+1),
-                 desde, estado:'active', owner:S.session.user };
-  /* Un solo camino para todas: el tamaño se teclea siempre. Antes había dos
-     ramas —una para firmas del catálogo y otra para el resto— y era justo esa
-     bifurcación la que dejaba cuentas con plan:'—' y sin reglas. */
-  const cap = parseFloat($('#ncStart').value);
-  if(!isFinite(cap) || cap <= 0){
-    $('#ncErr').textContent = nc.tipo === 'prop'
-      ? 'Enter an account size greater than zero.'
-      : 'Enter a valid balance, greater than zero.'; return; }
-  /* '' NO es 0: en el desbloqueo del colchón, vacío significa «el piso nunca
-     se congela», que es lo normal en una evaluación. */
-  const num = id => { const v = $('#'+id).value.trim(); return v === '' ? '' : (parseFloat(v) || 0); };
-  const cuenta = nc.tipo === 'prop'
-    ? { ...base, tipo:'prop', firm:nc.firm, plan:nc.plan || '—', size:cap, start:cap, fase:nc.fase,
-        reglas:{ target:num('ncTarget') || 0, maxDD:num('ncDD') || 0,
-                 lock:num('ncLock'), dailyLoss:num('ncDaily') || 0,
-                 pago:num('ncPago') } }
-    : { ...base, tipo:nc.tipo, firm:'—', plan:'—', size:cap, start:cap, fase:'payout' };
-  S.accounts.push(cuenta);
+  const esEval = nc.fase === 'eval';
+  S.accounts.push({
+    id:'ac_'+uid(), alias, orden:(S.accounts.length+1), desde,
+    estado:'active', owner:S.session.user,
+    tipo:'prop', firm: ($('#ncFirma').value.trim() || '\u2014'), plan:'\u2014',
+    size:cap, start:cap, fase:nc.fase,
+    /* En examen sólo importa el objetivo; ya fondeada, el colchón y el pago
+       máximo. El que no aplica se guarda igual con su valor de fábrica, para
+       que al cambiar de etapa en Ajustes la cuenta ya sepa a dónde va. */
+    reglas:{ target:  esEval ? ncNum('ncTarget')  : NC_DEF.target,
+             colchon: esEval ? NC_DEF.colchon     : ncNum('ncColchon'),
+             maximo:  esEval ? NC_DEF.maximo      : ncNum('ncMaximo') }
+  });
   /* renderAll() en vez de tres renders sueltos: registrar una cuenta tiene que
      verse de inmediato en la pantalla donde estés, no sólo en Ajustes. */
   save(); closeOv(); renderAcctMgr(); renderAll();
