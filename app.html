@@ -4642,10 +4642,23 @@ function migrar(s){
      más que una barra en cero que no dice nada. */
   (s.accounts||[]).forEach(a => {
     if(!a || a.tipo === 'live' || a.tipo === 'sim') return;
-    const r = a.reglas || {};
-    const tieneAlgo = (+r.target > 0) || (+r.maxDD > 0) || (+r.colchon > 0);
-    if(tieneAlgo) return;
-    a.reglas = { ...r, ...reglasPorTamano(+a.size || +a.start || 0) };
+    const r = a.reglas || {}, def = reglasPorTamano(+a.size || +a.start || 0);
+    /* Campo por campo, no todo o nada. El caso que costó cuatro vueltas: una
+       cuenta FONDEADA dada de alta con el formulario viejo quedaba con
+       `target:0` —ahí el objetivo se dejaba vacío por ser fondeada— pero con
+       maxDD lleno. Como algo traía, la migración la saltaba entera; y sin
+       objetivo no hay tramo de examen que dar por recorrido, así que la barra
+       marcaba 0% aunque la cuenta estuviera fondeada y con reglas. Ése es el
+       cero mudo: ni «sin reglas» ni «en examen», sólo cero. */
+    const nuevas = { ...r };
+    if(!(+r.target > 0)) nuevas.target = def.target;
+    /* el colchón sólo se rellena si NO viene de ningún lado: las cuentas que
+       migraron del catálogo lo llevan dentro de `lock` y ésas no se tocan */
+    const yaHayColchon = (+r.colchon > 0) || (r.lock != null && r.lock !== '');
+    if(!yaHayColchon) nuevas.colchon = def.colchon;
+    const yaHayMaximo = (+r.maximo > 0) || (+r.pago > 0);
+    if(!yaHayMaximo) nuevas.maximo = def.maximo;
+    a.reglas = nuevas;
   });
   if((s.schema||0) >= SCHEMA) return s;      // idempotente: sin esto se re-migra en cada carga
   s.accounts = s.accounts || [];
