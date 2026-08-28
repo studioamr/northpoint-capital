@@ -3097,6 +3097,21 @@ stop[stop-color="#9BC0DC"]{stop-color:var(--txt)}
   </div>
 </div>
 
+<div class="overlay" id="ovImportar">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="impTitle" style="max-width:520px">
+    <h3 id="impTitle">Import from Tradovate</h3>
+    <p class="sub">Nothing is imported until you say so.</p>
+    <div id="impResumen"></div>
+    <div style="margin-top:14px"><label>Which accounts do these trades belong to?</label>
+      <div class="chips" id="impCtas"></div></div>
+    <p class="micro" id="impErr" style="color:var(--down);min-height:14px;margin-top:10px"></p>
+    <div class="m-foot">
+      <button class="btn" data-close>Cancel</button>
+      <button class="btn primary" id="impSave">Import</button>
+    </div>
+  </div>
+</div>
+
 <div class="overlay" id="ovNuevaCuenta">
   <div class="modal" role="dialog" aria-modal="true" aria-labelledby="ncTitle" style="max-width:480px">
     <h3 id="ncTitle">New account</h3>
@@ -3376,6 +3391,13 @@ stop[stop-color="#9BC0DC"]{stop-color:var(--txt)}
         <button class="btn sm" id="btnBackup" data-i18n="cf.respaldo">Download backup</button>
         <button class="btn sm" id="btnRestore" data-i18n="cf.restaurar">Restore backup</button>
         <input type="file" id="fileRestore" accept="application/json" hidden>
+        <!-- Importar de Tradovate. NO se conecta a la plataforma: el archivo se
+             lee AQUÍ, en tu equipo, y nunca sale de él. Sin usuario, sin
+             contraseña y sin llave de API — meter las credenciales de tu bróker
+             en una página web es la llave de tu dinero en manos de un sitio
+             estático, y eso no se hace por comodidad. -->
+        <button class="btn sm" id="btnCSV">Import from Tradovate (CSV)</button>
+        <input type="file" id="fileCSV" accept=".csv,text/csv" hidden>
         <button class="btn sm danger" id="btnWipe">Delete everything</button>
       </div>
       <div id="setResumen" class="mt2"></div>
@@ -10129,6 +10151,175 @@ function applyProfile(){
   $('#uRole').textContent = u ? u.roles.join(' · ') : '—';
   pintaAvatares();
 }
+
+
+/* ════════ IMPORTAR DE TRADOVATE ════════
+   Lo que se puede hacer sin mentir: Tradovate no tiene forma de conectarse
+   desde una página estática sin poner ahí el usuario, la contraseña y la llave
+   de API del bróker — y eso es la llave del dinero guardada en un sitio que
+   cualquiera puede leer. Así que no se conecta: se lee el CSV que la propia
+   plataforma exporta, y se lee AQUÍ, en el equipo. El archivo nunca sale.
+
+   El lector es TOLERANTE a propósito: Tradovate cambia los encabezados entre
+   la exportación de Performance, la de Fills y la de Orders, y entre versiones.
+   En vez de casarse con una lista de columnas se buscan por nombre —con sus
+   sinónimos— y se enseña cuáles encontró antes de importar nada. */
+const IMP_COLS = {
+  pnl:    ['pnl','p/l','p&l','profit','netpnl','netp/l','realizedpnl','realizedp/l','netprofit','grossp/l'],
+  fecha:  ['soldtimestamp','boughttimestamp','closetime','exittime','filltime','timestamp','tradedate','date','time'],
+  sym:    ['symbol','contract','instrument','product'],
+  qty:    ['qty','quantity','filledqty','size','contracts'],
+  lado:   ['side','b/s','action','buysell','direction'],
+  entrada:['buyprice','entryprice','avgentry','entry','avgfillprice'],
+  salida: ['sellprice','exitprice','avgexit','exit'],
+};
+const impNorm = t => String(t == null ? '' : t).toLowerCase().replace(/[^a-z0-9/&]/g, '');
+/* Dinero como lo escribe la plataforma: $1,234.56 · (123.45) para negativos */
+function impNum(v){
+  let t = String(v == null ? '' : v).trim();
+  if(!t) return NaN;
+  const neg = /^\(.*\)$/.test(t);
+  t = t.replace(/[()]/g, '').replace(/[$\s,]/g, '');
+  const n = parseFloat(t);
+  return isFinite(n) ? (neg ? -n : n) : NaN;
+}
+/* Fecha: ISO, o MM/DD/YYYY que es como la escribe Tradovate (formato de EE.UU.).
+   El rango de fechas se enseña en la vista previa justo para cazar el caso en
+   que un export venga en DD/MM y los días salgan cambiados. */
+function impFecha(v){
+  const t = String(v == null ? '' : v).trim(); if(!t) return null;
+  let m = t.match(/(\d{4})-(\d{2})-(\d{2})/);
+  if(m) return m[1] + '-' + m[2] + '-' + m[3];
+  m = t.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})/);
+  if(m){ const y = m[3].length === 2 ? '20' + m[3] : m[3];
+    return y + '-' + String(m[1]).padStart(2,'0') + '-' + String(m[2]).padStart(2,'0'); }
+  const d = new Date(t);
+  return isNaN(d) ? null : d.toISOString().slice(0, 10);
+}
+const impHora = v => { const m = String(v||'').match(/(\d{1,2}):(\d{2})/);
+  return m ? String(m[1]).padStart(2,'0') + ':' + m[2] : null; };
+/* MNQU6 → MNQ. Se prueba la clave más larga primero para que MNQ no se lo coma NQ. */
+function impSimbolo(v){
+  const t = String(v||'').toUpperCase().replace(/[^A-Z]/g,'');
+  const claves = Object.keys(POINT_VALUE).sort((a,b) => b.length - a.length);
+  return claves.find(k => t.startsWith(k)) || claves.find(k => t.includes(k)) || 'MNQ';
+}
+/* CSV con comillas: un campo puede traer comas dentro y partir por ',' rompería
+   la fila entera sin avisar. */
+function impFilas(txt){
+  const filas = []; let f = [], c = '', q = false;
+  for(let i = 0; i < txt.length; i++){
+    const ch = txt[i];
+    if(q){
+      if(ch === '"'){ if(txt[i+1] === '"'){ c += '"'; i++; } else q = false; }
+      else c += ch;
+    }
+    else if(ch === '"') q = true;
+    else if(ch === ',' || ch === ';' || ch === '\t'){ f.push(c); c = ''; }
+    else if(ch === '\n'){ f.push(c); filas.push(f); f = []; c = ''; }
+    else if(ch !== '\r') c += ch;
+  }
+  if(c !== '' || f.length){ f.push(c); filas.push(f); }
+  return filas.filter(r => r.some(x => String(x).trim() !== ''));
+}
+/* La huella de un trade, para no meterlo dos veces si vuelves a importar el
+   mismo archivo — que es lo que uno hace cuando no está seguro de si funcionó. */
+const impHuella = t => [t.date, t.time || '', t.sym, t.qty, Math.round(+t.pnl || 0)].join('|');
+
+let impPend = null, impCtasSel = [];
+$('#btnCSV').addEventListener('click', () => $('#fileCSV').click());
+$('#fileCSV').addEventListener('change', e => {
+  const f = e.target.files && e.target.files[0];
+  e.target.value = '';                       // permite reabrir el mismo archivo
+  if(!f) return;
+  const lector = new FileReader();
+  lector.onload = () => {
+    const filas = impFilas(String(lector.result || ''));
+    if(filas.length < 2){ toast(bi('Ese archivo no trae filas','That file has no rows')); return; }
+    const cab = filas[0].map(impNorm);
+    const halla = alias => {
+      let i = cab.findIndex(h => alias.includes(h));
+      if(i < 0) i = cab.findIndex(h => h && alias.some(a => h.includes(a)));
+      return i;
+    };
+    const ix = {}; Object.keys(IMP_COLS).forEach(k => { ix[k] = halla(IMP_COLS[k]); });
+    if(ix.pnl < 0){
+      toast(bi('No encuentro la columna de P&L en ese CSV','No P&L column found in that CSV')); return; }
+
+    const nuevos = [], sinFecha = [];
+    for(let r = 1; r < filas.length; r++){
+      const fila = filas[r];
+      const pnl = impNum(fila[ix.pnl]);
+      if(!isFinite(pnl)) continue;                    // encabezados repetidos, totales al pie
+      /* la fecha puede venir en más de una columna (comprado / vendido): se
+         toma la primera que se pueda leer, no sólo la que se detectó */
+      let fecha = ix.fecha >= 0 ? impFecha(fila[ix.fecha]) : null, hora = ix.fecha >= 0 ? impHora(fila[ix.fecha]) : null;
+      if(!fecha) for(let c = 0; c < fila.length && !fecha; c++){ fecha = impFecha(fila[c]); hora = hora || impHora(fila[c]); }
+      if(!fecha || fecha > todayISO()){ sinFecha.push(r); continue; }
+      const lado = ix.lado >= 0 ? (/s|sell|short/i.test(fila[ix.lado]) && !/buy/i.test(fila[ix.lado]) ? 'S' : 'L') : 'L';
+      const ent = ix.entrada >= 0 ? impNum(fila[ix.entrada]) : NaN;
+      const sal = ix.salida  >= 0 ? impNum(fila[ix.salida])  : NaN;
+      nuevos.push({
+        date: fecha, time: hora || horaMercadoAhora(),
+        sym: ix.sym >= 0 ? impSimbolo(fila[ix.sym]) : 'MNQ',
+        dir: lado,
+        qty: Math.max(1, Math.round(ix.qty >= 0 ? (impNum(fila[ix.qty]) || 1) : 1)),
+        entry: isFinite(ent) ? ent : null, exit: isFinite(sal) ? sal : null,
+        pnl, setupOk: false, notas: bi('Importado de Tradovate','Imported from Tradovate'), shot: null,
+      });
+    }
+    if(!nuevos.length){ toast(bi('Ese CSV no trae trades que pueda leer','No readable trades in that CSV')); return; }
+
+    const yaHay = new Set((S.trades || []).map(impHuella));
+    const frescos = nuevos.filter(t => !yaHay.has(impHuella(t)));
+    const repes = nuevos.length - frescos.length;
+    impPend = frescos;
+
+    const fechas = frescos.map(t => t.date).sort();
+    const suma = frescos.reduce((x, t) => x + t.pnl, 0);
+    const halladas = Object.keys(ix).filter(k => ix[k] >= 0).map(k => filas[0][ix[k]]).join(' · ');
+    $('#impResumen').innerHTML = `
+      <div class="cal-pace" style="margin-top:12px">
+        <b>${frescos.length} ${bi('trade(s) por importar','trade(s) to import')}</b>
+        ${repes ? ' · ' + repes + bi(' ya estaban (se saltan)',' already there (skipped)') : ''}
+        ${sinFecha.length ? ' · ' + sinFecha.length + bi(' sin fecha usable',' with no usable date') : ''}
+        <div style="margin-top:8px" class="micro">
+          ${frescos.length ? bi('Del ','From ') + fmtFecha(fechas[0]) + bi(' al ',' to ') + fmtFecha(fechas[fechas.length-1]) : ''}
+          · ${bi('suma','total')} <b class="${suma>0?'up':suma<0?'down':''}">${fmt$(suma, true)}</b>
+        </div>
+        <div style="margin-top:6px" class="micro" style="color:var(--faint)">
+          ${bi('Columnas leídas','Columns read')}: ${esc(halladas)}
+        </div>
+      </div>`;
+    /* Las fechas se enseñan a propósito: si el export viniera en DD/MM en vez de
+       MM/DD, el rango sale disparatado y se ve ANTES de importar. */
+    impCtasSel = [];
+    const ctas = ordenar(mias(S.accounts).filter(a => !esSim(a)));
+    $('#impCtas').innerHTML = ctas.length
+      ? ctas.map(a => `<button type="button" data-ac="${a.id}">${esc(a.alias)}</button>`).join('')
+      : `<span class="micro">${bi('No tienes cuentas: los trades entran sin cuenta','No accounts yet: trades come in unassigned')}</span>`;
+    $$('#impCtas [data-ac]').forEach(b => b.onclick = () => {
+      const id = b.dataset.ac, i = impCtasSel.indexOf(id);
+      if(i < 0) impCtasSel.push(id); else impCtasSel.splice(i, 1);
+      b.classList.toggle('on', i < 0);
+    });
+    $('#impErr').textContent = '';
+    openOv('ovImportar');
+  };
+  lector.readAsText(f);
+});
+$('#impSave').addEventListener('click', () => {
+  if(!impPend || !impPend.length){ closeOv(); return; }
+  if(mias(S.accounts).length && !impCtasSel.length){
+    $('#impErr').textContent = bi('Elige al menos una cuenta.','Pick at least one account.'); return; }
+  const yo = (S.session && S.session.user) || null;
+  impPend.forEach(t => S.trades.push(sellaCambio({
+    id: uid(), ...t, por: yo, seq: ++S.seqTrade,
+    accts: impCtasSel.length ? [...impCtasSel] : [SIN_CUENTA] })));
+  const n = impPend.length; impPend = null;
+  olvidaQuemas(); save(); closeOv(); renderAll(); updateBadges();
+  toast(n + bi(' trades importados',' trades imported'));
+});
 
 /* El respaldo servía de poco sin forma de volver a meterlo. */
 $('#btnRestore').addEventListener('click', ()=> $('#fileRestore').click());
