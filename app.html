@@ -11653,48 +11653,43 @@ function escenaAhora(now = new Date()){
      shopping y cena, según la hora del día. */
   /* viernes 17:00 → domingo 18:00 NY, que es cuando Globex reabre de verdad */
   const finde = (wd === 5 && m >= 1020) || wd === 6 || (wd === 0 && m < 1080);
+  /* ENTRE SEMANA SE VIVE EN EL AVIÓN, Y PUNTO (André, 28-ago-2026).
+     Antes había once escenas —tres oficinas y seis lugares del finde— y el
+     terminal iba saltando entre ellas según la hora. Ahora son DOS: el jet de
+     lunes a viernes y la casa el fin de semana. Las demás siguen dibujadas en
+     el código pero ya no las alcanza nadie. */
   if(finde){
-    /* El estadio se fue (André: «quita el partido de futbol»). Su franja de la
-       tarde se queda en casa, que es donde de verdad se está el fin de semana. */
-    /* la tarde del finde ahora es EL YATE (16–19): la casa y el yate son del
-       fin de semana, por orden de André */
-    const esc = m < 420 ? 'casa' : m < 600 ? 'gym' : m < 780 ? 'golf'
-              : m < 960 ? 'shopping' : m < 1140 ? 'yate'
-              : m < 1320 ? 'restaurante' : 'casa';
-    return { tipo:'finde', esc, c:'nyc', finde:true };
+    return { tipo:'finde', esc:'casa', c:'nyc', finde:true };
   }
+  /* SESIÓN ABIERTA: el jet cruza sobre esa ciudad. Antes aquí se bajaba a la
+     oficina; ahora no se baja nunca — el cartel dice sobre cuál estamos y
+     cuánto lleva la sesión, que es el dato que de verdad se busca. */
   for(const tr of TRAMOS){
     const mm = (tr.de > tr.a || tr.a > 1440) && m < tr.de ? m + 1440 : m;
-    /* Mientras la sesión está abierta se está en la mesa, y punto. El vuelo
-       salía en los últimos 25 minutos del tramo —a las 15:35 con Nueva York
-       todavía abierto hasta las 16:00— así que la pantalla enseñaba un avión
-       justo cuando se administra el cierre. Ahora el traslado va en el hueco
-       cerrado, que es cuando de verdad se viaja. */
-    if(mm >= tr.de && mm < tr.a)
-      return { tipo:'ciudad', c:tr.c, sig:tr.sig, restan: tr.a - mm };
+    if(mm >= tr.de && mm < tr.a){
+      const dur = tr.a - tr.de;
+      return { tipo:'vuelo', crucero:true, de:tr.c, a:tr.c, c:tr.c, sig:tr.sig,
+               restan: tr.a - mm, prog: dur > 0 ? (mm - tr.de) / dur : .5 };
+    }
   }
-  /* Ninguna sesión abierta: el mercado está CERRADO. Antes se caía a «Nueva
-     York» y la pantalla mentía; ahora se está en casa hasta la próxima
-     apertura, y se dice cuál es y cuánto falta. */
+  /* ENTRE SESIONES: en vuelo hacia la que abre. El hueco entero es el viaje —
+     ya no hay «cerrado en casa» de por medio, porque la casa quedó reservada
+     para el fin de semana. */
   let prox = null, faltan = 1e9;
   TRAMOS.forEach(tr => {
     const d = (tr.de - m + 1440) % 1440;
     if(d < faltan){ faltan = d; prox = tr; }
   });
-  /* de dónde se viene: el tramo que acaba de cerrar. Hace falta para saber de
-     qué ciudad despega el avión — antes el vuelo nacía dentro del tramo y ese
-     dato venía solo. */
   let ant = null, hace = 1e9;
   TRAMOS.forEach(tr => {
     const d = (m - (tr.a % 1440) + 1440) % 1440;
     if(d < hace){ hace = d; ant = tr; }
   });
-  /* El ciclo completo queda: sesión → CERRADO → avión → la que sigue. El avión
-     es el último tramo del hueco, pegado a la apertura. */
-  if(prox && faltan <= VUELO_MIN)
-    return { tipo:'vuelo', de: ant ? ant.c : 'nyc', a: prox.c, prog: 1 - faltan / VUELO_MIN };
-  return { tipo:'finde', esc:'casa', c:'nyc', cerrado:true,
-           abre: prox ? prox.c : 'londres', faltan };
+  /* el hueco de verdad entre el cierre de una y la apertura de la otra: sirve
+     para que la barra de progreso mida el viaje completo y no un tramo fijo */
+  const hueco = ant && prox ? ((prox.de - (ant.a % 1440) + 1440) % 1440) || VUELO_MIN : VUELO_MIN;
+  return { tipo:'vuelo', de: ant ? ant.c : 'nyc', a: prox ? prox.c : 'londres',
+           prog: Math.max(0, Math.min(1, 1 - faltan / hueco)), faltan };
 }
 /* qué día es allá: el viernes de Nueva York puede ser sábado en Tokio */
 function diaSemanaEn(tz, now = new Date()){
@@ -12266,23 +12261,10 @@ function trasladoJet(c, W, H, t, E, rr, prog){
     [[0,0,150,44],[52,-26,110,44],[112,-6,90,40],[26,18,140,34]].forEach(([dx,dy,w,h]) => {
       c.beginPath(); c.ellipse(nx + dx*es, ny + dy*es, w*es/2, h*es/2, 0, 0, 7); c.fill(); });
   }
-  /* la ciudad de destino asoma desde abajo SOLO en los traslados. En crucero
-     no se dibuja nada abajo: André pidió el jet limpio — la sesión abierta ya
-     la dice el cartel. */
-  if(!E.finde && !E.crucero){
-    const sube = Math.max(0, prog - .35) / .65;
-    if(sube > 0){
-      const base = H + 120 - sube * 220;
-      c.fillStyle = '#1B212A';
-      c.fillRect(0, base + 60, W, H - base + 60);
-      if(E.a === 'nyc') edificioNY(c, W * .72, base + 62, .9, rr);
-      else if(E.a === 'londres') edificioLondres(c, W * .72, base + 62, .9, rr);
-      else edificioTokio(c, W * .72, base + 62, .9, t);
-      c.fillStyle = '#20262E';
-      c.fillRect(W * .48, base + 62, 90, 200);
-      c.fillRect(W * .88, base + 92, 70, 160);
-    }
-  }
+  /* Nada debajo del avión. La ciudad de destino asomaba desde abajo en los
+     traslados —una torre a medio salir de la orilla— y André la quitó: el jet
+     va limpio siempre, con cielo y nubes y nada más. A dónde vamos ya lo dice
+     el cartel de arriba. */
   const cx = W / 2, cy = H / 2 - 60 + oscil;
   c.save(); c.translate(cx, cy); c.rotate(Math.sin(t / 1400) * .012);
   const L = 760, R = 128;
@@ -14490,17 +14472,9 @@ function animaBalances(){
 /* La tira de destinos. El orden no es decorativo: primero las tres oficinas
    —que es a lo que se viene—, luego el jet y al final los lugares del finde. */
 const DESTINOS = [
-  { id:'ahora',       et:['AHORA','NOW'],           e:null },
-  { id:'nyc',         et:['NUEVA YORK','NEW YORK'], e:{ tipo:'ciudad', c:'nyc' } },
-  { id:'londres',     et:['LONDRES','LONDON'],      e:{ tipo:'ciudad', c:'londres' } },
-  { id:'tokio',       et:['TOKIO','TOKYO'],         e:{ tipo:'ciudad', c:'tokio' } },
-  { id:'vuelo',       et:['EN VUELO','IN FLIGHT'],  e:{ tipo:'vuelo', de:'nyc', a:'tokio' } },
-  { id:'casa',        et:['CASA','HOME'],           e:{ tipo:'finde', esc:'casa',        c:'nyc', finde:true } },
-  { id:'yate',        et:['YATE','YACHT'],          e:{ tipo:'finde', esc:'yate',        c:'nyc', finde:true } },
-  { id:'golf',        et:['GOLF','GOLF'],           e:{ tipo:'finde', esc:'golf',        c:'nyc', finde:true } },
-  { id:'gym',         et:['GYM','GYM'],             e:{ tipo:'finde', esc:'gym',         c:'nyc', finde:true } },
-  { id:'shopping',    et:['SHOPPING','SHOPPING'],   e:{ tipo:'finde', esc:'shopping',    c:'nyc', finde:true } },
-  { id:'restaurante', et:['RESTAURANTE','DINNER'],  e:{ tipo:'finde', esc:'restaurante', c:'nyc', finde:true } },
+  { id:'ahora', et:['AHORA','NOW'],          e:null },
+  { id:'vuelo', et:['EN VUELO','IN FLIGHT'], e:{ tipo:'vuelo', de:'nyc', a:'tokio' } },
+  { id:'casa',  et:['CASA','HOME'],          e:{ tipo:'finde', esc:'casa', c:'nyc', finde:true } },
 ];
 let ofiDestId = 'ahora';
 function renderDestinos(){
@@ -14518,16 +14492,8 @@ function renderDestinos(){
     const d = DESTINOS.find(x => x.id === b.dataset.dest); if(!d) return;
     ofiDestino = d.e ? { ...d.e } : null;
     ofiDestId = d.id;
-    /* al ir a una ciudad a mano se entra a la oficina: es lo que se quiere ver
-       —el edificio y la mesa—, no el jet cruzando por encima.
-       Hay que sellar también ofiCiudadKey: el dibujo resetea `ofiBajado` cada
-       vez que la ciudad cambia respecto a esa llave, así que sin esto el clic
-       se deshacía solo en el siguiente cuadro y siempre se veía el jet. */
-    if(d.e && d.e.tipo === 'ciudad'){
-      ofiBajado = true; ofiCiudadKey = d.e.c + '|' + todayISO();
-    } else {
-      ofiBajado = false; ofiCiudadKey = '';
-    }
+    /* ya no se baja a ninguna oficina: sólo quedan el jet y la casa */
+    ofiBajado = false; ofiCiudadKey = '';
     host._html = ''; renderDestinos();
   });
 }
