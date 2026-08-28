@@ -2023,6 +2023,8 @@ button.tag.quemada{text-decoration:line-through;text-decoration-color:var(--down
   font-family:var(--mono);font-size:8.5px;letter-spacing:.1em;color:var(--faint)}
 .ps-hitos span:nth-child(2){flex:1;text-align:center}
 .ps-hitos span:last-child{text-align:right}
+.ps-hitos b{color:inherit;font-weight:600}
+.ps-hitos .down{color:var(--down)}
 .ps-hitos .ok{color:var(--up)}
 .fc-hacer{display:inline-block;margin-top:3px;color:var(--txt);cursor:pointer;
   border-bottom:1px solid var(--line);letter-spacing:.1em}
@@ -3842,11 +3844,16 @@ const FIRM_CATALOG = {
    Para otros tamaños se escalan en proporción. Son OBJETIVOS, no la línea de
    riesgo —el drawdown se queda en blanco mientras nadie lo escriba— así que
    equivocarlos se corrige en Ajustes y no cuesta una cuenta. */
-const REGLAS_DEF = { size:50000, target:3000, colchon:2100, maximo:3100 };
-const reglasPorTamano = tam => {
+const REGLAS_DEF = { size:50000, target:3000, colchon:2100, tramo:1000, tramoApex:2000 };
+/* El tramo del colchón al pago máximo NO es igual en todas: en Apex son $2,000
+   —el 100% cae en +7,100 acumulado— y en las demás $1,000, que da +6,100.
+   Lo dijo André con esos números; se pueden cambiar cuenta por cuenta. */
+const reglasPorTamano = (tam, firm) => {
   const k = (tam > 0 ? tam : REGLAS_DEF.size) / REGLAS_DEF.size;
   const r = v => Math.round(v * k / 100) * 100;
-  return { target:r(REGLAS_DEF.target), colchon:r(REGLAS_DEF.colchon), maximo:r(REGLAS_DEF.maximo) };
+  const tramo = /apex/i.test(String(firm || '')) ? REGLAS_DEF.tramoApex : REGLAS_DEF.tramo;
+  const colchon = r(REGLAS_DEF.colchon);
+  return { target:r(REGLAS_DEF.target), colchon, maximo: colchon + r(tramo) };
 };
 
 /* Las firmas que ofrece el alta. OJO: esta lista es MÁS LARGA que
@@ -4671,7 +4678,12 @@ function migrar(s){
      más que una barra en cero que no dice nada. */
   (s.accounts||[]).forEach(a => {
     if(!a || a.tipo === 'live' || a.tipo === 'sim') return;
-    const r = a.reglas || {}, def = reglasPorTamano(+a.size || +a.start || 0);
+    const r = a.reglas || {}, def = reglasPorTamano(+a.size || +a.start || 0, a.firm);
+    /* Las firmas CON catálogo verificado conservan lo suyo; las que no —donde
+       los números salieron de un formulario viejo que ya no existe— se pasan al
+       modelo nuevo. Ahí es donde vivían los colchones de $7,600 que no
+       correspondían a nada. */
+    const conCatalogo = !!FIRM_CATALOG[a.firm];
     /* Campo por campo, no todo o nada. El caso que costó cuatro vueltas: una
        cuenta FONDEADA dada de alta con el formulario viejo quedaba con
        `target:0` —ahí el objetivo se dejaba vacío por ser fondeada— pero con
@@ -4683,9 +4695,9 @@ function migrar(s){
     if(!(+r.target > 0)) nuevas.target = def.target;
     /* el colchón sólo se rellena si NO viene de ningún lado: las cuentas que
        migraron del catálogo lo llevan dentro de `lock` y ésas no se tocan */
-    const yaHayColchon = (+r.colchon > 0) || (r.lock != null && r.lock !== '');
+    const yaHayColchon = (+r.colchon > 0) || (conCatalogo && r.lock != null && r.lock !== '');
     if(!yaHayColchon) nuevas.colchon = def.colchon;
-    const yaHayMaximo = (+r.maximo > 0) || (+r.pago > 0);
+    const yaHayMaximo = (+r.maximo > 0) || (conCatalogo && +r.pago > 0);
     if(!yaHayMaximo) nuevas.maximo = def.maximo;
     a.reglas = nuevas;
   });
@@ -6077,6 +6089,7 @@ function renderAcctMgr(){
       }
     }
     if(f==='alias' && !a.alias) a.alias = 'T'+a.orden;
+    sellaCambio(a);            /* para que el cambio le gane a la copia del otro */
     save(); renderAcctMgr(); renderAll();
   });
 }
@@ -6102,7 +6115,7 @@ window.marcarFondeadas = () => {
   if(!confirm(bi(
       'Marcar ' + evs.length + ' cuenta(s) como FONDEADAS: el examen se da por pasado y el camino arranca en el colchón.\n\nSe deshace en Ajustes → Cuentas → Stage.\n\n¿Marcarlas?',
       'Mark ' + evs.length + ' account(s) as FUNDED: the evaluation counts as passed and the road starts at the cushion.\n\nUndo it in Settings → Accounts → Stage.\n\nMark them?'))) return;
-  evs.forEach(a => { a.fase = 'buffer'; });
+  evs.forEach(a => { a.fase = 'buffer'; sellaCambio(a); });
   olvidaQuemas(); save(); renderAcctMgr(); renderAll();
   toast(bi(evs.length + ' marcadas como fondeadas', evs.length + ' marked as funded'));
 };
@@ -6113,7 +6126,7 @@ window.copiarReglas = id => {
   if(!confirm(bi(
       'Copiar las reglas de «' + a.alias + '» —objetivo, drawdown, colchón, límite diario y tramo de pago— a las otras ' + otras.length + ' cuenta(s).\n\nNO se copia el tamaño, ni el saldo, ni la etapa: eso es de cada cuenta.\n\n¿Copiar?',
       'Copy the rules of "' + a.alias + '" — target, drawdown, cushion, daily limit and payout stretch — to your other ' + otras.length + ' account(s).\n\nSize, balance and stage are NOT copied: those belong to each account.\n\nCopy?'))) return;
-  otras.forEach(x => { x.reglas = { ...a.reglas }; });
+  otras.forEach(x => { x.reglas = { ...a.reglas }; sellaCambio(x); });
   save(); renderAcctMgr(); renderAll();
   toast(bi('Reglas copiadas a ' + otras.length, 'Rules copied to ' + otras.length));
 };
@@ -6133,6 +6146,7 @@ window.reiniciarCuenta = id => {
     .reduce((x,t) => x + (t.pnl||0), 0);
   a.start = a.size - hoyPnl;
   a.desde = hoy;
+  sellaCambio(a);
   save(); renderAcctMgr(); renderDashboard(); renderAgentes();
   toast(hoyPnl ? `Reiniciada en ${fmt$(a.size)} (se descontó el día del pase)` : 'Balance reiniciado desde hoy');
 };
@@ -7079,6 +7093,17 @@ function pintaPerfilSocio(){
           <span class="${cc.pasoBuffer ? 'ok' : ''}">${bi('COLCHÓN','CUSHION')} ${fmt$(cc.target + cc.buffer)}</span>
           <span class="${cc.pasoPago ? 'ok' : ''}">${bi('PAYOUT','PAYOUT')} ${fmt$(cc.total)}</span>
         </div>
+        <!-- Los dos números que se buscan al abrir la hoja de alguien: dónde
+             está su piso y a dónde va. La hoja enseñaba la barra pero no el
+             drawdown ni el objetivo, que es justo lo que se quiere saber de un
+             socio: qué tan cerca está del piso y cuánto le falta. -->
+        ${(()=>{ const h = saludDe(a), bajo = h.colchon != null && h.maxDD > 0 && h.colchon < h.maxDD * .3;
+          return `<div class="ps-hitos" style="color:var(--dim)">
+            <span>${bi('PISO','DD LINE')} ${h.linea == null
+                ? `<b style="color:var(--faint)">${bi('sin definir','not set')}</b>`
+                : `<b class="${bajo ? 'down' : ''}">${fmt$(h.linea)}</b>${h.fija ? ' ' + bi('(fijo)','(locked)') : ''}`}</span>
+            <span style="text-align:right">${bi('OBJETIVO','GOAL')} <b>${metaDe(a)}</b></span>
+          </div>`; })()}
         <!-- Una barra en cero no dice si es que no has ganado nada o si la app
              no se enteró. Ahora lo dice, y dice qué hacer. -->
         ${cc.pct === 0 ? `<p class="micro" style="text-transform:none;letter-spacing:.03em;color:var(--faint);margin-top:4px">${bi(
@@ -9219,6 +9244,14 @@ const NC_FASES = { eval:['Examen','Evaluation'], buffer:['Fondeada','Funded'] };
 /* Los valores con los que abre el alta: la referencia de 50k de REGLAS_DEF,
    para no tener el mismo número escrito en dos lugares. */
 const NC_DEF = { start: REGLAS_DEF.size, ...reglasPorTamano(REGLAS_DEF.size) };
+/* Al escribir la firma en el alta se reajusta el máximo: Apex lleva su tramo de
+   $2,000 y las demás $1,000, sin que haya que acordarse del número. */
+$('#ncFirma').addEventListener('input', () => {
+  if(nc.fase === 'eval') return;                       // en examen ese campo ni se ve
+  const d = reglasPorTamano(ncNum('ncStart'), $('#ncFirma').value);
+  $('#ncMaximo').value = d.maximo;
+  ncMetaPinta();
+});
 
 const nc = { fase:'eval', firm:'' };
 function ncChips(cont, lista, activo, onPick, fmt){
@@ -9271,7 +9304,12 @@ $('#ncSave').addEventListener('click', ()=>{
      esa fecha en adelante. Si el usuario no la toca, es hoy. */
   const desde = ($('#ncDesde') && $('#ncDesde').value) || todayISO();
   const esEval = nc.fase === 'eval';
-  S.accounts.push({
+  /* sellaCambio: sin sello, fusionarListas() desempata a favor de la copia
+     LOCAL, así que la cuenta que otro socio edita en su equipo no llega nunca
+     al tuyo — Gerardo puso su saldo en $51,000 en su celular y en la mesa de
+     André seguía apareciendo $50,000, para siempre. Los trades ya se sellaban;
+     las cuentas se habían quedado fuera. */
+  S.accounts.push(sellaCambio({
     id:'ac_'+uid(), alias, orden:(S.accounts.length+1), desde,
     estado:'active', owner:S.session.user,
     tipo:'prop', firm: ($('#ncFirma').value.trim() || '\u2014'), plan:'\u2014',
@@ -9282,7 +9320,7 @@ $('#ncSave').addEventListener('click', ()=>{
     reglas:{ target:  esEval ? ncNum('ncTarget')  : NC_DEF.target,
              colchon: esEval ? NC_DEF.colchon     : ncNum('ncColchon'),
              maximo:  esEval ? NC_DEF.maximo      : ncNum('ncMaximo') }
-  });
+  }));
   /* renderAll() en vez de tres renders sueltos: registrar una cuenta tiene que
      verse de inmediato en la pantalla donde estés, no sólo en Ajustes. */
   save(); closeOv(); renderAcctMgr(); renderAll();
