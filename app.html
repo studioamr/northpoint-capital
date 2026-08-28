@@ -3913,7 +3913,9 @@ const SISTEMA = {
   reparto: [
     { k:'cuentas',    pct:.20, t:'to the accounts',   d:'fattens the cushion: no live account, no payout' },
     { k:'portafolio', pct:.20, t:'to the portfolio',   d:'net worth that no longer depends on trading' },
-    { k:'mateo',      pct:.20, t:'for Mateo',       d:'their slice of the split' },
+    /* la llave 'mateo' se queda: los porcentajes que el usuario ya ajustó
+       cuelgan de ella. Sólo cambia la etiqueta que se lee. */
+    { k:'mateo',      pct:.20, t:'for Gerardo',     d:'their slice of the split' },
     { k:'pablo',      pct:.20, t:'for Pablo',       d:'their slice of the split' },
     { k:'andre',      pct:.20, t:'for André',       d:'their slice of the split' },
   ],
@@ -4082,7 +4084,7 @@ const PERSONAJES = [
     voz:'Dirección de inversión, mandato y reparto.',
     look:{ piel:'#D9A377', pelo:'#14100C', traje:'#22303E', camisa:'#FFFFFF', ac:'#4A7FA8',
            prop:'globo', porte:'erguido', cara:'sereno' } },
-  { id:'mateo.np', nom:'MATEO', area:'CRO · Research', roles:['NP-020','NP-030'],
+  { id:'mateo.np', nom:'GERARDO', area:'CRO · Research', roles:['NP-020','NP-030'],
     lema:'El drawdown no negocia. Yo tampoco.',
     voz:'Riesgo, límites y el contexto del día.',
     look:{ piel:'#C98F63', pelo:'#181410', traje:'#4E545E', camisa:'#EFE8D8', ac:'#C4544A',
@@ -4211,8 +4213,16 @@ const USERS = {
      debería tener que contestarle a su propio terminal. Aquí viajan con la app. */
   'pablo.np': { nombre:'Pablo',    roles:['NP-001','NP-010'], correo:'pablo@northpoint.mx',
                 correos:['pabloochoa8am@outlook.com'] },
-  'mateo.np': { nombre:'Mateo',    roles:['NP-020','NP-030'], correo:'mateo@northpoint.mx',
-                correos:[] },
+  /* GERARDO, no Mateo (27-ago-2026). La clave `mateo.np` NO se toca: es lo que
+     llevan escrito sus cuentas en `owner`, sus trades en `por`, su fila en la
+     nube y las lápidas de borrado. Renombrarla lo dejaría sin nada de eso.
+     Cambia el nombre que se lee, y `alias` deja que entre escribiendo su nombre
+     nuevo sin romper el viejo, que sigue funcionando.
+     OJO: el alias NO va en `correos`, aunque tentaría — de ahí sale el correo
+     con el que se intenta el login de nube, y meter uno inventado lo dejaría
+     sin poder entrar. */
+  'mateo.np': { nombre:'Gerardo',  roles:['NP-020','NP-030'], correo:'mateo@northpoint.mx',
+                alias:['gerardo'], correos:[] },
   'andre.np': { nombre:'André',    roles:['NP-040','NP-050'], correo:'andre@northpoint.mx',
                 correos:['andremacouzetruiz@gmail.com'] },
   /* 10 invitados para que André reparta acceso sin tocar código. Cada quien entra
@@ -9348,6 +9358,9 @@ function resuelveUsuario(txt){
   if(!q) return null;
   if(USERS[q]) return q;                                     // andre.np
   if(USERS[q + '.np']) return q + '.np';                     // andre
+  const porAlias = Object.keys(USERS)
+    .find(k => (USERS[k].alias || []).includes(q));           // gerardo -> mateo.np
+  if(porAlias) return porAlias;
   const porRegistro = Object.keys(S.correos || {})
     .find(k => (S.correos[k] || '').toLowerCase() === q);    // su correo real
   if(porRegistro && USERS[porRegistro]) return porRegistro;
@@ -10935,7 +10948,7 @@ const OFI = {
   },
   sillas: [
     { n:'PABLO', x:5.6, y:4.2, z:0, flip:false },
-    { n:'MATEO', x:3.0, y:6.0, z:0, flip:true  },
+    { n:'GERARDO', x:3.0, y:6.0, z:0, flip:true  },
     { n:'ANDRÉ', x:6.2, y:5.8, z:0, flip:true  },
   ],
   etapas: ['01 CONTEXTO','02 TESIS','03 RIESGO','04 FIRMA','05 EJECUTA','06 GESTIÓN','07 CIERRE','08 JOURNAL'],
@@ -14255,7 +14268,7 @@ function dibujaOficina(t){
     });
     /* las tres oficinas: escritorio al frente, silla al fondo, mampara de
        cristal entre una y otra, y su placa en el barandal */
-    const NOMS = [['pablo.np','PABLO'], ['mateo.np','MATEO'], ['andre.np','ANDRÉ']];
+    const NOMS = [['pablo.np','PABLO'], ['mateo.np','GERARDO'], ['andre.np','ANDRÉ']];
     NOMS.forEach((par, k) => {
       const x0 = .5 + k * 3.15;
       add(x0 + FONDO + .5, c2 => {
