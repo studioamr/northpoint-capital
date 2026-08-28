@@ -2017,6 +2017,9 @@ button.tag.quemada{text-decoration:line-through;text-decoration-color:var(--down
    una barra está en cero, y cortarla la vuelve inútil. */
 .fc-falta{font-style:normal;font-family:var(--mono);font-size:9.5px;line-height:1.45;
   color:var(--dim);white-space:normal;overflow:visible;max-width:34ch}
+.fc-hacer{display:inline-block;margin-top:3px;color:var(--txt);cursor:pointer;
+  border-bottom:1px solid var(--line);letter-spacing:.1em}
+.fc-hacer:hover{border-color:var(--accent)}
 .fc-ver{font-style:normal;font-family:var(--mono);font-size:8.5px;letter-spacing:.14em;
   color:var(--faint);opacity:0;transition:opacity .2s ease}
 .fc-linea:hover .fc-ver,.fc-linea:focus-visible .fc-ver{opacity:1}
@@ -6040,6 +6043,21 @@ window.corregirPlan = id => {
 /* Tres cuentas iguales son quince campos tecleados a mano, y basta un dedazo en
    uno para que la línea de drawdown de esa cuenta quede mal sin que se note.
    Se llena una, se revisa su META contra la fondeadora, y se copia. */
+/* «Ya están fondeadas»: pasa TUS cuentas de examen a fondeadas de un clic.
+   Existe porque este dato se perdía en un desplegable adentro de Ajustes y la
+   barra en cero no decía que fuera eso — tres vueltas costó descubrirlo. Se
+   deshace cuenta por cuenta en Ajustes → Cuentas → Stage. */
+window.marcarFondeadas = () => {
+  const yo = S.session && S.session.user;
+  const evs = mias(S.accounts).filter(a => !esLive(a) && !esSim(a) && a.fase === 'eval');
+  if(!evs.length) return;
+  if(!confirm(bi(
+      'Marcar ' + evs.length + ' cuenta(s) como FONDEADAS: el examen se da por pasado y el camino arranca en el colchón.\n\nSe deshace en Ajustes → Cuentas → Stage.\n\n¿Marcarlas?',
+      'Mark ' + evs.length + ' account(s) as FUNDED: the evaluation counts as passed and the road starts at the cushion.\n\nUndo it in Settings → Accounts → Stage.\n\nMark them?'))) return;
+  evs.forEach(a => { a.fase = 'buffer'; });
+  olvidaQuemas(); save(); renderAcctMgr(); renderAll();
+  toast(bi(evs.length + ' marcadas como fondeadas', evs.length + ' marked as funded'));
+};
 window.copiarReglas = id => {
   const a = S.accounts.find(x => x.id === id); if(!a || !a.reglas) return;
   const otras = mias(S.accounts).filter(x => x.id !== id && !esLive(x) && !esSim(x));
@@ -6243,15 +6261,20 @@ function carreraSocio(uid){
   const suyas = todas.filter(cuentaEnPie);
   const quemadas = todas.length - suyas.length;
   if(!suyas.length) return { uid, cuentas:0, avance:0, total:0, pct:0, cobrado:0,
-                             capital:0, balance:0, quemadas, sinVara:0, sinDatos: !todas.length };
+                             capital:0, balance:0, quemadas, sinVara:0, enExamen:0, sinDatos: !todas.length };
   let avance = 0, total = 0, pagos = 0, sinVara = 0;
   /* El CAPITAL de una cuenta se sabe siempre (es su tamaño); el AVANCE no: sin
      reglamento no hay objetivo ni colchón contra qué medir. Así que la cuenta
      suma dinero y cuenta como cuenta, pero se queda fuera del porcentaje en vez
      de arrastrarlo a un número inventado. */
+  let enExamen = 0;
   suyas.forEach(a => {
     if(!reglasDe(a)){ sinVara++; return; }
-    const c = carreraCuenta(a); avance += c.avance; total += c.total; if(c.pasoPago) pagos++; });
+    const c = carreraCuenta(a); avance += c.avance; total += c.total; if(c.pasoPago) pagos++;
+    /* una cuenta en examen sin un solo trade aporta cero, y eso es correcto —
+       pero visto desde la pista se lee igual que un error. Se cuenta para
+       poder decirlo. */
+    if(!c.pasoEval && c.avance <= 0) enExamen++; });
   /* El capital que trae puesto: la suma del tamaño de sus cuentas EN PIE. Una
      quemada no es capital, así que no cuenta —es la misma regla que ya rige el
      balance de FUTUROS, y tenía que ser la misma aquí para no decir dos cosas
@@ -6263,7 +6286,7 @@ function carreraSocio(uid){
      primero— pero lo que se lee es el saldo, que es el número que él tecleó y
      el que se mueve. */
   const balance = suyas.reduce((x, a) => x + carreraCuenta(a).balance, 0);
-  return { uid, cuentas:suyas.length, avance, total, capital, balance, sinVara,
+  return { uid, cuentas:suyas.length, avance, total, capital, balance, sinVara, enExamen,
            pct: total > 0 ? Math.max(0, Math.min(100, avance / total * 100)) : 0,
            pagos, quemadas, sinDatos:false };
 }
@@ -6517,7 +6540,20 @@ function renderFirmaCarrera(){
                  x.sinVara === 1 ? bi('cuenta sin reglas','account with no rules')
                                  : bi('cuentas sin reglas','accounts with no rules')} — ${
                  bi('escríbelas en Ajustes → Cuentas y la barra empieza a moverse',
-                    'type them in Settings → Accounts and the bar starts moving')}</i>` : ''}
+                    'type them in Settings → Accounts and the bar starts moving')}</i>`
+               : (x.enExamen && !x.avance) ? `<i class="fc-falta">${x.enExamen} ${
+                 x.enExamen === 1 ? bi('cuenta en examen','account in evaluation')
+                                  : bi('cuentas en examen','accounts in evaluation')} ${
+                 bi('y sin trades: por eso la barra va en cero.','and no trades: that is why the bar is at zero.')}${
+                 /* El botón sólo en TU carril: marcar las cuentas de otro socio
+                    como fondeadas no le toca a nadie más que a él.
+                    Va como span y no como <button> porque el carril entero YA es
+                    un botón —el que abre su perfil— y un botón dentro de otro no
+                    es HTML válido ni se puede enfocar con el teclado. */
+                 x.uid === yo ? ` <span class="fc-hacer" role="button" tabindex="0"
+                    onclick="event.stopPropagation(); marcarFondeadas()"
+                    onkeydown="if(event.key===' '||event.key==='Enter'){event.stopPropagation();event.preventDefault();marcarFondeadas();}"
+                    >${bi('YA ESTÁN FONDEADAS →','THEY ARE ALREADY FUNDED →')}</span>` : ''}</i>` : ''}
               <i class="fc-ver">${bi('VER PERFIL →','SEE PROFILE →')}</i>
             </span>
           </button>`).join('')}
@@ -7019,7 +7055,17 @@ function pintaPerfilSocio(){
       <p class="micro">${esYo ? bi('Tus balances','Your balances') : bi('Sus balances','Their balances')}</p>
       ${balRow(bi('FUTUROS','FUTURES'), futBal, futBase, fondSuyas.length,
           fondSuyas.length
-            ? fondSuyas.length + (fondSuyas.length === 1 ? bi(' cuenta fondeada viva',' live funded account') : bi(' cuentas fondeadas vivas',' live funded accounts'))
+            ? (()=>{ /* Decía «3 live funded accounts» aunque las tres estuvieran
+        guardadas en examen: la tarjeta las llamaba fondeadas y el camino las
+        trataba como exámenes, y ésa contradicción es la que hacía imposible
+        entender un 0%. Ahora se cuenta por etapa. */
+        const ev = fondSuyas.filter(a => a.fase === 'eval').length, fo = fondSuyas.length - ev;
+        const trozos = [];
+        if(fo) trozos.push(fo + (fo === 1 ? bi(' fondeada',' funded') : bi(' fondeadas',' funded')));
+        if(ev) trozos.push(ev + (ev === 1 ? bi(' en examen',' in evaluation') : bi(' en examen',' in evaluation')));
+        return fondSuyas.length + (fondSuyas.length === 1 ? bi(' cuenta',' account') : bi(' cuentas',' accounts'))
+             + (trozos.length > 1 ? ' · ' + trozos.join(' · ') : (ev ? ' · ' + trozos[0] : ''));
+      })()
               + bi(' · pica para ver su camino',' · tap to see their road')
             : bi('sin cuentas fondeadas','no funded accounts'), true)}
       ${balRow('LIVE', liveBal, liveBase, liveSuyas.length,
@@ -14501,7 +14547,17 @@ function renderAgentes(){
     balCard(bi('PORTAFOLIO','PORTFOLIO'), balPort, basePort, (S.positions||[]).length,
       (S.positions||[]).length ? bi('sobre ','on ') + fmt$(basePort) + bi(' aportados · de la mesa',' contributed · whole desk') : bi('sin posiciones todavía','no positions yet'))
     + balCard(bi('FUTUROS','FUTURES'), balFut, baseFut, fondeadas.length,
-      fondeadas.length ? (fondeadas.length + bi(fondeadas.length===1?' cuenta fondeada viva':' cuentas fondeadas vivas', fondeadas.length===1?' live funded account':' live funded accounts')) : bi('sin cuentas fondeadas','no funded accounts'))
+      fondeadas.length ? (()=>{ /* Decía «3 live funded accounts» aunque las tres estuvieran
+        guardadas en examen: la tarjeta las llamaba fondeadas y el camino las
+        trataba como exámenes, y ésa contradicción es la que hacía imposible
+        entender un 0%. Ahora se cuenta por etapa. */
+        const ev = fondeadas.filter(a => a.fase === 'eval').length, fo = fondeadas.length - ev;
+        const trozos = [];
+        if(fo) trozos.push(fo + (fo === 1 ? bi(' fondeada',' funded') : bi(' fondeadas',' funded')));
+        if(ev) trozos.push(ev + (ev === 1 ? bi(' en examen',' in evaluation') : bi(' en examen',' in evaluation')));
+        return fondeadas.length + (fondeadas.length === 1 ? bi(' cuenta',' account') : bi(' cuentas',' accounts'))
+             + (trozos.length > 1 ? ' · ' + trozos.join(' · ') : (ev ? ' · ' + trozos[0] : ''));
+      })() : bi('sin cuentas fondeadas','no funded accounts'))
     + balCard('LIVE', balLive, baseLive, lives.length,
       lives.length ? bi('sobre ','on ') + fmt$(baseLive) + bi(' de capital propio',' of own capital') : bi('sin cuenta propia','no own account'));
   grid.className = 'perfil-grid';
