@@ -1233,6 +1233,13 @@ button.tag.quemada{text-decoration:line-through;text-decoration-color:var(--down
   color:var(--dim);cursor:pointer;transition:all .15s}
 .chp:hover{border-color:var(--accent);color:var(--txt)}
 .chp.on{border-color:var(--up);color:var(--txt);background:rgba(87,199,155,.12)}
+/* La tira de destinos: se arrastra de lado en el celular en vez de apilarse en
+   tres renglones sobre el dibujo, que es lo que de verdad se está viendo. */
+.ofi-dest{display:flex;gap:7px;margin-top:10px;overflow-x:auto;padding-bottom:4px;
+  scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.ofi-dest::-webkit-scrollbar{display:none}
+.ofi-dest .chp{flex:0 0 auto}
+.ofi-dest .chp.vivo{border-color:var(--up);color:var(--up)}
 /* El monito se queda a la vista mientras lo armas: en el overlay la
    cabecera no scrollea, y en Ajustes el retrato se pega arriba del panel
    —así no hay que subir y bajar para ver qué cambió. */
@@ -2639,6 +2646,10 @@ stop[stop-color="#9BC0DC"]{stop-color:var(--txt)}
           <button type="button" id="btnBajar" hidden></button>
           <div id="horaNY" aria-label="Hora de Nueva York"></div>
         </div>
+        <!-- Los destinos. La escena la manda el mercado, pero se puede ir a
+             ver cualquiera a mano: las tres oficinas y los lugares del finde.
+             AHORA regresa al que toca por reloj. -->
+        <div class="ofi-dest" id="ofiDest" role="group"></div>
 
         <!-- El tablero del negocio: el camino a payout con el proceso de
              cada socio sobre la banda. -->
@@ -11613,6 +11624,23 @@ const TRAMOS = [
 ];
 const VUELO_MIN = 25;                     // lo que dura el traslado en pantalla
 
+/* DESTINO A MANO. Normalmente la escena la decide el reloj del mercado; esto
+   deja ir a verla a donde sea sin esperar a que sea la hora. Es sólo de vista:
+   no se guarda, no viaja a la nube y no toca ningún dato — al recargar vuelve
+   a mandar el mercado. */
+let ofiDestino = null;
+function escenaElegida(){
+  const d = ofiDestino; if(!d) return null;
+  if(d.tipo === 'vuelo')
+    /* el progreso corre igual que en un vuelo de verdad, en vueltas de dos
+       minutos, para que la barra y las nubes no se vean congeladas */
+    return { ...d, prog: (Date.now() / 120000) % 1 };
+  if(d.tipo === 'ciudad'){
+    const tr = TRAMOS.find(x => x.c === d.c) || {};
+    return { tipo:'ciudad', c:d.c, sig:tr.sig, restan:0, aMano:true };
+  }
+  return { ...d };
+}
 function escenaAhora(now = new Date()){
   /* El reloj que manda es el de Nueva York: las sesiones son del mercado, no de
      donde esté sentado quien mira. Antes se usaba la hora local del equipo y en
@@ -13365,7 +13393,7 @@ function dibujaOficina(t){
      al bajar a la sesión, la pantalla cambia a la hora local de esa ciudad —y
      el cielo la sigue. Al cerrar la sesión (botón o fin del tramo) se sube
      solo: el estado se resetea con la LLAVE ciudad+día, no con un timer. */
-  const E = escenaAhora();
+  const E = escenaElegida() || escenaAhora();
   const btnB = $('#btnBajar');
   /* la hora de NY, fija abajo a la izquierda — el reloj del MERCADO,
      independiente del reloj de escena (México en el jet / ciudad al bajar) */
@@ -14459,7 +14487,53 @@ function animaBalances(){
   });
 }
 
+/* La tira de destinos. El orden no es decorativo: primero las tres oficinas
+   —que es a lo que se viene—, luego el jet y al final los lugares del finde. */
+const DESTINOS = [
+  { id:'ahora',       et:['AHORA','NOW'],           e:null },
+  { id:'nyc',         et:['NUEVA YORK','NEW YORK'], e:{ tipo:'ciudad', c:'nyc' } },
+  { id:'londres',     et:['LONDRES','LONDON'],      e:{ tipo:'ciudad', c:'londres' } },
+  { id:'tokio',       et:['TOKIO','TOKYO'],         e:{ tipo:'ciudad', c:'tokio' } },
+  { id:'vuelo',       et:['EN VUELO','IN FLIGHT'],  e:{ tipo:'vuelo', de:'nyc', a:'tokio' } },
+  { id:'casa',        et:['CASA','HOME'],           e:{ tipo:'finde', esc:'casa',        c:'nyc', finde:true } },
+  { id:'yate',        et:['YATE','YACHT'],          e:{ tipo:'finde', esc:'yate',        c:'nyc', finde:true } },
+  { id:'golf',        et:['GOLF','GOLF'],           e:{ tipo:'finde', esc:'golf',        c:'nyc', finde:true } },
+  { id:'gym',         et:['GYM','GYM'],             e:{ tipo:'finde', esc:'gym',         c:'nyc', finde:true } },
+  { id:'shopping',    et:['SHOPPING','SHOPPING'],   e:{ tipo:'finde', esc:'shopping',    c:'nyc', finde:true } },
+  { id:'restaurante', et:['RESTAURANTE','DINNER'],  e:{ tipo:'finde', esc:'restaurante', c:'nyc', finde:true } },
+];
+let ofiDestId = 'ahora';
+function renderDestinos(){
+  const host = $('#ofiDest'); if(!host) return;
+  const html = DESTINOS.map(d => {
+    /* el de AHORA se marca aparte: es el único que no es un lugar, es «lo que
+       toca según el mercado», y conviene que se lea distinto */
+    const on = d.id === ofiDestId ? ' on' : '';
+    const vivo = d.id === 'ahora' && !ofiDestino ? ' vivo' : '';
+    return `<button type="button" class="chp${on}${vivo}" data-dest="${d.id}">${loc(d.et)}</button>`;
+  }).join('');
+  if(host._html === html) return;      // sin repintar: el dibujo corre a 30 fps
+  host._html = html; host.innerHTML = html;
+  host.querySelectorAll('[data-dest]').forEach(b => b.onclick = () => {
+    const d = DESTINOS.find(x => x.id === b.dataset.dest); if(!d) return;
+    ofiDestino = d.e ? { ...d.e } : null;
+    ofiDestId = d.id;
+    /* al ir a una ciudad a mano se entra a la oficina: es lo que se quiere ver
+       —el edificio y la mesa—, no el jet cruzando por encima.
+       Hay que sellar también ofiCiudadKey: el dibujo resetea `ofiBajado` cada
+       vez que la ciudad cambia respecto a esa llave, así que sin esto el clic
+       se deshacía solo en el siguiente cuadro y siempre se veía el jet. */
+    if(d.e && d.e.tipo === 'ciudad'){
+      ofiBajado = true; ofiCiudadKey = d.e.c + '|' + todayISO();
+    } else {
+      ofiBajado = false; ofiCiudadKey = '';
+    }
+    host._html = ''; renderDestinos();
+  });
+}
+
 function renderAgentes(){
+  renderDestinos();
   const grid = $('#agGrid'); if(!grid) return;
   const tarjeta = p => {
     const c = carreraDe(p.id);
