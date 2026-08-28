@@ -4233,7 +4233,7 @@ const USERS = {
      con el que se intenta el login de nube, y meter uno inventado lo dejaría
      sin poder entrar. */
   'mateo.np': { nombre:'Gerardo',  roles:['NP-020','NP-030'], correo:'mateo@northpoint.mx',
-                alias:['gerardo'], correos:[] },
+                alias:['gerardo'], correos:['andaluzgerardo@gmail.com'] },
   'andre.np': { nombre:'André',    roles:['NP-040','NP-050'], correo:'andre@northpoint.mx',
                 correos:['andremacouzetruiz@gmail.com'] },
   /* 10 invitados para que André reparta acceso sin tocar código. Cada quien entra
@@ -9385,17 +9385,21 @@ function resuelveUsuario(txt){
 }
 /* La nube dijo que sí pero este equipo no sabe de quién es ese correo: se
    pregunta una vez y se recuerda. Sin esto habría que adivinar. */
-function preguntaQuienEres(correo){
-  return new Promise(res => {
-    /* Los nombres salen de la mesa, no de una lista escrita a mano: si Jorge se
-       dio de alta ayer, Jorge tiene que aparecer aquí hoy. */
-    const nombres = SOCIOS_REALES.map(k => k.replace('.np','')).join(', ');
-    const quien = prompt(bi(
-      'Primera vez en este equipo con ' + correo + '.\n¿Quién eres? Escribe: ' + nombres,
-      'First time on this device with ' + correo + '.\nWho are you? Type: ' + nombres));
-    if(!quien) return res(null);
-    res(resuelveUsuario(String(quien).trim().toLowerCase()));
-  });
+/* ESTE DIÁLOGO SE FUE (André, 28-ago-2026).
+   Preguntaba «¿quién eres? escribe: pablo, mateo, andre» a cualquiera que
+   entrara con un correo que este equipo no conocía — y de paso le enseñaba los
+   usuarios de la casa a quien fuera que estuviera del otro lado. Gerardo lo
+   veía cada vez que abría el terminal en su teléfono, con el nombre viejo.
+
+   La respuesta correcta ya existía y no hacía falta preguntarla: la nube sabe
+   de quién es la cuenta (`cloudTok.uid_terminal`), y los correos de los socios
+   viajan en USERS. Si con las dos cosas no se sabe quién es, no se adivina: se
+   dice que ese correo no está dado de alta y ahí se acaba. */
+function noSeQuienEres(){
+  $('#lgErr').textContent = bi(
+    'Ese correo todavía no está ligado a nadie de la mesa. Pídele a André que lo dé de alta.',
+    'That email is not linked to anyone on the desk yet. Ask André to add it.');
+  return null;
 }
 async function doLogin(){
   /* atajo de André: escribir «amr» cuenta como escribir su correo completo.
@@ -9416,8 +9420,8 @@ async function doLogin(){
     try{
       await cloudLogin(escrito, p);
       const dueño = (cloudTok && cloudTok.uid_terminal) || null;
-      u = dueño || await preguntaQuienEres(escrito);
-      if(!u){ $('#lgErr').textContent = ''; return; }
+      u = dueño || noSeQuienEres();
+      if(!u) return;
       S.correos = S.correos || {}; S.correos[u] = escrito;
       S.claves = S.claves || {}; S.claves[u] = await hashClave(p);
     }catch(e){
@@ -10725,6 +10729,26 @@ function fusionarEstado(local, remoto){
      con id — el spread tampoco lo fusionaba: el socio que sincroniza último le
      borraba al otro su marca de "ya lo vi" y el tour le volvía a salir. */
   f.bienvenida = { ...(remoto.bienvenida||{}), ...(local.bienvenida||{}) };
+  /* ── LOS MAPAS POR USUARIO SE COMBINAN, NO SE REEMPLAZAN ──
+     `bienvenida` ya estaba arreglado, pero sus hermanos no, y el bug es peor
+     ahí: el spread de arriba (`{...remoto, ...local}`) se queda con el objeto
+     LOCAL ENTERO. Un equipo nuevo llega con `monitos:{}` —vacío, porque acaba
+     de instalar— y ese vacío gana: borra el monito de TODOS y luego sube el
+     borrón a la nube. Eso es lo que le reiniciaba el personaje a Gerardo cada
+     vez que entraba desde su teléfono, y de paso se lo habría reiniciado a
+     Pablo y a André.
+     `claves` y `correos` corrían el mismo riesgo: perderlos deja a alguien sin
+     poder entrar desde el equipo donde sí se había registrado. */
+  ['monitos','claves','correos','viosOut'].forEach(k => {
+    f[k] = { ...(remoto[k]||{}), ...(local[k]||{}) };
+  });
+  /* los sellos de tiempo se quedan con el más reciente de cada quien: si Pablo
+     subió hace 5 minutos desde su equipo, que no lo pise un cero de otro */
+  ['sync','presencia'].forEach(k => {
+    const o = { ...(remoto[k]||{}) };
+    Object.keys(local[k]||{}).forEach(u => { o[u] = Math.max(+o[u]||0, +local[k][u]||0); });
+    f[k] = o;
+  });
   /* La mesa se UNE, nunca se reemplaza: si Jorge se dio de alta en su equipo y
      Ana en el suyo, los dos tienen que quedar. El spread de arriba dejaba ganar
      al último que sincronizara y el otro desaparecía de la firma. Gana el alta
