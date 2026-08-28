@@ -2017,6 +2017,13 @@ button.tag.quemada{text-decoration:line-through;text-decoration-color:var(--down
    una barra está en cero, y cortarla la vuelve inútil. */
 .fc-falta{font-style:normal;font-family:var(--mono);font-size:9.5px;line-height:1.45;
   color:var(--dim);white-space:normal;overflow:visible;max-width:34ch}
+/* Los tres hitos del camino, repartidos a lo ancho como la barra de arriba.
+   El que ya se pasó se prende: se lee de un golpe dónde vas. */
+.ps-hitos{display:flex;justify-content:space-between;gap:8px;margin-top:5px;
+  font-family:var(--mono);font-size:8.5px;letter-spacing:.1em;color:var(--faint)}
+.ps-hitos span:nth-child(2){flex:1;text-align:center}
+.ps-hitos span:last-child{text-align:right}
+.ps-hitos .ok{color:var(--up)}
 .fc-hacer{display:inline-block;margin-top:3px;color:var(--txt);cursor:pointer;
   border-bottom:1px solid var(--line);letter-spacing:.1em}
 .fc-hacer:hover{border-color:var(--accent)}
@@ -4950,6 +4957,12 @@ function reglasManuales(a){
      con $1,000 clavados la meta salía $1,500 abajo de la real. Vacío = la
      regla de la casa, para no obligar a llenarlo a quien no lo sabe. */
   return { target, maxDD, dailyLoss:num(m.dailyLoss), lockAtProfit:lock,
+           /* El colchón EXACTO, tal como se escribió. Antes salía de
+              `maxDD + lockAtProfit`, y con un drawdown mayor que el colchón esa
+              suma no podía dar el número tecleado por más que se repartiera.
+              Se manda directo y el lock queda sólo para el gate de
+              reglasFondeadas(). */
+           buffer: colchon > 0 ? colchon : null,
            /* el tramo de pago es lo que falta del colchón al pago máximo */
            pago: (colchon > 0 && maximo > colchon) ? maximo - colchon
                : ((m.pago === '' || m.pago == null) ? null : num(m.pago)),
@@ -6162,7 +6175,7 @@ function carreraCuenta(a){
      pueden comparar y sumar en la carrera de la firma. Si la borráramos, cada
      cuenta mediría una vara de distinto largo. */
   const target = Re ? (Re.target || 0) : 0;
-  const buffer = Rf ? (Rf.maxDD || 0) + (Rf.lockAtProfit || 0) : 0;
+  const buffer = Rf ? (Rf.buffer != null ? Rf.buffer : (Rf.maxDD || 0) + (Rf.lockAtProfit || 0)) : 0;
   const pago = (Rf && Rf.pago) ? +Rf.pago : TRAMO_PAGO;
   const total = target + buffer + pago;
 
@@ -7033,6 +7046,16 @@ function pintaPerfilSocio(){
         <div class="ps-cam-pie">
           <span>${Math.round(cc.pct)}% ${bi('del camino','of the road')}</span>
           <span>${fmt$(cc.avance)} ${bi('de','of')} ${fmt$(cc.total)}</span>
+        </div>
+        <!-- LOS DOS HITOS, con su número ACUMULADO. La barra ya traía sus dos
+             rayitas pero mudas: no decían dónde quedaba el colchón ni que de
+             ahí para arriba ya es payout, que es lo único que se quiere saber
+             mirando esto. El colchón se cuenta desde cero del camino —examen
+             más colchón— porque así es como se llega a él. -->
+        <div class="ps-hitos">
+          <span class="${cc.pasoEval ? 'ok' : ''}">${bi('EXAMEN','EXAM')} ${fmt$(cc.target)}</span>
+          <span class="${cc.pasoBuffer ? 'ok' : ''}">${bi('COLCHÓN','CUSHION')} ${fmt$(cc.target + cc.buffer)}</span>
+          <span class="${cc.pasoPago ? 'ok' : ''}">${bi('PAYOUT','PAYOUT')} ${fmt$(cc.total)}</span>
         </div>
         <!-- Una barra en cero no dice si es que no has ganado nada o si la app
              no se enteró. Ahora lo dice, y dice qué hacer. -->
