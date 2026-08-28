@@ -6543,6 +6543,13 @@ function renderFirmaCarrera(){
      nube: decirles «sal y vuelve a entrar con tu contraseña de nube» los manda a
      una puerta que no existe. El aviso es sólo para los tres socios. */
   const sinNube = cloudOn() && !cloudTok && SOCIOS_REALES.includes(S.session && S.session.user);
+  /* CON sesión de nube pero con la subida fallando: hasta ahora eso no se decía
+     en ningún lado. El socio veía todo normal, guardaba, y sus datos no salían
+     de su equipo — que es exactamente lo que le pasó a Gerardo: rehacía su
+     perfil cada vez sin que nada le dijera por qué. Un error que nadie ve es
+     peor que uno que truena. */
+  const nubeFalla = cloudOn() && cloudTok && cloudErr
+    ? String(cloudErr) : null;
   const SY = S.sync || {};
   const sello = uid => {
     if(uid === yo) return '';
@@ -6561,6 +6568,13 @@ function renderFirmaCarrera(){
            lo que se lista es quién está en la mesa y cuánto trae puesto. -->
       <span class="micro">${bi('quién está en la mesa y cuánto maneja','who is at the desk and how much they run')}</span></div>
     <div class="p-body">
+      ${nubeFalla ? `<div class="pr-aviso micro" style="margin:0 0 14px;border-color:rgba(228,110,98,.5);background:rgba(228,110,98,.08)">
+        <b style="color:var(--down)">${bi('LA NUBE NO ESTÁ GUARDANDO','THE CLOUD IS NOT SAVING')}</b> —
+        ${bi('tus cambios se quedan en este equipo. Error: ','your changes are staying on this device. Error: ')}
+        <b>${esc(nubeFalla)}</b>.
+        ${bi('Si dice 401 o 403, tu sesión caducó: sal y vuelve a entrar. Si es otro número, mándaselo a André.',
+             'If it says 401 or 403 your session expired: sign out and back in. Any other number, send it to André.')}
+      </div>` : ''}
       ${sinNube ? `<div class="pr-aviso micro" style="margin:0 0 14px;border-color:rgba(228,110,98,.5);background:rgba(228,110,98,.08)">
         <b style="color:var(--down)">${bi('ESTÁS TRABAJANDO SOLO','YOU ARE WORKING SOLO')}</b> —
         ${bi('entraste con la clave local, así que NADA viaja: tu avance no sube y el de los socios no baja aunque le des refresh. Sal y vuelve a entrar con tu contraseña de nube.',
@@ -9639,7 +9653,15 @@ async function doLogin(){
   S.presencia = S.presencia || {}; S.presencia[yo2] = Date.now();
   try{ save(); }catch(e){}
   marcaPresencia();
-  if(!(S.bienvenida || {})[u]) setTimeout(() => abreCreador(tourAbre), 700);
+  /* Se abría según `bienvenida`, una marca de «ya viste el recorrido» que vive
+     en este equipo. Si la nube no guarda —y a Gerardo no le guardaba— esa marca
+     se pierde y el armador de monito le salía EN CADA LOGIN, obligándolo a
+     rehacerse desde cero cada vez.
+     Ahora se pregunta lo que de verdad importa: ¿ya tienes cara? Si el monito
+     llegó de la nube, no hay nada que armar aunque este equipo no recuerde el
+     recorrido. */
+  const yaTieneCara = !!(((S.monitos || {})[u] || {}).avatar);
+  if(!(S.bienvenida || {})[u] && !yaTieneCara) setTimeout(() => abreCreador(tourAbre), 700);
   else if(usaDefault(u)) setTimeout(()=> toast(tr('cl.cambiala')), 1600);
 }
 $('#btnLogout').addEventListener('click', ()=>{
@@ -11077,9 +11099,20 @@ function fusionarEstado(local, remoto){
   });
   /* monitos: el look de cada socio lo manda SU máquina. Para los demás vale lo
      que llegue de la nube; para el usuario en sesión, lo local. */
-  f.monitos = { ...(local.monitos||{}), ...(remoto.monitos||{}) };
+  /* Se resolvía con un spread, así que ganaba lo REMOTO para todos — y un
+     hueco `{avatar:null}` pisaba una cara de verdad. Ahora se compara: entre un
+     monito armado y uno vacío gana el armado, venga de donde venga. Sólo entre
+     dos armados manda el remoto, que es el equipo de su dueño. */
+  const conCara = x => !!(x && x.avatar);
+  f.monitos = { ...(local.monitos||{}) };
+  Object.keys(remoto.monitos || {}).forEach(uid2 => {
+    const suyo = remoto.monitos[uid2], mio = f.monitos[uid2];
+    if(conCara(suyo) || !conCara(mio)) f.monitos[uid2] = suyo;
+  });
   const yo = S.session && S.session.user;
-  if(yo && (local.monitos||{})[yo]) f.monitos[yo] = local.monitos[yo];
+  /* el tuyo lo manda TU equipo, pero sólo si de verdad trae cara: si aquí está
+     vacío y en la nube hay una, la de la nube es la buena */
+  if(yo && conCara((local.monitos||{})[yo])) f.monitos[yo] = local.monitos[yo];
   /* Mapas que el spread `{...remoto, ...local}` se llevaba enteros porque
      SIEMPRE existen en local (DEFAULTS los crea vacíos): el que sincronizaba
      con el mapa vacío borraba el del otro. Van uno por uno, remoto primero.
