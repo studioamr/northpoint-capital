@@ -9990,6 +9990,8 @@ function batBannerHTML(c, yo){
 function batBannerBind(c, yo){
   if(!c) return;
   const acepta = () => {
+    if(!((S.batNinja||{})[yo])){   /* sin ninja no hay bank ni katanas: primero se crea, LUEGO se acepta */
+      window._batOnb='intro'; batPantalla='home'; renderBatalla(); return; }
     c.trades = { [c.host]:[], [c.rival]:[] };
     if(c.programado && c.programado > Date.now() + 9000){
       c.estado='programado'; c.inicio=c.programado; c.fin=c.inicio+batDuracionMs(c.duracion,c.inicio);
@@ -10123,6 +10125,7 @@ function batMuere(u){
    5 victorias → Shiro, y así sube la escalera hasta Kuro */
 /* DINERO SOLO EN GANANCIA: si ganas te PAGAN (base + tu profit ×3, por el
    multiplicador del evento). Nunca pierdes del banco. Las katanas cuestan lana. */
+const INVITE_VENCE = 24*3600000; /* una invitación sin responder caduca sola en 24h */
 const BAT_PAGO_BASE = 5000;
 const BAT_FEE = 2000; /* lo que pagas de tu banco si PIERDES el duelo — fijo */
 function batKatanasDe(u){ if(!S.batKatanas) S.batKatanas={}; if(!Array.isArray(S.batKatanas[u])||!S.batKatanas[u].length) S.batKatanas[u]=['blanca']; return S.batKatanas[u]; }
@@ -10159,9 +10162,16 @@ function batRegistraResultado(c){
 
   if(c.party){
     const rank = batJugadores(c).map(u=>({u, p:batProfit(c,u)})).sort((a,b)=>b.p-a.p);
-    const gan = rank[0] && rank[0].p!==0 ? rank[0].u : null;
+    /* si dos o más empatan en el primer lugar, es un EMPATE de verdad: nadie
+       cobra ni paga — antes el orden del sort decidía árbitrariamente quién
+       ganaba y quién pagaba el fee entre dos profits idénticos */
+    const top = rank[0] ? rank[0].p : 0;
+    const empatados = rank.filter(r=>r.p===top).length;
+    const gan = (rank[0] && top!==0 && empatados===1) ? rank[0].u : null;
+    const empate = !gan && empatados>1 && top!==0;
     rank.forEach((r)=>{ ensure(r.u);
       if(r.u===gan){ st[r.u].g++; paga(r.u, r.p); try{ if(r.u===yo) window._batWinFlash={g:st[r.u].g}; }catch(e){} }
+      else if(empate && r.p===top){ st[r.u].e++; }
       else { st[r.u].p++; if(gan) cobra(r.u); } });
     batJugadores(c).forEach(batStamp);
     batHist().unshift({ id:'h'+Date.now().toString(36)+Math.random().toString(36).slice(2,6), ts:Date.now(), party:true, jugadores:batJugadores(c), ganador:gan, marcadores:rank, dur:c.duracion });
@@ -10175,6 +10185,11 @@ function batRegistraResultado(c){
   if(gan){ const perd = gan===c.host?c.rival:c.host;
     st[gan].g++; st[perd].p++;
     paga(gan, gan===c.host?pH:pR); cobra(perd);
+    if(c.torneo){ S.batTorneosPagado=S.batTorneosPagado||{};
+      if(!S.batTorneosPagado[c.torneo]){ S.batTorneosPagado[c.torneo]=true;
+        const def=(batTorneos()||[]).find(x=>x.edId===c.torneo) || {premio:0};
+        batStackSet(gan, batBanco(gan)+def.premio);
+        try{ if(yo===gan) window._batPagoFlash={monto:def.premio, mult:1, rival:null, torneo:true}; }catch(e){} } }
     try{ if(yo===gan) window._batWinFlash={g:st[gan].g}; }catch(e){}
   } else { st[c.host].e++; st[c.rival].e++; }
   batStamp(c.host); batStamp(c.rival);
@@ -10962,25 +10977,34 @@ function batEnTiempo(ms){ if(ms<=0) return bi('ya','now'); const h=Math.floor(ms
   return h>=24? Math.floor(h/24)+'d '+(h%24)+'h' : (h>0? h+'h '+m+'m' : m+'m'); }
 const batHHMM = ts => { const d=new Date(ts); return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'); };
 /* ── Torneos: en vivo, tus torneos, próximos ── */
+/* próxima fecha (>= hoy) que caiga en ese día de la semana, a esa hora;
+   si HOY es ese día y la ventana ya cerró, salta a la semana siguiente */
+function batProximoDOW(dow, hora, durh){
+  const D=86400000, now=Date.now();
+  let d=new Date(); d.setHours(hora,0,0,0);
+  let delta=(dow - d.getDay() + 7) % 7;
+  d.setDate(d.getDate()+delta);
+  if(d.getTime() + durh*3600000 <= now) d.setDate(d.getDate()+7);
+  return d.getTime();
+}
 function batTorneos(){
-  const now=new Date(); const D=86400000;
-  const base=new Date(now.getFullYear(),now.getMonth(),now.getDate()).getTime();
   if(!S.batTorneosInsc) S.batTorneosInsc={};
   const insc=S.batTorneosInsc;
   const defs=[
-    {id:'asia',   nom:['Copa Asia','Asia Cup'],            ico:'🇯🇵', col:'#4a90d9', premio:5000,  costo:1000, cupo:32, offDay:0, hora:7,  durh:3},
-    {id:'londres',nom:['Abierto de Londres','London Open'],ico:'🇬🇧', col:'#c9a227', premio:8000,  costo:1500, cupo:48, offDay:1, hora:2,  durh:4},
-    {id:'ny',     nom:['Maratón NY','NY Marathon'],        ico:'🗽', col:'#30d158', premio:12000, costo:2000, cupo:64, offDay:2, hora:8,  durh:6},
-    {id:'kuro',   nom:['Torneo Kuro','Kuro Invitational'], ico:'🐉', col:'#8a6bd6', premio:25000, costo:5000, cupo:16, offDay:5, hora:9,  durh:8}
+    {id:'asia',   nom:['Copa Asia','Asia Cup'],            ico:'🇯🇵', col:'#4a90d9', premio:5000,  costo:1000, cupo:32, dow:0, hora:7,  durh:3},
+    {id:'londres',nom:['Abierto de Londres','London Open'],ico:'🇬🇧', col:'#c9a227', premio:8000,  costo:1500, cupo:48, dow:1, hora:2,  durh:4},
+    {id:'ny',     nom:['Maratón NY','NY Marathon'],        ico:'🗽', col:'#30d158', premio:12000, costo:2000, cupo:64, dow:2, hora:8,  durh:6},
+    {id:'kuro',   nom:['Torneo Kuro','Kuro Invitational'], ico:'🐉', col:'#8a6bd6', premio:25000, costo:5000, cupo:16, dow:5, hora:9,  durh:8}
   ];
+  const nt=Date.now();
   return defs.map((t,i)=>{
-    const inicio=base + t.offDay*D + t.hora*3600000;
+    const inicio=batProximoDOW(t.dow, t.hora, t.durh);
     const fin=inicio + t.durh*3600000;
-    const nt=now.getTime();
-    const estado = (nt>=inicio && nt<fin) ? 'live' : (nt<inicio ? 'proximo' : 'cerrado');
+    const estado = (nt>=inicio && nt<fin) ? 'live' : 'proximo';
     const inscritos = 6 + (i*7)%20;
-    return {...t, inicio, fin, estado, inscritos, inscrito: !!insc[t.id]};
-  }).filter(t=> t.estado!=='cerrado' || insc[t.id]);
+    const edId = t.id+':'+inicio;   /* la inscripción es POR EDICIÓN: la próxima semana vuelve a estar libre */
+    return {...t, edId, inicio, fin, estado, inscritos, inscrito: !!insc[edId]};
+  });
 }
 function batPintaCielo(){
   const cv=document.getElementById('batCielo'); if(!cv) return;
@@ -11204,7 +11228,7 @@ function batSetupBind(scope, yo, alCerrar){
     const durFinal = batFmt==='sesion' ? sesObj.dur : batSel.dur;
     const base = { id:'bt_'+uid(), host:yo, formato:batFmt, sesion:sesFinal, duracion:durFinal,
       balance: batSel.balance||50000, tp: batSel.tp? +batSel.tp:null, dd: batSel.dd? +batSel.dd:null,
-      mult: batSel.mult||1,
+      mult: batSel.mult||1, torneo: batSel.torneo||null,
       programado: batSel.cuando||null, estado:'invitado', creado:Date.now(), upd:Date.now(), inicio:null, fin:null, trades:{} };
     if(rivales.length===1) S.challenge = { ...base, rival:rivales[0] };
     else S.challenge = { ...base, party:true, jugadores:[yo,...rivales], rival:rivales[0] };
@@ -11305,7 +11329,7 @@ function renderBatalla(){
         const durFinal = batFmt==='sesion' ? sesObj.dur : batSel.dur;
         const base = { id:'bt_'+uid(), host:yo, formato:batFmt, sesion:sesFinal, duracion:durFinal,
           balance: batSel.balance||50000, tp: batSel.tp? +batSel.tp:null, dd: batSel.dd? +batSel.dd:null,
-          mult: batSel.mult||1,
+          mult: batSel.mult||1, torneo: batSel.torneo||null,
           programado: batSel.cuando||null, estado:'invitado', creado:Date.now(), upd:Date.now(), inicio:null, fin:null, trades:{} };
         if(rivales.length===1) S.challenge = { ...base, rival:rivales[0] };
         else S.challenge = { ...base, party:true, jugadores:[yo,...rivales], rival:rivales[0] };
@@ -11511,7 +11535,8 @@ function renderBatalla(){
             <div class="evt-sec">${bi('SIGUIENTES TORNEOS','NEXT TOURNAMENTS')}</div>
             ${batTorneos().map(t=>{ const dt=batDiaTxt(t.inicio); const AHORA=Date.now();
               const cuando=t.estado==='live'?`${bi('quedan','left')} <i>${batEnTiempo(t.fin-AHORA)}</i>`:`${bi('empieza en','starts in')} <i>${batEnTiempo(t.inicio-AHORA)}</i>`;
-              return `<div class="ag-row ${t.estado==='live'?'live':''}" style="--kc:${t.col}"><div class="ag-when"><b>${t.estado==='live'?bi('HOY','NOW'):dt.hora}</b><span>${t.estado==='live'?'● '+bi('EN VIVO','LIVE'):esc(dt.dia)}</span></div><div class="ag-i"><b>${t.ico} ${loc(t.nom)}</b><span>${esc(dt.dia)} ${dt.hora} → ${batHHMM(t.fin)} (${t.durh}h) · ${cuando}</span><span>${bi('entrada','entry')} <i>${fmt$(t.costo)}</i> · ${bi('premio','prize')} <i>${fmt$(t.premio)}</i> · ${bi('paga','pays')} <i>×3</i> · ${bi('cupo','spots')} ${t.inscritos}/${t.cupo}</span></div>${t.inscrito?`<span class="evt-tag">${bi('Inscrito','Joined')}</span>`:`<button type="button" class="btn primary sm" data-trnjoin="${t.id}">${bi('Unirme','Join')} · ${fmt$(t.costo)}</button>`}</div>`; }).join('')}
+              return `<div class="ag-row ${t.estado==='live'?'live':''}" style="--kc:${t.col}"><div class="ag-when"><b>${t.estado==='live'?bi('HOY','NOW'):dt.hora}</b><span>${t.estado==='live'?'● '+bi('EN VIVO','LIVE'):esc(dt.dia)}</span></div><div class="ag-i"><b>${t.ico} ${loc(t.nom)}</b><span>${esc(dt.dia)} ${dt.hora} → ${batHHMM(t.fin)} (${t.durh}h) · ${cuando}</span><span>${bi('entrada','entry')} <i>${fmt$(t.costo)}</i> · ${bi('premio','prize')} <i>${fmt$(t.premio)}</i> · ${bi('paga','pays')} <i>×3</i> · ${bi('cupo','spots')} ${t.inscritos}/${t.cupo}</span></div>${(t.inscrito && t.estado==='live')?`<button type="button" class="btn primary sm" data-abreses="${t.id}" data-mult="3" data-torneo="${t.edId}">${bi('Retar','Battle')} ×3</button>`
+                :t.inscrito?`<span class="evt-tag">${bi('Inscrito','Joined')}</span>`:`<button type="button" class="btn primary sm" data-trnjoin="${t.id}">${bi('Unirme','Join')} · ${fmt$(t.costo)}</button>`}</div>`; }).join('')}
           </div>
         </div>`:''}
         ${window._batSetup?`
@@ -11640,12 +11665,12 @@ function renderBatalla(){
       </div>
       `;
 
-    root.querySelectorAll('[data-abreses]').forEach(b=> b.onclick=()=>{ batSel={ops:[],ses:b.dataset.abreses,dur:30,cuando:null,mult:+(b.dataset.mult||1),fmt:'sesion'}; window._batEventos=false; window._batSetup=true; renderBatalla(); });
+    root.querySelectorAll('[data-abreses]').forEach(b=> b.onclick=()=>{ batSel={ops:[],ses:b.dataset.abreses,dur:30,cuando:null,mult:+(b.dataset.mult||1),fmt:'sesion',torneo:b.dataset.torneo||null}; window._batEventos=false; window._batSetup=true; renderBatalla(); });
     root.querySelectorAll('[data-trnjoin]').forEach(b=> b.onclick=(e)=>{ e.stopPropagation(); const id=b.dataset.trnjoin;
-      const t=batTorneos().find(x=>x.id===id); const costo=(t&&t.costo)||0;
+      const t=batTorneos().find(x=>x.id===id); if(!t) return; const costo=t.costo||0;
       if(batBanco(yo)<costo){ toast(bi('No te alcanza la entrada','Not enough for the entry')+' · '+fmt$(costo)); return; }
       batStackSet(yo, batBanco(yo)-costo);
-      if(!S.batTorneosInsc) S.batTorneosInsc={}; S.batTorneosInsc[id]=true; save();
+      if(!S.batTorneosInsc) S.batTorneosInsc={}; S.batTorneosInsc[t.edId]=true; save();
       toast(bi('Inscrito al torneo · entrada','Joined the tournament · entry')+' −'+fmt$(costo)); renderBatalla(); });
     $('#batNuevo').onclick = () => { if(!window._batSetup||!batSel) batSel={ops:[],ses:null,dur:30,cuando:null,mult:1,fmt:'reloj'}; window._batSetup=true; window._batArsenal=false; window._batEventos=false; renderBatalla(); };
     $('#batAjustes') && ($('#batAjustes').onclick = () => { batPantalla='ajustes'; renderBatalla(); });
@@ -11823,6 +11848,8 @@ function renderBatalla(){
           if(!cc){ renderBatalla(); return; }
           if(cc.estado==='volando' || cc.estado==='terminado' || (cc.estado==='activo' && !batMin)){ renderBatalla(); return; }
           if(cc.estado==='cancelado'){ batReset(); return; }
+          /* la invitación caduca: nadie se queda esperando para siempre */
+          if(cc.estado==='invitado' && Date.now() >= (cc.creado||0) + INVITE_VENCE){ cc.estado='cancelado'; batGuarda(); batReset(); return; }
           if(cc.estado==='programado' && Date.now() >= cc.inicio - 9000){ cc.estado='volando'; batGuarda(); return; }
           if(cc.estado==='activo' && Date.now() >= cc.fin){ renderBatalla(); return; }
           const bR=$('#bnReloj'), bP=$('#bnProfit'), bC=$('#bnCuenta');
@@ -15299,6 +15326,7 @@ function fusionarEstado(local, remoto){
     if(Object.keys(out).length || local[k] || remoto[k]) f[k]=out;
   });
   f.batTorneosInsc = { ...(remoto.batTorneosInsc||{}), ...(local.batTorneosInsc||{}) };
+  f.batTorneosPagado = { ...(remoto.batTorneosPagado||{}), ...(local.batTorneosPagado||{}) };
   /* historial: unión por id (los viejos sin id se identifican por ts) */
   const hVis={};
   f.batHistorial = [ ...(local.batHistorial||[]), ...(remoto.batHistorial||[]) ]
