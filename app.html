@@ -2331,7 +2331,7 @@ button.tag.quemada{text-decoration:line-through;text-decoration-color:var(--down
 .fc-pista{display:grid;gap:18px}
 .fc-meta{display:flex;justify-content:space-between;font-family:var(--mono);font-size:9.5px;
   letter-spacing:.14em;color:var(--faint);margin-bottom:2px}
-.fc-linea{display:grid;grid-template-columns:22px 1fr 138px;gap:14px;align-items:center;
+.fc-linea{display:grid;grid-template-columns:22px 1fr 120px;gap:14px;align-items:center;
   width:100%;text-align:left;font:inherit;color:inherit;background:none;border:0;padding:0;
   cursor:pointer;border-radius:12px}
 .fc-linea:focus-visible{outline:1px solid var(--accent-deep);outline-offset:4px}
@@ -2358,9 +2358,9 @@ button.tag.quemada{text-decoration:line-through;text-decoration-color:var(--down
 .fc-viva{position:absolute;right:1px;bottom:1px;width:10px;height:10px;border-radius:50%;
   background:var(--up);border:2px solid var(--bg)}
 .fc-info{display:flex;flex-direction:column;gap:2px;min-width:0}
-.fc-info b{font-size:12.5px;display:flex;align-items:baseline;gap:7px}
-.fc-info .fc-pct{font-family:var(--mono);font-weight:600;font-size:11px;color:var(--up)}
-.fc-info em{font-style:normal;font-family:var(--mono);font-size:10px;color:var(--faint);
+.fc-info b{font-size:13.5px;font-weight:700}
+.fc-info .fc-pct{font-family:var(--mono);font-weight:600;font-size:22px;color:var(--up);line-height:1;margin:2px 0}
+.fc-info em{font-style:normal;font-family:var(--mono);font-size:11px;color:var(--faint);
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .fc-linea.vacia .fc-info b{color:var(--faint)}
 /* El aviso SÍ se envuelve: es la única línea de este panel que explica por qué
@@ -2978,9 +2978,6 @@ stop[stop-color="#9BC0DC"]{stop-color:var(--txt)}
           <canvas id="agOficina" width="1800" height="1160" aria-label="The Northpoint office — 88th floor, New York"></canvas>
           <div id="horaNY" aria-label="Hora de Nueva York"></div>
         </div>
-
-        <!-- Progreso al primer payout de cada miembro, con su avatar al final -->
-        <div id="pgPayouts"></div>
 
         <!-- El tablero del negocio: el camino a payout con el proceso de
              cada socio sobre la banda. -->
@@ -6307,9 +6304,7 @@ function renderFirmaCarrera(){
              'If it says 401 or 403 your session expired: sign out and back in. Any other number, send it to André.')}
       </div>` : ''}
       ${sinNube ? `<div class="pr-aviso micro" style="margin:0 0 14px;border-color:rgba(228,110,98,.5);background:rgba(228,110,98,.08)">
-        <b style="color:var(--down)">${bi('ESTÁS TRABAJANDO SOLO','YOU ARE WORKING SOLO')}</b> —
-        ${bi('entraste con la clave local, así que NADA viaja: tu avance no sube y el de los socios no baja aunque le des refresh. Sal y vuelve a entrar con tu contraseña de nube.',
-             'you signed in with the local key, so NOTHING travels: your progress does not upload and your partners\' does not come down no matter how much you refresh. Sign out and back in with your cloud password.')}
+        <b style="color:var(--down)">${bi('TRABAJANDO SOLO','WORKING SOLO')}</b> · ${bi('sal y vuelve a entrar con tu contraseña de nube para sincronizar.','sign out and back in with your cloud password to sync.')}
       </div>` : ''}
       <div class="fc-pista">
         <div class="fc-meta"><span>0%</span><span>${bi('META','FINISH')} · 100%</span></div>
@@ -6326,35 +6321,9 @@ function renderFirmaCarrera(){
               </span>
             </div>
             <span class="fc-info">
-              <b>${esc(x.nom)}${x.sinDatos ? '' : ` <span class="fc-pct">${Math.round(x.pct)}%</span>`}</b>
-              <!-- ya está registrado —si no, no estaría en la pista—, así que
-                   lo que le falta no es sincronía: es dar de alta su cuenta -->
-              <em>${x.sinDatos
-                 ? bi('registrado · todavía sin cuentas','registered · no accounts yet')
-                 : fmt$(x.balance) + bi(' en cuenta · ',' on account · ')
-                   + x.cuentas + (x.cuentas === 1 ? bi(' cuenta',' account') : bi(' cuentas',' accounts'))
-                   + (x.pagos ? ' · ' + x.pagos + bi(' cobrada',' paid') + (x.pagos > 1 ? 's' : '') : '')
-                   /* una cuenta que se quemó sale de la carrera, pero se dice:
-                      que el número baje sin explicación se siente a error */
-                   + (x.quemadas ? ' · ' + x.quemadas + bi(' quemada',' burned') + (x.quemadas > 1 ? 's' : '') : '')
-                   + sello(x.uid)}</em>
-              <!-- EL AVISO VA APARTE, y es la única línea de este panel que se
-                   envuelve. Estaba pegado al final del renglón de arriba, que
-                   lleva nowrap + ellipsis: se cortaba SIEMPRE —«$150,000 under
-                   managem…»— y la única pista de por qué la barra estaba en
-                   cero no se leía nunca. -->
-              <!-- UNA LÍNEA CORTA, NO UN PÁRRAFO. La primera versión era un
-                   regaño de dos renglones en el carril de cada socio y a Pablo
-                   le estorbaba con razón: lo que hace falta es decir qué frena
-                   la barra y dar el clic, no explicar la app cada vez. -->
-              ${x.sinVara ? `<i class="fc-falta">${x.sinVara} ${bi('sin reglas','with no rules')}</i>`
-               : (x.enExamen && !x.avance && x.uid === yo)
-                 ? `<i class="fc-falta"><span class="fc-hacer" role="button" tabindex="0"
-                      title="${bi('Pasa tus cuentas de examen a fondeadas','Move your evaluation accounts to funded')}"
-                      onclick="event.stopPropagation(); marcarFondeadas()"
-                      onkeydown="if(event.key===' '||event.key==='Enter'){event.stopPropagation();event.preventDefault();marcarFondeadas();}"
-                      >${x.enExamen} ${bi('en examen · ¿ya fondeadas?','in evaluation · already funded?')}</span></i>` : ''}
-              <i class="fc-ver">${bi('VER PERFIL →','SEE PROFILE →')}</i>
+              <b>${esc(x.nom)}</b>
+              <span class="fc-pct">${x.sinDatos ? '—' : Math.round(x.pct) + '%'}</span>
+              <em>${x.sinDatos ? bi('sin cuentas','no accounts') : fmt$(x.balance)}</em>
             </span>
           </button>`).join('')}
       </div>
@@ -11377,7 +11346,7 @@ function cloudPaint(){
   const falla = cloudOn() && cloudTok && cloudErr ? String(cloudErr) : null;
   if(falla !== _nubeAvisada){
     _nubeAvisada = falla;
-    if($('#pgFirma')) try{ renderPayoutsFirma(); renderFirmaCarrera(); }catch(e){}
+    if($('#pgFirma')) try{ renderFirmaCarrera(); }catch(e){}
   }
 }
 /* El pill se pica y te dice POR QUÉ estás trabajando solo y cómo arreglarlo.
@@ -13028,40 +12997,7 @@ function renderAgentes(){
   if(typeof animaOficina === 'function') animaOficina();
   /* el tablero del negocio: el camino a payout con el proceso de cada socio
      (la caja y los objetivos viven en Mi dinero; la carrera se retiró) */
-  renderPayoutsFirma();
   renderFirmaCarrera();
-}
-/* En camino al primer payout, POR miembro — mismo bloque que Payout management,
-   con el avatar del perfil al final de cada barra de progreso. */
-function renderPayoutsFirma(){
-  const host = $('#pgPayouts'); if(!host) return;
-  const yo = S.session && S.session.user;
-  const socios = registrados().map(p => ({ ...carreraSocio(p.id), nom:p.nom }));
-  if(!socios.length){ host.innerHTML = ''; return; }
-  host.innerHTML = `
-    <div class="panel" style="padding:20px 22px;margin-bottom:12px">
-      <div class="p-head" style="padding:0 0 14px"><h3>${bi('En camino al primer payout','On the way to the first payout')}</h3></div>
-      <div class="pgp-lista">
-        ${socios.map(x => {
-          const pct = x.sinDatos ? 0 : Math.max(0, Math.min(100, Math.round(x.pct)));
-          return `<div class="pgp-card ${x.uid===yo?'yo':''}">
-            <div class="pgp-h">
-              <b>${esc(x.nom)}${x.uid===yo?` <em>${bi('(tú)','(you)')}</em>`:''}</b>
-              <span class="pgp-pct mono">${pct}%</span>
-            </div>
-            <div class="pgp-bar">
-              <i style="width:${pct}%"></i>
-              <span class="pgp-cara" style="left:clamp(16px, ${pct}%, calc(100% - 16px))">${caraSocio(x.uid, 32)}</span>
-            </div>
-            <div class="pgp-pasos">
-              <span class="${pct>0?'on':''}">${bi('Evaluación','Evaluation')}</span>
-              <span class="${pct>=50?'on':''}">${bi('Colchón','Buffer')}</span>
-              <span class="${pct>=100?'on':''}">${bi('Primer payout','First payout')}</span>
-            </div>
-          </div>`;
-        }).join('')}
-      </div>
-    </div>`;
 }
 
 /* ════════ LA VIDA DEL NEGOCIO ════════
