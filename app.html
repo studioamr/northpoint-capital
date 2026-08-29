@@ -744,6 +744,11 @@ body.locked .app{visibility:hidden;pointer-events:none}
   text-align:center;margin-bottom:10px}
 /* EL MAPA */
 .bat-mapa{position:relative;width:100%;aspect-ratio:400/280;border-radius:18px;overflow:hidden;border:1px solid var(--line);margin-bottom:16px;background:#0c1322}
+.bat-hero3{position:relative;width:100%;border-radius:18px;overflow:hidden;border:1px solid var(--line);margin-bottom:16px;background:#0c1322;line-height:0}
+.bat-hero3 canvas{display:block;width:100%;height:auto}
+.bat-hero3-lbl{position:absolute;left:14px;bottom:12px;line-height:1.2;text-shadow:0 1px 6px rgba(0,0,0,.7)}
+.bat-hero3-lbl b{display:block;font-size:15px;font-weight:900;letter-spacing:.02em;color:#fff}
+.bat-hero3-lbl span{font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,.75)}
 .bat-mapa-svg{position:absolute;inset:0;width:100%;height:100%;display:block}
 .bat-map-zona{position:absolute;bottom:8px;transform:translateX(-50%);font-family:var(--mono);font-size:8.5px;
   letter-spacing:.14em;text-transform:uppercase;color:rgba(255,255,255,.82);text-shadow:0 1px 3px rgba(0,0,0,.7);white-space:nowrap;z-index:3}
@@ -9217,6 +9222,78 @@ function batMapaHTML(hl){
   </div>`;
 }
 
+/* ══ HERO ASIA · una imagen como la sesión: cielo por la hora real de Tokio
+   (mismo motor `pintaCielo`) + skyline de Tokio (Torre de Tokio, Skytree) y
+   nuestra torre NorthPoint. Estático, es una imagen. ══ */
+function batTorreTokio(c, cx, g, h, noche){
+  const w = h*0.34;
+  c.strokeStyle = noche? '#e2653a' : '#d9552f'; c.fillStyle = c.strokeStyle;
+  c.beginPath(); c.moveTo(cx-w/2, g); c.lineTo(cx-w*0.16, g-h*0.5); c.lineTo(cx+w*0.16, g-h*0.5); c.lineTo(cx+w/2, g); c.closePath();
+  c.globalAlpha=.9; c.lineWidth=2; c.stroke(); c.globalAlpha=1;
+  c.beginPath(); c.moveTo(cx-w*0.16, g-h*0.5); c.lineTo(cx-w*0.06, g-h*0.82); c.lineTo(cx+w*0.06, g-h*0.82); c.lineTo(cx+w*0.16, g-h*0.5); c.stroke();
+  c.fillRect(cx-w*0.22, g-h*0.5, w*0.44, h*0.06);            // plataforma
+  c.fillRect(cx-1.5, g-h, 3, h*0.18);                         // mástil
+  c.fillStyle = noche? '#ffd06a':'#fff'; c.beginPath(); c.arc(cx, g-h, 2.6, 0, 7); c.fill();
+  // cruces de la celosía
+  c.strokeStyle='rgba(226,101,58,.5)'; c.lineWidth=1;
+  for(let yy=g; yy>g-h*0.5; yy-=h*0.09){ const u=(g-yy)/(h*0.5); const ww=(w/2)*(1-u*0.68);
+    c.beginPath(); c.moveTo(cx-ww,yy); c.lineTo(cx+ww,yy-h*0.045); c.moveTo(cx+ww,yy); c.lineTo(cx-ww,yy-h*0.045); c.stroke(); }
+}
+function batSkytree(c, cx, g, h, noche){
+  c.fillStyle = noche? '#2b3a52' : '#8fa6bd';
+  c.beginPath(); c.moveTo(cx-h*0.06, g); c.lineTo(cx-h*0.018, g-h*0.72); c.lineTo(cx+h*0.018, g-h*0.72); c.lineTo(cx+h*0.06, g); c.closePath(); c.fill();
+  c.fillStyle = noche? '#3a4d6a' : '#a9bccf'; c.fillRect(cx-h*0.035, g-h*0.78, h*0.07, h*0.08); // observatorio
+  c.fillStyle = noche? '#5a7fb0' : '#c7d6e6'; c.fillRect(cx-1.4, g-h, 2.8, h*0.24);             // aguja
+  if(noche){ c.fillStyle='#7ec8ff'; for(let yy=g-6; yy>g-h*0.7; yy-=10){ c.fillRect(cx-1, yy, 2, 3); } // luz azul
+    c.fillStyle='#ff5a7a'; c.beginPath(); c.arc(cx, g-h, 2.2, 0,7); c.fill(); }
+}
+function batNPtorre(c, cx, g, h, noche){
+  const w=h*0.2;
+  c.fillStyle = noche? '#111e28':'#3a4a5a'; c.fillRect(cx-w/2, g-h, w, h);
+  c.strokeStyle='#30d158'; c.lineWidth=1.4; c.strokeRect(cx-w/2, g-h, w, h);
+  c.fillStyle = noche? 'rgba(78,224,138,.9)':'rgba(48,209,88,.8)';
+  for(let yy=g-8; yy>g-h+6; yy-=11){ c.fillRect(cx-w*0.28, yy, 2.4, 3); c.fillRect(cx+w*0.12, yy, 2.4, 3); }
+  // letrero NP
+  c.fillStyle='#0d1a13'; c.fillRect(cx-w*0.5, g-h-13, w, 12); c.strokeStyle='#30d158'; c.strokeRect(cx-w*0.5, g-h-13, w, 12);
+  c.fillStyle='#4ee08a'; c.font='700 10px "IBM Plex Mono", monospace'; c.textAlign='center'; c.fillText('NP', cx, g-h-4);
+  c.fillRect(cx-1, g-h-22, 2, 8); c.beginPath(); c.arc(cx, g-h-23, 2.4, 0,7); c.fill();
+}
+function batSkyline(c, W, H, noche){
+  const g = H*0.86;
+  c.fillStyle = noche? '#0b1524' : '#3f6a86'; c.fillRect(0, g, W, H-g);   // bahía
+  c.fillStyle = noche? 'rgba(255,255,255,.06)':'rgba(255,255,255,.14)';
+  for(let k=0;k<7;k++) c.fillRect(W*0.1+k*W*0.11, g+8+k*3, W*0.06, 2);    // reflejos
+  const dark = noche? '#111a26':'#5b6f84', win = noche? 'rgba(255,208,120,.9)':'rgba(255,255,255,.55)';
+  let x=-8, k=0; const hs=[.16,.26,.11,.32,.2,.13,.28,.15,.23];
+  while(x<W+8){ const w=W*0.055+(k%4)*7, h=H*hs[k%hs.length], by=g-h;
+    c.fillStyle=dark; c.fillRect(x, by, w, h);
+    for(let wy=by+7; wy<g-4; wy+=11){ for(let wx=x+5; wx<x+w-3; wx+=8){ if((k*3+wx+wy)%4===0){ c.fillStyle=win; c.fillRect(wx,wy,2.4,3.2);} } }
+    x+=w+3; k++;
+  }
+  batNPtorre(c, W*0.30, g, H*0.5, noche);
+  batTorreTokio(c, W*0.56, g, H*0.5, noche);
+  batSkytree(c, W*0.80, g, H*0.72, noche);
+}
+function batPintaCielo(){
+  const cv=document.getElementById('batCielo'); if(!cv) return;
+  const c=cv.getContext('2d'); const W=cv.width, H=cv.height;
+  const rr=i=>((Math.sin(i*12.9898)*43758.5453)%1+1)%1;
+  const minLocal = (typeof minutosEn==='function') ? minutosEn('Asia/Tokyo') : 780;
+  let P=null; try{ P = paletaCielo(c, minLocal, H); }catch(e){}
+  c.fillStyle = P? P.grad : '#18213c'; c.fillRect(0,0,W,H);
+  const noche = P? P.oscuridad>0.25 : true;
+  if(noche) for(let i=0;i<80;i++){ c.fillStyle=`rgba(255,255,255,${.2+rr(i)*.5})`; c.fillRect(rr(i)*W, rr(i+9)*H*0.55, 1.6,1.6); }
+  const esDia = minLocal>=370 && minLocal<=1150;
+  const u = esDia? (minLocal-370)/780 : 0.5;
+  const ax=90+u*(W-180), ay=H*0.34 - Math.sin(u*Math.PI)*H*0.2;
+  if(esDia){ const alto=Math.sin(u*Math.PI), sol=alto>.55?'#FFF6D8':(alto>.25?'#FFD98A':'#FF9E5A');
+    const halo=c.createRadialGradient(ax,ay,6,ax,ay,70); halo.addColorStop(0,'rgba(255,224,150,.4)'); halo.addColorStop(1,'rgba(255,224,150,0)');
+    c.fillStyle=halo; c.beginPath(); c.arc(ax,ay,70,0,7); c.fill(); c.fillStyle=sol; c.beginPath(); c.arc(ax,ay,20,0,7); c.fill();
+  } else { c.fillStyle='#F2F1E4'; c.beginPath(); c.arc(ax,ay,17,0,7); c.fill();
+    c.fillStyle= P? P.base : '#141733'; c.beginPath(); c.arc(ax+7,ay-3,15,0,7); c.fill(); }
+  batSkyline(c, W, H, noche);
+}
+
 function batHomeHTML(uid){
   const bal = batBalance(uid), porta = batPortafolio(uid), neto = batNeto(uid);
   const i = batEraIdx(neto), e = WEALTH_ERAS[i];
@@ -9233,7 +9310,10 @@ function batHomeHTML(uid){
       </div>
     </div>
     <div class="bat-hero-etapa2">${bi('Rango','Rank')} ${i+1} / ${WEALTH_ERAS.length} · ${esc(loc(e.t))} · ${bi('patrimonio','net worth')} ${fmt$(neto)}</div>
-    ${batMapaHTML(uid)}
+    <div class="bat-hero3">
+      <canvas id="batCielo" width="880" height="440"></canvas>
+      <div class="bat-hero3-lbl"><b>${bi('SESIÓN ASIA','ASIA SESSION')}</b><span>${bi('Tokio · Marunouchi','Tokyo · Marunouchi')}</span></div>
+    </div>
     <div class="bat-meta">
       <div class="bat-meta-top"><span>${bi('Objetivo','Goal')}: <b>${fmt$(meta)}</b>${meta>=1000000?' · '+bi('MILLONARIO','MILLIONAIRE'):''}</span><span>${fmt$(neto)} / ${fmtCorto(meta)}</span></div>
       <div class="bat-meta-track"><i style="width:${Math.round(progMeta*100)}%"></i></div>
@@ -9617,7 +9697,7 @@ function renderBatalla(){
     });
     /* picar un perfil (en el ranking o en el mapa) abre la comparación tú vs él */
     root.querySelectorAll('[data-perfil]').forEach(b => b.onclick = () => { if(b.dataset.perfil!==yo){ batPerfilUid = b.dataset.perfil; batPantalla='perfil'; renderBatalla(); } });
-    requestAnimationFrame(batPintaMonito);   // el monito de cada quien, parado en su escena
+    requestAnimationFrame(batPintaCielo);   // imagen tipo sesión: cielo + skyline de Tokio
     /* banner del reto (invitación / cita / batalla minimizada) + su latido */
     if(!viendo && c){
       batBannerBind(c, yo);
