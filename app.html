@@ -803,7 +803,43 @@ body.locked .app{visibility:hidden;pointer-events:none}
 .bat-dash-cell.win b{color:var(--up)}
 .bat-dash-cell.streak b{color:#e9cf46}
 @media(max-width:560px){.bat-dash-hd{flex-wrap:wrap}.bat-dash-lvl{width:100%}.bat-dash-grid{grid-template-columns:repeat(2,1fr)}}
-/* ── Lobby arcade (estilo juego) ── */
+/* ── Colección de katanas ── */
+.kat-wrap{border:1px solid var(--line);border-radius:18px;background:linear-gradient(160deg,var(--w03),var(--w02));padding:16px 16px 18px;margin-bottom:18px}
+.kat-top{display:flex;align-items:center;gap:12px;margin-bottom:14px}
+.kat-top-l{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.kat-title{font-size:15px;font-weight:900;letter-spacing:-.01em}
+.kat-sub{font-family:var(--mono);font-size:10.5px;color:var(--faint)}
+.kat-banco{flex:0 0 auto;text-align:right;background:rgba(48,209,88,.08);border:1px solid rgba(48,209,88,.28);border-radius:12px;padding:7px 14px;line-height:1.15}
+.kat-banco span{display:block;font-family:var(--mono);font-size:9px;letter-spacing:.14em;color:var(--faint)}
+.kat-banco b{font-size:19px;font-weight:900;color:var(--up)}
+.kat-feat{display:flex;align-items:center;gap:14px;background:#0b1016;border:1px solid var(--line-soft);border-radius:14px;padding:12px 16px;margin-bottom:14px}
+.kat-feat-blade{width:120px;height:52px;flex:0 0 auto}
+.kat-feat-txt{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}
+.kat-feat-txt em{font-family:var(--mono);font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--faint);font-style:normal}
+.kat-feat-txt>b{font-size:19px;font-weight:900}
+.kat-feat-next{flex:0 0 auto;text-align:right;line-height:1.2}
+.kat-feat-next em{display:block;font-family:var(--mono);font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--faint);font-style:normal}
+.kat-feat-next b{font-size:15px;font-weight:900;color:#E9CF46}
+.kat-feat-next span{display:block;font-family:var(--mono);font-size:10px;color:var(--dim)}
+.kat-feat-next.done b{color:var(--up);font-size:20px}
+.kat-cinta{font-family:var(--mono);font-size:11px;font-weight:700}
+.kat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.kat-card{position:relative;display:flex;flex-direction:column;align-items:center;gap:5px;border:1px solid var(--line-soft);border-radius:14px;background:var(--w02);padding:12px 8px 11px;text-align:center}
+.kat-card.owned{border-color:rgba(48,209,88,.4);background:rgba(48,209,88,.05)}
+.kat-card.next{border-color:#E9CF46;box-shadow:inset 0 0 0 1px rgba(233,207,70,.35);background:rgba(233,207,70,.05)}
+.kat-card.locked{opacity:.55}
+.kat-ico{position:relative;width:100%;height:46px}
+.kat-badge{position:absolute;top:-4px;right:6px;font-size:12px;width:18px;height:18px;border-radius:50%;display:flex;align-items:center;justify-content:center}
+.kat-badge.ok{background:var(--up);color:#04120a;font-weight:900}
+.kat-badge.lock{opacity:.7}
+.kat-nom{font-size:13.5px;font-weight:800}
+.kat-estado{font-family:var(--mono);font-size:11px;color:var(--faint);margin-top:1px}
+.kat-estado.owned{color:var(--up)}
+.kat-buy{margin-top:2px;font-family:var(--mono);font-size:11px;font-weight:800;padding:8px 10px;border-radius:10px;border:none;cursor:pointer;background:linear-gradient(180deg,#ffd24a,#f0a81e);color:#3a2600;box-shadow:0 3px 0 #b9791a;transition:transform .08s,box-shadow .08s;width:100%}
+.kat-buy:active{transform:translateY(2px);box-shadow:0 1px 0 #b9791a}
+.kat-buy.no{background:var(--w04);color:var(--faint);box-shadow:none;cursor:not-allowed}
+@media(max-width:560px){.kat-grid{grid-template-columns:repeat(2,1fr)}.kat-feat-next{display:none}}
+/* ── Lobby arcade (sin uso; conservado) ── */
 .bat-arcade{max-width:560px;margin:0 auto 6px}
 .ba-hud{display:flex;align-items:center;gap:12px;margin-bottom:11px}
 .ba-lvl{display:flex;align-items:center;gap:8px;background:var(--w03);border:1px solid var(--line);border-radius:13px;padding:7px 12px 7px 9px}
@@ -9087,6 +9123,49 @@ function batGuarda(){ save(); renderBatalla(); }
 function batStats(){ if(!S.batStats || typeof S.batStats!=='object') S.batStats = {}; return S.batStats; }
 function batHist(){ if(!Array.isArray(S.batHistorial)) S.batHistorial = []; return S.batHistorial; }
 function batStatDe(uid){ const s = batStats()[uid]; return s || { pts:0, g:0, p:0, e:0 }; }
+/* ── KATANAS ── la colección: de cinta blanca a negra, cada una más cara.
+   El dinero sale de ganar batallas (tu profit + lo que pierde el rival). ── */
+const KATANAS=[
+ {id:'blanca',  n:['Shiro','Shiro'],       cinta:['Blanca','White'],   belt:'#EDEFF2', precio:0},
+ {id:'amarilla',n:['Kiiro','Kiiro'],       cinta:['Amarilla','Yellow'],belt:'#E7C24A', precio:1500},
+ {id:'naranja', n:['Daidai','Daidai'],     cinta:['Naranja','Orange'], belt:'#E0863C', precio:4000},
+ {id:'verde',   n:['Midori','Midori'],     cinta:['Verde','Green'],    belt:'#4FAE6A', precio:9000},
+ {id:'azul',    n:['Ao','Ao'],             cinta:['Azul','Blue'],      belt:'#3E82C8', precio:18000},
+ {id:'morada',  n:['Murasaki','Murasaki'], cinta:['Morada','Purple'],  belt:'#8A5CC8', precio:35000},
+ {id:'marron',  n:['Cha','Cha'],           cinta:['Marrón','Brown'],   belt:'#7A5230', precio:65000},
+ {id:'roja',    n:['Aka','Aka'],           cinta:['Roja','Red'],       belt:'#C8443C', precio:110000},
+ {id:'negra',   n:['Kuro','Kuro'],         cinta:['Negra','Black'],    belt:'#23272E', precio:200000},
+];
+function katanaSVG(hex){
+  const dark = hex==='#23272E', blade = dark?'#3a4048':'#d7dee7', edge = dark?'#20242b':'#aeb8c4';
+  return `<svg viewBox="0 0 140 60" width="100%" height="100%" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
+    <g transform="rotate(-18 70 30)">
+      <path d="M6 34 Q45 22 92 26 L92 31 Q47 30 9 39 Z" fill="${blade}" stroke="${edge}" stroke-width="0.8"/>
+      <path d="M6 34 Q45 22 92 26" fill="none" stroke="#ffffff" stroke-opacity="0.5" stroke-width="0.8"/>
+      <path d="M92 26 L101 27.6 L92 31 Z" fill="${blade}" stroke="${edge}" stroke-width="0.6"/>
+      <rect x="93" y="20" width="4.5" height="20" rx="2" fill="#2b3038"/>
+      <rect x="97" y="24.5" width="34" height="11" rx="3.5" fill="${hex}" stroke="rgba(0,0,0,.4)" stroke-width="0.7"/>
+      <g stroke="rgba(0,0,0,.4)" stroke-width="1.1">
+        <line x1="103" y1="24.5" x2="110" y2="35.5"/><line x1="110" y1="24.5" x2="103" y2="35.5"/>
+        <line x1="114" y1="24.5" x2="121" y2="35.5"/><line x1="121" y1="24.5" x2="114" y2="35.5"/>
+      </g>
+      <rect x="128" y="25.5" width="4.8" height="9" rx="2" fill="#2b3038"/>
+    </g>
+  </svg>`;
+}
+function batBanco(u){
+  if(!S.batBanco) S.batBanco={};
+  if(S.batBanco[u]==null){
+    let b=0;
+    batHist().forEach(h=>{
+      if(h.party){ if(h.ganador===u) (h.marcadores||[]).forEach(m=> b+=Math.abs(m.p||0)); }
+      else if(h.ganador===u){ b += Math.abs(h.pHost||0)+Math.abs(h.pRival||0); }
+    });
+    S.batBanco[u]=b;
+  }
+  return S.batBanco[u];
+}
+function batKatanasDe(u){ if(!S.batKatanas) S.batKatanas={}; if(!Array.isArray(S.batKatanas[u])) S.batKatanas[u]=['blanca']; return S.batKatanas[u]; }
 /* aplica el dinero del reto: el ganador se lleva SU profit + lo que perdieron
    los demás; eso engorda su balance y su acumulado (que sube el rango) */
 function batEco(u){ S.juego=S.juego||{}; if(!S.juego[u]) S.juego[u]={size:0,balance:0,acum:0,gastado:0}; return S.juego[u]; }
@@ -9123,6 +9202,8 @@ function batRegistraResultado(c){
   [c.host, c.rival].forEach(u => { st[u] = st[u] || { pts:0, g:0, p:0, e:0 }; });
   if(gan){ const perd = gan === c.host ? c.rival : c.host; st[gan].pts += 3; st[gan].g++; st[perd].pts += 1; st[perd].p++; }
   else { st[c.host].pts += 1; st[c.rival].pts += 1; st[c.host].e++; st[c.rival].e++; }
+  /* el ganador se lleva a su banco lo que él hizo + lo que movió el rival → sirve para comprar katanas */
+  if(gan){ batBanco(gan); S.batBanco[gan] = (S.batBanco[gan]||0) + Math.abs(pH) + Math.abs(pR); }
   batHist().unshift({ ts:Date.now(), host:c.host, rival:c.rival, ganador:gan, pHost:pH, pRival:pR, dur:c.duracion });
   if(S.batHistorial.length > 40) S.batHistorial.length = 40;
   save();
@@ -9831,11 +9912,10 @@ function renderBatalla(){
       return;
     }
 
-    /* ── HOME · lobby arcade (estilo juego) ── */
+    /* ── HOME · panel de temporada + colección de katanas ── */
     const mi = batStatDe(yo);
     const miPos = ranking.findIndex(r=>r.uid===yo)+1;
-    const totBat = mi.g+mi.p+mi.e, wr = totBat? Math.round(mi.g/totBat*100):0;
-    const nivel = 1 + Math.floor((mi.pts||0)/10), xpPct = ((mi.pts||0)%10)*10, trofeos = mi.pts||0;
+    const miLv = batNivel(yo), totBat = mi.g+mi.p+mi.e, wr = totBat? Math.round(mi.g/totBat*100):0;
     let streak=0, tipoR=null;
     for(const h of hist){
       const dentro = h.host===yo || h.rival===yo || (h.party && (h.jugadores||[]).includes(yo));
@@ -9844,49 +9924,53 @@ function renderBatalla(){
       const t2 = h.ganador===yo?'w':'l';
       if(tipoR===null){ tipoR=t2; streak=1; } else if(tipoR===t2){ streak++; } else break;
     }
-    const LIGAS=[{min:0,n:['Cobre','Copper'],col:'#C98A4B',ico:'🥉'},{min:15,n:['Plata','Silver'],col:'#C7D0DA',ico:'🥈'},{min:40,n:['Oro','Gold'],col:'#E9CF46',ico:'🥇'},{min:80,n:['Diamante','Diamond'],col:'#7CD4FF',ico:'💎'}];
-    let ligaIdx=0; LIGAS.forEach((l,i)=>{ if(trofeos>=l.min) ligaIdx=i; });
-    const liga=LIGAS[ligaIdx];
-    const AR_ES=['Piso Inicial','Sala de Órdenes','Mesa de Futuros','Sala de Riesgo','Piso Institucional','La Bóveda','Torre NorthPoint','La Cima'];
-    const AR_EN=['Starting Floor','Order Room','Futures Desk','Risk Room','Institutional Floor','The Vault','NorthPoint Tower','The Summit'];
-    const arenaNum = Math.min(8, 1+Math.floor(mi.g/2));
-    const arenaNom = (idi()==='es'?AR_ES:AR_EN)[arenaNum-1];
+    const rachaTxt = streak? (tipoR==='w'?'🔥 '+streak:'❄ '+streak) : '—';
+    const banco = batBanco(yo), miKat = batKatanasDe(yo);
+    const kActualIdx = KATANAS.reduce((mx,k,i)=> miKat.includes(k.id)? i : mx, 0);
+    const kProxIdx = KATANAS.findIndex(k=> !miKat.includes(k.id));
     root.innerHTML = `
-      <div class="bat-arcade">
-        <div class="ba-hud">
-          <div class="ba-lvl"><b>${nivel}</b><span class="ba-lvl-bar"><i style="width:${xpPct}%"></i></span><em>${(mi.pts||0)%10}/10</em></div>
-          <div class="ba-cur">
-            <span class="ba-pill gold">🏆 ${trofeos}</span>
-            <span class="ba-pill fire">🔥 ${streak}</span>
-          </div>
+      <div class="bat-lobby-top">
+        <span class="bat-lobby-t">${bi('Batallas','Battles')}</span>
+        <button type="button" class="bat-ajustes" id="batAjustes" aria-label="${bi('Ajustes','Settings')}"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="3.2"/><path d="M12 3v2.5M12 18.5V21M4.2 7l2.2 1.3M17.6 15.7l2.2 1.3M4.2 17l2.2-1.3M17.6 8.3l2.2-1.3"/></svg></button>
+      </div>
+      ${batBannerHTML(c, yo)}
+      <div class="bat-dash">
+        <p class="bat-dash-tag">${bi('Panel de temporada','Season panel')} · <b>${ranking.length} ${bi('jugadores','players')}</b><em>${totBat} ${bi('batallas','battles')}</em></p>
+        <div class="bat-dash-hd">
+          <span class="bat-dash-ava">${caraSocio(yo,58)}</span>
+          <div class="bat-dash-id"><b>${esc(batNom(yo))}</b><span class="bat-dash-rank">${miPos?'#'+miPos:'—'} <em>${bi('de','of')} ${ranking.length}</em></span></div>
+          <div class="bat-dash-lvl"><div class="bat-dash-lvl-top"><span>${bi('Nivel','Level')}</span><b>${miLv}</b></div><span class="bat-dash-lvl-bar"><i style="width:${miLv}%"></i></span></div>
         </div>
-        <div class="ba-id-row">
-          <div class="ba-id">
-            <span class="ba-id-ava">${caraSocio(yo,40)}</span>
-            <div class="ba-id-txt"><b>${esc(batNom(yo))}</b><span style="color:${liga.col}">${liga.ico} ${loc(liga.n)} · #${miPos||'—'}</span></div>
-          </div>
-          <div class="ba-nav">
-            <button type="button" class="ba-nav-b" data-goto="baJugs">${bi('MESA','DESK')}</button>
-            <button type="button" class="ba-nav-b" data-goto="baHist">${bi('HISTORIAL','HISTORY')}</button>
-            <button type="button" class="ba-nav-b" id="batAjustes">${bi('SALIR','EXIT')}</button>
-          </div>
-        </div>
-        ${batBannerHTML(c, yo)}
-        <div class="ba-season">🏅 <b>${bi('TEMPORADA','SEASON')} · ${liga.ico} ${loc(liga.n).toUpperCase()}</b> ${bi('— gana batallas para subir de liga','— win battles to rank up')}</div>
-        <div class="ba-hero">
-          <canvas id="batHeroCv" width="1120" height="760"></canvas>
-          <span class="ba-stat tl"><b>${nivel}</b>${bi('NIVEL','LEVEL')}</span>
-          <span class="ba-stat tr"><b>${trofeos}</b>🏆</span>
-          <span class="ba-stat bl"><b>${mi.g}-${mi.p}</b>${bi('RÉCORD','RECORD')}</span>
-          <span class="ba-stat br"><b>${wr}%</b>${bi('EFECT','WIN%')}</span>
-          <div class="ba-arena"><span>${bi('ARENA','ARENA')} ${arenaNum} / 8</span><b>${esc(arenaNom)}</b></div>
-        </div>
-        <button type="button" class="ba-batalla" id="batNuevo"><b>¡${bi('BATALLA','BATTLE')}!</b><em>${bi('reta a un socio','challenge a partner')}</em></button>
-        <button type="button" class="ba-party" disabled>¡PARTY! 🔒 <span>${bi('pronto','soon')}</span></button>
-        <div class="ba-cofres">
-          ${LIGAS.map((l,i)=>{ const on=trofeos>=l.min, cur=i===ligaIdx; return `<div class="ba-cofre ${on?'on':'off'} ${cur?'cur':''}"><span class="ba-cofre-ic">${on?l.ico:'🔒'}</span><b>${loc(l.n)}</b><em>${l.min} 🏆</em></div>`;}).join('')}
+        <div class="bat-dash-grid">
+          <div class="bat-dash-cell win"><b>${mi.g}</b><span>${bi('Ganadas','Wins')}</span></div>
+          <div class="bat-dash-cell"><b>${mi.p}</b><span>${bi('Perdidas','Losses')}</span></div>
+          <div class="bat-dash-cell"><b>${wr}%</b><span>${bi('Efectividad','Win rate')}</span></div>
+          <div class="bat-dash-cell streak"><b>${rachaTxt}</b><span>${bi('Racha','Streak')}</span></div>
         </div>
       </div>
+      <div class="kat-wrap">
+        <div class="kat-top">
+          <div class="kat-top-l"><span class="kat-title">🗡️ ${bi('Colección de katanas','Katana collection')}</span><span class="kat-sub">${miKat.length} / ${KATANAS.length} · ${bi('gana batallas para comprarlas','win battles to buy them')}</span></div>
+          <div class="kat-banco"><span>${bi('BANCO','BANK')}</span><b>${fmt$(banco)}</b></div>
+        </div>
+        <div class="kat-feat">
+          <div class="kat-feat-blade">${katanaSVG(KATANAS[kActualIdx].belt)}</div>
+          <div class="kat-feat-txt"><em>${bi('tu katana','your katana')}</em><b>${loc(KATANAS[kActualIdx].n)}</b><span class="kat-cinta" style="color:${KATANAS[kActualIdx].belt}">● ${bi('Cinta','Belt')} ${loc(KATANAS[kActualIdx].cinta)}</span></div>
+          ${kProxIdx>=0 ? `<div class="kat-feat-next"><em>${bi('siguiente','next')}</em><b>${fmt$(KATANAS[kProxIdx].precio)}</b><span>${loc(KATANAS[kProxIdx].cinta)}</span></div>`:`<div class="kat-feat-next done"><em>${bi('completa','complete')}</em><b>★</b></div>`}
+        </div>
+        <div class="kat-grid">
+          ${KATANAS.map((k,i)=>{ const owned=miKat.includes(k.id), esProx=(i===kProxIdx), puede=esProx && banco>=k.precio;
+            return `<div class="kat-card ${owned?'owned':(esProx?'next':'locked')}">
+              <div class="kat-ico">${katanaSVG(k.belt)}${owned?'<span class="kat-badge ok">✓</span>':(esProx?'':'<span class="kat-badge lock">🔒</span>')}</div>
+              <b class="kat-nom">${loc(k.n)}</b>
+              <span class="kat-cinta" style="color:${k.belt}">● ${loc(k.cinta)}</span>
+              ${owned ? `<span class="kat-estado owned">${bi('En tu colección','Owned')}</span>`
+                : esProx ? `<button type="button" class="kat-buy ${puede?'':'no'}" data-kat="${k.id}" ${puede?'':'disabled'}>${puede?bi('Comprar','Buy'):bi('Te falta','Locked')} ${fmt$(k.precio)}</button>`
+                : `<span class="kat-estado">${fmt$(k.precio)}</span>`}
+            </div>`;}).join('')}
+        </div>
+      </div>
+      <button type="button" class="btn primary bat-play-b batalla bat-nuevo" id="batNuevo">${bi('Retar a un socio','Challenge a partner')}</button>
       <div class="bat-sec-t" id="baJugs">${bi('Jugadores de la mesa','Desk players')} · ${bi('toca un perfil o rétalo','tap a profile or challenge')}</div>
       <div class="bat-jugs">
         ${ranking.map((r,i)=>{ const lv=batNivel(r.uid); return `
@@ -9919,8 +10003,14 @@ function renderBatalla(){
     $('#batAjustes') && ($('#batAjustes').onclick = () => { batPantalla='ajustes'; renderBatalla(); });
     root.querySelectorAll('[data-perfil]').forEach(b => b.onclick = () => { if(b.dataset.perfil!==yo){ batPerfilUid=b.dataset.perfil; batPantalla='perfil'; renderBatalla(); } });
     root.querySelectorAll('[data-retar]').forEach(b => b.onclick = (e) => { e.stopPropagation(); batSel={ op:b.dataset.retar, ses:'asia', dur:30, cuando:null }; batPantalla='setup'; renderBatalla(); });
-    root.querySelectorAll('[data-goto]').forEach(b => b.onclick = () => { const el=document.getElementById(b.dataset.goto); if(el) el.scrollIntoView({behavior:'smooth',block:'start'}); });
-    requestAnimationFrame(batPintaHero);   // el monito del jugador en su arena
+    root.querySelectorAll('[data-kat]').forEach(b => b.onclick = () => {
+      const k = KATANAS.find(x=>x.id===b.dataset.kat); if(!k) return;
+      const bal = batBanco(yo);
+      if(bal < k.precio){ toast(bi('No te alcanza todavía. Gana más batallas.','Not enough yet. Win more battles.')); return; }
+      S.batBanco[yo] = bal - k.precio; batKatanasDe(yo).push(k.id); save();
+      toast('🗡️ '+bi('¡Katana desbloqueada!','Katana unlocked!')+' '+loc(k.n));
+      renderBatalla();
+    });
     if(c){
       batBannerBind(c, yo);
       if(c.estado==='invitado' || c.estado==='programado' || c.estado==='activo'){
