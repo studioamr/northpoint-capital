@@ -1053,6 +1053,30 @@ button.st-chip:hover{border-color:rgba(255,255,255,.45)}
 /* la tarjeta completa del reto dentro de la pestaña */
 .setup-body{padding:10px 14px 16px}
 .setup-body .bat-card{background:transparent;border:none;box-shadow:none;padding:4px 2px;margin:0}
+/* tu bloque clicable + info de rival */
+.stage-me{display:flex;align-items:center;gap:13px;background:none;border:none;padding:0;cursor:pointer;text-align:left;min-width:0;flex:1;font-family:inherit;color:inherit}
+.stage-me:hover .zen-ava{box-shadow:0 4px 14px rgba(0,0,0,.5),0 0 0 2px #fff,0 0 18px -2px #fff}
+.bat-op-i{margin-left:7px;width:17px;height:17px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:10px;font-style:normal;background:rgba(255,255,255,.12);color:rgba(255,255,255,.8);border:1px solid rgba(255,255,255,.2)}
+.bat-op-i:hover{background:rgba(255,255,255,.25);color:#fff}
+/* perfil dentro del stage */
+.perf-head{display:flex;align-items:center;gap:15px;padding:4px 2px 2px}
+.perf-ava{width:74px;height:74px;border-radius:18px;overflow:hidden;flex:0 0 auto;background:rgba(0,0,0,.3);box-shadow:0 4px 14px rgba(0,0,0,.5),0 0 0 2px rgba(255,255,255,.25)}
+.perf-ava img,.perf-ava canvas,.perf-ava svg{width:100%;height:100%;object-fit:cover}
+.perf-idb{display:flex;flex-direction:column;gap:4px;min-width:0}
+.perf-idb>b{font-size:20px;color:#fff;font-weight:900}
+.perf-sw{display:flex;align-items:center;gap:8px}
+.perf-sw svg{width:74px;height:23px;filter:drop-shadow(0 0 6px var(--kc,#fff))}
+.perf-sw i{font-style:normal;font-family:Georgia,'Hiragino Mincho ProN','Yu Mincho',serif;font-size:14px;font-weight:700}
+.perf-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:6px 0 2px}
+.perf-st{border:1px solid rgba(255,255,255,.1);border-radius:12px;background:rgba(255,255,255,.03);padding:10px 8px;text-align:center}
+.perf-st em{display:block;font-family:var(--mono);font-size:8px;letter-spacing:.12em;color:rgba(255,255,255,.55);font-style:normal;margin-bottom:3px;white-space:nowrap}
+.perf-st b{font-size:16px;color:#fff;font-weight:900}
+.perf-h2h{display:flex;align-items:center;justify-content:space-between;gap:10px;border:1px solid rgba(255,255,255,.1);border-radius:12px;background:rgba(255,255,255,.03);padding:12px 18px;margin-bottom:4px}
+.perf-h2h>div{text-align:center}
+.perf-h2h b{display:block;font-size:20px;color:#fff;font-weight:900}
+.perf-h2h span{font-family:var(--mono);font-size:9px;color:rgba(255,255,255,.55);letter-spacing:.1em}
+.perf-h2h-m{font-family:var(--mono);font-size:10.5px;color:rgba(255,255,255,.6)}
+@media(max-width:640px){ .perf-grid{grid-template-columns:repeat(2,1fr)} }
 @media(max-width:640px){ .stage-id b{font-size:15px} .st-chip{padding:6px 10px} .st-chip b{font-size:13px} .ars-grid{grid-template-columns:repeat(2,1fr)} .stage-top{flex-wrap:wrap;gap:9px;padding:12px 13px} .stage-stats{margin-left:auto} }
 .zen-hero{position:relative;border-radius:18px;overflow:hidden;border:1px solid rgba(255,255,255,.1);margin-bottom:18px;line-height:0;box-shadow:0 18px 44px -14px rgba(0,0,0,.6),inset 0 0 0 1px rgba(255,255,255,.03)}
 .zen-hero canvas{display:block;width:100%;height:auto}
@@ -9534,7 +9558,7 @@ const BAT_DUR = [
    El reto se cita en la PRÓXIMA apertura de la sesión elegida — como buscar
    partida: eliges cancha (Asia/Londres/NY), horario y formato. */
 const BAT_SESIONES = [
-  { id:'asia',    ico:'🌏', ciudad:['Tokio','Tokyo'],      nom:['Asia','Asia'],        hora:19, dur:240 },
+  { id:'asia',    ico:'🇯🇵', ciudad:['Tokio','Tokyo'],      nom:['Asia','Asia'],        hora:19, dur:240 },
   { id:'londres', ico:'🇬🇧', ciudad:['Londres','London'],   nom:['Londres','London'],   hora:1,  dur:180 },
   { id:'ny',      ico:'🗽', ciudad:['Nueva York','New York'], nom:['Nueva York','New York'], hora:7, dur:180 },
 ];
@@ -9795,10 +9819,22 @@ function katanaSVG(hex, flat, oculta){
   const dark = hex==='#23272E';
   const blade = oculta?'#1c2028': (dark?'#3a4048':'#d7dee7'), edge = oculta?'#0e1116':(dark?'#20242b':'#aeb8c4');
   const mango = oculta?'#14171d':hex, tsuba = oculta?'#14171d':'#2b3038', filo = oculta?'0':'0.5';
+  const gid='ks'+(katanaSVG._n=(katanaSVG._n||0)+1);
   return `<svg viewBox="0 0 200 56" width="100%" height="100%" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
+    ${oculta?'':`<defs>
+      <clipPath id="${gid}c"><path d="M6 30 Q64 19.5 146 23 L146 28.6 Q66 27.6 9 35 Z"/></clipPath>
+      <linearGradient id="${gid}g" x1="0" y1="0" x2="1" y2="0">
+        <stop offset="0" stop-color="#fff" stop-opacity="0"/><stop offset="0.5" stop-color="#fff" stop-opacity="0.95"/><stop offset="1" stop-color="#fff" stop-opacity="0"/>
+      </linearGradient>
+    </defs>`}
     <g transform="rotate(${flat?0:-14} 100 28)">
       <path d="M6 30 Q64 19.5 146 23 L146 28.6 Q66 27.6 9 35 Z" fill="${blade}" stroke="${edge}" stroke-width="0.8"/>
-      <path d="M6 30 Q64 19.5 146 23" fill="none" stroke="#ffffff" stroke-opacity="${filo}" stroke-width="0.8"/>
+      <path d="M6 30 Q64 19.5 146 23" fill="none" stroke="#ffffff" stroke-opacity="${filo}" stroke-width="0.8">${oculta?'':`<animate attributeName="stroke-opacity" values="0.35;1;0.35" dur="2.2s" begin="${((katanaSVG._n%4)*0.4).toFixed(1)}s" repeatCount="indefinite"/>`}</path>
+      ${oculta?'':`<g clip-path="url(#${gid}c)">
+        <rect x="-30" y="14" width="20" height="26" fill="url(#${gid}g)" transform="skewX(-18)" opacity="0.9">
+          <animateTransform attributeName="transform" type="translate" additive="sum" from="0 0" to="190 0" dur="2.8s" begin="${((katanaSVG._n%5)*0.55).toFixed(2)}s" repeatCount="indefinite"/>
+        </rect>
+      </g>`}
       <path d="M146 23 L156 24.9 L146 28.6 Z" fill="${blade}" stroke="${edge}" stroke-width="0.6"/>
       <rect x="147" y="16.8" width="4.6" height="20" rx="2" fill="${tsuba}"/>
       <rect x="151.5" y="21.6" width="40" height="10.8" rx="3.5" fill="${mango}" stroke="rgba(0,0,0,.4)" stroke-width="0.7"/>
@@ -10543,15 +10579,15 @@ function zenFrase(c,x,y,text,col){ c.save(); c.font='600 22px "Hiragino Mincho P
   c.shadowColor='rgba(0,0,0,.55)'; c.shadowBlur=5; c.fillStyle=col||'rgba(255,255,255,.5)';
   for(let i=0;i<text.length;i++) c.fillText(text[i], x, y+i*27);
   c.restore(); }
-/* NINJA NPC: silueta encapuchada con katana a la espalda y bufanda al viento */
-function zenNinja(c,x,base,s,now,ph){ const bob=Math.sin(now/900+(ph||0))*1.5; c.save(); c.translate(x,base+bob);
+/* NINJA NPC: silueta encapuchada · su bufanda y su katana llevan el color de la espada equipada */
+function zenNinja(c,x,base,s,now,ph,col){ const bob=Math.sin(now/900+(ph||0))*1.5; const kc=col||'#b53a2e'; c.save(); c.translate(x,base+bob);
   c.fillStyle='#0c0e13'; c.fillRect(-5*s,-14*s,4*s,14*s); c.fillRect(2*s,-14*s,4*s,14*s);
   c.fillRect(-6.5*s,-30*s,13*s,18*s);
   c.strokeStyle='#c7ccd4'; c.lineWidth=1.6*s; c.beginPath(); c.moveTo(-9*s,-38*s); c.lineTo(9*s,-16*s); c.stroke();
-  c.strokeStyle='#7a2f2b'; c.lineWidth=2.6*s; c.beginPath(); c.moveTo(-9*s,-38*s); c.lineTo(-12*s,-42*s); c.stroke();
+  c.strokeStyle=kc; c.lineWidth=2.6*s; c.beginPath(); c.moveTo(-9*s,-38*s); c.lineTo(-12*s,-42*s); c.stroke();
   c.fillStyle='#0c0e13'; c.beginPath(); c.arc(0,-33*s,5.6*s,0,7); c.fill();
   c.fillStyle='rgba(214,220,232,.9)'; c.fillRect(-5*s,-35*s,10*s,2.2*s);
-  c.fillStyle='#b53a2e'; c.beginPath(); c.moveTo(5*s,-32*s); c.quadraticCurveTo(15*s+Math.sin(now/300+ph)*5,-30*s,20*s,-23*s); c.quadraticCurveTo(13*s,-28*s,5*s,-28*s); c.closePath(); c.fill();
+  c.fillStyle=kc; c.beginPath(); c.moveTo(5*s,-32*s); c.quadraticCurveTo(15*s+Math.sin(now/300+ph)*5,-30*s,20*s,-23*s); c.quadraticCurveTo(13*s,-28*s,5*s,-28*s); c.closePath(); c.fill();
   c.restore(); }
 /* dibuja UNA escena (para el héroe animado y para la ficha) */
 function zenDibujaEscena(c, W, H, E, now, pet, poderHex){
@@ -10592,7 +10628,7 @@ function zenDibujaEscena(c, W, H, E, now, pet, poderHex){
   if(E.casas){ zenCasaJaponesa(c, W*0.63, base, 1.25); zenCasaJaponesa(c, W*0.79, base, 1.0); zenCasaJaponesa(c, W*0.53, base, 0.85); }
   if(E.faro) zenFaro(c, W*0.15, base, 1.35);
   /* ninjas NPC dando vida a la escena */
-  zenNinja(c, W*0.26, base, 1.2, now, 0);   /* un solo ninja: tú */
+  zenNinja(c, W*0.26, base, 1.2, now, 0, poderHex);   /* un solo ninja: tú, con el color de tu espada */
   if(E.lava) zenLava(c, W, base, now);
   if(E.rayos && Math.floor(now/1600)%3===0) zenRayo(c, W*(0.36+0.2*((Math.floor(now/1600))%2)), 16, base-70);
   if(E.playa){ c.fillStyle='rgba(228,206,150,.9)'; c.beginPath(); c.moveTo(0,H); c.lineTo(W,H); c.lineTo(W,base+H*0.14); c.quadraticCurveTo(W*0.5,base+H*0.04,0,base+H*0.16); c.closePath(); c.fill(); }
@@ -10746,7 +10782,7 @@ function batTorneos(){
   if(!S.batTorneosInsc) S.batTorneosInsc={};
   const insc=S.batTorneosInsc;
   const defs=[
-    {id:'asia',   nom:['Copa Asia','Asia Cup'],            ico:'🌏', col:'#4a90d9', premio:5000,  cupo:32, offDay:0, hora:7,  durh:3},
+    {id:'asia',   nom:['Copa Asia','Asia Cup'],            ico:'🇯🇵', col:'#4a90d9', premio:5000,  cupo:32, offDay:0, hora:7,  durh:3},
     {id:'londres',nom:['Abierto de Londres','London Open'],ico:'🇬🇧', col:'#c9a227', premio:8000,  cupo:48, offDay:1, hora:2,  durh:4},
     {id:'ny',     nom:['Maratón NY','NY Marathon'],        ico:'🗽', col:'#30d158', premio:12000, cupo:64, offDay:2, hora:8,  durh:6},
     {id:'kuro',   nom:['Torneo Kuro','Kuro Invitational'], ico:'🐉', col:'#8a6bd6', premio:25000, cupo:16, offDay:5, hora:9,  durh:8}
@@ -10940,7 +10976,7 @@ function batSetupCardHTML(){
   const fmts = [['sesion','🌏',bi('Sesión','Session')],['sprint','⚡',bi('Sprint','Sprint')],['maraton','🏁',bi('Maratón','Marathon')]];
   return `<div class="bat-card">
       <div class="bat-f"><label>${bi('¿A quién retas?','Who do you challenge?')} <em>${bi('puedes elegir a varios','pick one or more')}</em></label>
-        <div class="bat-ops">${ops.map(u=>{ const on=batSel.ops.includes(u); return `<button type="button" class="bat-op ${on?'on':''}" data-op="${u}"><span class="bat-op-ava">${caraSocio(u,24)}</span>${esc(batNom(u))}${on?' ✓':''}</button>`;}).join('')}${ops.length>1?`<button type="button" class="bat-op bat-op-all ${batSel.ops.length===ops.length?'on':''}" data-opall>${bi('Todos','All')}</button>`:''}</div></div>
+        <div class="bat-ops">${ops.map(u=>{ const on=batSel.ops.includes(u); return `<button type="button" class="bat-op ${on?'on':''}" data-op="${u}"><span class="bat-op-ava">${caraSocio(u,24)}</span>${esc(batNom(u))}${on?' ✓':''}<span class="bat-op-i" data-vperfil="${u}" title="${bi('ver su perfil','view profile')}">ℹ</span></button>`;}).join('')}${ops.length>1?`<button type="button" class="bat-op bat-op-all ${batSel.ops.length===ops.length?'on':''}" data-opall>${bi('Todos','All')}</button>`:''}</div></div>
       <div class="bat-f"><label>${bi('Formato','Format')}</label>
         <div class="bat-fmt-tabs">${fmts.map(f=>`<button type="button" class="bat-fmt-tab ${batFmt===f[0]?'on':''}" data-fmt="${f[0]}"><b>${f[1]}</b>${f[2]}</button>`).join('')}</div></div>
       ${batFmt==='sesion' ? `<div class="bat-f"><label>${bi('Sesión','Session')}</label>
@@ -10962,6 +10998,7 @@ function batSetupCardHTML(){
 }
 function batSetupBind(scope, yo, alCerrar){
   const ops = batOponentes();
+  scope.querySelectorAll('[data-vperfil]').forEach(b=> b.onclick=(e)=>{ e.stopPropagation(); window._batPerfil=b.dataset.vperfil; renderBatalla(); });
   scope.querySelectorAll('[data-op]').forEach(b=> b.onclick=()=>{ const u=b.dataset.op, i=batSel.ops.indexOf(u); if(i>=0) batSel.ops.splice(i,1); else batSel.ops.push(u); batSel.op=batSel.ops[0]||null; renderBatalla(); });
   const allBtn=scope.querySelector('[data-opall]'); if(allBtn) allBtn.onclick=()=>{ batSel.ops = batSel.ops.length===ops.length? (ops[0]?[ops[0]]:[]) : ops.slice(); batSel.op=batSel.ops[0]||null; renderBatalla(); };
   scope.querySelectorAll('[data-fmt]').forEach(b=> b.onclick=()=>{ batFmt=b.dataset.fmt; if(batFmt==='sprint') batSel.dur=30; else if(batFmt==='maraton') batSel.dur=1440; batSel.cuando=null; batSel.cuandoSes=null; renderBatalla(); });
@@ -11042,7 +11079,7 @@ function renderBatalla(){
         </div>
         <div class="bat-card">
           <div class="bat-f"><label>${bi('¿A quién retas?','Who do you challenge?')} <em>${bi('puedes elegir a varios','pick one or more')}</em></label>
-            <div class="bat-ops">${ops.map(u=>{ const on=batSel.ops.includes(u); return `<button type="button" class="bat-op ${on?'on':''}" data-op="${u}"><span class="bat-op-ava">${caraSocio(u,24)}</span>${esc(batNom(u))}${on?' ✓':''}</button>`;}).join('')}${ops.length>1?`<button type="button" class="bat-op bat-op-all ${batSel.ops.length===ops.length?'on':''}" data-opall>${bi('Todos','All')}</button>`:''}</div></div>
+            <div class="bat-ops">${ops.map(u=>{ const on=batSel.ops.includes(u); return `<button type="button" class="bat-op ${on?'on':''}" data-op="${u}"><span class="bat-op-ava">${caraSocio(u,24)}</span>${esc(batNom(u))}${on?' ✓':''}<span class="bat-op-i" data-vperfil="${u}" title="${bi('ver su perfil','view profile')}">ℹ</span></button>`;}).join('')}${ops.length>1?`<button type="button" class="bat-op bat-op-all ${batSel.ops.length===ops.length?'on':''}" data-opall>${bi('Todos','All')}</button>`:''}</div></div>
           <div class="bat-f"><label>${bi('Formato','Format')}</label>
             <div class="bat-fmt-tabs">${fmts.map(f=>`<button type="button" class="bat-fmt-tab ${batFmt===f[0]?'on':''}" data-fmt="${f[0]}"><b>${f[1]}</b>${f[2]}</button>`).join('')}</div></div>
           ${batFmt==='sesion' ? `<div class="bat-f"><label>${bi('Sesión','Session')}</label>
@@ -11194,8 +11231,10 @@ function renderBatalla(){
       <div class="zen-stage">
         <canvas id="batZenCv" width="900" height="1200"></canvas>
         <div class="stage-top">
-          <span class="zen-ava samurai" style="--belt:${miBelt}">${caraSocio(yo,64)}<i class="hachimaki"></i></span>
-          <div class="stage-id"><b>${esc(batNom(yo))}</b><span style="color:${miBelt}">${kActualIdx>=0?loc(KATANAS[kActualIdx].n):bi('Aprendiz','Apprentice')}</span></div>
+          <button type="button" class="stage-me" id="stYo" title="${bi('Ver mi perfil','View my profile')}">
+            <span class="zen-ava samurai" style="--belt:${miBelt}">${caraSocio(yo,64)}<i class="hachimaki"></i></span>
+            <span class="stage-id"><b>${esc(batNom(yo))}</b><span style="color:${miBelt}">${kActualIdx>=0?loc(KATANAS[kActualIdx].n):bi('Aprendiz','Apprentice')}</span></span>
+          </button>
           <div class="stage-stats">
             <div class="st-chip wins"><em>${bi('VICTORIAS','WINS')}</em><b>🏆 ${mi.g||0}</b></div>
             <div class="st-chip bank"><em>BANK</em><b>${fmt$(banco)}</b></div>
@@ -11263,6 +11302,36 @@ function renderBatalla(){
             </div>
           </div>
         </div>`:''}
+        ${window._batPerfil?(()=>{ const u=window._batPerfil, s=batStatDe(u), esYo=(u===yo);
+          const kw=batKatanasDe(u), kEq=KATANAS[batEquipadaDe(u)], h2=esYo?null:batH2H(yo,u);
+          const histU=batHist().map((h,i)=>({h,i})).filter(x=> x.h.party? (x.h.jugadores||[]).includes(u) : (x.h.host===u||x.h.rival===u)).slice(0,8);
+          return `<div class="ars-ov">
+          <div class="ars-top"><b>👤 ${esc(batNom(u))}${esYo?` · ${bi('tu perfil','your profile')}`:''}</b><button type="button" class="ars-x" id="perfX" aria-label="${bi('cerrar','close')}">✕</button></div>
+          <div class="evt-body">
+            <div class="perf-head">
+              <span class="perf-ava">${caraSocio(u,74)}</span>
+              <div class="perf-idb">
+                <b>${esc(batNom(u))}</b>
+                <span class="perf-sw" style="--kc:${kEq.belt}">${katanaSVG(kEq.belt,true)}<i style="color:${kEq.belt}">${loc(kEq.n)}</i></span>
+              </div>
+            </div>
+            <div class="perf-grid">
+              <div class="perf-st"><em>🏆 ${bi('VICTORIAS','WINS')}</em><b>${s.g||0}</b></div>
+              <div class="perf-st"><em>✕ ${bi('DERROTAS','LOSSES')}</em><b>${s.p||0}</b></div>
+              <div class="perf-st"><em>💵 BANK</em><b>${fmt$(batBanco(u))}</b></div>
+              <div class="perf-st"><em>🗡️ ${bi('COLECCIÓN','COLLECTION')}</em><b>${kw.length}/${KATANAS.length}</b></div>
+            </div>
+            ${esYo?'':`
+            <div class="evt-sec">${bi('CARA A CARA CONTIGO','HEAD TO HEAD VS YOU')}</div>
+            <div class="perf-h2h"><div><b>${h2.wa}</b><span>${bi('tuyas','yours')}</span></div><div class="perf-h2h-m">${h2.n} ${bi('duelos','duels')}${h2.emp?' · '+h2.emp+' '+bi('empates','ties'):''}</div><div><b>${h2.wb}</b><span>${bi('suyas','theirs')}</span></div></div>
+            <button type="button" class="btn primary stage-btn" data-perfretar="${u}" style="width:100%">⚔️ ${bi('Retar a','Challenge')} ${esc(batNom(u))}</button>`}
+            <div class="evt-sec">${bi('HISTORIAL','HISTORY')}</div>
+            ${histU.length? histU.map(x=>{ const h=x.h; const gn=h.ganador?batNom(h.ganador):bi('Empate','Tie');
+              if(h.party) return `<div class="evt-row" data-histg="${x.i}"><span class="evt-ico">👥</span><div class="evt-i"><b>${bi('Grupo','Group')} · ${(h.jugadores||[]).length}</b><span>${bi('ganó','won by')} ${esc(gn)}</span></div><span class="evt-tag">›</span></div>`;
+              return `<div class="evt-row" data-histg="${x.i}"><span class="evt-ico">⚔️</span><div class="evt-i"><b>${esc(batNom(h.host))} vs ${esc(batNom(h.rival))}</b><span>${fmt$(h.pHost,true)} / ${fmt$(h.pRival,true)} · ${bi('ganó','won by')} ${esc(gn)}</span></div><span class="evt-tag">›</span></div>`;
+            }).join('') : `<div class="evt-vacio">${bi('Aún sin batallas','No battles yet')}</div>`}
+          </div>
+        </div>`;})():''}
       </div>
       `;
 
@@ -11276,6 +11345,10 @@ function renderBatalla(){
     $('#stEventos') && ($('#stEventos').onclick = () => { window._batEventos=true; window._batArsenal=false; window._batSetup=false; window._batComo=false; renderBatalla(); });
     $('#stComo') && ($('#stComo').onclick = () => { window._batComo=true; window._batEventos=false; window._batArsenal=false; window._batSetup=false; renderBatalla(); });
     $('#comoX') && ($('#comoX').onclick = () => { window._batComo=false; renderBatalla(); });
+    $('#stYo') && ($('#stYo').onclick = () => { window._batPerfil=yo; renderBatalla(); });
+    $('#perfX') && ($('#perfX').onclick = () => { window._batPerfil=null; renderBatalla(); });
+    root.querySelectorAll('[data-perfretar]').forEach(b=> b.onclick=()=>{ const u=b.dataset.perfretar; batSel={op:u,ops:[u],ses:'asia',dur:30,cuando:null}; window._batPerfil=null; window._batSetup=true; window._batEventos=false; window._batArsenal=false; window._batComo=false; renderBatalla(); });
+    root.querySelectorAll('[data-histg]').forEach(b=> b.onclick=()=>{ const h=batHist()[+b.dataset.histg]; if(h) batHistDetalle(h); });
     $('#evX') && ($('#evX').onclick = () => { window._batEventos=false; renderBatalla(); });
     $('#stArsenal') && ($('#stArsenal').onclick = () => { window._batArsenal=true; window._batEventos=false; window._batSetup=false; renderBatalla(); });
     $('#arsX') && ($('#arsX').onclick = () => { window._batArsenal=false; renderBatalla(); });
