@@ -751,6 +751,24 @@ body.locked .app{visibility:hidden;pointer-events:none}
 .bat-vuelo-lbl b{display:block;font-size:22px;font-weight:900;color:#fff}
 .bat-vuelo-lbl span{font-family:var(--mono);font-size:12px;color:rgba(255,255,255,.8)}
 .bat-vuelo-lbl i{font-style:normal;color:#4ee08a}
+/* tarjetas de jugador (lobby del juego) */
+.bat-jugs{display:grid;gap:10px;margin-bottom:26px}
+.bat-jug{display:flex;align-items:center;gap:14px;border:1px solid var(--line);border-radius:16px;background:var(--w02);padding:13px 15px;cursor:pointer;transition:all .14s;text-align:left}
+.bat-jug:hover{border-color:var(--accent)}
+.bat-jug.yo{border-color:var(--up);background:rgba(48,209,88,.05)}
+.bat-jug.lider{box-shadow:inset 0 0 0 1px rgba(233,207,70,.35)}
+.bat-jug-pos{font-family:var(--mono);font-size:15px;font-weight:700;color:var(--faint);min-width:30px;text-align:center}
+.bat-jug-pos.oro{color:#e9cf46}
+.bat-jug-ava{width:52px;height:52px;border-radius:50%;overflow:hidden;flex:0 0 auto;background:var(--bg-2);display:flex;align-items:center;justify-content:center}
+.bat-jug-ava img,.bat-jug-ava canvas,.bat-jug-ava svg{width:100%;height:100%;object-fit:cover}
+.bat-jug-info{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px}
+.bat-jug-nom{font-size:15px;font-weight:800} .bat-jug-nom em{color:var(--faint);font-style:normal;font-weight:400;font-size:12px}
+.bat-jug-stats{font-family:var(--mono);font-size:11px;color:var(--dim)}
+.bat-jug-xp{height:7px;border-radius:4px;background:var(--line-soft);overflow:hidden;max-width:220px}
+.bat-jug-xp i{display:block;height:100%;background:linear-gradient(90deg,var(--up),#8ad0ff);border-radius:4px;transition:width .6s}
+.bat-jug-wins{font-family:var(--mono);text-align:right;color:var(--faint);font-size:9px;flex:0 0 auto}
+.bat-jug-wins b{display:block;font-size:22px;color:var(--txt);line-height:1}
+.bat-jug-retar{flex:0 0 auto;padding:9px 16px;font-size:13px}
 .bat-rio{position:relative;width:100%;border-radius:18px;overflow:hidden;border:1px solid var(--line);margin-bottom:16px;background:#0c1322;line-height:0}
 .bat-rio canvas{display:block;width:100%;height:auto}
 .bat-rio-lbl{position:absolute;left:14px;bottom:12px;line-height:1.25;text-shadow:0 1px 6px rgba(0,0,0,.6)}
@@ -8896,6 +8914,8 @@ function batEraIdx(v){ let i=0; for(let k=0;k<WEALTH_ERAS.length;k++){ if(v>=WEA
 function batEraProg(v){ const i=batEraIdx(v), e=WEALTH_ERAS[i], nx=WEALTH_ERAS[i+1]||null;
   const prog = nx ? Math.max(0, Math.min(1, (v-e.min)/(nx.min-e.min))) : 1; return { i, e, nx, prog }; }
 let batTick = null, batVueloRAF = null, batDir = 'L', batPantalla = 'home', batFmt = 'sesion', batSel = null, batViendo = null, batMin = false, batPerfilUid = null;
+/* nivel del jugador 0-100: sube con victorias, un poco por jugar */
+function batNivel(uid){ const s=batStatDe(uid); return Math.max(0, Math.min(100, s.g*12 + s.p*3 + s.e*3)); }
 /* récord cara a cara entre dos socios (solo 1v1) */
 function batH2H(a, b){
   let wa=0, wb=0, emp=0, pa=0, pb=0, n=0;
@@ -9569,12 +9589,13 @@ function renderBatalla(){
     /* ── PERFIL · picar un socio en el leaderboard = comparación tú vs él ── */
     if(batPantalla === 'perfil' && batPerfilUid && batPerfilUid !== yo){
       const otro = batPerfilUid, h2h = batH2H(yo, otro);
-      const card = (u)=>{ const s=batStatDe(u);
+      const card = (u)=>{ const s=batStatDe(u), lv=batNivel(u);
         return `<div class="bat-perfil-card ${u===yo?'yo':''}">
           <span class="bat-perfil-ava">${caraSocio(u,64)}</span>
           <b class="bat-perfil-nom">${esc(batNom(u))}${u===yo?` <em>${bi('(tú)','(you)')}</em>`:''}</b>
-          <span class="bat-perfil-bal">${s.g} ${bi('ganadas','wins')}</span>
-          <span class="bat-perfil-sub">${s.g}${bi('G','W')} · ${s.p}${bi('P','L')}${s.e?' · '+s.e+bi('E','T'):''}</span>
+          <span class="bat-perfil-bal">${bi('Nivel','Level')} ${lv}</span>
+          <span class="bat-jug-xp" style="max-width:none;margin:2px 0"><i style="width:${lv}%"></i></span>
+          <span class="bat-perfil-sub">${s.g}${bi('G','W')} · ${s.p}${bi('P','L')}${s.e?' · '+s.e+bi('E','T'):''} · ${s.g} ${bi('victorias','wins')}</span>
         </div>`; };
       root.innerHTML = `
         <div class="bat-lobby-top"><button type="button" class="bat-volver" id="batVolverLobby">‹ ${bi('Atrás','Back')}</button>
@@ -9605,15 +9626,20 @@ function renderBatalla(){
       <div class="bat-rio"><canvas id="batRioCv" width="1800" height="1160"></canvas>
         <div class="bat-rio-lbl"><b>${bi('SEDE · RÍO DE JANEIRO','HOME · RIO DE JANEIRO')}</b><span>NORTHPOINT · LEBLON</span></div></div>
       <button type="button" class="btn primary bat-play-b batalla bat-nuevo" id="batNuevo">${bi('Retar a un socio','Challenge a partner')}</button>
-      <div class="bat-sec-t">${bi('Leaderboard','Leaderboard')} · ${bi('toca para comparar','tap to compare')}</div>
-      <div class="bat-rank">
-        ${ranking.map((r,i)=>`
-          <button type="button" class="bat-rank-row ${r.uid===yo?'yo':''}" data-perfil="${r.uid}">
-            <span class="bat-rank-pos ${i===0&&r.g>0?'oro':''}">#${i+1}</span>
-            <span class="bat-rank-ava">${caraSocio(r.uid,34)}</span>
-            <span class="bat-rank-nom">${esc(batNom(r.uid))}${r.uid===yo?` <em>${bi('(tú)','(you)')}</em>`:''}<i>${r.g}${bi('G','W')} · ${r.p}${bi('P','L')}${r.e?' · '+r.e+bi('E','T'):''}</i></span>
-            <span class="bat-rank-pts"><b>${r.g}</b>${bi('ganadas','wins')}</span>
-          </button>`).join('')}
+      <div class="bat-sec-t">${bi('Jugadores de la mesa','Desk players')} · ${bi('toca un perfil o rétalo','tap a profile or challenge')}</div>
+      <div class="bat-jugs">
+        ${ranking.map((r,i)=>{ const lv=batNivel(r.uid); return `
+          <div class="bat-jug ${r.uid===yo?'yo':''} ${i===0&&r.g>0?'lider':''}" data-perfil="${r.uid}">
+            <span class="bat-jug-pos ${i===0&&r.g>0?'oro':''}">#${i+1}</span>
+            <span class="bat-jug-ava">${caraSocio(r.uid,52)}</span>
+            <span class="bat-jug-info">
+              <b class="bat-jug-nom">${esc(batNom(r.uid))}${r.uid===yo?` <em>${bi('(tú)','(you)')}</em>`:''}</b>
+              <span class="bat-jug-stats">${bi('Nivel','Level')} ${lv} · ${r.g}${bi('G','W')} · ${r.p}${bi('P','L')}</span>
+              <span class="bat-jug-xp"><i style="width:${lv}%"></i></span>
+            </span>
+            ${r.uid===yo ? `<span class="bat-jug-wins"><b>${r.g}</b>${bi('victorias','wins')}</span>`
+              : `<button type="button" class="btn primary sm bat-jug-retar" data-retar="${r.uid}">${bi('Retar','Challenge')}</button>`}
+          </div>`;}).join('')}
       </div>
       <div class="bat-sec-t">${bi('Historial','History')}</div>
       <div class="bat-hist">
@@ -9631,6 +9657,7 @@ function renderBatalla(){
     $('#batNuevo').onclick = () => { batPantalla='setup'; renderBatalla(); };
     $('#batAjustes') && ($('#batAjustes').onclick = () => { batPantalla='ajustes'; renderBatalla(); });
     root.querySelectorAll('[data-perfil]').forEach(b => b.onclick = () => { if(b.dataset.perfil!==yo){ batPerfilUid=b.dataset.perfil; batPantalla='perfil'; renderBatalla(); } });
+    root.querySelectorAll('[data-retar]').forEach(b => b.onclick = (e) => { e.stopPropagation(); batSel={ op:b.dataset.retar, ses:'asia', dur:30, cuando:null }; batPantalla='setup'; renderBatalla(); });
     requestAnimationFrame(batPintaRio);   // portada: la sede NorthPoint en Río
     if(c){
       batBannerBind(c, yo);
