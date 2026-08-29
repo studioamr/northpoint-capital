@@ -3180,7 +3180,7 @@ stop[stop-color="#9BC0DC"]{stop-color:var(--txt)}
       </a>
       <a class="item" href="#batalla" data-view="batalla">
         <svg viewBox="0 0 24 24" fill="none" stroke-width="1.6"><path d="M14.5 4l5.5 5.5-3 3-5.5-5.5zM10 8.5L4 14.5 4 20l5.5 0 6-6M13 11l-6 6"/></svg>
-        <span data-i18n="nav.batalla">Batallas 1v1</span>
+        <span data-i18n="nav.batalla">Batallas</span>
       </a>
     </nav>
 
@@ -4255,8 +4255,8 @@ const I18N = {
   'nav.academia': { es:'Academia', en:'Academy' },
   'nav.cuaderno': { es:'Cuaderno', en:'Notebook' },
   'tit.cuaderno.t': { es:'Cuaderno', en:'Notebook' },
-  'nav.batalla': { es:'Batallas 1v1', en:'1v1 Battles' },
-  'tit.batalla.t': { es:'Batallas 1v1', en:'1v1 Battles' },
+  'nav.batalla': { es:'Batallas', en:'Battles' },
+  'tit.batalla.t': { es:'Batallas', en:'Battles' },
   'tit.entreno.k': { es:'Entrenamiento', en:'Training' },
   'tit.entreno.t': { es:'Backtesting', en:'Backtesting' },
   'tit.academia.t': { es:'Academia', en:'Academy' },
@@ -9152,16 +9152,34 @@ function batMapaSVG(){
     if(it.kind==='b'){ const b=it.b, pr=batProj(b.u,b.v); const sc=0.7+b.v*0.6; ciudad+=box(pr.x,pr.y,b.hw*sc,b.h*sc,b.top,b.l,b.r,b.neon); }
     else { const pr=batProj(it.t[0],it.t[1]); const sc=0.7+it.t[1]*0.6; ciudad+=arbol(pr.x,pr.y,9*sc,it.t[2]); }
   });
+  /* NUESTRO EDIFICIO · la torre NorthPoint, con faro y letrero verde */
+  const npU=0.66, npV=0.36, npSc=0.7+npV*0.6, npHw=17*npSc, npH=86*npSc, npPr=batProj(npU,npV);
+  const npTopY = npPr.y - npHw*0.55*2 - npH;   // cima de la torre
+  let npTorre = box(npPr.x, npPr.y, npHw, npH, '#13232e','#0c1720','#060f16', '#30d158')
+    + `<rect x="${(npPr.x-13).toFixed(1)}" y="${(npTopY-11).toFixed(1)}" width="26" height="11" rx="1.5" fill="#0d1a13" stroke="#30d158" stroke-width="1"/>`
+    + `<text x="${npPr.x.toFixed(1)}" y="${(npTopY-2.5).toFixed(1)}" font-size="7.5" font-family="'IBM Plex Mono',monospace" font-weight="700" fill="#4ee08a" text-anchor="middle">NP</text>`
+    + `<rect x="${(npPr.x-0.7).toFixed(1)}" y="${(npTopY-19).toFixed(1)}" width="1.4" height="8" fill="#0c1720"/>`
+    + `<circle cx="${npPr.x.toFixed(1)}" cy="${(npTopY-20).toFixed(1)}" r="2.2" fill="#4ee08a"><animate attributeName="opacity" values="1;.25;1" dur="1.4s" repeatCount="indefinite"/></circle>`;
   /* piso trapecio con zonas (perspectiva) */
   const gp=(u,v)=>{ const p=batProj(u,v); return `${p.x.toFixed(1)},${p.y.toFixed(1)}`; };
   return `<svg class="bat-mapa-svg" viewBox="0 0 400 280" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
-    <defs><linearGradient id="batSky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#243154"/><stop offset=".6" stop-color="#3a3a63"/><stop offset="1" stop-color="#7a5a6a"/></linearGradient></defs>
+    <defs><linearGradient id="batSky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2b3a63"/><stop offset=".55" stop-color="#6a5a86"/><stop offset="1" stop-color="#e79a6a"/></linearGradient></defs>
     <rect width="400" height="280" fill="url(#batSky)"/>
-    <circle cx="330" cy="52" r="20" fill="#fdf3d0" opacity=".9"/>
-    <!-- montañas alrededor, al fondo -->
-    <path d="M0,150 L50,96 L96,132 L150,88 L210,128 L270,92 L330,126 L400,100 L400,150 Z" fill="#3a4a52"/>
-    <path d="M0,150 L60,120 L120,142 L190,112 L250,140 L320,116 L400,138 L400,150 Z" fill="#2c3a40"/>
-    <g fill="rgba(255,255,255,.8)"><path d="M144,92 l6,-4 6,4 -3,3 -3,-2z"/><path d="M264,96 l6,-4 6,4 -3,3 -3,-2z"/></g>
+    <!-- RÍO DE JANEIRO al fondo · sol tropical -->
+    <circle cx="72" cy="44" r="26" fill="#ffe1a6" opacity=".22"/><circle cx="72" cy="44" r="15" fill="#ffe8bc"/>
+    <!-- Bahía de Guanabara -->
+    <rect x="0" y="122" width="400" height="30" fill="#3f6f92"/>
+    <g stroke="#ffffff" stroke-opacity=".25"><line x1="24" y1="134" x2="74" y2="134"/><line x1="200" y1="140" x2="252" y2="140"/><line x1="300" y1="132" x2="340" y2="132"/></g>
+    <!-- Morros verdes (selva) -->
+    <path d="M0,152 C22,118 56,112 84,142 C98,118 122,116 140,144 C154,124 176,128 196,152 L0,152 Z" fill="#2c5236"/>
+    <path d="M188,152 C208,126 238,124 260,148 L188,152 Z" fill="#264a30"/>
+    <!-- Corcovado + Cristo Redentor -->
+    <path d="M98,152 C102,120 118,106 130,106 C142,106 156,122 158,152 Z" fill="#31593b"/>
+    <g transform="translate(128,102)"><rect x="-4" y="0" width="8" height="3" fill="#b6b1a4"/><rect x="-1.4" y="-13" width="2.8" height="13" fill="#eae7de"/><rect x="-9" y="-10.5" width="18" height="2.3" rx="1" fill="#eae7de"/><circle cx="0" cy="-15" r="2.3" fill="#eae7de"/></g>
+    <!-- Pão de Açúcar (Pan de Azúcar) + Morro da Urca, saliendo del agua -->
+    <path d="M328,152 C330,116 343,101 356,101 C369,101 381,118 383,152 Z" fill="#3b4144"/>
+    <path d="M300,152 C302,130 311,120 320,120 C329,120 336,132 338,152 Z" fill="#334034"/>
+    <line x1="320" y1="122" x2="356" y2="104" stroke="#9aa" stroke-width=".5" opacity=".7"/>
     <!-- PISO en perspectiva, con zonas -->
     <polygon points="${gp(0,0)} ${gp(.34,0)} ${gp(.34,1)} ${gp(0,1)}" fill="#8a7856"/>
     <polygon points="${gp(.34,0)} ${gp(.62,0)} ${gp(.62,1)} ${gp(.34,1)}" fill="#5f9a45"/>
@@ -9170,6 +9188,7 @@ function batMapaSVG(){
     <polygon points="${gp(0,.42)} ${gp(1,.42)} ${gp(1,.54)} ${gp(0,.54)}" fill="#33333a"/>
     <polyline points="${gp(0,.48)} ${gp(1,.48)}" fill="none" stroke="#e6cf46" stroke-width="1.4" stroke-dasharray="10 10"/>
     ${ciudad}
+    ${npTorre}
     <!-- PLAYA y mar al frente -->
     <polygon points="${gp(0,1)} ${gp(1,1)} 430,280 -30,280" fill="#e6d29a"/>
     <rect x="0" y="272" width="400" height="8" fill="#2f9fd0"/>
