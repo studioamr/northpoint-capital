@@ -1198,15 +1198,21 @@ button.st-chip:hover{border-color:rgba(255,255,255,.45)}
 /* ══ KATA · el templo de validación ══ */
 .kt-stage{height:calc(100vh - 130px);min-height:540px;margin-bottom:26px}
 .kt-stage > canvas{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
-/* el backtester clásico es LO PRINCIPAL: flota en vidrio sobre el templo (tokens oscuros fijos) */
-.kt-main{position:absolute;left:14px;right:14px;top:74px;bottom:60px;z-index:3;overflow-y:auto;overscroll-behavior:contain;padding:2px 2px 10px;scrollbar-width:thin;
+/* el backtester clásico es LO PRINCIPAL: flota en vidrio sobre el templo (tokens oscuros fijos)…
+   pero solo aparece al ENTRAR AL DOJO; antes, el templo espera a pantalla completa */
+.kt-main{display:none;position:absolute;left:14px;right:14px;top:74px;bottom:60px;z-index:3;overflow-y:auto;overscroll-behavior:contain;padding:2px 2px 10px;scrollbar-width:thin;
   --txt:#e8ebf0;--dim:rgba(255,255,255,.66);--faint:rgba(255,255,255,.5);--line:rgba(255,255,255,.14);--line-soft:rgba(255,255,255,.09);
   --w02:rgba(255,255,255,.03);--w04:rgba(255,255,255,.06);--w07:rgba(255,255,255,.09);--panel-bg:#10141b;--sheen:rgba(255,255,255,.08);--bg:#0b0f16;color:var(--txt)}
 .kt-main .bt-sel-bar{background:rgba(6,9,14,.8);backdrop-filter:blur(9px);border:1px solid rgba(255,255,255,.12);border-radius:14px;padding:10px 14px;margin-bottom:10px}
 .kt-main .bt{background:rgba(6,9,14,.8);backdrop-filter:blur(9px);border-color:rgba(255,255,255,.12)}
 .kt-main .bt-chart-wrap{background:rgba(255,255,255,.04)}
 .kt-main .bt-log{background:rgba(6,9,14,.8);backdrop-filter:blur(9px);border-color:rgba(255,255,255,.12);margin-top:10px}
-.kt-acciones{position:absolute;left:0;right:0;bottom:0;z-index:3;display:flex;align-items:center;justify-content:center;gap:12px;padding:8px 16px 12px}
+.kt-stage.dentro .kt-main{display:block}
+.kt-espera{position:absolute;left:0;right:0;bottom:11%;z-index:3;display:flex;flex-direction:column;align-items:center;gap:10px;padding:0 18px}
+.kt-espera .stage-btn{width:min(430px,100%)}
+.kt-stage.dentro .kt-espera{display:none}
+.kt-acciones{position:absolute;left:0;right:0;bottom:0;z-index:3;display:none;align-items:center;justify-content:center;gap:12px;padding:8px 16px 12px}
+.kt-stage.dentro .kt-acciones{display:flex}
 .kt-acciones .stage-btn.sec{width:auto;padding:9px 20px}
 .kt-id b{font-size:22px;font-weight:900;letter-spacing:.14em;color:#fff;text-shadow:0 1px 8px rgba(0,0,0,.6)}
 .kt-id span{font-family:var(--mono);font-size:9.5px;letter-spacing:.1em;color:rgba(255,255,255,.75);text-shadow:0 1px 4px rgba(0,0,0,.7)}
@@ -9399,66 +9405,14 @@ function kataMarcaRacha(){ const K=kataEstado(), hoy=kataHoy();
 }
 function kataCertificadas(){ const K=kataEstado(); return Object.values(K.setups).filter(x=>x.cert).length; }
 let kataLigado=false;
-function kataCardsHTML(){
-  const K=kataEstado();
-  return Object.entries(K.setups).map(([id,k])=>{
-    const n=k.reps.length, w=k.reps.filter(r=>r.r==='w').length, l=k.reps.filter(r=>r.r==='l').length;
-    const wr=(w+l)?Math.round(w/(w+l)*100):null;
-    const okPct=n?Math.round(k.reps.filter(r=>r.ok).length/n*100):null;
-    const ci=kataCinta(n), cinta=KATA_CINTAS[ci], next=KATA_CINTAS[ci+1];
-    const prog=next?Math.max(0,Math.min(1,(n-cinta[0])/(next[0]-cinta[0]))):1;
-    const examen=!k.cert && n>=KATA_VALIDA;
-    const simN=k.sim.length, simOkPct=simN?Math.round(k.sim.filter(r=>r.ok).length/simN*100):null;
-    const chip=k.cert?`<span class="kt-chip cert">${bi('CERTIFICADA','CERTIFIED')} ✓</span>`
-      :examen?`<span class="kt-chip exam">${bi('EXAMEN SIM','SIM EXAM')} ${simN}/${KATA_EXAMEN}</span>`
-      :`<span class="kt-chip">${bi('VALIDACIÓN','VALIDATION')} ${n}/${KATA_VALIDA}</span>`;
-    return `<div class="kt-card ${k.cert?'cert':''}" data-kata="${id}">
-      <div class="kt-h"><span class="kt-dot" style="background:${cinta[2]}"></span><b>${esc(k.n)}</b>${chip}</div>
-      <div class="kt-nums"><span>${n} ${bi('reps','reps')}</span><span>WR ${wr==null?'—':wr+'%'}</span><span>${bi('reglas','rules')} ${okPct==null?'—':okPct+'%'}</span><span style="color:${cinta[2]}">${bi('cinta','belt')} ${loc(cinta[1])}</span></div>
-      <div class="kt-bar"><i style="width:${Math.round(prog*100)}%;background:${next?next[2]:cinta[2]}"></i></div>
-      ${next?`<div class="kt-next">${n}/${next[0]} → ${bi('cinta','belt')} ${loc(next[1])}</div>`:''}
-      ${k.cert?`<div class="kt-cert-nota">${bi('Lista para usarse · buff KURO activo','Ready to trade · KURO buff active')} +${Math.round(KATA_BUFF*100)}%</div>`:`
-      <div class="kt-controls">
-        <button type="button" class="kt-b w" data-krep="w">WIN</button>
-        <button type="button" class="kt-b l" data-krep="l">LOSS</button>
-        <button type="button" class="kt-b s" data-krep="s">SKIP</button>
-        <label class="kt-regla"><input type="checkbox" class="kt-ok" checked> ${bi('seguí las reglas','followed rules')}</label>
-        <button type="button" class="kt-mini" data-kundo>↺</button>
-      </div>
-      ${examen?`<div class="kt-exam">
-        <span>${bi('EXAMEN','EXAM')} · ${bi('20 trades en sim, ≥80% con reglas','20 sim trades, ≥80% by the rules')} · ${simN}/${KATA_EXAMEN}${simOkPct!=null?` · ${bi('reglas','rules')} ${simOkPct}%`:''}</span>
-        <div class="kt-exam-b"><button type="button" class="kt-b w" data-ksim="w">SIM WIN</button><button type="button" class="kt-b l" data-ksim="l">SIM LOSS</button></div>
-      </div>`:''}`}
-    </div>`;
-  }).join('');
-}
-function kataChips(){
-  const el=$('#ktChips'); if(!el) return;
-  const K=kataEstado();
-  const encendido=K.racha.ultimo===kataHoy();
-  const nCert=kataCertificadas();
-  const repsTot=Object.values(K.setups).reduce((a,k)=>a+k.reps.length,0);
-  el.innerHTML=`
-    <div class="st-chip ${encendido?'kt-enc':''}"><em>${bi('INCIENSO','INCENSE')}</em><b>${K.racha.d||0} ${bi('días','days')}</b></div>
-    <div class="st-chip"><em>REPS</em><b>${repsTot}</b></div>
-    <div class="st-chip" style="--sc:#e9cf46"><em>${bi('CERTIFICADAS','CERTIFIED')}</em><b style="color:#f0dc7a">${nCert}${nCert?` · +${Math.round(nCert*KATA_BUFF*100)}% KURO`:''}</b></div>`;
-}
 function kataOverlay(){
   const host=$('#ktOvHost'); if(!host) return;
-  const ov=window._kataOv||null;
-  if(ov==='katas'){ host.innerHTML=`<div class="ars-ov">
-      <div class="ars-top"><b>${bi('Tus katas · validación','Your katas · validation')}</b><span class="ars-cash">${bi('valida antes de usar','validate before you trade')}</span><button type="button" class="ars-x" id="ktX">✕</button></div>
-      <div class="evt-body arriba">
-        <div class="kt-grid">${kataCardsHTML()}</div>
-        <div class="kt-nueva"><input type="text" id="ktNombre" placeholder="${bi('nueva kata (nombre del setup)…','new kata (setup name)…')}" maxlength="28"><button type="button" class="btn sm" id="ktCrear">+ ${bi('Crear','Create')}</button></div>
-      </div></div>`;
-  } else if(ov==='como'){ host.innerHTML=`<div class="ars-ov">
+  if(window._kataOv==='como'){ host.innerHTML=`<div class="ars-ov">
       <div class="ars-top"><b>${bi('¿Cómo funciona?','How it works')}</b><button type="button" class="ars-x" id="ktX">✕</button></div>
       <div class="evt-body">
-        <div class="rg"><span class="rg-v rg-pago"><b class="up">LONG</b><b class="dn">SHORT</b></span><div><b>${bi('Backtestea aquí mismo','Backtest right here')}</b><p>${bi('Crea una cuenta de backtest, reproduce el chart y registra cada trade: dirección + P&L. La curva y las stats se arman solas.','Create a backtest account, replay the chart and log every trade: direction + P&L. The curve and stats build themselves.')}</p></div></div>
-        <div class="rg"><span class="rg-v rg-mult"><b>25</b><b class="oro">300</b></span><div><b>${bi('Cada rep cuenta en tus KATAS','Every rep counts toward your KATAS')}</b><p>${bi('Registra la rep en su kata (win/loss/skip + ¿seguiste reglas?). Las cintas se ganan por VOLUMEN: 25, 75, 150, 300.','Log the rep on its kata (win/loss/skip + rules?). Belts are earned by VOLUME: 25, 75, 150, 300.')}</p></div></div>
-        <div class="rg"><span class="rg-v rg-pago"><b class="up">100</b><b style="color:#3E8BFF">${bi('reps','reps')}</b></span><div><b>${bi('A las 100 reps: el examen en sim','At 100 reps: the sim exam')}</b><p>${bi('20 trades en cuenta sim con ≥80% siguiendo reglas → la kata queda CERTIFICADA: lista para usarse en real.','20 sim trades with ≥80% by the rules → the kata is CERTIFIED: cleared for live.')}</p></div></div>
-        <div class="rg"><span class="rg-v rg-x"><i>${katanaSVG('#e9cf46',true)}</i><i>${katanaSVG('#23272E',true)}</i></span><div><b>${bi('El templo alimenta la guerra','The temple feeds the war')}</b><p>${bi('Cada kata certificada = +3% de pago por victoria en KURO. Entrenar diario mantiene el incienso encendido.','Each certified kata = +3% duel payout in KURO. Daily training keeps the incense lit.')}</p></div></div>
+        <div class="rg"><span class="rg-v rg-pago"><b class="up">⛩</b><b style="color:#ffb98a;font-size:10px">DOJO</b></span><div><b>${bi('Entra al dojo y backtestea','Enter the dojo and backtest')}</b><p>${bi('Crea las cuentas de backtest que quieras: una por estrategia, por mes o por experimento. Cambia y borra aquí mismo.','Create as many backtest accounts as you want: one per strategy, per month or per experiment. Switch and delete right here.')}</p></div></div>
+        <div class="rg"><span class="rg-v rg-pago"><b class="up">LONG</b><b class="dn">SHORT</b></span><div><b>${bi('Registra cada trade del replay','Log every replay trade')}</b><p>${bi('Reproduce el chart, y por cada trade anota dirección + P&L y dale Agregar. El punto avanza y la curva se dibuja sola.','Replay the chart, and for each trade enter direction + P&L and hit Add. The dot advances and the curve draws itself.')}</p></div></div>
+        <div class="rg"><span class="rg-v rg-mult"><b>WR</b><b class="oro">PF</b></span><div><b>${bi('Las stats se arman solas','Stats build themselves')}</b><p>${bi('Trades, win rate, profit factor, W/L y el log completo, en vivo. Nada de esto toca tus números reales: es tu arenero.','Trades, win rate, profit factor, W/L and the full log, live. None of it touches your real numbers: it is your sandbox.')}</p></div></div>
       </div></div>`;
   } else host.innerHTML='';
 }
@@ -9469,22 +9423,25 @@ function renderKata(){
     root.innerHTML=`<div class="zen-stage kt-stage">
       <canvas id="kataCv" width="900" height="1200"></canvas>
       <div class="stage-top">
-        <div class="stage-id kt-id"><b>KATA</b><span>${bi('backtesting · el templo de validación','backtesting · the temple of validation')}</span></div>
-        <div class="stage-stats" id="ktChips"></div>
+        <div class="stage-id kt-id"><b>KATA</b><span>${bi('backtesting · el dojo','backtesting · the dojo')}</span></div>
       </div>
       <div class="kt-main" id="ktMain"></div>
-      <div class="kt-acciones">
-        <button type="button" class="stage-btn sec" id="ktEntrenar">${bi('Katas · validación','Katas · validation')}</button>
+      <div class="kt-espera">
+        <button type="button" class="btn primary stage-btn" id="ktEntrar">${bi('Entrar al dojo','Enter the dojo')}</button>
         <button type="button" class="stage-link" id="ktComo">${bi('¿cómo funciona?','how it works?')}</button>
+      </div>
+      <div class="kt-acciones">
+        <button type="button" class="stage-btn sec" id="ktSalir">‹ ${bi('Salir del dojo','Leave the dojo')}</button>
       </div>
       <div id="ktOvHost"></div>
     </div>`;
-    /* EL BACKTESTER CLÁSICO es lo principal: se adopta DENTRO del stage,
-       flotando en vidrio sobre el templo (que queda de puro ambiente) */
+    /* EL BACKTESTER CLÁSICO vive DENTRO del dojo: se adopta al stage,
+       flotando en vidrio sobre el templo — pero solo aparece al ENTRAR */
     const main=$('#ktMain'), sec=$('#v-entreno');
     if(main && sec){ ['.bt-sel-bar','.bt','#btLog'].forEach(q=>{ const el2=sec.querySelector(':scope > '+q); if(el2) main.appendChild(el2); }); }
   }
-  kataChips(); kataOverlay();
+  root.querySelector('.kt-stage').classList.toggle('dentro', !!window._kataDentro);
+  kataOverlay();
   /* ── el TEMPLO al amanecer, de fondo: el ninja entrena su kata ── */
   cancelAnimationFrame(window._kataRAF||0);
   const kcv=$('#kataCv');
@@ -9526,40 +9483,22 @@ function renderKata(){
     window._kataRAF=requestAnimationFrame(pintaK); }
   if(!kataLigado){ kataLigado=true;
     root.addEventListener('click', (e)=>{
-      const K2=kataEstado();
-      if(e.target.closest('#ktEntrenar')){ window._kataOv='katas'; kataOverlay(); return; }
+      if(e.target.closest('#ktEntrar')){ window._kataDentro=true;
+        root.querySelector('.kt-stage')?.classList.add('dentro');
+        if(typeof btDibuja==='function') btDibuja();
+        return; }
+      if(e.target.closest('#ktSalir')){ window._kataDentro=false;
+        root.querySelector('.kt-stage')?.classList.remove('dentro');
+        return; }
       if(e.target.closest('#ktComo')){ window._kataOv='como'; kataOverlay(); return; }
       if(e.target.closest('#ktX')){ window._kataOv=null; kataOverlay(); return; }
-      const crear=e.target.closest('#ktCrear');
-      if(crear){ const inp=$('#ktNombre'), nom=(inp.value||'').trim(); if(!nom){ toast(bi('Ponle nombre al setup','Name the setup')); return; }
-        const id='k'+Date.now().toString(36); K2.setups[id]={n:nom, reps:[], sim:[], cert:false, creado:Date.now()}; save(); kataChips(); kataOverlay(); return; }
-      const card=e.target.closest('[data-kata]');
-      if(!card) return; const id=card.dataset.kata, k=K2.setups[id]; if(!k) return;
-      const rep=e.target.closest('[data-krep]');
-      if(rep){ const ok=card.querySelector('.kt-ok'); const antes=kataCinta(k.reps.length);
-        k.reps.push({ r:rep.dataset.krep, ok:ok?ok.checked:true, ts:Date.now() });
-        kataMarcaRacha(); save();
-        const despues=kataCinta(k.reps.length);
-        if(despues>antes){ const q=KATA_SENSEI[Math.min(despues,KATA_SENSEI.length-1)];
-          toast(bi('Cinta '+loc(KATA_CINTAS[despues][1])+' — el sensei dice: ','Belt '+loc(KATA_CINTAS[despues][1])+' — sensei says: ')+loc(q)); }
-        else if(k.reps.length===KATA_VALIDA){ toast(bi('100 reps · el EXAMEN en sim está abierto','100 reps · the SIM EXAM is open')); }
-        kataChips(); kataOverlay(); return; }
-      if(e.target.closest('[data-kundo]')){ if(k.reps.length){ k.reps.pop(); save(); kataChips(); kataOverlay(); } return; }
-      const sim=e.target.closest('[data-ksim]');
-      if(sim){ const ok=card.querySelector('.kt-ok');
-        k.sim.push({ r:sim.dataset.ksim, ok:ok?ok.checked:true, ts:Date.now() });
-        kataMarcaRacha();
-        if(k.sim.length>=KATA_EXAMEN){
-          const okPct=k.sim.filter(r=>r.ok).length/k.sim.length;
-          if(okPct>=KATA_EXAMEN_OK){ k.cert=true; toast(bi('KATA CERTIFICADA: '+k.n+' · ya puedes usarla — y pega más fuerte en KURO','KATA CERTIFIED: '+k.n+' · cleared to trade — and it hits harder in KURO')); }
-          else { k.sim=[]; toast(bi('Examen fallido ('+Math.round(okPct*100)+'% reglas): el sensei te regresa al inicio del examen','Exam failed ('+Math.round(okPct*100)+'% rules): the sensei restarts your exam')); }
-        }
-        save(); kataChips(); kataOverlay(); return; }
     });
   }
 }
 function renderEntreno(){
-  renderKata();
+  /* KATA (el dojo) quedó dormido a pedido de André: el backtesting clásico manda.
+     Para revivirlo: volver a llamar renderKata() aquí. */
+  cancelAnimationFrame(window._kataRAF||0);
   imgInit();
   btEstado();
   btSelector(); btStats(); btLog();
