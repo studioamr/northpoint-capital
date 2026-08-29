@@ -1060,6 +1060,14 @@ body.locked .app{visibility:hidden;pointer-events:none}
    aplastaban todas en una columna. */
 #mdCharts .md-ch{flex:0 0 340px;margin:0}
 @media(max-width:620px){ #mdCharts .md-ch{flex-basis:276px} }
+/* ── Journal · stats y curvas con espacio (sin rail apretado) ── */
+.md-sec-t{margin:30px 0 14px}
+.mdk-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px}
+.mdk-grid .mdk-card{margin:0;padding:20px;min-height:130px}
+.md-charts-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:14px}
+.md-ch2{margin:0}
+.md-ch2 .p-body{padding:14px 16px 16px}
+.md-ch2 canvas{width:100%}
 .md-ext{padding:18px 20px}
 .md-ext-h{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
 .md-ext-f{font-family:var(--mono);font-size:9.5px;letter-spacing:.08em;color:var(--faint)}
@@ -2888,37 +2896,26 @@ stop[stop-color="#9BC0DC"]{stop-color:var(--txt)}
              del plan viven en The plan; aquí eran la misma cifra dos veces.
              renderObjetivos() se queda y sale sola si no encuentra su hilera. -->
 
-        <div style="display:flex;align-items:center;gap:12px;margin:22px 0 8px">
-          <span class="micro" data-i18n="md.tasas">Win rate and desk ratios</span>
-        </div>
-        <div class="mdk-wrap">          <div class="px-rail mdk-rail" id="mdKpiRail"></div>        </div>
+        <div class="md-sec-t"><span class="micro" data-i18n="md.tasas">Win rate and desk ratios</span></div>
+        <div class="mdk-grid" id="mdKpiRail"></div>
 
-        <div style="display:flex;align-items:center;gap:12px;margin:22px 0 8px">
-          <span class="micro" data-i18n="md.graficos">Northpoint Score y curvas</span>
-        </div>
-        <div class="mdk-wrap">          <div class="px-rail mdk-rail" id="mdCharts">
-          <div class="panel md-ch">
-            <div class="p-head"><h3 data-i18n="me.score">Northpoint Score</h3><span class="micro" id="mdScoreSub"></span></div>
-            <div class="p-body">
-              <canvas id="radarCanvas" height="150"></canvas>
-              <div class="md-score-pie" id="mdScorePie"></div>
-            </div>
-          </div>
-          <div class="panel md-ch">
+        <div class="md-sec-t"><span class="micro" data-i18n="md.graficos">Tus curvas</span></div>
+        <div class="md-charts-grid" id="mdCharts">
+          <div class="panel md-ch2">
             <div class="p-head"><h3 data-i18n="md.acum">P&amp;L acumulado</h3><span class="micro" id="eqLabel"></span></div>
             <div class="p-body">
-              <canvas id="eqCanvas" height="150"></canvas>
+              <canvas id="eqCanvas" height="220"></canvas>
               <div id="eqEmpty"></div>
             </div>
           </div>
-          <div class="panel md-ch">
+          <div class="panel md-ch2">
             <div class="p-head"><h3 data-i18n="md.porDia">P&amp;L per day</h3><span class="micro" id="dayLabel"></span></div>
             <div class="p-body">
-              <canvas id="dayCanvas" height="150"></canvas>
+              <canvas id="dayCanvas" height="220"></canvas>
               <div id="dayEmpty"></div>
             </div>
           </div>
-          </div>        </div>
+        </div>
 
         <!-- calendario -->
         <div class="panel mt">
@@ -3714,7 +3711,7 @@ const I18N = {
   'md.porTrade': { es:'Por trade',              en:'Per trade' },
   'md.longShort':{ es:'Long vs Short',          en:'Long vs Short' },
   'md.tasas':    { es:'Win rate y tasas de la mesa', en:'Win rate and desk ratios' },
-  'md.graficos': { es:'Northpoint Score y curvas',   en:'Northpoint Score and curves' },
+  'md.graficos': { es:'Tus curvas',   en:'Your curves' },
   'md.winRate':  { es:'Win rate · por trade',   en:'Win rate · per trade' },
   'md.diaWin':   { es:'Días ganados',           en:'Winning days' },
   'md.gana':     { es:'gana',                   en:'win' },
@@ -6939,13 +6936,8 @@ function renderDashboard(){
     </div>`,
   ].join('');
 
-  /* ── los cuatro gráficos ── */
-  drawRadar(); drawEquity(); drawDaily();
-  /* las cintas se arman AQUÍ, ya con los gráficos dibujados, y se repintan un
-     instante después porque los canvas se asientan tras el layout */
-  cintaInfinita($('#mdKpiRail'), 30);
-  cintaInfinita($('#mdCharts'), 26);
-  setTimeout(repintaCintas, 280);
+  /* ── las curvas (el Northpoint Score se retiró) ── */
+  drawEquity(); drawDaily();
 
   /* ── extremos: el mejor, el total y el peor ── */
   const mejor = todos.length ? todos.reduce((a,t)=>(t.pnl||0)>(a.pnl||0)?t:a) : null;
