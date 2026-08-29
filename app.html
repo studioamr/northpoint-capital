@@ -3817,9 +3817,11 @@ const REGLAS_DEF = { size:50000, target:3000, colchon:2100, tramo:1000, tramoApe
 const reglasPorTamano = (tam, firm) => {
   const k = (tam > 0 ? tam : REGLAS_DEF.size) / REGLAS_DEF.size;
   const r = v => Math.round(v * k / 100) * 100;
+  /* el tramo del colchón al pago máximo NO se escala: es regla de la casa
+     ($1,000; $2,000 en Apex), no una proporción de la cuenta */
   const tramo = /apex/i.test(String(firm || '')) ? REGLAS_DEF.tramoApex : REGLAS_DEF.tramo;
   const colchon = r(REGLAS_DEF.colchon);
-  return { target:r(REGLAS_DEF.target), colchon, maximo: colchon + r(tramo) };
+  return { target:r(REGLAS_DEF.target), colchon, maximo: colchon + tramo };
 };
 
 /* Las firmas que ofrece el alta. OJO: esta lista es MÁS LARGA que
@@ -4488,7 +4490,7 @@ const FASES = {
             rDia: () => SISTEMA.fases.buffer.maxPerdidaDia,                         // 200 [PLAN]
             oDia: () => SISTEMA.fases.buffer.objetivoDia,                           // 400 [PLAN]
             tope: () => null,
-            hito: (R,a) => a.start + R.maxDD + (R.lockAtProfit||0) },               // 52,100 [CAT]
+            hito: (R,a) => a.start + (R.colchon || (R.maxDD||0) + (R.lockAtProfit||0)) },   // 52,100 en la 50k
   payout: { get t(){ return tr('fase.payout'); }, corto:'PAY',
             rDia: () => SISTEMA.fases.payout.maxPerdidaDia,                         // 100 [PLAN]
             oDia: () => SISTEMA.fases.payout.objetivoDia,                           // 200 [PLAN]
@@ -4506,51 +4508,82 @@ function migrar(s){
        puede fusionarlos (ni el descarte de violaciones distinguirlos) */
     if(!t.id) t.id = 't-mig-' + (t.seq != null ? t.seq : (t.date || 'x') + '-' + k);
   });
-  /* Las cuentas que nacieron colgadas del catálogo se pasan a reglas propias.
-     Va ANTES del corte por esquema —y con su propia guarda, `if(a.reglas)`—
-     porque tiene que alcanzar a las cuentas ya migradas de versiones
-     anteriores, igual que la normalización de trades de aquí arriba. No se
-     puede usar esLive()/esSim(): se declaran más abajo y esto corre dentro de
-     load(). */
-  (s.accounts||[]).forEach(a => {
-    if(!a || a.reglas || a.tipo === 'live' || a.tipo === 'sim') return;
-    const F = FIRM_CATALOG[a.firm];
-    const pl = F && F.plans && F.plans[a.plan];
-    const z  = pl && pl.sizes && pl.sizes[a.size];
-    if(!z) return;                     // sin catálogo se quedan vacías: las llena él
-    a.reglas = { target: z.target || 0, maxDD: z.maxDD || 0,
-                 dailyLoss: z.dailyLoss || 0, lock: pl.lockAtProfit,
-                 consistency: pl.consistency || 0, minDays: pl.minDays || 0 };
-  });
-  /* Y las que NO estaban en el catálogo se quedaban sin nada: su barra en cero
-     para siempre y el aviso «sin reglas» pidiéndole al usuario que llenara
-     cinco cajas por cuenta. Nadie lo hizo — ése fue el problema de la semana.
-     Ahora arrancan con los valores de fábrica de su tamaño, visibles y
-     editables en Ajustes → Cuentas. Una cuenta con un objetivo aproximado dice
-     más que una barra en cero que no dice nada. */
+  /* ══ MIGRACIÓN TOTAL DE REGLAS · UN SOLO MODELO ══
+     Tres generaciones de formularios dejaron tres formas de a.reglas
+     conviviendo ({target,maxDD,lock,dailyLoss[,pago]} del catálogo y del
+     formulario viejo, {target,colchon,maximo} del alta actual, y cualquier
+     mezcla tecleada en Ajustes). Cada lector tenía que adivinar la forma y de
+     ahí salían los colchones imposibles. Desde aquí TODA cuenta prop queda en
+     el modelo único:
+       target  = profit del examen (hito: tamaño + target)
+       colchon = acumulado tras el reinicio que desbloquea el payout
+       maximo  = acumulado del 100% (el tramo de pago es maximo − colchon)
+       maxDD / dailyLoss = opcionales, sólo línea de riesgo y aviso
+     `lock` y `pago` desaparecen: el lock se DERIVA al leer (colchon − maxDD
+     cuando colchon > maxDD; si no, el piso no se congela).
+     Corre ANTES del corte por esquema y es idempotente: los valores buenos se
+     conservan tal cual en cada pasada. */
   (s.accounts||[]).forEach(a => {
     if(!a || a.tipo === 'live' || a.tipo === 'sim') return;
-    const r = a.reglas || {}, def = reglasPorTamano(+a.size || +a.start || 0, a.firm);
-    /* Las firmas CON catálogo verificado conservan lo suyo; las que no —donde
-       los números salieron de un formulario viejo que ya no existe— se pasan al
-       modelo nuevo. Ahí es donde vivían los colchones de $7,600 que no
-       correspondían a nada. */
-    const conCatalogo = !!FIRM_CATALOG[a.firm];
-    /* Campo por campo, no todo o nada. El caso que costó cuatro vueltas: una
-       cuenta FONDEADA dada de alta con el formulario viejo quedaba con
-       `target:0` —ahí el objetivo se dejaba vacío por ser fondeada— pero con
-       maxDD lleno. Como algo traía, la migración la saltaba entera; y sin
-       objetivo no hay tramo de examen que dar por recorrido, así que la barra
-       marcaba 0% aunque la cuenta estuviera fondeada y con reglas. Ése es el
-       cero mudo: ni «sin reglas» ni «en examen», sólo cero. */
-    const nuevas = { ...r };
-    if(!(+r.target > 0)) nuevas.target = def.target;
-    /* el colchón sólo se rellena si NO viene de ningún lado: las cuentas que
-       migraron del catálogo lo llevan dentro de `lock` y ésas no se tocan */
-    const yaHayColchon = (+r.colchon > 0) || (conCatalogo && r.lock != null && r.lock !== '');
-    if(!yaHayColchon) nuevas.colchon = def.colchon;
-    const yaHayMaximo = (+r.maximo > 0) || (conCatalogo && +r.pago > 0);
-    if(!yaHayMaximo) nuevas.maximo = def.maximo;
+    if(a.estado === 'active') a.estado = 'activa';   // el alta de una época guardaba el nombre en inglés
+    const r = a.reglas || {};
+    const num = v => { const n = parseFloat(v); return isFinite(n) ? n : 0; };
+    /* el catálogo por TALLA (cualquier plan de esa firma con esa talla): es la
+       semilla para cuentas viejas y la vara de cordura para las tecleadas */
+    const F = FIRM_CATALOG[a.firm];
+    let zEval = null, zFund = null;
+    if(F) Object.keys(F.plans).forEach(nom => {
+      const pl = F.plans[nom], z = pl.sizes && pl.sizes[a.size];
+      if(!z) return;
+      if(pl.phase === 'eval'   && !zEval) zEval = z;
+      if(pl.phase === 'funded' && !zFund) zFund = z;
+    });
+    const zCat = zFund || zEval;
+    const lockVal = (r.lock === '' || r.lock == null) ? null : num(r.lock);
+    const pagoVal = (r.pago === '' || r.pago == null) ? null : num(r.pago);
+    const def = reglasPorTamano(+a.size || +a.start || 0, a.firm);
+
+    let maxDD     = num(r.maxDD)     > 0 ? num(r.maxDD)     : (zCat && zCat.maxDD     > 0 ? zCat.maxDD     : 0);
+    let dailyLoss = num(r.dailyLoss) > 0 ? num(r.dailyLoss) : (zCat && zCat.dailyLoss > 0 ? zCat.dailyLoss : 0);
+    let target    = num(r.target)    > 0 ? num(r.target)
+                  : (zEval && zEval.target > 0 ? zEval.target : def.target);
+    /* colchón: el tecleado manda — SALVO que sea el default escalado de una
+       versión anterior (contaminado: coincide con el default pero contradice
+       maxDD+lock del catálogo). Con drawdown conocido, el colchón real es
+       maxDD + lock (Tradeify congela en +100). */
+    let colchon = num(r.colchon);
+    const contaminado = F && colchon > 0 && colchon === def.colchon
+                     && maxDD > 0 && (maxDD + 100) !== colchon;
+    if(!(colchon > 0) || contaminado)
+      colchon = maxDD > 0 ? maxDD + (lockVal != null ? lockVal : 100) : def.colchon;
+    /* máximo: el tecleado manda si es coherente (> colchón); si no, el pago
+       legacy; si no, el tramo de la casa SIN escalar */
+    let maximo = num(r.maximo);
+    if(!(maximo > colchon)) maximo = pagoVal > 0 ? colchon + pagoVal
+                                   : colchon + (/apex/i.test(String(a.firm || '')) ? 2000 : 1000);
+    /* regla de la casa dictada por André (28-ago): en Apex el 100% está $2,000
+       arriba del colchón. Las cuentas que quedaron con el brinco default viejo
+       de $1,000 —escrito por una versión anterior, no tecleado— se corrigen. */
+    if(/apex/i.test(String(a.firm || '')) && maximo - colchon === 1000) maximo = colchon + 2000;
+    /* REPARACIÓN CON AUTORIDAD: si la firma y la talla están en el catálogo
+       VERIFICADO y lo tecleado es absurdo (menos de la mitad del reglamento
+       real), gana el catálogo. Es lo que dejó la cuenta de Gerardo en
+       500/1000/1000: números tecleados que ninguna pantalla comparó jamás
+       contra el reglamento que la app SÍ tiene. Se sella (upd) a propósito —
+       excepción única a «la migración no sella»— para que la reparación le
+       gane la fusión a la copia rota del otro equipo. */
+    if(zEval && zCat && target > 0 && target < zEval.target / 2
+       && maxDD > 0 && zCat.maxDD > 0 && maxDD < zCat.maxDD){
+      target = zEval.target; maxDD = zCat.maxDD;
+      dailyLoss = zCat.dailyLoss || dailyLoss;
+      colchon = maxDD + 100; maximo = colchon + 1000;
+      a.upd = Date.now();
+    }
+    const nuevas = { target, colchon, maximo };
+    if(maxDD > 0)     nuevas.maxDD = maxDD;
+    if(dailyLoss > 0) nuevas.dailyLoss = dailyLoss;
+    if(num(r.consistency) > 0) nuevas.consistency = num(r.consistency);
+    if(num(r.minDays) > 0)     nuevas.minDays = num(r.minDays);
     a.reglas = nuevas;
   });
   if((s.schema||0) >= SCHEMA) return s;      // idempotente: sin esto se re-migra en cada carga
@@ -4742,7 +4775,11 @@ function quemaDetectada(a){
   if(_quemas.has(a.id)) return _quemas.get(a.id);
   const R = reglasDe(a);
   let out = null;
-  if(R){
+  /* Sin drawdown escrito no hay línea, y sin línea no hay quema: con maxDD=0
+     `linea = pico` y CUALQUIER día —ganador o perdedor— quedaba bajo la línea,
+     así que toda cuenta del alta nuevo se enterraba en su primer trade. La
+     misma guarda honesta que ya tenía saludDe. */
+  if(R && R.maxDD > 0){
     const porDia = {}, hoy = todayISO();
     (S.trades || []).forEach(t => {
       if(t.date >= a.desde && t.date <= hoy && (t.accts || []).includes(a.id))
@@ -4826,42 +4863,29 @@ const proy = (t, n) => n === 1 ? t : { ...t, pnl:(t.pnl||0)*n, pnl1:t.pnl, nAcc:
 function reglasManuales(a){
   const m = a && a.reglas; if(!m) return null;
   const num = v => { const n = parseFloat(v); return isFinite(n) ? n : 0; };
-  const target = num(m.target), maxDD = num(m.maxDD);
-  const colchon = num(m.colchon), maximo = num(m.maximo);
-  if(maxDD <= 0 && target <= 0 && colchon <= 0) return null;   // vacías = como si no hubiera
-  /* EL COLCHÓN SE ESCRIBE DIRECTO. Adentro el motor lo pide como
-     `maxDD + lockAtProfit`, así que lo que no cubra el drawdown lo pone el
-     lock y la suma da exactamente el número tecleado. Las cuentas viejas, que
-     guardaban `lock` en vez de `colchon`, siguen por su camino.
-     lock null NO es lock 0: null significa «el piso nunca se congela» (una
-     evaluación) y 0 significaría «se congela desde el primer peso». */
-  const lock = colchon > 0 ? Math.max(0, colchon - maxDD)
-             : ((m.lock === '' || m.lock == null) ? null : num(m.lock));
-  /* El tramo de pago era TRAMO_PAGO, una constante de $1,000 igual para todas.
-     Es regla de NORTHPOINT, no de la fondeadora: André lleva $2,500 en Apex, y
-     con $1,000 clavados la meta salía $1,500 abajo de la real. Vacío = la
-     regla de la casa, para no obligar a llenarlo a quien no lo sabe. */
-  return { target, maxDD, dailyLoss:num(m.dailyLoss), lockAtProfit:lock,
-           /* El colchón EXACTO, tal como se escribió. Antes salía de
-              `maxDD + lockAtProfit`, y con un drawdown mayor que el colchón esa
-              suma no podía dar el número tecleado por más que se repartiera.
-              Se manda directo y el lock queda sólo para el gate de
-              reglasFondeadas(). */
-           buffer: colchon > 0 ? colchon : null,
-           /* el tramo de pago es lo que falta del colchón al pago máximo */
-           pago: (colchon > 0 && maximo > colchon) ? maximo - colchon
-               : ((m.pago === '' || m.pago == null) ? null : num(m.pago)),
-           consistency:num(m.consistency), minDays:num(m.minDays),
-           note:null, src:'manual', checked:null, manual:true };
+  const target = num(m.target), colchon = num(m.colchon), maximo = num(m.maximo);
+  const maxDD = num(m.maxDD);
+  if(target <= 0 && colchon <= 0 && maxDD <= 0) return null;   // vacías = como si no hubiera
+  /* lockAtProfit se DERIVA, ya no se guarda: si el colchón supera al drawdown,
+     el piso se congela cuando el colchón cubre el excedente (Tradeify: 2100
+     contra 2000 congela en +100). Si el drawdown es mayor que el colchón —o no
+     está escrito— el piso NUNCA se congela: null, no 0. Un lock de 0 congelaría
+     el piso en el arranque desde el primer peso, que es lo contrario. */
+  const lock = (maxDD > 0 && colchon > maxDD) ? colchon - maxDD : null;
+  return { target, colchon, maximo, maxDD, dailyLoss: num(m.dailyLoss),
+           /* nombres que el motor ya pedía: buffer = colchón acumulado tras el
+              reinicio; pago = lo que falta del colchón al 100% */
+           buffer: colchon, pago: Math.max(0, maximo - colchon),
+           lockAtProfit: lock,
+           consistency: num(m.consistency), minDays: num(m.minDays),
+           src:'manual', manual:true };
 }
 function reglasDe(a){
-  const M = reglasManuales(a); if(M) return M;
-  const F = FIRM_CATALOG[a.firm];
-  const p = F && F.plans && F.plans[a.plan];
-  const z = p && p.sizes && p.sizes[a.size];
-  return z ? { ...z, ddType:p.ddType, lockAtProfit:p.lockAtProfit,
-               consistency:p.consistency||0, minDays:p.minDays||0, note:p.note,
-               src:F.src, checked:F.checked } : null;
+  /* Las reglas viven EN LA CUENTA. FIRM_CATALOG ya no es fuente aquí: la
+     migración total garantiza reglas propias en toda cuenta prop, y el
+     catálogo queda sólo como semilla de migración y como vara de cordura del
+     aviso en Ajustes. */
+  return reglasManuales(a);
 }
 
 /* Balance, pico, línea de drawdown y colchón de una cuenta.
@@ -5831,7 +5855,7 @@ function renderAcctMgr(){
           }</option>`).join('')}
         </select></div>
         <div><label>Status</label><select data-f="estado" data-id="${a.id}">
-          ${['activa','pausada','quemada'].map(e=>`<option value="${e}"${e===a.estado?' selected':''}>${({activa:'Active',pausada:'Paused',quemada:'Burned'})[e]}</option>`).join('')}
+          ${['activa','quemada'].concat(a.estado === 'pausada' ? ['pausada'] : []).map(e=>`<option value="${e}"${e===a.estado?' selected':''}>${({activa:'Active',pausada:'Paused',quemada:'Burned'})[e]}</option>`).join('')}
         </select></div>
       </div>
       <!-- LOS MISMOS NÚMEROS DEL ALTA, editables. El drawdown vive SÓLO aquí:
@@ -5855,18 +5879,29 @@ function renderAcctMgr(){
           <input disabled value="${metaDe(a)}"></div>
         <div></div>
       </div>`}
-      ${(!esLive(a) && !esSim(a) && a.fase !== 'eval' && R && R.lockAtProfit == null)
-        ? `<div class="cal-pace" style="margin-top:10px;border-left-color:var(--warn)">
-             <b>${bi('El colchón de esta cuenta está mal.','This account\'s cushion is wrong.')}</b>
-             ${bi(`Está en ${esc((FASES[a.fase]||FASES.eval).t)} pero no tiene desbloqueo del colchón,
-                   así que el piso nunca se congela y sigue arrastrándose detrás de ti.
-                   Escribe arriba, en «Cushion unlocks at», la ganancia a la que tu fondeadora congela el piso.`,
-                  `It is in ${esc((FASES[a.fase]||FASES.eval).t)} but has no cushion unlock, so the floor never
-                   freezes and keeps trailing behind you. Type the profit at which your firm locks the floor
-                   in «Cushion unlocks at» above.`)}
-             ${FIRM_CATALOG[a.firm] ? `<div style="margin-top:8px"><button class="btn sm primary" onclick="corregirPlan('${a.id}')">${bi('Usar el del catálogo','Use the catalogue value')}</button></div>` : ''}
-           </div>`
-        : ''}
+      ${(()=>{
+        /* LA VARA DE CORDURA. La cuenta manda —lo tecleado es lo que rige—
+           pero cuando la firma y la talla están en el catálogo VERIFICADO y lo
+           tecleado es absurdo (menos de la mitad del reglamento real), se dice
+           y se ofrece el arreglo de un clic. Éste es el aviso que faltó cuando
+           la cuenta de Gerardo quedó en 500/1000/1000: la app TENÍA el
+           reglamento y ninguna pantalla comparó. */
+        if(esLive(a) || esSim(a)) return '';
+        const F = FIRM_CATALOG[a.firm]; if(!F) return '';
+        let zE = null, zC = null;
+        Object.keys(F.plans).forEach(n => { const pl = F.plans[n], z = pl.sizes && pl.sizes[a.size];
+          if(!z) return; if(pl.phase === 'eval' && !zE) zE = z; if(!zC || pl.phase === 'funded') zC = zC || z; });
+        const rg2 = a.reglas || {};
+        const raro = (zE && +rg2.target > 0 && +rg2.target < zE.target / 2)
+                  || (zC && +rg2.maxDD > 0 && zC.maxDD > 0 && +rg2.maxDD < zC.maxDD / 2);
+        return raro ? `<div class="cal-pace" style="margin-top:10px;border-left-color:var(--warn)">
+             <b>${bi('Estas reglas no cuadran con el reglamento verificado de ' + esc(a.firm) + '.',
+                     'These rules do not match the verified ' + esc(a.firm) + ' rulebook.')}</b>
+             ${bi('Para esta talla el reglamento dice objetivo ' + fmt$(zE ? zE.target : 0) + ' y drawdown ' + fmt$(zC ? zC.maxDD : 0) + '. Lo tecleado rige — pero con estos números la barra y la línea de riesgo no miden tu cuenta real.',
+                  'For this size the rulebook says target ' + fmt$(zE ? zE.target : 0) + ' and drawdown ' + fmt$(zC ? zC.maxDD : 0) + '. What you type rules — but with these numbers the bar and the risk line do not measure your real account.')}
+             <div style="margin-top:8px"><button class="btn sm primary" onclick="usarCatalogo('${a.id}')">${bi('Usar el reglamento verificado','Use the verified rulebook')}</button></div>
+           </div>` : '';
+      })()}
       <div class="micro" style="margin-top:10px;color:var(--dim)">
         ${esLive(a) ? `Balance ${fmt$(h.balance)} · your own capital: no phases, no cutoff and nobody to replace the account`
           : esSim(a) ? `Balance ${fmt$(h.balance)} · practice money: does not count on The Desk or your targets`
@@ -5931,14 +5966,24 @@ function renderAcctMgr(){
     save(); renderAcctMgr(); renderAll();
   });
 }
-window.corregirPlan = id => {
-  const a = S.accounts.find(x=>x.id===id); if(!a) return;
-  const Rf = reglasFondeadas(a);
-  if(!Rf || !Rf.plan){ toast('No funded plan for that size'); return; }
-  a.plan = Rf.plan;
-  save(); renderAcctMgr(); renderDashboard(); renderAgentes();
-  toast('Plan updated to ' + Rf.plan);
+/* Reescribe las reglas de una cuenta desde el reglamento VERIFICADO de su
+   firma y talla. Sella el cambio para que le gane la fusión a la copia rota
+   del otro equipo. */
+window.usarCatalogo = id => {
+  const a = S.accounts.find(x => x.id === id); if(!a) return;
+  const F = FIRM_CATALOG[a.firm]; if(!F) return;
+  let zE = null, zF = null;
+  Object.keys(F.plans).forEach(n => { const pl = F.plans[n], z = pl.sizes && pl.sizes[a.size];
+    if(!z) return; if(pl.phase === 'eval' && !zE) zE = z; if(pl.phase === 'funded' && !zF) zF = z; });
+  const zC = zF || zE; if(!zC) { toast(bi('El catálogo no tiene esa talla','No such size in the catalogue')); return; }
+  const maxDD = zC.maxDD || 0, colchon = maxDD + 100;
+  a.reglas = { target: (zE && zE.target) || (a.reglas || {}).target || 0,
+               colchon, maximo: colchon + 1000, maxDD,
+               dailyLoss: zC.dailyLoss || 0 };
+  sellaCambio(a); olvidaQuemas(); save(); renderAcctMgr(); renderAll();
+  toast(bi('Reglas del reglamento verificado','Rules set from the verified rulebook'));
 };
+
 /* Tres cuentas iguales son quince campos tecleados a mano, y basta un dedazo en
    uno para que la línea de drawdown de esa cuenta quede mal sin que se note.
    Se llena una, se revisa su META contra la fondeadora, y se copia. */
@@ -5962,8 +6007,8 @@ window.copiarReglas = id => {
   const otras = mias(S.accounts).filter(x => x.id !== id && !esLive(x) && !esSim(x));
   if(!otras.length) return;
   if(!confirm(bi(
-      'Copiar las reglas de «' + a.alias + '» —objetivo, drawdown, colchón, límite diario y tramo de pago— a las otras ' + otras.length + ' cuenta(s).\n\nNO se copia el tamaño, ni el saldo, ni la etapa: eso es de cada cuenta.\n\n¿Copiar?',
-      'Copy the rules of "' + a.alias + '" — target, drawdown, cushion, daily limit and payout stretch — to your other ' + otras.length + ' account(s).\n\nSize, balance and stage are NOT copied: those belong to each account.\n\nCopy?'))) return;
+      'Copiar las reglas de «' + a.alias + '» —objetivo, colchón, pago máximo y drawdown— a las otras ' + otras.length + ' cuenta(s).\n\nNO se copia el tamaño, ni el saldo, ni la etapa: eso es de cada cuenta.\n\n¿Copiar?',
+      'Copy the rules of "' + a.alias + '" — target, cushion, max payout and drawdown — to your other ' + otras.length + ' account(s).\n\nSize, balance and stage are NOT copied: those belong to each account.\n\nCopy?'))) return;
   otras.forEach(x => { x.reglas = { ...a.reglas }; sellaCambio(x); });
   save(); renderAcctMgr(); renderAll();
   toast(bi('Reglas copiadas a ' + otras.length, 'Rules copied to ' + otras.length));
@@ -6022,7 +6067,6 @@ window.abreNuevaCuenta = ncAbrir;
    $3,000 examen + $2,100 colchón + $1,000 pago. Los hitos se detectan del
    acumulado de fills — nadie aprieta botones — y una vez pasados no se
    despasan: manda el pico histórico. (Cifras del plan de cada cuenta.) */
-const TRAMO_PAGO = 1000;   // del colchón al pago máximo — regla de la casa
 /* El arreglo de un clic para el aviso «N trades no cuentan»: mueve la línea de
    salida de la cuenta a la fecha de su PRIMER trade asignado. Aritmética, no
    excursión a Ajustes. */
@@ -6033,7 +6077,7 @@ window.desdePrimerTrade = function(id){
   a.desde = fechas[0]; save(); renderAll();
 };
 function carreraCuenta(a){
-  const Re = reglasEval(a), Rf = reglasFondeadas(a);
+  const R = reglasDe(a);
   /* LA ETAPA CON LA QUE SE REGISTRÓ MANDA SOBRE LOS TRADES.
      Antes el examen SIEMPRE formaba parte del camino y sólo se daba por
      pasado cuando los trades registrados AQUÍ llegaban al objetivo. Así que
@@ -6048,9 +6092,9 @@ function carreraCuenta(a){
      escala, así que el porcentaje de una fondeada y el de una en evaluación se
      pueden comparar y sumar en la carrera de la firma. Si la borráramos, cada
      cuenta mediría una vara de distinto largo. */
-  const target = Re ? (Re.target || 0) : 0;
-  const buffer = Rf ? (Rf.buffer != null ? Rf.buffer : (Rf.maxDD || 0) + (Rf.lockAtProfit || 0)) : 0;
-  const pago = (Rf && Rf.pago) ? +Rf.pago : TRAMO_PAGO;
+  const target = R ? (R.target || 0) : 0;
+  const buffer = R ? (R.colchon || 0) : 0;
+  const pago = R ? (R.pago || 0) : 0;
   const total = target + buffer + pago;
 
   const porDia = {};
@@ -8301,43 +8345,6 @@ Analiza el día de este trader. Si hay screenshots, comenta lo que se ve en el g
 ].forEach(([btn, rail, dx]) =>
   $(btn)?.addEventListener('click', ()=> $(rail).scrollBy({left:dx, behavior:'smooth'})));
 
-/* ════════ Proceso: evaluación → colchón → retiros ════════
-   Al aprobar la evaluación en 53,000 la cuenta se REINICIA a 50,000 y arranca la
-   construcción del colchón con sus propias reglas de riesgo. La zona de retiros
-   empieza en 52,100, que es un drawdown completo por encima del piso congelado
-   de 50,100 — de ahí sale ese número, no es arbitrario. */
-/* Las fases 2 y 3 se viven ya con el plan FONDEADO, que es el que congela el piso:
-   leer sus umbrales del plan de evaluación daría 52,000 en vez de 52,100. */
-function planDeFase(a, fase, filtro){
-  const F = FIRM_CATALOG[a.firm];
-  if(!F) return null;
-  for(const nombre of Object.keys(F.plans)){
-    const p = F.plans[nombre];
-    if(p.phase === fase && p.sizes[a.size] && (!filtro || filtro(p, nombre)))
-      return { ...p.sizes[a.size], lockAtProfit:p.lockAtProfit, consistency:p.consistency||0,
-               minDays:p.minDays||0, plan:nombre };
-  }
-  return null;
-}
-/* Buscar sólo por fase devolvía el PRIMER plan del catálogo, no el de la cuenta:
-   con una Select Daily citaba las reglas de Growth. Se prefiere el plan que la
-   cuenta ya tiene y, si no aplica, el de su misma familia. */
-const familia = a => String(a.plan || '').split(' ')[0];
-const reglasFondeadas = a => {
-  const R = reglasDe(a);
-  if(R && R.lockAtProfit != null) return { ...R, plan:a.plan };
-  const fam = familia(a);
-  return planDeFase(a, 'funded', (p,n) => p.lockAtProfit != null && n.startsWith(fam))
-      || planDeFase(a, 'funded', p => p.lockAtProfit != null);
-};
-const reglasEval = a => {
-  const R = reglasDe(a);
-  if(R && R.target > 0) return { ...R, plan:a.plan };
-  const fam = familia(a);
-  return planDeFase(a, 'eval', (p,n) => p.sizes[a.size].target > 0 && n.startsWith(fam))
-      || planDeFase(a, 'eval', p => p.sizes[a.size].target > 0);
-};
-
 function renderJournal(){
   /* El desempeño: objetivos, KPIs, gráficos y calendario. El historial
      completo se mudó a su propia vista: Trades. */
@@ -9091,12 +9098,15 @@ const NC_FASES = { eval:['Examen','Evaluation'], buffer:['Fondeada','Funded'] };
 const NC_DEF = { start: REGLAS_DEF.size, ...reglasPorTamano(REGLAS_DEF.size) };
 /* Al escribir la firma en el alta se reajusta el máximo: Apex lleva su tramo de
    $2,000 y las demás $1,000, sin que haya que acordarse del número. */
-$('#ncFirma').addEventListener('input', () => {
-  if(nc.fase === 'eval') return;                       // en examen ese campo ni se ve
+/* al TERMINAR de editar (change, no input): recalcular con el balance a medio
+   teclear escribía máximos absurdos —reglasPorTamano(5) da 0— en silencio */
+['ncFirma','ncStart'].forEach(id => $('#' + id).addEventListener('change', () => {
+  if(nc.fase === 'eval') return;                       // en examen esos campos no aplican
   const d = reglasPorTamano(ncNum('ncStart'), $('#ncFirma').value);
   $('#ncMaximo').value = d.maximo;
+  $('#ncColchon').value = $('#ncColchon').value || d.colchon;
   ncMetaPinta();
-});
+}));
 
 const nc = { fase:'eval', firm:'' };
 function ncChips(cont, lista, activo, onPick, fmt){
@@ -9156,15 +9166,20 @@ $('#ncSave').addEventListener('click', ()=>{
      las cuentas se habían quedado fuera. */
   S.accounts.push(sellaCambio({
     id:'ac_'+uid(), alias, orden:(S.accounts.length+1), desde,
-    estado:'active', owner:S.session.user,
+    estado:'activa', owner:S.session.user,
     tipo:'prop', firm: ($('#ncFirma').value.trim() || '\u2014'), plan:'\u2014',
     size:cap, start:cap, fase:nc.fase,
     /* En examen sólo importa el objetivo; ya fondeada, el colchón y el pago
        máximo. El que no aplica se guarda igual con su valor de fábrica, para
        que al cambiar de etapa en Ajustes la cuenta ya sepa a dónde va. */
-    reglas:{ target:  esEval ? ncNum('ncTarget')  : NC_DEF.target,
-             colchon: esEval ? NC_DEF.colchon     : ncNum('ncColchon'),
-             maximo:  esEval ? NC_DEF.maximo      : ncNum('ncMaximo') }
+    reglas: (() => {
+      const colchon = esEval ? NC_DEF.colchon : ncNum('ncColchon');
+      let maximo    = esEval ? NC_DEF.maximo  : ncNum('ncMaximo');
+      /* un máximo por debajo del colchón no existe: se corrige al tramo de la
+         casa en vez de guardar un camino imposible en silencio */
+      if(!(maximo > colchon)) maximo = colchon + (/apex/i.test($('#ncFirma').value) ? 2000 : 1000);
+      return { target: esEval ? ncNum('ncTarget') : NC_DEF.target, colchon, maximo };
+    })()
   }));
   /* renderAll() en vez de tres renders sueltos: registrar una cuenta tiene que
      verse de inmediato en la pantalla donde estés, no sólo en Ajustes. */
