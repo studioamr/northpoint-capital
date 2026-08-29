@@ -1374,6 +1374,26 @@ body.locked .app{visibility:hidden;pointer-events:none}
 .lec-key li{font-size:15px;line-height:1.6}
 .lec-cargando{max-width:760px;margin:0 auto;padding:60px 22px;text-align:center;font-family:var(--mono);font-size:13px;color:var(--faint);line-height:1.8}
 /* cuaderno AL LADO de la lección: documento a la izq, libreta a la der (compu) */
+/* ── Libreta paginada (autoguardado) ── */
+.ac2-libreta-btn{margin-top:14px;display:inline-flex;align-items:center;gap:8px;padding:11px 18px;border-radius:12px;border:1px solid var(--line);background:var(--w04);color:var(--txt);font-size:14px;font-weight:800;cursor:pointer;box-shadow:0 3px 0 rgba(0,0,0,.25);transition:transform .08s}
+.ac2-libreta-btn:hover{border-color:var(--accent)}
+.ac2-libreta-btn:active{transform:translateY(2px)}
+.ac2-libreta-btn em{font-style:normal;font-family:var(--mono);font-size:10px;font-weight:600;color:var(--faint)}
+.lib-ov{position:fixed;inset:0;z-index:9200;background:rgba(4,6,10,.74);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;padding:18px;animation:fichaIn .18s ease}
+.lib{width:min(650px,96vw);height:min(82vh,780px);display:flex;flex-direction:column;border-radius:16px;overflow:hidden;box-shadow:0 30px 90px rgba(0,0,0,.65);background:#f4efe1;border:1px solid rgba(0,0,0,.2)}
+.lib-top{display:flex;align-items:center;gap:12px;padding:13px 18px;background:#2a2622;color:#f0ead8;flex:0 0 auto}
+.lib-top>b{font-size:16px;font-weight:800}
+.lib-auto{margin-left:auto;font-family:var(--mono);font-size:9.5px;letter-spacing:.1em;color:#7ea88a;text-transform:uppercase}
+.lib-x{width:30px;height:30px;border-radius:8px;border:1px solid rgba(255,255,255,.22);background:transparent;color:#f0ead8;cursor:pointer;font-size:13px}
+.lib-paper{flex:1;min-height:0;background:repeating-linear-gradient(#f4efe1,#f4efe1 31px,#cfc4a8 32px);border-left:36px solid #ece3ce}
+.lib-paper textarea{width:100%;height:100%;border:none;background:transparent;resize:none;outline:none;font-family:Georgia,'Yu Mincho',serif;font-size:16px;line-height:32px;color:#2a2620;padding:5px 22px 24px 12px;box-sizing:border-box;border-left:2px solid #cf8a8a;margin-left:-2px}
+.lib-nav{display:flex;align-items:center;gap:8px;padding:10px 14px;background:#ece3ce;border-top:1px solid #d3c8ac;flex:0 0 auto}
+.lib-pg{font-family:var(--mono);font-size:12px;color:#6a6252;font-weight:800}
+.lib-b{padding:8px 13px;border-radius:9px;border:1px solid #c9be9f;background:#fbf8ef;color:#3a352c;cursor:pointer;font-weight:800;font-size:14px}
+.lib-b:disabled{opacity:.4;cursor:default}
+.lib-b.add{margin-left:auto;background:#2a2622;color:#f0ead8;border-color:#2a2622;font-size:12.5px}
+.lib-b.del{color:#a0402e}
+@media(max-width:560px){.lib{height:88vh}.lib-b.add{font-size:11px;padding:8px 10px}}
 .lec-split{display:flex;gap:30px;max-width:1180px;margin:0 auto;padding:0 22px;align-items:flex-start}
 .lec-split .lec-doc{flex:1;min-width:0}
 .lec-split .lec-doc .lec,.lec-split .lec-doc .lec-cargando{max-width:none;margin:0;padding:34px 0 90px}
@@ -8914,6 +8934,7 @@ function renderAcademia(){
         <div class="ac2-hs"><b>${modsDone}/${acadModsPlano().length}</b><span>${bi('módulos','modules')}</span></div>
         <div class="ac2-hs"><b>${ACADEMIA.length}</b><span>${bi('programas','programs')}</span></div>
       </div>
+      <button type="button" class="ac2-libreta-btn" id="acLibreta">📓 ${bi('Mi libreta','My notebook')} <em>${bi('notas · '+libretaEstado().paginas.length+' hojas','notes · '+libretaEstado().paginas.length+' pages')}</em></button>
     </div>
   </div>`;
 
@@ -8980,6 +9001,43 @@ function renderAcademia(){
     e.stopPropagation();
     abreLeccion(a.dataset.abrir);
   }));
+  $('#acLibreta') && ($('#acLibreta').onclick = abreLibreta);
+}
+/* ══ LIBRETA · un cuaderno real, paginado, que se guarda hoja por hoja ══ */
+function libretaEstado(){
+  if(!S.libreta || typeof S.libreta!=='object') S.libreta={paginas:[''],actual:0};
+  if(!Array.isArray(S.libreta.paginas) || !S.libreta.paginas.length) S.libreta.paginas=[''];
+  if(typeof S.libreta.actual!=='number' || S.libreta.actual<0 || S.libreta.actual>=S.libreta.paginas.length) S.libreta.actual=0;
+  return S.libreta;
+}
+function abreLibreta(){
+  const L=libretaEstado();
+  const ov=document.createElement('div'); ov.className='lib-ov';
+  const cerrar=()=>{ document.removeEventListener('keydown', onKey); ov.remove(); };
+  const onKey=(e)=>{ if(e.key==='Escape') cerrar(); };
+  const pinta=()=>{
+    ov.innerHTML=`<div class="lib">
+      <div class="lib-top"><b>📓 ${bi('Mi libreta','My notebook')}</b><span class="lib-auto">● ${bi('se guarda solo','auto-saved')}</span><button type="button" class="lib-x" aria-label="${bi('cerrar','close')}">✕</button></div>
+      <div class="lib-paper"><textarea id="libTa" spellcheck="false" placeholder="${bi('Escribe aquí tus notas de trading…','Write your trading notes here…')}">${esc(L.paginas[L.actual]||'')}</textarea></div>
+      <div class="lib-nav">
+        <button type="button" class="lib-b" id="libPrev" ${L.actual===0?'disabled':''}>‹</button>
+        <span class="lib-pg">${bi('Hoja','Page')} ${L.actual+1} / ${L.paginas.length}</span>
+        <button type="button" class="lib-b" id="libNext" ${L.actual>=L.paginas.length-1?'disabled':''}>›</button>
+        <button type="button" class="lib-b add" id="libAdd">+ ${bi('Nueva hoja','New page')}</button>
+        <button type="button" class="lib-b del" id="libDel" ${L.paginas.length<=1?'disabled':''}>🗑</button>
+      </div></div>`;
+    const ta=ov.querySelector('#libTa'); ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length);
+    ta.oninput=()=>{ L.paginas[L.actual]=ta.value; save(); };
+    const guarda=()=>{ L.paginas[L.actual]=ta.value; };
+    ov.querySelector('.lib-x').onclick=cerrar;
+    ov.querySelector('#libPrev').onclick=()=>{ guarda(); if(L.actual>0) L.actual--; save(); pinta(); };
+    ov.querySelector('#libNext').onclick=()=>{ guarda(); if(L.actual<L.paginas.length-1) L.actual++; save(); pinta(); };
+    ov.querySelector('#libAdd').onclick=()=>{ guarda(); L.paginas.splice(L.actual+1,0,''); L.actual++; save(); pinta(); };
+    ov.querySelector('#libDel').onclick=()=>{ if(L.paginas.length<=1) return; if(!confirm(bi('¿Borrar esta hoja?','Delete this page?'))) return; L.paginas.splice(L.actual,1); if(L.actual>=L.paginas.length) L.actual=L.paginas.length-1; save(); pinta(); };
+  };
+  ov.onclick=(e)=>{ if(e.target===ov) cerrar(); };
+  document.addEventListener('keydown', onKey);
+  document.body.appendChild(ov); pinta();
 }
 
 /* ══════════ CUADERNO NORTHPOINT ══════════
