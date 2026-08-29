@@ -915,7 +915,10 @@ body.locked .app{visibility:hidden;pointer-events:none}
 .kat-feat-next.done b{color:var(--up);font-size:20px}
 .kat-cinta{font-family:var(--mono);font-size:11px;font-weight:700}
 .kat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
-.kat-card{position:relative;display:flex;flex-direction:column;align-items:center;gap:5px;border:1px solid var(--line-soft);border-radius:14px;background:var(--w02);padding:12px 8px 11px;text-align:center;cursor:pointer}
+.kat-card{position:relative;display:flex;flex-direction:column;align-items:center;gap:5px;border:1px solid var(--line-soft);border-radius:14px;background:var(--w02);padding:12px 8px 11px;text-align:center}
+.kat-card.owned{cursor:pointer}
+.kat-card.locked{cursor:default}
+.kat-lock-mini{font-size:10px;opacity:.8}
 /* ── Ficha de katana (ecosistema + datos) ── */
 .kat-ficha-ov{position:fixed;inset:0;z-index:9000;background:rgba(4,6,10,.72);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;padding:20px;animation:fichaIn .18s ease}
 @keyframes fichaIn{from{opacity:0}to{opacity:1}}
@@ -10431,9 +10434,9 @@ function renderBatalla(){
           <div class="kat-banco"><span>${bi('BANCO','BANK')}</span><b>${fmt$(banco)}</b></div>
         </div>
         ${kProxIdx>=0 ? (()=>{ const nk=KATANAS[kProxIdx], falta=nk.precio-banco; return `
-        <div class="kat-feat goal oculta" style="--kc:#3a3f4a">
-          <div class="kat-feat-blade">${katanaSVG(nk.belt, true, true)}<span class="kat-feat-lock">🔒</span></div>
-          <div class="kat-feat-txt"><em>${bi('SIGUIENTE KATANA · sellada','NEXT KATANA · sealed')}</em><b>? ? ?</b><span class="kat-cinta" style="color:var(--faint)">${bi('se revela al forjarla','revealed when forged')}</span></div>
+        <div class="kat-feat goal" style="--kc:${nk.belt}">
+          <div class="kat-feat-blade">${katanaSVG(nk.belt, true)}<span class="kat-feat-lock">🔒</span></div>
+          <div class="kat-feat-txt"><em>${bi('SIGUIENTE KATANA','NEXT KATANA')}</em><b>${loc(nk.n)}</b><span class="kat-cinta" style="color:${nk.belt}">● ${bi('Cinta','Belt')} ${loc(nk.cinta)}</span></div>
           <div class="kat-feat-goal"><b>${fmt$(nk.precio)}</b>${falta<=0?`<button type="button" class="kat-buy" data-kat="${nk.id}">${bi('Forjar','Forge')}</button>`:`<span class="kat-falta">${bi('te faltan','need')} ${fmt$(falta)}</span>`}</div>
         </div>`;})() : `
         <div class="kat-feat done" style="--kc:${KATANAS[kActualIdx].belt}">
@@ -10442,13 +10445,13 @@ function renderBatalla(){
         </div>`}
         <div class="kat-grid">
           ${KATANAS.map((k,i)=>{ const owned=miKat.includes(k.id), cur=(i===kEquipIdx);
-            return `<div class="kat-card ${owned?'owned':'locked oculta'} ${cur?'cur':''}" data-ficha="${i}" style="--kc:${owned?k.belt:'#3a3f4a'};--lvl:${i}">
+            return `<div class="kat-card ${owned?'owned':'locked'} ${cur?'cur':''}"${owned?` data-equip="${i}"`:''} style="--kc:${k.belt};--lvl:${i}">
               ${cur?`<span class="kat-aqui">${bi('EQUIPADA','EQUIPPED')}</span>`:''}
-              <div class="kat-ico">${katanaSVG(k.belt, cur, !owned)}${owned?`<span class="kat-kanji">${k.kanji}</span><span class="kat-badge ok">✓</span>`:'<span class="kat-badge lock">🔒</span>'}</div>
-              <b class="kat-nom">${owned?loc(k.n):'???'}</b>
-              <span class="kat-cinta" style="color:${owned?k.belt:'var(--faint)'}">${owned?'● '+loc(k.cinta):bi('espada sellada','sealed blade')}</span>
+              <div class="kat-ico">${katanaSVG(k.belt, cur)}<span class="kat-kanji">${k.kanji}</span>${owned?'<span class="kat-badge ok">✓</span>':'<span class="kat-badge lock">🔒</span>'}</div>
+              <b class="kat-nom">${loc(k.n)}</b>
+              <span class="kat-cinta" style="color:${k.belt}">● ${loc(k.cinta)}</span>
               ${owned ? (cur?`<span class="kat-estado owned">${bi('Equipada','Equipped')}</span>`:`<span class="kat-estado" style="opacity:.55">${bi('En tu colección','Owned')}</span>`)
-                : `<span class="kat-estado">${fmt$(k.precio)}</span>`}
+                : `<span class="kat-estado"><span class="kat-lock-mini">🔒</span> ${fmt$(k.precio)}</span>`}
             </div>`;}).join('')}
         </div>
         <div class="kat-prog" style="--kc:${KATANAS[kActualIdx].belt}">
@@ -10502,10 +10505,9 @@ function renderBatalla(){
       renderBatalla();
     });
     requestAnimationFrame(batPintaZen);   // fondo zen del perfil según la katana
-    root.querySelectorAll('[data-ficha]').forEach(b => b.onclick = () => {
-      const i=+b.dataset.ficha;
-      if(batKatanasDe(yo).includes(KATANAS[i].id)){ batEquipar(yo,i); toast('🗡️ '+bi('Equipaste','Equipped')+' '+loc(KATANAS[i].n)); renderBatalla(); }
-      else batKatFicha(i);
+    root.querySelectorAll('[data-equip]').forEach(b => b.onclick = () => {
+      const i=+b.dataset.equip; batEquipar(yo,i);
+      toast('🗡️ '+bi('Equipaste','Equipped')+' '+loc(KATANAS[i].n)); renderBatalla();
     });
     if(window._batBotinFlash && window._batBotinFlash.uid===yo){ const f=window._batBotinFlash; window._batBotinFlash=null; setTimeout(()=>animaBotin(banco, f.monto), 220); }
     if(c){
