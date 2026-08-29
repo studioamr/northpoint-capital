@@ -861,8 +861,13 @@ body.locked .app{visibility:hidden;pointer-events:none}
 .zen-stat{flex:1;min-width:66px;background:rgba(12,16,26,.5);border:1px solid rgba(255,255,255,.16);border-radius:12px;padding:9px 12px;text-align:center;backdrop-filter:blur(5px)}
 .zen-stat em{display:block;font-family:var(--mono);font-size:8.5px;letter-spacing:.1em;color:rgba(255,255,255,.7);font-style:normal;margin-bottom:2px}
 .zen-stat b{font-size:19px;font-weight:900;color:#fff;letter-spacing:-.01em}
-.zen-stat.banco{background:rgba(48,209,88,.16);border-color:rgba(48,209,88,.45)}
+.zen-stat.banco{background:rgba(48,209,88,.16);border-color:rgba(48,209,88,.45);position:relative}
 .zen-stat.banco b{color:#7cf0a6}
+.zen-stat.banco-flash{box-shadow:0 0 0 2px rgba(48,209,88,.55),0 0 26px -4px rgba(48,209,88,.7);transition:box-shadow .2s}
+.coin-drop{position:absolute;top:-34px;font-size:15px;pointer-events:none;z-index:6;animation:coinFall 1.4s cubic-bezier(.5,0,.7,1) forwards}
+@keyframes coinFall{0%{transform:translateY(-34px) rotate(0);opacity:0}18%{opacity:1}100%{transform:translateY(34px) rotate(220deg);opacity:0}}
+.botin-pop{position:absolute;top:-20px;left:50%;font-family:var(--mono);font-size:14px;font-weight:800;color:#7cf0a6;text-shadow:0 2px 7px rgba(0,0,0,.7);pointer-events:none;white-space:nowrap;z-index:7;animation:botinPop 1.7s ease-out forwards}
+@keyframes botinPop{0%{transform:translate(-50%,8px);opacity:0}18%{opacity:1}78%{opacity:1}100%{transform:translate(-50%,-16px);opacity:0}}
 @media(max-width:560px){.zen-id>b{font-size:22px}.zen-stat b{font-size:16px}.zen-stat{min-width:0;padding:8px 6px}}
 /* ── Colección de katanas ── */
 .kat-wrap{position:relative;border:1px solid rgba(255,190,205,.22);border-radius:18px;background:linear-gradient(160deg,#1a1424,#120e18);padding:16px 16px 18px;margin-bottom:18px;overflow:hidden}
@@ -896,8 +901,8 @@ body.locked .app{visibility:hidden;pointer-events:none}
 .kat-card{position:relative;display:flex;flex-direction:column;align-items:center;gap:5px;border:1px solid var(--line-soft);border-radius:14px;background:var(--w02);padding:12px 8px 11px;text-align:center}
 /* katanas logradas: cada una con el aura de su propio color; entre más avanzada,
    el contorno más ancho y con más energía (como cuerdas vibrantes) */
-.kat-card.owned{border-color:var(--kc);border-width:calc(1px + var(--lvl,0)*0.35px);background:color-mix(in srgb,var(--kc) 7%,transparent);animation:katVibra calc(3.4s - var(--lvl,0)*0.28s) ease-in-out infinite}
-@keyframes katVibra{0%,100%{box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--kc) 35%,transparent),0 0 calc(6px + var(--lvl,0)*4px) -2px var(--kc)}50%{box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--kc) 55%,transparent),0 0 calc(12px + var(--lvl,0)*7px) -1px var(--kc)}}
+/* las katanas pasadas: aura FIJA de su color (sin vibración) */
+.kat-card.owned{border-color:var(--kc);border-width:calc(1px + var(--lvl,0)*0.35px);background:color-mix(in srgb,var(--kc) 7%,transparent);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--kc) 40%,transparent),0 0 calc(6px + var(--lvl,0)*4px) -2px var(--kc)}
 .kat-card.next{border-color:var(--line);background:var(--w02);opacity:.5}
 .kat-card.locked{opacity:.5}
 /* la katana en la que ESTÁS: el aura más ancha y viva de todas */
@@ -9289,7 +9294,7 @@ function batRegistraResultado(c){
   if(gan){ const perd = gan === c.host ? c.rival : c.host; st[gan].pts += 3; st[gan].g++; st[perd].pts += 1; st[perd].p++; }
   else { st[c.host].pts += 1; st[c.rival].pts += 1; st[c.host].e++; st[c.rival].e++; }
   /* el ganador se lleva a su banco lo que él hizo + lo que movió el rival → sirve para comprar katanas */
-  if(gan){ batBanco(gan); S.batBanco[gan] = (S.batBanco[gan]||0) + batBotin(pH,pR); }
+  if(gan){ const bot=batBotin(pH,pR); batBanco(gan); S.batBanco[gan] = (S.batBanco[gan]||0) + bot; try{ window._batBotinFlash={uid:gan,monto:bot}; }catch(e){} }
   batHist().unshift({ ts:Date.now(), host:c.host, rival:c.rival, ganador:gan, pHost:pH, pRival:pR, dur:c.duracion });
   if(S.batHistorial.length > 40) S.batHistorial.length = 40;
   save();
@@ -9758,6 +9763,24 @@ function batPintaZen(){
   }
   window._zenRAF=requestAnimationFrame(frame);
 }
+/* ── el dinero cae al banco cuando ganas: monedas + conteo del número ── */
+function animaBotin(final, monto){
+  const el = document.querySelector('.zen-stat.banco'); if(!el) return;
+  const bEl = el.querySelector('b'); if(!bEl) return;
+  const start = Math.max(0, final - monto);
+  const t0 = performance.now(), dur = 1300;
+  (function tick(now){ const k=Math.min(1,(now-t0)/dur), e=k*(2-k);
+    bEl.textContent = fmt$(Math.round(start + monto*e));
+    if(k<1) requestAnimationFrame(tick); else bEl.textContent = fmt$(final);
+  })(performance.now());
+  el.classList.add('banco-flash');
+  for(let i=0;i<11;i++){ const c=document.createElement('span'); c.className='coin-drop'; c.textContent='🪙';
+    c.style.left=(8+Math.random()*84)+'%'; c.style.animationDelay=(Math.random()*0.55)+'s';
+    el.appendChild(c); setTimeout(()=>c.remove(),2000); }
+  const pop=document.createElement('span'); pop.className='botin-pop'; pop.textContent='+'+fmt$(monto);
+  el.appendChild(pop); setTimeout(()=>pop.remove(),1700);
+  setTimeout(()=>el.classList.remove('banco-flash'),1500);
+}
 function batPintaCielo(){
   const cv=document.getElementById('batCielo'); if(!cv) return;
   const c=cv.getContext('2d'); const W=cv.width, H=cv.height;
@@ -10156,6 +10179,7 @@ function renderBatalla(){
       renderBatalla();
     });
     requestAnimationFrame(batPintaZen);   // fondo zen del perfil (sakura, koi, río)
+    if(window._batBotinFlash && window._batBotinFlash.uid===yo){ const f=window._batBotinFlash; window._batBotinFlash=null; setTimeout(()=>animaBotin(banco, f.monto), 220); }
     if(c){
       batBannerBind(c, yo);
       if(c.estado==='invitado' || c.estado==='programado' || c.estado==='activo'){
