@@ -791,6 +791,21 @@ body.locked .app{visibility:hidden;pointer-events:none}
 .bat-wbar-track{height:12px;border-radius:6px;background:var(--line-soft);overflow:hidden}
 .bat-wbar-track i{display:block;height:100%;border-radius:6px;background:linear-gradient(90deg,var(--up),#8ad0ff);transition:width .6s}
 .bat-wbar-lbl{font-family:var(--mono);font-size:11px;color:var(--faint);margin-top:8px;text-align:center}
+/* objetivo del plan + decisiones de crecimiento */
+.bat-meta{border:1px solid var(--line);border-radius:14px;background:var(--w02);padding:14px 16px;margin-bottom:12px}
+.bat-meta-top{display:flex;justify-content:space-between;align-items:baseline;font-family:var(--mono);font-size:12px;color:var(--dim);margin-bottom:8px}
+.bat-meta-top b{color:var(--txt);font-size:15px}
+.bat-meta-track{height:12px;border-radius:6px;background:var(--line-soft);overflow:hidden}
+.bat-meta-track i{display:block;height:100%;border-radius:6px;background:linear-gradient(90deg,var(--up),#8ad0ff);transition:width .6s}
+.bat-meta-lbl{font-family:var(--mono);font-size:10.5px;color:var(--faint);margin-top:8px;text-align:center;line-height:1.5}
+.bat-decisiones{display:grid;gap:10px;margin-bottom:22px}
+.bat-dec{position:relative;text-align:left;border:1px solid var(--line);border-radius:14px;background:var(--w02);
+  padding:14px 16px;cursor:pointer;transition:all .14s;display:block}
+.bat-dec:hover:not([disabled]){border-color:var(--accent)}
+.bat-dec[disabled]{opacity:.45;cursor:not-allowed}
+.bat-dec b{display:block;font-size:14.5px;font-weight:800;margin-bottom:3px}
+.bat-dec span{font-family:var(--mono);font-size:10.5px;color:var(--dim);line-height:1.45;display:block;max-width:78%}
+.bat-dec em{position:absolute;top:14px;right:16px;font-style:normal;font-family:var(--mono);font-size:15px;font-weight:700;color:var(--down)}
 .bat-play{display:flex;gap:12px;margin-bottom:24px}
 .bat-play-b{flex:1;font-size:19px;font-weight:900;padding:18px 10px;border-radius:16px}
 .bat-play-b.batalla{box-shadow:0 6px 0 color-mix(in srgb, var(--accent) 55%, #000)}
@@ -8803,10 +8818,20 @@ const WEALTH_ERAS = [
   { min:750000,  t:['Élite','Elite'] },
   { min:1000000, t:['Leyenda','Legend'] },
 ];
+/* las metas del PLAN: primer objetivo $1k, luego 5k… hasta el MILLÓN */
+const BAT_METAS = [1000, 5000, 25000, 100000, 250000, 500000, 1000000];
+const CUENTA_EXTRA_COSTO = 250;   // reinvertir en otra cuenta de fondeo (simulado)
+const CUENTA_EXTRA_BONO = 0.15;   // cada cuenta extra: +15% a lo que ganas en un reto
 function juegoDe(uid){ S.juego = S.juego || {}; return S.juego[uid] || null; }
 function tieneCuenta(uid){ return !!juegoDe(uid); }
 function batBalance(uid){ const j=juegoDe(uid); return j ? (j.balance||0) : 0; }
+function batPortafolio(uid){ const j=juegoDe(uid); return j ? (j.portafolio||0) : 0; }
+function batCuentas(uid){ const j=juegoDe(uid); return j ? (j.cuentas||1) : 0; }
 function batAcum(uid){ const j=juegoDe(uid); return j ? (j.acum||0) : 0; }
+/* patrimonio = lo que de verdad tienes: caja de la cuenta + portafolio invertido.
+   Es lo que mide el rango y la meta hacia el millón. */
+function batNeto(uid){ const j=juegoDe(uid); return j ? ((j.balance||0)+(j.portafolio||0)) : 0; }
+function batMetaDe(v){ return BAT_METAS.find(m=> v < m) || BAT_METAS[BAT_METAS.length-1]; }
 function batEraIdx(v){ let i=0; for(let k=0;k<WEALTH_ERAS.length;k++){ if(v>=WEALTH_ERAS[k].min) i=k; } return i; }
 function batEraProg(v){ const i=batEraIdx(v), e=WEALTH_ERAS[i], nx=WEALTH_ERAS[i+1]||null;
   const prog = nx ? Math.max(0, Math.min(1, (v-e.min)/(nx.min-e.min))) : 1; return { i, e, nx, prog }; }
@@ -8901,7 +8926,11 @@ function batAplicaEconomia(c){
   const gan = sorted[0];
   let pot=0; jug.forEach(u=>{ if(u!==gan) pot += Math.max(0, -prof[u]); });
   jug.forEach(u=>{ const e=batEco(u);
-    if(u===gan){ const r=prof[u]+pot; e.balance+=r; e.acum=(e.acum||0)+Math.max(0,r); }
+    /* dividendo del portafolio: lo invertido rinde 3% cada reto (aunque pierdas) */
+    const div = Math.round((e.portafolio||0)*0.03);
+    if(div){ e.balance += div; }
+    if(u===gan){ const mult = 1 + CUENTA_EXTRA_BONO*Math.max(0,(e.cuentas||1)-1);
+      const r = Math.round((prof[u]+pot)*mult); e.balance+=r; e.acum=(e.acum||0)+Math.max(0,r); }
     else { e.balance+=prof[u]; e.acum=(e.acum||0)+Math.max(0,prof[u]); }
   });
 }
@@ -9149,7 +9178,7 @@ function batMapaSVG(){
 }
 function batMapaHTML(hl){
   const marks = SOCIOS_REALES.map((u,idx)=>{
-    const ei = tieneCuenta(u) ? batEraIdx(batAcum(u)) : 0;
+    const ei = tieneCuenta(u) ? batEraIdx(batNeto(u)) : 0;
     /* parado sobre el piso isométrico: u por rango, v (profundidad) escalonada */
     const uu = Math.max(.04, Math.min(.96, (ei/9)*0.92 + 0.04 + (idx%2? .02 : -.02)));
     const vv = 0.58 + (idx%3)*0.11;
@@ -9170,25 +9199,37 @@ function batMapaHTML(hl){
 }
 
 function batHomeHTML(uid){
-  const bal = batBalance(uid), acum = batAcum(uid);
-  const { i, e, nx, prog } = batEraProg(acum);
-  const st = batStatDe(uid);
+  const bal = batBalance(uid), porta = batPortafolio(uid), neto = batNeto(uid);
+  const i = batEraIdx(neto), e = WEALTH_ERAS[i];
   const j = juegoDe(uid) || {};
+  const meta = batMetaDe(neto), metaAnt = [...BAT_METAS].reverse().find(m=> m<=neto) || 0;
+  const progMeta = Math.max(0, Math.min(1, (neto-metaAnt)/(meta-metaAnt||1)));
+  const esYo = uid===batYo();
   return `
     <div class="bat-hud">
-      <div class="bat-hud-bal"><b>${fmt$(bal)}</b><i>${bi('balance de la cuenta','account balance')}${j.size?' · '+fmtCorto(j.size):''}</i></div>
+      <div class="bat-hud-bal"><b>${fmt$(bal)}</b><i>${bi('caja de la cuenta','account cash')}${j.size?' · '+fmtCorto(j.size):''}${(j.cuentas||1)>1?' ×'+(j.cuentas):''}</i></div>
       <div class="bat-curs">
-        <span class="bat-cur"><b>${fmt$(acum)}</b><i>${bi('acumulado','earned')}</i></span>
+        <span class="bat-cur"><b>${fmt$(porta)}</b><i>${bi('portafolio','portfolio')}</i></span>
         <span class="bat-cur"><b>${i+1}/${WEALTH_ERAS.length}</b><i>${bi('rango','rank')}</i></span>
       </div>
     </div>
-    <div class="bat-hero-etapa2">${bi('Rango','Rank')} ${i+1} / ${WEALTH_ERAS.length} · ${esc(loc(e.t))}</div>
+    <div class="bat-hero-etapa2">${bi('Rango','Rank')} ${i+1} / ${WEALTH_ERAS.length} · ${esc(loc(e.t))} · ${bi('patrimonio','net worth')} ${fmt$(neto)}</div>
     ${batMapaHTML(uid)}
-    <div class="bat-wbar">
-      <div class="bat-wbar-top"><span>${fmt$(acum)}</span><span>${nx?fmt$(nx.min):bi('EL MILLÓN','THE MILLION')}</span></div>
-      <div class="bat-wbar-track"><i style="width:${Math.round(prog*100)}%"></i></div>
-      <div class="bat-wbar-lbl">${nx? bi('Rumbo a','On the way to')+' '+esc(loc(nx.t))+' · '+bi('rango','rank')+' '+(i+2) : bi('Rango máximo alcanzado','Top rank reached')}</div>
-    </div>`;
+    <div class="bat-meta">
+      <div class="bat-meta-top"><span>${bi('Objetivo','Goal')}: <b>${fmt$(meta)}</b>${meta>=1000000?' · '+bi('MILLONARIO','MILLIONAIRE'):''}</span><span>${fmt$(neto)} / ${fmtCorto(meta)}</span></div>
+      <div class="bat-meta-track"><i style="width:${Math.round(progMeta*100)}%"></i></div>
+      <div class="bat-meta-lbl">${bi('Gana retos, súmalo a tu caja, y reinviértelo — como en el plan, del primer mil al millón.','Win challenges, add it to your cash, and reinvest it — like the plan, from the first grand to the million.')}</div>
+    </div>
+    ${esYo ? `<div class="bat-decisiones">
+      <button type="button" class="bat-dec" id="batDecCuenta" ${bal<CUENTA_EXTRA_COSTO?'disabled':''}>
+        <b>${bi('Reinvertir en otra cuenta','Reinvest in another account')}</b>
+        <span>${bi('Compra una cuenta de fondeo más','Buy one more funded account')} · +${Math.round(CUENTA_EXTRA_BONO*100)}% ${bi('a tus ganancias','to your winnings')}</span>
+        <em>${fmt$(CUENTA_EXTRA_COSTO)}</em></button>
+      <button type="button" class="bat-dec" id="batDecPorta" ${bal<500?'disabled':''}>
+        <b>${bi('Invertir en portafolio','Invest in portfolio')}</b>
+        <span>${bi('Asegura ganancias — rinden 3% cada reto y no se arriesgan','Secure profits — they yield 3% per challenge and are never at risk')}</span>
+        <em>${fmt$(Math.max(500, Math.round(bal*0.25)))}</em></button>
+    </div>` : ''}`;
 }
 
 /* ── LA CIUDAD · tu puesto en la mesa te da tu edificio ──
@@ -9421,8 +9462,8 @@ function renderBatalla(){
       $('#batLogout').onclick = () => { if(!confirm(bi('¿Terminar sesión?','Sign out?'))) return; S.session = { user:null }; try{ localStorage.removeItem('np_tok'); }catch(e){} if(typeof lockUI==='function') lockUI(); else location.reload(); };
       return;
     }
-    const ranking = SOCIOS_REALES.map(u => ({ uid:u, ...batStatDe(u), bal:batBalance(u), acum:batAcum(u) }))
-      .sort((a,b)=> b.acum - a.acum || b.bal - a.bal);
+    const ranking = SOCIOS_REALES.map(u => ({ uid:u, ...batStatDe(u), bal:batBalance(u), neto:batNeto(u) }))
+      .sort((a,b)=> b.neto - a.neto || b.bal - a.bal);
     const hist = batHist();
 
     /* ── LA CIUDAD DE LA MESA (ranking visual por edificio) ── */
@@ -9441,13 +9482,13 @@ function renderBatalla(){
     /* ── PERFIL · comparación tú vs él, con récord cara a cara ── */
     if(batPantalla === 'perfil' && batPerfilUid && batPerfilUid !== yo){
       const otro = batPerfilUid, h2h = batH2H(yo, otro);
-      const card = (u)=>{ const acum=batAcum(u), i=batEraIdx(acum);
+      const card = (u)=>{ const neto=batNeto(u), i=batEraIdx(neto);
         return `<div class="bat-perfil-card ${u===yo?'yo':''}">
           <span class="bat-perfil-ava">${caraSocio(u,64)}</span>
           <b class="bat-perfil-nom">${esc(batNom(u))}${u===yo?` <em>${bi('(tú)','(you)')}</em>`:''}</b>
-          <span class="bat-perfil-bal">${tieneCuenta(u)?fmt$(batBalance(u)):bi('sin cuenta','no account')}</span>
+          <span class="bat-perfil-bal">${tieneCuenta(u)?fmt$(neto):bi('sin cuenta','no account')}</span>
           <span class="bat-perfil-sub">${tieneCuenta(u)?bi('Rango','Rank')+' '+(i+1)+' · '+esc(loc(WEALTH_ERAS[i].t)):''}</span>
-          <span class="bat-perfil-acum">${tieneCuenta(u)?bi('acumulado','earned')+' '+fmt$(acum):''}</span>
+          <span class="bat-perfil-acum">${tieneCuenta(u)?bi('caja','cash')+' '+fmt$(batBalance(u))+' · '+bi('port.','port.')+' '+fmt$(batPortafolio(u)):''}</span>
         </div>`; };
       root.innerHTML = `
         <div class="bat-lobby-top"><button type="button" class="bat-volver" id="batVolverLobby">‹ ${bi('Inicio','Home')}</button>
@@ -9482,7 +9523,7 @@ function renderBatalla(){
       root.querySelectorAll('[data-size]').forEach(b=> b.onclick=()=>{
         const size=+b.dataset.size, costo=+b.dataset.costo;
         S.juego = S.juego || {};
-        S.juego[yo] = { size, balance:size, acum:0, gastado:costo };
+        S.juego[yo] = { size, balance:size, acum:0, gastado:costo, cuentas:1, portafolio:0 };
         save(); toast(bi('Cuenta comprada: ','Account bought: ')+fmt$(size)+'.');
         renderBatalla();
       });
@@ -9514,8 +9555,8 @@ function renderBatalla(){
           <button type="button" class="bat-rank-row ${r.uid===yo?'yo':''}" data-perfil="${r.uid}">
             <span class="bat-rank-pos ${i===0?'oro':''}">#${i+1}</span>
             <span class="bat-rank-ava">${caraSocio(r.uid,34)}</span>
-            <span class="bat-rank-nom">${esc(batNom(r.uid))}${r.uid===yo?` <em>${bi('(tú)','(you)')}</em>`:''}<i>${tieneCuenta(r.uid)? bi('rango','rank')+' '+(batEraIdx(r.acum)+1)+' · '+r.g+bi('G','W')+' · '+r.p+bi('P','L') : bi('sin cuenta','no account')}</i></span>
-            <span class="bat-rank-pts"><b>${fmt$(r.bal)}</b>${bi('balance','balance')}</span>
+            <span class="bat-rank-nom">${esc(batNom(r.uid))}${r.uid===yo?` <em>${bi('(tú)','(you)')}</em>`:''}<i>${tieneCuenta(r.uid)? bi('rango','rank')+' '+(batEraIdx(r.neto)+1)+' · '+r.g+bi('G','W')+' · '+r.p+bi('P','L') : bi('sin cuenta','no account')}</i></span>
+            <span class="bat-rank-pts"><b>${fmt$(r.neto)}</b>${bi('patrimonio','net worth')}</span>
           </button>`).join('')}
       </div>
       <button type="button" class="btn bat-ciudad-btn" id="batCiudadBtn">${bi('Ver la ciudad de la mesa','See the desk city')}</button>
@@ -9541,6 +9582,20 @@ function renderBatalla(){
     $('#batNuevo').onclick = () => { batPantalla='setup'; renderBatalla(); };
     $('#batAjustes') && ($('#batAjustes').onclick = () => { batPantalla='ajustes'; renderBatalla(); });
     $('#batCiudadBtn') && ($('#batCiudadBtn').onclick = () => { batPantalla='ciudad'; renderBatalla(); });
+    /* DECISIONES de crecimiento (simulan el plan) */
+    $('#batDecCuenta') && ($('#batDecCuenta').onclick = () => {
+      const j=juegoDe(yo); if(!j || j.balance<CUENTA_EXTRA_COSTO){ toast(bi('Saldo insuficiente.','Not enough cash.')); return; }
+      j.balance -= CUENTA_EXTRA_COSTO; j.cuentas = (j.cuentas||1)+1; save();
+      toast(bi('Nueva cuenta de fondeo. Ahora ganas +'+Math.round(CUENTA_EXTRA_BONO*100)+'% por reto.','New funded account. You now earn +'+Math.round(CUENTA_EXTRA_BONO*100)+'% per challenge.'));
+      renderBatalla();
+    });
+    $('#batDecPorta') && ($('#batDecPorta').onclick = () => {
+      const j=juegoDe(yo); if(!j || j.balance<500){ toast(bi('Saldo insuficiente.','Not enough cash.')); return; }
+      const monto = Math.max(500, Math.round(j.balance*0.25));
+      j.balance -= monto; j.portafolio = (j.portafolio||0)+monto; save();
+      toast(bi('Invertiste '+fmt$(monto)+' en tu portafolio.','You invested '+fmt$(monto)+' in your portfolio.'));
+      renderBatalla();
+    });
     /* picar un perfil (en el ranking o en el mapa) abre la comparación tú vs él */
     root.querySelectorAll('[data-perfil]').forEach(b => b.onclick = () => { if(b.dataset.perfil!==yo){ batPerfilUid = b.dataset.perfil; batPantalla='perfil'; renderBatalla(); } });
     requestAnimationFrame(batPintaMonito);   // el monito de cada quien, parado en su escena
