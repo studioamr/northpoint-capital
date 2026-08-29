@@ -1159,6 +1159,29 @@ button.st-chip:hover{border-color:rgba(255,255,255,.45)}
 .nj-sw{width:34px;height:34px;border-radius:50%;border:2px solid rgba(255,255,255,.18);background:var(--c);cursor:pointer;transition:transform .12s, box-shadow .12s}
 .nj-sw:hover{transform:scale(1.12)}
 .nj-sw.on{border-color:#fff;box-shadow:0 0 0 3px rgba(255,255,255,.25),0 0 14px -2px var(--c);transform:scale(1.12)}
+/* ══ ceremonias a pantalla completa ══ */
+.cer-ov{position:fixed;inset:0;z-index:9600;background:rgba(3,4,8,.87);backdrop-filter:blur(9px);display:flex;align-items:center;justify-content:center;animation:cerIn .35s ease;cursor:pointer}
+.cer-ov.cer-muerte{background:rgba(1,1,3,.95)}
+.cer-out{opacity:0;transition:opacity .45s ease}
+.cer-cv{position:absolute;inset:0;width:100%;height:100%}
+.cer-in{position:relative;z-index:2;display:flex;flex-direction:column;align-items:center;gap:13px;text-align:center;padding:0 22px;animation:cerPop .55s cubic-bezier(.3,1.35,.4,1)}
+.cer-in em{font-family:var(--mono);font-size:13px;letter-spacing:.34em;color:rgba(255,255,255,.78);font-style:normal}
+.cer-in>b{font-size:34px;font-weight:900;color:#fff;letter-spacing:-.01em}
+.cer-in>span{font-family:var(--mono);font-size:13px;color:rgba(255,255,255,.72)}
+.cer-in>span i{font-style:normal;color:#ffd76a;font-weight:800}
+.cer-monto{font-family:var(--mono);font-size:min(13vw,88px);font-weight:800;color:#5fe096;text-shadow:0 0 36px rgba(48,209,88,.55);letter-spacing:-.03em;line-height:1}
+.cer-kanji{font-size:46px;color:rgba(255,255,255,.35);font-family:Georgia,'Hiragino Mincho ProN','Yu Mincho',serif}
+.cer-sword{width:min(560px,82vw);height:120px;filter:drop-shadow(0 0 18px var(--kc)) drop-shadow(0 0 48px color-mix(in srgb,var(--kc) 70%,transparent));animation:cerForja 1.4s cubic-bezier(.2,1,.3,1)}
+.cer-sword svg{width:100%;height:100%}
+@keyframes cerForja{0%{transform:translateY(190px);opacity:0}55%{opacity:1}100%{transform:none}}
+.cer-skull{font-size:76px;color:#ff6a5e;text-shadow:0 0 42px rgba(255,80,70,.55);animation:cerSkull 1s ease}
+@keyframes cerSkull{0%{transform:scale(.3);opacity:0}60%{transform:scale(1.15)}100%{transform:scale(1)}}
+@keyframes cerIn{from{opacity:0}}
+@keyframes cerPop{0%{transform:translateY(28px) scale(.92);opacity:0}100%{transform:none;opacity:1}}
+.cer-muerte .cer-in>b{color:#ff8a7e}
+/* la arena de pelea en la batalla activa */
+.bat-arena{width:100%;max-width:640px;margin:0 auto 2px;line-height:0}
+.bat-arena canvas{width:100%;height:auto;display:block}
 @media(max-width:640px){ .stage-id b{font-size:15px} .st-chip{padding:6px 10px} .st-chip b{font-size:13px} .ars-grid{grid-template-columns:repeat(2,1fr)} .stage-top{flex-wrap:wrap;gap:9px;padding:12px 13px} .stage-stats{margin-left:auto} }
 .zen-hero{position:relative;border-radius:18px;overflow:hidden;border:1px solid rgba(255,255,255,.1);margin-bottom:18px;line-height:0;box-shadow:0 18px 44px -14px rgba(0,0,0,.6),inset 0 0 0 1px rgba(255,255,255,.03)}
 .zen-hero canvas{display:block;width:100%;height:auto}
@@ -10006,12 +10029,13 @@ function batRegistraResultado(c){
       y ENTRE MÁS ALTA tu katana más ganas (+8% por nivel) */
     const pago=Math.round((BAT_PAGO_BASE + Math.max(0,profit)*3) * (c.mult||1) * (1+katanaBono(batKatRango(u)).loot));
     batStackSet(u, batBanco(u)+pago);
-    try{ if(u===yo) window._batPagoFlash={monto:pago, mult:(c.mult||1)}; }catch(e){}
+    try{ if(u===yo) window._batPagoFlash={monto:pago, mult:(c.mult||1), rival: c.party?null:(u===c.host?c.rival:c.host)}; }catch(e){}
   };
   const cobra=(u)=>{ /* si pierdes, pagas el fee fijo — y si el bank se acaba, MUERES */
     batStackSet(u, batBanco(u)-BAT_FEE);
     try{ if(u===yo) window._batFeeFlash={monto:BAT_FEE}; }catch(e){}
-    if(batBanco(u) < 0){ batMuere(u); try{ if(u===yo){ window._batFeeFlash=null; window._batMuerteFlash=true; } }catch(e){} }
+    if(batBanco(u) < 0){ const njPrev=batNinjaDe(u), beltPrev=KATANAS[batEquipadaDe(u)].belt; batMuere(u);
+      try{ if(u===yo){ window._batFeeFlash=null; window._batMuerteFlash={nj:njPrev, belt:beltPrev}; } }catch(e){} }
   };
 
   if(c.party){
@@ -10679,6 +10703,33 @@ function zenFrase(c,x,y,text,col){ c.save(); c.font='600 22px "Hiragino Mincho P
   c.shadowColor='rgba(0,0,0,.55)'; c.shadowBlur=5; c.fillStyle=col||'rgba(255,255,255,.5)';
   for(let i=0;i<text.length;i++) c.fillText(text[i], x, y+i*27);
   c.restore(); }
+/* ⚔ LOS DOS NINJAS PELEANDO: cargan, chocan al centro (chispa de acero) y
+   regresan. El que va ganando empuja el punto de choque hacia el rival. */
+function batPintaPelea(c2, W2, base2, now, dd, s2){
+  s2 = s2||1.25;
+  const eio=v=>v<0.5?2*v*v:1-Math.pow(-2*v+2,2)/2;
+  const T=2600, kD=(now%T)/T;
+  const fase = kD<0.38 ? eio(kD/0.38) : kD<0.5 ? 1 : eio(1-((kD-0.5)/0.5));
+  const ctr = W2*(0.5 + 0.07*(dd.ventaja||0));
+  const baseA=W2*0.26, baseB=W2*0.74;
+  const xA = baseA + (ctr-26*s2-baseA)*fase;
+  const xB = baseB + (ctr+26*s2-baseB)*fase;
+  const moviendo = kD<0.38 || kD>0.5;
+  zenNinja(c2, xA, base2, s2, now, 0, dd.a.col, dd.a.cfg, false, moviendo);
+  zenNinja(c2, xB, base2, s2, now, 1.7, dd.b.col, dd.b.cfg, true, moviendo);
+  if(kD>=0.38 && kD<0.5){ const a2=(kD-0.38)/0.12, sx=ctr, sy=base2-28*s2;
+    c2.save(); c2.globalAlpha=1-a2; c2.strokeStyle='#fff'; c2.lineWidth=2.4;
+    for(let i2=0;i2<6;i2++){ const an=i2/6*6.283+now/90;
+      c2.beginPath(); c2.moveTo(sx+Math.cos(an)*4, sy+Math.sin(an)*4); c2.lineTo(sx+Math.cos(an)*(15+20*a2), sy+Math.sin(an)*(15+20*a2)); c2.stroke(); }
+    c2.fillStyle=`rgba(255,255,255,${0.8*(1-a2)})`; c2.beginPath(); c2.arc(sx,sy,7+15*a2,0,7); c2.fill();
+    c2.restore(); }
+  const tag=(x,n,p)=>{ c2.save(); c2.textAlign='center';
+    c2.font='700 13px "IBM Plex Mono", monospace'; c2.shadowColor='rgba(0,0,0,.75)'; c2.shadowBlur=5;
+    c2.fillStyle='rgba(255,255,255,.94)'; c2.fillText(n, x, base2-56*s2);
+    c2.fillStyle=p>=0?'#6fe39a':'#ff7a6e'; c2.fillText((p>=0?'+':'−')+'$'+Math.abs(p).toLocaleString(), x, base2-44*s2);
+    c2.restore(); };
+  tag(xA, dd.a.nom, dd.a.pnl||0); tag(xB, dd.b.nom, dd.b.pnl||0);
+}
 /* TU NINJA: cada quien crea el suyo al registrarse en Battles.
    traje / banda / bufanda personalizados; el mango de su katana = la espada equipada */
 const NJ_DEF = { traje:'#0c0e13', banda:'#d6dce8', buf:'#b53a2e' };
@@ -10754,8 +10805,12 @@ function zenDibujaEscena(c, W, H, E, now, pet, poderHex, njCfg){
   if(E.casas){ zenCasaJaponesa(c, W*0.63, base, 1.25); zenCasaJaponesa(c, W*0.79, base, 1.0); zenCasaJaponesa(c, W*0.53, base, 0.85); }
   if(E.faro) zenFaro(c, W*0.15, base, 1.35);
   /* ninjas NPC dando vida a la escena */
-  /* TU ninja: quieto en su lugar, apenas respirando (la bufanda ondea sola) */
-  zenNinja(c, W*0.26, base, 1.2, now*0.55, 0, poderHex, njCfg||window._zenNinja);
+  const dd = njCfg ? null : window._zenDuelo;
+  if(dd){ batPintaPelea(c, W, base, now, dd, 1.25); }
+  else {
+    /* TU ninja: quieto en su lugar, apenas respirando (la bufanda ondea sola) */
+    zenNinja(c, W*0.26, base, 1.2, now*0.55, 0, poderHex, njCfg||window._zenNinja);
+  }
   if(E.lava) zenLava(c, W, base, now);
   if(E.rayos && Math.floor(now/1600)%3===0) zenRayo(c, W*(0.36+0.2*((Math.floor(now/1600))%2)), 16, base-70);
   if(E.playa){ c.fillStyle='rgba(228,206,150,.9)'; c.beginPath(); c.moveTo(0,H); c.lineTo(W,H); c.lineTo(W,base+H*0.14); c.quadraticCurveTo(W*0.5,base+H*0.04,0,base+H*0.16); c.closePath(); c.fill(); }
@@ -10884,6 +10939,77 @@ function batPintaZen(){
   const poderHex=KATANAS[_iv].belt;
   function frame(now){ zenDibujaEscena(c,W,H,E,now,pet,poderHex); if(cv.isConnected) window._zenRAF=requestAnimationFrame(frame); }
   window._zenRAF=requestAnimationFrame(frame);
+}
+/* ══ CEREMONIAS ══ los tres momentos grandes, a pantalla completa:
+   la VICTORIA con su pago (lluvia de monedas), la FORJA de una katana
+   (la espada emergiendo del fuego), y la MUERTE del ninja (cae y funde a negro). */
+function batCeremonia(tipo, d){
+  d = d || {};
+  document.querySelectorAll('.cer-ov').forEach(e=>e.remove());
+  const ov=document.createElement('div'); ov.className='cer-ov cer-'+tipo;
+  let inner='';
+  if(tipo==='victoria'){
+    inner=`<em>${d.bienvenida?bi('BIENVENIDO AL DOJO','WELCOME TO THE DOJO'):bi('VICTORIA','VICTORY')}</em>
+      <b class="cer-monto">+$0</b>
+      <span>${d.bienvenida?bi('tu feria de bienvenida','your welcome bonus'):(d.rival?bi('venciste a ','you beat ')+esc(batNom(d.rival)):bi('ganaste el duelo','you won the duel'))}${(d.mult||1)>1?` · <i>×${d.mult}</i>`:''}</span>`;
+  } else if(tipo==='forja'){
+    inner=`<span class="cer-kanji">${d.k.kanji}</span>
+      <div class="cer-sword" style="--kc:${d.k.belt}">${katanaSVG(d.k.belt,true)}</div>
+      <em>${bi('KATANA FORJADA','KATANA FORGED')}</em>
+      <b style="color:${d.k.belt}">${loc(d.k.n)}</b>
+      <span>−${fmt$(d.k.precio)} ${bi('de tu bank','from your bank')}</span>`;
+  } else if(tipo==='muerte'){
+    inner=`<em class="cer-skull">☠</em>
+      <b>${bi('TU NINJA HA MUERTO','YOUR NINJA HAS DIED')}</b>
+      <span>${bi('el bank se acabó · renaces forjando uno nuevo con','your bank ran dry · be reborn with a fresh')} ${fmt$(BAT_BIENVENIDA)}</span>`;
+  }
+  ov.innerHTML=`<canvas class="cer-cv"></canvas><div class="cer-in">${inner}</div>`;
+  document.body.appendChild(ov);
+  const cv=ov.querySelector('.cer-cv'); const W=cv.width=window.innerWidth, H=cv.height=window.innerHeight;
+  const cx=cv.getContext('2d');
+  const t0=performance.now(); let vivo=true;
+  const dur = tipo==='muerte'?4300:3400;
+  const cierra=()=>{ if(!vivo) return; vivo=false; ov.classList.add('cer-out'); setTimeout(()=>{ try{ ov.remove(); }catch(e){} }, 500); };
+  ov.addEventListener('click', cierra); setTimeout(cierra, dur);
+  const P=[], rnd=Math.random, eio=v=>v<0.5?2*v*v:1-Math.pow(-2*v+2,2)/2;
+  if(tipo==='victoria'){ for(let i=0;i<72;i++) P.push({x:rnd()*W, y:-40-rnd()*H, vy:230+rnd()*280, s:7+rnd()*9, rot:rnd()*6.3, vr:(rnd()*2-1)*4.5, hue:44+rnd()*10}); }
+  if(tipo==='forja'){ for(let i=0;i<90;i++) P.push({x:W/2+(rnd()*2-1)*W*0.17, y:H*0.7+rnd()*H*0.25, vy:-(70+rnd()*170), s:1.5+rnd()*3, dr:rnd()*6.3}); }
+  if(tipo==='muerte'){ for(let i=0;i<54;i++) P.push({x:rnd()*W, y:rnd()*H, vy:26+rnd()*44, s:1+rnd()*2.4, dr:rnd()*6.3}); }
+  let last=t0;
+  const loop=(t)=>{ if(!vivo || !ov.isConnected) return;
+    const dt=Math.min(0.05,(t-last)/1000); last=t; const k=Math.min(1,(t-t0)/dur);
+    cx.clearRect(0,0,W,H);
+    if(tipo==='victoria'){
+      P.forEach(p=>{ p.y+=p.vy*dt; p.rot+=p.vr*dt; if(p.y>H+30){ p.y=-30; p.x=rnd()*W; }
+        const sq=Math.max(0.22,Math.abs(Math.cos(p.rot)));
+        cx.save(); cx.translate(p.x,p.y);
+        cx.fillStyle=`hsl(${p.hue} 80% 55%)`; cx.beginPath(); cx.ellipse(0,0,p.s,p.s*sq,0,0,7); cx.fill();
+        cx.strokeStyle='rgba(120,82,0,.7)'; cx.lineWidth=1.2; cx.stroke();
+        cx.fillStyle='rgba(255,242,190,.85)'; cx.beginPath(); cx.ellipse(-p.s*0.3,-p.s*0.22,p.s*0.22,p.s*0.16*sq,0,0,7); cx.fill();
+        cx.restore(); });
+    } else if(tipo==='forja'){
+      const g=cx.createRadialGradient(W/2,H*0.85,10, W/2,H*0.85, W*0.42);
+      g.addColorStop(0,'rgba(255,160,60,.45)'); g.addColorStop(1,'rgba(255,120,40,0)');
+      cx.fillStyle=g; cx.fillRect(0,0,W,H);
+      P.forEach(p=>{ p.y+=p.vy*dt; p.x+=Math.sin(t/300+p.dr)*0.7; if(p.y<H*0.18){ p.y=H*0.7+rnd()*H*0.25; p.x=W/2+(rnd()*2-1)*W*0.17; }
+        const a=Math.max(0.15, Math.min(1,(p.y-H*0.2)/(H*0.6)));
+        cx.fillStyle=`rgba(255,${140+Math.round(90*a)},60,${0.2+0.6*a})`; cx.beginPath(); cx.arc(p.x,p.y,p.s,0,7); cx.fill(); });
+    } else if(tipo==='muerte'){
+      P.forEach(p=>{ p.y+=p.vy*dt; p.x+=Math.sin(t/700+p.dr)*0.5; if(p.y>H){ p.y=-6; p.x=rnd()*W; }
+        cx.fillStyle='rgba(168,173,184,.38)'; cx.fillRect(p.x,p.y,p.s,p.s); });
+      if(d.nj){ const fase=eio(Math.min(1,k*1.6));
+        cx.save(); cx.translate(W/2, H*0.58); cx.rotate(fase*1.55); cx.globalAlpha=Math.max(0,1-k*1.2);
+        zenNinja(cx, 0, 50, 3.6, t, 0, d.belt||'#8b93a1', d.nj);
+        cx.restore(); }
+    }
+    requestAnimationFrame(loop); };
+  requestAnimationFrame(loop);
+  if(tipo==='victoria'){ const el=ov.querySelector('.cer-monto');
+    const fin=d.monto||0, tc0=performance.now(), tdur=1400;
+    (function paso(tt){ if(!ov.isConnected) return; const kk=Math.min(1,(tt-tc0)/tdur), e=kk*(2-kk);
+      el.textContent='+'+fmt$(Math.round(fin*e));
+      if(kk<1) requestAnimationFrame(paso); })(tc0);
+  }
 }
 /* ── el dinero cae al banco cuando ganas: monedas + conteo del número ── */
 function animaBotin(final, monto){
@@ -11600,15 +11726,23 @@ function renderBatalla(){
     root.querySelectorAll('[data-forja]').forEach(b=> b.onclick=()=>{ const i=+b.dataset.forja, k=KATANAS[i]; const bal=batBanco(yo);
       if(bal<k.precio){ toast(bi('No te alcanza todavía. Gana más duelos.','Not enough yet. Win more duels.')); return; }
       batStackSet(yo, bal-k.precio); batKatanasDe(yo).push(k.id); if(!S.batEquipada)S.batEquipada={}; S.batEquipada[yo]=k.id; save();
-      toast('🗡️ '+bi('¡Forjaste','Forged')+' '+loc(k.n)+'!'); renderBatalla(); });
+      renderBatalla(); setTimeout(()=>batCeremonia('forja',{k}), 180); });
     root.querySelectorAll('[data-equip]').forEach(b=> b.onclick=()=>{ batEquipar(yo,+b.dataset.equip); renderBatalla(); });
+    /* ⚔ si hay batalla ACTIVA, el stage muestra a los dos ninjas peleando */
+    if(c && c.estado==='activo'){
+      const rivD = c.party ? (batJugadores(c).find(u2=>u2!==yo)||c.rival) : (c.host===yo?c.rival:c.host);
+      window._zenDuelo = { ventaja: Math.tanh((batProfit(c,yo)-batProfit(c,rivD))/800),
+        a:{ cfg:batNinjaDe(yo),  col:KATANAS[batEquipadaDe(yo)].belt,  nom:batNom(yo),  pnl:batProfit(c,yo) },
+        b:{ cfg:batNinjaDe(rivD), col:KATANAS[batEquipadaDe(rivD)].belt, nom:batNom(rivD), pnl:batProfit(c,rivD) },
+        riv:rivD };
+    } else window._zenDuelo=null;
     requestAnimationFrame(batPintaZen);   // el mundo del stage según tu katana más alta
-    if(window._batMuerteFlash){ window._batMuerteFlash=null; window._batPagoFlash=null; window._batFeeFlash=null; window._batWinFlash=null;
-      setTimeout(()=>toast('☠ '+bi('Tu bank se acabó — tu ninja ha muerto. Forja uno nuevo para renacer.','Your bank ran dry — your ninja died. Forge a new one to be reborn.')), 340);
+    if(window._batMuerteFlash){ const f=window._batMuerteFlash; window._batMuerteFlash=null; window._batPagoFlash=null; window._batFeeFlash=null; window._batWinFlash=null;
+      setTimeout(()=>batCeremonia('muerte', f===true?{}:f), 220);
     } else if(window._batPagoFlash){ const f=window._batPagoFlash; window._batPagoFlash=null; window._batWinFlash=null;
       const el=root.querySelector('.st-chip.bank'); if(el) el.classList.add('elo-up');
       if(typeof animaBotin==='function') setTimeout(()=>animaBotin(batBanco(yo), f.monto), 200);
-      if(!f.bienvenida) setTimeout(()=>toast(bi('Victoria · te pagaron','Victory · you got paid')+' '+fmt$(f.monto)+(f.mult>1?' (×'+f.mult+')':'')), 340);
+      setTimeout(()=>batCeremonia('victoria', f), 260);
     } else if(window._batFeeFlash){ const f=window._batFeeFlash; window._batFeeFlash=null; window._batWinFlash=null;
       const el=root.querySelector('.st-chip.bank'); if(el) el.classList.add('elo-down');
       setTimeout(()=>toast('▼ '+bi('Derrota · fee','Loss · fee')+' −'+fmt$(f.monto)), 340);
@@ -11633,6 +11767,10 @@ function renderBatalla(){
             bR.textContent=(hh>0?String(hh).padStart(2,'0')+':':'')+String(Math.floor(rst%3600000/60000)).padStart(2,'0')+':'+String(Math.floor(rst%60000/1000)).padStart(2,'0');
             if(bP) bP.textContent=fmt$(batProfit(cc,yo),true);
           }
+          /* el duelo del stage se actualiza en vivo (P&L y ventaja de cada ninja) */
+          if(cc.estado==='activo' && window._zenDuelo){ const dd2=window._zenDuelo;
+            dd2.a.pnl=batProfit(cc,yo); dd2.b.pnl=batProfit(cc,dd2.riv);
+            dd2.ventaja=Math.tanh((dd2.a.pnl-dd2.b.pnl)/800); }
         }, 1000);
       }
     }
@@ -11824,8 +11962,9 @@ function renderBatalla(){
         <div class="bat-panel-log">${filas(rivalDe)}</div>
       </div>
 
-      <!-- EN MEDIO: temporizador grande -->
+      <!-- EN MEDIO: los ninjas PELEANDO + temporizador grande -->
       <div class="bat-reloj-wrap">
+        <div class="bat-arena"><canvas id="arenaCv" width="1000" height="300"></canvas></div>
         <span class="bat-vs-mini">VS</span>
         <div class="bat-reloj-grande mono">${reloj}</div>
         <span class="bat-reloj-lbl">${bi('tiempo restante','time left')}</span>
@@ -11855,6 +11994,18 @@ function renderBatalla(){
       pintaCurva($('#batGrafRival'), $('#batGrafRivalE'), (c.trades[rivalDe]||[]).map(t=>t.pnl||0), 1, vac);
       pintaCurva($('#batGrafYo'), $('#batGrafYoE'), (c.trades[yo]||[]).map(t=>t.pnl||0), 1, vac);
     });
+    /* ⚔ la arena: nuestros ninjas peleando en vivo */
+    (()=>{ const acv=$('#arenaCv'); cancelAnimationFrame(window._arenaRAF||0); if(!acv) return;
+      const ax=acv.getContext('2d');
+      const dd={ ventaja:Math.tanh((pYo-pRival)/800),
+        a:{ cfg:batNinjaDe(yo),      col:KATANAS[batEquipadaDe(yo)].belt,      nom:batNom(yo),      pnl:pYo },
+        b:{ cfg:batNinjaDe(rivalDe), col:KATANAS[batEquipadaDe(rivalDe)].belt, nom:batNom(rivalDe), pnl:pRival } };
+      const pintaA=(t)=>{ if(!acv.isConnected) return; ax.clearRect(0,0,1000,300);
+        ax.fillStyle='rgba(255,255,255,.05)'; ax.beginPath(); ax.ellipse(500,264,340,15,0,0,7); ax.fill();
+        batPintaPelea(ax, 1000, 254, t||0, dd, 2.1);
+        window._arenaRAF=requestAnimationFrame(pintaA); };
+      window._arenaRAF=requestAnimationFrame(pintaA);
+    })();
     /* controles */
     $('#batTdir').onclick = e => { const b = e.target.closest('button[data-dir]'); if(!b) return; batDir = b.dataset.dir; $('#batTdir').querySelectorAll('button').forEach(x=>x.classList.toggle('on', x===b)); };
     const registrar = () => {
