@@ -2001,6 +2001,14 @@ button.tag.quemada{text-decoration:line-through;text-decoration-color:var(--down
   color:var(--dim);white-space:normal;overflow:visible;max-width:34ch}
 /* Los tres hitos del camino, repartidos a lo ancho como la barra de arriba.
    El que ya se pasó se prende: se lee de un golpe dónde vas. */
+/* ── EL BOTÓN GRANDE de Daily Trades: la puerta principal del registro ── */
+#btnCapturaGrande{display:flex;flex-direction:column;align-items:center;gap:6px;width:100%;
+  padding:30px 20px;border:2px dashed var(--line);border-radius:16px;background:var(--w02);
+  cursor:pointer;transition:all .18s;text-align:center}
+#btnCapturaGrande:hover{border-color:var(--up);background:rgba(87,199,155,.07)}
+#btnCapturaGrande .cg-ico{font-size:34px;line-height:1}
+#btnCapturaGrande .cg-t{font-size:19px;font-weight:600;letter-spacing:.02em;color:var(--txt)}
+#btnCapturaGrande .cg-s{font-family:var(--mono);font-size:10.5px;letter-spacing:.08em;color:var(--faint)}
 .ps-hitos{display:flex;justify-content:space-between;gap:8px;margin-top:5px;
   font-family:var(--mono);font-size:8.5px;letter-spacing:.1em;color:var(--faint)}
 .ps-hitos span:nth-child(2){flex:1;text-align:center}
@@ -2580,7 +2588,7 @@ stop[stop-color="#9BC0DC"]{stop-color:var(--txt)}
           <div id="pickMesa"></div>
           <span class="micro" id="acctSummary"></span>
           <div class="acct-bar-fin">
-            <button class="btn xs" id="btnCerrarDia2">Day close ✍</button>
+            <button class="btn xs" id="btnCSV2">Import Tradovate CSV</button>
             <button class="btn xs" id="btnAcctDet" aria-expanded="false" aria-controls="acctTable">Show detail</button>
             <button class="btn xs" id="btnAcctMgr" data-i18n="ac.gestionar">Gestionar</button>
           </div>
@@ -2660,7 +2668,17 @@ stop[stop-color="#9BC0DC"]{stop-color:var(--txt)}
 
       <!-- ════ TRADES (el historial completo, con registro y exportación) ════ -->
       <section class="view" id="v-trades">
-        <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin:0 0 14px">
+        <!-- DAILY TRADES (rediseño 28-ago-2026, orden de André): UN botón
+             grande que ES el registro — la captura de TradingView entra por
+             aquí, por Cmd+V o soltando el archivo en cualquier pantalla. Todo
+             lo demás es apoyo: filtros, export y la tabla. -->
+        <input type="file" id="capFile" accept="image/*" hidden>
+        <button type="button" id="btnCapturaGrande">
+          <span class="cg-ico">📸</span>
+          <span class="cg-t">Registrar trade</span>
+          <span class="cg-s">suelta o pega (⌘V) tu captura de TradingView aquí — o tócame</span>
+        </button>
+        <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin:14px 0 14px">
           <div class="seg" id="jSeg">
             <button data-r="mes" class="on" data-i18n="j.mes">Mes</button>
             <button data-r="todo" data-i18n="j.todo">Todo</button>
@@ -2670,10 +2688,8 @@ stop[stop-color="#9BC0DC"]{stop-color:var(--txt)}
           <div style="margin-left:auto;display:flex;gap:10px">
             <button class="btn" id="btnExport" data-i18n="j.exportar">Exportar</button>
             <button class="btn" onclick="abreReporte()">Reporte PDF</button>
+            <button class="btn" id="btnCSV3">Tradovate CSV</button>
             <button class="btn" id="btnTrade">+ Manual</button>
-            <input type="file" id="capFile" accept="image/*" hidden>
-            <button class="btn primary" id="btnCaptura"
-              title="Suelta o pega (Cmd+V) tu captura de TradingView en cualquier pantalla — también funciona">📸 Registrar de captura</button>
           </div>
         </div>
 
@@ -2854,57 +2870,23 @@ stop[stop-color="#9BC0DC"]{stop-color:var(--txt)}
 <div class="overlay" id="ovNuevaCuenta">
   <div class="modal" role="dialog" aria-modal="true" aria-labelledby="ncTitle" style="max-width:480px">
     <h3 id="ncTitle">New account</h3>
-    <p class="sub">Stage, balance and its target. Nothing else.</p>
-
-    <!-- SÓLO CUENTA FONDEADA (André, 28-ago-2026). Se fueron el selector de
-         tipo —fondeada / propia / práctica—, los chips de seis firmas, el
-         drawdown, el desbloqueo del colchón, el límite diario y el tramo de
-         pago, y la nota del catálogo. Eran once cajas para dar de alta una
-         cuenta y por eso nadie las llenaba: sin reglas escritas la barra se
-         queda en cero, que fue el problema de toda la semana.
-         Quedan tres números, con su valor puesto de fábrica. -->
+    <!-- NOMBRE, BALANCE Y ETAPA (André, 28-ago-2026). Sin firmas, sin reglas,
+         sin metas por cuenta: TODA cuenta corre el mismo camino de $6,100.
+         Examen arranca en 0%; fondeada arranca al 50%. -->
+    <p class="sub">Nombre, balance y etapa. El camino es el mismo para todas: $6,100.</p>
     <div class="f-full"><label>Account name</label>
       <input id="ncAlias" placeholder="Name it whatever you want" maxlength="24"></div>
-
-    <div class="f-row" style="margin-top:12px">
-      <div><label>Firm</label><input id="ncFirma" placeholder="Apex" maxlength="20"></div>
-      <div><label>Balance USD</label>
-        <input type="number" id="ncStart" min="0" step="100" value="50000"></div>
-    </div>
-
+    <div class="f-full" style="margin-top:12px"><label>Balance USD</label>
+      <input type="number" id="ncStart" min="0" step="100" value="50000"></div>
     <div style="margin-top:12px">
       <label>Stage</label>
       <div class="chips" id="ncFase"></div>
+      <p class="micro" style="color:var(--faint);margin-top:6px">
+        Examen arranca en 0% · Funded arranca en 50% del camino.</p>
     </div>
-
-    <!-- EXAMEN: un solo número, el objetivo. -->
-    <div class="f-full" id="ncZonaEval" style="margin-top:12px">
-      <label>Profit target USD</label>
-      <input type="number" id="ncTarget" min="0" step="100" value="3000">
-    </div>
-
-    <!-- FONDEADA: el colchón y el pago máximo, los dos editables. -->
-    <div class="f-row" id="ncZonaFund" style="margin-top:12px;display:none">
-      <div><label>Cushion USD</label>
-        <input type="number" id="ncColchon" min="0" step="100" value="2100"></div>
-      <div><label>Max payout USD</label>
-        <input type="number" id="ncMaximo" min="0" step="100" value="3100"></div>
-    </div>
-
-    <div class="f-full" style="margin-top:12px">
-      <label>Goal</label>
-      <input id="ncMeta" disabled value="—">
-      <p class="micro" style="color:var(--faint);margin-top:5px;line-height:1.5">
-        El saldo al que llegas cuando terminas esta etapa. Si no cuadra con lo que
-        dice tu fondeadora, algún número de arriba está mal.</p>
-    </div>
-
     <div class="f-full" style="margin-top:12px">
       <label>Counts trades from</label>
       <input type="date" id="ncDesde">
-      <p class="micro" style="color:var(--faint);margin-top:5px;line-height:1.5">
-        The road to payout only counts trades from this date on. If the account
-        has been running for a while, put the day it actually started.</p>
     </div>
 
     <p class="micro" id="ncErr" style="color:var(--down);min-height:14px;margin-top:10px"></p>
@@ -3162,17 +3144,7 @@ stop[stop-color="#9BC0DC"]{stop-color:var(--txt)}
   </div>
 </div>
 
-<div class="overlay" id="ovReport">
-  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="ovReport-t">
-    <h3 id="ovReport-t">Day close</h3>
-    <p class="sub">Post-market · what happened today and where each account stands. Saved for you.</p>
-    <textarea id="repText" rows="12" class="mono" style="font-size:12px;line-height:1.7"></textarea>
-    <div class="m-foot">
-      <button class="btn" data-close>Close</button>
-      <button class="btn primary" id="repCopy">Copiar al portapapeles</button>
-    </div>
-  </div>
-</div>
+
 
 <div class="overlay" id="ovTix">
   <div class="modal" role="dialog" aria-modal="true" aria-labelledby="ovTix-t">
@@ -3522,91 +3494,7 @@ const $  = s => document.querySelector(s);
 const $$ = s => [...document.querySelectorAll(s)];
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
-/* ════════ Catálogo de fondeadoras ════════
-   Copiado literal de ~/claude/candado/data/firm-rules.js — leído de la fuente OFICIAL
-   (help.tradeify.co) el 18-jul-2026. Las reglas cambian: manda el contrato de la cuenta.
-   Lo que no esté aquí se muestra como "sin verificar", nunca con un número inventado. */
-const FIRM_CATALOG = {
-  "Tradeify": {
-    src: "help.tradeify.co", checked: "2026-07-18",
-    plans: {
-      "Growth Evaluation": {
-        phase:"eval", ddType:"eod", lockAtProfit:null,   // no congela en evaluación
-        consistency:0, minDays:1,
-        sizes:{ 50000:{target:3000, dailyLoss:1250, maxDD:2000},
-                100000:{target:6000, dailyLoss:2500, maxDD:3500},
-                150000:{target:9000, dailyLoss:3750, maxDD:5000} },
-        note:"Sin consistencia: se puede pasar en 1 día. El límite diario es blando (pausa el día, no truena). En evaluación el drawdown NO se congela."
-      },
-      "Growth Sim Funded": {
-        phase:"funded", ddType:"eod", lockAtProfit:100,
-        consistency:0.35, minDays:5,
-        sizes:{ 50000:{target:0, dailyLoss:1250, maxDD:2000},
-                100000:{target:0, dailyLoss:2500, maxDD:3500},
-                150000:{target:0, dailyLoss:3750, maxDD:5000} },
-        note:"Consistencia 35%. Payout con 5 días de ganancia > $150/$200/$250 y balance mínimo. El límite diario SUBE al llegar a 6% de ganancia. Drawdown se congela en inicio + $100."
-      },
-      "Select Evaluation": {
-        phase:"eval", ddType:"eod", lockAtProfit:null,
-        consistency:0.40, minDays:3,
-        sizes:{ 50000:{target:3000, dailyLoss:0, maxDD:2000},
-                100000:{target:6000, dailyLoss:0, maxDD:3000},
-                150000:{target:9000, dailyLoss:0, maxDD:4500} },
-        note:"SIN límite diario en evaluación. Consistencia 40% obliga a un mínimo de 3 días. Drawdown más apretado que Growth en 100k/150k."
-      },
-      "Select Flex (fondeada)": {
-        phase:"funded", ddType:"eod", lockAtProfit:100,
-        consistency:0, minDays:5,
-        sizes:{ 50000:{target:0, dailyLoss:0, maxDD:2000},
-                100000:{target:0, dailyLoss:0, maxDD:3000},
-                150000:{target:0, dailyLoss:0, maxDD:4500} },
-        note:"Sin límite diario y SIN consistencia. Payout con 5 días ganadores. OJO: los contratos NO empiezan al máximo — una cuenta de 100k arranca en 3 minis, no 8, y escala con la ganancia."
-      },
-      "Select Daily (fondeada)": {
-        phase:"funded", ddType:"eod", lockAtProfit:100,
-        consistency:0, minDays:0,
-        sizes:{ 50000:{target:0, dailyLoss:1000, maxDD:2000},
-                100000:{target:0, dailyLoss:1250, maxDD:2500},
-                150000:{target:0, dailyLoss:1750, maxDD:3500} },
-        note:"El drawdown más apretado de todo Tradeify en 100k/150k. Payout diario: 2× la ganancia desde el último, con tope. La elección entre Flex y Daily es PERMANENTE por cuenta."
-      },
-      "Lightning Funded": {
-        phase:"funded", ddType:"eod", lockAtProfit:100,
-        consistency:0.20, minDays:0,
-        sizes:{ 50000:{target:3000, dailyLoss:1250, maxDD:2000},
-                100000:{target:6000, dailyLoss:2500, maxDD:4000},
-                150000:{target:9000, dailyLoss:3000, maxDD:5250} },
-        note:"Fondeo directo, sin evaluación. La consistencia SUBE por payout: 20% → 25% → 30%. El 'objetivo' aquí desbloquea el payout, NO es lo que puedes retirar: en 150k llegas a $9,000 y retiras máximo $3,000. Sin resets: hay que recomprar."
-      }
-    }
-  }
-};
 
-/* LOS VALORES DE FÁBRICA de una cuenta, en la referencia de 50k que usa André:
-   pasa el examen en +3,000, hace colchón en +2,100 y cobra el máximo en +3,100.
-   Para otros tamaños se escalan en proporción. Son OBJETIVOS, no la línea de
-   riesgo —el drawdown se queda en blanco mientras nadie lo escriba— así que
-   equivocarlos se corrige en Ajustes y no cuesta una cuenta. */
-const REGLAS_DEF = { size:50000, target:3000, colchon:2100, tramo:1000, tramoApex:2000 };
-/* El tramo del colchón al pago máximo NO es igual en todas: en Apex son $2,000
-   —el 100% cae en +7,100 acumulado— y en las demás $1,000, que da +6,100.
-   Lo dijo André con esos números; se pueden cambiar cuenta por cuenta. */
-const reglasPorTamano = (tam, firm) => {
-  const k = (tam > 0 ? tam : REGLAS_DEF.size) / REGLAS_DEF.size;
-  const r = v => Math.round(v * k / 100) * 100;
-  /* el tramo del colchón al pago máximo NO se escala: es regla de la casa
-     ($1,000; $2,000 en Apex), no una proporción de la cuenta */
-  const tramo = /apex/i.test(String(firm || '')) ? REGLAS_DEF.tramoApex : REGLAS_DEF.tramo;
-  const colchon = r(REGLAS_DEF.colchon);
-  return { target:r(REGLAS_DEF.target), colchon, maximo: colchon + tramo };
-};
-
-/* Las firmas que ofrece el alta. OJO: esta lista es MÁS LARGA que
-   FIRM_CATALOG a propósito —se puede registrar una cuenta de una firma cuyo
-   reglamento no tenemos— y por eso vive pegada al catálogo: para que se vea de
-   un golpe cuáles traen reglas y cuáles no. Las que no, guardan `plan:'—'`,
-   cuentan como capital y no calculan drawdown ni colchón. */
-const NC_FIRMAS = ['Tradeify','Apex','Lucid Trading','TakeProfitTrader','MyFundedFutures','Otra'];
 
 const POINT_VALUE = { NQ:20, ES:50, YM:5, RTY:50, GC:100, CL:1000, MNQ:2, MES:5, MYM:0.5, M2K:5,
                       BTC:5, MBT:0.1 };   // CME: BTC = 5 bitcoin/contrato · MBT = 0.1
@@ -3865,7 +3753,18 @@ function registrado(uid){
   const suyo = o => (o.owner || DUENO_ORIGEN) === uid;
   return (S.accounts || []).some(suyo) || (S.trades || []).some(suyo);
 }
-const registrados = () => PERSONAJES.filter(p => registrado(p.id));
+/* La mesa lista a TODO el que se registró — socios E invitados/alumnos. Cada
+   persona nueva que entra estrena su carril en The Desk sin tocar código:
+   registrado() detecta su rastro (alta, presencia, monito o datos suyos) y
+   aquí se le arma su lugar. Los PERSONAJES traen su look de fábrica; los demás
+   viven de su monito (caraSocio ya cae a «?» si aún no lo arma). */
+const registrados = () => {
+  const base = PERSONAJES.filter(p => registrado(p.id));
+  const extras = Object.keys(USERS)
+    .filter(u => !PERSONAJES.some(p => p.id === u) && registrado(u))
+    .map(u => ({ id: u, nom: String((USERS[u] && USERS[u].nombre) || u).toUpperCase() }));
+  return base.concat(extras);
+};
 
 /* ── Equipo NORTHPOINT · credenciales y cargos ── */
 /* Sin nube, `pass` es la clave local (y está a la vista en el código: sirve para
@@ -4289,89 +4188,15 @@ function migrar(s){
     if(!t.date || typeof t.date !== 'string') t.date = '1970-01-01';
     if(t.time == null) t.time = '';
   });
-  /* ══ MIGRACIÓN TOTAL DE REGLAS · UN SOLO MODELO ══
-     Tres generaciones de formularios dejaron tres formas de a.reglas
-     conviviendo ({target,maxDD,lock,dailyLoss[,pago]} del catálogo y del
-     formulario viejo, {target,colchon,maximo} del alta actual, y cualquier
-     mezcla tecleada en Ajustes). Cada lector tenía que adivinar la forma y de
-     ahí salían los colchones imposibles. Desde aquí TODA cuenta prop queda en
-     el modelo único:
-       target  = profit del examen (hito: tamaño + target)
-       colchon = acumulado tras el reinicio que desbloquea el payout
-       maximo  = acumulado del 100% (el tramo de pago es maximo − colchon)
-       maxDD / dailyLoss = opcionales, sólo línea de riesgo y aviso
-     `lock` y `pago` desaparecen: el lock se DERIVA al leer (colchon − maxDD
-     cuando colchon > maxDD; si no, el piso no se congela).
-     Corre ANTES del corte por esquema y es idempotente: los valores buenos se
-     conservan tal cual en cada pasada. */
+  /* ══ EL CAMINO ES UNO (28-ago-2026) ══
+     Fuera el aparato de reglas por cuenta: toda cuenta corre los mismos
+     $6,100. a.reglas se borra del estado — el motor ya no lo lee, y dejarlo
+     era una fuente eterna de confusión. La etapa (examen/fondeada) es lo único
+     que se conserva: fondeada arranca a mitad del camino. */
   (s.accounts||[]).forEach(a => {
-    if(!a || a.tipo === 'live' || a.tipo === 'sim') return;
-    if(a.estado === 'active') a.estado = 'activa';   // el alta de una época guardaba el nombre en inglés
-    const r = a.reglas || {};
-    const num = v => { const n = parseFloat(v); return isFinite(n) ? n : 0; };
-    /* el catálogo por TALLA (cualquier plan de esa firma con esa talla): es la
-       semilla para cuentas viejas y la vara de cordura para las tecleadas */
-    const F = FIRM_CATALOG[a.firm];
-    let zEval = null, zFund = null;
-    if(F) Object.keys(F.plans).forEach(nom => {
-      const pl = F.plans[nom], z = pl.sizes && pl.sizes[a.size];
-      if(!z) return;
-      if(pl.phase === 'eval'   && !zEval) zEval = z;
-      if(pl.phase === 'funded' && !zFund) zFund = z;
-    });
-    const zCat = zFund || zEval;
-    const lockVal = (r.lock === '' || r.lock == null) ? null : num(r.lock);
-    const pagoVal = (r.pago === '' || r.pago == null) ? null : num(r.pago);
-    const def = reglasPorTamano(+a.size || +a.start || 0, a.firm);
-
-    let maxDD     = num(r.maxDD)     > 0 ? num(r.maxDD)     : (zCat && zCat.maxDD     > 0 ? zCat.maxDD     : 0);
-    let dailyLoss = num(r.dailyLoss) > 0 ? num(r.dailyLoss) : (zCat && zCat.dailyLoss > 0 ? zCat.dailyLoss : 0);
-    let target    = num(r.target)    > 0 ? num(r.target)
-                  : (zEval && zEval.target > 0 ? zEval.target : def.target);
-    /* colchón: el tecleado manda — SALVO que sea el default escalado de una
-       versión anterior (contaminado: coincide con el default pero contradice
-       maxDD+lock del catálogo). Con drawdown conocido, el colchón real es
-       maxDD + lock (Tradeify congela en +100). */
-    let colchon = num(r.colchon);
-    const contaminado = F && colchon > 0 && colchon === def.colchon
-                     && maxDD > 0 && (maxDD + 100) !== colchon;
-    if(!(colchon > 0) || contaminado)
-      colchon = maxDD > 0 ? maxDD + (lockVal != null ? lockVal : 100) : def.colchon;
-    /* máximo: el tecleado manda si es coherente (> colchón); si no, el pago
-       legacy; si no, el tramo de la casa SIN escalar */
-    let maximo = num(r.maximo);
-    if(!(maximo > colchon)) maximo = pagoVal > 0 ? colchon + pagoVal
-                                   : colchon + (/apex/i.test(String(a.firm || '')) ? 2000 : 1000);
-    /* regla de la casa dictada por André (28-ago): en Apex el 100% está $2,000
-       arriba del colchón. Las cuentas que quedaron con el brinco default viejo
-       de $1,000 —escrito por una versión anterior, no tecleado— se corrigen. */
-    if(/apex/i.test(String(a.firm || '')) && maximo - colchon === 1000) maximo = colchon + 2000;
-    /* REPARACIÓN CON AUTORIDAD: si la firma y la talla están en el catálogo
-       VERIFICADO y lo tecleado es absurdo (menos de la mitad del reglamento
-       real), gana el catálogo. Es lo que dejó la cuenta de Gerardo en
-       500/1000/1000: números tecleados que ninguna pantalla comparó jamás
-       contra el reglamento que la app SÍ tiene. Se sella (upd) a propósito —
-       excepción única a «la migración no sella»— para que la reparación le
-       gane la fusión a la copia rota del otro equipo. */
-    if(zEval && zCat && target > 0 && target < zEval.target / 2
-       && maxDD > 0 && zCat.maxDD > 0 && maxDD < zCat.maxDD){
-      target = zEval.target; maxDD = zCat.maxDD;
-      dailyLoss = zCat.dailyLoss || dailyLoss;
-      colchon = maxDD + 100; maximo = colchon + 1000;
-      /* SELLO CONSTANTE, no Date.now(): migrar() corre en cada carga de cada
-         máquina, y un sello fresco por máquina re-ganaba la fusión y REVERTÍA
-         ediciones humanas hechas después de la reparación. Con la constante,
-         la reparación le gana a la copia rota (upd viejo o ausente) y pierde
-         contra cualquier sellaCambio() real, que siempre es mayor. */
-      const TS_REPARACION = 1788134400000;   // 29-ago-2026, fecha de esta migración
-      if(!(+a.upd > TS_REPARACION)) a.upd = TS_REPARACION;
-    }
-    const nuevas = { target, colchon, maximo };
-    if(maxDD > 0)     nuevas.maxDD = maxDD;
-    if(dailyLoss > 0) nuevas.dailyLoss = dailyLoss;
-    if(num(r.consistency) > 0) nuevas.consistency = num(r.consistency);
-    if(num(r.minDays) > 0)     nuevas.minDays = num(r.minDays);
-    a.reglas = nuevas;
+    if(!a) return;
+    if(a.estado === 'active') a.estado = 'activa';
+    delete a.reglas;
   });
   if((s.schema||0) >= SCHEMA) return s;      // idempotente: sin esto se re-migra en cada carga
   s.accounts = s.accounts || [];
@@ -5091,17 +4916,12 @@ function computeScore(){
   const risk = last.filter(t => { const v = vioOf(t); return !v.includes('MICROS') && !v.includes('OUT_OF_WINDOW') && !v.includes('THIRD_TRADE'); }).length / last.length;
   const emo  = last.filter(t => { const v = vioOf(t); return !v.includes('REVENGE') && !v.includes('AFTER_WIN'); }).length / last.length;
   const dec  = last.filter(t => t.setupOk).length / last.length;
-  const days = [...new Set(last.map(t=>t.date))];
-  /* Consistencia = cerraste el día (la hoja firmada de Journal). Antes salía
-     del checklist de Rutina, que ya no existe. */
-  const cons = days.filter(d => { const s = S.sessions[claveSesion(d)]; return s && s.cerrado; }).length / days.length;
   const dims = [
     { k:'Risk Discipline', v: risk },
     { k:'Emotion Control', v: emo },
     { k:'Decision Quality', v: dec },
-    { k:'Consistency',     v: cons },
   ];
-  let total = Math.round(dims.reduce((a,d)=>a+d.v*250,0));
+  let total = Math.round(dims.reduce((a,d)=>a+d.v*1000/3,0));
   /* Una violación de riesgo no se promedia: tapa el grado. Antes, cuatro banderas
      en el mes costaban 46 puntos sobre 1000 y el score seguía diciendo INSTITUCIONAL. */
   const graves = new Set(last.flatMap(t => vioOf(t))
@@ -5450,7 +5270,7 @@ addEventListener('keydown', e=>{ if(e.key==='Escape' && pickerAbierto) cerrarPic
 /* repinta todo lo que depende de la selección, sin perder el desplegable abierto */
 function refrescarSeleccion(){
   const v = vistaActual();
-  if(v === 'journal'){ renderDashboard(); renderJournal(); pintaCierreBtn(); }
+  if(v === 'journal'){ renderDashboard(); renderJournal(); }
   else if(v === 'agentes') renderAgentes();
   else if(v === 'trades') renderTrades();
   else if(v === 'vida') renderVida();
@@ -5590,16 +5410,6 @@ function renderAcctPanel(){
 
 /* ── gestor ── */
 function renderAcctMgr(){
-  /* El desplegable de Plan estaba CLAVADO a los planes de Tradeify
-     (`Object.keys(FIRM_CATALOG.Tradeify.plans)`) y no había campo de Firm en
-     ninguna parte. En una cuenta de otra firma el plan guardado es '—', ninguna
-     opción coincidía y el navegador marcaba la primera: la ficha enseñaba
-     «Growth Evaluation · $50,000» junto a «PLAN NOT VERIFIED» — dos cosas que
-     se contradicen, y el usuario sin manera de arreglarlo porque la firma no se
-     podía ni ver. Ahora las opciones salen de la firma DE LA CUENTA, y el valor
-     que trae siempre aparece en la lista aunque no esté en el catálogo. */
-  const conActual = (lista, actual) =>
-    lista.includes(String(actual)) ? lista : [String(actual)].concat(lista);
   /* misTrades(), no S.trades: el resto de esta pantalla ya usa mias(S.accounts),
      así que contar los huérfanos sobre la mesa entera le enseñaba a André un
      número de trades sin cuenta que incluía los de Pablo — y lo invitaba a
@@ -5607,9 +5417,7 @@ function renderAcctMgr(){
      había quedado atrás. */
   const huerf = misTrades().filter(t => !Array.isArray(t.accts) || t.accts.includes(SIN_CUENTA)).length;
   $('#acList').innerHTML = mias(S.accounts).length ? ordenar(mias(S.accounts)).map(a=>{
-    const R = reglasDe(a), h = saludDe(a);
-    const firmas = conActual(NC_FIRMAS, a.firm || '—');
-    const rg     = a.reglas || {};
+    const h = saludDe(a);
     return `<div class="panel" style="margin-bottom:10px"><div class="p-body">
       <div class="acct-row">
         <div><label>Alias</label><input data-f="alias" data-id="${a.id}" value="${esc(a.alias)}"></div>
@@ -5625,9 +5433,7 @@ function renderAcctMgr(){
           <option value=""${!a.owner?' selected':''}>Unassigned</option>
           ${SOCIOS_REALES.map(u=>`<option value="${u}"${a.owner===u?' selected':''}>${esc(USERS[u].nombre)}</option>`).join('')}
         </select></div>
-        ${(esLive(a)||esSim(a)) ? '<div></div>' : `<div><label>Firm</label><select data-f="firm" data-id="${a.id}">
-          ${firmas.map(f=>`<option${f===a.firm?' selected':''}>${esc(f)}</option>`).join('')}
-        </select></div>`}
+        <div></div>
       </div>
       ${(esLive(a)||esSim(a)) ? '' : `<div class="acct-row" style="margin-top:10px">
         <div><label>Size</label><input type="number" data-f="size" data-id="${a.id}" value="${a.size}" step="100"></div>
@@ -5655,75 +5461,16 @@ function renderAcctMgr(){
           ${['activa','quemada'].concat(a.estado === 'pausada' ? ['pausada'] : []).map(e=>`<option value="${e}"${e===a.estado?' selected':''}>${({activa:'Active',pausada:'Paused',quemada:'Burned'})[e]}</option>`).join('')}
         </select></div>
       </div>
-      <!-- LOS MISMOS NÚMEROS DEL ALTA, editables. El drawdown vive SÓLO aquí:
-           se quitó del alta por ruidoso, pero sin él no hay línea de riesgo que
-           dibujar, así que queda a mano para quien la quiera. -->
-      <div style="margin-top:12px"><label>Its rules</label></div>
-      <div class="acct-row" style="margin-top:6px">
-        <div><label class="micro">Profit target USD</label>
-          <input type="number" data-f="r.target" data-id="${a.id}" value="${rg.target != null ? rg.target : ''}" step="100" placeholder="3000"></div>
-        <div><label class="micro">Max drawdown USD</label>
-          <input type="number" data-f="r.maxDD" data-id="${a.id}" value="${rg.maxDD || ''}" step="100" placeholder="${bi('no se sabe','unknown')}"></div>
-      </div>
-      <div class="acct-row" style="margin-top:10px">
-        <div><label class="micro">Cushion USD</label>
-          <input type="number" data-f="r.colchon" data-id="${a.id}" value="${rg.colchon || ''}" step="100" placeholder="2100"></div>
-        <div><label class="micro">Max payout USD</label>
-          <input type="number" data-f="r.maximo" data-id="${a.id}" value="${rg.maximo || ''}" step="100" placeholder="3100"></div>
-      </div>
-      <div class="acct-row" style="margin-top:10px">
-        <div><label class="micro">Goal</label>
-          <input disabled value="${metaDe(a)}"></div>
-        <div></div>
-      </div>`}
-      ${(()=>{
-        /* LA VARA DE CORDURA. La cuenta manda —lo tecleado es lo que rige—
-           pero cuando la firma y la talla están en el catálogo VERIFICADO y lo
-           tecleado es absurdo (menos de la mitad del reglamento real), se dice
-           y se ofrece el arreglo de un clic. Éste es el aviso que faltó cuando
-           la cuenta de Gerardo quedó en 500/1000/1000: la app TENÍA el
-           reglamento y ninguna pantalla comparó. */
-        if(esLive(a) || esSim(a)) return '';
-        const F = FIRM_CATALOG[a.firm]; if(!F) return '';
-        let zE = null, zC = null;
-        Object.keys(F.plans).forEach(n => { const pl = F.plans[n], z = pl.sizes && pl.sizes[a.size];
-          if(!z) return; if(pl.phase === 'eval' && !zE) zE = z; if(!zC || pl.phase === 'funded') zC = zC || z; });
-        const rg2 = a.reglas || {};
-        const raro = (zE && +rg2.target > 0 && +rg2.target < zE.target / 2)
-                  || (zC && +rg2.maxDD > 0 && zC.maxDD > 0 && +rg2.maxDD < zC.maxDD / 2);
-        return raro ? `<div class="cal-pace" style="margin-top:10px;border-left-color:var(--warn)">
-             <b>${bi('Estas reglas no cuadran con el reglamento verificado de ' + esc(a.firm) + '.',
-                     'These rules do not match the verified ' + esc(a.firm) + ' rulebook.')}</b>
-             ${bi('Para esta talla el reglamento dice objetivo ' + fmt$(zE ? zE.target : 0) + ' y drawdown ' + fmt$(zC ? zC.maxDD : 0) + '. Lo tecleado rige — pero con estos números la barra y la línea de riesgo no miden tu cuenta real.',
-                  'For this size the rulebook says target ' + fmt$(zE ? zE.target : 0) + ' and drawdown ' + fmt$(zC ? zC.maxDD : 0) + '. What you type rules — but with these numbers the bar and the risk line do not measure your real account.')}
-             <div style="margin-top:8px"><button class="btn sm primary" onclick="usarCatalogo('${a.id}')">${bi('Usar el reglamento verificado','Use the verified rulebook')}</button></div>
-           </div>` : '';
-      })()}
+      `}
+
       <div class="micro" style="margin-top:10px;color:var(--dim)">
         ${esLive(a) ? `Balance ${fmt$(h.balance)} · your own capital: no phases, no cutoff and nobody to replace the account`
           : esSim(a) ? `Balance ${fmt$(h.balance)} · practice money: does not count on The Desk or your targets`
-          : R ? `Balance ${fmt$(h.balance)} · DD line ${fmt$(h.linea)}${h.fija?' (locked)':''} · cushion ${fmt$(h.colchon)}
-               · firm daily limit ${R.dailyLoss ? fmt$(R.dailyLoss) : 'none'}
-               · since ${fmtFecha(a.desde)}
-               ${(()=>{ /* EL CAMINO QUE LA APP ESTÁ CALCULANDO, en una línea.
-                    Sin esto, un porcentaje que no cuadra sólo se puede depurar
-                    a preguntas: no había manera de ver desde qué tramos salía. */
-                  const cc = carreraCuenta(a);
-                  return `<br><b style="color:var(--dim)">${bi('CAMINO','ROAD')}</b>
-                    ${bi('examen','exam')} ${fmt$(cc.target)}
-                    → ${bi('colchón','cushion')} ${fmt$(cc.buffer)}
-                    → ${bi('tramo de pago','payout stretch')} ${fmt$(cc.pago)}
-                    · ${bi('meta','goal')} <b style="color:var(--dim)">${metaDe(a)}</b>
-                    · ${bi('vas en','you are at')} <b style="color:var(--dim)">${Math.round(cc.pct)}%</b>`;
-               })()}`
-            : `Balance ${fmt$(h.balance)} · since ${fmtFecha(a.desde)}
-               <br><span class="tag wr">NO RULES YET</span> it counts as capital on The Desk.
-               Fill in its target and max drawdown above and it starts computing its
-               drawdown line, cushion and road to payout`}
+          : (()=>{ const cc = carreraCuenta(a);
+              return `Balance ${fmt$(cc.balance)} · ${bi('camino','road')} ${fmt$(cc.avance)} ${bi('de','of')} ${fmt$(cc.total)} (${Math.round(cc.pct)}%) · since ${fmtFecha(a.desde)}`;
+            })()}
       </div>
       <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
-        ${(!esLive(a) && !esSim(a) && a.reglas && mias(S.accounts).filter(x => x.id !== a.id && !esLive(x) && !esSim(x)).length)
-          ? `<button class="btn sm" onclick="copiarReglas('${a.id}')">${bi('Copiar sus reglas a las demás','Copy its rules to my other accounts')}</button>` : ''}
         <button class="btn sm" onclick="reiniciarCuenta('${a.id}')">Reset balance</button>
         <button class="btn sm danger" onclick="borrarCuenta('${a.id}')">Delete</button>
       </div>
@@ -5739,51 +5486,12 @@ function renderAcctMgr(){
   $$('#acList [data-f]').forEach(el => el.onchange = ()=>{
     const a = S.accounts.find(x=>x.id===el.dataset.id); if(!a) return;
     const f = el.dataset.f;
-    if(f.startsWith('r.')){
-      /* los cuatro números viven en a.reglas. Vacío se guarda como '' y no como
-         0, porque en el desbloqueo del colchón esa diferencia es la que separa
-         «nunca se congela» de «se congela desde el primer peso». */
-      const v = el.value.trim();
-      a.reglas = a.reglas || {};
-      a.reglas[f.slice(2)] = v === '' ? '' : (parseFloat(v) || 0);
-    } else {
-      a[f] = (f==='size'||f==='start') ? (parseFloat(el.value)||0) : el.value.trim();
-      /* Cambiar de firma ya NO reacomoda plan ni tamaño: con reglas propias la
-         firma es una etiqueta, y reescribirle los números al usuario porque
-         cambió de nombre sería justo lo contrario de lo que se pidió. Sólo se
-         limpia el plan cuando esa firma no lo tiene, para no dejar colgado el
-         nombre de un plan de otra casa. */
-      if(f === 'firm'){
-        const cat = FIRM_CATALOG[a.firm];
-        if(!cat || !cat.plans[a.plan]) a.plan = '\u2014';
-      }
-    }
+    a[f] = (f==='size'||f==='start') ? (parseFloat(el.value)||0) : el.value.trim();
     if(f==='alias' && !a.alias) a.alias = 'T'+a.orden;
     sellaCambio(a);            /* para que el cambio le gane a la copia del otro */
     save(); renderAcctMgr(); renderAll();
   });
 }
-/* Reescribe las reglas de una cuenta desde el reglamento VERIFICADO de su
-   firma y talla. Sella el cambio para que le gane la fusión a la copia rota
-   del otro equipo. */
-window.usarCatalogo = id => {
-  const a = S.accounts.find(x => x.id === id); if(!a) return;
-  const F = FIRM_CATALOG[a.firm]; if(!F) return;
-  let zE = null, zF = null;
-  Object.keys(F.plans).forEach(n => { const pl = F.plans[n], z = pl.sizes && pl.sizes[a.size];
-    if(!z) return; if(pl.phase === 'eval' && !zE) zE = z; if(pl.phase === 'funded' && !zF) zF = z; });
-  const zC = zF || zE; if(!zC) { toast(bi('El catálogo no tiene esa talla','No such size in the catalogue')); return; }
-  const maxDD = zC.maxDD || 0, colchon = maxDD + 100;
-  a.reglas = { target: (zE && zE.target) || (a.reglas || {}).target || 0,
-               colchon, maximo: colchon + 1000, maxDD,
-               dailyLoss: zC.dailyLoss || 0 };
-  sellaCambio(a); olvidaQuemas(); save(); renderAcctMgr(); renderAll();
-  toast(bi('Reglas del reglamento verificado','Rules set from the verified rulebook'));
-};
-
-/* Tres cuentas iguales son quince campos tecleados a mano, y basta un dedazo en
-   uno para que la línea de drawdown de esa cuenta quede mal sin que se note.
-   Se llena una, se revisa su META contra la fondeadora, y se copia. */
 /* «Ya están fondeadas»: pasa TUS cuentas de examen a fondeadas de un clic.
    Existe porque este dato se perdía en un desplegable adentro de Ajustes y la
    barra en cero no decía que fuera eso — tres vueltas costó descubrirlo. Se
@@ -5798,17 +5506,6 @@ window.marcarFondeadas = () => {
   evs.forEach(a => { a.fase = 'buffer'; sellaCambio(a); });
   olvidaQuemas(); save(); renderAcctMgr(); renderAll();
   toast(bi(evs.length + ' marcadas como fondeadas', evs.length + ' marked as funded'));
-};
-window.copiarReglas = id => {
-  const a = S.accounts.find(x => x.id === id); if(!a || !a.reglas) return;
-  const otras = mias(S.accounts).filter(x => x.id !== id && !esLive(x) && !esSim(x));
-  if(!otras.length) return;
-  if(!confirm(bi(
-      'Copiar las reglas de «' + a.alias + '» —objetivo, colchón, pago máximo y drawdown— a las otras ' + otras.length + ' cuenta(s).\n\nNO se copia el tamaño, ni el saldo, ni la etapa: eso es de cada cuenta.\n\n¿Copiar?',
-      'Copy the rules of "' + a.alias + '" — target, cushion, max payout and drawdown — to your other ' + otras.length + ' account(s).\n\nSize, balance and stage are NOT copied: those belong to each account.\n\nCopy?'))) return;
-  otras.forEach(x => { x.reglas = { ...a.reglas }; sellaCambio(x); });
-  save(); renderAcctMgr(); renderAll();
-  toast(bi('Reglas copiadas a ' + otras.length, 'Rules copied to ' + otras.length));
 };
 window.reiniciarCuenta = id => {
   const a = S.accounts.find(x=>x.id===id); if(!a) return;
@@ -5875,126 +5572,36 @@ window.desdePrimerTrade = function(id){
   if(!fechas.length) return;
   a.desde = fechas[0]; save(); renderAll();
 };
+/* ══ EL CAMINO ══
+   Orden de André (28-ago): «todo es lo mismo, buscando echar 6,100 de profit
+   y ya». Fuera el aparato de reglas por cuenta (objetivo/colchón/máximo/
+   drawdown): TODA cuenta corre el MISMO camino de $6,100 de profit.
+   Dos etapas al registrarla: examen arranca en 0%, fondeada arranca en 50%.
+   El balance es el saldo más lo ganado — sin reinicios ni tramos. */
+const CAMINO_TOTAL = 6100;
+const CAMINO_MITAD = CAMINO_TOTAL / 2;
 function carreraCuenta(a){
-  const R = reglasDe(a);
-  /* LA ETAPA CON LA QUE SE REGISTRÓ MANDA SOBRE LOS TRADES.
-     Antes el examen SIEMPRE formaba parte del camino y sólo se daba por
-     pasado cuando los trades registrados AQUÍ llegaban al objetivo. Así que
-     una cuenta dada de alta como ya fondeada —comprada pasada, o que ya venías
-     operando— aparecía «EN EVALUACIÓN» y en 0%, teniendo que volver a ganar un
-     examen que ya estaba ganado. Si la registraste fondeada, esa etapa es
-     historia: no cuenta en la vara ni hay que repetirla. */
   const yaFondeada = !!a.fase && a.fase !== 'eval';
-  /* El tramo del examen SIGUE en la vara y se pinta como ya recorrido, en vez
-     de desaparecer. Dos razones: se ve que esa parte ya está ganada —que es lo
-     que quieres leer de un golpe—, y todas las cuentas comparten la misma
-     escala, así que el porcentaje de una fondeada y el de una en evaluación se
-     pueden comparar y sumar en la carrera de la firma. Si la borráramos, cada
-     cuenta mediría una vara de distinto largo. */
-  const target = R ? (R.target || 0) : 0;
-  const buffer = R ? (R.colchon || 0) : 0;
-  const pago = R ? (R.pago || 0) : 0;
-  const total = target + buffer + pago;
-
+  const tam = (a.size > 0) ? a.size : (a.start || 0);
+  /* lo que ya traías ganado al registrarla: Balance now − tamaño */
+  const previo = Math.max(0, (a.start || 0) - tam);
   const porDia = {};
   const hoyISO = todayISO();
-  /* Un trade fechado en el futuro no puede mover una barra de hoy: se ignora
-     aquí y se avisa en la ficha, igual que los anteriores a la línea de salida. */
   S.trades.forEach(t => { if(t.date >= a.desde && t.date <= hoyISO && (t.accts||[]).includes(a.id))
     porDia[t.date] = (porDia[t.date]||0) + (t.pnl||0); });
   const dias = Object.keys(porDia).sort();
-  /* ── DOS ETAPAS, NO UNA SUMA CORRIDA ──
-     Pasar la evaluación REINICIA la cuenta a su tamaño: el excedente del día del
-     pase NO es colchón, se queda en la fondeadora. Antes se arrastraba todo en
-     una sola suma y un día bueno de +$6,200 pintaba «PAGO MÁXIMO» sobre una
-     cuenta de la que no se podía retirar un peso. El colchón y el tramo de pago
-     se construyen con lo ganado DESPUÉS del día del pase. */
-  /* LO QUE YA TRAÍAS GANADO AL REGISTRARLA.
-     La app sólo sabía de los trades capturados AQUÍ, así que una cuenta que ya
-     venías operando entraba con su saldo correcto y con la barra en 0% — sin
-     forma de decirle dónde vas de verdad salvo recapturar meses de historial.
-     Ahora la diferencia entre el saldo de arranque y el tamaño de la cuenta
-     cuenta como ganancia hecha: pones tu saldo de hoy en «Starting balance» y
-     la barra arranca de ahí.
-     Cuando arranque y tamaño coinciden —toda cuenta nueva— esto vale 0 y nada
-     cambia respecto a antes. */
-  const tam = (a.size > 0) ? a.size : (a.start || 0);
-  const previo = Math.max(0, (a.start || 0) - tam);
-  let p = previo, pico = previo, mEval = null;
-  dias.forEach(d => {
-    p += porDia[d]; pico = Math.max(pico, p);
-    /* el día del pase sólo existe si la cuenta VIVE su examen aquí: en una
-       registrada ya fondeada el examen es historia previa, y detectarlo sobre
-       sus trades se comía el día más grande como «día del pase» — su mejor día
-       no contaba ni para el colchón ni para el payout */
-    if(!yaFondeada && !mEval && target > 0 && pico >= target) mEval = d;
-  });
-  /* El pase se marcaba SÓLO recorriendo días de trades, así que una cuenta
-     registrada con un saldo que ya alcanza el objetivo seguía diciendo «en
-     evaluación» con la barra pasada del corte. Lo previo también pasa el
-     examen: no hay día que marcar, pero sí etapa que reconocer. */
-  const evalPrevio = target > 0 && previo >= target;
-  const pasoEval = yaFondeada || evalPrevio || !!mEval;
-  /* lo ganado ya fondeado: desde el día siguiente al pase — o TODO, si la
-     cuenta nació fondeada y por lo tanto no hay día de pase que recortar. */
-  /* De lo previo, cuánto cuenta ya como colchón: si la registraste fondeada,
-     todo; si el examen se pasó con lo previo, sólo el excedente sobre el
-     objetivo —el resto se queda en la fondeadora al reiniciar. */
-  let pDesp = yaFondeada ? previo : (evalPrevio ? previo - target : 0);
-  let picoDesp = pDesp, mBuffer = null, mPago = null;
-  if(pasoEval){
-    dias.forEach(d => {
-      if(mEval && d <= mEval) return;
-      pDesp += porDia[d]; picoDesp = Math.max(picoDesp, pDesp);
-      if(!mBuffer && buffer > 0 && picoDesp >= buffer) mBuffer = d;
-      if(!mPago   && pago   > 0 && picoDesp >= buffer + pago) mPago = d;
-    });
-  }
-  /* Igual que el pase del examen: los hitos del colchón y del tramo de pago se
-     marcaban SÓLO al recorrer días de trades, así que con saldo previo la barra
-     los cruzaba sin cambiar de etiqueta. Se leen también del pico acumulado. */
-  const pasoBuffer = !!mBuffer || (buffer > 0 && picoDesp >= buffer);
-  const pasoPago   = !!mPago   || (pago   > 0 && picoDesp >= buffer + pago);
-
-  /* la barra no retrocede de un hito ya pasado */
-  const avance = !pasoEval
-    ? Math.max(0, Math.min(target, p))
-    : Math.min(total, target + Math.max(0, Math.min(buffer + pago, picoDesp)));
-  const pct = total > 0 ? Math.max(0, Math.min(100, avance / total * 100)) : 0;
-
-  /* el balance: antes del pase corre sobre el acumulado; ya fondeada, arranca
-     de nuevo en el tamaño de la cuenta */
-  /* Se cuenta desde el TAMAÑO y no desde el arranque, porque `p` ya trae
-     dentro lo previo: sumar `a.start` lo contaría dos veces. Al pasar el examen
-     la cuenta reinicia en su tamaño. */
-  const balance = pasoEval ? tam + pDesp : tam + p;
-
-  return { target, buffer, pago, total, p, pico, pDesp, picoDesp, avance, pct, balance,
-           pasoEval, pasoBuffer, pasoPago, mEval, mBuffer, mPago,
+  const p = previo + dias.reduce((x, d) => x + porDia[d], 0);
+  const base = yaFondeada ? CAMINO_MITAD : 0;
+  const avance = Math.max(0, Math.min(CAMINO_TOTAL, base + p));
+  const pct = avance / CAMINO_TOTAL * 100;
+  const balance = tam + p;
+  const pasoEval = avance >= CAMINO_MITAD;      // FUNDED: la mitad del camino
+  const pasoPago = avance >= CAMINO_TOTAL;      // PAID: los $6,100 completos
+  return { target: CAMINO_MITAD, buffer: CAMINO_MITAD, pago: 0, total: CAMINO_TOTAL,
+           p, pico: p, pDesp: p, picoDesp: p, avance, pct, balance,
+           pasoEval, pasoBuffer: false, pasoPago,
+           mEval: null, mBuffer: null, mPago: null,
            arranque: dias[0] || null };
-}
-
-/* LA META: el saldo al que llegas cuando el colchón está hecho y el tramo de
-   pago recorrido. Se cuenta desde el TAMAÑO de la cuenta y no desde lo que
-   llevas en la evaluación, porque al pasar el examen la cuenta se reinicia y
-   el excedente de ese día se queda en la fondeadora. Se pinta en la ficha para
-   poder cotejar de un vistazo el número que da la app contra el que te dice tu
-   fondeadora — que es justo donde se descubren los dedazos. */
-function metaDe(a){
-  const cc = carreraCuenta(a);
-  /* Se mide desde el TAMAÑO de la cuenta, no desde el saldo de hoy: el punto
-     de pase de una de 50k son 53,000 vayas donde vayas, y al pasar el examen la
-     cuenta reinicia en su tamaño de todos modos. */
-  const tam = (a.size > 0) ? a.size : (a.start || 0);
-  /* La meta es la de SU etapa. En examen es el saldo al que pasas; ya fondeada,
-     el del pago máximo. Antes siempre daba la segunda, así que el alta decía
-     $53,000 para un examen y su ficha decía $53,100 — el mismo número contado
-     de dos formas, que es justo lo que hace dudar de los dos. */
-  /* la etapa se DERIVA de la aritmética: registrada en examen pero con el
-     pase ya detectado en los trades, la meta es la del payout — si no, la
-     hoja decía PAID con balance $54,100 y «GOAL $53,000» en el mismo recuadro */
-  if(a.fase === 'eval' && !cc.pasoEval) return cc.target > 0 ? fmt$(tam + cc.target) : '—';
-  return (cc.buffer || cc.pago) ? fmt$(tam + cc.buffer + cc.pago) : '—';
 }
 
 /* ── LA CARRERA DE LA FIRMA ──
@@ -6012,19 +5619,12 @@ function carreraSocio(uid){
   const quemadas = todas.length - suyas.length;
   if(!suyas.length) return { uid, cuentas:0, avance:0, total:0, pct:0, cobrado:0,
                              capital:0, balance:0, quemadas, sinVara:0, enExamen:0, sinDatos: !todas.length };
-  let avance = 0, total = 0, pagos = 0, sinVara = 0;
-  /* El CAPITAL de una cuenta se sabe siempre (es su tamaño); el AVANCE no: sin
-     reglamento no hay objetivo ni colchón contra qué medir. Así que la cuenta
-     suma dinero y cuenta como cuenta, pero se queda fuera del porcentaje en vez
-     de arrastrarlo a un número inventado. */
-  let enExamen = 0;
+  let avance = 0, total = 0, pagos = 0, sinVara = 0, enExamen = 0;
   suyas.forEach(a => {
-    if(!reglasDe(a)){ sinVara++; return; }
     const c = carreraCuenta(a); avance += c.avance; total += c.total; if(c.pasoPago) pagos++;
-    /* una cuenta en examen sin un solo trade aporta cero, y eso es correcto —
-       pero visto desde la pista se lee igual que un error. Se cuenta para
-       poder decirlo. */
-    if(!c.pasoEval && c.avance <= 0) enExamen++; });
+    /* una cuenta registrada en examen y sin avance se dice, con su clic para
+       marcarla fondeada — es el único ajuste de etapa que existe */
+    if(a.fase === 'eval' && c.avance <= 0) enExamen++; });
   /* El capital que trae puesto: la suma del tamaño de sus cuentas EN PIE. Una
      quemada no es capital, así que no cuenta —es la misma regla que ya rige el
      balance de FUTUROS, y tenía que ser la misma aquí para no decir dos cosas
@@ -6536,7 +6136,7 @@ window.psFuturos = function(){ psV.fut = !psV.fut; pintaPerfilSocio(); };
 window.psDia    = function(iso){ psV.dia = (psV.dia === iso ? null : iso); pintaPerfilSocio(); };
 
 window.perfilSocio = function(uid){
-  if(!PERSONAJES.find(x => x.id === uid)) return;
+  if(!PERSONAJES.find(x => x.id === uid) && !USERS[uid]) return;
   psV = { uid, mes: todayISO().slice(0, 7), dia: null, fut: false };
   pintaPerfilSocio();
   openOv('ovPerfilSocio');
@@ -6544,7 +6144,11 @@ window.perfilSocio = function(uid){
 
 function pintaPerfilSocio(){
   const uid = psV.uid;
-  const p = PERSONAJES.find(x => x.id === uid); if(!p) return;
+  /* los invitados/alumnos no están en PERSONAJES: se les arma la ficha al
+     vuelo con su nombre de USERS y su monito (si ya lo hizo) */
+  const p = PERSONAJES.find(x => x.id === uid)
+         || (USERS[uid] ? { id: uid, nom: String(USERS[uid].nombre || uid).toUpperCase() } : null);
+  if(!p) return;
   const yo = S.session && S.session.user;
   const esYo = uid === yo;
   const hoy = Date.now();
@@ -6610,34 +6214,17 @@ function pintaPerfilSocio(){
     if(!ctas.length) return '';
     return `<div class="ps-caminos">` + ordenar(ctas).map(a => {
       const cc = carreraCuenta(a);
-      /* la quema se veía en el camino de Rutina (guardada) pero NO aquí, que es
-         donde de verdad se mira a un socio: una cuenta muerta parecía viva */
-      const q = quemaDetectada(a);
-      if(q || a.estado === 'quemada'){
+      if(a.estado === 'quemada'){
         return `<div class="ps-cam" style="opacity:.65">
           <div class="ps-cam-h"><b>${esc(a.alias)}</b>
-            <span class="ps-cam-et" style="color:var(--down)">${bi('QUEMADA','BURNED')}</span>
-            <span class="mono">${q ? fmt$(q.balance) : ''}</span></div>
-          <p class="micro" style="text-transform:none;letter-spacing:.03em">${q
-            ? bi('Tocó su línea de drawdown el ' + fmtFecha(q.fecha) + '. Sale del balance y de la carrera; sus trades se conservan.',
-                 'Hit its drawdown line on ' + fmtFecha(q.fecha) + '. Out of the balance and the race; its trades are kept.')
-            : bi('Marcada como quemada en Ajustes.','Marked burned in Settings.')}</p>
+            <span class="ps-cam-et" style="color:var(--down)">${bi('QUEMADA','BURNED')}</span></div>
         </div>`;
       }
-      if(!cc.total){
-        return `<div class="ps-cam">
-          <div class="ps-cam-h"><b>${esc(a.alias)}</b><span class="mono">${fmt$(cc.balance)}</span></div>
-          <p class="micro" style="text-transform:none;letter-spacing:.03em">${bi(
-            'Sin reglas escritas no hay vara que medir. El profit sí es real.',
-            'With no rules written there is no bar to measure. The profit is real.')}</p>
-        </div>`;
-      }
-      const c1 = cc.target / cc.total * 100;
-      const c2 = (cc.target + cc.buffer) / cc.total * 100;
+      /* UN solo camino para toda cuenta: $6,100. La rayita del medio es el 50%
+         donde arranca una fondeada. Sin hitos, sin piso, sin metas por cuenta. */
       const etapa = cc.pasoPago ? [bi('COBRÓ','PAID'),'up']
-                  : cc.pasoBuffer ? [bi('TRAMO DE PAGO','PAYOUT STRETCH'),'up']
                   : cc.pasoEval ? [bi('FONDEADA','FUNDED'),'']
-                  : [bi('EN EVALUACIÓN','IN EVALUATION'),''];
+                  : [bi('EN EXAMEN','IN EVALUATION'),''];
       return `<div class="ps-cam">
         <div class="ps-cam-h">
           <b>${esc(a.alias)}</b>
@@ -6646,42 +6233,15 @@ function pintaPerfilSocio(){
         </div>
         <div class="pr-track vara">
           <i class="${cc.pct >= 100 ? 'listo' : ''}" style="width:${cc.pct}%"></i>
-          <span class="corte" style="left:${c1}%"></span>
-          <span class="corte" style="left:${c2}%"></span>
+          <span class="corte" style="left:50%"></span>
         </div>
         <div class="ps-cam-pie">
           <span>${Math.round(cc.pct)}% ${bi('del camino','of the road')}</span>
           <span>${fmt$(cc.avance)} ${bi('de','of')} ${fmt$(cc.total)}</span>
         </div>
-        <!-- LOS DOS HITOS, con su número ACUMULADO. La barra ya traía sus dos
-             rayitas pero mudas: no decían dónde quedaba el colchón ni que de
-             ahí para arriba ya es payout, que es lo único que se quiere saber
-             mirando esto. El colchón se cuenta desde cero del camino —examen
-             más colchón— porque así es como se llega a él. -->
-        <div class="ps-hitos">
-          <span class="${cc.pasoEval ? 'ok' : ''}">${bi('EXAMEN','EXAM')} ${fmt$(cc.target)}</span>
-          <span class="${cc.pasoBuffer ? 'ok' : ''}">${bi('COLCHÓN','CUSHION')} ${fmt$(cc.target + cc.buffer)}</span>
-          <span class="${cc.pasoPago ? 'ok' : ''}">${bi('PAYOUT','PAYOUT')} ${fmt$(cc.total)}</span>
-        </div>
-        <!-- Los dos números que se buscan al abrir la hoja de alguien: dónde
-             está su piso y a dónde va. La hoja enseñaba la barra pero no el
-             drawdown ni el objetivo, que es justo lo que se quiere saber de un
-             socio: qué tan cerca está del piso y cuánto le falta. -->
-        ${(()=>{ const h = saludDe(a), bajo = h.colchon != null && h.maxDD > 0 && h.colchon < h.maxDD * .3;
-          return `<div class="ps-hitos" style="color:var(--dim)">
-            <span>${bi('PISO','DD LINE')} ${h.linea == null
-                ? `<b style="color:var(--faint)">${bi('sin definir','not set')}</b>`
-                : `<b class="${bajo ? 'down' : ''}">${fmt$(h.linea)}</b>${h.fija ? ' ' + bi('(fijo)','(locked)') : ''}`}</span>
-            <span style="text-align:right">${bi('OBJETIVO','GOAL')} <b>${metaDe(a)}</b></span>
-          </div>`; })()}
         ${(cc.pasoPago && (a.owner || DUENO_ORIGEN) === (S.session && S.session.user)) ? `
           <div style="margin-top:6px"><button class="btn xs primary"
             onclick="event.stopPropagation(); abrirCaja('ingreso')">${bi('Registrar el payout →','Log the payout →')}</button></div>` : ''}
-        <!-- Una barra en cero no dice si es que no has ganado nada o si la app
-             no se enteró. Ahora lo dice, y dice qué hacer. -->
-        ${cc.pct === 0 ? `<p class="micro" style="text-transform:none;letter-spacing:.03em;color:var(--faint);margin-top:4px">${bi(
-            'Sin trades. ¿Ya la venías operando? Pon tu saldo en Ajustes → Cuentas → Balance now.',
-            'No trades yet. Already running it? Put its balance in Settings → Accounts → Balance now.')}</p>` : ''}
       </div>`;
     }).join('') + `</div>`;
   };
@@ -7266,35 +6826,6 @@ function getSession(iso){
 
 
 /* Cierre del día: su bitácora escrita, no un reporte a nadie. */
-function buildReport(){
-  const iso = todayISO();
-  const dayTr = tradesByDay()[iso] || [];
-  const st = computeStats(misTrades());
-  const R = pnlRanges(), M = metas();
-  const dPnl = dayTr.reduce((a,t)=>a+(t.pnl||0),0);
-  const lines = [];
-  lines.push('NORTHPOINT · DAY CLOSE');
-  lines.push(fmtFecha(iso) + ' · ' + (S.profile.nombre || 'Operador') + ' · ' + (S.profile.rol||''));
-  lines.push('────────────────────────────');
-  lines.push('Trades: ' + dayTr.length + '  ·  P&L del día: ' + fmt$(dPnl,true));
-  dayTr.forEach((t,i)=>{
-    const v = violations(t, dayTr);
-    lines.push(`${i+1}) ${t.sym} ${t.dir==='L'?'LONG':'SHORT'} x${t.qty} @ ${t.time} → ${fmt$(t.pnl,true)}${t.setupOk?' · setup válido':' · SETUP INCOMPLETO'}${v.length?' · ⚠ '+v.map(x=>tr('vio.'+x)).join(', '):''}`);
-    if(t.notas) lines.push('   ' + t.notas);
-  });
-  if(!dayTr.length) lines.push('No trades. The checklist gave no valid setup — the best trade of the day was no trade.');
-  lines.push('────────────────────────────');
-  lines.push('Progress vs target · Day: ' + fmt$(R.dia,true) + ' / ' + fmt$(M.dia) + ' · Mes: ' + fmt$(R.mes,true) + ' / ' + fmt$(M.mes));
-  acctsSel().forEach(a=>{
-    const h = saludDe(a), F = FASES[a.fase] || FASES.eval;
-    lines.push('  ' + a.alias + ' · ' + F.corto + ' · ' + fmt$(h.balance) +
-      (h.colchon==null ? ' · colchón sin verificar' : ' · colchón ' + fmt$(h.colchon)));
-  });
-  const sc = computeScore();
-  if(sc) lines.push('Northpoint Score: ' + sc.total + ' / 1000 · ' + sc.grade);
-  return lines.join('\n');
-}
-
 /* ════════ JOURNAL ════════ */
 let jRange = 'mes';
 /* ════════ CALENDARIO DE METAS (Journal) ════════ */
@@ -8043,7 +7574,8 @@ document.addEventListener('drop', e => {
     else registraDeCaptura(d);
   });
 });
-$('#btnCaptura')?.addEventListener('click', () => $('#capFile').click());
+$('#btnCapturaGrande')?.addEventListener('click', () => $('#capFile').click());
+$('#btnCSV3')?.addEventListener('click', () => $('#fileCSV')?.click());
 $('#capFile')?.addEventListener('change', e => {
   const f = e.target.files && e.target.files[0];
   e.target.value = '';
@@ -8481,26 +8013,9 @@ $('#pSave').addEventListener('click', ()=>{
    y cualquier otra fase (colchón, pago) pide uno fondeado. Se toma el primero
    que cuadre, que es el más común de esa firma. */
 /* En el alta sólo hay DOS etapas —examen y fondeada—, que es como se habla de
-   una cuenta cuando la registras. La tercera (payout) se elige después en
-   Ajustes, cuando de verdad llegas ahí. */
+   una cuenta cuando la registras. */
 const NC_FASES = { eval:['Examen','Evaluation'], buffer:['Fondeada','Funded'] };
-
-/* Los valores con los que abre el alta: la referencia de 50k de REGLAS_DEF,
-   para no tener el mismo número escrito en dos lugares. */
-const NC_DEF = { start: REGLAS_DEF.size, ...reglasPorTamano(REGLAS_DEF.size) };
-/* Al escribir la firma en el alta se reajusta el máximo: Apex lleva su tramo de
-   $2,000 y las demás $1,000, sin que haya que acordarse del número. */
-/* al TERMINAR de editar (change, no input): recalcular con el balance a medio
-   teclear escribía máximos absurdos —reglasPorTamano(5) da 0— en silencio */
-['ncFirma','ncStart'].forEach(id => $('#' + id).addEventListener('change', () => {
-  if(nc.fase === 'eval') return;                       // en examen esos campos no aplican
-  const d = reglasPorTamano(ncNum('ncStart'), $('#ncFirma').value);
-  $('#ncMaximo').value = d.maximo;
-  $('#ncColchon').value = $('#ncColchon').value || d.colchon;
-  ncMetaPinta();
-}));
-
-const nc = { fase:'eval', firm:'' };
+const nc = { fase:'eval' };
 function ncChips(cont, lista, activo, onPick, fmt){
   cont.innerHTML = lista.map(v =>
     `<button type="button" data-v="${esc(String(v))}" class="${String(v)===String(activo)?'on':''}">${fmt?fmt(v):esc(String(v))}</button>`).join('');
@@ -8508,74 +8023,30 @@ function ncChips(cont, lista, activo, onPick, fmt){
 }
 const ncNum = id => { const v = ($('#'+id).value || '').trim();
   return v === '' ? 0 : (parseFloat(v) || 0); };
-/* LA META: en examen, el saldo al que pasas; ya fondeada, el saldo del pago
-   máximo. Es la comprobación de que los números de arriba son los correctos. */
-function ncMetaPinta(){
-  const base = ncNum('ncStart');
-  const sube = nc.fase === 'eval' ? ncNum('ncTarget') : ncNum('ncMaximo');
-  $('#ncMeta').value = (base > 0 && sube > 0) ? fmt$(base + sube) : '—';
-}
 function ncPinta(){
   ncChips($('#ncFase'), Object.keys(NC_FASES), nc.fase,
           v => { nc.fase = v; ncPinta(); }, k => loc(NC_FASES[k]));
-  /* display en vez del atributo `hidden`: .f-row lleva display:flex en la hoja
-     de estilos y eso le gana a hidden, así que las cajas de la etapa fondeada
-     se veían aunque estuviera elegido Examen — las seis cajas otra vez. */
-  const esEval = nc.fase === 'eval';
-  $('#ncZonaEval').style.display = esEval ? '' : 'none';
-  $('#ncZonaFund').style.display = esEval ? 'none' : '';
-  ncMetaPinta();
 }
 function ncAbrir(){
   nc.fase = 'eval';
-  $('#ncAlias').value = ''; $('#ncFirma').value = ''; $('#ncErr').textContent = '';
-  $('#ncStart').value   = NC_DEF.start;
-  $('#ncTarget').value  = NC_DEF.target;
-  $('#ncColchon').value = NC_DEF.colchon;
-  $('#ncMaximo').value  = NC_DEF.maximo;
-  $('#ncDesde').value   = todayISO();
+  $('#ncAlias').value = ''; $('#ncErr').textContent = '';
+  $('#ncStart').value = 50000;
+  $('#ncDesde').value = todayISO();
   ncPinta();
   openOv('ovNuevaCuenta');
 }
-['ncStart','ncTarget','ncColchon','ncMaximo'].forEach(id =>
-  $('#'+id).addEventListener('input', ncMetaPinta));
 
 $('#ncSave').addEventListener('click', ()=>{
-  /* El nombre lo pone quien la crea — sin autonombrar "T3" en silencio, que
-     luego nadie sabe cuál cuenta es cuál. */
   const alias = $('#ncAlias').value.trim();
   if(!alias){ $('#ncErr').textContent = 'Give the account a name.'; return; }
   const cap = ncNum('ncStart');
   if(cap <= 0){ $('#ncErr').textContent = 'Enter a balance greater than zero.'; return; }
-  /* `desde` es la línea de salida de la carrera: sólo cuentan los trades de
-     esa fecha en adelante. Si el usuario no la toca, es hoy. */
   const desde = ($('#ncDesde') && $('#ncDesde').value) || todayISO();
-  const esEval = nc.fase === 'eval';
-  /* sellaCambio: sin sello, fusionarListas() desempata a favor de la copia
-     LOCAL, así que la cuenta que otro socio edita en su equipo no llega nunca
-     al tuyo — Gerardo puso su saldo en $51,000 en su celular y en la mesa de
-     André seguía apareciendo $50,000, para siempre. Los trades ya se sellaban;
-     las cuentas se habían quedado fuera. */
+  /* sellaCambio: sin sello, la copia del otro equipo ganaría la fusión */
   S.accounts.push(sellaCambio({
     id:'ac_'+uid(), alias, orden:(S.accounts.length+1), desde,
     estado:'activa', owner:S.session.user,
-    tipo:'prop', firm: ($('#ncFirma').value.trim() || '\u2014'), plan:'\u2014',
-    size:cap, start:cap, fase:nc.fase,
-    /* En examen sólo importa el objetivo; ya fondeada, el colchón y el pago
-       máximo. El que no aplica se guarda igual con su valor de fábrica, para
-       que al cambiar de etapa en Ajustes la cuenta ya sepa a dónde va. */
-    reglas: (() => {
-      /* con la FIRMA tecleada: NC_DEF es la referencia genérica y en Apex el
-         tramo es $2,000 — el alta guardaba 3,100 y la migración lo corregía al
-         recargar: el hito PAYOUT cambiaba solo de un día a otro */
-      const d = reglasPorTamano(cap, $('#ncFirma').value);
-      const colchon = esEval ? d.colchon : ncNum('ncColchon');
-      let maximo    = esEval ? d.maximo  : ncNum('ncMaximo');
-      /* un máximo por debajo del colchón no existe: se corrige al tramo de la
-         casa en vez de guardar un camino imposible en silencio */
-      if(!(maximo > colchon)) maximo = colchon + (/apex/i.test($('#ncFirma').value) ? 2000 : 1000);
-      return { target: esEval ? ncNum('ncTarget') : NC_DEF.target, colchon, maximo };
-    })()
+    tipo:'prop', size:cap, start:cap, fase:nc.fase,
   }));
   /* renderAll() en vez de tres renders sueltos: registrar una cuenta tiene que
      verse de inmediato en la pantalla donde estés, no sólo en Ajustes. */
@@ -9793,14 +9264,7 @@ $$('[data-close]').forEach(b=> b.addEventListener('click', closeOv));
 addEventListener('keydown', e=>{ if(e.key==='Escape') closeOv(); });
 
 
-$('#repCopy').addEventListener('click', ()=>{
-  navigator.clipboard.writeText($('#repText').value).then(()=>{
-    const iso = todayISO(); const s = getSession(iso);
-    s.post[2] = true; save();
-    toast('Report copied — sent = post-market ✓');
-    closeOv();
-  }).catch(()=> toast('No se pudo copiar'));
-});
+
 
 $('#btnTrade').addEventListener('click', ()=> openTrade());
 /* ── PEDIR EL CORREO DE RECUPERACIÓN DESDE AQUÍ ──
@@ -9903,39 +9367,9 @@ $('#lgOlvide')?.addEventListener('click', async () => {
    si la mesa vuelve a abrir. */
 $('#btnPos')?.addEventListener('click', ()=> openPos());
 
-/* El cierre del día, alcanzable: el botón original vivía en la vista de Rutina
-   (guardada), así que la hoja del día y ovReport quedaron sin camino. Éste vive
-   en Journal: mismo flujo, y al cerrar abre la hoja para copiarla. */
-$('#btnCerrarDia2')?.addEventListener('click', () => {
-  const iso = todayISO();
-  const ses = getSession(iso);
-  const dayTr = tradesByDay()[iso] || [];
-  const maxT = planDelDia(iso).maxT;
-  if(ses.cerrado){
-    if(!confirm(bi('El día ya está cerrado. ¿Reabrirlo?','The day is closed. Reopen it?'))) return;
-    ses.cerrado = null; sellaCambio(ses); save(); renderJournal(); pintaCierreBtn();
-    toast(bi('Día reabierto.','Day reopened.'));
-    return;
-  }
-  const cuantos = dayTr.length;
-  const como = !cuantos ? bi('sin disparar: no hubo setup','no shots: there was no setup')
-    : cuantos < maxT ? bi(cuantos + ' de ' + maxT + ' balas', cuantos + ' of ' + maxT + ' bullets')
-    : bi('con las ' + maxT + ' balas gastadas', 'with all ' + maxT + ' bullets spent');
-  if(!confirm(bi('Cerrar el día ' + como + '. Después de esto la sesión queda firmada.\n\n¿Cerrar?',
-                 'Close the day ' + como + '. After this the session is signed off.\n\nClose?'))) return;
-  ses.cerrado = { hora: horaMercadoAhora(), trades: cuantos, maxT,
-                  por: (S.session && S.session.user) || null, ts: Date.now() };
-  sellaCambio(ses); save(); pintaCierreBtn();
-  $('#repText').value = buildReport();
-  openOv('ovReport');
-  toast(bi('Día cerrado ' + como + '.', 'Day closed ' + como + '.'));
-});
-/* el botón dice en qué estado está el día */
-function pintaCierreBtn(){
-  const b = $('#btnCerrarDia2'); if(!b) return;
-  const cerrado = !!(getSession(todayISO()).cerrado);
-  b.textContent = cerrado ? bi('Día cerrado · reabrir','Day closed · reopen') : bi('Cerrar el día ✍','Day close ✍');
-}
+/* El botón de Journal abre el mismo importador de Tradovate de Ajustes:
+   ahí es donde vives a diario, no en la pestaña Data (orden de André). */
+$('#btnCSV2')?.addEventListener('click', () => $('#fileCSV')?.click());
 
 /* ════════ Badges del rail ════════ */
 function updateBadges(){
@@ -12673,7 +12107,7 @@ lockUI();
 try{ localStorage.removeItem('np_last_user'); }catch(e){}
 
 /* QA hook */
-window.__np = { state: () => S, score: computeScore, report: buildReport };
+window.__np = { state: () => S, score: computeScore };
 </script>
 </body>
 </html>
