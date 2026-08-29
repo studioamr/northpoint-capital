@@ -2961,9 +2961,12 @@ stop[stop-color="#9BC0DC"]{stop-color:var(--txt)}
       <div class="cap-h"><span class="n">01</span><b>The shot</b><span class="micro">what and when</span></div>
       <div class="f-row3">
         <div><label>Instrument</label>
+          <!-- todos los símbolos que POINT_VALUE sabe valuar: el lector de
+               capturas mapea BTCUSDT→BTC y aquí tiene que existir la opción -->
           <select id="tSym">
+            <option>MNQ</option><option>MES</option><option>MYM</option><option>M2K</option>
             <option>NQ</option><option>ES</option><option>YM</option><option>RTY</option>
-            <option>GC</option><option>CL</option><option>MNQ</option><option>MES</option>
+            <option>GC</option><option>CL</option><option>BTC</option><option>MBT</option>
           </select>
         </div>
         <div><label>Direction</label><select id="tDir"><option value="L">Long</option><option value="S">Short</option></select></div>
@@ -2971,7 +2974,7 @@ stop[stop-color="#9BC0DC"]{stop-color:var(--txt)}
       </div>
       <div class="f-row" style="margin-top:10px">
         <div><label>Date</label><input type="date" id="tFecha" max="2099-12-31"></div>
-        <div><label>Entry time</label><input type="time" id="tHora" value="07:35"></div>
+        <div><label>Entry time · NY</label><input type="time" id="tHora"></div>
       </div>
     </div>
 
@@ -3310,10 +3313,11 @@ stop[stop-color="#9BC0DC"]{stop-color:var(--txt)}
       </div>
       <p class="micro" style="color:var(--faint);line-height:1.6;margin:6px 0 16px" id="setMetaAyuda"></p>
       <div class="f-row">
-        <div><label>Opens</label><input type="time" id="setOpen"></div>
-        <div><label>Closes</label><input type="time" id="setClose"></div>
+        <div><label>Opens · NY time</label><input type="time" id="setOpen"></div>
+        <div><label>Closes · NY time</label><input type="time" id="setClose"></div>
       </div>
       <p class="micro" style="color:var(--faint);line-height:1.6;margin:6px 0 16px">
+        En HORA DE NUEVA YORK, el reloj del mercado (Morelia va 2 h atrás).
         Un trade fuera de esta ventana se marca solo.</p>
       <!-- EL PLAN DE HOY. planDelDia() siempre supo leerlo de la sesión, pero
            el único editor vivía en la vista de Rutina (guardada): declarar más
@@ -8652,11 +8656,94 @@ let tShot = null;
 function tShotPinta(){
   const z = $('#tShotZona'); if(!z) return;
   z.innerHTML = tShot
-    ? `<div class="shot-prev"><img src="${tShot}" alt="Screenshot del trade"><button type="button" id="tShotQuitar">Quitar</button></div>`
+    ? `<div class="shot-prev"><img src="${tShot}" alt="Screenshot del trade"><button type="button" id="tShotQuitar">Quitar</button></div>
+       <button type="button" class="btn sm primary" id="tShotLeer" style="margin-top:8px;width:100%">✨ ${bi('Leer los datos de la captura','Read the trade from the screenshot')}</button>
+       <div id="tShotLeerCaja" class="micro" style="margin-top:6px;line-height:1.6"></div>`
     : `<div class="shot-drop" id="tShotDrop">Haz clic para subir la captura — o pégala aquí con Ctrl/Cmd+V</div>`;
   const d = $('#tShotDrop'); if(d) d.onclick = () => $('#tShotFile').click();
   const q = $('#tShotQuitar'); if(q) q.onclick = () => { tShot = null; tShotPinta(); };
+  const l = $('#tShotLeer'); if(l) l.onclick = () => leerCaptura();
 }
+/* ══ LEER EL TRADE DE LA CAPTURA ══
+   André registra con la herramienta de posición de TradingView: la captura ya
+   trae TODO (instrumento, lado, contratos, entrada, salida, P&L, hora). Vaciar
+   eso a mano campo por campo era el paso que hacía pesado el journal. Esto se
+   lo dicta al formulario: la imagen adjunta se manda a la API de Anthropic con
+   LA LLAVE DEL PROPIO USUARIO (el mismo BYOK del análisis del día: la llave
+   vive sólo en este navegador y el uso se cobra en su cuenta) y la respuesta
+   PRE-LLENA el formulario. NUNCA guarda solo: el trader revisa y da Save. */
+async function leerCaptura(){
+  const caja = $('#tShotLeerCaja'); if(!caja || !tShot) return;
+  const llave = localStorage.getItem(LLAVE_IA) || '';
+  if(!llave){
+    caja.innerHTML = `${bi('Pega tu llave de Anthropic (empieza con','Paste your Anthropic key (starts with')} <code>sk-ant-</code>).
+      ${bi('Se guarda sólo en este navegador y el uso se cobra en tu cuenta.','It stays in this browser only; usage bills your account.')}
+      <div style="display:flex;gap:8px;margin-top:8px">
+        <input id="capLlaveIn" type="password" placeholder="sk-ant-..." style="flex:1;min-width:0">
+        <button type="button" class="btn sm primary" id="capLlaveOk">Save</button>
+      </div>`;
+    $('#capLlaveOk').onclick = () => {
+      const v = $('#capLlaveIn').value.trim();
+      if(!v.startsWith('sk-ant-')){ toast(tr('ag.llaveMala')); return; }
+      localStorage.setItem(LLAVE_IA, v); leerCaptura();
+    };
+    return;
+  }
+  const btn = $('#tShotLeer'); if(btn) btn.disabled = true;
+  caja.textContent = bi('Leyendo la captura…','Reading the screenshot…');
+  try{
+    const media = (tShot.match(/^data:(image\/\w+);/) || [])[1] || 'image/jpeg';
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method:'POST',
+      headers:{ 'content-type':'application/json', 'x-api-key': llave,
+                'anthropic-version':'2023-06-01',
+                'anthropic-dangerous-direct-browser-access':'true' },
+      body: JSON.stringify({
+        model:'claude-opus-5', max_tokens: 500,
+        system:'Extraes datos de trades desde capturas de TradingView para un journal. Respondes ÚNICAMENTE un objeto JSON, sin texto alrededor.',
+        messages:[{ role:'user', content:[
+          { type:'image', source:{ type:'base64', media_type: media, data: tShot.split(',')[1] } },
+          { type:'text', text:
+`Lee la herramienta de posición (long/short position tool) de esta captura de TradingView y devuelve SOLO este JSON:
+{"sym":"<ticker tal cual, ej BTCUSDT o MNQ>","dir":"L|S","qty":<contratos>,"entry":<precio de entrada>,"exit":<precio de salida o null si sigue abierta>,"pnl":<P&L en USD: el realizado si está cerrada; si está abierta, el P&L actual que muestra la herramienta (negativo si pierde)>,"date":"YYYY-MM-DD o null (la fecha del reloj/eje del gráfico si se ve)","time":"HH:MM o null (hora de entrada si se ve)","nota":"<en 10 palabras qué se ve, ej: short al quiebre del rango>"}
+Reglas: los números SIN comas de miles. dir: en la herramienta larga el TP va arriba de la entrada; en la corta, abajo. Si un dato no se ve, null. Nada fuera del JSON.` },
+        ]}],
+      }),
+    });
+    const j = await res.json();
+    if(!res.ok){
+      const msg = (j && j.error && j.error.message) || ('HTTP ' + res.status);
+      if(res.status === 401){ localStorage.removeItem(LLAVE_IA); caja.textContent = ''; leerCaptura(); return; }
+      throw new Error(msg);
+    }
+    const texto = (j.content || []).filter(b => b.type === 'text').map(b => b.text).join('');
+    const m = texto.match(/\{[\s\S]*\}/);
+    if(!m) throw new Error(bi('La IA no devolvió datos legibles','The AI returned nothing readable'));
+    const d = JSON.parse(m[0]);
+    /* PRE-LLENA, no guarda: lo leído se escribe en las cajas y el trader manda */
+    const puestos = [];
+    if(d.sym){
+      const symApp = impSimbolo(d.sym);
+      $('#tSym').value = symApp;
+      if($('#tSym').value === symApp) puestos.push(symApp);
+      else puestos.push(esc(String(d.sym)) + bi(' (no está en la lista de símbolos: elígelo a mano)',' (not in the symbol list: pick it by hand)'));
+    }
+    if(d.dir === 'L' || d.dir === 'S'){ $('#tDir').value = d.dir; puestos.push(d.dir === 'L' ? 'LONG' : 'SHORT'); }
+    if(isFinite(+d.qty) && +d.qty > 0){ $('#tQty').value = Math.round(+d.qty); puestos.push('×' + Math.round(+d.qty)); }
+    if(isFinite(+d.entry)) $('#tIn').value = +d.entry;
+    if(isFinite(+d.exit) && d.exit != null) $('#tOut').value = +d.exit;
+    if(isFinite(+d.pnl)){ $('#tPnl').value = Math.round(+d.pnl * 100) / 100; puestos.push(fmt$(+d.pnl, true)); }
+    if(d.time && /^\d{1,2}:\d{2}/.test(d.time)) $('#tHora').value = d.time.slice(0, 5);
+    if(d.date && /^\d{4}-\d{2}-\d{2}$/.test(d.date) && d.date <= todayISO()) $('#tFecha').value = d.date;
+    if(d.nota && !$('#tNotas').value.trim()) $('#tNotas').value = String(d.nota).slice(0, 120);
+    caja.innerHTML = `<b class="up">${bi('Leído','Read')}: ${esc(puestos.join(' · '))}</b> — ${bi('revisa los números y dale Save. Tú mandas, no la captura.','check the numbers and hit Save. You rule, not the screenshot.')}`;
+  }catch(e){
+    caja.innerHTML = `<span class="down">${bi('No se pudo leer: ','Could not read: ')}${esc(e.message || String(e))}</span>`;
+  }finally{
+    if(btn) btn.disabled = false;
+  }
+}
+
 function encogeImagen(archivo, cb){
   const img = new Image();
   img.onload = () => {
