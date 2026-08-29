@@ -1125,7 +1125,11 @@ body.locked .app{visibility:hidden;pointer-events:none}
 .kat-card.cur .kat-ico{height:52px}
 .kat-aqui{position:absolute;top:-9px;left:50%;transform:translateX(-50%);font-family:var(--mono);font-size:8.5px;font-weight:800;letter-spacing:.14em;color:#0a0a0a;background:var(--kc);border-radius:20px;padding:3px 10px;box-shadow:0 2px 8px -2px var(--kc);white-space:nowrap}
 .kat-aqui.vista{background:transparent;color:var(--kc);border:1px solid var(--kc);box-shadow:none}
-.kat-card.viewing{outline:2px solid var(--kc);outline-offset:2px}
+.kat-card{transition:opacity .18s ease}
+/* al elegir una, las demás se atenúan para que solo resalte la seleccionada */
+.kat-grid:has(.kat-card.viewing) .kat-card:not(.viewing){opacity:.32}
+.kat-grid:has(.kat-card.viewing) .kat-card:not(.viewing):hover{opacity:.7}
+.kat-card.viewing{outline:2px solid var(--kc);outline-offset:2px;opacity:1}
 .kat-prog{display:flex;align-items:center;gap:10px;margin:14px 0 2px}
 .kat-prog-bar{flex:1;height:8px;border-radius:5px;background:var(--line-soft);overflow:hidden}
 .kat-prog-bar i{display:block;height:100%;border-radius:5px;background:linear-gradient(90deg,color-mix(in srgb,var(--kc) 60%,#000),var(--kc));transition:width .6s}
@@ -10929,7 +10933,8 @@ function renderBatalla(){
     const _preview = (window._batVista!=null && window._batVista>=0 && window._batVista<KATANAS.length) ? window._batVista : null;
     /* la espada flotante = la equipada (o la que previsualizas); el ENTORNO = tu cinta/rango */
     const vistaIdx = _preview!=null ? _preview : kEquipIdx;
-    const escenaIdx = _preview!=null ? _preview : batRango(batElo(yo));
+    /* el ENTORNO siempre sigue tu cinta/rango — mover de espada ya no lo cambia */
+    const escenaIdx = batRango(batElo(yo));
     window._zenVista = escenaIdx;
     const _bh = KATANAS[vistaIdx].belt.replace('#','');
     const katClaro = (parseInt(_bh.slice(0,2),16)*0.299 + parseInt(_bh.slice(2,4),16)*0.587 + parseInt(_bh.slice(4,6),16)*0.114)/255 > 0.72;
@@ -11072,7 +11077,6 @@ function renderBatalla(){
     root.querySelectorAll('[data-ver]').forEach(b => b.onclick = () => {
       const i=+b.dataset.ver; window._batVista=i;
       if(miKat.includes(KATANAS[i].id)){ batEquipar(yo,i); toast('🗡️ '+bi('Equipaste','Equipped')+' '+loc(KATANAS[i].n)); }
-      else { toast('🌏 '+bi('Mundo de','World of')+' '+loc(KATANAS[i].n)); }
       renderBatalla();
     });
     if(window._batBotinFlash && window._batBotinFlash.uid===yo){ const f=window._batBotinFlash; window._batBotinFlash=null; setTimeout(()=>animaBotin(banco, f.monto), 220); }
