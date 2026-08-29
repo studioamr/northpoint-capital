@@ -4420,6 +4420,7 @@ stop[stop-color="#9BC0DC"]{stop-color:var(--txt)}
           <span class="micro" data-i18n="vd.plan">The plan · from $0 to the house</span>
           <span class="micro" id="metaSub" style="margin-left:auto;color:var(--faint)"></span>
         </div>
+        <div id="contrato30" class="mt"></div>
         <div class="panel pat mt" id="patrimonioHoy"></div>
         <div id="metasMods" class="mt"></div>
       </section>
@@ -6088,11 +6089,19 @@ function guardaEnDisco(){
     return true;
   }catch(e){
     const lleno = /quota|exceeded|storage/i.test((e && e.name) + ' ' + (e && e.message));
+    /* "tus datos siguen subiendo a la nube" era una afirmación FIJA, sin
+       importar si en verdad hay nube (10 invitados nunca la usan) o sesión, o
+       si la conexión también está caída — justo el momento en que un trade
+       recién capturado puede quedar SOLO en memoria, sin ningún respaldo. */
+    const conNube = (typeof cloudOn==='function' && cloudOn()) && cloudTok && !cloudErr && navigator.onLine !== false;
     if(Date.now() - _avisoCuota > 30000){
       _avisoCuota = Date.now();
       try{ toast(lleno
-        ? bi('NO SE PUDO GUARDAR EN ESTE EQUIPO: la memoria del navegador está llena. Borra capturas de pantalla viejas en Trades (son lo que más pesa). Tus datos siguen subiendo a la nube.',
-             'COULD NOT SAVE ON THIS DEVICE: browser storage is full. Delete old trade screenshots (they weigh the most). Your data still uploads to the cloud.')
+        ? (conNube
+          ? bi('NO SE PUDO GUARDAR EN ESTE EQUIPO: la memoria del navegador está llena. Borra capturas de pantalla viejas en Trades (son lo que más pesa). Tus datos siguen subiendo a la nube.',
+               'COULD NOT SAVE ON THIS DEVICE: browser storage is full. Delete old trade screenshots (they weigh the most). Your data still uploads to the cloud.')
+          : bi('NO SE PUDO GUARDAR NI EN ESTE EQUIPO NI EN LA NUBE: no cierres ni recargues esta pestaña hasta liberar espacio (borra capturas viejas en Trades) o recuperar conexión — lo más reciente vive solo en memoria por ahora.',
+               'COULD NOT SAVE ON THIS DEVICE OR THE CLOUD: do not close or reload this tab until you free up space (delete old screenshots in Trades) or get connection back — the latest data lives only in memory for now.'))
         : bi('No se pudo guardar en este equipo: ' + (e && e.message), 'Could not save on this device: ' + (e && e.message))); }catch(_){}
     }
     return false;
@@ -7095,7 +7104,7 @@ function refrescarSeleccion(){
   else if(v === 'agentes') renderAgentes();
   else if(v === 'trades') renderTrades();
   else if(v === 'vida') renderVida();
-  else if(v === 'plan') renderMetas();
+  else if(v === 'plan'){ renderContrato(); renderMetas(); }
   else if(v === 'posiciones') renderPosiciones();
   else { renderPicker($('#pickMesa')); renderPicker($('#pickJournal')); }
 }
@@ -8032,6 +8041,7 @@ function pintaPerfilSocio(){
           <span>${Math.round(cc.pct)}% ${bi('del camino','of the road')}</span>
           <span>${fmt$(cc.avance)} ${bi('de','of')} ${fmt$(cc.total)}</span>
         </div>
+        ${caminoDeRegreso(a)}
         ${(cc.pasoPago && (a.owner || DUENO_ORIGEN) === (S.session && S.session.user)) ? `
           <div style="margin-top:6px"><button class="btn xs primary"
             onclick="event.stopPropagation(); abrirCaja('ingreso')">${bi('Registrar el payout →','Log the payout →')}</button></div>` : ''}
@@ -8821,14 +8831,16 @@ function abrirDia(iso){
   openOv('ovDia');
 }
 
-/* La IA es con llave propia (BYOK): se guarda sólo en este navegador y el uso
-   se cobra en la cuenta de Anthropic de quien la pegó. Sin llave no hay
+/* La IA es con llave propia (BYOK): la llave viaja con S y es "la llave de la
+   mesa" A PROPÓSITO — quien la pega la comparte con los otros socios (viven
+   viendo el mismo renglón de Supabase), y el USO se sigue cobrando a la cuenta
+   de Anthropic de quien la pegó, no a quien la usa después. Sin llave no hay
    análisis — nada de fingir inteligencia con reglas fijas disfrazadas. */
 $('#diaIA').addEventListener('click', () => analizarDiaIA());
 function iaPideLlave(caja, mensajePrevio){
   caja.innerHTML = `<div class="dia-ia" style="white-space:normal">
     ${mensajePrevio ? `<div style="color:var(--down);margin-bottom:8px">${esc(mensajePrevio)}</div>` : ''}
-    Pega tu llave de Anthropic (empieza con <code>sk-ant-</code>). Se guarda sólo en este navegador y el uso se cobra en tu cuenta.
+    Pega tu llave de Anthropic (empieza con <code>sk-ant-</code>). Se guarda para toda la mesa —André, Pablo y Gerardo la comparten desde aquí— y el uso se cobra en TU cuenta de Anthropic.
     <div style="display:flex;gap:8px;margin-top:10px">
       <input id="iaLlaveIn" type="password" placeholder="sk-ant-..." style="flex:1;min-width:0">
       <button class="btn sm primary" id="iaLlaveOk">Save</button>
@@ -9565,7 +9577,7 @@ function renderAcademia(){
           <button type="button" class="les-abrir" data-abrir="${lid}">${bi('abrir','open')}</button>
         </div>`).join('');
       return `<div class="ac2-mod ${est} ${abierto?'open':''}" data-mod="${m.id}">
-        <div class="ac2-mod-head" data-modhead="${m.id}">
+        <div class="ac2-mod-head" data-modhead="${m.id}" role="button" tabindex="${est==='locked'?'-1':'0'}" aria-expanded="${abierto?'true':'false'}">
           <div class="ac2-badge">${badge || lockSvg}</div>
           <div class="ac2-mod-txt">
             <b>${bi(m.t[0],m.t[1])}</b>
@@ -9593,12 +9605,16 @@ function renderAcademia(){
 
   root.innerHTML = hero + programas;
 
-  root.querySelectorAll('[data-modhead]').forEach(h => h.addEventListener('click', () => {
-    const id = h.dataset.modhead, m = acadModsPlano().find(x=>x.id===id);
-    if(!m || modEstado(m)==='locked') return;
-    acadEstado().abiertos[id] = !acadEstado().abiertos[id];
-    save(); renderAcademia();
-  }));
+  root.querySelectorAll('[data-modhead]').forEach(h => {
+    const toggle = () => {
+      const id = h.dataset.modhead, m = acadModsPlano().find(x=>x.id===id);
+      if(!m || modEstado(m)==='locked') return;
+      acadEstado().abiertos[id] = !acadEstado().abiertos[id];
+      save(); renderAcademia();
+    };
+    h.addEventListener('click', toggle);
+    h.addEventListener('keydown', e => { if(e.key==='Enter'||e.key===' '){ e.preventDefault(); toggle(); } });
+  });
   /* el checkbox marca/desmarca la lección como vista */
   root.querySelectorAll('[data-chk]').forEach(c => c.addEventListener('click', (e) => {
     e.stopPropagation();
@@ -9650,13 +9666,13 @@ function abreLibreta(){
         <button type="button" class="lib-b del" id="libDel" ${L.paginas.length<=1?'disabled':''}>🗑</button>
       </div></div>`;
     const ta=ov.querySelector('#libTa'); ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length);
-    ta.oninput=()=>{ L.paginas[L.actual]=ta.value; save(); };
+    ta.oninput=()=>{ L.paginas[L.actual]=ta.value; sellaCambio(L); save(); };
     const guarda=()=>{ L.paginas[L.actual]=ta.value; };
     ov.querySelector('.lib-x').onclick=cerrar;
-    ov.querySelector('#libPrev').onclick=()=>{ guarda(); if(L.actual>0) L.actual--; save(); pinta(); };
-    ov.querySelector('#libNext').onclick=()=>{ guarda(); if(L.actual<L.paginas.length-1) L.actual++; save(); pinta(); };
-    ov.querySelector('#libAdd').onclick=()=>{ guarda(); L.paginas.splice(L.actual+1,0,''); L.actual++; save(); pinta(); };
-    ov.querySelector('#libDel').onclick=()=>{ if(L.paginas.length<=1) return; if(!confirm(bi('¿Borrar esta hoja?','Delete this page?'))) return; L.paginas.splice(L.actual,1); if(L.actual>=L.paginas.length) L.actual=L.paginas.length-1; save(); pinta(); };
+    ov.querySelector('#libPrev').onclick=()=>{ guarda(); if(L.actual>0) L.actual--; sellaCambio(L); save(); pinta(); };
+    ov.querySelector('#libNext').onclick=()=>{ guarda(); if(L.actual<L.paginas.length-1) L.actual++; sellaCambio(L); save(); pinta(); };
+    ov.querySelector('#libAdd').onclick=()=>{ guarda(); L.paginas.splice(L.actual+1,0,''); L.actual++; sellaCambio(L); save(); pinta(); };
+    ov.querySelector('#libDel').onclick=()=>{ if(L.paginas.length<=1) return; if(!confirm(bi('¿Borrar esta hoja?','Delete this page?'))) return; L.paginas.splice(L.actual,1); if(L.actual>=L.paginas.length) L.actual=L.paginas.length-1; sellaCambio(L); save(); pinta(); };
   };
   ov.onclick=(e)=>{ if(e.target===ov) cerrar(); };
   document.addEventListener('keydown', onKey);
@@ -9687,12 +9703,12 @@ function montaLibretaInline(box){
         <button type="button" class="lib-b" id="lecLibClose" title="${bi('Cerrar cuaderno','Close notebook')}">▾</button>
       </div></div>`;
     const ta=box.querySelector('#lecLibTa'); const g=()=>{ L.paginas[L.actual]=ta.value; };
-    ta.oninput=()=>{ L.paginas[L.actual]=ta.value; save(); };
-    box.querySelector('#lecLibPrev').onclick=()=>{ g(); if(L.actual>0)L.actual--; save(); pinta(); };
-    box.querySelector('#lecLibNext').onclick=()=>{ g(); if(L.actual<L.paginas.length-1)L.actual++; save(); pinta(); };
-    box.querySelector('#lecLibAdd').onclick=()=>{ g(); L.paginas.splice(L.actual+1,0,''); L.actual++; save(); pinta(); };
+    ta.oninput=()=>{ L.paginas[L.actual]=ta.value; sellaCambio(L); save(); };
+    box.querySelector('#lecLibPrev').onclick=()=>{ g(); if(L.actual>0)L.actual--; sellaCambio(L); save(); pinta(); };
+    box.querySelector('#lecLibNext').onclick=()=>{ g(); if(L.actual<L.paginas.length-1)L.actual++; sellaCambio(L); save(); pinta(); };
+    box.querySelector('#lecLibAdd').onclick=()=>{ g(); L.paginas.splice(L.actual+1,0,''); L.actual++; sellaCambio(L); save(); pinta(); };
     box.querySelector('#lecLibExp').onclick=abreLibreta;
-    const cl=box.querySelector('#lecLibClose'); if(cl) cl.onclick=()=>{ ta&&(L.paginas[L.actual]=ta.value); save(); cerrada(); };
+    const cl=box.querySelector('#lecLibClose'); if(cl) cl.onclick=()=>{ ta&&(L.paginas[L.actual]=ta.value); sellaCambio(L); save(); cerrada(); };
   };
   cerrada();
 }
@@ -9724,7 +9740,7 @@ function renderCuaderno(){
       </div>`;
     }).join('');
     return `<div class="nb-mod ${abierto?'open':''}" data-nbmod="${m.id}">
-      <div class="nb-mod-h" data-nbmodh="${m.id}">
+      <div class="nb-mod-h" data-nbmodh="${m.id}" role="button" tabindex="0" aria-expanded="${abierto?'true':'false'}">
         <div class="nb-mod-n">${num}</div>
         <b>${bi(m.t[0],m.t[1])}</b>
         <span class="nb-cuenta">${conNotas}/${m.les.length} ${bi('con notas','with notes')}</span>
@@ -9758,18 +9774,18 @@ function renderCuaderno(){
     <div class="nb-notas">${modsHtml}</div>`;
 
   /* portada: guardar promesa/objetivos */
-  const guardaCampo = (id, campo) => { const el = $('#'+id); if(el) el.addEventListener('input', () => { nbEstado()[campo] = el.value; save(); }); };
+  const guardaCampo = (id, campo) => { const el = $('#'+id); if(el) el.addEventListener('input', () => { const n=nbEstado(); n[campo] = el.value; n.portadaUpd = Date.now(); save(); }); };
   guardaCampo('nbPromesa', 'promesa');
   guardaCampo('nbObjetivos', 'objetivos');
   nbFirmaInit();
-  $('#nbFirmaLimpia')?.addEventListener('click', () => { nbEstado().firma = null; save(); renderCuaderno(); });
+  $('#nbFirmaLimpia')?.addEventListener('click', () => { const n=nbEstado(); n.firma = null; n.portadaUpd = Date.now(); save(); renderCuaderno(); });
 
   /* módulos: acordeón */
-  root.querySelectorAll('[data-nbmodh]').forEach(h => h.addEventListener('click', () => {
-    const id = h.dataset.nbmodh;
-    nbEstado().abiertos[id] = !nbEstado().abiertos[id];
-    save(); renderCuaderno();
-  }));
+  root.querySelectorAll('[data-nbmodh]').forEach(h => {
+    const toggle = () => { const id = h.dataset.nbmodh; nbEstado().abiertos[id] = !nbEstado().abiertos[id]; save(); renderCuaderno(); };
+    h.addEventListener('click', toggle);
+    h.addEventListener('keydown', e => { if(e.key==='Enter'||e.key===' '){ e.preventDefault(); toggle(); } });
+  });
   /* notas por lección */
   root.querySelectorAll('[data-nota]').forEach(t => t.addEventListener('input', () => {
     nbEstado().notas[t.dataset.nota] = t.value;
@@ -9791,7 +9807,7 @@ function nbFirmaInit(){
   const pos = e => { const r = cv.getBoundingClientRect(); const t = e.touches ? e.touches[0] : e; return [t.clientX - r.left, t.clientY - r.top]; };
   const start = e => { dib = true; last = pos(e); tocado = true; const ph = wrap.querySelector('.nb-firma-ph'); if(ph) ph.style.display = 'none'; e.preventDefault(); };
   const move = e => { if(!dib) return; const p = pos(e); ctx.beginPath(); ctx.moveTo(last[0], last[1]); ctx.lineTo(p[0], p[1]); ctx.stroke(); last = p; e.preventDefault(); };
-  const end = () => { if(dib){ dib = false; if(tocado){ nbEstado().firma = cv.toDataURL('image/png'); save(); } } };
+  const end = () => { if(dib){ dib = false; if(tocado){ const n=nbEstado(); n.firma = cv.toDataURL('image/png'); n.portadaUpd = Date.now(); save(); } } };
   cv.addEventListener('mousedown', start); cv.addEventListener('mousemove', move); window.addEventListener('mouseup', end);
   cv.addEventListener('touchstart', start, {passive:false}); cv.addEventListener('touchmove', move, {passive:false}); cv.addEventListener('touchend', end);
 }
@@ -12191,11 +12207,24 @@ function renderBatalla(){
    (S.trades) y en la mesa. La curva es tu equity real, en orden cronológico. */
 let lgDir = 'L', lgLigado = false, lgSel = '__all';
 function lgCtasProp(){ return ordenar(mias(S.accounts).filter(a => esViva(a) && !esLive(a) && !esSim(a) && cuentaEnPie(a))); }
-/* trades reales, filtrados por la cuenta seleccionada arriba */
+/* trades reales, filtrados por la cuenta seleccionada arriba.
+   OJO: un trade puede estar etiquetado a VARIAS cuentas a la vez (así lo crea
+   lgAgrega() cuando el selector está en "Todas las cuentas", el valor por
+   default) — Dashboard y Journal ya multiplican su pnl por cuántas de esas
+   cuentas están en vista (nSel/proy, tradesByDay()); Log trade no lo hacía y
+   mostraba 1/N del total real para el mismo trade recién guardado. */
 function lgTradesReales(){
-  let list = misTrades().slice();
+  let list;
   if(lgSel && lgSel !== '__all'){
-    list = list.filter(t => Array.isArray(t.accts) && t.accts.includes(lgSel));
+    const ids = new Set([lgSel]);
+    list = misTrades().filter(t => nSel(t, ids) > 0).map(t => proy(t, nSel(t, ids)));
+  } else {
+    /* "Todas las cuentas": se sigue mostrando TODO como antes (nada desaparece),
+       pero un trade etiquetado a varias de mis cuentas fondeadas multiplica su
+       pnl por cuántas — igual que ya hacían Dashboard/Journal (nSel/proy). Un
+       trade sin ninguna de esas cuentas (o solo 1) queda tal cual, sin tocar. */
+    const ids = new Set(lgCtasProp().map(a=>a.id));
+    list = misTrades().map(t => { const n = nSel(t, ids); return n > 1 ? proy(t, n) : t; });
   }
   return list.sort((a,b)=> (a.date<b.date?-1:a.date>b.date?1:0) || ((a.seq||0)-(b.seq||0)));
 }
@@ -13383,7 +13412,7 @@ $('#cjSave').addEventListener('click', ()=>{
   S.caja.push({ id:uid(), fecha:todayISO(), tipo:cajaTipo, concepto, monto:Math.abs(monto) });
   /* la caja alimenta el "cobrado" de los KPIs del portafolio: refrescar ambos */
   /* la caja mueve el portafolio y también la escalera de objetivos */
-  save(); closeOv(); renderVida(); renderMetas(); renderPosiciones();
+  save(); closeOv(); renderVida(); renderContrato(); renderMetas(); renderPosiciones();
   toast(cajaTipo === 'ingreso' ? 'Income logged' : 'Expense logged');
 });
 
@@ -15044,20 +15073,33 @@ async function fijaClaveNube(accessToken, clave){
   return d;
 }
 
-async function cloudRefresh(){
-  if(!cloudTok || !cloudTok.refresh_token) return false;
-  try{
-    const r = await fetch(CLOUD.url + '/auth/v1/token?grant_type=refresh_token', {
-      method:'POST', headers:{ 'apikey':CLOUD.anon, 'Content-Type':'application/json' },
-      body: JSON.stringify({ refresh_token: cloudTok.refresh_token }),
-    });
-    const d = await r.json();
-    if(!r.ok || !d.access_token) return false;
-    cloudTok = { ...cloudTok, access_token:d.access_token, refresh_token:d.refresh_token,
-                 exp: Date.now() + (d.expires_in || 3600) * 1000 };
-    localStorage.setItem('np_tok', JSON.stringify(cloudTok));
-    return true;
-  }catch(e){ return false; }
+/* Hasta 4 disparadores (el tick de 8s, visibilitychange, el pull al hacer
+   login, el timer de 45min) podían pedir refresh casi al mismo tiempo con el
+   MISMO refresh_token ya vencido — dos POST concurrentes a Supabase, y como
+   los refresh tokens son de un solo uso, el segundo puede leer uno que el
+   primero ya rotó y disparar la revocación de toda la sesión. Una sola
+   promesa "en vuelo" compartida: quien llegue tarde espera la MISMA, nunca
+   lanza una segunda. */
+let _refreshEnVuelo = null;
+function cloudRefresh(){
+  if(_refreshEnVuelo) return _refreshEnVuelo;
+  if(!cloudTok || !cloudTok.refresh_token) return Promise.resolve(false);
+  _refreshEnVuelo = (async () => {
+    try{
+      const r = await fetch(CLOUD.url + '/auth/v1/token?grant_type=refresh_token', {
+        method:'POST', headers:{ 'apikey':CLOUD.anon, 'Content-Type':'application/json' },
+        body: JSON.stringify({ refresh_token: cloudTok.refresh_token }),
+      });
+      const d = await r.json();
+      if(!r.ok || !d.access_token) return false;
+      cloudTok = { ...cloudTok, access_token:d.access_token, refresh_token:d.refresh_token,
+                   exp: Date.now() + (d.expires_in || 3600) * 1000 };
+      localStorage.setItem('np_tok', JSON.stringify(cloudTok));
+      return true;
+    }catch(e){ return false; }
+  })();
+  _refreshEnVuelo.finally(() => { _refreshEnVuelo = null; });
+  return _refreshEnVuelo;
 }
 function cloudLogout(){
   cloudTok = null;
@@ -15196,6 +15238,46 @@ function fusionarEstado(local, remoto){
   ['trades','tickets','accounts','positions','caja'].forEach(k => {
     f[k] = fusionarListas(local[k], remoto[k], tumbas);
   });
+  /* Backtesting (S.bt): btEstado() crea S.bt = {cuentas:[...],activa} en cuanto
+     CUALQUIER equipo abre Entrenamiento, así que 'siempre existe en local' —
+     el mismo patrón que ya se sabe peligroso. Sin esto, un equipo con menos
+     cuentas de backtest (o ninguna) borraba las sesiones completas del otro
+     socio en el próximo sync. Las cuentas se unen por id; los trades DENTRO
+     de cada cuenta se unen aparte (no tienen id: fusionarListas los distingue
+     por contenido, así que un mismo trade no se duplica). */
+  if(local.bt || remoto.bt){
+    const cL = (local.bt||{}).cuentas||[], cR = (remoto.bt||{}).cuentas||[];
+    const cuentas = fusionarListas(cL, cR, tumbas).map(c => {
+      const propia = cL.find(x=>x.id===c.id), suya = cR.find(x=>x.id===c.id);
+      return { ...c, trades: fusionarListas(propia&&propia.trades, suya&&suya.trades, tumbas) };
+    });
+    const activaLocal = (local.bt||{}).activa;
+    f.bt = { cuentas, activa: (activaLocal && cuentas.some(c=>c.id===activaLocal)) ? activaLocal : ((remoto.bt||{}).activa) };
+  }
+  /* La libreta (notas de trading en texto libre, autoguardado por tecla) no
+     tiene ids por página — se resuelve ENTERA por su sello más reciente, como
+     ya se hace con 'politica'/'llaveIA', para no perder hojas reales por
+     'quien sincronizó de último'. */
+  { const lL = local.libreta, lR = remoto.libreta;
+    f.libreta = (!lR) ? lL : (!lL) ? lR : ((+lL.upd||0) >= (+lR.upd||0) ? lL : lR); }
+  /* El cuaderno de Academia: notas y qué lecciones tienes abiertas se UNEN por
+     lección (como 'monitos'). Los dibujos/capturas (notebook.imgs/dibujos) NO
+     se fusionan aquí a propósito: se excluyen de lo que sube a la nube más
+     abajo (ver soloMio) — nadie tiene forma de verlos ni borrarlos todavía, y
+     unirlos solo haría crecer sin tope el renglón compartido de los 3 socios. */
+  { const nL = local.notebook||{}, nR = remoto.notebook||{};
+    /* la portada (promesa/objetivos/firma) se resuelve entera por sello, como
+       la libreta — es texto de una sola persona, no un mapa por lección */
+    const portada = (!nR.portadaUpd) ? nL : (!nL.portadaUpd) ? nR : ((+nL.portadaUpd||0)>=(+nR.portadaUpd||0) ? nL : nR);
+    f.notebook = { notas:{...(nR.notas||{}), ...(nL.notas||{})}, abiertos:{...(nR.abiertos||{}), ...(nL.abiertos||{})},
+                   dibujos: nL.dibujos||nR.dibujos||{}, imgs: nL.imgs||nR.imgs||{},
+                   promesa: portada.promesa, objetivos: portada.objetivos, firma: portada.firma, portadaUpd: portada.portadaUpd }; }
+  /* El contrato firmado (compromiso al entrar) es un mapa por usuario. */
+  f.contrato = { ...(remoto.contrato||{}), ...(local.contrato||{}) };
+  /* Progreso de Academia (lecciones hechas/abiertas) por lección, no por
+     usuario — se une igual, para que el checklist no se resetee al sincronizar. */
+  { const aL = local.academia||{}, aR = remoto.academia||{};
+    f.academia = { hechas:{...(aR.hechas||{}), ...(aL.hechas||{})}, abiertos:{...(aR.abiertos||{}), ...(aL.abiertos||{})} }; }
   /* bienvenida (quién ya vio el recorrido) es un objeto por usuario, no una lista
      con id — el spread tampoco lo fusionaba: el socio que sincroniza último le
      borraba al otro su marca de "ya lo vi" y el tour le volvía a salir. */
@@ -15376,16 +15458,26 @@ function fusionarEstado(local, remoto){
 }
 /* lo que NO viaja: es de cada socio, no de la mesa */
 const soloMio = e => { const c = {...e}; delete c.session; delete c.profile; delete c.ui;
-                       delete c.rev; delete c.claves; delete c.carrera; return c; };
+                       delete c.rev; delete c.claves; delete c.carrera;
+                       /* dibujos/capturas de la libreta de Academia: nadie tiene forma de
+                          verlos ni borrarlos desde OTRO equipo, así que solo inflarían sin
+                          límite el renglón compartido. Quedan en este navegador; notas y
+                          qué lecciones abriste sí viajan. */
+                       if(c.notebook) c.notebook = { notas:c.notebook.notas, abiertos:c.notebook.abiertos };
+                       return c; };
 
 
-let _avisoSinAcceso = false;
+let _avisoSinAcceso = false, _cloudPullBusy = false;
 async function cloudPull(){
-  if(!cloudOn() || !cloudTok || cloudBusy) return;
+  /* 'cloudBusy' es de cloudPush — cloudPull nunca tenía su PROPIO candado de
+     reentrancia, así que el tick de 8s, visibilitychange y el pull de recién
+     entrado podían solaparse. */
+  if(!cloudOn() || !cloudTok || cloudBusy || _cloudPullBusy) return;
+  _cloudPullBusy = true;
   try{
     if(cloudTok.exp && Date.now() > cloudTok.exp - 60000) await cloudRefresh();
     const r = await fetch(CLOUD.url + '/rest/v1/northpoint_estado?id=eq.1&select=data,rev', { headers: cloudHead() });
-    if(r.status === 401){ if(await cloudRefresh()) return cloudPull(); throw new Error(401); }
+    if(r.status === 401){ if(await cloudRefresh()){ _cloudPullBusy = false; return cloudPull(); } throw new Error(401); }
     if(!r.ok) throw new Error(r.status);
     const filas = await r.json();
     const fila = filas && filas[0];
@@ -15432,6 +15524,7 @@ async function cloudPull(){
     else cloudErr = null;
     cloudPaint();
   }catch(e){ cloudErr = (e && e.message) || 'sin red'; cloudPaint(); }
+  finally{ _cloudPullBusy = false; }
 }
 
 /* Cola de una casilla: si llega un guardado mientras otro va en vuelo, no se
@@ -19681,7 +19774,7 @@ function renderMetas(){
   }).join('');
 
   $$('#metasMods [data-pt]').forEach(b => b.onclick = () => {
-    S.ui.planTab = b.dataset.pt; save(); renderMetas();
+    S.ui.planTab = b.dataset.pt; save(); renderContrato(); renderMetas();
   });
 
   $$('#metasMods [data-sal]').forEach(b => b.onclick = () => {
@@ -19689,7 +19782,7 @@ function renderMetas(){
     const k = b.dataset.sal;
     if(S.salidas[k]){ marcaBorrado('sal:' + k); delete S.salidas[k]; }
     else S.salidas[k] = todayISO();
-    save(); renderMetas();
+    save(); renderContrato(); renderMetas();
   });
 
 }
@@ -19728,7 +19821,7 @@ function renderVida(){
     if(!confirm(bi('¿Borrar este movimiento de caja?','Delete this cash movement?'))) return;
     marcaBorrado(b.dataset.del);
     S.caja = (S.caja||[]).filter(x => x.id !== b.dataset.del);
-    save(); renderVida(); renderMetas();
+    save(); renderVida(); renderContrato(); renderMetas();
   });
 }
 
@@ -19744,7 +19837,7 @@ function render(view){
   else if(view==='payout') renderPayout();
   else if(view==='posiciones') renderPosiciones();
   else if(view==='vida') renderVida();
-  else if(view==='plan') renderMetas();
+  else if(view==='plan'){ renderContrato(); renderMetas(); }
   updateBadges();
 }
 /* Los alias del hash los traducía show() pero NO se reescribía la URL, así que
@@ -19853,12 +19946,20 @@ function abreLeccion(id){
     ${bi('El contenido de esta lección se está preparando.','This lesson\'s content is being prepared.')}</div>`;
   /* el cuaderno vive al LADO: en compu, el documento a la izquierda y la libreta
      a la derecha (columna fija que sigue mientras lees); en móvil, debajo. */
-  const notasHtml = `<aside class="lec-side"><div class="lec-libreta-inline" id="lecLibretaBox"></div></aside>`;
+  const notasHtml = `<aside class="lec-side"><div class="lec-libreta-inline" id="lecLibretaBox"></div>
+    <div class="nb-draw" style="margin-top:12px"><canvas id="lecDibujo"></canvas></div>
+    <div class="nb-draw-acc"><div class="nb-colors" id="nbColors"></div>
+      <button type="button" class="btn xs" id="lecDibLimpia">${bi('Borrar boceto','Clear sketch')}</button></div>
+    <div class="nb-imgs" id="lecImgs" style="margin-top:10px"></div>
+    <p class="micro" style="color:var(--faint);margin:6px 0 0">${bi('Pega (Ctrl/⌘+V) una captura aquí mientras lees','Paste (Ctrl/⌘+V) a screenshot here while you read')}</p>
+  </aside>`;
   $('#lecScroll').innerHTML = `<div class="lec-split"><div class="lec-doc">${cuerpo}</div>${notasHtml}</div>`;
   $('#lecScroll').scrollTop = 0;
   $('#lecMarca').style.display = '';
   marcaLecBtn(id);
   montaLibretaInline($('#lecLibretaBox'));
+  initLecDibujo(id);
+  renderLecImgs(id);
   $('#ovLeccion').classList.add('on');
   document.body.style.overflow = 'hidden';
 }
