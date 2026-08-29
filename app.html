@@ -9704,19 +9704,24 @@ function katanaSVG(hex, flat, oculta){
     </g>
   </svg>`;
 }
-function batBanco(u){
-  if(!S.batBanco) S.batBanco={};
-  if(S.batBanco[u]==null){
-    let b=0;
-    batHist().forEach(h=>{
-      if(h.party){ if(h.ganador===u) b += batBotin((h.marcadores||[]).reduce((s,m)=>s+Math.abs(m.p||0),0),0); }
-      else if(h.ganador===u){ b += batBotin(h.pHost,h.pRival); }
-    });
-    S.batBanco[u]=b;
-  }
-  return S.batBanco[u];
+/* ── EL STACK ── tu cuenta y tu vida a la vez. Empiezas con $50k, la creces
+   ganando duelos; si la quiebras, reinicio total. Meta: la katana negra. ── */
+const BAT_STACK_INI = 50000;
+const BAT_RUINA = 3000; /* si tu stack cae a/por debajo de esto, quiebras (cuenta muerta) */
+/* umbral de stack (pico) para desbloquear cada katana · índice alineado a KATANAS */
+const KAT_UMBRAL = [0, 75000, 120000, 200000, 350000, 600000, 1000000, 2500000, 5000000];
+function batStackObj(){ if(!S.batStack) S.batStack={}; if(!S.batPico) S.batPico={}; return S.batStack; }
+function batBanco(u){ const st=batStackObj();
+  if(st[u]==null){ const r=batStatDe(u); const seed=Math.max(12000, BAT_STACK_INI + (r.g||0)*18000 - (r.p||0)*9000); st[u]=seed; if(S.batPico[u]==null) S.batPico[u]=seed; }
+  if(S.batPico[u]==null) S.batPico[u]=st[u];
+  return st[u];
 }
-function batKatanasDe(u){ if(!S.batKatanas) S.batKatanas={}; if(!Array.isArray(S.batKatanas[u])) S.batKatanas[u]=['blanca']; return S.batKatanas[u]; }
+function batPico(u){ batBanco(u); return S.batPico[u]; }
+function batStackSet(u,val){ const st=batStackObj(); st[u]=Math.max(0,Math.round(val)); if(st[u]>(S.batPico[u]||0)) S.batPico[u]=st[u]; }
+/* quiebra: reinicio total — vuelves al stack inicial y pierdes tus katanas (Shiro) */
+function batQuiebra(u){ const st=batStackObj(); st[u]=BAT_STACK_INI; S.batPico[u]=BAT_STACK_INI; if(S.batEquipada) delete S.batEquipada[u]; }
+/* las katanas desbloqueadas salen de tu PICO de stack — cada espada es un umbral de riqueza */
+function batKatanasDe(u){ const pk=batPico(u); const out=[]; for(let i=0;i<KATANAS.length;i++){ if(pk>=KAT_UMBRAL[i]) out.push(KATANAS[i].id); } return out.length?out:['blanca']; }
 /* la katana EQUIPADA (la que define tu ecosistema y tu espada del perfil).
    Por defecto la más alta que tengas; el jugador la cambia picando otra suya. */
 function batEquipadaDe(u){
@@ -9747,40 +9752,40 @@ function batAplicaEconomia(c){
 }
 function batRegistraResultado(c){
   if(c.registrado) return; c.registrado = true;
+  const st = batStats(); const yo=(S.session||{}).user;
+  const ensure=u=>{ st[u]=st[u]||{pts:0,g:0,p:0,e:0}; };
+
   if(c.party){
-    /* PARTY · gana el de mayor profit: +3 al 1º, +1 a los demás por jugar */
     const rank = batJugadores(c).map(u=>({u, p:batProfit(c,u)})).sort((a,b)=>b.p-a.p);
-    const st = batStats();
-    rank.forEach((r,idx)=>{ st[r.u]=st[r.u]||{pts:0,g:0,p:0,e:0}; if(idx===0 && r.p!==0){ st[r.u].pts+=3; st[r.u].g++; } else { st[r.u].pts+=1; st[r.u].p++; } });
-    /* ELO por parejas: cada quien contra cada quien según el P&L de la batalla */
-    const eBef={}, eDel={}; rank.forEach(r=>{ eBef[r.u]=batElo(r.u); eDel[r.u]=0; });
-    for(let i=0;i<rank.length;i++) for(let j=i+1;j<rank.length;j++){ const a=rank[i], b=rank[j];
-      const Sa = a.p===b.p ? .5 : 1;
-      eDel[a.u]+=batEloDelta(eBef[a.u],eBef[b.u],Sa,20); eDel[b.u]+=batEloDelta(eBef[b.u],eBef[a.u],1-Sa,20); }
-    rank.forEach(r=>{ if(eDel[r.u]<0) eDel[r.u]=Math.round(eDel[r.u]*(1-katanaBono(batKatRango(r.u)).escudo)); st[r.u].elo=Math.max(0,(eBef[r.u]||BAT_ELO_BASE)+eDel[r.u]); });
-    try{ const yo=(S.session||{}).user; if(yo&&eDel[yo]!==undefined) window._batEloFlash={delta:eDel[yo],elo:st[yo].elo,antes:eBef[yo]}; }catch(e){}
-    batHist().unshift({ ts:Date.now(), party:true, jugadores:batJugadores(c), ganador:rank[0]&&rank[0].p!==0?rank[0].u:null, marcadores:rank, eloDelta:eDel, dur:c.duracion });
+    const gan = rank[0] && rank[0].p!==0 ? rank[0].u : null;
+    rank.forEach((r,idx)=>{ ensure(r.u); if(idx===0 && gan){ st[r.u].g++; } else { st[r.u].p++; } });
+    const cambios={};
+    if(gan){ let pot=0;
+      rank.slice(1).forEach(r=>{ const bk=batBanco(r.u); const base=Math.min(bk, Math.max(Math.round(bk*0.15),5000));
+        const perd=Math.round(base*(1-katanaBono(batKatRango(r.u)).escudo)); const nl=bk-perd; pot+=base;
+        if(nl<=BAT_RUINA){ batQuiebra(r.u); cambios[r.u]='ruina'; } else { batStackSet(r.u,nl); cambios[r.u]=-perd; } });
+      const gk=batBanco(gan); const gana=Math.round(pot*(1+katanaBono(batKatRango(gan)).loot)); batStackSet(gan, gk+gana); cambios[gan]=gana;
+    }
+    try{ if(yo && cambios[yo]!==undefined) window._batStackFlash = cambios[yo]==='ruina'?{ruina:true}:{delta:cambios[yo],stack:batBanco(yo)}; }catch(e){}
+    batHist().unshift({ ts:Date.now(), party:true, jugadores:batJugadores(c), ganador:gan, marcadores:rank, dur:c.duracion });
     if(S.batHistorial.length > 40) S.batHistorial.length = 40;
     save(); return;
   }
+
   const pH = batProfit(c, c.host), pR = batProfit(c, c.rival);
   const gan = pH === pR ? null : (pH > pR ? c.host : c.rival);
-  const st = batStats();
-  [c.host, c.rival].forEach(u => { st[u] = st[u] || { pts:0, g:0, p:0, e:0 }; });
-  if(gan){ const perd = gan === c.host ? c.rival : c.host; st[gan].pts += 3; st[gan].g++; st[perd].pts += 1; st[perd].p++; }
-  else { st[c.host].pts += 1; st[c.rival].pts += 1; st[c.host].e++; st[c.rival].e++; }
-  /* ── ELO: le das tus puntos a tu rival · aquí duele perder ── */
-  const eH0=batElo(c.host), eR0=batElo(c.rival);
-  const sH = gan===c.host ? 1 : (gan===c.rival ? 0 : .5);
-  let dH = batEloDelta(eH0,eR0,sH,28), dR = batEloDelta(eR0,eH0,1-sH,28);
-  /* escudo de la katana: amortigua lo que pierdes al caer */
-  if(dH<0) dH = Math.round(dH*(1-katanaBono(batKatRango(c.host)).escudo));
-  if(dR<0) dR = Math.round(dR*(1-katanaBono(batKatRango(c.rival)).escudo));
-  st[c.host].elo = Math.max(0, eH0+dH); st[c.rival].elo = Math.max(0, eR0+dR);
-  try{ const yo=(S.session||{}).user; if(yo===c.host) window._batEloFlash={delta:dH,elo:st[c.host].elo,antes:eH0}; else if(yo===c.rival) window._batEloFlash={delta:dR,elo:st[c.rival].elo,antes:eR0}; }catch(e){}
-  /* el ganador se lleva su profit + lo del rival, con el bono de botín de su katana */
-  if(gan){ const bot=Math.round(batBotin(pH,pR)*(1+katanaBono(batKatRango(gan)).loot)); batBanco(gan); S.batBanco[gan] = (S.batBanco[gan]||0) + bot; try{ window._batBotinFlash={uid:gan,monto:bot}; }catch(e){} }
-  batHist().unshift({ ts:Date.now(), host:c.host, rival:c.rival, ganador:gan, pHost:pH, pRival:pR, eloH:dH, eloR:dR, dur:c.duracion });
+  ensure(c.host); ensure(c.rival);
+  if(gan){ const perd = gan===c.host?c.rival:c.host; st[gan].g++; st[perd].p++;
+    const bk=batBanco(perd); const base=Math.min(bk, Math.max(Math.round(bk*0.22),8000));
+    const perdMonto=Math.round(base*(1-katanaBono(batKatRango(perd)).escudo));
+    const ganaMonto=Math.round(base*(1+katanaBono(batKatRango(gan)).loot));
+    batStackSet(gan, batBanco(gan)+ganaMonto);
+    const nl=bk-perdMonto; let ruina=false;
+    if(nl<=BAT_RUINA){ batQuiebra(perd); ruina=true; } else batStackSet(perd, nl);
+    try{ if(yo===gan) window._batStackFlash={delta:ganaMonto,stack:batBanco(gan)};
+         else if(yo===perd) window._batStackFlash = ruina?{ruina:true}:{delta:-perdMonto,stack:batBanco(perd)}; }catch(e){}
+  } else { st[c.host].e++; st[c.rival].e++; }
+  batHist().unshift({ ts:Date.now(), host:c.host, rival:c.rival, ganador:gan, pHost:pH, pRival:pR, dur:c.duracion });
   if(S.batHistorial.length > 40) S.batHistorial.length = 40;
   save();
 }
@@ -10804,8 +10809,8 @@ function renderBatalla(){
   const enHome = !c || c.estado === 'cancelado' || c.estado === 'invitado'
     || c.estado === 'programado' || (c.estado === 'activo' && batMin);   // programado y activo-min viven como banner
   if(enHome){
-    const ranking = SOCIOS_REALES.map(u => ({ uid:u, ...batStatDe(u), elo:batElo(u) }))
-      .sort((a,b)=> b.elo - a.elo || b.g - a.g || a.p - b.p);
+    const ranking = SOCIOS_REALES.map(u => ({ uid:u, ...batStatDe(u), stack:batBanco(u) }))
+      .sort((a,b)=> b.stack - a.stack);
     const hist = batHist();
 
     /* ── NUEVO RETO · sólo rival + duración ── */
@@ -10913,16 +10918,16 @@ function renderBatalla(){
     /* ── PERFIL · picar un socio en el leaderboard = comparación tú vs él ── */
     if(batPantalla === 'perfil' && batPerfilUid && batPerfilUid !== yo){
       const otro = batPerfilUid, h2h = batH2H(yo, otro);
-      const card = (u)=>{ const s=batStatDe(u), el=batElo(u);
-        const ri=KATANAS.reduce((mx,k,ix)=> batKatanasDe(u).includes(k.id)?ix:mx,0), rc=KATANAS[ri].belt, nx=KATANAS[ri+1], bk=batBanco(u);
-        const prog=nx?Math.max(0,Math.min(1,bk/Math.max(1,nx.precio))):1;
+      const card = (u)=>{ const s=batStatDe(u), bk=batBanco(u), pk=batPico(u);
+        const ri=KATANAS.reduce((mx,k,ix)=> batKatanasDe(u).includes(k.id)?ix:mx,0), rc=KATANAS[ri].belt, nx=KATANAS[ri+1], um=KAT_UMBRAL[ri+1], prevUm=KAT_UMBRAL[ri]||0;
+        const prog=nx?Math.max(0,Math.min(1,(pk-prevUm)/Math.max(1,um-prevUm))):1;
         return `<div class="bat-perfil-card ${u===yo?'yo':''}">
           <span class="bat-perfil-ava">${caraSocio(u,64)}</span>
           <b class="bat-perfil-nom">${esc(batNom(u))}${u===yo?` <em>${bi('(tú)','(you)')}</em>`:''}</b>
           <span class="bat-perfil-rank"><b style="color:${rc}">${loc(KATANAS[ri].n)}</b> · ${bi('Rango','Rank')} ${ri+1}/${KATANAS.length}</span>
-          <span class="bat-perfil-elo">🏅 <b>${el}</b> ${bi('pts','pts')}</span>
+          <span class="bat-perfil-elo">💵 <b>${fmt$(bk)}</b></span>
           <span class="bat-jug-xp" style="max-width:none;margin:4px 0 1px"><i style="width:${Math.round(prog*100)}%;background:${nx?nx.belt:rc}"></i></span>
-          <span class="bat-perfil-nextt">${nx?bi('faltan','need')+' '+fmt$(Math.max(0,nx.precio-bk))+' → '+loc(nx.n):bi('rango máximo','max rank')}</span>
+          <span class="bat-perfil-nextt">${nx?bi('crece a','grow to')+' '+fmt$(um)+' → '+loc(nx.n):bi('¡katana negra!','black katana!')}</span>
           <span class="bat-perfil-sub">${s.g}${bi('G','W')} · ${s.p}${bi('P','L')}${s.e?' · '+s.e+bi('E','T'):''}</span>
         </div>`; };
       root.innerHTML = `
@@ -11003,23 +11008,23 @@ function renderBatalla(){
             <b>${esc(batNom(yo))}</b>
           </div>
           <div class="zen-stats">
-            <div class="zen-stat banco"><em>${bi('BANCO','BANK')}</em><b>${fmt$(banco)}</b></div>
-            <div class="zen-stat elo" style="--sc:#e9cf46"><em>🏅 ${bi('PUNTOS','SCORE')}</em><b>${batElo(yo)}</b></div>
+            <div class="zen-stat banco"><em>${bi('TU STACK','YOUR STACK')}</em><b>${fmt$(banco)}</b></div>
             <div class="zen-stat katana" style="--sc:${KATANAS[kActualIdx].belt}"><em>${bi('RANGO','RANK')} ${kActualIdx+1}/${KATANAS.length}</em><b style="color:${KATANAS[kActualIdx].belt}">${loc(KATANAS[kActualIdx].n)}</b></div>
+            <div class="zen-stat"><em>${bi('PICO','PEAK')}</em><b>${fmt$(batPico(yo))}</b></div>
             <div class="zen-stat"><em>${bi('NIVEL','LEVEL')}</em><b>${batNivel(yo)}</b></div>
           </div>
         </div>
       </div>
-      ${(()=>{ const ri=kActualIdx, rc=KATANAS[ri].belt, el=batElo(yo), nx=KATANAS[ri+1];
-        const prog=nx?Math.max(0,Math.min(1,banco/Math.max(1,nx.precio))):1;
+      ${(()=>{ const ri=kActualIdx, rc=KATANAS[ri].belt, nx=KATANAS[ri+1], um=KAT_UMBRAL[ri+1], pico=batPico(yo);
+        const prevUm=KAT_UMBRAL[ri]||0; const prog=nx?Math.max(0,Math.min(1,(pico-prevUm)/Math.max(1,um-prevUm))):1;
         return `<div class="rank-wrap">
           <div class="rank-head">
-            <div class="rank-now"><span class="rank-kico" style="--kc:${rc}">${katanaSVG(rc,true)}</span><div class="rank-now-t"><em>${bi('TU RANGO','YOUR RANK')}</em><b>${bi('Rango','Rank')} ${ri+1}/${KATANAS.length} · <span style="color:${rc}">${loc(KATANAS[ri].n)}</span></b><span class="rank-elo">🏅 ${el} <i>${bi('puntos','points')}</i></span></div></div>
-            <div class="rank-next">${nx?`<em>${bi('SIGUIENTE RANGO','NEXT RANK')}</em><b style="color:${nx.belt}">${loc(nx.n)}</b><span>${banco>=nx.precio?bi('¡ya puedes forjarla!','ready to forge!'):bi('faltan','need')+' '+fmt$(nx.precio-banco)}</span>`:`<em>${bi('RANGO MÁXIMO','MAX RANK')}</em><b>${loc(KATANAS[ri].n)}</b>`}</div>
+            <div class="rank-now"><span class="rank-kico" style="--kc:${rc}">${katanaSVG(rc,true)}</span><div class="rank-now-t"><em>${bi('TU RANGO','YOUR RANK')}</em><b>${bi('Rango','Rank')} ${ri+1}/${KATANAS.length} · <span style="color:${rc}">${loc(KATANAS[ri].n)}</span></b><span class="rank-elo">${fmt$(banco)} <i>${bi('en tu stack','in your stack')}</i></span></div></div>
+            <div class="rank-next">${nx?`<em>${bi('SIGUIENTE RANGO','NEXT RANK')}</em><b style="color:${nx.belt}">${loc(nx.n)}</b><span>${pico>=um?bi('¡desbloqueada!','unlocked!'):bi('crece a','grow to')+' '+fmt$(um)}</span>`:`<em>${bi('¡MÁXIMO RANGO!','MAX RANK!')}</em><b style="color:${rc}">${loc(KATANAS[ri].n)}</b>`}</div>
           </div>
-          <div class="rank-ladder">${KATANAS.map((k,i)=>`<span class="rank-step ${i<ri?'done':i===ri?'cur':'lock'}" title="${loc(k.n)}"><span class="rank-step-sw" style="--kc:${k.belt}">${katanaSVG(k.belt,true)}</span></span>`).join('')}</div>
+          <div class="rank-ladder">${KATANAS.map((k,i)=>`<span class="rank-step ${i<ri?'done':i===ri?'cur':'lock'}" title="${loc(k.n)} · ${fmt$(KAT_UMBRAL[i])}"><span class="rank-step-sw" style="--kc:${k.belt}">${katanaSVG(k.belt,true)}</span></span>`).join('')}</div>
           <div class="rank-bar"><i style="width:${Math.round(prog*100)}%;background:${nx?nx.belt:rc}"></i></div>
-          <div class="rank-how"><b>${bi('¿Cómo subo?','How to rank up?')}</b> ${bi('Ganas batallas → ahorras tu profit en el banco → compras la siguiente katana → subes de rango.','Win battles → save your profit in the bank → buy the next katana → rank up.')}</div>
+          <div class="rank-how"><b>${bi('¿Cómo subo?','How do I rank up?')}</b> ${bi('Gana duelos → crece tu stack → al cruzar cada monto forjas la siguiente katana. Meta: la negra. Si quiebras el stack, empiezas de cero.','Win duels → grow your stack → cross each amount to forge the next katana. Goal: the black one. Blow your stack and you restart from zero.')}</div>
         </div>`; })()}
       <button type="button" class="btn primary bat-play-b batalla bat-nuevo" id="batNuevo"><span class="globe" aria-hidden="true"></span> ${bi('Retar a un socio','Challenge a partner')}</button>
       <div class="kat-wrap">
@@ -11027,11 +11032,11 @@ function renderBatalla(){
           <div class="kat-top-l"><span class="kat-title">🗡️ ${bi('Colección de katanas','Katana collection')}</span><span class="kat-sub">${miKat.length} / ${KATANAS.length} · ${bi('gana batallas para comprarlas','win battles to buy them')}</span></div>
           <div class="kat-banco"><span>${bi('BANCO','BANK')}</span><b>${fmt$(banco)}</b></div>
         </div>
-        ${kProxIdx>=0 ? (()=>{ const nk=KATANAS[kProxIdx], falta=nk.precio-banco; return `
+        ${kProxIdx>=0 ? (()=>{ const nk=KATANAS[kProxIdx], um=KAT_UMBRAL[kProxIdx], falta=um-batPico(yo); return `
         <div class="kat-feat goal" style="--kc:${nk.belt}">
           <div class="kat-feat-blade">${katanaSVG(nk.belt, true)}<span class="kat-feat-lock">🔒</span></div>
-          <div class="kat-feat-txt"><em>${bi('SIGUIENTE KATANA','NEXT KATANA')}</em><div class="kat-feat-tp"><b style="border-bottom:2px solid ${nk.belt};padding-bottom:1px">${loc(nk.n)}</b><span class="kat-feat-precio2">${fmt$(nk.precio)}</span></div></div>
-          <div class="kat-feat-goal">${falta<=0?`<button type="button" class="kat-buy" data-kat="${nk.id}">${bi('Forjar','Forge')}</button>`:`<span class="kat-falta">${bi('te faltan','need')} ${fmt$(falta)}</span>`}</div>
+          <div class="kat-feat-txt"><em>${bi('SIGUIENTE KATANA','NEXT KATANA')}</em><div class="kat-feat-tp"><b style="border-bottom:2px solid ${nk.belt};padding-bottom:1px">${loc(nk.n)}</b><span class="kat-feat-precio2">${fmt$(um)} ${bi('de stack','stack')}</span></div></div>
+          <div class="kat-feat-goal">${falta<=0?`<span class="kat-falta" style="color:var(--up)">${bi('¡desbloqueada!','unlocked!')}</span>`:`<span class="kat-falta">${bi('crece','grow')} +${fmt$(falta)}</span>`}</div>
         </div>`;})() : `
         <div class="kat-feat done" style="--kc:${KATANAS[kActualIdx].belt}">
           <div class="kat-feat-blade">${katanaSVG(KATANAS[kActualIdx].belt, true)}</div>
@@ -11043,9 +11048,9 @@ function renderBatalla(){
               ${cur?`<span class="kat-aqui">${bi('EQUIPADA','EQUIPPED')}</span>`:(ver?`<span class="kat-aqui vista">${bi('EN VISTA','VIEWING')}</span>`:'')}
               <div class="kat-ico">${katanaSVG(k.belt, cur)}<span class="kat-kanji">${k.kanji}</span>${owned?'<span class="kat-badge ok">✓</span>':'<span class="kat-badge lock">🔒</span>'}</div>
               <b class="kat-nom" style="border-bottom:2px solid ${k.belt}">${loc(k.n)}</b>
-              ${owned ? (cur?`<span class="kat-estado owned">${bi('Equipada','Equipped')}</span>`:`<span class="kat-estado" style="opacity:.55">${bi('En tu colección','Owned')}</span>`)
-                : `<span class="kat-precio-tag"><span class="kat-lock-mini">🔒</span> ${fmt$(k.precio)}</span>`}
-              <span class="kat-bono" title="${loc(k.poder.n)}"><b style="color:${k.belt}">${katanaBonoTxt(i).loot}</b> ${bi('botín','loot')} · <b>${katanaBonoTxt(i).escudo}</b> ELO</span>
+              ${owned ? (cur?`<span class="kat-estado owned">${bi('Equipada','Equipped')}</span>`:`<span class="kat-estado" style="opacity:.55">${bi('Desbloqueada','Unlocked')}</span>`)
+                : `<span class="kat-precio-tag"><span class="kat-lock-mini">🔒</span> ${fmt$(KAT_UMBRAL[i])}</span>`}
+              <span class="kat-bono" title="${loc(k.poder.n)}"><b style="color:${k.belt}">${katanaBonoTxt(i).loot}</b> ${bi('botín','loot')} · <b>${katanaBonoTxt(i).escudo}</b> ${bi('escudo','shield')}</span>
             </div>`;}).join('')}
         </div>
         <div class="kat-prog" style="--kc:${KATANAS[kActualIdx].belt}">
@@ -11069,7 +11074,7 @@ function renderBatalla(){
                 <i>${r.g}${bi('G','W')} · ${r.p}${bi('P','L')}</i>
               </span>
             </span>
-            <span class="bat-jug-elo"><span class="bat-jug-dan">${bi('Rango','Rank')} ${curI+1}/${KATANAS.length}</span><b>${r.elo}<em>${bi('pts','pts')}</em></b></span>
+            <span class="bat-jug-elo"><span class="bat-jug-dan">${bi('Rango','Rank')} ${curI+1}/${KATANAS.length}</span><b>${fmt$(r.stack)}</b></span>
           </div>`;}).join('')}
         </div>
         `;
@@ -11098,12 +11103,15 @@ function renderBatalla(){
       if(miKat.includes(KATANAS[i].id)){ batEquipar(yo,i); toast('🗡️ '+bi('Equipaste','Equipped')+' '+loc(KATANAS[i].n)); }
       renderBatalla();
     });
-    if(window._batBotinFlash && window._batBotinFlash.uid===yo){ const f=window._batBotinFlash; window._batBotinFlash=null; setTimeout(()=>animaBotin(banco, f.monto), 220); }
-    if(window._batEloFlash){ const f=window._batEloFlash; window._batEloFlash=null;
-      const sube=f.delta>=0;
-      const el=root.querySelector('.zen-stat.elo'); if(el){ el.classList.add(sube?'elo-up':'elo-down'); }
-      const sg=(f.delta>0?'+':'')+f.delta;
-      setTimeout(()=>toast((sube?'🏅 ▲ ':'▼ ')+sg+' '+bi('puntos','points')), 360);
+    if(window._batStackFlash){ const f=window._batStackFlash; window._batStackFlash=null;
+      const el=root.querySelector('.zen-stat.banco');
+      if(f.ruina){ if(el){ el.classList.add('elo-down'); }
+        setTimeout(()=>toast('💀 '+bi('Quebraste tu cuenta — reinicio a','You blew your account — restart at')+' '+fmt$(BAT_STACK_INI)), 320);
+      } else { const sube=f.delta>=0;
+        if(el){ el.classList.add(sube?'elo-up':'elo-down'); }
+        if(sube && typeof animaBotin==='function'){ setTimeout(()=>animaBotin(f.stack, f.delta), 220); }
+        setTimeout(()=>toast((sube?'💵 ▲ +':'▼ -')+fmt$(Math.abs(f.delta)).replace('$','')+' '+bi('a tu stack','to your stack')), 360);
+      }
     }
     if(c){
       batBannerBind(c, yo);
