@@ -950,7 +950,7 @@ body.locked .app{visibility:hidden;pointer-events:none}
 /* ── Perfil zen (Batallas) ── */
 /* ── UNA SOLA VENTANA · el stage ES el juego ── */
 .zen-stage{position:relative;border-radius:18px;overflow:hidden;border:1px solid rgba(255,255,255,.1);line-height:0;box-shadow:0 22px 50px -16px rgba(0,0,0,.65),inset 0 0 0 1px rgba(255,255,255,.03);height:calc(100vh - 130px);min-height:520px}
-.zen-stage canvas{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
+.zen-stage > canvas{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
 .zen-stage::after{content:'';position:absolute;inset:0;z-index:1;pointer-events:none;background:linear-gradient(180deg,rgba(6,9,14,.42) 0%,transparent 22%,transparent 62%,rgba(6,9,14,.66) 100%)}
 .stage-top{position:absolute;top:0;left:0;right:0;z-index:3;display:flex;align-items:center;gap:13px;padding:16px 18px;line-height:1.2}
 .stage-id{display:flex;flex-direction:column;gap:2px;min-width:0;flex:1}
@@ -1077,6 +1077,24 @@ button.st-chip:hover{border-color:rgba(255,255,255,.45)}
 .perf-h2h span{font-family:var(--mono);font-size:9px;color:rgba(255,255,255,.55);letter-spacing:.1em}
 .perf-h2h-m{font-family:var(--mono);font-size:10.5px;color:rgba(255,255,255,.6)}
 @media(max-width:640px){ .perf-grid{grid-template-columns:repeat(2,1fr)} }
+/* la tarjeta del perfil: su mundo en vivo */
+.perf-card{position:relative;border-radius:14px;overflow:hidden;border:1px solid rgba(255,255,255,.12);line-height:0;margin-bottom:4px}
+.perf-card canvas{display:block;width:100%;height:auto}
+.perf-card-in{position:absolute;left:0;right:0;bottom:0;padding:10px 14px;line-height:1.25;background:linear-gradient(transparent,rgba(6,9,14,.72))}
+.perf-card-in b{display:block;font-size:15px;color:#fff;font-weight:900;text-shadow:0 1px 4px rgba(0,0,0,.7)}
+.perf-card-in span{font-family:var(--mono);font-size:10px;font-weight:700;text-shadow:0 1px 3px rgba(0,0,0,.8)}
+.perf-edit{margin-left:auto;flex:0 0 auto}
+/* creador de ninja */
+.nj-ov{z-index:7}
+.nj-body{align-items:stretch}
+.nj-intro{margin:0 0 2px;font-size:13px;line-height:1.55;color:rgba(255,255,255,.8)}
+.nj-intro b{color:#fff}
+.nj-prev{display:flex;justify-content:center;padding:4px 0 2px}
+.nj-prev canvas{width:220px;height:220px;flex:0 0 auto;background:radial-gradient(60% 55% at 50% 62%,rgba(255,255,255,.07),transparent 75%);border-radius:16px}
+.nj-row{display:flex;gap:9px;flex-wrap:wrap}
+.nj-sw{width:34px;height:34px;border-radius:50%;border:2px solid rgba(255,255,255,.18);background:var(--c);cursor:pointer;transition:transform .12s, box-shadow .12s}
+.nj-sw:hover{transform:scale(1.12)}
+.nj-sw.on{border-color:#fff;box-shadow:0 0 0 3px rgba(255,255,255,.25),0 0 14px -2px var(--c);transform:scale(1.12)}
 @media(max-width:640px){ .stage-id b{font-size:15px} .st-chip{padding:6px 10px} .st-chip b{font-size:13px} .ars-grid{grid-template-columns:repeat(2,1fr)} .stage-top{flex-wrap:wrap;gap:9px;padding:12px 13px} .stage-stats{margin-left:auto} }
 .zen-hero{position:relative;border-radius:18px;overflow:hidden;border:1px solid rgba(255,255,255,.1);margin-bottom:18px;line-height:0;box-shadow:0 18px 44px -14px rgba(0,0,0,.6),inset 0 0 0 1px rgba(255,255,255,.03)}
 .zen-hero canvas{display:block;width:100%;height:auto}
@@ -10579,18 +10597,31 @@ function zenFrase(c,x,y,text,col){ c.save(); c.font='600 22px "Hiragino Mincho P
   c.shadowColor='rgba(0,0,0,.55)'; c.shadowBlur=5; c.fillStyle=col||'rgba(255,255,255,.5)';
   for(let i=0;i<text.length;i++) c.fillText(text[i], x, y+i*27);
   c.restore(); }
-/* NINJA NPC: silueta encapuchada · su bufanda y su katana llevan el color de la espada equipada */
-function zenNinja(c,x,base,s,now,ph,col){ const bob=Math.sin(now/900+(ph||0))*1.5; const kc=col||'#b53a2e'; c.save(); c.translate(x,base+bob);
-  c.fillStyle='#0c0e13'; c.fillRect(-5*s,-14*s,4*s,14*s); c.fillRect(2*s,-14*s,4*s,14*s);
+/* TU NINJA: cada quien crea el suyo al registrarse en Battles.
+   traje / banda / bufanda personalizados; el mango de su katana = la espada equipada */
+const NJ_DEF = { traje:'#0c0e13', banda:'#d6dce8', buf:'#b53a2e' };
+const NJ_OPCIONES = {
+  traje:[['#0c0e13','Negro'],['#1c2733','Noche'],['#2a1a2e','Púrpura'],['#14291c','Bosque'],['#3a1216','Vino'],['#232733','Acero'],['#3d2c14','Café'],['#5a5f6a','Gris']],
+  banda:[['#d6dce8','Blanca'],['#e7c24a','Oro'],['#4fae6a','Jade'],['#3e82c8','Cielo'],['#c8443c','Roja'],['#8a5cc8','Violeta']],
+  buf:[['#b53a2e','Roja'],['#e0863c','Naranja'],['#e7c24a','Oro'],['#4fae6a','Jade'],['#3e82c8','Azul'],['#8a5cc8','Violeta'],['#EDEFF2','Blanca'],['#23272E','Negra']]
+};
+function batNinjaDe(u){ const nj=(S.batNinja||{})[u]; if(nj) return nj;
+  /* rivales sin registro: ninja determinístico a partir de su uid */
+  let h=0; for(const ch of String(u||'')) h=(h*31+ch.charCodeAt(0))>>>0;
+  return { traje:NJ_OPCIONES.traje[h%NJ_OPCIONES.traje.length][0], banda:NJ_OPCIONES.banda[(h>>3)%NJ_OPCIONES.banda.length][0], buf:NJ_OPCIONES.buf[(h>>5)%NJ_OPCIONES.buf.length][0] }; }
+function zenNinja(c,x,base,s,now,ph,col,nj){ const bob=Math.sin(now/900+(ph||0))*1.5; const kc=col||'#b53a2e';
+  const cfg = nj||NJ_DEF;
+  c.save(); c.translate(x,base+bob);
+  c.fillStyle=cfg.traje; c.fillRect(-5*s,-14*s,4*s,14*s); c.fillRect(2*s,-14*s,4*s,14*s);
   c.fillRect(-6.5*s,-30*s,13*s,18*s);
   c.strokeStyle='#c7ccd4'; c.lineWidth=1.6*s; c.beginPath(); c.moveTo(-9*s,-38*s); c.lineTo(9*s,-16*s); c.stroke();
   c.strokeStyle=kc; c.lineWidth=2.6*s; c.beginPath(); c.moveTo(-9*s,-38*s); c.lineTo(-12*s,-42*s); c.stroke();
-  c.fillStyle='#0c0e13'; c.beginPath(); c.arc(0,-33*s,5.6*s,0,7); c.fill();
-  c.fillStyle='rgba(214,220,232,.9)'; c.fillRect(-5*s,-35*s,10*s,2.2*s);
-  c.fillStyle=kc; c.beginPath(); c.moveTo(5*s,-32*s); c.quadraticCurveTo(15*s+Math.sin(now/300+ph)*5,-30*s,20*s,-23*s); c.quadraticCurveTo(13*s,-28*s,5*s,-28*s); c.closePath(); c.fill();
+  c.fillStyle=cfg.traje; c.beginPath(); c.arc(0,-33*s,5.6*s,0,7); c.fill();
+  c.fillStyle=cfg.banda; c.fillRect(-5*s,-35*s,10*s,2.2*s);
+  c.fillStyle=cfg.buf; c.beginPath(); c.moveTo(5*s,-32*s); c.quadraticCurveTo(15*s+Math.sin(now/300+ph)*5,-30*s,20*s,-23*s); c.quadraticCurveTo(13*s,-28*s,5*s,-28*s); c.closePath(); c.fill();
   c.restore(); }
 /* dibuja UNA escena (para el héroe animado y para la ficha) */
-function zenDibujaEscena(c, W, H, E, now, pet, poderHex){
+function zenDibujaEscena(c, W, H, E, now, pet, poderHex, njCfg){
   const rr=i=>((Math.sin(i*12.9898)*43758.5453)%1+1)%1, base=H*0.72;
   const g=c.createLinearGradient(0,0,0,H); E.cielo.forEach((col,idx)=> g.addColorStop(idx/(E.cielo.length-1),col)); c.fillStyle=g; c.fillRect(0,0,W,H);
   if(E.part==='estrella'){ for(let i=0;i<64;i++){ c.fillStyle=`rgba(255,255,255,${.25+rr(i+3)*.6*(0.6+0.4*Math.sin(now/700+i))})`; c.fillRect(rr(i)*W, rr(i+9)*H*0.55, 1.7,1.7); } }
@@ -10628,7 +10659,7 @@ function zenDibujaEscena(c, W, H, E, now, pet, poderHex){
   if(E.casas){ zenCasaJaponesa(c, W*0.63, base, 1.25); zenCasaJaponesa(c, W*0.79, base, 1.0); zenCasaJaponesa(c, W*0.53, base, 0.85); }
   if(E.faro) zenFaro(c, W*0.15, base, 1.35);
   /* ninjas NPC dando vida a la escena */
-  zenNinja(c, W*0.26, base, 1.2, now, 0, poderHex);   /* un solo ninja: tú, con el color de tu espada */
+  zenNinja(c, W*0.26, base, 1.2, now, 0, poderHex, njCfg||window._zenNinja);   /* un solo ninja: TU ninja */
   if(E.lava) zenLava(c, W, base, now);
   if(E.rayos && Math.floor(now/1600)%3===0) zenRayo(c, W*(0.36+0.2*((Math.floor(now/1600))%2)), 16, base-70);
   if(E.playa){ c.fillStyle='rgba(228,206,150,.9)'; c.beginPath(); c.moveTo(0,H); c.lineTo(W,H); c.lineTo(W,base+H*0.14); c.quadraticCurveTo(W*0.5,base+H*0.04,0,base+H*0.16); c.closePath(); c.fill(); }
@@ -10749,6 +10780,7 @@ function batPintaZen(){
   const c=cv.getContext('2d'); const W=cv.width, H=cv.height;
   cancelAnimationFrame(window._zenRAF||0);
   const _u=(S.session||{}).user||'';
+  window._zenNinja = batNinjaDe(_u);
   const _iv=(window._zenVista!=null && window._zenVista>=0 && window._zenVista<KATANAS.length) ? window._zenVista : batEquipadaDe(_u);
   const E=ZEN_ESCENAS[_iv]||ZEN_ESCENAS[2];
   if(!window._zenPart){ const p=[]; for(let i=0;i<28;i++) p.push({x:Math.random()*W,y:Math.random()*H,s:4+Math.random()*6,sp:.3+Math.random()*.9,dr:Math.random()*6,sw:.4+Math.random()*.9}); window._zenPart=p; }
@@ -11308,12 +11340,17 @@ function renderBatalla(){
           return `<div class="ars-ov">
           <div class="ars-top"><b>👤 ${esc(batNom(u))}${esYo?` · ${bi('tu perfil','your profile')}`:''}</b><button type="button" class="ars-x" id="perfX" aria-label="${bi('cerrar','close')}">✕</button></div>
           <div class="evt-body">
+            <div class="perf-card">
+              <canvas id="perfCv" width="640" height="300"></canvas>
+              <div class="perf-card-in"><b>${esc(batNom(u))}</b><span style="color:${kEq.belt}">${loc(kEq.n)} · ${loc(ZEN_ESCENAS[batEquipadaDe(u)].bioma)}</span></div>
+            </div>
             <div class="perf-head">
               <span class="perf-ava">${caraSocio(u,74)}</span>
               <div class="perf-idb">
                 <b>${esc(batNom(u))}</b>
                 <span class="perf-sw" style="--kc:${kEq.belt}">${katanaSVG(kEq.belt,true)}<i style="color:${kEq.belt}">${loc(kEq.n)}</i></span>
               </div>
+              ${esYo?`<button type="button" class="ars-eq perf-edit" data-njedit>🥷 ${bi('Editar mi ninja','Edit my ninja')}</button>`:''}
             </div>
             <div class="perf-grid">
               <div class="perf-st"><em>🏆 ${bi('VICTORIAS','WINS')}</em><b>${s.g||0}</b></div>
@@ -11330,6 +11367,21 @@ function renderBatalla(){
               if(h.party) return `<div class="evt-row" data-histg="${x.i}"><span class="evt-ico">👥</span><div class="evt-i"><b>${bi('Grupo','Group')} · ${(h.jugadores||[]).length}</b><span>${bi('ganó','won by')} ${esc(gn)}</span></div><span class="evt-tag">›</span></div>`;
               return `<div class="evt-row" data-histg="${x.i}"><span class="evt-ico">⚔️</span><div class="evt-i"><b>${esc(batNom(h.host))} vs ${esc(batNom(h.rival))}</b><span>${fmt$(h.pHost,true)} / ${fmt$(h.pRival,true)} · ${bi('ganó','won by')} ${esc(gn)}</span></div><span class="evt-tag">›</span></div>`;
             }).join('') : `<div class="evt-vacio">${bi('Aún sin batallas','No battles yet')}</div>`}
+          </div>
+        </div>`;})():''}
+        ${(window._batCrearNinja || !((S.batNinja||{})[yo]))?(()=>{
+          if(!window._njCfg) window._njCfg = {...((S.batNinja||{})[yo]||NJ_DEF)};
+          const nuevo = !((S.batNinja||{})[yo]);
+          const filas=[['traje',bi('TRAJE','SUIT')],['banda',bi('BANDA','HEADBAND')],['buf',bi('BUFANDA','SCARF')]];
+          return `<div class="ars-ov nj-ov">
+          <div class="ars-top"><b>🥷 ${nuevo?bi('Crea tu ninja','Create your ninja'):bi('Tu ninja','Your ninja')}</b>${nuevo?'':`<button type="button" class="ars-x" id="njX" aria-label="${bi('cerrar','close')}">✕</button>`}</div>
+          <div class="evt-body nj-body">
+            ${nuevo?`<p class="nj-intro">${bi('Bienvenido a Battles,','Welcome to Battles,')} <b>${esc(batNom(yo))}</b>. ${bi('Este ninja te representará en todos los entornos. Hazlo tuyo.','This ninja will represent you in every world. Make it yours.')}</p>`:''}
+            <div class="nj-prev"><canvas id="njCv" width="240" height="240"></canvas></div>
+            ${filas.map(f=>`
+            <div class="evt-sec">${f[1]}</div>
+            <div class="nj-row">${NJ_OPCIONES[f[0]].map(o=>`<button type="button" class="nj-sw ${window._njCfg[f[0]]===o[0]?'on':''}" data-njk="${f[0]}" data-njv="${o[0]}" title="${o[1]}" style="--c:${o[0]}"></button>`).join('')}</div>`).join('')}
+            <button type="button" class="btn primary stage-btn" id="njOk">🥷 ${nuevo?bi('¡Listo! Entrar al dojo','Done! Enter the dojo'):bi('Guardar','Save')}</button>
           </div>
         </div>`;})():''}
       </div>
@@ -11349,6 +11401,28 @@ function renderBatalla(){
     $('#perfX') && ($('#perfX').onclick = () => { window._batPerfil=null; renderBatalla(); });
     root.querySelectorAll('[data-perfretar]').forEach(b=> b.onclick=()=>{ const u=b.dataset.perfretar; batSel={op:u,ops:[u],ses:'asia',dur:30,cuando:null}; window._batPerfil=null; window._batSetup=true; window._batEventos=false; window._batArsenal=false; window._batComo=false; renderBatalla(); });
     root.querySelectorAll('[data-histg]').forEach(b=> b.onclick=()=>{ const h=batHist()[+b.dataset.histg]; if(h) batHistDetalle(h); });
+    /* ── crear / editar tu ninja ── */
+    root.querySelectorAll('[data-njk]').forEach(b=> b.onclick=()=>{ window._njCfg[b.dataset.njk]=b.dataset.njv; renderBatalla(); });
+    $('#njOk') && ($('#njOk').onclick = () => { S.batNinja=S.batNinja||{}; const nuevo=!S.batNinja[yo];
+      S.batNinja[yo]={...window._njCfg}; save(); window._batCrearNinja=false;
+      toast('🥷 '+(nuevo?bi('¡Tu ninja está listo. Bienvenido al dojo!','Your ninja is ready. Welcome to the dojo!'):bi('Ninja actualizado','Ninja updated'))); renderBatalla(); });
+    $('#njX') && ($('#njX').onclick = () => { window._batCrearNinja=false; window._njCfg=null; renderBatalla(); });
+    root.querySelectorAll('[data-njedit]').forEach(b=> b.onclick=()=>{ window._njCfg={...((S.batNinja||{})[yo]||NJ_DEF)}; window._batCrearNinja=true; window._batPerfil=null; renderBatalla(); });
+    /* preview del ninja en vivo */
+    const njcv=$('#njCv'); cancelAnimationFrame(window._njRAF||0);
+    if(njcv){ const nx=njcv.getContext('2d');
+      const pintaNj=(t)=>{ if(!njcv.isConnected) return; nx.clearRect(0,0,240,240);
+        nx.fillStyle='rgba(255,255,255,.06)'; nx.beginPath(); nx.ellipse(120,212,66,12,0,0,7); nx.fill();
+        zenNinja(nx,116,206,4.4,t||0,0,KATANAS[kEquipIdx].belt,window._njCfg);
+        window._njRAF=requestAnimationFrame(pintaNj); };
+      window._njRAF=requestAnimationFrame(pintaNj); }
+    /* la tarjeta del perfil: su mundo + su ninja en vivo */
+    const pcv=$('#perfCv'); cancelAnimationFrame(window._perfRAF||0);
+    if(pcv && window._batPerfil){ const uid=window._batPerfil, px=pcv.getContext('2d');
+      const Ei=ZEN_ESCENAS[batEquipadaDe(uid)]||ZEN_ESCENAS[0], belt=KATANAS[batEquipadaDe(uid)].belt, njp=batNinjaDe(uid);
+      const pp=[]; for(let i=0;i<16;i++) pp.push({x:Math.random()*640,y:Math.random()*300,s:4+Math.random()*5,sp:.3+Math.random()*.8,dr:Math.random()*6,sw:.5});
+      const pintaPf=(t)=>{ if(!pcv.isConnected) return; zenDibujaEscena(px,640,300,Ei,t||0,pp,belt,njp); window._perfRAF=requestAnimationFrame(pintaPf); };
+      window._perfRAF=requestAnimationFrame(pintaPf); }
     $('#evX') && ($('#evX').onclick = () => { window._batEventos=false; renderBatalla(); });
     $('#stArsenal') && ($('#stArsenal').onclick = () => { window._batArsenal=true; window._batEventos=false; window._batSetup=false; renderBatalla(); });
     $('#arsX') && ($('#arsX').onclick = () => { window._batArsenal=false; renderBatalla(); });
