@@ -929,6 +929,9 @@ body.locked .app{visibility:hidden;pointer-events:none}
 .kat-card.owned{cursor:pointer}
 .kat-card.locked{cursor:default}
 .kat-lock-mini{font-size:10px;opacity:.8}
+.kat-precio-tag{font-family:var(--mono);font-size:12.5px;font-weight:800;color:#E9CF46;margin-top:1px}
+.kat-feat-tp{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.kat-feat-precio2{font-family:var(--mono);font-size:17px;font-weight:800;color:#E9CF46}
 /* ── Ficha de katana (ecosistema + datos) ── */
 .kat-ficha-ov{position:fixed;inset:0;z-index:9000;background:rgba(4,6,10,.72);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;padding:20px;animation:fichaIn .18s ease}
 @keyframes fichaIn{from{opacity:0}to{opacity:1}}
@@ -9979,6 +9982,17 @@ function zenMonte(c, W, base, layer, col, h, snow, mesa){
   c.fillStyle='rgba(0,0,0,.12)'; for(let i=0;i<pts.length-1;i++){ if(i%2){ c.beginPath(); c.moveTo(pts[i][0],pts[i][1]); c.lineTo(pts[i+1][0],pts[i+1][1]); c.lineTo(pts[i+1][0],base); c.lineTo(pts[i][0],base); c.closePath(); c.fill(); } }
   if(snow){ c.fillStyle='rgba(255,255,255,.94)'; pts.forEach((p,i)=>{ if(p[1]<base-h*0.42){ const nx=pts[i+1]||p, px=pts[i-1]||p; c.beginPath(); c.moveTo((px[0]+p[0])/2,(px[1]+p[1])/2); c.lineTo(p[0],p[1]); c.lineTo((nx[0]+p[0])/2,(nx[1]+p[1])/2); c.lineTo(p[0]+8,p[1]+16); c.lineTo(p[0]-8,p[1]+16); c.closePath(); c.fill(); } }); }
 }
+/* PODER de la katana: el fondo se energiza con su color (aura pulsante + destellos) */
+function zenPoder(c,W,H,now,hex){ if(!hex) return; const h=hex.replace('#','');
+  const r=parseInt(h.slice(0,2),16), g=parseInt(h.slice(2,4),16), b=parseInt(h.slice(4,6),16);
+  const p=0.5+0.5*Math.sin(now/650);
+  const rg=c.createRadialGradient(W/2,H*0.5,H*0.12,W/2,H*0.5,W*0.7);
+  rg.addColorStop(0,'rgba(0,0,0,0)'); rg.addColorStop(.62,'rgba(0,0,0,0)'); rg.addColorStop(1,`rgba(${r},${g},${b},${0.14+p*0.2})`);
+  c.fillStyle=rg; c.fillRect(0,0,W,H);
+  c.fillStyle=`rgba(${r},${g},${b},1)`;
+  for(let i=0;i<40;i++){ const x=(i*97.3)%W, y=H-((now*0.08*(0.5+(i%5)*0.2)+i*43)%(H+30)); const s=1.4+((i%3)*0.9);
+    c.globalAlpha=(0.22+0.5*(((i*7)%10)/10))*(0.55+0.45*p); c.beginPath(); c.arc(x,y,s,0,7); c.fill(); }
+  c.globalAlpha=1; }
 /* caligrafía vertical japonesa (frase de filosofía del trading) */
 function zenFrase(c,x,y,text,col){ c.save(); c.font='600 22px "Hiragino Mincho ProN","Yu Mincho",serif'; c.textAlign='center';
   c.shadowColor='rgba(0,0,0,.55)'; c.shadowBlur=5; c.fillStyle=col||'rgba(255,255,255,.5)';
@@ -9995,12 +10009,14 @@ function zenNinja(c,x,base,s,now,ph){ const bob=Math.sin(now/900+(ph||0))*1.5; c
   c.fillStyle='#b53a2e'; c.beginPath(); c.moveTo(5*s,-32*s); c.quadraticCurveTo(15*s+Math.sin(now/300+ph)*5,-30*s,20*s,-23*s); c.quadraticCurveTo(13*s,-28*s,5*s,-28*s); c.closePath(); c.fill();
   c.restore(); }
 /* dibuja UNA escena (para el héroe animado y para la ficha) */
-function zenDibujaEscena(c, W, H, E, now, pet){
+function zenDibujaEscena(c, W, H, E, now, pet, poderHex){
   const rr=i=>((Math.sin(i*12.9898)*43758.5453)%1+1)%1, base=H*0.72;
   const g=c.createLinearGradient(0,0,0,H); E.cielo.forEach((col,idx)=> g.addColorStop(idx/(E.cielo.length-1),col)); c.fillStyle=g; c.fillRect(0,0,W,H);
   if(E.part==='estrella'){ for(let i=0;i<64;i++){ c.fillStyle=`rgba(255,255,255,${.25+rr(i+3)*.6*(0.6+0.4*Math.sin(now/700+i))})`; c.fillRect(rr(i)*W, rr(i+9)*H*0.55, 1.7,1.7); } }
   const disc=E.sol||E.luna;
-  if(disc){ c.fillStyle=disc.halo; c.beginPath(); c.arc(W*disc.x,H*disc.y,disc.r*1.55,0,7); c.fill(); c.fillStyle=disc.col; c.beginPath(); c.arc(W*disc.x,H*disc.y,disc.r,0,7); c.fill();
+  if(disc){ const dr=disc.r*(1+0.05*Math.sin(now/500));   /* el astro LATE con el poder */
+    c.fillStyle=disc.halo; c.beginPath(); c.arc(W*disc.x,H*disc.y,dr*(1.5+0.12*Math.sin(now/500)),0,7); c.fill();
+    c.fillStyle=disc.col; c.beginPath(); c.arc(W*disc.x,H*disc.y,dr,0,7); c.fill();
     if(E.luna){ c.fillStyle='rgba(150,165,200,.32)'; [[.28,-.22,.16],[-.22,.24,.12],[.12,.36,.1]].forEach(([dx,dy,rf])=>{ c.beginPath(); c.arc(W*disc.x+disc.r*dx,H*disc.y+disc.r*dy,disc.r*rf,0,7); c.fill(); }); } }
   if(E.nubes) zenNubes(c,W,H,now,E.nubesCol);
   E.montes.forEach((m,mi)=> zenMonte(c,W,base,mi,m[0],m[1]*H*0.36,E.nieve&&mi<2,E.mesa));
@@ -10029,8 +10045,6 @@ function zenDibujaEscena(c, W, H, E, now, pet){
   if(E.faro) zenFaro(c, W*0.15, base, 1.35);
   /* ninjas NPC dando vida a la escena */
   zenNinja(c, W*0.24, base, 1.15, now, 0); zenNinja(c, W*0.83, base, 0.95, now, 2.3);
-  /* frase de filosofía del trading en caligrafía japonesa */
-  if(E.frase) zenFrase(c, W*0.055, H*0.14, E.frase, E.fraseCol||'rgba(255,255,255,.5)');
   if(E.lava) zenLava(c, W, base, now);
   if(E.rayos && Math.floor(now/1600)%3===0) zenRayo(c, W*(0.36+0.2*((Math.floor(now/1600))%2)), 16, base-70);
   if(E.playa){ c.fillStyle='rgba(228,206,150,.9)'; c.beginPath(); c.moveTo(0,H); c.lineTo(W,H); c.lineTo(W,base+H*0.14); c.quadraticCurveTo(W*0.5,base+H*0.04,0,base+H*0.16); c.closePath(); c.fill(); }
@@ -10057,6 +10071,8 @@ function zenDibujaEscena(c, W, H, E, now, pet){
   if(E.sakuraTree) zenSakuraTree(c, W*0.2, base+H*0.05, 1.25);
   if(E.flores) zenFlores(c,W,H,base,E.floresCol||'rgba(230,150,200,.9)');
   if(E.pasto) zenPasto(c,W,H,base,now,E.pastoCol);
+  if(E.frase) zenFrase(c, W*0.055, H*0.14, E.frase, E.fraseCol||'rgba(255,255,255,.5)');
+  zenPoder(c,W,H,now,poderHex);   /* el poder de la katana energiza el fondo */
 }
 function zenEscenaDe(uid){ return ZEN_ESCENAS[batEquipadaDe(uid)]||ZEN_ESCENAS[2]; }
 /* el monito del jugador de cuerpo entero, en pose de samurái con su katana alzada */
@@ -10097,7 +10113,7 @@ function batKatFicha(idx){
     toast('🗡️ '+bi('¡Katana desbloqueada!','Katana unlocked!')+' '+loc(k.n)); renderBatalla(); };
   const fcv=ov.querySelector('#katFichaCv'), fc=fcv.getContext('2d');
   const fp=[]; for(let i=0;i<16;i++) fp.push({x:Math.random()*640,y:Math.random()*300,s:3+Math.random()*4,sp:.3+Math.random()*.7,dr:Math.random()*6,sw:.4+Math.random()*.8});
-  (function loop(now){ zenDibujaEscena(fc,640,300,E,now,fp); if(!owned){ fc.fillStyle='rgba(6,8,14,.86)'; fc.fillRect(0,0,640,300); } if(document.body.contains(ov)) ov._raf=requestAnimationFrame(loop); })(performance.now());
+  (function loop(now){ zenDibujaEscena(fc,640,300,E,now,fp,k.belt); if(!owned){ fc.fillStyle='rgba(6,8,14,.86)'; fc.fillRect(0,0,640,300); } if(document.body.contains(ov)) ov._raf=requestAnimationFrame(loop); })(performance.now());
 }
 function batPintaZen(){
   const cv=document.getElementById('batZenCv'); if(!cv) return;
@@ -10106,7 +10122,8 @@ function batPintaZen(){
   const E=zenEscenaDe((S.session||{}).user||'');
   if(!window._zenPart){ const p=[]; for(let i=0;i<28;i++) p.push({x:Math.random()*W,y:Math.random()*H,s:4+Math.random()*6,sp:.3+Math.random()*.9,dr:Math.random()*6,sw:.4+Math.random()*.9}); window._zenPart=p; }
   const pet=window._zenPart;
-  function frame(now){ zenDibujaEscena(c,W,H,E,now,pet); if(cv.isConnected) window._zenRAF=requestAnimationFrame(frame); }
+  const poderHex=KATANAS[batEquipadaDe((S.session||{}).user||'')].belt;
+  function frame(now){ zenDibujaEscena(c,W,H,E,now,pet,poderHex); if(cv.isConnected) window._zenRAF=requestAnimationFrame(frame); }
   window._zenRAF=requestAnimationFrame(frame);
 }
 /* ── el dinero cae al banco cuando ganas: monedas + conteo del número ── */
@@ -10457,8 +10474,8 @@ function renderBatalla(){
         ${kProxIdx>=0 ? (()=>{ const nk=KATANAS[kProxIdx], falta=nk.precio-banco; return `
         <div class="kat-feat goal" style="--kc:${nk.belt}">
           <div class="kat-feat-blade">${katanaSVG(nk.belt, true)}<span class="kat-feat-lock">🔒</span></div>
-          <div class="kat-feat-txt"><em>${bi('SIGUIENTE KATANA','NEXT KATANA')}</em><b style="border-bottom:2px solid ${nk.belt};padding-bottom:1px;width:fit-content">${loc(nk.n)}</b></div>
-          <div class="kat-feat-goal"><b>${fmt$(nk.precio)}</b>${falta<=0?`<button type="button" class="kat-buy" data-kat="${nk.id}">${bi('Forjar','Forge')}</button>`:`<span class="kat-falta">${bi('te faltan','need')} ${fmt$(falta)}</span>`}</div>
+          <div class="kat-feat-txt"><em>${bi('SIGUIENTE KATANA','NEXT KATANA')}</em><div class="kat-feat-tp"><b style="border-bottom:2px solid ${nk.belt};padding-bottom:1px">${loc(nk.n)}</b><span class="kat-feat-precio2">${fmt$(nk.precio)}</span></div></div>
+          <div class="kat-feat-goal">${falta<=0?`<button type="button" class="kat-buy" data-kat="${nk.id}">${bi('Forjar','Forge')}</button>`:`<span class="kat-falta">${bi('te faltan','need')} ${fmt$(falta)}</span>`}</div>
         </div>`;})() : `
         <div class="kat-feat done" style="--kc:${KATANAS[kActualIdx].belt}">
           <div class="kat-feat-blade">${katanaSVG(KATANAS[kActualIdx].belt, true)}</div>
@@ -10471,7 +10488,7 @@ function renderBatalla(){
               <div class="kat-ico">${katanaSVG(k.belt, cur)}<span class="kat-kanji">${k.kanji}</span>${owned?'<span class="kat-badge ok">✓</span>':'<span class="kat-badge lock">🔒</span>'}</div>
               <b class="kat-nom" style="border-bottom:2px solid ${k.belt}">${loc(k.n)}</b>
               ${owned ? (cur?`<span class="kat-estado owned">${bi('Equipada','Equipped')}</span>`:`<span class="kat-estado" style="opacity:.55">${bi('En tu colección','Owned')}</span>`)
-                : `<span class="kat-estado"><span class="kat-lock-mini">🔒</span> ${fmt$(k.precio)}</span>`}
+                : `<span class="kat-precio-tag"><span class="kat-lock-mini">🔒</span> ${fmt$(k.precio)}</span>`}
             </div>`;}).join('')}
         </div>
         <div class="kat-prog" style="--kc:${KATANAS[kActualIdx].belt}">
