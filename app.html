@@ -949,10 +949,9 @@ body.locked .app{visibility:hidden;pointer-events:none}
 .zen-stat.banco{background:rgba(14,52,32,.72);border-color:rgba(48,209,88,.6);position:relative}
 .zen-stat.banco b{color:#a6f8c4;text-shadow:0 1px 5px rgba(0,0,0,.7)}
 .zen-stat.banco-flash{box-shadow:0 0 0 2px rgba(48,209,88,.55),0 0 26px -4px rgba(48,209,88,.7);transition:box-shadow .2s}
-.zen-stat.elo{background:rgba(30,22,52,.72);border-color:rgba(150,120,235,.55)}
-.zen-stat.elo b{color:#d8ccff}
-.zen-stat.elo em i{font-style:normal;color:#c3b4ff;font-weight:800}
-.zen-stat.katana b{font-size:15px;font-family:Georgia,'Hiragino Mincho ProN','Yu Mincho',serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.zen-stat.elo,.zen-stat.katana{background:color-mix(in srgb,var(--sc,#888) 16%,rgba(8,11,18,.66));border-color:color-mix(in srgb,var(--sc,#888) 60%,transparent);box-shadow:0 0 16px -6px var(--sc,transparent)}
+.zen-stat.elo em,.zen-stat.katana em{text-shadow:0 1px 3px rgba(0,0,0,.75)}
+.zen-stat.katana b{font-size:15px;font-family:Georgia,'Hiragino Mincho ProN','Yu Mincho',serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;text-shadow:0 1px 4px rgba(0,0,0,.7)}
 .zen-stat .zs-sub{font-style:normal;font-size:11px;font-weight:700;color:rgba(255,255,255,.6)}
 .zen-stat.elo-up{animation:eloUp 1.1s ease}
 .zen-stat.elo-down{animation:eloDown 1.1s ease}
@@ -10927,8 +10926,11 @@ function renderBatalla(){
     const banco = batBanco(yo), miKat = batKatanasDe(yo);
     const kActualIdx = KATANAS.reduce((mx,k,i)=> miKat.includes(k.id)? i : mx, 0);
     const kEquipIdx = batEquipadaDe(yo);
-    const vistaIdx = (window._batVista!=null && window._batVista>=0 && window._batVista<KATANAS.length) ? window._batVista : kEquipIdx;
-    window._zenVista = vistaIdx;
+    const _preview = (window._batVista!=null && window._batVista>=0 && window._batVista<KATANAS.length) ? window._batVista : null;
+    /* la espada flotante = la equipada (o la que previsualizas); el ENTORNO = tu cinta/rango */
+    const vistaIdx = _preview!=null ? _preview : kEquipIdx;
+    const escenaIdx = _preview!=null ? _preview : batRango(batElo(yo));
+    window._zenVista = escenaIdx;
     const _bh = KATANAS[vistaIdx].belt.replace('#','');
     const katClaro = (parseInt(_bh.slice(0,2),16)*0.299 + parseInt(_bh.slice(2,4),16)*0.587 + parseInt(_bh.slice(4,6),16)*0.114)/255 > 0.72;
     const kProxIdx = KATANAS.findIndex(k=> !miKat.includes(k.id));
@@ -10971,8 +10973,8 @@ function renderBatalla(){
           </div>
           <div class="zen-stats">
             <div class="zen-stat banco"><em>${bi('BANCO','BANK')}</em><b>${fmt$(banco)}</b></div>
-            <div class="zen-stat elo"><em>${batRangoTxt(batElo(yo))}</em><b>${batElo(yo)}<i class="zs-sub"> ELO</i></b></div>
-            <div class="zen-stat katana"><em>${bi('KATANA','KATANA')}</em><b style="color:${KATANAS[kEquipIdx].belt}">${loc(KATANAS[kEquipIdx].n)}</b></div>
+            <div class="zen-stat elo" style="--sc:${KATANAS[batRango(batElo(yo))].belt}"><em style="color:${KATANAS[batRango(batElo(yo))].belt}">${batRangoTxt(batElo(yo))}</em><b>${batElo(yo)}<i class="zs-sub"> ELO</i></b></div>
+            <div class="zen-stat katana" style="--sc:${KATANAS[kEquipIdx].belt}"><em>KATANA</em><b style="color:${KATANAS[kEquipIdx].belt}">${loc(KATANAS[kEquipIdx].n)}</b></div>
             <div class="zen-stat"><em>${bi('NIVEL','LEVEL')}</em><b>${batNivel(yo)}</b></div>
           </div>
         </div>
