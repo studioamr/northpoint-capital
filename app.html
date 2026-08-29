@@ -620,6 +620,38 @@ body.locked .app{visibility:hidden;pointer-events:none}
 .ac2-les.hecha .les-t{color:var(--dim);text-decoration:line-through}
 .ac2-les .les-n{margin-left:auto;font-family:var(--mono);font-size:10px;color:var(--faint)}
 .ac2-lock-msg{font-family:var(--mono);font-size:11px;color:var(--faint);padding:10px 0 2px}
+/* ── Batallas 1v1 · lobby, ranking, historial ── */
+.bat-lobby-top{display:flex;align-items:center;gap:12px;margin-bottom:16px}
+.bat-lobby-t{font-size:20px;font-weight:900;letter-spacing:-.01em}
+.bat-ajustes{margin-left:auto;width:40px;height:40px;border-radius:11px;border:1px solid var(--line);background:var(--w02);color:var(--txt);font-size:17px;cursor:pointer}
+.bat-ajustes:hover{border-color:var(--accent)}
+.bat-volver{border:1px solid var(--line-soft);background:var(--glass);color:var(--txt);font:600 12px/1 var(--mono,inherit);padding:9px 14px;border-radius:10px;cursor:pointer}
+.bat-nuevo{width:100%;margin-bottom:22px;padding:14px}
+.bat-sec-t{font-family:var(--mono);font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--faint);margin:0 0 12px}
+.bat-rank{display:grid;gap:8px;margin-bottom:26px}
+.bat-rank-row{display:flex;align-items:center;gap:14px;border:1px solid var(--line-soft);border-radius:12px;background:var(--w02);padding:12px 16px}
+.bat-rank-row.yo{border-color:var(--up);background:rgba(48,209,88,.06)}
+.bat-rank-pos{font-family:var(--mono);font-size:14px;font-weight:600;color:var(--faint);min-width:26px;text-align:center}
+.bat-rank-pos.oro{font-size:18px}
+.bat-rank-ava{width:34px;height:34px;border-radius:50%;overflow:hidden;flex:0 0 auto;display:flex;align-items:center;justify-content:center;background:var(--bg-2)}
+.bat-rank-ava img,.bat-rank-ava canvas,.bat-rank-ava svg{width:100%;height:100%;object-fit:cover}
+.bat-rank-nom{flex:1;font-size:14px;font-weight:700;display:flex;flex-direction:column;gap:2px}
+.bat-rank-nom em{color:var(--faint);font-style:normal;font-weight:400;font-size:11px}
+.bat-rank-nom i{font-family:var(--mono);font-style:normal;font-size:10.5px;color:var(--faint);font-weight:400}
+.bat-rank-pts{font-family:var(--mono);text-align:right;color:var(--dim);font-size:10px}
+.bat-rank-pts b{display:block;font-size:22px;color:var(--txt);line-height:1}
+.bat-hist{display:grid;gap:7px}
+.bat-hist-row{display:grid;grid-template-columns:1fr auto auto;gap:12px;align-items:center;border-bottom:1px solid var(--line-soft);padding:10px 4px;font-size:13px}
+.bat-hist-vs{font-weight:600} .bat-hist-vs em{color:var(--faint);font-style:normal;font-weight:400}
+.bat-hist-res{font-family:var(--mono);font-size:11.5px;color:var(--dim)}
+.bat-hist-gan{font-family:var(--mono);font-size:11px;color:var(--faint)}
+.bat-hist-gan.w{color:var(--up)}
+.bat-hist-vacio{font-family:var(--mono);font-size:12px;color:var(--faint);padding:16px 4px;text-align:center}
+.bat-set-row{display:block;width:100%;text-align:left;border:none;border-bottom:1px solid var(--line-soft);background:none;
+  color:var(--txt);font:500 14px/1 var(--sans,inherit);padding:15px 4px;cursor:pointer}
+.bat-set-row:last-child{border-bottom:none}
+.bat-set-row:hover{color:var(--accent)}
+.bat-set-row.danger{color:var(--down)}
 /* ── Batallas 1v1 ── */
 .bat-hero{text-align:center;padding:28px 20px 22px}
 .bat-vs-ico{font-size:40px;margin-bottom:8px}
@@ -8381,14 +8413,30 @@ const BAT_DUR = [
   { min:30,  t:'30 min' }, { min:60, t:'1 h' }, { min:90, t:'1 h 30' },
   { min:120, t:'2 h' },   { min:240, t:'4 h' },
 ];
-let batTick = null, batDir = 'L';
+let batTick = null, batDir = 'L', batPantalla = 'lobby';
 function batYo(){ return socioEnSesion() || DUENO_ORIGEN; }
 function batNom(uid){ return (USERS[uid] && USERS[uid].nombre) || uid; }
 function batOponentes(){ return SOCIOS_REALES.filter(u => u !== batYo()); }
 function batProfit(c, uid){ return ((c.trades && c.trades[uid]) || []).reduce((a,t) => a + (t.pnl||0), 0); }
 function batNTrades(c, uid){ return ((c.trades && c.trades[uid]) || []).length; }
-function batReset(){ S.challenge = null; save(); renderBatalla(); }
+function batReset(){ S.challenge = null; batPantalla = 'lobby'; save(); renderBatalla(); }
 function batGuarda(){ save(); renderBatalla(); }
+/* ranking, puntos e historial de batallas */
+function batStats(){ if(!S.batStats || typeof S.batStats!=='object') S.batStats = {}; return S.batStats; }
+function batHist(){ if(!Array.isArray(S.batHistorial)) S.batHistorial = []; return S.batHistorial; }
+function batStatDe(uid){ const s = batStats()[uid]; return s || { pts:0, g:0, p:0, e:0 }; }
+function batRegistraResultado(c){
+  if(c.registrado) return; c.registrado = true;
+  const pH = batProfit(c, c.host), pR = batProfit(c, c.rival);
+  const gan = pH === pR ? null : (pH > pR ? c.host : c.rival);
+  const st = batStats();
+  [c.host, c.rival].forEach(u => { st[u] = st[u] || { pts:0, g:0, p:0, e:0 }; });
+  if(gan){ const perd = gan === c.host ? c.rival : c.host; st[gan].pts += 3; st[gan].g++; st[perd].pts += 1; st[perd].p++; }
+  else { st[c.host].pts += 1; st[c.rival].pts += 1; st[c.host].e++; st[c.rival].e++; }
+  batHist().unshift({ ts:Date.now(), host:c.host, rival:c.rival, ganador:gan, pHost:pH, pRival:pR, dur:c.duracion });
+  if(S.batHistorial.length > 40) S.batHistorial.length = 40;
+  save();
+}
 
 function renderBatalla(){
   const root = $('#batRoot'); if(!root) return;
@@ -8396,39 +8444,86 @@ function renderBatalla(){
   const c = S.challenge;
   if(batTick){ clearInterval(batTick); batTick = null; }
 
-  /* ── sin reto: crear party ── */
+  /* ── sin reto activo: LOBBY (ranking + historial) o SETUP (crear reto) ── */
   if(!c || c.estado === 'cancelado'){
-    const ops = batOponentes();
+    if(batPantalla === 'setup'){
+      const ops = batOponentes();
+      root.innerHTML = `
+        <div class="bat-lobby-top">
+          <button type="button" class="bat-volver" id="batVolverLobby">‹ ${bi('Lobby','Lobby')}</button>
+          <span class="bat-lobby-t">${bi('Nuevo reto','New challenge')}</span>
+        </div>
+        <div class="bat-card">
+          <div class="bat-f"><label>${bi('Rival','Opponent')}</label>
+            <div class="bat-ops">${ops.map((u,i)=>`<button type="button" class="bat-op ${i===0?'on':''}" data-op="${u}">${esc(batNom(u))}</button>`).join('')}</div>
+          </div>
+          <div class="bat-f"><label>${bi('Duración del challenge','Challenge duration')}</label>
+            <div class="bat-durs">${BAT_DUR.map((d,i)=>`<button type="button" class="bat-dur ${i===0?'on':''}" data-min="${d.min}">${d.t}</button>`).join('')}</div>
+          </div>
+          <div class="bat-f"><label>${bi('Sesión','Session')}</label><div class="bat-sesion">✈ ${bi('Asia · Tokio','Asia · Tokyo')}</div></div>
+          <button type="button" class="btn primary bat-crear" id="batCrear">${bi('Crear reto y enviar invitación','Create challenge & send invite')} →</button>
+        </div>`;
+      let opSel = ops[0], minSel = 30;
+      $('#batVolverLobby').onclick = () => { batPantalla = 'lobby'; renderBatalla(); };
+      root.querySelectorAll('[data-op]').forEach(b => b.onclick = () => { opSel = b.dataset.op; root.querySelectorAll('[data-op]').forEach(x=>x.classList.toggle('on', x===b)); });
+      root.querySelectorAll('[data-min]').forEach(b => b.onclick = () => { minSel = +b.dataset.min; root.querySelectorAll('[data-min]').forEach(x=>x.classList.toggle('on', x===b)); });
+      $('#batCrear').onclick = () => {
+        if(!opSel){ toast(bi('Elige un rival','Pick an opponent')); return; }
+        S.challenge = { id:'bt_'+uid(), host:yo, rival:opSel, duracion:minSel, estado:'invitado', creado:Date.now(), inicio:null, fin:null, trades:{} };
+        batGuarda();
+      };
+      return;
+    }
+    if(batPantalla === 'ajustes'){
+      root.innerHTML = `
+        <div class="bat-lobby-top">
+          <button type="button" class="bat-volver" id="batVolverLobby">‹ ${bi('Lobby','Lobby')}</button>
+          <span class="bat-lobby-t">${bi('Ajustes','Settings')}</span>
+        </div>
+        <div class="bat-card">
+          <button type="button" class="bat-set-row" id="batResetRank">${bi('Reiniciar ranking y puntos','Reset ranking & points')}</button>
+          <button type="button" class="bat-set-row" id="batLimpiaHist">${bi('Borrar historial de batallas','Clear battle history')}</button>
+          <button type="button" class="bat-set-row danger" id="batLogout">${bi('Terminar sesión','Sign out')}</button>
+        </div>`;
+      $('#batVolverLobby').onclick = () => { batPantalla = 'lobby'; renderBatalla(); };
+      $('#batResetRank').onclick = () => { if(confirm(bi('¿Reiniciar el ranking de todos?','Reset everyone\'s ranking?'))){ S.batStats = {}; save(); toast(bi('Ranking reiniciado','Ranking reset')); batPantalla='lobby'; renderBatalla(); } };
+      $('#batLimpiaHist').onclick = () => { if(confirm(bi('¿Borrar el historial?','Clear history?'))){ S.batHistorial = []; save(); toast(bi('Historial borrado','History cleared')); batPantalla='lobby'; renderBatalla(); } };
+      $('#batLogout').onclick = () => { if(!confirm(bi('¿Terminar sesión?','Sign out?'))) return; S.session = { user:null }; try{ localStorage.removeItem('np_tok'); }catch(e){} if(typeof lockUI==='function') lockUI(); else location.reload(); };
+      return;
+    }
+    /* LOBBY */
+    const ranking = SOCIOS_REALES.map(u => ({ uid:u, ...batStatDe(u), n: batStatDe(u).g + batStatDe(u).p + batStatDe(u).e }))
+      .sort((a,b)=> b.pts - a.pts || b.g - a.g);
+    const hist = batHist();
     root.innerHTML = `
-      <div class="bat-hero">
-        <div class="bat-vs-ico">⚔</div>
-        <h2>${bi('Reta a un socio','Challenge a teammate')}</h2>
-        <p>${bi('Quién hace más profit en la sesión. Crea la party, configura el match e invita.','Who makes more profit in the session. Create the party, set up the match and invite.')}</p>
+      <div class="bat-lobby-top">
+        <span class="bat-lobby-t">⚔ ${bi('Batallas 1v1','1v1 Battles')}</span>
+        <button type="button" class="bat-ajustes" id="batAjustes" title="${bi('Ajustes','Settings')}">⚙</button>
       </div>
-      <div class="bat-card">
-        <div class="bat-f"><label>${bi('Rival','Opponent')}</label>
-          <div class="bat-ops" id="batOps">
-            ${ops.map((u,i)=>`<button type="button" class="bat-op ${i===0?'on':''}" data-op="${u}">${esc(batNom(u))}</button>`).join('')}
-          </div>
-        </div>
-        <div class="bat-f"><label>${bi('Duración del challenge','Challenge duration')}</label>
-          <div class="bat-durs" id="batDurs">
-            ${BAT_DUR.map((d,i)=>`<button type="button" class="bat-dur ${i===0?'on':''}" data-min="${d.min}">${d.t}</button>`).join('')}
-          </div>
-        </div>
-        <div class="bat-f"><label>${bi('Sesión','Session')}</label>
-          <div class="bat-sesion">✈ ${bi('Asia · Tokio','Asia · Tokyo')}</div>
-        </div>
-        <button type="button" class="btn primary bat-crear" id="batCrear">${bi('Crear reto y enviar invitación','Create challenge & send invite')} →</button>
+      <button type="button" class="btn primary bat-nuevo" id="batNuevo">+ ${bi('Nuevo reto','New challenge')}</button>
+      <div class="bat-sec-t">${bi('Ranking de la mesa','Desk ranking')}</div>
+      <div class="bat-rank">
+        ${ranking.map((r,i)=>`
+          <div class="bat-rank-row ${r.uid===yo?'yo':''}">
+            <span class="bat-rank-pos ${i===0&&r.pts>0?'oro':''}">${i===0&&r.pts>0?'👑':'#'+(i+1)}</span>
+            <span class="bat-rank-ava">${caraSocio(r.uid,34)}</span>
+            <span class="bat-rank-nom">${esc(batNom(r.uid))}${r.uid===yo?` <em>${bi('(tú)','(you)')}</em>`:''}<i>${r.g}${bi('G','W')} · ${r.p}${bi('P','L')}${r.e?' · '+r.e+bi('E','T'):''}</i></span>
+            <span class="bat-rank-pts"><b>${r.pts}</b>${bi('pts','pts')}</span>
+          </div>`).join('')}
+      </div>
+      <div class="bat-sec-t">${bi('Historial','History')}</div>
+      <div class="bat-hist">
+        ${hist.length ? hist.slice(0,10).map(h=>{
+          const gn = h.ganador ? batNom(h.ganador) : bi('Empate','Tie');
+          return `<div class="bat-hist-row">
+            <span class="bat-hist-vs">${esc(batNom(h.host))} <em>vs</em> ${esc(batNom(h.rival))}</span>
+            <span class="bat-hist-res">${fmt$(h.pHost,true)} / ${fmt$(h.pRival,true)}</span>
+            <span class="bat-hist-gan ${h.ganador?'w':''}">${h.ganador?'👑 '+esc(gn):esc(gn)}</span>
+          </div>`;
+        }).join('') : `<div class="bat-hist-vacio">${bi('Aún no hay batallas. ¡Reta a alguien!','No battles yet. Challenge someone!')}</div>`}
       </div>`;
-    let opSel = ops[0], minSel = 30;
-    root.querySelectorAll('[data-op]').forEach(b => b.onclick = () => { opSel = b.dataset.op; root.querySelectorAll('[data-op]').forEach(x=>x.classList.toggle('on', x===b)); });
-    root.querySelectorAll('[data-min]').forEach(b => b.onclick = () => { minSel = +b.dataset.min; root.querySelectorAll('[data-min]').forEach(x=>x.classList.toggle('on', x===b)); });
-    $('#batCrear').onclick = () => {
-      if(!opSel){ toast(bi('Elige un rival','Pick an opponent')); return; }
-      S.challenge = { id:'bt_'+uid(), host:yo, rival:opSel, duracion:minSel, estado:'invitado', creado:Date.now(), inicio:null, fin:null, trades:{} };
-      batGuarda();
-    };
+    $('#batNuevo').onclick = () => { batPantalla = 'setup'; renderBatalla(); };
+    $('#batAjustes').onclick = () => { batPantalla = 'ajustes'; renderBatalla(); };
     return;
   }
 
@@ -8568,6 +8663,7 @@ function renderBatalla(){
 
   /* ── terminado: resumen y estadísticas ── */
   if(c.estado === 'terminado'){
+    batRegistraResultado(c);   // suma puntos al ranking y guarda en el historial (una vez)
     const pHost = batProfit(c, c.host), pRival = batProfit(c, c.rival);
     const ganador = pHost === pRival ? null : (pHost > pRival ? c.host : c.rival);
     const stat = (uid) => {
