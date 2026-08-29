@@ -1814,6 +1814,21 @@ button.tag.quemada{text-decoration:line-through;text-decoration-color:var(--down
 .sl-tag{margin-left:auto;font-family:var(--mono);font-size:10px;letter-spacing:.22em;color:#38BDF8}
 .sl-sub{font-size:13px;line-height:1.7;color:var(--dim);max-width:64ch;margin:10px 0 18px}
 .sl-card{padding:22px 24px;margin-bottom:16px}
+/* progreso hacia el primer payout */
+.pay-progreso{padding:20px 22px;margin-bottom:16px}
+.pay-prog-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px}
+.pay-prog-pct{font-family:var(--mono);font-weight:600;font-size:34px;line-height:1;color:var(--up)}
+.pay-prog-pct i{font-size:16px;font-style:normal;color:var(--dim)}
+.pay-prog-bar{height:10px;border-radius:99px;background:var(--w08,rgba(255,255,255,.08));margin:14px 0 10px;overflow:hidden}
+.pay-prog-bar>i{display:block;height:100%;border-radius:99px;background:var(--up);transition:width .7s ease}
+.pay-prog-pasos{display:flex;justify-content:space-between;font-family:var(--mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.pay-prog-pasos .on{color:var(--up)}
+.split-modos{display:flex;gap:8px;margin:12px 0 4px;flex-wrap:wrap}
+.split-modo{border:1px solid var(--line);border-radius:9px;background:var(--w02);color:var(--dim);
+  font:600 12px/1 var(--mono,inherit);letter-spacing:.06em;padding:9px 15px;cursor:pointer;transition:all .14s}
+.split-modo:hover{border-color:var(--line);color:var(--txt)}
+.split-modo.on{background:var(--accent);border-color:var(--accent);color:#08111f}
+.split-modo-d{color:var(--faint);margin:0 0 14px;line-height:1.5}
 .sl-donut-wrap{display:flex;gap:34px;align-items:center;flex-wrap:wrap}
 .sl-donut{position:relative;flex:0 0 220px;max-width:220px;margin:0 auto}
 .sl-donut .rd-centro b{font-size:26px}
@@ -2750,6 +2765,10 @@ stop[stop-color="#9BC0DC"]{stop-color:var(--txt)}
 
     <nav class="rail-group">
       <div class="micro" data-i18n="nav.grupo.snow">My money</div>
+      <a class="item" href="#payout" data-view="payout">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="1.6"><path d="M3 8.5h18M3 8.5A2 2 0 0 1 5 6.5h14a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><circle cx="16.5" cy="13" r="1.6"/></svg>
+        <span data-i18n="nav.payout">Payout management</span>
+      </a>
       <a class="item" href="#posiciones" data-view="posiciones">
         <svg viewBox="0 0 24 24" fill="none" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><path d="M12 3v18M3.5 7.5l17 9M3.5 16.5l17-9"/></svg>
         <span data-i18n="nav.pos">Portafolio</span>
@@ -3015,18 +3034,24 @@ stop[stop-color="#9BC0DC"]{stop-color:var(--txt)}
         <div class="bt-log lg-log" id="lgLog"></div>
       </section>
 
-      <!-- ════ POSICIONES ════ -->
-      <section class="view" id="v-posiciones">
-        <!-- Tres piezas y nada más: el monto, la lámina 2040 y la curva. -->
+      <!-- ════ PAYOUT MANAGEMENT ════ -->
+      <section class="view" id="v-payout">
+        <!-- Progreso hacia el primer payout (cuando aún no cobras) -->
+        <div class="panel pay-progreso" id="payProgreso" hidden></div>
+
+        <!-- El monto del payout y su reparto -->
         <div class="panel py-entrada">
-          <label for="pyMonto">Payout amount</label>
+          <label for="pyMonto" data-i18n="pm.monto">Monto del payout</label>
           <div class="rd-in"><span>$</span><input type="number" id="pyMonto" min="0" step="50" placeholder="0"></div>
-          <button class="btn primary" id="pyCalc">Calculate</button>
+          <button class="btn primary" id="pyCalc" data-i18n="pm.calcular">Calcular</button>
         </div>
 
         <!-- LA RUEDA · a qué destino va cada porcentaje del payout -->
         <div class="panel mt2" id="ruedaBox" style="padding:20px 22px" hidden></div>
+      </section>
 
+      <!-- ════ POSICIONES (Portfolio) ════ -->
+      <section class="view" id="v-posiciones">
         <!-- LA LÁMINA · Generational AI Portfolio 2040, como en la presentación -->
         <div class="sl">
           <div class="sl-head">
@@ -3079,7 +3104,6 @@ stop[stop-color="#9BC0DC"]{stop-color:var(--txt)}
           <span class="micro" data-i18n="vd.plan">The plan · from $0 to the house</span>
           <span class="micro" id="metaSub" style="margin-left:auto;color:var(--faint)"></span>
         </div>
-        <div class="panel" id="contrato30"></div>
         <div class="panel pat mt" id="patrimonioHoy"></div>
         <div id="metasMods" class="mt"></div>
       </section>
@@ -3627,6 +3651,10 @@ const I18N = {
   'nav.sesion':        { es:'Rutina',                en:'Routine' },
   'nav.journal':       { es:'Journal',                    en:'Journal' },
   'nav.pos':           { es:'Portafolio',            en:'Portfolio' },
+  'nav.payout':        { es:'Payout management',     en:'Payout management' },
+  'tit.payout.t':      { es:'Payout management',     en:'Payout management' },
+  'pm.monto':          { es:'Monto del payout',      en:'Payout amount' },
+  'pm.calcular':       { es:'Calcular',              en:'Calculate' },
   'tit.mesa.k':        { es:'Operación diaria',      en:'Daily trading' },
   'tit.journal.t':     { es:'Journal',                    en:'Journal' },
   'tit.snow.k':        { es:'Mi dinero',             en:'My money' },
@@ -4354,19 +4382,17 @@ const PRECIOS = { g63: 185000, sf90: 550000, casa: 12000000, yate: 40000000 };
    El ticket es el CÓMO; la cifra de acceso es el CUÁNTO. */
 const PLAN_FASES = [
   { r:'0', id:'f0', t:'The first stack', de:0, a:5000, neg:0,
-    ico:'semilla', que:'That the system exists — not the money.',
+    ico:'semilla', que:'Empiezas con $100 y juntas los primeros $5,000.',
     ingreso:null, pasivo:0,
     costoIni:[
-      [['5 Tradeify Red Pill','5 Tradeify Red Pill'], 400, ['$8,175 MXN','$8,175 MXN']],
-      [['Colchón de resets','Reset buffer'], 200, ['por si truena una','in case one blows']],
-      [['3 meses de vida sin cobrar','3 months of living, not collecting'], 975, ['$325 al mes','$325 a month']],
+      [['1 cuenta de evaluación','1 evaluation account'], 100, ['tu única entrada · $100','your only entry · $100']],
     ],
     /* Las tres etapas de UNA cuenta, con los números que André fijó el 30-jul.
        No es teoría: es el ciclo que ya corre en RED PILL 1. */
     etapas:[
       { n:'1', t:['Evals','Evals'], de:50000, a:53000, riesgo:'$100/día', obj:'$200/día', dias:'15 días',
-        nota:['5 Red Pill de Tradeify ($400 USD · $8,175 MXN) · ORB en la sesión de NY',
-              '5 Tradeify Red Pill ($400 USD · $8,175 MXN) · ORB on the NY session'] },
+        nota:['1 cuenta de evaluación ($100 USD) · ORB en la sesión de NY',
+              '1 evaluation account ($100 USD) · ORB on the NY session'] },
       { n:'2', t:['Buffer','Buffer'], de:50000, a:52100, riesgo:'$100/día', obj:'$200/día', dias:'10–20 días',
         nota:['Si ganas el primer trade, paras. Dos máximo, estrictos.',
               'If the first trade wins, you stop. Two max, strict.'] },
@@ -4374,15 +4400,15 @@ const PLAN_FASES = [
         nota:['El piso se congela en $50,100: la mitad de cuarto, la mitad de riesgo. De aquí en adelante Tradeify paga a diario.',
               'The floor freezes at $50,100: half the room, half the risk. From here Tradeify pays daily.'] },
     ],
-    haz:['Buy 5 Tradeify Red Pill of $50k — $400 for the five.',
-         'Pass the five evaluations: +$3,000 of profit on each one at $200 a day.',
-         'Build the buffer before withdrawing a single dollar: $2,100 per account.',
-         'First payout: $1,000 per account, $5,000 across the five. That closes this phase.',
-         'That $5,000 is not spending money — it is what buys the second stack.'],
-    tk:{ ctas:5, tam:50000, objDia:200, verdes:5, liveCap:0, livePct:0,
-         mas:['5 Tradeify Select, all $50k','Zero debt. The system comes first'] },
+    haz:['Empieza con $100: 1 cuenta de evaluación de $50k. Esa es tu única entrada.',
+         'Pasa la evaluación: +$3,000 de profit al $200 al día.',
+         'Arma el buffer antes de retirar un solo dólar: $2,100 en la cuenta.',
+         'Cobra los payouts hasta juntar $5,000. Reinvierte cada payout en más cuentas.',
+         'Esos $5,000 no se gastan — son los que compran el segundo escalón.'],
+    tk:{ ctas:1, tam:50000, objDia:200, verdes:5, liveCap:0, livePct:0,
+         mas:['1 cuenta de $50k para empezar','Cero deuda. El sistema primero'] },
     salida:[['Net worth of $5,000','pat',5000],['First payout collected','payouts',1],
-            ['5 funded accounts alive','cuentas',5],['15 sessions logged','ses',15]],
+            ['1 funded account alive','cuentas',1],['15 sessions logged','ses',15]],
     costos:[['Food and going out',120],['Transport',60],['Phone and apps',25],['Golf / gym',60],['Extras',60]],
     regla:'The first $5,000 does not get spent: it buys the second stack. That is the whole phase.' },
 
@@ -5409,6 +5435,7 @@ const TITLES = {
   trades:      ['tit.mesa.k',  'tit.trades.t'],
   log:         ['tit.mesa.k',  'tit.log.t'],
   agentes:     ['tit.np.k',    'tit.agentes.t'],
+  payout:      ['tit.snow.k',  'tit.payout.t'],
   posiciones:  ['tit.snow.k',  'tit.pos.t'],
   vida:        ['tit.snow.k',  'tit.vida.t'],
   plan:        ['tit.snow.k',  'tit.plan.t'],
@@ -8857,10 +8884,10 @@ function pieSVG(segs, size = 210, hole = null){
     if(frac >= 0.99999) return `<circle cx="${cx}" cy="${cy}" r="${r}" fill="${x.color}"/>`;
     if(frac <= 0) return '';
     const [x1,y1] = polar(a0), [x2,y2] = polar(a1);
-    return `<path d="M${cx} ${cy} L${x1.toFixed(2)} ${y1.toFixed(2)} A${r} ${r} 0 ${(a1-a0)>180?1:0} 1 ${x2.toFixed(2)} ${y2.toFixed(2)} Z" fill="${x.color}" stroke="var(--panel-bg)" stroke-width="2.6"/>`;
+    return `<path d="M${cx} ${cy} L${x1.toFixed(2)} ${y1.toFixed(2)} A${r} ${r} 0 ${(a1-a0)>180?1:0} 1 ${x2.toFixed(2)} ${y2.toFixed(2)} Z" fill="${x.color}" stroke="var(--bg-2)" stroke-width="2.6"/>`;
   }).join('');
   const hr = hole == null ? r*0.6 : hole;
-  return `<svg viewBox="0 0 ${size} ${size}" class="rd-pie">${wedges}<circle cx="${cx}" cy="${cy}" r="${hr.toFixed(1)}" fill="var(--panel-bg)"/></svg>`;
+  return `<svg viewBox="0 0 ${size} ${size}" class="rd-pie">${wedges}<circle cx="${cx}" cy="${cy}" r="${hr.toFixed(1)}" fill="var(--bg-2)"/></svg>`;
 }
 const TESIS_2040 = [
   { n:'Chips / Semiconductors', pct:28, color:'#38BDF8' },
@@ -8932,6 +8959,23 @@ function ruedaDeFase(i){
   const p = RUEDA_POR_FASE[Math.max(0, Math.min(7, i))] || RUEDA_POR_FASE[0];
   return FRASCOS.map((f, k) => ({ ...f, pct: p[k] }));
 }
+/* Modos de abordar el split: cambian cuánto del payout va a cada frasco.
+   Conservador protege (más a inversión estable y colchón de vida); Agresivo
+   escala rápido (casi todo a comprar más cuentas). [port,live,ctas,vida,libre] */
+const MODOS_SPLIT = {
+  conservador: { n:['Conservador','Conservative'], d:['Protege el capital: más a inversión estable y colchón de vida.','Protect capital: more to steady investing and a living cushion.'], pct:{ port:50, live:8, ctas:12, vida:25, libre:5 } },
+  moderado:    { n:['Moderado','Moderate'],        d:['Balance: creces las cuentas sin descuidar la inversión ni la vida.','Balance: grow accounts without neglecting investing or living.'], pct:{ port:40, live:5, ctas:35, vida:15, libre:5 } },
+  agresivo:    { n:['Agresivo','Aggressive'],      d:['Escala rápido: casi todo a comprar más cuentas y disparos.','Scale fast: most of it into more accounts and shots.'], pct:{ port:25, live:0, ctas:60, vida:12, libre:3 } },
+};
+function aplicaModoSplit(modo){
+  const m = MODOS_SPLIT[modo]; if(!m) return;
+  const R = rueda();
+  R.forEach(x => { if(m.pct[x.id] != null) x.pct = m.pct[x.id]; });
+  S.politica.ruedaTocada = true;
+  S.politica.splitModo = modo;
+  S.politica.upd = Date.now();
+  save(); renderPayout();
+}
 /* en qué fase del plan estás, medido con el patrimonio real */
 function faseActualIdx(){
   try{
@@ -8976,6 +9020,10 @@ function renderRueda(monto){
         ? `<button class="btn sm" id="rdReset">${bi('Back to the phase default','Back to the phase default')}</button>`
         : `<span class="micro" style="color:var(--faint)">${bi('follows your phase automatically','follows your phase automatically')}</span>`}
     </div>
+    <div class="split-modos">
+      ${Object.keys(MODOS_SPLIT).map(k => `<button type="button" class="split-modo ${S.politica.splitModo===k?'on':''}" data-modo="${k}">${bi(MODOS_SPLIT[k].n[0],MODOS_SPLIT[k].n[1])}</button>`).join('')}
+    </div>
+    <p class="split-modo-d micro">${S.politica.splitModo ? bi(MODOS_SPLIT[S.politica.splitModo].d[0], MODOS_SPLIT[S.politica.splitModo].d[1]) : bi('Elige un modo o ajusta cada rebanada a mano.','Pick a mode or tune each slice by hand.')}</p>
     <div class="rd">
       <div class="rd-wheel">
         ${pieSVG(R)}
@@ -9003,27 +9051,66 @@ function renderRueda(monto){
   const rst = $('#rdReset');
   if(rst) rst.onclick = () => {
     S.politica.ruedaTocada = false;
+    S.politica.splitModo = null;
     S.politica.rueda = ruedaDeFase(faseActualIdx());
     S.politica.ruedaFase = faseActualIdx();
     S.politica.upd = Date.now();
-    save(); renderPosiciones();
+    save(); renderPayout();
   };
+  $$('#ruedaBox [data-modo]').forEach(b => b.onclick = () => aplicaModoSplit(b.dataset.modo));
   $$('#ruedaBox [data-rd]').forEach(sl => {
     sl.oninput = () => {
       ajustaRueda(sl.dataset.rd, +sl.value);
       S.politica.ruedaTocada = true;       // ya es tuya: deja de seguir la fase
       S.politica.upd = Date.now();
-      save(); renderPosiciones();
+      save(); renderPayout();
     };
   });
   return Math.round(monto * inv.pct / 100);
 }
 
-function renderPosiciones(){
+/* Payout management: el monto, su reparto (The split) y, si aún no cobras tu
+   primer payout, el progreso hacia él. */
+function renderPayout(){
   const monto = (S.politica && S.politica.montoPayout) || 0;
   const inp = $('#pyMonto');
   if(inp && !inp.value && monto) inp.value = monto;
-  const mInv = renderRueda(monto);
+  renderRueda(monto);
+
+  const box = $('#payProgreso'); if(!box) return;
+  const cobrados = (S.caja || []).filter(c => c.tipo === 'ingreso');
+  if(cobrados.length){ box.hidden = true; return; }   // ya cobras: no hace falta el "en camino"
+  /* aún sin payout: mostramos el avance de la cuenta más adelantada */
+  const ctas = mias(S.accounts).filter(a => !esLive(a) && !esSim(a) && cuentaEnPie(a));
+  let pct = 0, cuenta = null, falta = null;
+  ctas.forEach(a => { try{ const cc = carreraCuenta(a); if(cc && cc.pct > pct){ pct = cc.pct; cuenta = a; falta = cc; } }catch(e){} });
+  pct = Math.max(0, Math.min(100, Math.round(pct)));
+  box.hidden = false;
+  box.innerHTML = `
+    <div class="pay-prog-head">
+      <div>
+        <span class="fl" style="margin:0">${bi('En camino a tu primer payout','On the way to your first payout')}</span>
+        <p class="micro" style="color:var(--dim);margin-top:4px;max-width:52ch;line-height:1.55">
+          ${cuenta
+            ? bi('Aún no cobras. Pasa la evaluación y arma el colchón; cuando la cuenta libere, aquí registras tu primer payout.','No payout yet. Pass the evaluation and build the buffer; once the account clears, you log your first payout here.')
+            : bi('Da de alta una cuenta y empieza a operar: el primer payout llega tras pasar la evaluación y el colchón.','Add an account and start trading: the first payout comes after passing evaluation and the buffer.')}
+        </p>
+      </div>
+      <div class="pay-prog-pct mono">${pct}<i>%</i></div>
+    </div>
+    <div class="pay-prog-bar"><i style="width:${pct}%"></i></div>
+    <div class="pay-prog-pasos">
+      <span class="${pct>0?'on':''}">${bi('Evaluación','Evaluation')}</span>
+      <span class="${pct>=50?'on':''}">${bi('Colchón','Buffer')}</span>
+      <span class="${pct>=100?'on':''}">${bi('Primer payout','First payout')}</span>
+    </div>
+    ${cuenta ? `<p class="micro" style="color:var(--faint);margin-top:10px">${esc(cuenta.alias)} · ${bi('la más adelantada','the most advanced')}</p>` : ''}`;
+}
+
+function renderPosiciones(){
+  const monto = (S.politica && S.politica.montoPayout) || 0;
+  const R = rueda(); const inv = R.find(x => x.grows) || R[0];
+  const mInv = Math.round(monto * (inv ? inv.pct : 0) / 100);
 
   $('#slDonut').innerHTML = pieSVG(TESIS_2040, 220) +
     `<div class="rd-centro"><b>2040</b><span>thesis</span></div>`;
@@ -9098,7 +9185,7 @@ $('#pyCalc')?.addEventListener('click', () => {
   S.politica = S.politica || {};
   S.politica.montoPayout = Math.max(0, parseFloat($('#pyMonto').value) || 0);
   S.politica.upd = Date.now();
-  save(); renderPosiciones();
+  save(); renderPayout();
 });
 $('#pyMonto')?.addEventListener('keydown', e => { if(e.key === 'Enter') $('#pyCalc').click(); });
 
@@ -13021,7 +13108,6 @@ function renderContrato(){
   </div>`;
 }
 function renderMetas(){
-  renderContrato();
   const host = $('#metasMods'); if(!host) return;
   const P = patrimonio();
   const N = P.total;
@@ -13264,6 +13350,7 @@ function render(view){
   else if(view==='log') renderLog();
   else if(view==='journal'){ renderDashboard(); renderJournal(); }
   else if(view==='trades') renderTrades();
+  else if(view==='payout') renderPayout();
   else if(view==='posiciones') renderPosiciones();
   else if(view==='vida') renderVida();
   else if(view==='plan') renderMetas();
