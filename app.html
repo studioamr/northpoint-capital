@@ -696,6 +696,40 @@ body.locked .app{visibility:hidden;pointer-events:none}
 .bat-set-row:last-child{border-bottom:none}
 .bat-set-row:hover{color:var(--accent)}
 .bat-set-row.danger{color:var(--down)}
+/* ── Buscar partida (matchmaking) ── */
+.bat-op{display:inline-flex;align-items:center;gap:8px}
+.bat-op-ava{width:22px;height:22px;border-radius:50%;overflow:hidden;display:inline-flex;flex:0 0 auto;background:var(--bg-2)}
+.bat-op-ava img,.bat-op-ava canvas,.bat-op-ava svg{width:100%;height:100%;object-fit:cover}
+.bat-op.on .bat-op-ava{box-shadow:0 0 0 2px rgba(8,17,31,.25)}
+.bat-fmt-tabs{display:flex;gap:8px}
+.bat-fmt-tab{flex:1;border:1px solid var(--line);border-radius:12px;background:var(--bg,#0b0f16);color:var(--dim);
+  font:600 12px/1.2 var(--mono,inherit);padding:11px 6px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:5px;transition:all .14s}
+.bat-fmt-tab b{font-size:19px;line-height:1}
+.bat-fmt-tab.on{background:var(--accent);border-color:var(--accent);color:#08111f}
+.bat-ses-chips{display:flex;gap:8px;flex-wrap:wrap}
+.bat-ses-chip{flex:1;min-width:96px;border:1px solid var(--line);border-radius:12px;background:var(--bg,#0b0f16);
+  color:var(--txt);padding:11px 12px;cursor:pointer;text-align:left;display:flex;flex-direction:column;gap:4px;transition:all .14s}
+.bat-ses-chip b{font-size:13.5px;font-weight:700}
+.bat-ses-chip i{font-family:var(--mono);font-style:normal;font-size:10.5px;color:var(--faint)}
+.bat-ses-chip.on{border-color:var(--accent);background:color-mix(in srgb, var(--accent) 12%, transparent)}
+.bat-ses-chip.on i{color:var(--dim)}
+.bat-cal{display:flex;gap:9px;overflow-x:auto;padding:2px 2px 8px;scrollbar-width:thin}
+.bat-cal::-webkit-scrollbar{height:6px} .bat-cal::-webkit-scrollbar-thumb{background:var(--line);border-radius:3px}
+.bat-cal-card{flex:0 0 auto;min-width:78px;border:1px solid var(--line);border-radius:13px;background:var(--bg,#0b0f16);
+  color:var(--txt);padding:12px 10px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px;transition:all .14s}
+.bat-cal-ico{font-size:19px;line-height:1}
+.bat-cal-dia{font-size:12px;font-weight:700;white-space:nowrap}
+.bat-cal-hora{font-family:var(--mono);font-size:10px;color:var(--faint);white-space:nowrap}
+.bat-cal-card.on{border-color:var(--accent);background:color-mix(in srgb, var(--accent) 14%, transparent);box-shadow:inset 0 0 0 1px var(--accent)}
+.bat-cal-card.ahora .bat-cal-ico{color:var(--accent)}
+.bat-resumen{display:flex;flex-direction:column;gap:3px;border:1px dashed var(--line);border-radius:12px;
+  padding:13px 15px;margin:4px 0 16px;background:var(--w02)}
+.bat-resumen-l{font-family:var(--mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--faint)}
+.bat-resumen b{font-size:15px;font-weight:800}
+.bat-resumen-w{font-family:var(--mono);font-size:11px;color:var(--up)}
+.bat-hero-sub{font-family:var(--mono);font-size:12px;color:var(--faint);margin-top:6px!important}
+.bat-prog-ico{font-size:44px;margin-bottom:6px}
+.bat-prog-sede{font-family:var(--mono);font-size:13px;color:var(--dim);letter-spacing:.04em;margin-bottom:4px}
 /* ── Batallas 1v1 · LA CIUDAD (3 clases: pobres / clase media / ricos) ── */
 .bat-ciudad{position:relative;width:100%;aspect-ratio:400/460;height:auto;border-radius:18px;overflow:hidden;margin-bottom:22px;
   border:1px solid var(--line);
@@ -8557,7 +8591,74 @@ const BAT_DUR = [
   { min:30,  t:'30 min' }, { min:60, t:'1 h' }, { min:90, t:'1 h 30' },
   { min:120, t:'2 h' },   { min:240, t:'4 h' },
 ];
-let batTick = null, batDir = 'L', batPantalla = 'lobby';
+/* ── LÓGICA DE MATCHMAKING · las tres sesiones reales del día ──
+   Cada killzone abre a una hora fija (hora local de la mesa) y dura su ventana.
+   El reto se cita en la PRÓXIMA apertura de la sesión elegida — como buscar
+   partida: eliges cancha (Asia/Londres/NY), horario y formato. */
+const BAT_SESIONES = [
+  { id:'asia',    ico:'🌏', ciudad:['Tokio','Tokyo'],      nom:['Asia','Asia'],        hora:19, dur:240 },
+  { id:'londres', ico:'🇬🇧', ciudad:['Londres','London'],   nom:['Londres','London'],   hora:1,  dur:180 },
+  { id:'ny',      ico:'🗽', ciudad:['Nueva York','New York'], nom:['Nueva York','New York'], hora:7, dur:180 },
+];
+/* formatos de duelo: sprint (rápido, arranca ya), sesión (cita en un killzone),
+   maratón (largo aliento, acumulas profit) */
+const BAT_SPRINTS = [
+  { min:30, t:'30 min' }, { min:60, t:'1 h' }, { min:90, t:'1 h 30' }, { min:120, t:'2 h' }, { min:240, t:'4 h' },
+];
+const BAT_MARATON = [
+  { min:1440,  ico:'🌗', t:['24 horas','24 hours'] },
+  { min:'finde', ico:'📅', t:['Fin de semana','Weekend'] },
+  { min:10080, ico:'🗓️', t:['1 semana','1 week'] },
+  { min:43200, ico:'📆', t:['1 mes','1 month'] },
+];
+function batSesion(id){ return BAT_SESIONES.find(s=>s.id===id) || BAT_SESIONES[0]; }
+/* próximas N aperturas de una sesión (hora fija), saltando fin de semana */
+function batProxAperturas(hora, n){
+  const out=[], now=new Date(); let d=new Date(now); d.setHours(hora,0,0,0);
+  if(d.getTime() <= now.getTime()) d.setDate(d.getDate()+1);
+  let guard=0;
+  while(out.length<n && guard++<20){ const dow=d.getDay(); if(dow!==0 && dow!==6) out.push(new Date(d.getTime())); d.setDate(d.getDate()+1); }
+  return out;
+}
+/* etiqueta amable de una fecha: Hoy / Mañana / Lun 3 sep, con la hora */
+function batDiaTxt(ts){
+  const d=new Date(ts), now=new Date();
+  const hh=String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');
+  const dd=new Date(d); dd.setHours(0,0,0,0); const hoy=new Date(now); hoy.setHours(0,0,0,0);
+  const difd=Math.round((dd-hoy)/86400000);
+  const diasES=['dom','lun','mar','mié','jue','vie','sáb'], diasEN=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  const mesES=['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+  let dia;
+  if(difd===0) dia=bi('Hoy','Today');
+  else if(difd===1) dia=bi('Mañana','Tomorrow');
+  else dia=(idi()==='en'?diasEN:diasES)[d.getDay()]+' '+d.getDate()+' '+mesES[d.getMonth()];
+  return { dia, hora:hh };
+}
+/* fin de una duración especial en ms desde un inicio */
+function batDuracionMs(dur, iniTs){
+  if(dur==='finde'){ const d=new Date(iniTs); const dow=d.getDay(); const dias=(dow===0?0:7-dow); const fin=new Date(d); fin.setDate(d.getDate()+dias); fin.setHours(23,59,0,0); return Math.max(3600000, fin-iniTs); }
+  return (+dur||30)*60000;
+}
+/* texto corto de una duración para las tarjetas y el resumen */
+function batDurTxt(dur){
+  if(dur==='finde') return bi('Fin de semana','Weekend');
+  const m=+dur; if(m>=43200) return bi('1 mes','1 month'); if(m>=10080) return bi('1 semana','1 week');
+  if(m>=1440) return '24 h'; const s=BAT_SPRINTS.find(x=>x.min===m); return s? s.t : (m+' min');
+}
+/* ciudad destino del vuelo según la sesión del reto */
+function batDestino(c){ const s=BAT_SESIONES.find(x=>x.id===(c&&c.sesion)); return s? loc(s.ciudad) : bi('Tokio','Tokyo'); }
+/* resumen legible del reto (para invitación y esperas) */
+function batRetoTxt(c){
+  const s=BAT_SESIONES.find(x=>x.id===(c&&c.sesion));
+  const cuando = c && c.programado ? (()=>{ const t=batDiaTxt(c.programado); return t.dia+' '+t.hora; })() : bi('ahora','now');
+  let sede;
+  if(s) sede = `${s.ico} ${loc(s.nom)}`;
+  else if(c && c.formato==='sprint') sede = '⚡ '+bi('Sprint','Sprint');
+  else if(c && c.formato==='maraton') sede = '🏁 '+bi('Maratón','Marathon');
+  else sede = '✈ ' + bi('Asia · Tokio','Asia · Tokyo');
+  return `${sede} · ${cuando} · ${batDurTxt(c&&c.duracion)}`;
+}
+let batTick = null, batDir = 'L', batPantalla = 'lobby', batFmt = 'sesion', batSel = null;
 function batYo(){ return socioEnSesion() || DUENO_ORIGEN; }
 function batNom(uid){ return (USERS[uid] && USERS[uid].nombre) || uid; }
 function batOponentes(){ return SOCIOS_REALES.filter(u => u !== batYo()); }
@@ -8683,28 +8784,90 @@ function renderBatalla(){
   if(!c || c.estado === 'cancelado'){
     if(batPantalla === 'setup'){
       const ops = batOponentes();
+      /* estado de la búsqueda de partida, persistente entre re-renders */
+      if(!batSel || !ops.includes(batSel.op)){
+        batSel = { op:ops[0], ses:'asia', dur:30, cuando:null, cuandoSes:null };
+        batFmt = 'sesion';
+      }
+      const sesObj = batSesion(batSel.ses);
+      /* al entrar en formato SESIÓN, si no hay cita puesta, cae en la próxima apertura */
+      if(batFmt==='sesion' && !batSel.cuando){ const ap=batProxAperturas(sesObj.hora,1)[0]; if(ap){ batSel.cuando=ap.getTime(); batSel.cuandoSes=batSel.ses; } }
+
+      /* CALENDARIO de próximas aperturas */
+      let calCards='';
+      if(batFmt==='sesion'){
+        batProxAperturas(sesObj.hora, 6).forEach(d=>{
+          const t=batDiaTxt(d.getTime()), ts=d.getTime(), on=batSel.cuando===ts;
+          calCards+=`<button type="button" class="bat-cal-card ${on?'on':''}" data-ts="${ts}" data-ses="${batSel.ses}">
+            <span class="bat-cal-ico">${sesObj.ico}</span><span class="bat-cal-dia">${t.dia}</span>
+            <span class="bat-cal-hora">${t.hora}</span></button>`;
+        });
+      } else {
+        /* sprint/maratón: "Ahora" + próximas aperturas de las tres sesiones, ordenadas */
+        const ahoraOn = !batSel.cuando;
+        calCards+=`<button type="button" class="bat-cal-card ahora ${ahoraOn?'on':''}" data-ts="" data-ses="">
+          <span class="bat-cal-ico">⚡</span><span class="bat-cal-dia">${bi('Ahora','Now')}</span>
+          <span class="bat-cal-hora">${bi('al instante','instant')}</span></button>`;
+        let ups=[]; BAT_SESIONES.forEach(s=> batProxAperturas(s.hora,2).forEach(d=> ups.push({ts:d.getTime(), s})));
+        ups.sort((a,b)=>a.ts-b.ts); ups.slice(0,6).forEach(u=>{
+          const t=batDiaTxt(u.ts), on=batSel.cuando===u.ts;
+          calCards+=`<button type="button" class="bat-cal-card ${on?'on':''}" data-ts="${u.ts}" data-ses="${u.s.id}">
+            <span class="bat-cal-ico">${u.s.ico}</span><span class="bat-cal-dia">${t.dia} ${t.hora}</span>
+            <span class="bat-cal-hora">${loc(u.s.nom)}</span></button>`;
+        });
+      }
+      /* selector de DURACIÓN según formato */
+      let durHTML='';
+      if(batFmt==='sprint'){
+        durHTML = `<div class="bat-durs">${BAT_SPRINTS.map(d=>`<button type="button" class="bat-dur ${batSel.dur===d.min?'on':''}" data-dur="${d.min}">${d.t}</button>`).join('')}</div>`;
+      } else if(batFmt==='maraton'){
+        durHTML = `<div class="bat-durs">${BAT_MARATON.map(d=>`<button type="button" class="bat-dur ${String(batSel.dur)===String(d.min)?'on':''}" data-dur="${d.min}">${d.ico} ${loc(d.t)}</button>`).join('')}</div>`;
+      }
+      /* resumen del reto */
+      const durActual = batFmt==='sesion' ? sesObj.dur : batSel.dur;
+      const sesResumen = batFmt==='sesion' ? batSel.ses : (batSel.cuandoSes||null);
+      const retoPrev = { sesion:sesResumen, programado:batSel.cuando, duracion:durActual, formato:batFmt };
+      const fmts = [['sesion','🎯',bi('Sesión','Session')],['sprint','⚡',bi('Sprint','Sprint')],['maraton','🏁',bi('Maratón','Marathon')]];
+
       root.innerHTML = `
         <div class="bat-lobby-top">
           <button type="button" class="bat-volver" id="batVolverLobby">‹ ${bi('Lobby','Lobby')}</button>
-          <span class="bat-lobby-t">${bi('Nuevo reto','New challenge')}</span>
+          <span class="bat-lobby-t">${bi('Buscar partida','Find a match')}</span>
         </div>
         <div class="bat-card">
           <div class="bat-f"><label>${bi('Rival','Opponent')}</label>
-            <div class="bat-ops">${ops.map((u,i)=>`<button type="button" class="bat-op ${i===0?'on':''}" data-op="${u}">${esc(batNom(u))}</button>`).join('')}</div>
+            <div class="bat-ops">${ops.map(u=>`<button type="button" class="bat-op ${batSel.op===u?'on':''}" data-op="${u}"><span class="bat-op-ava">${caraSocio(u,24)}</span>${esc(batNom(u))}</button>`).join('')}</div>
           </div>
-          <div class="bat-f"><label>${bi('Duración del challenge','Challenge duration')}</label>
-            <div class="bat-durs">${BAT_DUR.map((d,i)=>`<button type="button" class="bat-dur ${i===0?'on':''}" data-min="${d.min}">${d.t}</button>`).join('')}</div>
+          <div class="bat-f"><label>${bi('Formato','Format')}</label>
+            <div class="bat-fmt-tabs">${fmts.map(f=>`<button type="button" class="bat-fmt-tab ${batFmt===f[0]?'on':''}" data-fmt="${f[0]}"><b>${f[1]}</b>${f[2]}</button>`).join('')}</div>
           </div>
-          <div class="bat-f"><label>${bi('Sesión','Session')}</label><div class="bat-sesion">✈ ${bi('Asia · Tokio','Asia · Tokyo')}</div></div>
+          ${batFmt==='sesion' ? `<div class="bat-f"><label>${bi('Sesión (killzone)','Session (killzone)')}</label>
+            <div class="bat-ses-chips">${BAT_SESIONES.map(s=>`<button type="button" class="bat-ses-chip ${batSel.ses===s.id?'on':''}" data-ses="${s.id}"><b>${s.ico} ${loc(s.nom)}</b><i>${String(s.hora).padStart(2,'0')}:00 · ${Math.round(s.dur/60)}h</i></button>`).join('')}</div></div>` : ''}
+          ${durHTML ? `<div class="bat-f"><label>${bi('Duración','Duration')}</label>${durHTML}</div>` : ''}
+          <div class="bat-f"><label>${batFmt==='sesion'?bi('¿Qué día?','Which day?'):bi('¿Cuándo?','When?')}</label>
+            <div class="bat-cal">${calCards}</div></div>
+          <div class="bat-resumen"><span class="bat-resumen-l">${bi('Tu reto','Your challenge')}</span><b id="batResumen">${batRetoTxt(retoPrev)}</b><span class="bat-resumen-w">${bi('mayor profit gana','most profit wins')}</span></div>
           <button type="button" class="btn primary bat-crear" id="batCrear">${bi('Crear reto y enviar invitación','Create challenge & send invite')} →</button>
         </div>`;
-      let opSel = ops[0], minSel = 30;
-      $('#batVolverLobby').onclick = () => { batPantalla = 'lobby'; renderBatalla(); };
-      root.querySelectorAll('[data-op]').forEach(b => b.onclick = () => { opSel = b.dataset.op; root.querySelectorAll('[data-op]').forEach(x=>x.classList.toggle('on', x===b)); });
-      root.querySelectorAll('[data-min]').forEach(b => b.onclick = () => { minSel = +b.dataset.min; root.querySelectorAll('[data-min]').forEach(x=>x.classList.toggle('on', x===b)); });
+
+      $('#batVolverLobby').onclick = () => { batPantalla='lobby'; batSel=null; renderBatalla(); };
+      root.querySelectorAll('[data-op]').forEach(b=> b.onclick=()=>{ batSel.op=b.dataset.op; renderBatalla(); });
+      root.querySelectorAll('[data-fmt]').forEach(b=> b.onclick=()=>{
+        batFmt=b.dataset.fmt;
+        if(batFmt==='sprint') batSel.dur=30; else if(batFmt==='maraton') batSel.dur=1440;
+        batSel.cuando=null; batSel.cuandoSes=null;  // reset la cita al cambiar de formato
+        renderBatalla();
+      });
+      root.querySelectorAll('[data-ses]').forEach(b=> b.onclick=()=>{ if(b.dataset.ses && b.classList.contains('bat-ses-chip')){ batSel.ses=b.dataset.ses; batSel.cuando=null; renderBatalla(); } });
+      root.querySelectorAll('.bat-dur[data-dur]').forEach(b=> b.onclick=()=>{ batSel.dur = (b.dataset.dur==='finde'?'finde':(+b.dataset.dur||b.dataset.dur)); renderBatalla(); });
+      root.querySelectorAll('.bat-cal-card').forEach(b=> b.onclick=()=>{ batSel.cuando = b.dataset.ts? +b.dataset.ts : null; batSel.cuandoSes = b.dataset.ses||null; renderBatalla(); });
       $('#batCrear').onclick = () => {
-        if(!opSel){ toast(bi('Elige un rival','Pick an opponent')); return; }
-        S.challenge = { id:'bt_'+uid(), host:yo, rival:opSel, duracion:minSel, estado:'invitado', creado:Date.now(), inicio:null, fin:null, trades:{} };
+        if(!batSel.op){ toast(bi('Elige un rival','Pick an opponent')); return; }
+        const sesFinal = batFmt==='sesion' ? batSel.ses : (batSel.cuandoSes||null);
+        const durFinal = batFmt==='sesion' ? sesObj.dur : batSel.dur;
+        S.challenge = { id:'bt_'+uid(), host:yo, rival:batSel.op, formato:batFmt, sesion:sesFinal,
+          duracion:durFinal, programado:batSel.cuando||null, estado:'invitado', creado:Date.now(), inicio:null, fin:null, trades:{} };
+        batSel=null;
         batGuarda();
       };
       return;
@@ -8769,20 +8932,27 @@ function renderBatalla(){
   /* ── invitación enviada / recibida ── */
   if(c.estado === 'invitado'){
     if(soyRival){
+      const programadoFuturo = c.programado && c.programado > Date.now() + 60000;
       root.innerHTML = `
         <div class="bat-hero">
           <div class="bat-vs-ico">⚔</div>
           <h2>${esc(batNom(c.host))} ${bi('te reta','challenges you')}</h2>
-          <p>${bi('Reto en','Challenge in')} <b>${bi('Asia · Tokio','Asia · Tokyo')}</b> · ${BAT_DUR.find(d=>d.min===c.duracion)?.t} · ${bi('mayor profit gana','most profit wins')}</p>
+          <p><b>${batRetoTxt(c)}</b></p>
+          <p class="bat-hero-sub">✈ ${bi('Destino','Destination')}: ${esc(batDestino(c))}</p>
         </div>
         <div class="bat-actions">
-          <button type="button" class="btn primary bat-crear" id="batAcepta">${bi('Aceptar y abordar','Accept & board')} ✈</button>
+          <button type="button" class="btn primary bat-crear" id="batAcepta">${programadoFuturo? bi('Aceptar la cita','Accept the slot')+' 🗓️' : bi('Aceptar y abordar','Accept & board')+' ✈'}</button>
           <button type="button" class="btn" id="batRechaza">${bi('Rechazar','Decline')}</button>
         </div>`;
       $('#batAcepta').onclick = () => {
-        const vuelo = 9000;   // 9 s de vuelo/animación antes de arrancar
-        c.estado = 'volando'; c.inicio = Date.now() + vuelo; c.fin = c.inicio + c.duracion*60000;
         c.trades = { [c.host]:[], [c.rival]:[] };
+        if(c.programado && c.programado > Date.now() + 9000){
+          /* cita a futuro: se agenda y espera hasta la apertura de la sesión */
+          c.estado = 'programado'; c.inicio = c.programado; c.fin = c.inicio + batDuracionMs(c.duracion, c.inicio);
+        } else {
+          const vuelo = 9000;   // 9 s de vuelo/animación antes de arrancar
+          c.estado = 'volando'; c.inicio = Date.now() + vuelo; c.fin = c.inicio + batDuracionMs(c.duracion, c.inicio);
+        }
         batGuarda();
       };
       $('#batRechaza').onclick = () => { c.estado = 'cancelado'; save(); batReset(); };
@@ -8791,7 +8961,8 @@ function renderBatalla(){
         <div class="bat-hero">
           <div class="bat-spin"></div>
           <h2>${bi('Esperando a','Waiting for')} ${esc(batNom(c.rival))}…</h2>
-          <p>${bi('La invitación fue enviada. En cuanto acepte, abordan el avión a Tokio.','Invite sent. Once they accept, you board the plane to Tokyo.')}</p>
+          <p><b>${batRetoTxt(c)}</b></p>
+          <p class="bat-hero-sub">${bi('La invitación fue enviada. En cuanto acepte, se cita el reto en','Invite sent. Once they accept, the match is set for')} ${esc(batDestino(c))}.</p>
         </div>
         <div class="bat-actions"><button type="button" class="btn" id="batCancela">${bi('Cancelar reto','Cancel challenge')}</button></div>`;
       $('#batCancela').onclick = batReset;
@@ -8800,21 +8971,43 @@ function renderBatalla(){
     return;
   }
 
+  /* ── programado: la cita quedó a futuro, se espera a la apertura de la sesión ── */
+  if(c.estado === 'programado'){
+    if(Date.now() >= c.inicio - 9000){ c.estado = 'volando'; batGuarda(); return; }
+    const falta = c.inicio - Date.now();
+    const dd = Math.floor(falta/86400000), h = Math.floor(falta%86400000/3600000), m = Math.floor(falta%3600000/60000);
+    const cuenta = dd>0 ? `${dd}d ${h}h` : (h>0 ? `${h}h ${m}m` : `${m}m`);
+    const t = batDiaTxt(c.inicio);
+    root.innerHTML = `
+      <div class="bat-vuelo">
+        <div class="bat-prog-ico">🗓️</div>
+        <h2>${bi('Cita agendada','Match scheduled')}</h2>
+        <div class="bat-prog-sede">${esc(batDestino(c))} · ${t.dia} ${t.hora}</div>
+        <div class="bat-count">${cuenta}</div>
+        <p>${esc(batNom(c.host))} <b>vs</b> ${esc(batNom(c.rival))} · ${esc(batDurTxt(c.duracion))}</p>
+        <div class="bat-actions" style="margin-top:18px"><button type="button" class="btn" id="batCancela">${bi('Cancelar la cita','Cancel the match')}</button></div>
+      </div>`;
+    $('#batCancela').onclick = () => { c.estado='cancelado'; save(); batReset(); };
+    batTick = setInterval(renderBatalla, 1000);
+    return;
+  }
+
   /* ── volando: avión a Asia → Tokio con cuenta regresiva ── */
   if(c.estado === 'volando'){
     const faltan = Math.max(0, c.inicio - Date.now());
     if(faltan <= 0){ c.estado = 'activo'; batGuarda(); return; }
     const seg = Math.ceil(faltan/1000);
+    const destino = batDestino(c);
     root.innerHTML = `
       <div class="bat-vuelo">
         <div class="bat-ruta">
-          <span class="bat-ciudad">✈ ${bi('Asia','Asia')}</span>
+          <span class="bat-ciudad">✈ ${bi('Salida','Home')}</span>
           <div class="bat-linea"><i class="bat-avion" style="left:${100 - Math.min(100, faltan/9000*100)}%">✈</i></div>
-          <span class="bat-ciudad on">${bi('Tokio','Tokyo')}</span>
+          <span class="bat-ciudad on">${esc(destino)}</span>
         </div>
-        <h2>${bi('Rumbo a Tokio…','Bound for Tokyo…')}</h2>
+        <h2>${bi('Rumbo a','Bound for')} ${esc(destino)}…</h2>
         <div class="bat-count">${seg}</div>
-        <p>${esc(batNom(c.host))} <b>vs</b> ${esc(batNom(c.rival))} · ${BAT_DUR.find(d=>d.min===c.duracion)?.t}</p>
+        <p>${esc(batNom(c.host))} <b>vs</b> ${esc(batNom(c.rival))} · ${esc(batDurTxt(c.duracion))}</p>
       </div>`;
     batTick = setInterval(renderBatalla, 250);
     return;
