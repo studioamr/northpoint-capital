@@ -952,12 +952,12 @@ button.st-chip:hover{border-color:rgba(255,255,255,.45)}
 /* colección: primero TU espada equipada en grande, abajo las demás */
 .ars-scroll{flex:1;overflow-y:auto;padding:13px 16px;display:flex;flex-direction:column;gap:12px}
 .ars-scroll .ars-grid{flex:none;overflow:visible;padding:0}
-.ars-hero{position:relative;border:1px solid color-mix(in srgb,var(--kc) 55%,transparent);border-radius:16px;padding:22px 22px 18px;overflow:hidden;text-align:center;
+.ars-hero{position:relative;flex-shrink:0;border:1px solid color-mix(in srgb,var(--kc) 55%,transparent);border-radius:16px;padding:22px 22px 18px;overflow:hidden;text-align:center;
   background:radial-gradient(90% 80% at 50% 30%,color-mix(in srgb,var(--kc) 15%,transparent),transparent 75%),rgba(255,255,255,.03);
   box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--kc) 22%,transparent)}
 .ars-hero-kanji{position:absolute;top:6px;left:16px;font-size:46px;line-height:1;opacity:.16;color:var(--kc);font-weight:700}
-.ars-hero-sw{max-width:430px;margin:0 auto}
-.ars-hero-sw svg{width:100%;height:auto;filter:drop-shadow(0 6px 14px rgba(0,0,0,.6)) drop-shadow(0 0 18px color-mix(in srgb,var(--kc) 50%,transparent))}
+.ars-hero-sw{max-width:430px;margin:0 auto;aspect-ratio:200/56}
+.ars-hero-sw svg{display:block;width:100%;height:100%;filter:drop-shadow(0 6px 14px rgba(0,0,0,.6)) drop-shadow(0 0 18px color-mix(in srgb,var(--kc) 50%,transparent))}
 .ars-hero-i{display:flex;align-items:center;justify-content:center;gap:12px;margin-top:12px}
 .ars-hero-i b{font-size:20px;font-weight:900;padding-bottom:3px;color:var(--txt)}
 .ars-card{display:flex;flex-direction:column;align-items:center;gap:5px;border:1px solid rgba(255,255,255,.1);border-radius:12px;padding:11px 8px 10px;text-align:center;background:rgba(255,255,255,.03)}
@@ -1011,6 +1011,12 @@ button.st-chip:hover{border-color:rgba(255,255,255,.45)}
 .ag-i b{font-size:15px;color:#fff;font-weight:800}
 .ag-i span{font-family:var(--mono);font-size:10.5px;color:rgba(255,255,255,.6)}
 .ag-i span i{font-style:normal;color:#ffd76a;font-weight:800}
+/* en pantallas angostas el botón/tag exprimía .ag-i a casi 0 y cada palabra
+   caía en su propia línea; ahora baja a su propia fila completa */
+@media(max-width:480px){
+  .ag-row{flex-wrap:wrap}
+  .ag-row > .btn, .ag-row > .evt-tag{flex:0 0 100%;margin-top:2px}
+}
 /* fecha en el historial */
 .evt-fecha{flex:0 0 44px;text-align:center;border-right:1px solid rgba(255,255,255,.1);padding-right:11px}
 .evt-fecha b{display:block;font-family:var(--mono);font-size:17px;font-weight:800;color:#fff;line-height:1.05}
@@ -1992,7 +1998,10 @@ button.st-chip:hover{border-color:rgba(255,255,255,.45)}
   font:600 10px/1 var(--mono,inherit);letter-spacing:.06em;padding:6px 8px;cursor:pointer;white-space:nowrap}
 .lg-img:hover{border-color:var(--accent);color:var(--txt)}
 .lg-img.tiene{border-color:var(--up);color:var(--up)}
-@media(max-width:640px){ .lg-log .bt-log-row,.bt-conimg .bt-log-row{grid-template-columns:44px 52px 1fr 1fr 62px 22px;font-size:12px} }
+@media(max-width:640px){ .lg-log .bt-log-row,.bt-conimg .bt-log-row{grid-template-columns:44px 52px 1fr 1fr 62px 22px;font-size:12px}
+  /* a 62px "upload image"/"subir imagen" no cabía en una línea y se salía
+     de su columna, encima del botón de borrar */
+  .lg-log .lg-img,.bt-conimg .lg-img{white-space:normal;text-align:center;font-size:8.5px;line-height:1.15;padding:4px 5px} }
 @media(max-width:640px){ .acad-cards{grid-template-columns:1fr} .bt-eq{font-size:32px} .bt-chart-wrap{height:260px} .bt-go{flex:1}
   .bt-log-row{grid-template-columns:28px 56px 1fr 1fr 26px;font-size:12px} }
 /* ── Animación al sellar el trade ── */
@@ -2432,6 +2441,16 @@ button.tag.quemada{text-decoration:line-through;text-decoration-color:var(--down
 .acct-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 @media (max-width:640px){ .acct-top .btn{margin-left:0;order:3} .acct-row{grid-template-columns:1fr} }
 @media (pointer:coarse){ button.tag{min-height:38px;padding:0 12px} }
+/* objetivos de toque chicos en KURO/setup: la única forma de cerrar un
+   overlay (.ars-x), el engrane, "cómo se juega" y el LONG/SHORT del duelo
+   quedaban por debajo del mínimo cómodo para el dedo */
+@media (pointer:coarse){
+  .ars-x{width:40px;height:40px;border-radius:11px}
+  .st-gear{width:40px;height:40px}
+  .stage-link{padding:12px 16px}
+  .bt-dir button{padding:14px 16px}
+  .bat-op-i{width:26px;height:26px;font-size:12px;margin-left:9px}
+}
 
 /* ── Bootcamp · documentos ── */
 .bc-wrap{position:relative}
@@ -9850,8 +9869,10 @@ function batDuracionMs(dur, iniTs){
 /* texto corto de una duración para las tarjetas y el resumen */
 function batDurTxt(dur){
   if(dur==='finde') return bi('Fin de semana','Weekend');
-  const m=+dur; if(m>=43200) return bi('1 mes','1 month'); if(m>=10080) return bi('1 semana','1 week');
-  if(m>=1440) return '24 h'; const s=BAT_SPRINTS.find(x=>x.min===m); return s? s.t : (m+' min');
+  const m=+dur; if(!isFinite(m)) return '—';
+  if(m>=43200) return bi('1 mes','1 month'); if(m>=10080) return bi('1 semana','1 week');
+  if(m>=1440) return '24 h'; const s=BAT_SPRINTS.find(x=>x.min===m); if(s) return s.t;
+  if(m%60===0) return (m/60)+' h'; return m+' min';
 }
 /* ciudad destino del vuelo según la sesión del reto */
 function batDestino(c){ const s=BAT_SESIONES.find(x=>x.id===(c&&c.sesion)); return s? loc(s.ciudad) : bi('Tokio','Tokyo'); }
@@ -11460,7 +11481,7 @@ function renderBatalla(){
           <div class="evt-body">
             <div class="evt-sec">${bi('TUS COMPETENCIAS','YOUR COMPETITIONS')}</div>
             ${(()=>{ const filas2=[], AHORA=Date.now();
-              if(c){ const rv=c.party?(batJugadores(c).find(u2=>u2!==yo)||c.rival):(c.host===yo?c.rival:c.host);
+              if(c && ['invitado','programado','volando','activo'].includes(c.estado)){ const rv=c.party?(batJugadores(c).find(u2=>u2!==yo)||c.rival):(c.host===yo?c.rival:c.host);
                 const est=c.estado==='activo'?bi('EN CURSO','LIVE'):c.estado==='invitado'?bi('INVITACIÓN','INVITED'):bi('AGENDADO','SCHEDULED');
                 const resta=c.estado==='activo'&&c.fin?` · ${bi('quedan','left')} <i>${batEnTiempo(c.fin-AHORA)}</i>`:'';
                 filas2.push(`<div class="ag-row live"><div class="ag-when"><b>${bi('HOY','NOW')}</b><span>● ${est}</span></div><div class="ag-i"><b>${bi('Duelo vs','Duel vs')} ${esc(batNom(rv))}</b><span>${esc(batDurTxt(c.duracion))}${resta}${(c.mult||1)>1?` · ${bi('paga','pays')} <i>×${c.mult}</i>`:''} · ${bi('el que pierde paga','loser pays')} ${fmt$(BAT_FEE)}</span></div></div>`); }
