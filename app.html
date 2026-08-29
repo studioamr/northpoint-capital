@@ -1032,6 +1032,21 @@ button.st-chip:hover{border-color:rgba(255,255,255,.45)}
 .perf-eq{border:1px solid rgba(255,255,255,.1);border-radius:12px;background:rgba(255,255,255,.03);padding:10px 10px 7px;display:flex;flex-direction:column;gap:4px}
 .perf-eq canvas{width:100%;height:auto;display:block}
 .perf-eq-l{font-family:var(--mono);font-size:8.5px;letter-spacing:.1em;color:rgba(255,255,255,.45);text-align:center}
+/* título en tinta rasposa (estilo libreta) */
+.titulo-tinta{display:inline-flex;font-family:'Chalkduster','Bradley Hand','Segoe Print','Comic Sans MS',cursive;font-size:19px;font-weight:400;color:#f4f5f7;letter-spacing:.03em;text-shadow:0 0 1px rgba(255,255,255,.5),0 1px 3px rgba(0,0,0,.9);flex:1}
+.titulo-tinta i{font-style:normal;display:inline-block}
+.titulo-tinta i:nth-child(odd){transform:rotate(-4deg) translateY(-1px)}
+.titulo-tinta i:nth-child(even){transform:rotate(3.5deg) translateY(1px)}
+.titulo-tinta i:nth-child(3n){transform:rotate(6deg) scale(1.05)}
+/* arsenal del perfil */
+.perf-arsenal{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;border:1px solid rgba(255,255,255,.1);border-radius:12px;background:rgba(255,255,255,.03);padding:13px 14px}
+.perf-ars-k{display:flex;flex-direction:column;align-items:center;gap:3px;padding:7px 4px;border-radius:10px}
+.perf-ars-k svg{width:92%;max-width:118px;height:26px}
+.perf-ars-k.on svg{filter:drop-shadow(0 0 8px color-mix(in srgb,var(--kc) 65%,transparent)) drop-shadow(0 2px 3px rgba(0,0,0,.5))}
+.perf-ars-k i{font-style:normal;font-family:Georgia,'Hiragino Mincho ProN','Yu Mincho',serif;font-size:10.5px;color:rgba(255,255,255,.75)}
+.perf-ars-k.on i{color:var(--kc);font-weight:700}
+.perf-ars-k:not(.on){opacity:.5}
+@media(max-width:560px){ .perf-arsenal{grid-template-columns:repeat(2,1fr)} }
 .evt-row{display:flex;align-items:center;gap:11px;border:1px solid rgba(255,255,255,.1);border-radius:12px;background:rgba(255,255,255,.03);padding:10px 12px}
 .evt-row.live{border-color:rgba(48,209,88,.5);background:rgba(48,209,88,.07)}
 .evt-ico{font-size:20px}
@@ -9433,6 +9448,8 @@ function libretaEstado(){
   return S.libreta;
 }
 /* Portada de cuaderno real (tapa dura NorthPoint) — se reutiliza cerrada en el hero y en las lecciones */
+/* título en tinta rasposa (el mismo estilo de la libreta) */
+function tituloTinta(txt){ return String(txt||'').split('').map(l=> l===' '?'&nbsp;':`<i>${esc(l)}</i>`).join(''); }
 function libretaCerradaHTML(){
   const letras = 'NORTHPOINT'.split('').map(l=>`<i>${l}</i>`).join('');
   return `<div class="nbk">
@@ -11411,10 +11428,10 @@ function renderBatalla(){
           const maxAbs=Math.max(1,...bars.map(b=>Math.abs(b.p)));
           const histU=batHist().map((h,i)=>({h,i})).filter(x=> x.h.party? (x.h.jugadores||[]).includes(u) : (x.h.host===u||x.h.rival===u)).slice(0,8);
           return `<div class="ars-ov">
-          <div class="ars-top"><b>${esc(batNom(u))}${esYo?` · ${bi('tu perfil','your profile')}`:''}</b><button type="button" class="ars-x" id="perfX" aria-label="${bi('cerrar','close')}">✕</button></div>
+          <div class="ars-top"><b class="titulo-tinta">${tituloTinta(batNom(u))}</b>${esYo?`<span class="ars-cash">${bi('tu perfil','your profile')}</span>`:''}<button type="button" class="ars-x" id="perfX" aria-label="${bi('cerrar','close')}">✕</button></div>
           <div class="evt-body">
             <div class="perf-card">
-              <canvas id="perfCv" width="640" height="300"></canvas>
+              <canvas id="perfCv" width="640" height="460"></canvas>
               <div class="perf-card-in"><b>${esc(batNom(u))}</b><span style="color:${kEq.belt}">${loc(kEq.n)} · ${loc(ZEN_ESCENAS[batEquipadaDe(u)].bioma)}</span></div>
             </div>
             <div class="perf-head">
@@ -11436,8 +11453,8 @@ function renderBatalla(){
               <div class="perf-st"><em>${bi('P&L EN DUELOS','DUEL P&L')}</em><b style="color:${pTot>=0?'#6fe39a':'#ff6a5e'}">${fmt$(pTot,true)}</b></div>
               <div class="perf-st"><em>${bi('MEJOR DUELO','BEST DUEL')}</em><b>${best!=null?fmt$(best,true):'—'}</b></div>
             </div>
-            <div class="evt-sec">${bi('PROGRESO','PROGRESS')}</div>
-            ${bars.length>1?`<div class="perf-eq"><canvas id="perfEq" width="680" height="190"></canvas><span class="perf-eq-l">${bi('P&L acumulado de duelos desde el inicio','Cumulative duel P&L since day one')}</span></div>`:`<div class="evt-vacio">${bi('Todavía no hay suficientes duelos','Not enough duels yet')}</div>`}
+            <div class="evt-sec">${bi('ARSENAL','ARSENAL')} · ${kw.length}/${KATANAS.length}</div>
+            <div class="perf-arsenal">${KATANAS.map(k=>{ const o=kw.includes(k.id); return `<span class="perf-ars-k ${o?'on':''}" style="--kc:${k.belt}" title="${loc(k.n)}">${katanaSVG(k.belt,true,!o)}<i>${loc(k.n)}</i></span>`; }).join('')}</div>
             ${esYo?'':`
             <div class="evt-sec">${bi('CARA A CARA CONTIGO','HEAD TO HEAD VS YOU')}</div>
             <div class="perf-h2h"><div><b>${h2.wa}</b><span>${bi('tuyas','yours')}</span></div><div class="perf-h2h-m">${h2.n} ${bi('duelos','duels')}${h2.emp?' · '+h2.emp+' '+bi('empates','ties'):''}</div><div><b>${h2.wb}</b><span>${bi('suyas','theirs')}</span></div></div>`}
@@ -11503,8 +11520,8 @@ function renderBatalla(){
     const pcv=$('#perfCv'); cancelAnimationFrame(window._perfRAF||0);
     if(pcv && window._batPerfil){ const uid=window._batPerfil, px=pcv.getContext('2d');
       const Ei=ZEN_ESCENAS[batEquipadaDe(uid)]||ZEN_ESCENAS[0], belt=KATANAS[batEquipadaDe(uid)].belt, njp=batNinjaDe(uid);
-      const pp=[]; for(let i=0;i<16;i++) pp.push({x:Math.random()*640,y:Math.random()*300,s:4+Math.random()*5,sp:.3+Math.random()*.8,dr:Math.random()*6,sw:.5});
-      const pintaPf=(t)=>{ if(!pcv.isConnected) return; zenDibujaEscena(px,640,300,Ei,t||0,pp,belt,njp); window._perfRAF=requestAnimationFrame(pintaPf); };
+      const pp=[]; for(let i=0;i<16;i++) pp.push({x:Math.random()*640,y:Math.random()*460,s:4+Math.random()*5,sp:.3+Math.random()*.8,dr:Math.random()*6,sw:.5});
+      const pintaPf=(t)=>{ if(!pcv.isConnected) return; zenDibujaEscena(px,640,460,Ei,t||0,pp,belt,njp); window._perfRAF=requestAnimationFrame(pintaPf); };
       window._perfRAF=requestAnimationFrame(pintaPf); }
     /* la curva de progreso (P&L acumulado) — se dibuja sola, estilo backtesting */
     const eqcv=$('#perfEq'); cancelAnimationFrame(window._eqRAF||0);
