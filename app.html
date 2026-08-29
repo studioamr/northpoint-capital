@@ -869,9 +869,15 @@ body.locked .app{visibility:hidden;pointer-events:none}
 .kat-card.owned{border-color:rgba(48,209,88,.28);background:rgba(48,209,88,.04)}
 .kat-card.next{border-color:var(--line);background:var(--w02)}
 .kat-card.locked{opacity:.55}
-/* la katana en la que ESTÁS: contorno de su propio color para acentuar el logro */
-.kat-card.cur{border-color:var(--kc);box-shadow:inset 0 0 0 1px var(--kc),0 6px 20px -8px var(--kc)}
-.kat-card.cur .kat-nom{color:#fff}
+/* la katana en la que ESTÁS: contorno de su propio color, más resaltada (progreso) */
+.kat-card.cur{border-color:var(--kc);border-width:2px;box-shadow:inset 0 0 0 1px var(--kc),0 0 0 3px color-mix(in srgb,var(--kc) 22%,transparent),0 8px 26px -6px var(--kc);transform:translateY(-2px)}
+.kat-card.cur .kat-nom{color:#fff;font-size:15px}
+.kat-card.cur .kat-ico{height:52px}
+.kat-aqui{position:absolute;top:-9px;left:50%;transform:translateX(-50%);font-family:var(--mono);font-size:8.5px;font-weight:800;letter-spacing:.14em;color:#0a0a0a;background:var(--kc);border-radius:20px;padding:3px 10px;box-shadow:0 2px 8px -2px var(--kc);white-space:nowrap}
+.kat-prog{display:flex;align-items:center;gap:10px;margin:-4px 0 14px}
+.kat-prog-bar{flex:1;height:8px;border-radius:5px;background:var(--line-soft);overflow:hidden}
+.kat-prog-bar i{display:block;height:100%;border-radius:5px;background:linear-gradient(90deg,color-mix(in srgb,var(--kc) 60%,#000),var(--kc));transition:width .6s}
+.kat-prog-txt{font-family:var(--mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--faint);flex:0 0 auto}
 .kat-ico{position:relative;width:100%;height:46px}
 .kat-badge{position:absolute;top:-4px;right:6px;font-size:12px;width:18px;height:18px;border-radius:50%;display:flex;align-items:center;justify-content:center}
 .kat-badge.ok{background:var(--up);color:#04120a;font-weight:900}
@@ -9184,10 +9190,10 @@ const KATANAS=[
 /* el botín de una victoria: lo que se movió (ambos lados) por 3 + un bono fijo,
    para que subir dinero sea rápido y la katana negra ($1M) sea la gran barrera */
 function batBotin(pH,pR){ return (Math.abs(pH||0)+Math.abs(pR||0))*3 + 3000; }
-function katanaSVG(hex){
+function katanaSVG(hex, flat){
   const dark = hex==='#23272E', blade = dark?'#3a4048':'#d7dee7', edge = dark?'#20242b':'#aeb8c4';
   return `<svg viewBox="0 0 140 60" width="100%" height="100%" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
-    <g transform="rotate(-18 70 30)">
+    <g transform="rotate(${flat?0:-18} 70 30)">
       <path d="M6 34 Q45 22 92 26 L92 31 Q47 30 9 39 Z" fill="${blade}" stroke="${edge}" stroke-width="0.8"/>
       <path d="M6 34 Q45 22 92 26" fill="none" stroke="#ffffff" stroke-opacity="0.5" stroke-width="0.8"/>
       <path d="M92 26 L101 27.6 L92 31 Z" fill="${blade}" stroke="${edge}" stroke-width="0.6"/>
@@ -10042,17 +10048,22 @@ function renderBatalla(){
           <div class="kat-banco"><span>${bi('BANCO','BANK')}</span><b>${fmt$(banco)}</b></div>
         </div>
         <div class="kat-feat" style="--kc:${KATANAS[kActualIdx].belt}">
-          <div class="kat-feat-blade">${katanaSVG(KATANAS[kActualIdx].belt)}</div>
+          <div class="kat-feat-blade">${katanaSVG(KATANAS[kActualIdx].belt, true)}</div>
           <div class="kat-feat-txt"><em>${bi('tu katana','your katana')}</em><b>${loc(KATANAS[kActualIdx].n)}</b><span class="kat-cinta" style="color:${KATANAS[kActualIdx].belt}">● ${bi('Cinta','Belt')} ${loc(KATANAS[kActualIdx].cinta)}</span></div>
-          ${kProxIdx>=0 ? `<div class="kat-feat-next"><em>${bi('siguiente','next')}</em><b>${fmt$(KATANAS[kProxIdx].precio)}</b><span>${loc(KATANAS[kProxIdx].cinta)}</span></div>`:`<div class="kat-feat-next done"><em>${bi('completa','complete')}</em><b>★</b></div>`}
+          ${kProxIdx>=0 ? `<div class="kat-feat-next"><em>${bi('siguiente','next')} 🔒</em><b>${fmt$(KATANAS[kProxIdx].precio)}</b><span>${loc(KATANAS[kProxIdx].cinta)}</span></div>`:`<div class="kat-feat-next done"><em>${bi('completa','complete')}</em><b>★</b></div>`}
+        </div>
+        <div class="kat-prog" style="--kc:${KATANAS[kActualIdx].belt}">
+          <span class="kat-prog-bar"><i style="width:${Math.round((kActualIdx+1)/KATANAS.length*100)}%"></i></span>
+          <span class="kat-prog-txt">${bi('progreso','progress')} · ${kActualIdx+1}/${KATANAS.length}</span>
         </div>
         <div class="kat-grid">
           ${KATANAS.map((k,i)=>{ const owned=miKat.includes(k.id), esProx=(i===kProxIdx), puede=esProx && banco>=k.precio, cur=(i===kActualIdx);
             return `<div class="kat-card ${owned?'owned':(esProx?'next':'locked')} ${cur?'cur':''}"${cur?` style="--kc:${k.belt}"`:''}>
-              <div class="kat-ico">${katanaSVG(k.belt)}${owned?'<span class="kat-badge ok">✓</span>':(esProx?'':'<span class="kat-badge lock">🔒</span>')}</div>
+              ${cur?`<span class="kat-aqui">${bi('AQUÍ','HERE')}</span>`:''}
+              <div class="kat-ico">${katanaSVG(k.belt, cur)}${owned?'<span class="kat-badge ok">✓</span>':'<span class="kat-badge lock">🔒</span>'}</div>
               <b class="kat-nom">${loc(k.n)}</b>
               <span class="kat-cinta" style="color:${k.belt}">● ${loc(k.cinta)}</span>
-              ${owned ? `<span class="kat-estado owned">${bi('En tu colección','Owned')}</span>`
+              ${owned ? `<span class="kat-estado owned">${cur?bi('Tu katana','Your katana'):bi('En tu colección','Owned')}</span>`
                 : esProx ? `<button type="button" class="kat-buy ${puede?'':'no'}" data-kat="${k.id}" ${puede?'':'disabled'}>${puede?bi('Comprar','Buy'):bi('Te falta','Locked')} ${fmt$(k.precio)}</button>`
                 : `<span class="kat-estado">${fmt$(k.precio)}</span>`}
             </div>`;}).join('')}
