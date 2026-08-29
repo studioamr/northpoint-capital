@@ -2001,6 +2001,21 @@ button.tag.quemada{text-decoration:line-through;text-decoration-color:var(--down
   color:var(--dim);white-space:normal;overflow:visible;max-width:34ch}
 /* Los tres hitos del camino, repartidos a lo ancho como la barra de arriba.
    El que ya se pasó se prende: se lee de un golpe dónde vas. */
+/* ── EL CONTRATO DE 30 DÍAS en The plan ── */
+.c30-tira{display:flex;gap:4px;flex-wrap:wrap;margin:12px 0}
+.c30-dia{flex:0 0 auto;width:30px;height:30px;display:flex;align-items:center;justify-content:center;
+  font-family:var(--mono);font-size:10.5px;border-radius:7px;border:1px solid var(--line);color:var(--dim)}
+.c30-dia.eval{background:rgba(217,164,65,.14);border-color:rgba(217,164,65,.4)}
+.c30-dia.buff{background:rgba(120,165,200,.13);border-color:rgba(120,165,200,.38)}
+.c30-dia.payout{background:rgba(87,199,155,.15);border-color:rgba(87,199,155,.45);color:var(--up)}
+.c30-dia.hoy{outline:2px solid var(--accent);outline-offset:1px;color:var(--txt);font-weight:600}
+.c30-dia.ido{opacity:.38}
+.c30-hoy{display:flex;gap:14px;align-items:baseline;flex-wrap:wrap;padding:12px 14px;
+  border:1px solid var(--line);border-radius:10px;background:var(--w03);margin-bottom:10px}
+.c30-hoy b{letter-spacing:.04em}
+.c30-rutina{display:flex;gap:18px;flex-wrap:wrap;font-size:11px;color:var(--dim)}
+.c30-rutina b{color:var(--txt)}
+
 /* ── EL BOTÓN GRANDE de Daily Trades: la puerta principal del registro ── */
 #btnCapturaGrande{display:flex;flex-direction:column;align-items:center;gap:6px;width:100%;
   padding:30px 20px;border:2px dashed var(--line);border-radius:16px;background:var(--w02);
@@ -2760,7 +2775,8 @@ stop[stop-color="#9BC0DC"]{stop-color:var(--txt)}
           <span class="micro" data-i18n="vd.plan">The plan · from $0 to the house</span>
           <span class="micro" id="metaSub" style="margin-left:auto;color:var(--faint)"></span>
         </div>
-        <div class="panel pat" id="patrimonioHoy"></div>
+        <div class="panel" id="contrato30"></div>
+        <div class="panel pat mt" id="patrimonioHoy"></div>
         <div id="metasMods" class="mt"></div>
       </section>
 
@@ -3562,17 +3578,15 @@ const SISTEMA = {
      daba por bueno un segundo trade que el sistema nunca señaló — y ése, por
      definición, salió de la mano y no del plan. El segundo trade del día ahora
      se marca. */
+  /* Los números salen DEL CONTRATO firmado (PDF · 31 ago – 30 sep 2026):
+     examen 4 mini 1:2 —riesgo $500, objetivo +$1,000—; colchón 2 mini 1:1
+     —$500/+$500—; payouts diarios 1 mini +$250. Un trade al día en las tres. */
   fases: {
-    eval:   { maxPerdidaDia:1000, objetivoDia:1000, maxTrades:1, topeDia:1100,
+    eval:   { maxPerdidaDia:500, objetivoDia:1000, maxTrades:1, topeDia:1100,
               de:50000, a:53000, minDias:3, diasObjetivo:'3-5' },
-    /* ── EL COLCHÓN IBA AL DOBLE ──
-       Estaba en 200/400 y el plan de André dice $100 de riesgo y $200 de
-       objetivo al día. Con el límite al doble, un día que rompía el plan pasaba
-       como bueno y la app no marcaba nada: el error más caro de todos, porque
-       enseña que cabe más riesgo del que cabe. */
-    buffer: { maxPerdidaDia:100,  objetivoDia:200,  maxTrades:1,
-              de:50000, a:52100, maxDias:14 },
-    payout: { maxPerdidaDia:100,  objetivoDia:200,  maxTrades:1,
+    buffer: { maxPerdidaDia:500, objetivoDia:500, maxTrades:1,
+              de:50000, a:52500, maxDias:14 },
+    payout: { maxPerdidaDia:250, objetivoDia:250, maxTrades:1,
               desde:50100 },
   },
 
@@ -11780,7 +11794,78 @@ function cartillaFase(f, i){
            gasto, pasar: f.a };
 }
 
+/* ══ EL CONTRATO DE 30 DÍAS ══
+   Del PDF que André firmó (31 ago – 30 sep 2026): tres fases en fechas, un
+   trade al día, y la rutina en las dos horas (Morelia / NY). Es lo primero
+   que se ve en The plan: qué día es hoy, en qué fase estás y qué toca. */
+const CONTRATO = {
+  de: '2026-08-31', a: '2026-09-30', payoutDia: '2026-09-21',
+  fases: [
+    { de:'2026-08-31', a:'2026-09-04', k:'EVAL',
+      t:['EXAMEN','EVALUATION'], spec:'4 mini · 1 trade · 1:2 · riesgo $500 · objetivo +$1,000',
+      meta:['pasar: 50k → 53k','pass: 50k → 53k'] },
+    { de:'2026-09-07', a:'2026-09-18', k:'BUFF',
+      t:['COLCHÓN','BUFFER'], spec:'2 mini · 1 trade · 1:1 · riesgo $500 · objetivo +$500',
+      meta:['+$500 al día: 50k → 52.5k','+$500 a day: 50k → 52.5k'] },
+    { de:'2026-09-21', a:'2026-09-30', k:'PAYOUT',
+      t:['PAYOUTS DIARIOS','DAILY PAYOUTS'], spec:'1 mini · 1 trade · +$250 al día',
+      meta:['cobrar todos los días','collect every day'] },
+  ],
+  rutina: [
+    ['7:00', '9:00',  ['premarket','premarket']],
+    ['7:30', '9:30',  ['apertura NY','NY open']],
+    ['7:45', '9:45',  ['ORB + entrada','ORB + entry']],
+    ['9:00', '11:00', ['cierre · lock in','close · lock in']],
+  ],
+  setups: 'A+ SETUPS · ORB + killzones + EMAs 14/50 + SMC · entry al break',
+};
+function faseContrato(iso){
+  if(iso < CONTRATO.de || iso > CONTRATO.a) return null;
+  return CONTRATO.fases.find(f => iso >= f.de && iso <= f.a) || null;   // hueco = fin de semana
+}
+function renderContrato(){
+  const host = $('#contrato30'); if(!host) return;
+  const hoy = todayISO();
+  const enContrato = hoy >= CONTRATO.de && hoy <= CONTRATO.a;
+  /* el fin de semana manda sobre el rango de la fase: un sábado dentro del
+     colchón es descanso, no un día de colchón */
+  const wd = new Date(hoy + 'T12:00:00').getUTCDay();
+  const f = (wd === 0 || wd === 6) ? null : faseContrato(hoy);
+  /* la tira de días hábiles, con hoy marcado */
+  const dias = [];
+  const d0 = new Date(CONTRATO.de + 'T12:00:00');
+  for(let i = 0; i < 31; i++){
+    const d = new Date(d0.getTime() + i * 86400000);
+    const iso = d.toISOString().slice(0, 10);
+    if(iso > CONTRATO.a) break;
+    const wd = d.getUTCDay();
+    if(wd === 0 || wd === 6) continue;
+    const ff = faseContrato(iso);
+    dias.push(`<span class="c30-dia ${ff ? ff.k.toLowerCase() : ''} ${iso === hoy ? 'hoy' : ''} ${iso < hoy ? 'ido' : ''}"
+      title="${fmtFecha(iso)}${ff ? ' · ' + loc(ff.t) : ''}">${d.getUTCDate()}</span>`);
+  }
+  host.innerHTML = `<div class="p-body">
+    <div style="display:flex;align-items:baseline;gap:12px;flex-wrap:wrap">
+      <b class="micro" style="color:var(--txt)">${bi('EL CONTRATO · 30 DÍAS','THE CONTRACT · 30 DAYS')}</b>
+      <span class="micro">31 AGO → 30 SEP · ${bi('primer payout','first payout')} 21 SEP</span>
+      <span class="micro" style="margin-left:auto">${esc(CONTRATO.setups)}</span>
+    </div>
+    <div class="c30-tira">${dias.join('')}</div>
+    ${f ? `<div class="c30-hoy">
+        <b>${bi('HOY','TODAY')} · ${loc(f.t)}</b>
+        <span class="mono">${esc(f.spec)}</span>
+        <span class="micro" style="color:var(--faint)">${loc(f.meta)}</span>
+      </div>`
+      : `<div class="c30-hoy"><b>${enContrato
+           ? bi('HOY · FIN DE SEMANA — el mercado descansa y tú también','TODAY · WEEKEND — the market rests and so do you')
+           : (hoy < CONTRATO.de ? bi('El contrato arranca el 31 de agosto','The contract starts August 31')
+                                : bi('Contrato cumplido','Contract complete'))}</b></div>`}
+    <div class="c30-rutina">${CONTRATO.rutina.map(r =>
+      `<span><b class="mono">${r[0]}</b> MX · <b class="mono">${r[1]}</b> NY — ${loc(r[2])}</span>`).join('')}</div>
+  </div>`;
+}
 function renderMetas(){
+  renderContrato();
   const host = $('#metasMods'); if(!host) return;
   const P = patrimonio();
   const N = P.total;
