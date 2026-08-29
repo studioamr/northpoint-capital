@@ -706,9 +706,14 @@ body.locked .app{visibility:hidden;pointer-events:none}
   font:600 12px/1.2 var(--mono,inherit);padding:11px 6px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:5px;transition:all .14s}
 .bat-fmt-tab b{font-size:19px;line-height:1}
 .bat-fmt-tab.on{background:var(--accent);border-color:var(--accent);color:#08111f}
-.bat-ses-chips{display:flex;gap:8px;flex-wrap:wrap}
-.bat-ses-chip{flex:1;min-width:96px;border:1px solid var(--line);border-radius:12px;background:var(--bg,#0b0f16);
-  color:var(--txt);padding:11px 12px;cursor:pointer;text-align:left;display:flex;flex-direction:column;gap:4px;transition:all .14s}
+.bat-ses-chips{display:flex;gap:10px;flex-wrap:wrap}
+.bat-mundito{display:block}
+.bat-mundito .bat-globo{width:40px;height:40px;display:block;filter:drop-shadow(0 2px 4px rgba(0,0,0,.35));animation:batGloboFloat 3.4s ease-in-out infinite}
+@keyframes batGloboFloat{0%,100%{transform:translateY(0) rotate(-4deg)}50%{transform:translateY(-4px) rotate(4deg)}}
+.bat-ses-chip.on .bat-globo{animation-duration:2s}
+.bat-ses-chip{flex:1;min-width:96px;border:1px solid var(--line);border-radius:14px;background:var(--bg,#0b0f16);
+  display:flex;flex-direction:column;align-items:center;gap:5px;text-align:center;
+  color:var(--txt);padding:12px;cursor:pointer;transition:all .14s}
 .bat-ses-chip b{font-size:13.5px;font-weight:700}
 .bat-ses-chip i{font-family:var(--mono);font-style:normal;font-size:10.5px;color:var(--faint)}
 .bat-ses-chip.on{border-color:var(--accent);background:color-mix(in srgb, var(--accent) 12%, transparent)}
@@ -8822,6 +8827,23 @@ const BAT_MARATON = [
   { min:43200, ico:'📆', t:['1 mes','1 month'] },
 ];
 function batSesion(id){ return BAT_SESIONES.find(s=>s.id===id) || BAT_SESIONES[0]; }
+/* el "mundito" de cada sesión: un globo con su región y un punto en su ciudad */
+function batMundito(id){
+  const mar='#2f7fb8', tierra='#4fae5a';
+  const cont = {
+    asia:    '<path d="M17 9c7-1 13 3 14 9-3 4-9 6-14 4-4-2-5-9-2-12z"/><path d="M8 24c3-1 6 1 5 4-2 3-6 2-7-1z"/>',
+    londres: '<path d="M13 11c6-2 12 1 14 6-3 5-9 7-14 4-4-2-4-8 0-10z"/><path d="M9 25c2 0 4 2 3 4-3 2-6 0-5-3z"/>',
+    nyc:     '<path d="M23 8c4 3 5 8 3 12-2 5-6 8-9 6-2-6 1-13 6-18z"/><path d="M12 13c3 0 5 3 3 6-3 2-6 0-6-3z"/>',
+  }[id] || '';
+  const pin = { asia:['27','15','#ff5a5a'], londres:['20','13','#ffd24a'], nyc:['15','18','#4da3ff'] }[id] || ['20','20','#fff'];
+  return `<svg class="bat-globo" viewBox="0 0 40 40" aria-hidden="true">
+    <circle cx="20" cy="20" r="18" fill="${mar}"/>
+    <g fill="${tierra}">${cont}</g>
+    <ellipse cx="14" cy="13" rx="7" ry="4" fill="rgba(255,255,255,.16)"/>
+    <circle cx="20" cy="20" r="18" fill="none" stroke="rgba(255,255,255,.28)" stroke-width="1.4"/>
+    <circle cx="${pin[0]}" cy="${pin[1]}" r="2.8" fill="${pin[2]}"/><circle cx="${pin[0]}" cy="${pin[1]}" r="5" fill="none" stroke="${pin[2]}" stroke-opacity=".5"/>
+  </svg>`;
+}
 /* próximas N aperturas de una sesión (hora fija), saltando fin de semana */
 function batProxAperturas(hora, n){
   const out=[], now=new Date(); let d=new Date(now); d.setHours(hora,0,0,0);
@@ -9544,7 +9566,7 @@ function renderBatalla(){
           <div class="bat-f"><label>${bi('¿A quién retas?','Who do you challenge?')}</label>
             <div class="bat-ops">${ops.map(u=>`<button type="button" class="bat-op ${batSel.op===u?'on':''}" data-op="${u}"><span class="bat-op-ava">${caraSocio(u,24)}</span>${esc(batNom(u))}</button>`).join('')}</div></div>
           <div class="bat-f"><label>${bi('Sesión','Session')}</label>
-            <div class="bat-ses-chips">${BAT_SESIONES.map(s=>`<button type="button" class="bat-ses-chip ${batSel.ses===s.id?'on':''}" data-ses="${s.id}"><b>${loc(s.nom)}</b><i>${String(s.hora).padStart(2,'0')}:00 · ${Math.round(s.dur/60)}h</i></button>`).join('')}</div></div>
+            <div class="bat-ses-chips">${BAT_SESIONES.map(s=>`<button type="button" class="bat-ses-chip ${batSel.ses===s.id?'on':''}" data-ses="${s.id}"><span class="bat-mundito">${batMundito(s.id)}</span><b>${loc(s.nom)}</b><i>${String(s.hora).padStart(2,'0')}:00 · ${Math.round(s.dur/60)}h</i></button>`).join('')}</div></div>
           <div class="bat-f"><label>${bi('¿Cuándo?','When?')}</label><div class="bat-cal">${cal}</div></div>
           <div class="bat-f"><label>${bi('Duración','Duration')}</label>
             <div class="bat-durs">${BAT_DUR.map(d=>`<button type="button" class="bat-dur ${batSel.dur===d.min?'on':''}" data-min="${d.min}">${d.t}</button>`).join('')}</div></div>
