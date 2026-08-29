@@ -775,11 +775,31 @@ body.locked .app{visibility:hidden;pointer-events:none}
 .bat-jug-wins{font-family:var(--mono);text-align:right;color:var(--faint);font-size:9px;flex:0 0 auto}
 .bat-jug-wins b{display:block;font-size:22px;color:var(--txt);line-height:1}
 .bat-jug-retar{flex:0 0 auto;padding:9px 16px;font-size:13px}
-.bat-rio{position:relative;width:100%;border-radius:18px;overflow:hidden;border:1px solid var(--line);margin-bottom:16px;background:#0c1322;line-height:0}
-.bat-rio canvas{display:block;width:100%;height:auto}
-.bat-rio-lbl{position:absolute;left:14px;bottom:12px;line-height:1.25;text-shadow:0 1px 6px rgba(0,0,0,.6)}
-.bat-rio-lbl b{display:block;font-size:15px;font-weight:900;letter-spacing:.02em;color:#fff}
-.bat-rio-lbl span{font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;color:rgba(255,255,255,.8)}
+/* ── Dashboard de Battles ── */
+.bat-dash{border:1px solid var(--line);border-radius:18px;background:linear-gradient(160deg,var(--w04),var(--w02));padding:17px 18px 15px;margin-bottom:18px;position:relative;overflow:hidden}
+.bat-dash::before{content:'';position:absolute;inset:0;background:radial-gradient(130% 100% at 100% 0,rgba(48,209,88,.10),transparent 58%);pointer-events:none}
+.bat-dash-tag{position:relative;font-family:var(--mono);font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--faint);margin:0 0 13px;display:flex;align-items:center;gap:8px}
+.bat-dash-tag b{color:var(--up);font-weight:700}
+.bat-dash-tag em{margin-left:auto;font-style:normal;color:var(--dim)}
+.bat-dash-hd{display:flex;align-items:center;gap:15px;position:relative}
+.bat-dash-ava{width:58px;height:58px;border-radius:50%;overflow:hidden;flex:0 0 auto;background:var(--bg-2);display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 2px var(--line)}
+.bat-dash-ava img,.bat-dash-ava canvas,.bat-dash-ava svg{width:100%;height:100%;object-fit:cover}
+.bat-dash-id{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px}
+.bat-dash-id>b{font-size:19px;font-weight:900;letter-spacing:-.01em}
+.bat-dash-rank{font-family:var(--mono);font-size:12px;color:var(--up);font-weight:700}
+.bat-dash-rank em{color:var(--faint);font-style:normal;font-weight:400}
+.bat-dash-lvl{flex:0 0 auto;width:148px;display:flex;flex-direction:column;gap:6px}
+.bat-dash-lvl-top{display:flex;justify-content:space-between;align-items:baseline;font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--faint)}
+.bat-dash-lvl-top b{font-family:var(--sans);font-size:20px;color:var(--txt);font-weight:900;letter-spacing:0}
+.bat-dash-lvl-bar{height:8px;border-radius:5px;background:var(--line-soft);overflow:hidden}
+.bat-dash-lvl-bar i{display:block;height:100%;background:linear-gradient(90deg,var(--up),#8ad0ff);border-radius:5px;transition:width .6s}
+.bat-dash-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:15px;position:relative}
+.bat-dash-cell{border:1px solid var(--line-soft);border-radius:13px;background:var(--w02);padding:12px 8px;text-align:center;display:flex;flex-direction:column;gap:4px}
+.bat-dash-cell b{font-size:23px;font-weight:900;line-height:1;letter-spacing:-.02em}
+.bat-dash-cell span{font-family:var(--mono);font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:var(--faint)}
+.bat-dash-cell.win b{color:var(--up)}
+.bat-dash-cell.streak b{color:#e9cf46}
+@media(max-width:560px){.bat-dash-hd{flex-wrap:wrap}.bat-dash-lvl{width:100%}.bat-dash-grid{grid-template-columns:repeat(2,1fr)}}
 .bat-hero3{position:relative;width:100%;border-radius:18px;overflow:hidden;border:1px solid var(--line);margin-bottom:16px;background:#0c1322;line-height:0}
 .bat-hero3 canvas{display:block;width:100%;height:auto}
 .bat-hero3-lbl{position:absolute;left:14px;bottom:12px;line-height:1.2;text-shadow:0 1px 6px rgba(0,0,0,.7)}
@@ -9667,8 +9687,40 @@ function renderBatalla(){
         <button type="button" class="bat-ajustes" id="batAjustes" aria-label="${bi('Ajustes','Settings')}"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="3.2"/><path d="M12 3v2.5M12 18.5V21M4.2 7l2.2 1.3M17.6 15.7l2.2 1.3M4.2 17l2.2-1.3M17.6 8.3l2.2-1.3"/></svg></button>
       </div>
       ${batBannerHTML(c, yo)}
-      <div class="bat-rio"><canvas id="batRioCv" width="1800" height="1160"></canvas>
-        <div class="bat-rio-lbl"><b>${bi('SEDE · RÍO DE JANEIRO','HOME · RIO DE JANEIRO')}</b><span>NORTHPOINT · LEBLON</span></div></div>
+      ${(()=>{
+        const miPos = ranking.findIndex(r=>r.uid===yo)+1;
+        const mi = ranking.find(r=>r.uid===yo) || {g:0,p:0,e:0};
+        const miLv = batNivel(yo), totBat = mi.g+mi.p+mi.e, wr = totBat? Math.round(mi.g/totBat*100):0;
+        let streak=0, tipo=null;
+        for(const h of hist){
+          const dentro = h.host===yo || h.rival===yo || (h.party && (h.jugadores||[]).includes(yo));
+          if(!dentro) continue;
+          if(!h.ganador){ break; }
+          const gane = h.ganador===yo, t = gane?'w':'l';
+          if(tipo===null){ tipo=t; streak=1; } else if(tipo===t){ streak++; } else break;
+        }
+        const rachaTxt = streak? (tipo==='w'?'🔥 '+streak:'❄ '+streak) : '—';
+        return `<div class="bat-dash">
+          <p class="bat-dash-tag">${bi('Panel de temporada','Season panel')} · <b>${ranking.length} ${bi('jugadores','players')}</b><em>${totBat} ${bi('batallas','battles')}</em></p>
+          <div class="bat-dash-hd">
+            <span class="bat-dash-ava">${caraSocio(yo,58)}</span>
+            <div class="bat-dash-id">
+              <b>${esc(batNom(yo))}</b>
+              <span class="bat-dash-rank">${miPos?'#'+miPos:'—'} <em>${bi('de','of')} ${ranking.length}</em></span>
+            </div>
+            <div class="bat-dash-lvl">
+              <div class="bat-dash-lvl-top"><span>${bi('Nivel','Level')}</span><b>${miLv}</b></div>
+              <span class="bat-dash-lvl-bar"><i style="width:${miLv}%"></i></span>
+            </div>
+          </div>
+          <div class="bat-dash-grid">
+            <div class="bat-dash-cell win"><b>${mi.g}</b><span>${bi('Ganadas','Wins')}</span></div>
+            <div class="bat-dash-cell"><b>${mi.p}</b><span>${bi('Perdidas','Losses')}</span></div>
+            <div class="bat-dash-cell"><b>${wr}%</b><span>${bi('Efectividad','Win rate')}</span></div>
+            <div class="bat-dash-cell streak"><b>${rachaTxt}</b><span>${bi('Racha','Streak')}</span></div>
+          </div>
+        </div>`;
+      })()}
       <button type="button" class="btn primary bat-play-b batalla bat-nuevo" id="batNuevo">${bi('Retar a un socio','Challenge a partner')}</button>
       <div class="bat-sec-t">${bi('Jugadores de la mesa','Desk players')} · ${bi('toca un perfil o rétalo','tap a profile or challenge')}</div>
       <div class="bat-jugs">
@@ -9702,7 +9754,6 @@ function renderBatalla(){
     $('#batAjustes') && ($('#batAjustes').onclick = () => { batPantalla='ajustes'; renderBatalla(); });
     root.querySelectorAll('[data-perfil]').forEach(b => b.onclick = () => { if(b.dataset.perfil!==yo){ batPerfilUid=b.dataset.perfil; batPantalla='perfil'; renderBatalla(); } });
     root.querySelectorAll('[data-retar]').forEach(b => b.onclick = (e) => { e.stopPropagation(); batSel={ op:b.dataset.retar, ses:'asia', dur:30, cuando:null }; batPantalla='setup'; renderBatalla(); });
-    requestAnimationFrame(batPintaRio);   // portada: la sede NorthPoint en Río
     if(c){
       batBannerBind(c, yo);
       if(c.estado==='invitado' || c.estado==='programado' || c.estado==='activo'){
