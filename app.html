@@ -744,6 +744,13 @@ body.locked .app{visibility:hidden;pointer-events:none}
   text-align:center;margin-bottom:10px}
 /* EL MAPA */
 .bat-mapa{position:relative;width:100%;aspect-ratio:400/280;border-radius:18px;overflow:hidden;border:1px solid var(--line);margin-bottom:16px;background:#0c1322}
+.bat-vuelo-jet{position:relative;width:100%;border-radius:18px;overflow:hidden;border:1px solid var(--line);background:#0c1322;line-height:0;margin-top:8px}
+.bat-vuelo-jet canvas{display:block;width:100%;height:auto}
+.bat-vuelo-lbl{position:absolute;left:0;right:0;bottom:0;padding:26px 18px 16px;line-height:1.3;
+  background:linear-gradient(0deg,rgba(0,0,0,.6),transparent);text-shadow:0 1px 6px rgba(0,0,0,.7)}
+.bat-vuelo-lbl b{display:block;font-size:22px;font-weight:900;color:#fff}
+.bat-vuelo-lbl span{font-family:var(--mono);font-size:12px;color:rgba(255,255,255,.8)}
+.bat-vuelo-lbl i{font-style:normal;color:#4ee08a}
 .bat-hero3{position:relative;width:100%;border-radius:18px;overflow:hidden;border:1px solid var(--line);margin-bottom:16px;background:#0c1322;line-height:0}
 .bat-hero3 canvas{display:block;width:100%;height:auto}
 .bat-hero3-lbl{position:absolute;left:14px;bottom:12px;line-height:1.2;text-shadow:0 1px 6px rgba(0,0,0,.7)}
@@ -8840,7 +8847,7 @@ function batMetaDe(v){ return BAT_METAS.find(m=> v < m) || BAT_METAS[BAT_METAS.l
 function batEraIdx(v){ let i=0; for(let k=0;k<WEALTH_ERAS.length;k++){ if(v>=WEALTH_ERAS[k].min) i=k; } return i; }
 function batEraProg(v){ const i=batEraIdx(v), e=WEALTH_ERAS[i], nx=WEALTH_ERAS[i+1]||null;
   const prog = nx ? Math.max(0, Math.min(1, (v-e.min)/(nx.min-e.min))) : 1; return { i, e, nx, prog }; }
-let batTick = null, batDir = 'L', batPantalla = 'home', batFmt = 'sesion', batSel = null, batViendo = null, batMin = false, batPerfilUid = null;
+let batTick = null, batVueloRAF = null, batDir = 'L', batPantalla = 'home', batFmt = 'sesion', batSel = null, batViendo = null, batMin = false, batPerfilUid = null;
 /* récord cara a cara entre dos socios (solo 1v1) */
 function batH2H(a, b){
   let wa=0, wb=0, emp=0, pa=0, pb=0, n=0;
@@ -9426,12 +9433,13 @@ function renderBatalla(){
   const yo = batYo();
   const c = S.challenge;
   if(batTick){ clearInterval(batTick); batTick = null; }
+  if(batVueloRAF){ cancelAnimationFrame(batVueloRAF); batVueloRAF = null; }
 
   /* ── el home NO se traba: la invitación pendiente, la cita agendada y la
      batalla minimizada viven como BANNER sobre el home; sólo la partida en vivo
      (volando/activo maximizado/terminado) toma la pantalla completa ── */
   const enHome = !c || c.estado === 'cancelado' || c.estado === 'invitado'
-    || c.estado === 'programado' || (c.estado === 'activo' && batMin);
+    || c.estado === 'programado' || (c.estado === 'activo' && batMin);   // programado y activo-min viven como banner
   if(enHome){
     const ranking = SOCIOS_REALES.map(u => ({ uid:u, ...batStatDe(u) }))
       .sort((a,b)=> b.g - a.g || a.p - b.p);
@@ -9440,7 +9448,14 @@ function renderBatalla(){
     /* ── NUEVO RETO · sólo rival + duración ── */
     if(batPantalla === 'setup'){
       const ops = batOponentes();
-      if(!batSel || !ops.includes(batSel.op)) batSel = { op: ops[0]||null, dur:30 };
+      if(!batSel || !ops.includes(batSel.op)) batSel = { op: ops[0]||null, ses:'asia', dur:30, cuando:null };
+      const sesObj = batSesion(batSel.ses);
+      /* calendario: "Ahora" + próximas aperturas de la sesión elegida */
+      let cal = `<button type="button" class="bat-cal-card ahora ${!batSel.cuando?'on':''}" data-ts="">
+        <span class="bat-cal-dia">${bi('Ahora','Now')}</span><span class="bat-cal-hora">${bi('al instante','instant')}</span></button>`;
+      batProxAperturas(sesObj.hora, 5).forEach(d=>{ const t=batDiaTxt(d.getTime()), ts=d.getTime();
+        cal += `<button type="button" class="bat-cal-card ${batSel.cuando===ts?'on':''}" data-ts="${ts}">
+          <span class="bat-cal-dia">${t.dia}</span><span class="bat-cal-hora">${t.hora}</span></button>`; });
       root.innerHTML = `
         <div class="bat-lobby-top">
           <button type="button" class="bat-volver" id="batVolverLobby">‹ ${bi('Atrás','Back')}</button>
@@ -9449,17 +9464,23 @@ function renderBatalla(){
         <div class="bat-card">
           <div class="bat-f"><label>${bi('¿A quién retas?','Who do you challenge?')}</label>
             <div class="bat-ops">${ops.map(u=>`<button type="button" class="bat-op ${batSel.op===u?'on':''}" data-op="${u}"><span class="bat-op-ava">${caraSocio(u,24)}</span>${esc(batNom(u))}</button>`).join('')}</div></div>
+          <div class="bat-f"><label>${bi('Sesión','Session')}</label>
+            <div class="bat-ses-chips">${BAT_SESIONES.map(s=>`<button type="button" class="bat-ses-chip ${batSel.ses===s.id?'on':''}" data-ses="${s.id}"><b>${loc(s.nom)}</b><i>${String(s.hora).padStart(2,'0')}:00 · ${Math.round(s.dur/60)}h</i></button>`).join('')}</div></div>
+          <div class="bat-f"><label>${bi('¿Cuándo?','When?')}</label><div class="bat-cal">${cal}</div></div>
           <div class="bat-f"><label>${bi('Duración','Duration')}</label>
             <div class="bat-durs">${BAT_DUR.map(d=>`<button type="button" class="bat-dur ${batSel.dur===d.min?'on':''}" data-min="${d.min}">${d.t}</button>`).join('')}</div></div>
-          <p class="bat-party-nota">${bi('Cada quien registra su P&L durante el reto. El de mayor profit gana.','Each logs their P&L during the battle. Most profit wins.')}</p>
+          <p class="bat-party-nota">${bi('Vuelan a','You fly to')} ${esc(loc(sesObj.ciudad))}. ${bi('Cada quien registra su P&L; el de mayor profit gana.','Each logs their P&L; most profit wins.')}</p>
           <button type="button" class="btn primary bat-crear" id="batCrear">${bi('Enviar reto','Send challenge')}</button>
         </div>`;
       $('#batVolverLobby').onclick = () => { batPantalla='home'; batSel=null; renderBatalla(); };
       root.querySelectorAll('[data-op]').forEach(b=> b.onclick=()=>{ batSel.op=b.dataset.op; renderBatalla(); });
+      root.querySelectorAll('[data-ses]').forEach(b=> b.onclick=()=>{ batSel.ses=b.dataset.ses; batSel.cuando=null; renderBatalla(); });
+      root.querySelectorAll('.bat-cal-card').forEach(b=> b.onclick=()=>{ batSel.cuando = b.dataset.ts? +b.dataset.ts : null; renderBatalla(); });
       root.querySelectorAll('[data-min]').forEach(b=> b.onclick=()=>{ batSel.dur=+b.dataset.min; renderBatalla(); });
       $('#batCrear').onclick = () => {
         if(!batSel.op){ toast(bi('Elige un rival','Pick an opponent')); return; }
-        S.challenge = { id:'bt_'+uid(), host:yo, rival:batSel.op, duracion:batSel.dur, estado:'invitado', creado:Date.now(), inicio:null, fin:null, trades:{} };
+        S.challenge = { id:'bt_'+uid(), host:yo, rival:batSel.op, sesion:batSel.ses, duracion:batSel.dur,
+          programado: batSel.cuando||null, estado:'invitado', creado:Date.now(), inicio:null, fin:null, trades:{} };
         batSel=null; batPantalla='home';
         toast(bi('Reto enviado. Esperando que acepte.','Challenge sent. Waiting for them to accept.'));
         batGuarda();
@@ -9486,6 +9507,35 @@ function renderBatalla(){
       return;
     }
 
+    /* ── PERFIL · picar un socio en el leaderboard = comparación tú vs él ── */
+    if(batPantalla === 'perfil' && batPerfilUid && batPerfilUid !== yo){
+      const otro = batPerfilUid, h2h = batH2H(yo, otro);
+      const card = (u)=>{ const s=batStatDe(u);
+        return `<div class="bat-perfil-card ${u===yo?'yo':''}">
+          <span class="bat-perfil-ava">${caraSocio(u,64)}</span>
+          <b class="bat-perfil-nom">${esc(batNom(u))}${u===yo?` <em>${bi('(tú)','(you)')}</em>`:''}</b>
+          <span class="bat-perfil-bal">${s.g} ${bi('ganadas','wins')}</span>
+          <span class="bat-perfil-sub">${s.g}${bi('G','W')} · ${s.p}${bi('P','L')}${s.e?' · '+s.e+bi('E','T'):''}</span>
+        </div>`; };
+      root.innerHTML = `
+        <div class="bat-lobby-top"><button type="button" class="bat-volver" id="batVolverLobby">‹ ${bi('Atrás','Back')}</button>
+          <span class="bat-lobby-t">${bi('Tú vs','You vs')} ${esc(batNom(otro))}</span></div>
+        <div class="bat-perfil-vs">${card(yo)}<div class="bat-perfil-mid">VS</div>${card(otro)}</div>
+        <div class="bat-sec-t">${bi('Cara a cara','Head to head')}</div>
+        <div class="bat-h2h">
+          <div class="bat-h2h-m"><b>${h2h.wa}</b><span>${bi('tuyas','yours')}</span></div>
+          <div class="bat-h2h-mid">${h2h.n} ${bi('duelos','duels')}${h2h.emp?' · '+h2h.emp+' '+bi('empates','ties'):''}</div>
+          <div class="bat-h2h-m"><b>${h2h.wb}</b><span>${bi('suyas','theirs')}</span></div>
+        </div>
+        <div class="bat-h2h-prof"><span>${bi('Profit entre ustedes','Profit vs each other')}</span>
+          <em><b class="${h2h.pa>=0?'up':'down'}">${fmt$(h2h.pa,true)}</b> / <b class="${h2h.pb>=0?'up':'down'}">${fmt$(h2h.pb,true)}</b></em></div>
+        ${h2h.n===0? `<p class="bat-party-nota" style="text-align:center">${bi('Todavía no se enfrentan. ¡Rétalo!','You have not faced off yet. Challenge them!')}</p>`:''}
+        <div class="bat-play"><button type="button" class="btn primary bat-play-b batalla" id="batRetarPerfil">${bi('Retar a','Challenge')} ${esc(batNom(otro))}</button></div>`;
+      $('#batVolverLobby').onclick = ()=>{ batPantalla='home'; batPerfilUid=null; renderBatalla(); };
+      $('#batRetarPerfil').onclick = ()=>{ batSel={ op:otro, ses:'asia', dur:30, cuando:null }; batPantalla='setup'; batPerfilUid=null; renderBatalla(); };
+      return;
+    }
+
     /* ── HOME · leaderboard + reto + historial ── */
     root.innerHTML = `
       <div class="bat-lobby-top">
@@ -9494,15 +9544,15 @@ function renderBatalla(){
       </div>
       ${batBannerHTML(c, yo)}
       <button type="button" class="btn primary bat-play-b batalla bat-nuevo" id="batNuevo">${bi('Retar a un socio','Challenge a partner')}</button>
-      <div class="bat-sec-t">${bi('Leaderboard','Leaderboard')}</div>
+      <div class="bat-sec-t">${bi('Leaderboard','Leaderboard')} · ${bi('toca para comparar','tap to compare')}</div>
       <div class="bat-rank">
         ${ranking.map((r,i)=>`
-          <div class="bat-rank-row ${r.uid===yo?'yo':''}">
+          <button type="button" class="bat-rank-row ${r.uid===yo?'yo':''}" data-perfil="${r.uid}">
             <span class="bat-rank-pos ${i===0&&r.g>0?'oro':''}">#${i+1}</span>
             <span class="bat-rank-ava">${caraSocio(r.uid,34)}</span>
             <span class="bat-rank-nom">${esc(batNom(r.uid))}${r.uid===yo?` <em>${bi('(tú)','(you)')}</em>`:''}<i>${r.g}${bi('G','W')} · ${r.p}${bi('P','L')}${r.e?' · '+r.e+bi('E','T'):''}</i></span>
             <span class="bat-rank-pts"><b>${r.g}</b>${bi('ganadas','wins')}</span>
-          </div>`).join('')}
+          </button>`).join('')}
       </div>
       <div class="bat-sec-t">${bi('Historial','History')}</div>
       <div class="bat-hist">
@@ -9519,16 +9569,19 @@ function renderBatalla(){
 
     $('#batNuevo').onclick = () => { batPantalla='setup'; renderBatalla(); };
     $('#batAjustes') && ($('#batAjustes').onclick = () => { batPantalla='ajustes'; renderBatalla(); });
+    root.querySelectorAll('[data-perfil]').forEach(b => b.onclick = () => { if(b.dataset.perfil!==yo){ batPerfilUid=b.dataset.perfil; batPantalla='perfil'; renderBatalla(); } });
     if(c){
       batBannerBind(c, yo);
-      if(c.estado==='invitado' || c.estado==='activo'){
+      if(c.estado==='invitado' || c.estado==='programado' || c.estado==='activo'){
         batTick = setInterval(() => {
           const cc = S.challenge;
           if(!cc){ renderBatalla(); return; }
           if(cc.estado==='volando' || cc.estado==='terminado' || (cc.estado==='activo' && !batMin)){ renderBatalla(); return; }
           if(cc.estado==='cancelado'){ batReset(); return; }
+          if(cc.estado==='programado' && Date.now() >= cc.inicio - 9000){ cc.estado='volando'; batGuarda(); return; }
           if(cc.estado==='activo' && Date.now() >= cc.fin){ renderBatalla(); return; }
-          const bR=$('#bnReloj'), bP=$('#bnProfit');
+          const bR=$('#bnReloj'), bP=$('#bnProfit'), bC=$('#bnCuenta');
+          if(cc.estado==='programado' && bC){ const f=Math.max(0,cc.inicio-Date.now()), dd=Math.floor(f/86400000), h=Math.floor(f%86400000/3600000), m=Math.floor(f%3600000/60000); bC.textContent=dd>0?`${dd}d ${h}h`:(h>0?`${h}h ${m}m`:`${m}m`); }
           if(cc.estado==='activo' && bR){
             const rst=Math.max(0,cc.fin-Date.now()), hh=Math.floor(rst/3600000);
             bR.textContent=(hh>0?String(hh).padStart(2,'0')+':':'')+String(Math.floor(rst%3600000/60000)).padStart(2,'0')+':'+String(Math.floor(rst%60000/1000)).padStart(2,'0');
@@ -9609,22 +9662,33 @@ function renderBatalla(){
 
   /* ── volando: avión a Asia → Tokio con cuenta regresiva ── */
   if(c.estado === 'volando'){
-    const faltan = Math.max(0, c.inicio - Date.now());
-    if(faltan <= 0){ c.estado = 'activo'; batGuarda(); return; }
-    const seg = Math.ceil(faltan/1000);
+    /* EL JET · misma escena que el terminal: cielo por la hora de la ciudad
+       destino + el avión N-NP88 volando. */
     const destino = batDestino(c);
+    const TZ = { asia:'Asia/Tokyo', londres:'Europe/London', ny:'America/New_York' }[c.sesion] || 'Asia/Tokyo';
     root.innerHTML = `
-      <div class="bat-vuelo">
-        <div class="bat-ruta">
-          <span class="bat-ciudad">✈ ${bi('Salida','Home')}</span>
-          <div class="bat-linea"><i class="bat-avion" style="left:${100 - Math.min(100, faltan/9000*100)}%">✈</i></div>
-          <span class="bat-ciudad on">${esc(destino)}</span>
+      <div class="bat-vuelo-jet">
+        <canvas id="batVueloCv" width="1400" height="560"></canvas>
+        <div class="bat-vuelo-lbl">
+          <b>${bi('Rumbo a','Bound for')} ${esc(destino)}</b>
+          <span>${esc(batNom(c.host))} vs ${esc(batNom(c.rival))} · ${esc(batDurTxt(c.duracion))} · <i id="batVueloCount"></i></span>
         </div>
-        <h2>${bi('Rumbo a','Bound for')} ${esc(destino)}…</h2>
-        <div class="bat-count">${seg}</div>
-        <p>${c.party? '👥 '+batJugadores(c).length+' '+bi('jugadores','players') : esc(batNom(c.host))+' <b>vs</b> '+esc(batNom(c.rival))} · ${esc(batDurTxt(c.duracion))}</p>
       </div>`;
-    batTick = setInterval(renderBatalla, 250);
+    const cv = document.getElementById('batVueloCv');
+    const rr = i => ((Math.sin(i*12.9898)*43758.5453)%1+1)%1;
+    const dibuja = () => {
+      const cc = S.challenge;
+      if(!cc || cc.estado!=='volando' || !document.getElementById('batVueloCv')){ return; }
+      const faltan = Math.max(0, cc.inicio - Date.now());
+      if(faltan <= 0){ cc.estado='activo'; batGuarda(); return; }
+      const ctx = cv.getContext('2d'), W=cv.width, H=cv.height;
+      let minLocal = 780; try{ minLocal = minutosEn(TZ); }catch(e){}
+      try{ pintaCielo(ctx, W, H, minLocal, rr); }catch(e){ ctx.fillStyle='#141733'; ctx.fillRect(0,0,W,H); }
+      try{ trasladoJet(ctx, W, H, performance.now(), {}, rr, 1-Math.min(1,faltan/9000)); }catch(e){}
+      const el=document.getElementById('batVueloCount'); if(el) el.textContent = Math.ceil(faltan/1000)+'s';
+      batVueloRAF = requestAnimationFrame(dibuja);
+    };
+    cancelAnimationFrame(batVueloRAF); batVueloRAF = requestAnimationFrame(dibuja);
     return;
   }
 
