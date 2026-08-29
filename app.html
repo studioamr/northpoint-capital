@@ -1738,21 +1738,29 @@ button.st-chip:hover{border-color:rgba(255,255,255,.45)}
 /* bloque de páginas asomando por la derecha */
 .nbk::after{content:'';position:absolute;right:-4px;top:8px;bottom:8px;width:6px;border-radius:0 3px 3px 0;
   background:repeating-linear-gradient(#e9e6dd,#e9e6dd 1.5px,#cfc9ba 2.6px);box-shadow:1px 0 3px rgba(0,0,0,.28)}
-.nbk-cover{position:absolute;inset:0;border-radius:4px 9px 9px 4px;overflow:hidden;
+/* ── réplica de cuero negro, adaptada a NorthPoint ── */
+.nbk-cover{position:absolute;inset:0;border-radius:6px 9px 9px 6px;overflow:hidden;
   background:
-    radial-gradient(120% 90% at 30% 20%,#25282d 0%,#17191d 46%,#0d0f12 100%);
-  border:1px solid #2a2d33;
-  box-shadow:0 22px 40px -10px rgba(0,0,0,.6),inset 0 0 0 1px rgba(255,255,255,.04),
-    inset 9px 0 14px -6px rgba(0,0,0,.55),inset -1px -2px 4px rgba(255,255,255,.05)}
-/* textura sutil de tela/cuero */
-.nbk-cover::before{content:'';position:absolute;inset:0;opacity:.5;pointer-events:none;
-  background-image:repeating-linear-gradient(90deg,rgba(255,255,255,.018) 0 1px,transparent 1px 3px),
-    repeating-linear-gradient(0deg,rgba(0,0,0,.05) 0 1px,transparent 1px 3px)}
-/* marco debossado */
-.nbk-cover::after{content:'';position:absolute;inset:12px;border:1px solid rgba(255,255,255,.07);border-radius:4px;
-  box-shadow:inset 0 1px 1px rgba(0,0,0,.4);pointer-events:none}
-.nbk-plate{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#eef1f5;z-index:2;padding:0 22px;text-align:center}
-.nbk-title{font-family:var(--sans,inherit);font-size:11px;font-weight:800;letter-spacing:.24em;text-shadow:0 1px 1px rgba(0,0,0,.6)}
+    radial-gradient(150% 110% at 16% 10%,rgba(255,255,255,.08),transparent 44%),
+    repeating-linear-gradient(37deg,rgba(255,255,255,.014) 0 2px,transparent 2px 5px),
+    repeating-linear-gradient(-21deg,rgba(0,0,0,.2) 0 1px,transparent 1px 4px),
+    repeating-radial-gradient(circle at 60% 40%,rgba(255,255,255,.012) 0 1.5px,transparent 1.5px 4px),
+    linear-gradient(148deg,#141518 0%,#0a0b0d 52%,#040506 100%);
+  border:1px solid #1e2025;
+  box-shadow:0 18px 34px -8px rgba(0,0,0,.65),inset 0 0 46px rgba(0,0,0,.8),inset 0 1px 0 rgba(255,255,255,.06);
+  display:block}
+/* lomo con pliegue de cuero */
+.nbk-cover::before{content:'';position:absolute;left:7px;top:0;bottom:0;width:2px;pointer-events:none;
+  background:linear-gradient(rgba(0,0,0,.55),rgba(0,0,0,.3),rgba(0,0,0,.55));box-shadow:1px 0 1px rgba(255,255,255,.04)}
+.nbk-plate{position:absolute;left:0;right:0;top:30px;display:flex;justify-content:center;z-index:2;padding:0 10px}
+.nbk-title{display:inline-flex;color:#f4f5f7;font-family:'Chalkduster','Bradley Hand','Segoe Print','Comic Sans MS',cursive;
+  font-size:15px;font-weight:400;letter-spacing:.02em;white-space:nowrap;
+  text-shadow:0 0 1px rgba(255,255,255,.55),0 1px 3px rgba(0,0,0,.9)}
+.nbk-title i{font-style:normal;display:inline-block}
+.nbk-title i:nth-child(odd){transform:rotate(-5deg) translateY(-1.2px)}
+.nbk-title i:nth-child(even){transform:rotate(4deg) translateY(1.2px)}
+.nbk-title i:nth-child(3n){transform:rotate(7deg) translateY(-.6px) scale(1.06)}
+.nbk-title i:nth-child(5n){transform:rotate(-8deg) translateY(1.6px) scale(.94)}
 /* liga elástica de cierre */
 .nbk-band{position:absolute;top:-2px;bottom:-2px;right:20px;width:11px;z-index:3;
   background:linear-gradient(90deg,rgba(0,0,0,.35),rgba(30,32,36,.92) 40%,rgba(12,13,15,.95));
@@ -9426,11 +9434,11 @@ function libretaEstado(){
 }
 /* Portada de cuaderno real (tapa dura NorthPoint) — se reutiliza cerrada en el hero y en las lecciones */
 function libretaCerradaHTML(){
+  const letras = 'NORTHPOINT'.split('').map(l=>`<i>${l}</i>`).join('');
   return `<div class="nbk">
     <div class="nbk-cover">
-      <span class="nbk-band"></span>
       <div class="nbk-plate">
-        <b class="nbk-title">NORTHPOINT</b>
+        <b class="nbk-title">${letras}</b>
       </div>
     </div>
   </div>`;
@@ -9917,7 +9925,8 @@ function batBanco(u){ const st=batStackObj();
   return st[u];
 }
 function batPico(u){ batBanco(u); return S.batPico[u]; }
-function batStackSet(u,val){ const st=batStackObj(); st[u]=Math.max(0,Math.round(val)); if(st[u]>(S.batPico[u]||0)) S.batPico[u]=st[u]; }
+const BAT_BIENVENIDA = 50000; /* la feria de bienvenida al registrarte */
+function batStackSet(u,val){ const st=batStackObj(); st[u]=Math.round(val); if(st[u]>(S.batPico[u]||0)) S.batPico[u]=st[u]; }
 /* quiebra: tu stack vuelve al inicial (las katanas son tu récord de victorias, no se pierden) */
 function batQuiebra(u){ const st=batStackObj(); st[u]=BAT_STACK_INI; S.batPico[u]=BAT_STACK_INI; if(S.batEquipada) delete S.batEquipada[u]; }
 /* las katanas son COLECCIONABLES que se desbloquean GANANDO PARTIDAS:
@@ -9966,8 +9975,8 @@ function batRegistraResultado(c){
     batStackSet(u, batBanco(u)+pago);
     try{ if(u===yo) window._batPagoFlash={monto:pago, mult:(c.mult||1)}; }catch(e){}
   };
-  const cobra=(u)=>{ /* si pierdes, pagas el fee fijo */
-    batStackSet(u, Math.max(0, batBanco(u)-BAT_FEE));
+  const cobra=(u)=>{ /* si pierdes, pagas el fee fijo — el banco SÍ puede irse a rojo */
+    batStackSet(u, batBanco(u)-BAT_FEE);
     try{ if(u===yo) window._batFeeFlash={monto:BAT_FEE}; }catch(e){}
   };
 
@@ -11322,7 +11331,7 @@ function renderBatalla(){
           </button>
           <div class="stage-stats">
             <div class="st-chip wins"><em>${bi('VICTORIAS','WINS')}</em><b>${mi.g||0}</b></div>
-            <div class="st-chip bank"><em>BANK</em><b>${fmt$(banco)}</b></div>
+            <div class="st-chip bank"><em>BANK</em><b style="color:${banco>=0?'#6fe39a':'#ff6a5e'}">${fmt$(banco)}</b></div>
             <button type="button" class="st-chip armas" id="stArsenal" style="--kc:${KATANAS[kEquipIdx].belt}"><em>${bi('EQUIPADA','EQUIPPED')}</em><b class="st-sw">${katanaSVG(KATANAS[kEquipIdx].belt,true)}<span style="color:${KATANAS[kEquipIdx].belt}">${loc(KATANAS[kEquipIdx].n)}</span></b></button>
             <button type="button" class="st-gear" id="batAjustes" aria-label="${bi('Ajustes','Settings')}"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="3.2"/><path d="M12 3v2.5M12 18.5V21M4.2 7l2.2 1.3M17.6 15.7l2.2 1.3M4.2 17l2.2-1.3M17.6 8.3l2.2-1.3"/></svg></button>
           </div>
@@ -11334,7 +11343,7 @@ function renderBatalla(){
         </div>
         ${window._batArsenal?`
         <div class="ars-ov">
-          <div class="ars-top"><b>${bi('Tu colección','Your collection')}</b><span class="ars-cash">${fmt$(banco)} ${bi('en el banco','in the bank')}</span><button type="button" class="ars-x" id="arsX" aria-label="${bi('cerrar','close')}">✕</button></div>
+          <div class="ars-top"><b>${bi('Tu colección','Your collection')}</b><span class="ars-cash" style="color:${banco>=0?'#6fe39a':'#ff6a5e'}">${fmt$(banco)} ${bi('en el banco','in the bank')}</span><button type="button" class="ars-x" id="arsX" aria-label="${bi('cerrar','close')}">✕</button></div>
           <div class="ars-grid">
             ${KATANAS.map((k,i)=>{ const owned=miKat.includes(k.id), cur=(i===kEquipIdx&&owned), alcanza=banco>=k.precio;
               return `<div class="ars-card ${owned?'owned':'locked'} ${cur?'cur':''}" style="--kc:${k.belt}">
@@ -11416,25 +11425,23 @@ function renderBatalla(){
               </div>
               ${esYo?`<button type="button" class="ars-eq perf-edit" data-njedit>${bi('Editar mi ninja','Edit my ninja')}</button>`:''}
             </div>
+            <div class="evt-sec">${bi('NÚMEROS','THE NUMBERS')}</div>
             <div class="perf-grid">
               <div class="perf-st"><em>${bi('VICTORIAS','WINS')}</em><b>${s.g||0}</b></div>
               <div class="perf-st"><em>${bi('DERROTAS','LOSSES')}</em><b>${s.p||0}</b></div>
-              <div class="perf-st"><em>BANK</em><b>${fmt$(batBanco(u))}</b></div>
-              <div class="perf-st"><em>${bi('COLECCIÓN','COLLECTION')}</em><b>${kw.length}/${KATANAS.length}</b></div>
-            </div>
-            <div class="evt-sec">${bi('PERFORMANCE DE BATTLES','BATTLES PERFORMANCE')}</div>
-            <div class="perf-grid">
               <div class="perf-st"><em>${bi('WINRATE','WINRATE')}</em><b>${wr}%</b></div>
               <div class="perf-st"><em>${bi('RACHA','STREAK')}</em><b>${rachaA||'—'}</b></div>
+              <div class="perf-st"><em>BANK</em><b style="color:${batBanco(u)>=0?'#6fe39a':'#ff6a5e'}">${fmt$(batBanco(u))}</b></div>
+              <div class="perf-st"><em>${bi('COLECCIÓN','COLLECTION')}</em><b>${kw.length}/${KATANAS.length}</b></div>
               <div class="perf-st"><em>${bi('P&L EN DUELOS','DUEL P&L')}</em><b style="color:${pTot>=0?'#6fe39a':'#ff6a5e'}">${fmt$(pTot,true)}</b></div>
               <div class="perf-st"><em>${bi('MEJOR DUELO','BEST DUEL')}</em><b>${best!=null?fmt$(best,true):'—'}</b></div>
             </div>
-            ${bars.length>1?`<div class="perf-eq"><canvas id="perfEq" width="680" height="190"></canvas><span class="perf-eq-l">${bi('Progreso desde el inicio · P&L acumulado de duelos','Progress since day one · cumulative duel P&L')}</span></div>`:''}
+            <div class="evt-sec">${bi('PROGRESO','PROGRESS')}</div>
+            ${bars.length>1?`<div class="perf-eq"><canvas id="perfEq" width="680" height="190"></canvas><span class="perf-eq-l">${bi('P&L acumulado de duelos desde el inicio','Cumulative duel P&L since day one')}</span></div>`:`<div class="evt-vacio">${bi('Todavía no hay suficientes duelos','Not enough duels yet')}</div>`}
             ${esYo?'':`
             <div class="evt-sec">${bi('CARA A CARA CONTIGO','HEAD TO HEAD VS YOU')}</div>
-            <div class="perf-h2h"><div><b>${h2.wa}</b><span>${bi('tuyas','yours')}</span></div><div class="perf-h2h-m">${h2.n} ${bi('duelos','duels')}${h2.emp?' · '+h2.emp+' '+bi('empates','ties'):''}</div><div><b>${h2.wb}</b><span>${bi('suyas','theirs')}</span></div></div>
-            <button type="button" class="btn primary stage-btn" data-perfretar="${u}" style="width:100%">${bi('Retar a','Challenge')} ${esc(batNom(u))}</button>`}
-            <div class="evt-sec">${bi('HISTORIAL','HISTORY')}</div>
+            <div class="perf-h2h"><div><b>${h2.wa}</b><span>${bi('tuyas','yours')}</span></div><div class="perf-h2h-m">${h2.n} ${bi('duelos','duels')}${h2.emp?' · '+h2.emp+' '+bi('empates','ties'):''}</div><div><b>${h2.wb}</b><span>${bi('suyas','theirs')}</span></div></div>`}
+            <div class="evt-sec">${bi('DUELOS RECIENTES','RECENT DUELS')}</div>
             ${histU.length? histU.map(x=>{ const h=x.h; const gn=h.ganador?batNom(h.ganador):bi('Empate','Tie');
               const fd=new Date(h.ts||Date.now()), fdd=fd.getDate(), fdm=fd.toLocaleDateString(idi()==='es'?'es-MX':'en-US',{month:'short'}).replace('.','').toUpperCase();
               const fecha=`<span class="evt-fecha"><b>${fdd}</b><i>${fdm}</i></span>`;
@@ -11478,8 +11485,10 @@ function renderBatalla(){
     /* ── crear / editar tu ninja ── */
     root.querySelectorAll('[data-njk]').forEach(b=> b.onclick=()=>{ window._njCfg[b.dataset.njk]=b.dataset.njv; renderBatalla(); });
     $('#njOk') && ($('#njOk').onclick = () => { S.batNinja=S.batNinja||{}; const nuevo=!S.batNinja[yo];
-      S.batNinja[yo]={...window._njCfg}; save(); window._batCrearNinja=false;
-      toast('🥷 '+(nuevo?bi('¡Tu ninja está listo. Bienvenido al dojo!','Your ninja is ready. Welcome to the dojo!'):bi('Ninja actualizado','Ninja updated'))); renderBatalla(); });
+      S.batNinja[yo]={...window._njCfg};
+      if(nuevo){ batStackSet(yo, batBanco(yo)+BAT_BIENVENIDA); window._batPagoFlash={monto:BAT_BIENVENIDA,mult:1,bienvenida:true}; }
+      save(); window._batCrearNinja=false;
+      toast(nuevo?bi('Tu ninja está listo · feria de bienvenida: +'+fmt$(BAT_BIENVENIDA),'Your ninja is ready · welcome bonus: +'+fmt$(BAT_BIENVENIDA)):bi('Ninja actualizado','Ninja updated')); renderBatalla(); });
     $('#njX') && ($('#njX').onclick = () => { window._batCrearNinja=false; window._njCfg=null; renderBatalla(); });
     root.querySelectorAll('[data-njedit]').forEach(b=> b.onclick=()=>{ window._njCfg={...((S.batNinja||{})[yo]||NJ_DEF)}; window._batCrearNinja=true; window._batPerfil=null; renderBatalla(); });
     /* preview del ninja en vivo */
@@ -11549,7 +11558,7 @@ function renderBatalla(){
     if(window._batPagoFlash){ const f=window._batPagoFlash; window._batPagoFlash=null; window._batWinFlash=null;
       const el=root.querySelector('.st-chip.bank'); if(el) el.classList.add('elo-up');
       if(typeof animaBotin==='function') setTimeout(()=>animaBotin(batBanco(yo), f.monto), 200);
-      setTimeout(()=>toast('🏆 '+bi('Victoria · te pagaron','Victory · you got paid')+' '+fmt$(f.monto)+(f.mult>1?' (×'+f.mult+')':'')), 340);
+      if(!f.bienvenida) setTimeout(()=>toast(bi('Victoria · te pagaron','Victory · you got paid')+' '+fmt$(f.monto)+(f.mult>1?' (×'+f.mult+')':'')), 340);
     } else if(window._batFeeFlash){ const f=window._batFeeFlash; window._batFeeFlash=null; window._batWinFlash=null;
       const el=root.querySelector('.st-chip.bank'); if(el) el.classList.add('elo-down');
       setTimeout(()=>toast('▼ '+bi('Derrota · fee','Loss · fee')+' −'+fmt$(f.monto)), 340);
