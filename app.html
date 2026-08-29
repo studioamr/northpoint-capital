@@ -2526,7 +2526,12 @@ button.tag.quemada{text-decoration:line-through;text-decoration-color:var(--down
 .ag-form-l{font-family:var(--mono);font-size:8.5px;letter-spacing:.14em;color:var(--faint);display:block;margin-bottom:4px}
 .ag-form b{font-family:var(--mono);font-size:11px;color:var(--txt)}
 .ag-form-s{font-size:10.5px;color:var(--faint);margin-top:4px;line-height:1.45}
-.ag-oficina-wrap{border:1px solid var(--line);border-radius:14px;overflow:hidden;margin-bottom:18px;background:#0E1018;line-height:0}
+.ag-oficina-wrap{position:relative;border:1px solid var(--line);border-radius:14px;overflow:hidden;margin-bottom:18px;background:#0E1018;line-height:0}
+.ofi-escena{position:absolute;top:12px;left:12px;display:flex;gap:6px;flex-wrap:wrap;z-index:2}
+.ofi-escena button{font-family:var(--mono);font-size:10.5px;letter-spacing:.06em;color:rgba(255,255,255,.72);
+  background:rgba(10,14,22,.55);border:1px solid rgba(255,255,255,.16);border-radius:8px;padding:6px 10px;cursor:pointer;backdrop-filter:blur(6px);transition:all .14s}
+.ofi-escena button:hover{color:#fff;border-color:rgba(255,255,255,.4)}
+.ofi-escena button.on{background:var(--accent);border-color:var(--accent);color:#08111f}
 #agOficina{display:block;width:100%;height:auto}
 
 .duties{
@@ -3293,6 +3298,13 @@ stop[stop-color="#9BC0DC"]{stop-color:var(--txt)}
         <div class="ag-oficina-wrap">
           <canvas id="agOficina" width="1800" height="1160" aria-label="The Northpoint office — 88th floor, New York"></canvas>
           <div id="horaNY" aria-label="Hora de Nueva York"></div>
+          <div class="ofi-escena" id="ofiEscena" role="group" aria-label="Escena">
+            <button type="button" data-esc="auto">Auto</button>
+            <button type="button" data-esc="tokio">Tokio</button>
+            <button type="button" data-esc="londres">Londres</button>
+            <button type="button" data-esc="nyc">N. York</button>
+            <button type="button" data-esc="casa">Casa</button>
+          </div>
         </div>
 
         <!-- El tablero del negocio: el camino a payout con el proceso de
@@ -13618,6 +13630,25 @@ const TRAMOS = [
 ];
 const VUELO_MIN = 25;                     // lo que dura el traslado en pantalla
 
+/* ESCENA ELEGIDA A MANO en The Desk. 'auto' = el reloj real manda; si no, se
+   fuerza el jet cruzando sobre esa ciudad, o la casa del fin de semana. */
+function deskEscenaDe(){
+  const e = (S.ui && S.ui.deskEscena) || 'auto';
+  if(e === 'auto') return null;
+  if(e === 'casa') return { tipo:'finde', esc:'casa', c:'nyc', finde:true };
+  return { tipo:'vuelo', crucero:true, de:e, a:e, c:e, sig:'londres', restan:210, prog:.45 };
+}
+function marcaOfiEscena(){
+  const cur = (S.ui && S.ui.deskEscena) || 'auto';
+  document.querySelectorAll('#ofiEscena button').forEach(b => b.classList.toggle('on', b.dataset.esc === cur));
+}
+document.addEventListener('click', e => {
+  const b = e.target.closest && e.target.closest('#ofiEscena button');
+  if(!b) return;
+  S.ui = S.ui || {}; S.ui.deskEscena = b.dataset.esc; try{ save(); }catch(_){}
+  marcaOfiEscena();
+  try{ if(typeof animaOficina === 'function') animaOficina(); else dibujaOficina(performance.now()); }catch(_){}
+});
 function escenaAhora(now = new Date()){
   /* El reloj que manda es el de Nueva York: las sesiones son del mercado, no de
      donde esté sentado quien mira. Antes se usaba la hora local del equipo y en
@@ -14204,7 +14235,7 @@ function dibujaOficina(t){
      el cielo la sigue. Al cerrar la sesión (botón o fin del tramo) se sube
      solo: el estado se resetea con la LLAVE ciudad+día, no con un timer. */
 
-  const E = escenaAhora();
+  const E = deskEscenaDe() || escenaAhora();
   /* la hora de NY, fija abajo a la izquierda — el reloj del MERCADO,
      independiente del reloj de escena (México en el jet / ciudad al bajar) */
   const hNY = $('#horaNY');
@@ -14235,6 +14266,7 @@ function dibujaOficina(t){
 
 function animaOficina(){
   const cv = $('#agOficina'); if(!cv) return;
+  if(typeof marcaOfiEscena === 'function') marcaOfiEscena();
   cancelAnimationFrame(ofiRAF);
   const paso = 4200;                      // cada mensaje dura ~4.2s
   const t0 = performance.now();
