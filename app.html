@@ -1444,10 +1444,30 @@ body.locked .app{visibility:hidden;pointer-events:none}
 .lec-cargando{max-width:760px;margin:0 auto;padding:60px 22px;text-align:center;font-family:var(--mono);font-size:13px;color:var(--faint);line-height:1.8}
 /* cuaderno AL LADO de la lección: documento a la izq, libreta a la der (compu) */
 /* ── Libreta paginada (autoguardado) ── */
-.ac2-libreta-btn{margin-top:14px;display:inline-flex;align-items:center;gap:8px;padding:11px 18px;border-radius:12px;border:1px solid var(--line);background:var(--w04);color:var(--txt);font-size:14px;font-weight:800;cursor:pointer;box-shadow:0 3px 0 rgba(0,0,0,.25);transition:transform .08s}
-.ac2-libreta-btn:hover{border-color:var(--accent)}
-.ac2-libreta-btn:active{transform:translateY(2px)}
-.ac2-libreta-btn em{font-style:normal;font-family:var(--mono);font-size:10px;font-weight:600;color:var(--faint)}
+/* Libreta cerrada de pasta dura */
+.ac2-book{flex:0 0 auto;display:flex;flex-direction:column;align-items:center;gap:9px;cursor:pointer;perspective:800px;padding:4px 2px}
+.ac2-book:focus-visible{outline:2px solid var(--accent);outline-offset:6px;border-radius:10px}
+.nbk{position:relative;width:132px;height:172px;transform:rotateY(-16deg) rotateX(4deg);transform-style:preserve-3d;transition:transform .4s cubic-bezier(.4,1,.4,1)}
+.ac2-book:hover .nbk{transform:rotateY(-7deg) rotateX(2deg) translateY(-3px)}
+.nbk-cover{position:absolute;inset:0;border-radius:5px 10px 10px 5px;
+  background:linear-gradient(135deg,#242833 0%,#12151c 55%,#080a0f 100%);
+  border:1px solid rgba(255,255,255,.09);
+  box-shadow:0 18px 34px rgba(0,0,0,.5),inset 0 0 0 1px rgba(255,255,255,.05),inset 10px 0 16px rgba(0,0,0,.45),inset -1px -1px 3px rgba(255,255,255,.06);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;color:#e9edf4;z-index:2;overflow:hidden}
+.nbk-cover::after{content:'';position:absolute;inset:9px;border:1px solid rgba(201,214,236,.16);border-radius:3px;pointer-events:none}
+.nbk-mono{font-size:23px;opacity:.62;filter:drop-shadow(0 1px 1px rgba(0,0,0,.5))}
+.nbk-title{font-size:14px;font-weight:900;letter-spacing:.16em;text-shadow:0 1px 2px rgba(0,0,0,.6),0 0 1px rgba(220,230,248,.4)}
+.nbk-rule{width:38px;height:1px;background:linear-gradient(90deg,transparent,rgba(201,214,236,.55),transparent)}
+.nbk-sub{font-family:var(--mono);font-size:7.5px;letter-spacing:.32em;color:#8fa6c4}
+.nbk-spine{position:absolute;left:-3px;top:1px;bottom:1px;width:11px;border-radius:5px 0 0 5px;
+  background:linear-gradient(90deg,#000 0%,#20242c 60%,#0a0c11 100%);
+  box-shadow:2px 0 7px rgba(0,0,0,.45),inset -1px 0 2px rgba(255,255,255,.05);z-index:3}
+.nbk-pages{position:absolute;right:-5px;top:6px;bottom:6px;width:7px;border-radius:0 4px 4px 0;
+  background:repeating-linear-gradient(#efeade,#efeade 1.5px,#d2c8ae 2.5px);
+  box-shadow:1px 0 3px rgba(0,0,0,.3);z-index:1}
+.nbk-ribbon{position:absolute;top:-4px;right:30px;width:10px;height:46px;
+  background:linear-gradient(#c8443c,#8f2a24);box-shadow:0 2px 3px rgba(0,0,0,.35);border-radius:0 0 2px 2px;z-index:4}
+.nbk-lbl{font-family:var(--mono);font-size:10px;letter-spacing:.06em;color:var(--faint)}
 /* libreta con estética NorthPoint · B&N según el theme (negro/tinta blanca ↔ blanco/tinta negra) */
 .lib-ov{position:fixed;inset:0;z-index:9200;background:rgba(2,3,5,.8);backdrop-filter:blur(7px);display:flex;align-items:center;justify-content:center;padding:18px;animation:fichaIn .18s ease;
   --lib-bg:#0b0c0f;--lib-ink:#eef1f5;--lib-line:rgba(255,255,255,.09);--lib-bar:#070809;--lib-brd:rgba(255,255,255,.14);--lib-dim:rgba(238,241,245,.55);--lib-btn:rgba(255,255,255,.06)}
@@ -9023,7 +9043,20 @@ function renderAcademia(){
         <div class="ac2-hs"><b>${modsDone}/${acadModsPlano().length}</b><span>${bi('módulos','modules')}</span></div>
         <div class="ac2-hs"><b>${ACADEMIA.length}</b><span>${bi('programas','programs')}</span></div>
       </div>
-      <button type="button" class="ac2-libreta-btn" id="acLibreta">📓 ${bi('Mi libreta','My notebook')} <em>${bi('notas · '+libretaEstado().paginas.length+' hojas','notes · '+libretaEstado().paginas.length+' pages')}</em></button>
+    </div>
+    <div class="ac2-book" id="acLibreta" role="button" tabindex="0" title="${bi('Abrir libreta','Open notebook')}">
+      <div class="nbk">
+        <div class="nbk-pages"></div>
+        <div class="nbk-cover">
+          <span class="nbk-ribbon"></span>
+          <span class="nbk-mono">◆</span>
+          <b class="nbk-title">NORTHPOINT</b>
+          <span class="nbk-rule"></span>
+          <span class="nbk-sub">${bi('LIBRETA','NOTEBOOK')}</span>
+        </div>
+        <div class="nbk-spine"></div>
+      </div>
+      <span class="nbk-lbl">${bi('notas','notes')} · ${libretaEstado().paginas.length} ${bi('hojas','pages')}</span>
     </div>
   </div>`;
 
@@ -9090,7 +9123,7 @@ function renderAcademia(){
     e.stopPropagation();
     abreLeccion(a.dataset.abrir);
   }));
-  $('#acLibreta') && ($('#acLibreta').onclick = abreLibreta);
+  $('#acLibreta') && ($('#acLibreta').onclick = abreLibreta, $('#acLibreta').onkeydown = e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); abreLibreta(); } });
 }
 /* ══ LIBRETA · un cuaderno real, paginado, que se guarda hoja por hoja ══ */
 function libretaEstado(){
@@ -10746,9 +10779,8 @@ function renderBatalla(){
         </div>
       </div>
       <div class="bat-tabs2" id="batTabs2">
-        <button type="button" class="bat-tab2 on" data-slide="0">🗡️ ${bi('Katanas','Katanas')}</button>
-        <button type="button" class="bat-tab2" data-slide="1">🏆 ${bi('Arenas','Arenas')}</button>
-        <button type="button" class="bat-tab2" data-slide="2">📅 ${bi('Eventos','Events')}</button>
+        <button type="button" class="bat-tab2 on" data-slide="0">🗡️ ${bi('Colección','Collection')}</button>
+        <button type="button" class="bat-tab2" data-slide="1">📅 ${bi('Eventos','Events')}</button>
       </div>
       <div class="bat-slides" id="batSlides">
       <div class="bat-slide">
@@ -10782,16 +10814,7 @@ function renderBatalla(){
           <span class="kat-prog-txt">${bi('progreso','progress')} · ${kActualIdx+1}/${KATANAS.length}</span>
         </div>
       </div>
-      </div><!--/slide katanas-->
-      <div class="bat-slide">
-        <div class="ar-wrap">
-          <div class="ar-now"><span class="ar-ico">${ARENAS_L[arIdx].ico}</span>
-            <div class="ar-now-i"><span>${bi('Tu arena','Your arena')} · ${arIdx+1}/${ARENAS_L.length}</span><b>${loc(ARENAS_L[arIdx].nom)}</b></div>
-            <div class="ar-tro"><b>🏆 ${trofeos}</b><span>${arNext?bi('sigue subiendo','keep climbing'):bi('cima','summit')}</span></div></div>
-          ${arNext?`<div class="ar-next">${bi('Para subir a','Unlock')} <b>${loc(arNext.nom)}</b> ${bi('consigue la katana','get the')} <b style="color:${katDe(arNext.kat).belt}">${loc(katDe(arNext.kat).n)}</b> · ${fmt$(katDe(arNext.kat).precio)}</div>`:''}
-          <div class="ar-ladder">${ARENAS_L.map((a,i)=>{ const k=katDe(a.kat), tengo=miKat.includes(a.kat); return `<div class="ar-step ${i<arIdx?'done':i===arIdx?'cur':'lock'}"><span class="ar-step-ico">${tengo?a.ico:'🔒'}</span><div class="ar-step-i"><b>${loc(a.nom)}</b><span style="color:${k.belt}">🗡️ ${loc(k.n)}${tengo?'':' · '+fmt$(k.precio)}</span></div>${i===arIdx?`<span class="ar-step-tag">${bi('AQUÍ','HERE')}</span>`:tengo?'<span class="ar-step-ok">✓</span>':''}</div>`;}).join('')}</div>
-        </div>
-        <div class="bat-sec-t">${bi('Tabla de la mesa','Desk leaderboard')} · ${bi('toca un perfil','tap a profile')}</div>
+        <div class="bat-sec-t">${bi('Jugadores de la mesa','Desk players')} · ${bi('toca un perfil','tap a profile')}</div>
         <div class="bat-jugs">
           ${ranking.map((r,i)=>{
           const kw=batKatanasDe(r.uid), curI=KATANAS.reduce((mx,k,ix)=> kw.includes(k.id)?ix:mx,0), curK=KATANAS[curI];
@@ -10822,7 +10845,7 @@ function renderBatalla(){
           </div>`;
         }).join('') : `<div class="bat-hist-vacio">${bi('Aún no hay batallas. ¡Reta a alguien!','No battles yet. Challenge someone!')}</div>`}
         </div>
-      </div><!--/slide arenas-->
+      </div><!--/slide coleccion-->
       <div class="bat-slide">
         <div class="bat-sec-t">${bi('Hoy','Today')}</div>
         ${c ? `<div class="ev-bar activo"><span class="ev-ico">⚔️</span><div class="ev-txt"><b>${c.estado==='activo'?bi('Batalla en curso','Battle live'):bi('Reto agendado','Scheduled challenge')}</b><span>${esc(batRetoTxt(c))}</span></div></div>` : `<div class="ev-vacio">${bi('Sin eventos hoy · reta a la mesa','No events today · challenge the desk')}</div>`}
