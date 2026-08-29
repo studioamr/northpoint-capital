@@ -10185,7 +10185,12 @@ function batRegistraResultado(c){
       else if(empate && r.p===top){ st[r.u].e++; }
       else { st[r.u].p++; if(gan) cobra(r.u); } });
     batJugadores(c).forEach(batStamp);
-    batHist().unshift({ id:'h'+Date.now().toString(36)+Math.random().toString(36).slice(2,6), ts:Date.now(), party:true, jugadores:batJugadores(c), ganador:gan, marcadores:rank, dur:c.duracion });
+    /* id DETERMINÍSTICO del propio reto: si los dos equipos resuelven el mismo
+       duelo antes de sincronizar entre sí (carrera real, ambos sin red en el
+       mismo instante), cada quien generaba un id al azar para el MISMO duelo
+       y el historial quedaba duplicado tras fusionar — el dinero convergía
+       bien (por sello por usuario) pero el registro contaba el duelo dos veces. */
+    batHist().unshift({ id:'h_'+c.id, ts:Date.now(), party:true, jugadores:batJugadores(c), ganador:gan, marcadores:rank, dur:c.duracion });
     if(S.batHistorial.length > 40) S.batHistorial.length = 40;
     save(); return;
   }
@@ -10204,7 +10209,7 @@ function batRegistraResultado(c){
     try{ if(yo===gan) window._batWinFlash={g:st[gan].g}; }catch(e){}
   } else { st[c.host].e++; st[c.rival].e++; }
   batStamp(c.host); batStamp(c.rival);
-  batHist().unshift({ id:'h'+Date.now().toString(36)+Math.random().toString(36).slice(2,6), ts:Date.now(), host:c.host, rival:c.rival, ganador:gan, pHost:pH, pRival:pR, dur:c.duracion });
+  batHist().unshift({ id:'h_'+c.id, ts:Date.now(), host:c.host, rival:c.rival, ganador:gan, pHost:pH, pRival:pR, dur:c.duracion });
   if(S.batHistorial.length > 40) S.batHistorial.length = 40;
   save();
 }
