@@ -9465,7 +9465,7 @@ function renderKata(){
     let lastK=0;
     const njCfg=(typeof batNinjaDe==='function')?batNinjaDe((typeof batYo==='function'?batYo():'')||''):null;
     const beltCol=(typeof batEquipadaDe==='function' && typeof KATANAS!=='undefined')?KATANAS[batEquipadaDe(batYo())].belt:'#c7ccd4';
-    const pintaK=(t)=>{ if(!kcv.isConnected) return;
+    const pintaK=(t)=>{ if(!kcv.isConnected) return; if(kcv.offsetParent===null){ window._kataRAF=requestAnimationFrame(pintaK); return; }
       const dt=Math.min(0.05,(t-lastK)/1000)||0.016; lastK=t;
       const base=KH*0.78;
       const g=kx.createLinearGradient(0,0,0,KH);
@@ -11180,7 +11180,7 @@ function batPintaZen(){
   if(!window._zenPart){ const p=[]; for(let i=0;i<28;i++) p.push({x:Math.random()*W,y:Math.random()*H,s:4+Math.random()*6,sp:.3+Math.random()*.9,dr:Math.random()*6,sw:.4+Math.random()*.9}); window._zenPart=p; }
   const pet=window._zenPart;
   const poderHex=KATANAS[_iv].belt;
-  function frame(now){ zenDibujaEscena(c,W,H,E,now,pet,poderHex); if(cv.isConnected) window._zenRAF=requestAnimationFrame(frame); }
+  function frame(now){ if(!cv.isConnected) return; if(cv.offsetParent===null){ window._zenRAF=requestAnimationFrame(frame); return; } zenDibujaEscena(c,W,H,E,now,pet,poderHex); window._zenRAF=requestAnimationFrame(frame); }
   window._zenRAF=requestAnimationFrame(frame);
 }
 /* ══ CEREMONIAS ══ los tres momentos grandes, a pantalla completa:
@@ -11966,7 +11966,7 @@ function renderBatalla(){
       const aves2=[]; for(let i=0;i<3;i++) aves2.push({cx:OW*(0.3+i*0.2), cy:OH*(0.3+rr2(i,18)*0.08), r:26+rr2(i,19)*30, f:rr2(i,20)*6.3, v:(i%2?1:-1)*(0.00025+rr2(i,21)*0.0002)});
       const AP={x:OW*0.5, y:OH*0.335};   /* la cima */
       let last=0;
-      const pintaO=(t)=>{ if(!ocv.isConnected) return;
+      const pintaO=(t)=>{ if(!ocv.isConnected) return; if(ocv.offsetParent===null){ window._onbRAF=requestAnimationFrame(pintaO); return; }
         const dt=Math.min(0.05,(t-last)/1000)||0.016; last=t;
         /* cielo profundo */
         const g=ox.createLinearGradient(0,0,0,OH);
@@ -12053,7 +12053,7 @@ function renderBatalla(){
     /* preview del ninja en vivo */
     const njcv=$('#njCv'); cancelAnimationFrame(window._njRAF||0);
     if(njcv){ const nx=njcv.getContext('2d');
-      const pintaNj=(t)=>{ if(!njcv.isConnected) return; nx.clearRect(0,0,240,240);
+      const pintaNj=(t)=>{ if(!njcv.isConnected) return; if(njcv.offsetParent===null){ window._njRAF=requestAnimationFrame(pintaNj); return; } nx.clearRect(0,0,240,240);
         nx.fillStyle='rgba(255,255,255,.06)'; nx.beginPath(); nx.ellipse(120,212,66,12,0,0,7); nx.fill();
         zenNinja(nx,116,206,4.4,t||0,0,KATANAS[kEquipIdx].belt,window._njCfg);
         window._njRAF=requestAnimationFrame(pintaNj); };
@@ -12067,7 +12067,7 @@ function renderBatalla(){
          ZOOM centrado en el ninja (x=26%, base=72%) para que él sea el foco */
       /* zoom out: la escena COMPLETA compuesta para el cuadro — a 2× de densidad
          (el canvas es 1280×960 pero se dibuja en coordenadas de 640×480: nítido) */
-      const pintaPf=(t)=>{ if(!pcv.isConnected) return;
+      const pintaPf=(t)=>{ if(!pcv.isConnected) return; if(pcv.offsetParent===null){ window._perfRAF=requestAnimationFrame(pintaPf); return; }
         px.setTransform(2,0,0,2,0,0);
         zenDibujaEscena(px,640,480,Ei,t||0,pp,belt,njp);
         window._perfRAF=requestAnimationFrame(pintaPf); };
@@ -12389,7 +12389,7 @@ function renderBatalla(){
       window._arenaSt = st;
       const base=AH*0.47, s2=2.2, xa0=AW*0.18, xb0=AW*0.82;
       const eio=v=>v<0.5?2*v*v:1-Math.pow(-2*v+2,2)/2;
-      const pintaA=(t)=>{ if(!acv.isConnected) return;
+      const pintaA=(t)=>{ if(!acv.isConnected) return; if(acv.offsetParent===null){ window._arenaRAF=requestAnimationFrame(pintaA); return; }
         /* ¿cayó un trade nuevo? → se encola el corte */
         const ca=(c.trades[yo]||[]), cb=(c.trades[rivalDe]||[]);
         if(ca.length>st.na){ const tr=ca[ca.length-1]; st.golpes.push({de: (tr.pnl||0)>=0?'a':'b', pnl:tr.pnl}); st.na=ca.length; }
@@ -18990,6 +18990,9 @@ function animaOficina(){
        Ahora se atrapa, se avisa UNA vez (repetir 60 veces por segundo no
        informa, ahoga) y el bucle se detiene: una escena congelada se nota y se
        reporta; una que se repinta rota 60 veces por segundo, no. */
+    /* si la oficina no está a la vista, no se pinta (pero el bucle sigue barato) */
+    const ofiCv = $('#agOficina');
+    if(ofiCv && ofiCv.offsetParent===null){ ofiRAF = requestAnimationFrame(loop); return; }
     try {
       dibujaOficina(t);
     } catch(e){
