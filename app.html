@@ -977,6 +977,17 @@ button.st-chip:hover{border-color:rgba(255,255,255,.45)}
 .ars-cash{font-family:var(--mono);font-size:11px;color:rgba(255,255,255,.7)}
 .ars-x{width:28px;height:28px;border-radius:8px;border:1px solid rgba(255,255,255,.18);background:transparent;color:#fff;cursor:pointer;font-size:12px}
 .ars-grid{flex:1;overflow-y:auto;display:grid;grid-template-columns:repeat(3,1fr);gap:9px;padding:13px 16px;align-content:start}
+/* colección: primero TU espada equipada en grande, abajo las demás */
+.ars-scroll{flex:1;overflow-y:auto;padding:13px 16px;display:flex;flex-direction:column;gap:12px}
+.ars-scroll .ars-grid{flex:none;overflow:visible;padding:0}
+.ars-hero{position:relative;border:1px solid color-mix(in srgb,var(--kc) 55%,transparent);border-radius:16px;padding:22px 22px 18px;overflow:hidden;text-align:center;
+  background:radial-gradient(90% 80% at 50% 30%,color-mix(in srgb,var(--kc) 15%,transparent),transparent 75%),rgba(255,255,255,.03);
+  box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--kc) 22%,transparent)}
+.ars-hero-kanji{position:absolute;top:6px;left:16px;font-size:46px;line-height:1;opacity:.16;color:var(--kc);font-weight:700}
+.ars-hero-sw{max-width:430px;margin:0 auto}
+.ars-hero-sw svg{width:100%;height:auto;filter:drop-shadow(0 6px 14px rgba(0,0,0,.6)) drop-shadow(0 0 18px color-mix(in srgb,var(--kc) 50%,transparent))}
+.ars-hero-i{display:flex;align-items:center;justify-content:center;gap:12px;margin-top:12px}
+.ars-hero-i b{font-size:20px;font-weight:900;padding-bottom:3px;color:var(--txt)}
 .ars-card{display:flex;flex-direction:column;align-items:center;gap:5px;border:1px solid rgba(255,255,255,.1);border-radius:12px;padding:11px 8px 10px;text-align:center;background:rgba(255,255,255,.03)}
 .ars-card.owned{border-color:color-mix(in srgb,var(--kc) 55%,transparent);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--kc) 25%,transparent)}
 .ars-card.cur{border-color:var(--kc);box-shadow:0 0 14px -4px var(--kc)}
@@ -1105,8 +1116,10 @@ button.st-chip:hover{border-color:rgba(255,255,255,.45)}
 .como-txt b{display:block;font-size:13px;color:#fff;margin-bottom:3px}
 .como-txt p{margin:0;font-size:11.5px;line-height:1.5;color:rgba(255,255,255,.65)}
 /* la tarjeta completa del reto dentro de la pestaña */
-.setup-body{padding:10px 14px 16px}
+.setup-body{justify-content:flex-start;padding:26px 30px 30px}
 .setup-body .bat-card{background:transparent;border:none;box-shadow:none;padding:4px 2px;margin:0}
+.setup-body .bat-f{margin-bottom:26px}
+.setup-body .bat-f label{margin-bottom:12px}
 /* tu bloque clicable + info de rival */
 .stage-me{display:flex;align-items:center;gap:13px;background:none;border:none;padding:0;cursor:pointer;text-align:left;min-width:0;flex:1;font-family:inherit;color:inherit}
 .stage-me:hover .zen-ava{box-shadow:0 4px 14px rgba(0,0,0,.5),0 0 0 2px #fff,0 0 18px -2px #fff}
@@ -11712,8 +11725,16 @@ function renderBatalla(){
         ${window._batArsenal?`
         <div class="ars-ov">
           <div class="ars-top"><b>${bi('Tu colección','Your collection')}</b><span class="ars-cash" style="color:${banco>=0?'#6fe39a':'#ff6a5e'}">${fmt$(banco)} ${bi('en el banco','in the bank')}</span><button type="button" class="ars-x" id="arsX" aria-label="${bi('cerrar','close')}">✕</button></div>
-          <div class="ars-grid">
+          <div class="ars-scroll">
+            ${(()=>{ const kEq=KATANAS[kEquipIdx]||KATANAS[0];
+              return `<div class="ars-hero" style="--kc:${kEq.belt}">
+                <span class="ars-hero-kanji">${kEq.kanji}</span>
+                <div class="ars-hero-sw">${katanaSVG(kEq.belt, true)}</div>
+                <div class="ars-hero-i"><b style="border-bottom:3px solid ${kEq.belt}">${loc(kEq.n)}</b><span class="ars-tag">${bi('Equipada','Equipped')}</span></div>
+              </div>`; })()}
+            <div class="ars-grid">
             ${KATANAS.map((k,i)=>{ const owned=miKat.includes(k.id), cur=(i===kEquipIdx&&owned), alcanza=banco>=k.precio;
+              if(cur) return '';   /* la equipada ya está en grande arriba */
               const prevOk = i===0 || miKat.includes(KATANAS[i-1].id);   /* EN ORDEN: primero la anterior */
               return `<div class="ars-card ${owned?'owned':'locked'} ${cur?'cur':''}" style="--kc:${k.belt}">
                 <span class="ars-kanji">${k.kanji}</span>
@@ -11723,6 +11744,7 @@ function renderBatalla(){
                   : !prevOk? `<span class="ars-precio">${fmt$(k.precio)} · ${bi('antes forja','forge first')} <b style="color:${KATANAS[i-1].belt}">${loc(KATANAS[i-1].n)}</b></span>`
                   : (alcanza?`<button type="button" class="ars-buy" data-forja="${i}">${bi('Forjar','Forge')} · ${fmt$(k.precio)}</button>`:`<span class="ars-precio">🔒 ${fmt$(k.precio)}</span>`)}
               </div>`;}).join('')}
+            </div>
           </div>
         </div>`:''}
         ${window._batEventos?`
