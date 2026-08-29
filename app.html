@@ -4521,6 +4521,11 @@ function migrar(s){
     /* los trades de las primeras semanas nacieron sin id; sin id la nube no
        puede fusionarlos (ni el descarte de violaciones distinguirlos) */
     if(!t.id) t.id = 't-mig-' + (t.seq != null ? t.seq : (t.date || 'x') + '-' + k);
+    /* sin fecha, (a.date+a.time).localeCompare tronaba tradesByDay() y con él
+       TODO el render — y Restaurar respaldo persistía el estado roto ANTES del
+       render, dejando el terminal muerto en cada recarga */
+    if(!t.date || typeof t.date !== 'string') t.date = '1970-01-01';
+    if(t.time == null) t.time = '';
   });
   /* ══ MIGRACIÓN TOTAL DE REGLAS · UN SOLO MODELO ══
      Tres generaciones de formularios dejaron tres formas de a.reglas
@@ -4591,7 +4596,13 @@ function migrar(s){
       target = zEval.target; maxDD = zCat.maxDD;
       dailyLoss = zCat.dailyLoss || dailyLoss;
       colchon = maxDD + 100; maximo = colchon + 1000;
-      a.upd = Date.now();
+      /* SELLO CONSTANTE, no Date.now(): migrar() corre en cada carga de cada
+         máquina, y un sello fresco por máquina re-ganaba la fusión y REVERTÍA
+         ediciones humanas hechas después de la reparación. Con la constante,
+         la reparación le gana a la copia rota (upd viejo o ausente) y pierde
+         contra cualquier sellaCambio() real, que siempre es mayor. */
+      const TS_REPARACION = 1788134400000;   // 29-ago-2026, fecha de esta migración
+      if(!(+a.upd > TS_REPARACION)) a.upd = TS_REPARACION;
     }
     const nuevas = { target, colchon, maximo };
     if(maxDD > 0)     nuevas.maxDD = maxDD;
@@ -5269,7 +5280,7 @@ function tradesByDay(ids = idsSel()){
   const mios = misTrades();
   const pos = new Map(mios.map((t,i)=>[t.id,i]));
   [...mios].sort((a,b)=>
-      (a.date+a.time).localeCompare(b.date+b.time)
+      (String(a.date||'')+String(a.time||'')).localeCompare(String(b.date||'')+String(b.time||''))
       || ((a.seq||0) - (b.seq||0))
       || (pos.get(a.id) - pos.get(b.id))
   ).forEach(t=>{
@@ -5800,8 +5811,11 @@ function renderAcctPanel(){
   const alarmas = [];
   sel.forEach(a => {
     const h = saludDe(a), c = consistenciaDe(a);
-    if(h.colchon != null && h.colchon <= 0) alarmas.push(`${a.alias}: ${tr('me.colchonCero')}`);
-    if(c && c.ratio > c.tope) alarmas.push(`${a.alias}: ${tr('me.consistSobre')} ${Math.round(c.ratio*100)}% ${tr('me.sobreTope')} ${Math.round(c.tope*100)}%`);
+    /* esc(): el alias viaja por la nube entre socios y esto va a innerHTML —
+       sin escapar era un XSS almacenado cruzado (un alias <img onerror=...>
+       corría en el equipo de los demás en cuanto su colchón tocaba cero) */
+    if(h.colchon != null && h.colchon <= 0) alarmas.push(`${esc(a.alias)}: ${tr('me.colchonCero')}`);
+    if(c && c.ratio > c.tope) alarmas.push(`${esc(a.alias)}: ${tr('me.consistSobre')} ${Math.round(c.ratio*100)}% ${tr('me.sobreTope')} ${Math.round(c.tope*100)}%`);
   });
   const cajaAl = $('#acctAlarmas');
   if(cajaAl) cajaAl.innerHTML = alarmas.length
@@ -6214,7 +6228,10 @@ function metaDe(a){
      el del pago máximo. Antes siempre daba la segunda, así que el alta decía
      $53,000 para un examen y su ficha decía $53,100 — el mismo número contado
      de dos formas, que es justo lo que hace dudar de los dos. */
-  if(a.fase === 'eval') return cc.target > 0 ? fmt$(tam + cc.target) : '—';
+  /* la etapa se DERIVA de la aritmética: registrada en examen pero con el
+     pase ya detectado en los trades, la meta es la del payout — si no, la
+     hoja decía PAID con balance $54,100 y «GOAL $53,000» en el mismo recuadro */
+  if(a.fase === 'eval' && !cc.pasoEval) return cc.target > 0 ? fmt$(tam + cc.target) : '—';
   return (cc.buffer || cc.pago) ? fmt$(tam + cc.buffer + cc.pago) : '—';
 }
 
@@ -6967,7 +6984,7 @@ function pintaPerfilSocio(){
     if(!abrible || !hay) return `<div class="rt-cta">${cuerpo}</div>`;
     return `<button type="button" class="rt-cta abre" onclick="psFuturos()"
         aria-expanded="${psV.fut ? 'true' : 'false'}">${cuerpo}
-      <i class="ps-chev${psV.fut ? ' on' : ''}">›</i></button>` + (psV.fut ? psCaminos(fondSuyas) : '');
+      <i class="ps-chev${psV.fut ? ' on' : ''}">›</i></button>` + (psV.fut ? psCaminos(suyas) : '');
   };
 
   /* El camino a payout de cada cuenta, con la misma barra y los mismos dos
@@ -7075,7 +7092,7 @@ function pintaPerfilSocio(){
         guardadas en examen: la tarjeta las llamaba fondeadas y el camino las
         trataba como exámenes, y ésa contradicción es la que hacía imposible
         entender un 0%. Ahora se cuenta por etapa. */
-        const ev = fondSuyas.filter(a => a.fase === 'eval').length, fo = fondSuyas.length - ev;
+        const ev = fondSuyas.filter(a => a.fase === 'eval' && !carreraCuenta(a).pasoEval).length, fo = fondSuyas.length - ev;
         const trozos = [];
         if(fo) trozos.push(fo + (fo === 1 ? bi(' fondeada',' funded') : bi(' fondeadas',' funded')));
         if(ev) trozos.push(ev + (ev === 1 ? bi(' en examen',' in evaluation') : bi(' en examen',' in evaluation')));
@@ -9225,8 +9242,12 @@ $('#ncSave').addEventListener('click', ()=>{
        máximo. El que no aplica se guarda igual con su valor de fábrica, para
        que al cambiar de etapa en Ajustes la cuenta ya sepa a dónde va. */
     reglas: (() => {
-      const colchon = esEval ? NC_DEF.colchon : ncNum('ncColchon');
-      let maximo    = esEval ? NC_DEF.maximo  : ncNum('ncMaximo');
+      /* con la FIRMA tecleada: NC_DEF es la referencia genérica y en Apex el
+         tramo es $2,000 — el alta guardaba 3,100 y la migración lo corregía al
+         recargar: el hito PAYOUT cambiaba solo de un día a otro */
+      const d = reglasPorTamano(cap, $('#ncFirma').value);
+      const colchon = esEval ? d.colchon : ncNum('ncColchon');
+      let maximo    = esEval ? d.maximo  : ncNum('ncMaximo');
       /* un máximo por debajo del colchón no existe: se corrige al tramo de la
          casa en vez de guardar un camino imposible en silencio */
       if(!(maximo > colchon)) maximo = colchon + (/apex/i.test($('#ncFirma').value) ? 2000 : 1000);
@@ -9235,6 +9256,7 @@ $('#ncSave').addEventListener('click', ()=>{
   }));
   /* renderAll() en vez de tres renders sueltos: registrar una cuenta tiene que
      verse de inmediato en la pantalla donde estés, no sólo en Ajustes. */
+  $('#ncAlias').value = '';   // un doble clic reventaba la guarda del nombre y creaba DOS
   save(); closeOv(); renderAcctMgr(); renderAll();
   toast('Account created');
 });
@@ -9559,9 +9581,15 @@ async function doLogin(){
      Ahora se pregunta lo que de verdad importa: ¿ya tienes cara? Si el monito
      llegó de la nube, no hay nada que armar aunque este equipo no recuerde el
      recorrido. */
-  const yaTieneCara = !!(((S.monitos || {})[u] || {}).avatar);
-  if(!(S.bienvenida || {})[u] && !yaTieneCara) setTimeout(() => abreCreador(tourAbre), 700);
-  else if(usaDefault(u)) setTimeout(()=> toast(tr('cl.cambiala')), 1600);
+  /* la decisión se toma DENTRO del timer: antes se calculaba con el estado
+     PRE-pull, y en un equipo nuevo la cara de la nube llegaba 200ms tarde —
+     el armador se abría de todos modos y Gerardo rehacía su monito (y de paso
+     pisaba en la nube el que ya tenía) */
+  setTimeout(() => {
+    const cara = !!(((S.monitos || {})[u] || {}).avatar);
+    if(!(S.bienvenida || {})[u] && !cara) abreCreador(tourAbre);
+    else if(usaDefault(u)) toast(tr('cl.cambiala'));
+  }, 900);
 }
 $('#btnLogout').addEventListener('click', ()=>{
   /* Salir debe verse: se retira la marca de presencia y se sube ANTES de soltar
@@ -10168,6 +10196,9 @@ function impFecha(v){
   if(m) return m[1] + '-' + m[2] + '-' + m[3];
   m = t.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})/);
   if(m){ const y = m[3].length === 2 ? '20' + m[3] : m[3];
+    /* mes 13 no existe: un export en DD/MM producía fechas imposibles
+       ('2025-13-08') que persistían y ningún calendario podía pintar */
+    if(+m[1] > 12 || +m[2] > 31) return null;
     return y + '-' + String(m[1]).padStart(2,'0') + '-' + String(m[2]).padStart(2,'0'); }
   const d = new Date(t);
   return isNaN(d) ? null : d.toISOString().slice(0, 10);
@@ -10214,9 +10245,12 @@ $('#fileCSV').addEventListener('change', e => {
     if(filas.length < 2){ toast(bi('Ese archivo no trae filas','That file has no rows')); return; }
     const cab = filas[0].map(impNorm);
     const halla = alias => {
-      let i = cab.findIndex(h => alias.includes(h));
-      if(i < 0) i = cab.findIndex(h => h && alias.some(a => h.includes(a)));
-      return i;
+      /* recorre los SINÓNIMOS en su orden de prioridad (soldTimestamp antes
+         que boughtTimestamp: la fecha del trade es la del CIERRE) — iterar los
+         encabezados dejaba ganar al orden de columnas del archivo */
+      for(const a of alias){ const i = cab.indexOf(a); if(i >= 0) return i; }
+      for(const a of alias){ const i = cab.findIndex(h => h && h.includes(a)); if(i >= 0) return i; }
+      return -1;
     };
     const ix = {}; Object.keys(IMP_COLS).forEach(k => { ix[k] = halla(IMP_COLS[k]); });
     if(ix.pnl < 0){
@@ -10231,7 +10265,12 @@ $('#fileCSV').addEventListener('change', e => {
          toma la primera que se pueda leer, no sólo la que se detectó */
       let fecha = ix.fecha >= 0 ? impFecha(fila[ix.fecha]) : null, hora = ix.fecha >= 0 ? impHora(fila[ix.fecha]) : null;
       if(!fecha) for(let c = 0; c < fila.length && !fecha; c++){ fecha = impFecha(fila[c]); hora = hora || impHora(fila[c]); }
-      if(!fecha || fecha > todayISO()){ sinFecha.push(r); continue; }
+      if(!fecha || fecha > todayISO()){
+        /* la fila Total del pie trae pnl pero no es un trade: contarla como
+           «1 with no usable date» hacía creer que se perdió una operación */
+        const primera = impNorm(fila[0]);
+        if(primera !== 'total' && primera !== 'totals') sinFecha.push(r);
+        continue; }
       const lado = ix.lado >= 0 ? (/s|sell|short/i.test(fila[ix.lado]) && !/buy/i.test(fila[ix.lado]) ? 'S' : 'L') : 'L';
       const ent = ix.entrada >= 0 ? impNum(fila[ix.entrada]) : NaN;
       const sal = ix.salida  >= 0 ? impNum(fila[ix.salida])  : NaN;
@@ -12494,7 +12533,7 @@ function renderAgentes(){
         guardadas en examen: la tarjeta las llamaba fondeadas y el camino las
         trataba como exámenes, y ésa contradicción es la que hacía imposible
         entender un 0%. Ahora se cuenta por etapa. */
-        const ev = fondeadas.filter(a => a.fase === 'eval').length, fo = fondeadas.length - ev;
+        const ev = fondeadas.filter(a => a.fase === 'eval' && !carreraCuenta(a).pasoEval).length, fo = fondeadas.length - ev;
         const trozos = [];
         if(fo) trozos.push(fo + (fo === 1 ? bi(' fondeada',' funded') : bi(' fondeadas',' funded')));
         if(ev) trozos.push(ev + (ev === 1 ? bi(' en examen',' in evaluation') : bi(' en examen',' in evaluation')));
