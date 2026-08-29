@@ -918,6 +918,47 @@ body.locked .app{visibility:hidden;pointer-events:none}
   .zen-stat{flex:1 1 calc(50% - 3px);min-width:0;padding:7px 6px}
   .zen-stat b{font-size:16px}
 }
+/* ── 3 secciones scrolleables (Katanas · Arenas · Eventos) ── */
+.bat-tabs2{display:flex;gap:6px;margin-bottom:12px}
+.bat-tab2{flex:1;padding:11px 8px;border-radius:12px;border:1px solid var(--line);background:var(--w03);color:var(--dim);font-weight:800;font-size:13px;cursor:pointer;transition:all .12s}
+.bat-tab2.on{background:var(--accent);color:#04120a;border-color:var(--accent)}
+.bat-slides{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none;-ms-overflow-style:none;margin-bottom:14px;scroll-behavior:smooth}
+.bat-slides::-webkit-scrollbar{display:none}
+.bat-slide{flex:0 0 100%;scroll-snap-align:start;min-width:0;padding:1px 3px}
+/* Arenas */
+.ar-wrap{border:1px solid var(--line);border-radius:18px;background:var(--panel-bg);padding:16px;margin-bottom:16px}
+.ar-now{display:flex;align-items:center;gap:12px;margin-bottom:12px}
+.ar-ico{font-size:34px;line-height:1}
+.ar-now-i{flex:1;min-width:0}.ar-now-i>span{display:block;font-family:var(--mono);font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--faint)}.ar-now-i>b{font-size:18px;font-weight:900}
+.ar-tro{text-align:right}.ar-tro>b{font-family:var(--mono);font-size:16px;color:#E9CF46}.ar-tro>span{display:block;font-family:var(--mono);font-size:9px;color:var(--faint)}
+.ar-next{font-size:12px;color:var(--dim);background:var(--w03);border:1px dashed var(--line);border-radius:10px;padding:9px 12px;margin-bottom:12px;line-height:1.5}
+.ar-ladder{display:grid;gap:7px}
+.ar-step{display:flex;align-items:center;gap:11px;border:1px solid var(--line-soft);border-radius:11px;background:var(--w02);padding:9px 12px}
+.ar-step.cur{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent);background:rgba(48,209,88,.05)}
+.ar-step.lock{opacity:.55}
+.ar-step-ico{font-size:20px;width:26px;text-align:center}
+.ar-step-i{flex:1;min-width:0}.ar-step-i>b{font-size:13.5px;font-weight:800}.ar-step-i>span{display:block;font-family:var(--mono);font-size:10px}
+.ar-step-tag{font-family:var(--mono);font-size:8.5px;font-weight:800;letter-spacing:.1em;color:#04120a;background:var(--accent);border-radius:20px;padding:3px 9px}
+.ar-step-ok{color:var(--up);font-weight:900}
+/* Eventos + invitaciones */
+.ev-vacio{font-family:var(--mono);font-size:12px;color:var(--faint);text-align:center;padding:14px;border:1px dashed var(--line);border-radius:12px;margin-bottom:6px}
+.ev-list{display:grid;gap:8px}
+.ev-bar{display:flex;align-items:center;gap:12px;border:1px solid var(--line-soft);border-radius:12px;background:var(--w02);padding:11px 14px}
+.ev-bar.activo{border-color:rgba(48,209,88,.4);background:rgba(48,209,88,.05)}
+.ev-ico{font-size:22px}
+.ev-txt{flex:1;min-width:0}.ev-txt>b{font-size:14px;font-weight:800}.ev-txt>span{display:block;font-family:var(--mono);font-size:10.5px;color:var(--faint)}
+.ev-go{flex:0 0 auto}
+.bat-invs{display:grid;gap:9px}
+.bat-inv{display:flex;align-items:center;gap:12px;border:1px solid var(--line);border-radius:14px;background:var(--w02);padding:11px 13px;box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--kc,#888) 16%,transparent);cursor:pointer}
+.bat-inv:hover{border-color:var(--kc)}
+.bat-inv-ava{width:46px;height:46px;border-radius:50%;overflow:hidden;flex:0 0 auto;background:var(--bg-2)}
+.bat-inv-ava img,.bat-inv-ava canvas,.bat-inv-ava svg{width:100%;height:100%;object-fit:cover}
+.bat-inv-i{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}
+.bat-inv-i>b{font-size:15px;font-weight:800}
+.bat-inv-stage{font-family:var(--mono);font-size:10px;color:var(--dim)}
+.bat-inv-lvl{font-family:var(--mono);font-size:11px;font-weight:800;color:var(--kc)}
+.bat-inv-blade{width:70px;height:28px;flex:0 0 auto}
+.bat-inv-b{flex:0 0 auto}
 /* ── Colección de katanas ── */
 /* white glass shiny — B&N según el theme (negro en oscuro, blanco en claro) */
 .kat-wrap{position:relative;border:1px solid var(--line);border-radius:18px;
@@ -10634,6 +10675,16 @@ function renderBatalla(){
     const _bh = KATANAS[kEquipIdx].belt.replace('#','');
     const katClaro = (parseInt(_bh.slice(0,2),16)*0.299 + parseInt(_bh.slice(2,4),16)*0.587 + parseInt(_bh.slice(4,6),16)*0.114)/255 > 0.72;
     const kProxIdx = KATANAS.findIndex(k=> !miKat.includes(k.id));
+    const trofeos = mi.pts||0;
+    /* cada arena se DESBLOQUEA con una katana; la katana se compra con dinero; el dinero se gana peleando */
+    const ARENAS_L = [
+      {kat:'blanca',nom:['Piso Inicial','Starting Floor'],ico:'🏢'},{kat:'amarilla',nom:['Sala de Órdenes','Order Room'],ico:'📊'},
+      {kat:'naranja',nom:['Mesa de Futuros','Futures Desk'],ico:'📈'},{kat:'verde',nom:['Sala de Riesgo','Risk Room'],ico:'⚠️'},
+      {kat:'azul',nom:['Piso Institucional','Institutional Floor'],ico:'🏛️'},{kat:'morada',nom:['La Bóveda','The Vault'],ico:'🔐'},
+      {kat:'marron',nom:['Torre NorthPoint','NorthPoint Tower'],ico:'🗼'},{kat:'roja',nom:['La Cima','The Summit'],ico:'⛰️'}];
+    const katDe = id => KATANAS.find(k=>k.id===id);
+    let arIdx=0; ARENAS_L.forEach((a,i)=>{ if(miKat.includes(a.kat)) arIdx=i; }); const arNext=ARENAS_L[arIdx+1];
+    const opps = batOponentes();
     root.innerHTML = `
       <div class="bat-lobby-top">
         <span class="bat-lobby-t">${bi('Batallas','Battles')}</span>
@@ -10659,6 +10710,13 @@ function renderBatalla(){
           </div>
         </div>
       </div>
+      <div class="bat-tabs2" id="batTabs2">
+        <button type="button" class="bat-tab2 on" data-slide="0">🗡️ ${bi('Katanas','Katanas')}</button>
+        <button type="button" class="bat-tab2" data-slide="1">🏆 ${bi('Arenas','Arenas')}</button>
+        <button type="button" class="bat-tab2" data-slide="2">📅 ${bi('Eventos','Events')}</button>
+      </div>
+      <div class="bat-slides" id="batSlides">
+      <div class="bat-slide">
       <div class="kat-wrap">
         <div class="kat-top">
           <div class="kat-top-l"><span class="kat-title">🗡️ ${bi('Colección de katanas','Katana collection')}</span><span class="kat-sub">${miKat.length} / ${KATANAS.length} · ${bi('gana batallas para comprarlas','win battles to buy them')}</span></div>
@@ -10689,10 +10747,18 @@ function renderBatalla(){
           <span class="kat-prog-txt">${bi('progreso','progress')} · ${kActualIdx+1}/${KATANAS.length}</span>
         </div>
       </div>
-      <button type="button" class="btn primary bat-play-b batalla bat-nuevo" id="batNuevo">${bi('Retar a un socio','Challenge a partner')}</button>
-      <div class="bat-sec-t" id="baJugs">${bi('Jugadores de la mesa','Desk players')} · ${bi('toca para ver su perfil','tap to see their profile')}</div>
-      <div class="bat-jugs">
-        ${ranking.map((r,i)=>{
+      </div><!--/slide katanas-->
+      <div class="bat-slide">
+        <div class="ar-wrap">
+          <div class="ar-now"><span class="ar-ico">${ARENAS_L[arIdx].ico}</span>
+            <div class="ar-now-i"><span>${bi('Tu arena','Your arena')} · ${arIdx+1}/${ARENAS_L.length}</span><b>${loc(ARENAS_L[arIdx].nom)}</b></div>
+            <div class="ar-tro"><b>🏆 ${trofeos}</b><span>${arNext?bi('sigue subiendo','keep climbing'):bi('cima','summit')}</span></div></div>
+          ${arNext?`<div class="ar-next">${bi('Para subir a','Unlock')} <b>${loc(arNext.nom)}</b> ${bi('consigue la katana','get the')} <b style="color:${katDe(arNext.kat).belt}">${loc(katDe(arNext.kat).n)}</b> · ${fmt$(katDe(arNext.kat).precio)}</div>`:''}
+          <div class="ar-ladder">${ARENAS_L.map((a,i)=>{ const k=katDe(a.kat), tengo=miKat.includes(a.kat); return `<div class="ar-step ${i<arIdx?'done':i===arIdx?'cur':'lock'}"><span class="ar-step-ico">${tengo?a.ico:'🔒'}</span><div class="ar-step-i"><b>${loc(a.nom)}</b><span style="color:${k.belt}">🗡️ ${loc(k.n)}${tengo?'':' · '+fmt$(k.precio)}</span></div>${i===arIdx?`<span class="ar-step-tag">${bi('AQUÍ','HERE')}</span>`:tengo?'<span class="ar-step-ok">✓</span>':''}</div>`;}).join('')}</div>
+        </div>
+        <div class="bat-sec-t">${bi('Tabla de la mesa','Desk leaderboard')} · ${bi('toca un perfil','tap a profile')}</div>
+        <div class="bat-jugs">
+          ${ranking.map((r,i)=>{
           const kw=batKatanasDe(r.uid), curI=KATANAS.reduce((mx,k,ix)=> kw.includes(k.id)?ix:mx,0), curK=KATANAS[curI];
           return `
           <div class="bat-jug ${r.uid===yo?'yo':''} ${i===0&&r.g>0?'lider':''}" data-perfil="${r.uid}">
@@ -10708,9 +10774,9 @@ function renderBatalla(){
             </span>
             <span class="bat-jug-banco"><em>${bi('BOTÍN','LOOT')}</em><b>${fmt$(batBanco(r.uid))}</b></span>
           </div>`;}).join('')}
-      </div>
-      <div class="bat-sec-t" id="baHist">${bi('Historial','History')}</div>
-      <div class="bat-hist">
+        </div>
+        <div class="bat-sec-t">${bi('Historial','History')} · ${bi('toca para el reporte','tap for report')}</div>
+        <div class="bat-hist">
         ${hist.length ? hist.slice(0,12).map((h,i)=>{
           const gn = h.ganador ? batNom(h.ganador) : bi('Empate','Tie');
           if(h.party){ return `<div class="bat-hist-row" data-hist="${i}"><span class="bat-hist-vs">${bi('Grupo','Group')} <em>·</em> ${(h.jugadores||[]).length}</span><span class="bat-hist-res">${bi('ver reporte','view report')} ›</span><span class="bat-hist-gan ${h.ganador?'w':''}">${esc(gn)}</span></div>`; }
@@ -10720,8 +10786,29 @@ function renderBatalla(){
             <span class="bat-hist-gan ${h.ganador?'w':''}">${esc(gn)} ›</span>
           </div>`;
         }).join('') : `<div class="bat-hist-vacio">${bi('Aún no hay batallas. ¡Reta a alguien!','No battles yet. Challenge someone!')}</div>`}
-      </div>`;
+        </div>
+      </div><!--/slide arenas-->
+      <div class="bat-slide">
+        <div class="bat-sec-t">${bi('Hoy','Today')}</div>
+        ${c ? `<div class="ev-bar activo"><span class="ev-ico">⚔️</span><div class="ev-txt"><b>${c.estado==='activo'?bi('Batalla en curso','Battle live'):bi('Reto agendado','Scheduled challenge')}</b><span>${esc(batRetoTxt(c))}</span></div></div>` : `<div class="ev-vacio">${bi('Sin eventos hoy · reta a la mesa','No events today · challenge the desk')}</div>`}
+        <div class="bat-sec-t">${bi('Próximas aperturas','Upcoming openings')}</div>
+        <div class="ev-list">${BAT_SESIONES.map(s=>{ const ap=batProxAperturas(s.hora,1)[0], dt=ap?batDiaTxt(ap.getTime()):null; return `<div class="ev-bar"><span class="ev-ico">${s.ico}</span><div class="ev-txt"><b>${loc(s.nom)}</b><span>${dt?esc(dt.dia)+' · '+dt.hora:String(s.hora).padStart(2,'0')+':00'} · ${Math.round(s.dur/60)}h</span></div><button type="button" class="btn sm ev-go" data-abreses="${s.id}">${bi('Reto','Battle')}</button></div>`;}).join('')}</div>
+        <div class="bat-sec-t">${bi('Invitaciones · reta a la mesa','Invites · challenge the desk')}</div>
+        <div class="bat-invs">${opps.map(u=>{ const kw=batKatanasDe(u), ki=KATANAS.reduce((mx,k,ix)=>kw.includes(k.id)?ix:mx,0), E=ZEN_ESCENAS[batEquipadaDe(u)]; return `
+          <div class="bat-inv" data-perfil="${u}" style="--kc:${KATANAS[ki].belt}">
+            <span class="bat-inv-ava">${caraSocio(u,48)}</span>
+            <div class="bat-inv-i"><b>${esc(batNom(u))}</b><span class="bat-inv-stage">${E.ico} ${loc(E.bioma)}</span><span class="bat-inv-lvl">${bi('Nivel','Level')} ${batNivel(u)}</span></div>
+            <span class="bat-inv-blade">${katanaSVG(KATANAS[ki].belt,true)}</span>
+            <button type="button" class="btn primary sm bat-inv-b" data-retar="${u}">${bi('Retar','Challenge')}</button>
+          </div>`;}).join('')}</div>
+      </div><!--/slide eventos-->
+      </div><!--/bat-slides-->
+      <button type="button" class="btn primary bat-play-b batalla bat-nuevo" id="batNuevo">${bi('Retar a un socio','Challenge a partner')}</button>`;
 
+    const _slides=$('#batSlides'), _tabs=root.querySelectorAll('[data-slide]');
+    if(_slides){ _tabs.forEach(t=> t.onclick=()=>{ _slides.scrollTo({left:(+t.dataset.slide)*_slides.clientWidth, behavior:'smooth'}); });
+      _slides.onscroll=()=>{ const idx=Math.round(_slides.scrollLeft/Math.max(1,_slides.clientWidth)); _tabs.forEach((t,i)=> t.classList.toggle('on', i===idx)); }; }
+    root.querySelectorAll('[data-abreses]').forEach(b=> b.onclick=()=>{ batSel={op:null,ses:b.dataset.abreses,dur:30,cuando:null,ops:[]}; batFmt='sesion'; batPantalla='setup'; renderBatalla(); });
     $('#batNuevo').onclick = () => { batPantalla='setup'; renderBatalla(); };
     $('#batAjustes') && ($('#batAjustes').onclick = () => { batPantalla='ajustes'; renderBatalla(); });
     root.querySelectorAll('[data-hist]').forEach(b => b.onclick = () => { const h=batHist()[+b.dataset.hist]; if(h) batHistDetalle(h); });
