@@ -2760,58 +2760,21 @@ stop[stop-color="#9BC0DC"]{stop-color:var(--txt)}
 
 <!-- ══════════ MODALES ══════════ -->
 <div class="overlay" id="ovTrade">
-  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="tmTitle" style="max-width:620px">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="tmTitle" style="max-width:460px">
     <h3 id="tmTitle" data-i18n="tr.titulo">Log trade</h3>
-    <p class="sub">The whole shot, in four chapters.</p>
-
-    <div class="cap">
-      <div class="cap-h"><span class="n">01</span><b>The shot</b><span class="micro">what and when</span></div>
-      <div class="f-row3">
-        <div><label>Instrument</label>
-          <!-- todos los símbolos que POINT_VALUE sabe valuar: el lector de
-               capturas mapea BTCUSDT→BTC y aquí tiene que existir la opción -->
-          <select id="tSym">
-            <option>MNQ</option><option>MES</option><option>MYM</option><option>M2K</option>
-            <option>NQ</option><option>ES</option><option>YM</option><option>RTY</option>
-            <option>GC</option><option>CL</option><option>BTC</option><option>MBT</option>
-          </select>
-        </div>
-        <div><label>Direction</label><select id="tDir"><option value="L">Long</option><option value="S">Short</option></select></div>
-        <div><label>Contracts</label><input type="number" id="tQty" value="1" min="1" step="1"></div>
-      </div>
-      <div class="f-row" style="margin-top:10px">
-        <div><label>Date</label><input type="date" id="tFecha" max="2099-12-31"></div>
-        <div><label>Entry time · NY</label><input type="time" id="tHora"></div>
-      </div>
+    <!-- EL RESULTADO EN DINERO Y LA CAPTURA. NADA MÁS (André, 28-ago-2026).
+         El formulario de cuatro capítulos —instrumento, dirección, contratos,
+         entrada, salida, checklist, cuentas, lección— se fue: la captura de
+         TradingView ya trae todo eso y la IA lo guarda por debajo. Lo que el
+         humano aporta son dos cosas: cuánto fue, y la foto. -->
+    <p class="sub">El resultado en dinero y tu captura. La app pone el resto.</p>
+    <div class="f-full"><label>P&L USD</label>
+      <input type="number" id="tPnl" step="0.01" placeholder="-360.76"></div>
+    <div class="f-full" style="margin-top:12px">
+      <input type="file" id="tShotFile" accept="image/*" hidden>
+      <div id="tShotZona"></div>
     </div>
-
-    <div class="cap">
-      <div class="cap-h"><span class="n">02</span><b>The execution</b><span class="micro">cómo salió</span></div>
-      <div class="f-row3">
-        <div><label>Entry</label><input type="number" id="tIn" step="0.25" placeholder="0.00"></div>
-        <div><label>Exit</label><input type="number" id="tOut" step="0.25" placeholder="0.00"></div>
-        <div><label>P&L USD <span style="color:var(--faint)">(auto)</span></label><input type="number" id="tPnl" step="1" placeholder="auto"></div>
-      </div>
-      <div class="f-full" style="margin-top:10px">
-        <label>Checklist setup</label>
-        <select id="tSetup"><option value="1">Valid · complete</option><option value="0">Incomplete</option></select>
-      </div>
-    </div>
-
-    <div class="cap">
-      <div class="cap-h"><span class="n">03</span><b id="tAcctLbl">The accounts</b><span class="micro">where the order landed</span></div>
-      <div class="acct-chips" id="tAccts" role="group" aria-labelledby="tAcctLbl"></div>
-    </div>
-
-    <div class="cap">
-      <div class="cap-h"><span class="n">04</span><b>The lesson</b><span class="micro">what you learn</span></div>
-      <div class="f-full"><textarea id="tNotas" rows="2" placeholder="What you saw, what you executed, what you learn."></textarea></div>
-      <div class="f-full" style="margin-top:10px">
-        <input type="file" id="tShotFile" accept="image/*" hidden>
-        <div id="tShotZona"></div>
-      </div>
-    </div>
-
+    <p class="micro" id="tAuto" style="color:var(--faint);margin-top:10px;line-height:1.6"></p>
     <div class="m-foot">
       <button class="btn" data-close>Cancel</button>
       <button class="btn primary" id="tSave" data-i18n="tr.guardar">Save trade</button>
@@ -7494,6 +7457,17 @@ function guardaLlaveIA(v){
   S.llaveIA = { k: v, ts: Date.now() };
   try{ save(); }catch(e){}
 }
+/* la versión AUTOMÁTICA: si aquí no hay llave pero hay nube, se baja el
+   estado de la mesa y se vuelve a mirar — así un equipo recién abierto no le
+   pide nada a nadie por una simple carrera de sincronía */
+async function llaveIAAuto(){
+  let v = llaveIA();
+  if(!v && typeof cloudOn === 'function' && cloudOn() && cloudTok){
+    try{ await cloudPull(); }catch(e){}
+    v = llaveIA();
+  }
+  return v;
+}
 function tiraLlaveIA(mala){
   try{ localStorage.removeItem(LLAVE_IA); }catch(e){}
   if(S.llaveIA && S.llaveIA.k === mala){ S.llaveIA = { k:'', ts: Date.now() }; try{ save(); }catch(e){} }
@@ -7846,29 +7820,25 @@ function horaMercadoAhora(){
   return String(Math.floor(m / 60) % 24).padStart(2,'0') + ':' + String(m % 60).padStart(2,'0');
 }
 let editingTrade = null;
+/* lo último que el lector de capturas extrajo: se aplica al guardar, sin
+   enseñar veinte cajas — la interfaz es dinero + foto, los datos van por debajo */
+let tLeido = null;
 function openTrade(id){
   editingTrade = id ? S.trades.find(t=>t.id===id) : null;
+  tLeido = null;
   $('#tmTitle').textContent = editingTrade ? bi('Editar trade','Edit trade') : tr('tr.titulo');
   const t = editingTrade || {};
-  $('#tFecha').value = t.date || todayISO();
-  /* La hora y el instrumento venían FIJOS en el código: 07:35 y NQ. Un trade
-     tomado a las 11:41 quedaba sellado a las 07:35 —hora falsa, y con ella la
-     comparación contra la ventana— y cada trade nuevo nacía marcado
-     OTRO_INSTRUMENTO porque el default no era MNQ. Ahora la hora es la del
-     mercado en este momento y el instrumento es el de la casa. */
-  $('#tHora').value = t.time || horaMercadoAhora();
-  $('#tSym').value = t.sym || (S.profile && S.profile.instrumento) || SISTEMA.instrumento;
-  $('#tDir').value = t.dir || 'L';
-  $('#tQty').value = t.qty || 1;
-  $('#tSetup').value = (t.setupOk===false) ? '0' : '1';
-  /* Al editar un trade viejo no hay respuesta guardada. Se abre en «sin alarma»
-     a propósito: el default no puede ser el que limpia la marca solo. */
-  $('#tIn').value = t.entry ?? '';
-  $('#tOut').value = t.exit ?? '';
   $('#tPnl').value = t.pnl ?? '';
-  $('#tNotas').value = t.notas || '';
   tShot = t.shot || null; tShotPinta();
-  renderTradeAccts(Array.isArray(t.accts) ? t.accts : acctsSel().map(a=>a.id));
+  /* la línea honesta de qué va a poner la app sola */
+  const cuentas = Array.isArray(t.accts) && t.accts.length
+    ? t.accts.filter(x => x !== SIN_CUENTA).length
+    : mias(S.accounts).filter(a => !esLive(a) && !esSim(a) && cuentaEnPie(a)).length;
+  $('#tAuto').textContent = editingTrade
+    ? bi(`${fmtFecha(t.date)} · ${t.time || '—'} NY · ${t.sym || ''} — se conserva lo demás del trade`,
+         `${fmtFecha(t.date)} · ${t.time || '—'} NY · ${t.sym || ''} — the rest of the trade is kept`)
+    : bi(`Hoy · ${horaMercadoAhora()} NY · ${cuentas || 'sin'} cuenta${cuentas === 1 ? '' : 's'} — y si pegas la captura, los detalles salen de ella`,
+         `Today · ${horaMercadoAhora()} NY · ${cuentas || 'no'} account${cuentas === 1 ? '' : 's'} — paste the screenshot and the details come from it`);
   openOv('ovTrade');
 }
 
@@ -7935,18 +7905,25 @@ Reglas: los números SIN comas de miles. dir: en la herramienta larga el TP va a
 
 async function leerCaptura(){
   const caja = $('#tShotLeerCaja'); if(!caja || !tShot) return;
-  if(!llaveIA()){
-    caja.innerHTML = `${bi('Pega tu llave de Anthropic (empieza con','Paste your Anthropic key (starts with')} <code>sk-ant-</code>).
-      ${bi('Se guarda en la mesa: los demás socios ya no tendrán que pegarla.','It is saved to the desk: your partners will not need to paste it.')}
-      <div style="display:flex;gap:8px;margin-top:8px">
-        <input id="capLlaveIn" type="password" placeholder="sk-ant-..." style="flex:1;min-width:0">
-        <button type="button" class="btn sm primary" id="capLlaveOk">Save</button>
-      </div>`;
-    $('#capLlaveOk').onclick = () => {
-      const v = $('#capLlaveIn').value.trim();
-      if(!v.startsWith('sk-ant-')){ toast(tr('ag.llaveMala')); return; }
-      guardaLlaveIA(v); leerCaptura();
-    };
+  if(!(await llaveIAAuto())){
+    if((S.session && S.session.user) === 'andre.np'){
+      /* el dueño de la llave es UNO: André. Nadie más ve jamás este campo. */
+      caja.innerHTML = `${bi('La mesa aún no tiene su llave de IA. Pégala una vez (empieza con','The desk has no AI key yet. Paste it once (starts with')} <code>sk-ant-</code>)
+        ${bi('y viaja sola a todos los equipos.','and it travels to every device on its own.')}
+        <div style="display:flex;gap:8px;margin-top:8px">
+          <input id="capLlaveIn" type="password" placeholder="sk-ant-..." style="flex:1;min-width:0">
+          <button type="button" class="btn sm primary" id="capLlaveOk">Save</button>
+        </div>`;
+      $('#capLlaveOk').onclick = () => {
+        const v = $('#capLlaveIn').value.trim();
+        if(!v.startsWith('sk-ant-')){ toast(tr('ag.llaveMala')); return; }
+        guardaLlaveIA(v); leerCaptura();
+      };
+    } else {
+      caja.innerHTML = bi(
+        'La lectura automática se prende sola en cuanto André abra su terminal: la llave de la mesa viaja por la nube. Mientras, llena las cajas a mano.',
+        'Automatic reading turns on by itself once André opens his terminal: the desk key travels through the cloud. Meanwhile, fill the boxes by hand.');
+    }
     return;
   }
   const btn = $('#tShotLeer'); if(btn) btn.disabled = true;
@@ -7959,21 +7936,13 @@ async function leerCaptura(){
     return;
   }
   const d = r.d, puestos = [];
-  if(d.sym){
-    const symApp = impSimbolo(d.sym);
-    $('#tSym').value = symApp;
-    if($('#tSym').value === symApp) puestos.push(symApp);
-    else puestos.push(esc(String(d.sym)) + bi(' (no está en la lista de símbolos: elígelo a mano)',' (not in the symbol list: pick it by hand)'));
-  }
-  if(d.dir === 'L' || d.dir === 'S'){ $('#tDir').value = d.dir; puestos.push(d.dir === 'L' ? 'LONG' : 'SHORT'); }
-  if(isFinite(+d.qty) && +d.qty > 0){ $('#tQty').value = Math.round(+d.qty); puestos.push('×' + Math.round(+d.qty)); }
-  if(isFinite(+d.entry)) $('#tIn').value = +d.entry;
-  if(isFinite(+d.exit) && d.exit != null) $('#tOut').value = +d.exit;
+  /* la interfaz es dinero + foto: lo demás va a tLeido y tSave lo aplica */
+  tLeido = d;
+  if(d.sym) puestos.push(impSimbolo(d.sym));
+  if(d.dir === 'L' || d.dir === 'S') puestos.push(d.dir === 'L' ? 'LONG' : 'SHORT');
+  if(isFinite(+d.qty) && +d.qty > 0) puestos.push('×' + Math.round(+d.qty));
   if(isFinite(+d.pnl)){ $('#tPnl').value = Math.round(+d.pnl * 100) / 100; puestos.push(fmt$(+d.pnl, true)); }
-  if(d.time && /^\d{1,2}:\d{2}/.test(d.time)) $('#tHora').value = d.time.slice(0, 5);
-  if(d.date && /^\d{4}-\d{2}-\d{2}$/.test(d.date) && d.date <= todayISO()) $('#tFecha').value = d.date;
-  if(d.nota && !$('#tNotas').value.trim()) $('#tNotas').value = String(d.nota).slice(0, 120);
-  caja.innerHTML = `<b class="up">${bi('Leído','Read')}: ${esc(puestos.join(' · '))}</b> — ${bi('revisa los números y dale Save. Tú mandas, no la captura.','check the numbers and hit Save. You rule, not the screenshot.')}`;
+  caja.innerHTML = `<b class="up">${bi('Leído','Read')}: ${esc(puestos.join(' · '))}</b> — ${bi('revisa el dinero y dale Save.','check the money and hit Save.')}`;
 }
 
 /* ══ EL REGISTRO DIRECTO: la captura ES el registro ══
@@ -7984,9 +7953,10 @@ async function leerCaptura(){
    nada: se abre el modal con la captura ya puesta para acabar a mano. */
 async function registraDeCaptura(dataURL){
   if(!S.session || !S.session.user) return;
-  if(!llaveIA()){
-    /* sin llave no hay automático: se abre el modal con la captura puesta y
-       ahí mismo se pide la llave (una sola vez en toda la mesa) */
+  if(!(await llaveIAAuto())){
+    /* sin llave en toda la mesa no hay IA que llamar: la captura NO se pierde
+       —se abre el modal con ella puesta— y el único que ve un campo de llave
+       es André. A los demás ni se les menciona: se prende sola. */
     openTrade(); tShot = dataURL; tShotPinta(); leerCaptura();
     return;
   }
@@ -8081,32 +8051,7 @@ $('#capFile')?.addEventListener('change', e => {
 });
 /* La orden se replica a varias cuentas (copiadora). Sin al menos una, el trade
    quedaría invisible para el journal, el score y los balances: por eso se exige. */
-let tradeAccts = [], pendienteTix = null;
-function renderTradeAccts(pre){
-  const cont = $('#tAccts');
-  tradeAccts = (pre || []).filter(id => id === SIN_CUENTA || mias(S.accounts).some(a=>a.id===id));
-  if(!S.accounts.length){
-    if(!tradeAccts.length) tradeAccts = [SIN_CUENTA];
-    cont.innerHTML = `<p class="micro" style="color:var(--faint)">Sin cuentas dadas de alta: el trade se guarda sin asignar.</p>`;
-    return;
-  }
-  /* por defecto se marcan las cuentas de verdad; una sim se pica a propósito */
-  if(!tradeAccts.length) tradeAccts = cuentasVivas().filter(a => !esSim(a)).map(a=>a.id);
-  cont.innerHTML = ordenar(mias(S.accounts)).map(a=>{
-    const on = tradeAccts.includes(a.id);
-    const F = FASES[a.fase] || FASES.eval;
-    return `<button type="button" class="tag" data-a="${a.id}" aria-pressed="${on}">
-      <span class="dot"></span><span class="nm">${esc(a.alias)}</span><span class="cap">${F.corto}</span></button>`;
-  }).join('') +
-  `<button type="button" class="btn sm" id="tAcctsAll" style="margin-left:4px">All</button>`;
-  $$('#tAccts button[data-a]').forEach(b => b.onclick = ()=>{
-    const id = b.dataset.a;
-    tradeAccts = tradeAccts.includes(id) ? tradeAccts.filter(x=>x!==id) : [...tradeAccts, id];
-    renderTradeAccts(tradeAccts);
-  });
-  const all = $('#tAcctsAll');
-  if(all) all.onclick = ()=> renderTradeAccts(cuentasVivas().filter(a => !esSim(a)).map(a=>a.id));
-}
+let pendienteTix = null;
 
 window.openTrade = openTrade;
 window.delTrade = id => {
@@ -8115,51 +8060,36 @@ window.delTrade = id => {
   renderJournal(); renderTrades(); updateBadges(); toast('Trade deleted');
 };
 
-function autoPnl(){
-  const sym = $('#tSym').value, dirn = $('#tDir').value==='L'?1:-1;
-  const en = parseFloat($('#tIn').value), ex = parseFloat($('#tOut').value), q = parseInt($('#tQty').value)||1;
-  if(isFinite(en) && isFinite(ex) && POINT_VALUE[sym]){
-    $('#tPnl').value = Math.round((ex-en) * dirn * POINT_VALUE[sym] * q);
-  }
-}
-['tIn','tOut','tQty','tDir','tSym'].forEach(id => $('#'+id).addEventListener('input', autoPnl));
 
 $('#tSave').addEventListener('click', ()=>{
   const pnl = parseFloat($('#tPnl').value);
   if(!isFinite(pnl)){ toast('The trade P&L is missing'); return; }
+  /* Dos fuentes para los detalles, en este orden: lo que el LECTOR sacó de la
+     captura (tLeido), y lo que el trade ya tenía (al editar). Lo que no venga
+     de ninguna se rellena con lo de la casa: hoy, la hora del mercado, el
+     instrumento del plan y TODAS tus cuentas en pie. El humano sólo pone el
+     dinero y la foto. */
+  const t0 = editingTrade || {};
+  const L = tLeido || {};
+  const cuentas = (Array.isArray(t0.accts) && t0.accts.length)
+    ? t0.accts
+    : ordenar(mias(S.accounts).filter(a => !esLive(a) && !esSim(a) && cuentaEnPie(a))).map(a => a.id);
   const data = {
-    date: $('#tFecha').value || todayISO(),
-    /* Si el campo viene vacío se cae a la hora REAL del mercado, no a un
-       '07:35' fijo: ese valor era de la ventana vieja escrita en hora de
-       Morelia, así que un trade sin hora se automarcaba OUT_OF_WINDOW él solo. */
-    time: $('#tHora').value || horaMercadoAhora(),
-    sym: $('#tSym').value,
-    dir: $('#tDir').value,
-    qty: parseInt($('#tQty').value)||1,
-    entry: $('#tIn').value===''?null:parseFloat($('#tIn').value),
-    exit: $('#tOut').value===''?null:parseFloat($('#tOut').value),
+    date: (L.date && /^\d{4}-\d{2}-\d{2}$/.test(L.date) && L.date <= todayISO()) ? L.date : (t0.date || todayISO()),
+    time: (L.time && /^\d{1,2}:\d{2}/.test(L.time)) ? L.time.slice(0, 5) : (t0.time || horaMercadoAhora()),
+    sym: L.sym ? impSimbolo(L.sym) : (t0.sym || (S.profile && S.profile.instrumento) || SISTEMA.instrumento),
+    dir: (L.dir === 'L' || L.dir === 'S') ? L.dir : (t0.dir || 'L'),
+    qty: (isFinite(+L.qty) && +L.qty > 0) ? Math.round(+L.qty) : (t0.qty || 1),
+    entry: isFinite(+L.entry) ? +L.entry : (t0.entry ?? null),
+    exit: (L.exit != null && isFinite(+L.exit)) ? +L.exit : (t0.exit ?? null),
     pnl,
-    setupOk: $('#tSetup').value==='1',
-    /* La respuesta se guarda SIEMPRE, aunque el día sea anterior a la regla:
-       así el dato existe desde ya y el día que quieras mover la fecha de inicio
-       hacia atrás, el historial ya tiene con qué responder. */
-    notas: $('#tNotas').value.trim(),
+    setupOk: t0.setupOk !== false,
+    notas: t0.notas || (L.nota ? String(L.nota).slice(0, 120) : ''),
     shot: tShot || null,
-    accts: tradeAccts.length ? [...tradeAccts] : [SIN_CUENTA],
-    seq: (editingTrade && editingTrade.seq) || ++S.seqTrade,
-    por: (editingTrade && editingTrade.por) || (S.session && S.session.user) || null,
+    accts: cuentas.length ? cuentas : [SIN_CUENTA],
+    seq: t0.seq || ++S.seqTrade,
+    por: t0.por || (S.session && S.session.user) || null,
   };
-  if(S.accounts.length && !tradeAccts.length){
-    toast('Pick at least one account'); return;
-  }
-  /* Un dedazo en el año (2027 por 2026) metía un trade en el futuro que SÍ
-     contaba: inflaba el P&L, las estadísticas y el camino a payout, y te decía
-     que ya pasaste la evaluación. El mercado no ha abierto ese día todavía. */
-  if(data.date > todayISO()){
-    toast(bi('Esa fecha todavía no llega: ' + fmtFecha(data.date) + '. Revisa el año.',
-             'That date has not happened yet: ' + fmtFecha(data.date) + '. Check the year.'));
-    return;
-  }
   if(pendienteTix && !editingTrade){
     data.tixId = pendienteTix;
     const tk = S.tickets.find(x => x.id === pendienteTix);
@@ -8175,7 +8105,7 @@ $('#tSave').addEventListener('click', ()=>{
   save(); closeOv();
   render(location.hash.slice(1)||'agentes'); updateBadges();
   toast(editingTrade ? 'Trade updated' : 'Trade documentado');
-  editingTrade = null;
+  editingTrade = null; tLeido = null;
 });
 
 /* export */
@@ -10090,7 +10020,8 @@ function renderTix(){
     location.hash = 'journal';
     setTimeout(() => {
       $('#btnTrade').click();
-      setTimeout(() => { $('#tSym').value = t.sym; $('#tDir').value = t.dir; }, 60);
+      /* el modal ya no tiene cajas de símbolo/dirección: viajan por tLeido */
+      setTimeout(() => { tLeido = { sym: t.sym, dir: t.dir }; }, 60);
     }, 250);
   });
   cloudPaint();
