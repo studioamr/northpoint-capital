@@ -1924,6 +1924,21 @@ button.tag.quemada{text-decoration:line-through;text-decoration-color:var(--down
 .sl-tag{margin-left:auto;font-family:var(--mono);font-size:10px;letter-spacing:.22em;color:#38BDF8}
 .sl-sub{font-size:13px;line-height:1.7;color:var(--dim);max-width:64ch;margin:10px 0 18px}
 .sl-card{padding:22px 24px;margin-bottom:16px}
+/* progreso al primer payout POR miembro (The Desk), con avatar al final */
+.pgp-lista{display:grid;gap:18px}
+.pgp-card{}
+.pgp-h{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:9px}
+.pgp-h b{font-size:14px;font-weight:700}
+.pgp-h b em{color:var(--faint);font-style:normal;font-weight:400;font-size:11.5px}
+.pgp-pct{font-family:var(--mono);font-size:12px;color:var(--dim)}
+.pgp-bar{position:relative;height:32px;border-radius:99px;background:var(--w03,rgba(255,255,255,.05));overflow:visible}
+.pgp-bar>i{display:block;height:100%;border-radius:99px;background:linear-gradient(90deg,color-mix(in srgb,var(--up) 20%,transparent),color-mix(in srgb,var(--up) 60%,transparent));transition:width .7s ease}
+.pgp-card.yo .pgp-bar>i{background:linear-gradient(90deg,color-mix(in srgb,var(--up) 28%,transparent),var(--up))}
+.pgp-cara{position:absolute;top:50%;transform:translate(-50%,-50%);width:36px;height:36px;border-radius:50%;
+  border:2px solid var(--bg-2);overflow:hidden;display:flex;align-items:center;justify-content:center;background:var(--bg-2);transition:left .7s ease}
+.pgp-cara img,.pgp-cara canvas,.pgp-cara svg{width:100%;height:100%;object-fit:cover}
+.pgp-pasos{display:flex;justify-content:space-between;margin-top:9px;font-family:var(--mono);font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.pgp-pasos .on{color:var(--up)}
 /* progreso hacia el primer payout */
 .pay-progreso{padding:20px 22px;margin-bottom:16px}
 .pay-prog-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px}
@@ -2963,6 +2978,9 @@ stop[stop-color="#9BC0DC"]{stop-color:var(--txt)}
           <canvas id="agOficina" width="1800" height="1160" aria-label="The Northpoint office — 88th floor, New York"></canvas>
           <div id="horaNY" aria-label="Hora de Nueva York"></div>
         </div>
+
+        <!-- Progreso al primer payout de cada miembro, con su avatar al final -->
+        <div id="pgPayouts"></div>
 
         <!-- El tablero del negocio: el camino a payout con el proceso de
              cada socio sobre la banda. -->
@@ -11359,7 +11377,7 @@ function cloudPaint(){
   const falla = cloudOn() && cloudTok && cloudErr ? String(cloudErr) : null;
   if(falla !== _nubeAvisada){
     _nubeAvisada = falla;
-    if($('#pgFirma')) try{ renderFirmaCarrera(); }catch(e){}
+    if($('#pgFirma')) try{ renderPayoutsFirma(); renderFirmaCarrera(); }catch(e){}
   }
 }
 /* El pill se pica y te dice POR QUÉ estás trabajando solo y cómo arreglarlo.
@@ -13010,7 +13028,40 @@ function renderAgentes(){
   if(typeof animaOficina === 'function') animaOficina();
   /* el tablero del negocio: el camino a payout con el proceso de cada socio
      (la caja y los objetivos viven en Mi dinero; la carrera se retiró) */
+  renderPayoutsFirma();
   renderFirmaCarrera();
+}
+/* En camino al primer payout, POR miembro — mismo bloque que Payout management,
+   con el avatar del perfil al final de cada barra de progreso. */
+function renderPayoutsFirma(){
+  const host = $('#pgPayouts'); if(!host) return;
+  const yo = S.session && S.session.user;
+  const socios = registrados().map(p => ({ ...carreraSocio(p.id), nom:p.nom }));
+  if(!socios.length){ host.innerHTML = ''; return; }
+  host.innerHTML = `
+    <div class="panel" style="padding:20px 22px;margin-bottom:12px">
+      <div class="p-head" style="padding:0 0 14px"><h3>${bi('En camino al primer payout','On the way to the first payout')}</h3></div>
+      <div class="pgp-lista">
+        ${socios.map(x => {
+          const pct = x.sinDatos ? 0 : Math.max(0, Math.min(100, Math.round(x.pct)));
+          return `<div class="pgp-card ${x.uid===yo?'yo':''}">
+            <div class="pgp-h">
+              <b>${esc(x.nom)}${x.uid===yo?` <em>${bi('(tú)','(you)')}</em>`:''}</b>
+              <span class="pgp-pct mono">${pct}%</span>
+            </div>
+            <div class="pgp-bar">
+              <i style="width:${pct}%"></i>
+              <span class="pgp-cara" style="left:clamp(16px, ${pct}%, calc(100% - 16px))">${caraSocio(x.uid, 32)}</span>
+            </div>
+            <div class="pgp-pasos">
+              <span class="${pct>0?'on':''}">${bi('Evaluación','Evaluation')}</span>
+              <span class="${pct>=50?'on':''}">${bi('Colchón','Buffer')}</span>
+              <span class="${pct>=100?'on':''}">${bi('Primer payout','First payout')}</span>
+            </div>
+          </div>`;
+        }).join('')}
+      </div>
+    </div>`;
 }
 
 /* ════════ LA VIDA DEL NEGOCIO ════════
