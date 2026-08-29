@@ -2899,30 +2899,6 @@ stop[stop-color="#9BC0DC"]{stop-color:var(--txt)}
         <div class="md-sec-t"><span class="micro" data-i18n="md.tasas">Win rate and desk ratios</span></div>
         <div class="mdk-grid" id="mdKpiRail"></div>
 
-        <div class="md-charts-grid" id="mdCharts" style="margin-top:30px">
-          <div class="panel md-ch2">
-            <div class="p-head"><h3 data-i18n="md.acum">P&amp;L acumulado</h3><span class="micro" id="eqLabel"></span></div>
-            <div class="p-body">
-              <canvas id="eqCanvas" height="220"></canvas>
-              <div id="eqEmpty"></div>
-            </div>
-          </div>
-          <div class="panel md-ch2">
-            <div class="p-head"><h3 data-i18n="md.porDia">P&amp;L per day</h3><span class="micro" id="dayLabel"></span></div>
-            <div class="p-body">
-              <canvas id="dayCanvas" height="220"></canvas>
-              <div id="dayEmpty"></div>
-            </div>
-          </div>
-          <div class="panel md-ch2">
-            <div class="p-head"><h3 data-i18n="md.conteo">Trades acumulados</h3><span class="micro" id="cntLabel"></span></div>
-            <div class="p-body">
-              <canvas id="cntCanvas" height="220"></canvas>
-              <div id="cntEmpty"></div>
-            </div>
-          </div>
-        </div>
-
         <!-- calendario -->
         <div class="panel mt">
           <div class="p-head">
@@ -6941,10 +6917,14 @@ function renderDashboard(){
       <div class="mdk-v ${st.pnl>0?'up':st.pnl<0?'down':''}">${fmt$(st.pnl,true)}</div>
       <div class="mdk-s">${st.n} trades</div>
     </div>`,
+    `<div class="mdk-card">
+      <div class="mdk-l">${bi('Trades','Trades')}</div>
+      <div class="mdk-v ${st.pnl<0?'down':''}">${st.n}</div>
+      <div class="mdk-s">${gan}${tr('md.wCorto')} &middot; ${per}${tr('md.lCorto')} · ${st.pnl>=0?bi('en verde','in the green'):bi('en rojo','in the red')}</div>
+    </div>`,
   ].join('');
 
-  /* ── las curvas (el Northpoint Score se retiró) ── */
-  drawEquity(); drawDaily(); drawConteo();
+  /* las curvas se retiraron: el desempeño vive en las tarjetas de arriba */
 
   /* ── extremos: el mejor, el total y el peor ── */
   const mejor = todos.length ? todos.reduce((a,t)=>(t.pnl||0)>(a.pnl||0)?t:a) : null;
@@ -13441,7 +13421,6 @@ function renderAll(){ applyProfile(); aplicarIdioma(); pintaPlegado(); render(vi
 addEventListener('resize', ()=>{
   /* al redibujar la curva hay que repintar la copia de la cinta: si no, el
      original se actualiza y la mitad del bucle sigue enseñando datos viejos */
-  if($('#v-journal').classList.contains('on')){ drawEquity(); drawDaily(); drawConteo(); }
   if($('#v-entreno') && $('#v-entreno').classList.contains('on')) btDibuja(1);
   if($('#v-log') && $('#v-log').classList.contains('on')) lgDibuja(1);
 });
@@ -13452,8 +13431,6 @@ function applyTheme(t){
   if(t === 'light') document.documentElement.setAttribute('data-theme','light');
   else document.documentElement.removeAttribute('data-theme');
   try{ localStorage.setItem('np_theme', t); }catch(e){}
-  /* la curva de equity se pinta en canvas: repintar con los colores del tema */
-  try{ if(currentUser() && $('#v-journal') && $('#v-journal').classList.contains('on')){ drawEquity(); repintaCintas(); } }catch(e){}
   try{ if($('#v-entreno') && $('#v-entreno').classList.contains('on')) btDibuja(1); }catch(e){}
   try{ if($('#v-log') && $('#v-log').classList.contains('on')) lgDibuja(1); }catch(e){}
 }
