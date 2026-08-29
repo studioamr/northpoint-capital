@@ -1072,8 +1072,24 @@ body.locked .app{visibility:hidden;pointer-events:none}
 .lec-notas-h{font-family:var(--mono);font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--faint);margin-bottom:10px}
 .lec-notas textarea{width:100%;min-height:120px;resize:vertical;border:1px solid var(--line);border-radius:14px;
   background:var(--w02);color:var(--txt);font:400 15px/1.65 var(--sans,inherit);padding:14px 16px;outline:none}
-.lec-side .lec-notas textarea{min-height:min(64vh,560px)}
+.lec-side .lec-notas textarea{min-height:160px}
 .lec-notas textarea:focus{border-color:var(--accent)}
+.nb-h2{font-family:var(--mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--faint);margin:16px 0 8px}
+.nb-draw{border:1px solid var(--line);border-radius:12px;overflow:hidden;background:var(--w02);line-height:0}
+.nb-draw canvas{display:block;width:100%;height:190px;cursor:crosshair;touch-action:none}
+.nb-draw-acc{display:flex;align-items:center;gap:10px;margin-top:8px}
+.nb-colors{display:flex;gap:6px;margin-right:auto}
+.nb-color{width:20px;height:20px;border-radius:50%;border:2px solid transparent;cursor:pointer;padding:0}
+.nb-color.on{border-color:var(--txt);box-shadow:0 0 0 2px var(--bg-2)}
+.btn.sm{padding:7px 12px;font-size:12px}
+.nb-imgs{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
+.nb-imgs-vacio{grid-column:1/-1;font-family:var(--mono);font-size:11px;color:var(--faint);padding:6px 0}
+.nb-img{position:relative;border:1px solid var(--line-soft);border-radius:10px;overflow:hidden;aspect-ratio:4/3;background:var(--bg-2)}
+.nb-img img{width:100%;height:100%;object-fit:cover;cursor:zoom-in;display:block}
+.nb-img-x{position:absolute;top:4px;right:4px;width:20px;height:20px;border-radius:50%;border:none;background:rgba(0,0,0,.6);color:#fff;font-size:14px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.nb-add-img{display:block;margin-top:10px;text-align:center;border:1px dashed var(--line);border-radius:10px;padding:11px;
+  font-family:var(--mono);font-size:11px;color:var(--dim);cursor:pointer;transition:all .14s}
+.nb-add-img:hover{border-color:var(--accent);color:var(--txt)}
 @media(max-width:900px){
   .lec-split{flex-direction:column;gap:0;padding:0}
   .lec-split .lec-doc .lec,.lec-split .lec-doc .lec-cargando{padding:34px 22px 20px}
@@ -8660,6 +8676,8 @@ function nbEstado(){
   if(!S.notebook || typeof S.notebook !== 'object') S.notebook = {};
   if(!S.notebook.notas) S.notebook.notas = {};
   if(!S.notebook.abiertos) S.notebook.abiertos = {};
+  if(!S.notebook.dibujos) S.notebook.dibujos = {};   // dataURL del boceto por lección
+  if(!S.notebook.imgs) S.notebook.imgs = {};          // capturas/imágenes por lección [dataURL]
   return S.notebook;
 }
 let nbLigado = false;
@@ -15482,6 +15500,14 @@ function abreLeccion(id){
   const notasHtml = `<aside class="lec-side"><div class="lec-notas">
     <div class="lec-notas-h">${bi('Mi cuaderno · notas de esta lección','My notebook · notes for this lesson')}</div>
     <textarea id="lecNota" placeholder="${bi('Apunta lo que aprendas de este tema…','Jot down what you learn on this topic…')}">${esc(nota)}</textarea>
+    <div class="nb-h2">${bi('Boceto','Sketch')}</div>
+    <div class="nb-draw" id="nbDrawWrap"><canvas id="lecDibujo"></canvas></div>
+    <div class="nb-draw-acc"><span class="nb-colors" id="nbColors"></span>
+      <button type="button" class="btn sm" id="lecDibLimpia">${bi('Limpiar','Clear')}</button></div>
+    <div class="nb-h2">${bi('Capturas e imágenes','Screenshots & images')}</div>
+    <div class="nb-imgs" id="lecImgs"></div>
+    <label class="nb-add-img">＋ ${bi('Agregar (o pega con Ctrl/⌘+V)','Add (or paste with Ctrl/⌘+V)')}
+      <input type="file" accept="image/*" id="lecImgIn" hidden></label>
   </div></aside>`;
   $('#lecScroll').innerHTML = `<div class="lec-split"><div class="lec-doc">${cuerpo}</div>${notasHtml}</div>`;
   $('#lecScroll').scrollTop = 0;
@@ -15489,9 +15515,59 @@ function abreLeccion(id){
   marcaLecBtn(id);
   const ta = $('#lecNota');
   if(ta) ta.addEventListener('input', () => { nbEstado().notas[id] = ta.value; save(); });
+  /* boceto + capturas */
+  initLecDibujo(id);
+  renderLecImgs(id);
+  $('#lecImgIn')?.addEventListener('change', e => { const f=e.target.files&&e.target.files[0]; if(f) agregaLecImg(id, f); e.target.value=''; });
   $('#ovLeccion').classList.add('on');
   document.body.style.overflow = 'hidden';
 }
+/* ── DIBUJAR en la libreta ── */
+let lecDibColor = '#e6e6e6';
+function initLecDibujo(id){
+  const cv = $('#lecDibujo'); if(!cv) return;
+  const wrap = cv.parentElement, dpr = devicePixelRatio||1;
+  const W = wrap.clientWidth || 300, H = 190;
+  cv.width = W*dpr; cv.height = H*dpr;
+  const ctx = cv.getContext('2d'); ctx.scale(dpr,dpr);
+  ctx.lineCap='round'; ctx.lineJoin='round';
+  /* cargar el boceto guardado */
+  const prev = nbEstado().dibujos[id];
+  if(prev){ const img=new Image(); img.onload=()=>ctx.drawImage(img,0,0,W,H); img.src=prev; }
+  /* paleta de colores */
+  const cont = $('#nbColors');
+  if(cont){ cont.innerHTML=''; ['#e6e6e6','#30d158','#4da3ff','#ffd24a','#ff5a5a','#c88cff'].forEach(col=>{
+    const b=document.createElement('button'); b.type='button'; b.className='nb-color'+(col===lecDibColor?' on':''); b.style.background=col;
+    b.onclick=()=>{ lecDibColor=col; cont.querySelectorAll('.nb-color').forEach(x=>x.classList.toggle('on',x===b)); };
+    cont.appendChild(b); }); }
+  let dib=false,last=null;
+  const pos=e=>{ const r=cv.getBoundingClientRect(); const p=e.touches?e.touches[0]:e; return [p.clientX-r.left,p.clientY-r.top]; };
+  const start=e=>{ dib=true; last=pos(e); e.preventDefault(); };
+  const move=e=>{ if(!dib) return; const p=pos(e); ctx.strokeStyle=lecDibColor; ctx.lineWidth=2.4; ctx.beginPath(); ctx.moveTo(last[0],last[1]); ctx.lineTo(p[0],p[1]); ctx.stroke(); last=p; e.preventDefault(); };
+  const end=()=>{ if(dib){ dib=false; nbEstado().dibujos[id]=cv.toDataURL('image/png'); save(); } };
+  cv.addEventListener('mousedown',start); cv.addEventListener('mousemove',move); window.addEventListener('mouseup',end);
+  cv.addEventListener('touchstart',start,{passive:false}); cv.addEventListener('touchmove',move,{passive:false}); cv.addEventListener('touchend',end);
+  $('#lecDibLimpia')?.addEventListener('click', ()=>{ ctx.clearRect(0,0,W,H); nbEstado().dibujos[id]=null; save(); });
+}
+/* ── CAPTURAS/imágenes en la libreta ── */
+function agregaLecImg(id, file){
+  const rd = new FileReader();
+  rd.onload = () => { const nb=nbEstado(); nb.imgs[id]=nb.imgs[id]||[]; nb.imgs[id].push(rd.result); save(); renderLecImgs(id); };
+  rd.readAsDataURL(file);
+}
+function renderLecImgs(id){
+  const cont = $('#lecImgs'); if(!cont) return;
+  const imgs = nbEstado().imgs[id] || [];
+  cont.innerHTML = imgs.map((src,i)=>`<div class="nb-img"><img src="${src}" alt="" data-ver="${i}"><button type="button" class="nb-img-x" data-del="${i}" aria-label="Quitar">×</button></div>`).join('') || `<div class="nb-imgs-vacio">${bi('Sin capturas todavía','No screenshots yet')}</div>`;
+  cont.querySelectorAll('[data-del]').forEach(b=> b.onclick=()=>{ const nb=nbEstado(); nb.imgs[id].splice(+b.dataset.del,1); save(); renderLecImgs(id); });
+  cont.querySelectorAll('[data-ver]').forEach(im=> im.onclick=()=>{ window.open(imgs[+im.dataset.ver],'_blank'); });
+}
+/* pegar una captura con Ctrl/⌘+V mientras la lección está abierta */
+document.addEventListener('paste', e => {
+  if(!lecAbierta) return;
+  const items = e.clipboardData && e.clipboardData.items; if(!items) return;
+  for(const it of items){ if(it.type && it.type.indexOf('image')===0){ const f=it.getAsFile(); if(f){ agregaLecImg(lecAbierta, f); e.preventDefault(); return; } } }
+});
 function cierraLeccion(){
   $('#ovLeccion').classList.remove('on');
   document.body.style.overflow = '';
