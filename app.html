@@ -1779,15 +1779,10 @@ button.st-chip:hover{border-color:rgba(255,255,255,.45)}
 /* lomo con pliegue de cuero */
 .nbk-cover::before{content:'';position:absolute;left:7px;top:0;bottom:0;width:2px;pointer-events:none;
   background:linear-gradient(rgba(0,0,0,.55),rgba(0,0,0,.3),rgba(0,0,0,.55));box-shadow:1px 0 1px rgba(255,255,255,.04)}
-.nbk-plate{position:absolute;left:0;right:0;top:30px;display:flex;justify-content:center;z-index:2;padding:0 10px}
-.nbk-title{display:inline-flex;color:#f4f5f7;font-family:'Chalkduster','Bradley Hand','Segoe Print','Comic Sans MS',cursive;
-  font-size:15px;font-weight:400;letter-spacing:.02em;white-space:nowrap;
-  text-shadow:0 0 1px rgba(255,255,255,.55),0 1px 3px rgba(0,0,0,.9)}
-.nbk-title i{font-style:normal;display:inline-block}
-.nbk-title i:nth-child(odd){transform:rotate(-5deg) translateY(-1.2px)}
-.nbk-title i:nth-child(even){transform:rotate(4deg) translateY(1.2px)}
-.nbk-title i:nth-child(3n){transform:rotate(7deg) translateY(-.6px) scale(1.06)}
-.nbk-title i:nth-child(5n){transform:rotate(-8deg) translateY(1.6px) scale(.94)}
+.nbk-plate{position:absolute;left:0;right:0;top:32px;display:flex;justify-content:center;z-index:2;padding:0 10px}
+/* el título con el MISMO estilo del logo NORTHPOINT */
+.nbk-title{color:#fff;font-family:inherit;font-size:12px;font-weight:800;letter-spacing:.18em;white-space:nowrap;
+  text-shadow:0 1px 2px rgba(0,0,0,.8)}
 /* liga elástica de cierre */
 .nbk-band{position:absolute;top:-2px;bottom:-2px;right:20px;width:11px;z-index:3;
   background:linear-gradient(90deg,rgba(0,0,0,.35),rgba(30,32,36,.92) 40%,rgba(12,13,15,.95));
@@ -9463,11 +9458,10 @@ function libretaEstado(){
 /* título en tinta rasposa (el mismo estilo de la libreta) */
 function tituloTinta(txt){ return String(txt||'').split('').map(l=> l===' '?'&nbsp;':`<i>${esc(l)}</i>`).join(''); }
 function libretaCerradaHTML(){
-  const letras = 'NORTHPOINT'.split('').map(l=>`<i>${l}</i>`).join('');
   return `<div class="nbk">
     <div class="nbk-cover">
       <div class="nbk-plate">
-        <b class="nbk-title">${letras}</b>
+        <b class="nbk-title">NORTHPOINT</b>
       </div>
     </div>
   </div>`;
@@ -11126,7 +11120,7 @@ function batSetupCardHTML(){
           <input type="text" inputmode="numeric" id="batDD" class="bat-inp" placeholder="—" value="${batSel.dd?fmt$(+batSel.dd):''}"></div>
       </div>
       <div class="bat-resumen"><span class="bat-resumen-l">${bi('Tu reto','Your challenge')}</span><b id="batResumen">${batRetoTxt(retoPrev)}</b>
-        <span class="bat-resumen-w">${bi('Empiezan con','Start with')} ${fmt$(batSel.balance||50000)}${batSel.tp?` · TP ${fmt$(+batSel.tp)}`:''}${batSel.dd?` · DD ${fmt$(+batSel.dd)}`:''} · ${bi('mayor profit gana','most profit wins')}${(batSel.mult||1)>1?` · <i style="color:#ffd76a">${bi('evento','event')} ×${batSel.mult}</i>`:''}</span></div>
+        <span class="bat-resumen-w">${bi('Empiezan con','Start with')} ${fmt$(batSel.balance||50000)}${batSel.tp?` · TP ${fmt$(+batSel.tp)}`:''}${batSel.dd?` · DD ${fmt$(+batSel.dd)}`:''} · ${bi('mayor profit gana','most profit wins')}${(batSel.mult||1)>1?` · <i style="color:#ffd76a">${bi('evento','event')} ×${batSel.mult}</i>`:''} · <i style="color:#ff8a7e">${bi('el que pierde paga','loser pays')} ${fmt$(BAT_FEE)}</i></span></div>
       <button type="button" class="btn primary bat-crear" id="batCrear">${bi('Enviar reto','Send challenge')} →</button>
     </div>`;
 }
@@ -11155,7 +11149,7 @@ function batSetupBind(scope, yo, alCerrar){
     if(rivales.length===1) S.challenge = { ...base, rival:rivales[0] };
     else S.challenge = { ...base, party:true, jugadores:[yo,...rivales], rival:rivales[0] };
     if(alCerrar) alCerrar();
-    toast(rivales.length>1 ? bi('Reto grupal enviado.','Group challenge sent.') : bi('Reto enviado. Esperando que acepte.','Challenge sent. Waiting for them to accept.'));
+    toast((rivales.length>1 ? bi('Reto grupal enviado.','Group challenge sent.') : bi('Reto enviado.','Challenge sent.'))+' '+bi('El que pierda paga','Loser pays')+' '+fmt$(BAT_FEE)+'.');
     batGuarda();
   };
 }
@@ -11377,7 +11371,7 @@ function renderBatalla(){
           </div>
         </div>
         <div class="stage-cta">
-          <button type="button" class="btn primary stage-btn" id="batNuevo"><span class="globe" aria-hidden="true"></span> ${bi('Retar a un socio','Challenge a partner')}</button>
+          <button type="button" class="btn primary stage-btn" id="batNuevo"><span class="globe" aria-hidden="true"></span> Battle</button>
           <button type="button" class="stage-btn sec" id="stEventos">${bi('Eventos próximos','Upcoming events')}</button>
           <button type="button" class="stage-link" id="stComo">${bi('¿Cómo se juega?','How to play')}</button>
         </div>
@@ -11452,7 +11446,7 @@ function renderBatalla(){
           const maxAbs=Math.max(1,...bars.map(b=>Math.abs(b.p)));
           const histU=batHist().map((h,i)=>({h,i})).filter(x=> x.h.party? (x.h.jugadores||[]).includes(u) : (x.h.host===u||x.h.rival===u)).slice(0,8);
           return `<div class="ars-ov">
-          <div class="ars-top"><b class="titulo-tinta">${tituloTinta(batNom(u))}</b>${esYo?`<span class="ars-cash">${bi('tu perfil','your profile')}</span>`:''}<button type="button" class="ars-x" id="perfX" aria-label="${bi('cerrar','close')}">✕</button></div>
+          <div class="ars-top perf-top"><span style="flex:1"></span><button type="button" class="ars-x" id="perfX" aria-label="${bi('cerrar','close')}">✕</button></div>
           <div class="evt-body">
             <div class="perf-card">
               <canvas id="perfCv" width="640" height="740"></canvas>
