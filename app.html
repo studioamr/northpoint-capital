@@ -1211,6 +1211,15 @@ button.st-chip:hover{border-color:rgba(255,255,255,.45)}
 .onb-in b{font-size:44px;font-weight:900;color:#fff;letter-spacing:.06em;text-shadow:0 2px 20px rgba(0,0,0,.7)}
 .onb-in span{font-family:var(--mono);font-size:12px;color:rgba(255,255,255,.65);margin-bottom:8px}
 .onb-in .stage-btn{width:min(360px,100%)}
+/* ══ THEMES · el clima decorativo y sus chips ══ */
+#fxCv{position:fixed;inset:0;z-index:9995;pointer-events:none}
+.tm-chips{display:flex;gap:8px;flex-wrap:wrap}
+.tm-chip{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--line);border-radius:10px;background:var(--w02);color:var(--dim);font-family:var(--mono);font-size:11px;font-weight:700;padding:9px 13px;cursor:pointer}
+.tm-chip:hover{border-color:var(--dim)}
+.tm-chip.on{border-color:var(--accent);color:var(--txt);background:var(--w04);box-shadow:inset 0 0 0 1px var(--accent)}
+.tm-chip i{font-style:normal}
+.tm-sw{display:inline-flex;gap:3px}
+.tm-sw i{width:11px;height:11px;border-radius:3px;display:block}
 /* ══ KATA · el templo de validación ══ */
 .kt-stage{height:calc(100vh - 130px);min-height:540px;margin-bottom:26px}
 .kt-stage > canvas{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
@@ -9511,6 +9520,101 @@ function renderKata(){
     });
   }
 }
+/* ══ THEMES · ambiente animado + paleta de P&L ══
+   Decoran el blanco y negro SIN tocarlo: un canvas fijo encima de todo
+   (pointer-events:none) y un <style> que redefine --up/--down.
+   Vive en S.ui (por equipo, no viaja por la nube). */
+const TEMA_FX=[
+  {id:'ninguno', n:['Ninguno','None'], ico:'○'},
+  {id:'sakura',  n:['Sakura','Sakura'], ico:'🌸'},
+  {id:'lluvia',  n:['Lluvia','Rain'], ico:'🌧️'},
+  {id:'tormenta',n:['Tormenta','Thunder'], ico:'⛈️'},
+  {id:'nieve',   n:['Nieve','Snow'], ico:'❄️'},
+  {id:'otono',   n:['Otoño','Autumn'], ico:'🍂'},
+];
+const PALETAS=[
+  {id:'clasica', n:['Clásica','Classic'], dark:['#57C79B','#DE6A5F'], light:['#1B7A50','#B5473A']},
+  {id:'oceano',  n:['Océano','Ocean'],   dark:['#5AA7FF','#FFA45C'], light:['#155FBF','#B4610A']},
+  {id:'oro',     n:['Oro','Gold'],       dark:['#E9CF46','#C8443C'], light:['#8A6D1A','#A32E26']},
+  {id:'sakura',  n:['Sakura','Sakura'],  dark:['#F2A7BD','#9A8CE0'], light:['#B04E76','#5E4E96']},
+];
+function temaCfg(){ S.ui=S.ui||{}; if(!S.ui.temaFx) S.ui.temaFx='ninguno'; if(!S.ui.paleta) S.ui.paleta='clasica'; return S.ui; }
+function aplicaPaleta(){
+  const t=temaCfg(); const pa=PALETAS.find(x=>x.id===t.paleta)||PALETAS[0];
+  let st=document.getElementById('paletaCss');
+  if(!st){ st=document.createElement('style'); st.id='paletaCss'; document.head.appendChild(st); }
+  st.textContent = t.paleta==='clasica' ? '' :
+    `:root{--up:${pa.dark[0]};--down:${pa.dark[1]}}\n[data-theme="light"]{--up:${pa.light[0]};--down:${pa.light[1]}}`;
+}
+let _fxRAF=0;
+function fxAplica(){
+  const t=temaCfg();
+  let cv=document.getElementById('fxCv');
+  cancelAnimationFrame(_fxRAF);
+  if(window._fxMide){ window.removeEventListener('resize', window._fxMide); window._fxMide=null; }
+  if(t.temaFx==='ninguno'){ if(cv) cv.remove(); return; }
+  if(!cv){ cv=document.createElement('canvas'); cv.id='fxCv'; document.body.appendChild(cv); }
+  const fx=cv.getContext('2d'); const modo=t.temaFx;
+  let W=0,H=0,last=0;
+  const mide=()=>{ const d=Math.min(2,window.devicePixelRatio||1); W=innerWidth; H=innerHeight;
+    cv.width=Math.round(W*d); cv.height=Math.round(H*d); fx.setTransform(d,0,0,d,0,0); };
+  window._fxMide=mide; window.addEventListener('resize', mide); mide();
+  const R=Math.random;
+  /* partículas por efecto (el canvas es puro adorno: Math.random está bien aquí) */
+  const P=[]; let rayo=null, rayoProx=performance.now()+2500+R()*4000;
+  const cae=(n,f)=>{ for(let i=0;i<n;i++) P.push(f(i)); };
+  if(modo==='sakura'){ cae(46,()=>({k:'petalo',x:R()*W,y:R()*H,vy:22+R()*30,ph:R()*6.3,s:3.4+R()*3.2,rot:R()*6.3,vr:(R()-0.5)*2}));
+                       cae(34,()=>({k:'gota',x:R()*W,y:R()*H,vy:420+R()*220,vx:-30,l:9+R()*8,a:.10})); }
+  if(modo==='lluvia')  cae(130,()=>({k:'gota',x:R()*W,y:R()*H,vy:520+R()*320,vx:-70,l:11+R()*10,a:.16}));
+  if(modo==='tormenta')cae(185,()=>({k:'gota',x:R()*W,y:R()*H,vy:680+R()*380,vx:-130,l:14+R()*12,a:.18}));
+  if(modo==='nieve')   cae(95,()=>({k:'copo',x:R()*W,y:R()*H,vy:26+R()*40,ph:R()*6.3,s:1+R()*2.2}));
+  if(modo==='otono')   cae(38,()=>({k:'hoja',x:R()*W,y:R()*H,vy:30+R()*40,ph:R()*6.3,s:2.6+R()*2.8,rot:R()*6.3,vr:(R()-0.5)*3,
+                                    col:`rgba(${190+Math.round(R()*50)},${80+Math.round(R()*60)},40,.8)`}));
+  const paso=(now)=>{
+    if(document.hidden){ _fxRAF=requestAnimationFrame(paso); return; }
+    const dt=Math.min(0.05,(now-last)/1000)||0.016; last=now;
+    const claro=document.documentElement.getAttribute('data-theme')==='light';
+    fx.clearRect(0,0,W,H);
+    /* relámpagos de la tormenta */
+    if(modo==='tormenta'){
+      if(!rayo && now>rayoProx){ const seg=[]; let x=W*(0.15+R()*0.7), y=-10;
+        while(y<H*0.72){ seg.push([x,y]); x+=(R()-0.5)*90; y+=30+R()*55; }
+        rayo={seg, t0:now, ramal: R()<0.6 ? seg[Math.floor(seg.length/2)] : null};
+        rayoProx=now+2600+R()*5200; }
+      if(rayo){ const f=1-(now-rayo.t0)/260;
+        if(f<=0) rayo=null;
+        else{ fx.fillStyle=claro?`rgba(90,110,200,${f*0.16})`:`rgba(255,255,255,${f*0.2})`; fx.fillRect(0,0,W,H);
+          fx.strokeStyle=claro?`rgba(70,88,175,${f})`:`rgba(223,230,255,${f})`; fx.lineWidth=2.2;
+          fx.beginPath(); rayo.seg.forEach(([x,y],i)=> i?fx.lineTo(x,y):fx.moveTo(x,y)); fx.stroke();
+          if(rayo.ramal){ fx.lineWidth=1.2; fx.beginPath(); fx.moveTo(rayo.ramal[0],rayo.ramal[1]);
+            fx.lineTo(rayo.ramal[0]-60,rayo.ramal[1]+80); fx.lineTo(rayo.ramal[0]-85,rayo.ramal[1]+150); fx.stroke(); } } }
+    }
+    P.forEach(o=>{
+      if(o.k==='gota'){ o.x+=o.vx*dt; o.y+=o.vy*dt;
+        if(o.y>H+20){ o.y=-20; o.x=R()*(W+150); } if(o.x<-30) o.x=W+20;
+        fx.strokeStyle=claro?`rgba(40,70,110,${o.a})`:`rgba(185,205,240,${o.a})`; fx.lineWidth=1.1;
+        fx.beginPath(); fx.moveTo(o.x,o.y); fx.lineTo(o.x+o.vx*0.018,o.y+o.l); fx.stroke(); }
+      else if(o.k==='petalo'){ o.y+=o.vy*dt; o.x+=Math.sin(now/900+o.ph)*0.8; o.rot+=o.vr*dt;
+        if(o.y>H+10){ o.y=-10; o.x=R()*W; }
+        fx.save(); fx.translate(o.x,o.y); fx.rotate(o.rot);
+        fx.fillStyle=claro?'rgba(214,106,146,.75)':'rgba(246,193,208,.82)';
+        fx.beginPath(); fx.ellipse(0,0,o.s,o.s*0.62,0,0,7); fx.fill();
+        fx.fillStyle=claro?'rgba(176,78,118,.55)':'rgba(240,166,190,.6)';
+        fx.beginPath(); fx.ellipse(o.s*0.5,o.s*0.24,o.s*0.62,o.s*0.4,0.6,0,7); fx.fill(); fx.restore(); }
+      else if(o.k==='copo'){ o.y+=o.vy*dt; o.x+=Math.sin(now/1200+o.ph)*0.6;
+        if(o.y>H+6){ o.y=-6; o.x=R()*W; }
+        fx.fillStyle=claro?'rgba(110,130,165,.7)':'rgba(255,255,255,.8)';
+        fx.beginPath(); fx.arc(o.x,o.y,o.s,0,7); fx.fill(); }
+      else if(o.k==='hoja'){ o.y+=o.vy*dt; o.x+=Math.sin(now/800+o.ph)*0.9; o.rot+=o.vr*dt;
+        if(o.y>H+10){ o.y=-10; o.x=R()*W; }
+        fx.save(); fx.translate(o.x,o.y); fx.rotate(o.rot);
+        fx.fillStyle=o.col; fx.beginPath(); fx.ellipse(0,0,o.s,o.s*0.55,0,0,7); fx.fill(); fx.restore(); }
+    });
+    _fxRAF=requestAnimationFrame(paso);
+  };
+  _fxRAF=requestAnimationFrame(paso);
+}
+try{ aplicaPaleta(); fxAplica(); }catch(e){}
 function renderEntreno(){
   /* KATA (el dojo) quedó dormido a pedido de André: el backtesting clásico manda.
      Para revivirlo: volver a llamar renderKata() aquí. */
@@ -11611,12 +11715,23 @@ function renderBatalla(){
           <button type="button" class="bat-volver" id="batVolverLobby">‹ ${bi('Atrás','Back')}</button>
           <span class="bat-lobby-t">${bi('Ajustes','Settings')}</span>
         </div>
+        ${(()=>{ const t=temaCfg(); const claro=document.documentElement.getAttribute('data-theme')==='light';
+          return `<div class="bat-sec-t">${bi('THEMES · AMBIENTE','THEMES · AMBIENT')}</div>
+        <div class="bat-card">
+          <div class="bat-f"><label>${bi('Efecto sobre la plataforma','Effect over the platform')} <em>${bi('(solo este equipo)','(this device only)')}</em></label>
+            <div class="tm-chips">${TEMA_FX.map(f=>`<button type="button" class="tm-chip ${t.temaFx===f.id?'on':''}" data-fx="${f.id}"><i>${f.ico}</i>${loc(f.n)}</button>`).join('')}</div></div>
+          <div class="bat-f" style="margin-bottom:4px"><label>${bi('Paleta del P&L','P&L palette')} <em>${bi('positivo / negativo','positive / negative')}</em></label>
+            <div class="tm-chips">${PALETAS.map(p2=>{ const c2=claro?p2.light:p2.dark;
+              return `<button type="button" class="tm-chip ${t.paleta===p2.id?'on':''}" data-paleta="${p2.id}"><span class="tm-sw"><i style="background:${c2[0]}"></i><i style="background:${c2[1]}"></i></span>${loc(p2.n)}</button>`; }).join('')}</div></div>
+        </div>`; })()}
         <div class="bat-card">
           <button type="button" class="bat-set-row" id="batResetRank">${bi('Reiniciar el leaderboard','Reset the leaderboard')}</button>
           <button type="button" class="bat-set-row" id="batLimpiaHist">${bi('Borrar el historial','Clear the history')}</button>
           <button type="button" class="bat-set-row danger" id="batLogout">${bi('Terminar sesión','Sign out')}</button>
         </div>`;
       $('#batVolverLobby').onclick = () => { batPantalla='home'; renderBatalla(); };
+      root.querySelectorAll('[data-fx]').forEach(b=> b.onclick=()=>{ temaCfg().temaFx=b.dataset.fx; save(); fxAplica(); renderBatalla(); });
+      root.querySelectorAll('[data-paleta]').forEach(b=> b.onclick=()=>{ temaCfg().paleta=b.dataset.paleta; save(); aplicaPaleta(); renderBatalla(); });
       $('#batResetRank').onclick = () => { if(confirm(bi('¿Reiniciar el leaderboard?','Reset the leaderboard?'))){ S.batStats={}; save(); batPantalla='home'; renderBatalla(); } };
       $('#batLimpiaHist').onclick = () => { if(confirm(bi('¿Borrar el historial?','Clear history?'))){ S.batHistorial=[]; save(); batPantalla='home'; renderBatalla(); } };
       $('#batLogout').onclick = () => { if(!confirm(bi('¿Terminar sesión?','Sign out?'))) return; S.session={user:null}; try{ localStorage.removeItem('np_tok'); }catch(e){} if(typeof lockUI==='function') lockUI(); else location.reload(); };
