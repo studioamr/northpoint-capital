@@ -751,6 +751,11 @@ body.locked .app{visibility:hidden;pointer-events:none}
 .bat-vuelo-lbl b{display:block;font-size:22px;font-weight:900;color:#fff}
 .bat-vuelo-lbl span{font-family:var(--mono);font-size:12px;color:rgba(255,255,255,.8)}
 .bat-vuelo-lbl i{font-style:normal;color:#4ee08a}
+.bat-rio{position:relative;width:100%;border-radius:18px;overflow:hidden;border:1px solid var(--line);margin-bottom:16px;background:#0c1322;line-height:0}
+.bat-rio canvas{display:block;width:100%;height:auto}
+.bat-rio-lbl{position:absolute;left:14px;bottom:12px;line-height:1.25;text-shadow:0 1px 6px rgba(0,0,0,.6)}
+.bat-rio-lbl b{display:block;font-size:15px;font-weight:900;letter-spacing:.02em;color:#fff}
+.bat-rio-lbl span{font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;color:rgba(255,255,255,.8)}
 .bat-hero3{position:relative;width:100%;border-radius:18px;overflow:hidden;border:1px solid var(--line);margin-bottom:16px;background:#0c1322;line-height:0}
 .bat-hero3 canvas{display:block;width:100%;height:auto}
 .bat-hero3-lbl{position:absolute;left:14px;bottom:12px;line-height:1.2;text-shadow:0 1px 6px rgba(0,0,0,.7)}
@@ -9323,6 +9328,17 @@ function batSkyline(c, W, H, noche){
   batTorreTokio(c, W*0.56, g, H*0.5, noche);
   batSkytree(c, W*0.80, g, H*0.72, noche);
 }
+/* la SEDE de Río en Batallas: la torre NorthPoint plateada/espejo con cielo
+   azul de mediodía, la bahía, el Pan de Azúcar y el Cristo. Estático. */
+function batPintaRio(){
+  const cv = document.getElementById('batRioCv'); if(!cv || typeof escenaEdificio!=='function') return;
+  const c = cv.getContext('2d'); const W = cv.width, H = cv.height;
+  const rr = i => ((Math.sin(i*12.9898)*43758.5453)%1+1)%1;
+  const minLocal = 13*60;   // mediodía → cielo azul
+  let PC = { oscuridad:0, momento:'mediodía' };
+  try{ PC = pintaCielo(c, W, H, minLocal, rr) || PC; }catch(e){}
+  try{ escenaEdificio(c, W, H, 0, { c:'rio', sig:'nyc', restan:180 }, rr, PC); }catch(e){ if(!window.__rioErr){ window.__rioErr=1; console.log('rio err', e.message, e.stack); } }
+}
 function batPintaCielo(){
   const cv=document.getElementById('batCielo'); if(!cv) return;
   const c=cv.getContext('2d'); const W=cv.width, H=cv.height;
@@ -9586,6 +9602,8 @@ function renderBatalla(){
         <button type="button" class="bat-ajustes" id="batAjustes" aria-label="${bi('Ajustes','Settings')}"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="3.2"/><path d="M12 3v2.5M12 18.5V21M4.2 7l2.2 1.3M17.6 15.7l2.2 1.3M4.2 17l2.2-1.3M17.6 8.3l2.2-1.3"/></svg></button>
       </div>
       ${batBannerHTML(c, yo)}
+      <div class="bat-rio"><canvas id="batRioCv" width="1800" height="1160"></canvas>
+        <div class="bat-rio-lbl"><b>${bi('SEDE · RÍO DE JANEIRO','HOME · RIO DE JANEIRO')}</b><span>NORTHPOINT · LEBLON</span></div></div>
       <button type="button" class="btn primary bat-play-b batalla bat-nuevo" id="batNuevo">${bi('Retar a un socio','Challenge a partner')}</button>
       <div class="bat-sec-t">${bi('Leaderboard','Leaderboard')} · ${bi('toca para comparar','tap to compare')}</div>
       <div class="bat-rank">
@@ -9613,6 +9631,7 @@ function renderBatalla(){
     $('#batNuevo').onclick = () => { batPantalla='setup'; renderBatalla(); };
     $('#batAjustes') && ($('#batAjustes').onclick = () => { batPantalla='ajustes'; renderBatalla(); });
     root.querySelectorAll('[data-perfil]').forEach(b => b.onclick = () => { if(b.dataset.perfil!==yo){ batPerfilUid=b.dataset.perfil; batPantalla='perfil'; renderBatalla(); } });
+    requestAnimationFrame(batPintaRio);   // portada: la sede NorthPoint en Río
     if(c){
       batBannerBind(c, yo);
       if(c.estado==='invitado' || c.estado==='programado' || c.estado==='activo'){
@@ -13631,6 +13650,7 @@ const CIUDADES = {
   londres: { n:'LONDRES', en:'LONDON',   tz:'Europe/London',   sub:'CITY OF LONDON' },
   nyc:     { n:'NUEVA YORK', en:'NEW YORK', tz:'America/New_York', sub:'PISO 88 · MANHATTAN' },
   tokio:   { n:'TOKIO',   en:'TOKYO',    tz:'Asia/Tokyo',      sub:'MARUNOUCHI' },
+  rio:     { n:'RÍO DE JANEIRO', en:'RIO DE JANEIRO', tz:'America/Sao_Paulo', sub:'LEBLON · ZONA SUL' },
 };
 /* [inicio, fin) en minutos de la hora local del usuario, y a dónde vuela después */
 /* Los horarios REALES del indicador de la casa (1BULLET), en hora de NUEVA
@@ -14453,7 +14473,7 @@ function ventanitas(c, x, y, w, h, osc, rr, semilla, calido = '#FFE9AE'){
 
 function skylineCiudad(c, W, H, ciudad, osc, rr){
   const suelo = 640;
-  const tinte = ciudad === 'tokio' ? [52,44,74] : ciudad === 'londres' ? [46,50,72] : [44,48,88];
+  const tinte = ciudad === 'tokio' ? [52,44,74] : ciudad === 'londres' ? [46,50,72] : ciudad === 'rio' ? [70,96,128] : [44,48,88];
   const luzDia = 1 - osc;
   const capaCol = (capa, al) => `rgba(${tinte[0] + capa*14},${tinte[1] + capa*16},${tinte[2] + capa*14},${al})`;
 
@@ -14605,6 +14625,45 @@ function skylineCiudad(c, W, H, ciudad, osc, rr){
         c.fillStyle = 'rgba(20,16,28,.5)';
         for(let k = 0; k * 12 + 8 < sh; k++) c.fillRect(sx + 2, sy + 5 + k * 12, 5, 4);
       }
+    }
+  }
+  else if(ciudad === 'rio'){
+    /* ══ RÍO DE JANEIRO ══ la bahía azul, los morros verdes, el Pan de Azúcar
+       saliendo del agua y el Cristo Redentor en el Corcovado. */
+    const mar = 512;
+    /* mar de la bahía de Guanabara */
+    c.fillStyle = `rgba(46,124,168,${.7 + luzDia*.2})`; c.fillRect(0, mar, W, 640-mar+220);
+    c.fillStyle = 'rgba(255,255,255,.16)';
+    for(let i=0;i<9;i++){ const y=mar+18+i*16; c.fillRect(120+ (i%3)*400, y, 260, 3); }
+    /* morros verdes redondeados */
+    const morro = (mx,my,mw,mh,col)=>{ c.fillStyle=col; c.beginPath();
+      c.moveTo(mx-mw, my); c.bezierCurveTo(mx-mw*.5,my-mh, mx+mw*.5,my-mh, mx+mw,my); c.closePath(); c.fill(); };
+    morro(240,mar,260,150, `rgba(44,86,58,${.7+luzDia*.2})`);
+    morro(560,mar,300,120, `rgba(38,74,50,${.7+luzDia*.2})`);
+    morro(1520,mar,320,150, `rgba(40,80,54,${.7+luzDia*.2})`);
+    /* PÃO DE AÇÚCAR + Morro da Urca, a la derecha */
+    c.fillStyle = `rgba(58,66,70,${.85})`;
+    c.beginPath(); c.moveTo(1500,mar); c.bezierCurveTo(1508,mar-250, 1600,mar-320, 1688,mar-300);
+    c.bezierCurveTo(1740,mar-286, 1760,mar-60, 1770,mar); c.closePath(); c.fill();
+    c.fillStyle = `rgba(50,58,62,${.85})`;
+    c.beginPath(); c.moveTo(1380,mar); c.bezierCurveTo(1388,mar-150, 1440,mar-200, 1490,mar-196);
+    c.bezierCurveTo(1520,mar-190, 1540,mar-70, 1548,mar); c.closePath(); c.fill();
+    c.strokeStyle='rgba(200,200,210,.5)'; c.lineWidth=1.4; c.beginPath(); c.moveTo(1490,mar-196); c.lineTo(1630,mar-300); c.stroke(); // teleférico
+    /* CORCOVADO + CRISTO REDENTOR */
+    const hx=300, hy=mar;
+    c.fillStyle=`rgba(46,90,60,${.8})`;
+    c.beginPath(); c.moveTo(hx-150,hy); c.bezierCurveTo(hx-70,hy-260, hx+70,hy-260, hx+150,hy); c.closePath(); c.fill();
+    const cz=hy-262;                                   // cima
+    c.fillStyle='#EDEBE2';
+    c.fillRect(hx-6, cz-56, 12, 56);                   // cuerpo
+    c.fillRect(hx-44, cz-46, 88, 11);                  // brazos
+    c.beginPath(); c.arc(hx, cz-64, 11, 0, 7); c.fill(); // cabeza
+    c.fillStyle='#CFCDC2'; c.fillRect(hx-16, cz, 32, 12); // pedestal
+    /* edificios claros de la zona sur (playa) */
+    for(let i=0;i<26;i++){
+      const bx=i*(W/26)-16+rr(i+700)*20, bw=W/26*(.5+rr(i+705)*.5), bh=90+rr(i+710)*200;
+      c.fillStyle=capaCol(1,.5); c.fillRect(bx, 616-bh, bw, bh+120);
+      ventanitas(c, bx, 616-bh, bw, bh, osc*.4, rr, 700+i, '#FFF3C8');
     }
   }
   else {
@@ -14776,7 +14835,7 @@ function skylineCiudad(c, W, H, ciudad, osc, rr){
     c.strokeStyle = 'rgba(160,176,200,.9)'; c.lineWidth = 7;
     c.beginPath(); c.moveTo(ex - 24, 640); c.lineTo(ex, ey); c.lineTo(ex + 24, 640); c.stroke();
   }
-  else {
+  else if(ciudad === 'tokio'){
     /* Tokio · la torre roja a franjas */
     const tx = 400;
     c.strokeStyle = '#C4483C'; c.lineWidth = 9;
@@ -15077,6 +15136,37 @@ function sueloDe(c, W, H, ciudad, osc, rr){
       c.ellipse(px2, py2, 4.5 + rr(i+860) * 3, 3 + rr(i+870) * 2, rr(i+880) * 3, 0, 7); c.fill();
     }
   }
+  else if(ciudad === 'rio'){
+    /* ══ RÍO · LA PLAYA ══ arena, la banqueta de mosaico ondulado de Copacabana,
+       palmeras y el mar al frente. */
+    c.fillStyle = mez('#E9D9A6', luzDia*10); c.fillRect(0, S0, W, H - S0);           // arena
+    /* calçadão: olas blancas y negras de Copacabana */
+    c.save(); c.beginPath(); c.rect(0, S0+150, W, 120); c.clip();
+    for(let x=-40; x<W+40; x+=120){
+      c.fillStyle='#F4F1E8'; c.beginPath(); c.moveTo(x,S0+150); c.bezierCurveTo(x+60,S0+210, x+60,S0+210, x+120,S0+150);
+      c.lineTo(x+120,S0+270); c.bezierCurveTo(x+60,S0+330, x+60,S0+330, x,S0+270); c.closePath(); c.fill();
+      c.fillStyle='#2E2A28'; c.beginPath(); c.moveTo(x,S0+270); c.bezierCurveTo(x+60,S0+330, x+60,S0+330, x+120,S0+270);
+      c.lineTo(x+120,S0+150); c.bezierCurveTo(x+60,S0+210, x+60,S0+210, x,S0+150); c.closePath(); c.fill();
+    }
+    c.restore();
+    /* el mar al frente */
+    c.fillStyle = mez('#2E9CC4', -osc*30); c.fillRect(0, H-150, W, 150);
+    c.fillStyle='rgba(255,255,255,.4)';
+    for(let i=0;i<10;i++){ const y=H-140+i*13; c.fillRect(100+(i%4)*380, y, 240, 3); }
+    /* palmeras */
+    const palma=(px,py,es)=>{ c.save(); c.translate(px,py); c.scale(es,es);
+      c.fillStyle='rgba(18,30,22,.24)'; c.beginPath(); c.ellipse(0,4,26,8,0,0,7); c.fill();
+      c.fillStyle=mez('#6B4A28',luzDia*10); c.fillRect(-5,-92,10,92);
+      c.fillStyle=mez('#2E8B4A',luzDia*14);
+      for(let a=0;a<7;a++){ const an=-Math.PI/2+(a-3)*.5; c.beginPath(); c.moveTo(0,-92);
+        c.quadraticCurveTo(Math.cos(an)*70,-92+Math.sin(an)*40, Math.cos(an)*120,-78+Math.sin(an)*66);
+        c.quadraticCurveTo(Math.cos(an)*66,-92+Math.sin(an)*22, 0,-88); c.closePath(); c.fill(); }
+      c.restore(); };
+    [[180,S0+120,1.6],[W-220,S0+150,1.9],[520,H-120,1.3],[W-520,H-100,1.4]].forEach(([x,y,e])=>palma(x,y,e));
+    /* una sombrilla de acento */
+    c.fillStyle='#E24A2E'; c.beginPath(); c.moveTo(360,H-180); c.lineTo(300,H-150); c.lineTo(420,H-150); c.closePath(); c.fill();
+    c.fillStyle='#8E8478'; c.fillRect(358,H-180,4,34);
+  }
   else {
     /* ══ LONDRES · EL PARQUE REAL ══
        Fuera la explanada: la torre se planta en un royal park — césped con
@@ -15361,6 +15451,17 @@ function escenaEdificio(c, W, H, t, E, rr, PC){
           c2.fillStyle = 'rgba(94,58,42,.85)';
           for(let k = 0; k < 4; k++) c2.fillRect(u + .05 + k * .15, -f - .8, .035, .58);
           c2.fillRect(u, -f - .53, .6, .035);
+        } else if(estilo === 'rio'){
+          /* muro cortina de vidrio ESPEJO: paño plateado-azul con reflejo y
+             marco de aluminio finito */
+          c2.fillStyle = vidrio; c2.fillRect(u - .04, -f - .86, .68, .66);
+          c2.fillStyle = luzV; c2.fillRect(u, -f - .82, .6, .6);
+          /* reflejo diagonal del cielo */
+          c2.fillStyle = 'rgba(255,255,255,.22)';
+          c2.beginPath(); c2.moveTo(u, -f - .3); c2.lineTo(u + .28, -f - .82); c2.lineTo(u + .44, -f - .82); c2.lineTo(u + .16, -f - .3); c2.closePath(); c2.fill();
+          /* mullions de aluminio */
+          c2.fillStyle = 'rgba(210,220,230,.85)';
+          c2.fillRect(u + .29, -f - .82, .035, .6); c2.fillRect(u, -f - .53, .6, .03);
         } else {
           /* guillotina georgiana: marco blanco y parteluz en cruz */
           c2.fillStyle = '#EDE6D8'; c2.fillRect(u - .05, -f - .86, .7, .68);
@@ -15405,6 +15506,7 @@ function escenaEdificio(c, W, H, t, E, rr, PC){
     nyc:     { der:'#23262E', izq:'#1A1D24', vidrio:'rgba(110,124,148,.4)',  vidrio2:'rgba(96,110,134,.36)',  tinta:'#E8EAEE', banda:'rgba(201,169,106,.85)' },
     tokio:   { der:'#B23A30', izq:'#992E26', vidrio:'rgba(255,214,200,.3)',  vidrio2:'rgba(255,200,186,.26)', tinta:'#FFEFE9', banda:'#7E241E' },
     londres: { der:'#2E4A78', izq:'#253E68', vidrio:'rgba(178,200,230,.36)', vidrio2:'rgba(160,184,218,.32)', tinta:'#E9EFF9', banda:'rgba(233,239,249,.8)' },
+    rio:     { der:'#AEC0D2', izq:'#94A8BE', vidrio:'rgba(188,220,240,.62)', vidrio2:'rgba(168,204,228,.56)', tinta:'#2A3A4A', banda:'rgba(255,255,255,.92)' },
   };
   const TT = TRAJE_TORRE[E.c] || TRAJE_TORRE.nyc;
   caraTorre('der', c2 => fachada(c2, TT.der, TT.vidrio, TT.banda));
@@ -15474,7 +15576,7 @@ function escenaEdificio(c, W, H, t, E, rr, PC){
       staffTraje:'#33436A',
     },
   };
-  const DECO = DECOS[E.c] || DECOS.nyc;
+  const DECO = DECOS[E.c] || (E.c==='rio'?DECOS.tokio:DECOS.nyc);
 
   /* ══ AZOTEA ══ */
   for(let x = 0; x < N; x++) for(let y = 0; y < N; y++){
@@ -15830,7 +15932,7 @@ function escenaEdificio(c, W, H, t, E, rr, PC){
     londres: { agua:'#8EC0D8', pila:'#C9C2B4', pilaTop:'#A6906A', metal:'#A6906A',
                vitrina:'#5E4630', vidrio:'rgba(200,214,232,.28)', muroLogo:'#22304C' },
   };
-  const LJ = LUJO[E.c] || LUJO.nyc;
+  const LJ = LUJO[E.c] || (E.c==='rio'?LUJO.tokio:LUJO.nyc);
 
   /* ── EL MURO DE LA MARCA ── detrás del mostrador, con su luz por atrás */
   add(12.4, c2 => {
