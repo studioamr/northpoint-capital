@@ -2543,11 +2543,6 @@ button.tag.quemada{text-decoration:line-through;text-decoration-color:var(--down
 .ag-form b{font-family:var(--mono);font-size:11px;color:var(--txt)}
 .ag-form-s{font-size:10.5px;color:var(--faint);margin-top:4px;line-height:1.45}
 .ag-oficina-wrap{position:relative;border:1px solid var(--line);border-radius:14px;overflow:hidden;margin-bottom:18px;background:#0E1018;line-height:0}
-.ofi-escena{position:absolute;top:12px;left:12px;display:flex;gap:6px;flex-wrap:wrap;z-index:2}
-.ofi-escena button{font-family:var(--mono);font-size:10.5px;letter-spacing:.06em;color:rgba(255,255,255,.72);
-  background:rgba(10,14,22,.55);border:1px solid rgba(255,255,255,.16);border-radius:8px;padding:6px 10px;cursor:pointer;backdrop-filter:blur(6px);transition:all .14s}
-.ofi-escena button:hover{color:#fff;border-color:rgba(255,255,255,.4)}
-.ofi-escena button.on{background:var(--accent);border-color:var(--accent);color:#08111f}
 #agOficina{display:block;width:100%;height:auto}
 
 .duties{
@@ -3314,13 +3309,6 @@ stop[stop-color="#9BC0DC"]{stop-color:var(--txt)}
         <div class="ag-oficina-wrap">
           <canvas id="agOficina" width="1800" height="1160" aria-label="The Northpoint office — 88th floor, New York"></canvas>
           <div id="horaNY" aria-label="Hora de Nueva York"></div>
-          <div class="ofi-escena" id="ofiEscena" role="group" aria-label="Escena">
-            <button type="button" data-esc="jet">Jet</button>
-            <button type="button" data-esc="asia">Asia</button>
-            <button type="button" data-esc="londres">Londres</button>
-            <button type="button" data-esc="nyc">N. York</button>
-            <button type="button" data-esc="casa">Casa</button>
-          </div>
         </div>
 
         <!-- El tablero del negocio: el camino a payout con el proceso de
@@ -13648,28 +13636,6 @@ const TRAMOS = [
 ];
 const VUELO_MIN = 25;                     // lo que dura el traslado en pantalla
 
-/* ESCENA ELEGIDA A MANO en The Desk. 'auto' = el reloj real manda; si no, se
-   fuerza el jet cruzando sobre esa ciudad, o la casa del fin de semana. */
-function deskEscenaDe(){
-  const e = (S.ui && S.ui.deskEscena) || 'auto';
-  if(e === 'auto') return null;                                   // sin elección: manda el reloj
-  if(e === 'jet')  return { tipo:'vuelo', crucero:true, de:'tokio', a:'tokio', c:'tokio', sig:'londres', restan:210, prog:.45 };
-  if(e === 'casa') return { tipo:'finde', esc:'casa', c:'nyc', finde:true };
-  /* los EDIFICIOS: la oficina NorthPoint en cada sesión (entorno de trabajo) */
-  const ciudad = { asia:'tokio', londres:'londres', nyc:'nyc' }[e] || 'tokio';
-  return { tipo:'edificio', c:ciudad };
-}
-function marcaOfiEscena(){
-  const cur = (S.ui && S.ui.deskEscena) || 'auto';
-  document.querySelectorAll('#ofiEscena button').forEach(b => b.classList.toggle('on', b.dataset.esc === cur));
-}
-document.addEventListener('click', e => {
-  const b = e.target.closest && e.target.closest('#ofiEscena button');
-  if(!b) return;
-  S.ui = S.ui || {}; S.ui.deskEscena = b.dataset.esc; try{ save(); }catch(_){}
-  marcaOfiEscena();
-  try{ if(typeof animaOficina === 'function') animaOficina(); else dibujaOficina(performance.now()); }catch(_){}
-});
 function escenaAhora(now = new Date()){
   /* El reloj que manda es el de Nueva York: las sesiones son del mercado, no de
      donde esté sentado quien mira. Antes se usaba la hora local del equipo y en
@@ -14256,7 +14222,7 @@ function dibujaOficina(t){
      el cielo la sigue. Al cerrar la sesión (botón o fin del tramo) se sube
      solo: el estado se resetea con la LLAVE ciudad+día, no con un timer. */
 
-  const E = deskEscenaDe() || escenaAhora();
+  const E = escenaAhora();
   /* la hora de NY, fija abajo a la izquierda — el reloj del MERCADO,
      independiente del reloj de escena (México en el jet / ciudad al bajar) */
   const hNY = $('#horaNY');
@@ -14282,110 +14248,12 @@ function dibujaOficina(t){
 
   if(E.tipo === 'vuelo'){ escenaVuelo(c, W, H, t, E, rr); return; }
   if(E.tipo === 'finde'){ escenaFinde(c, W, H, t, E, rr, PC); return; }
-  if(E.tipo === 'edificio'){ escenaEdificio(c, W, H, t, E, rr, PC); return; }
 
 }
 
-/* ── LA OFICINA · el edificio NorthPoint en la ciudad de la sesión ──
-   Estás dentro del piso: el escritorio al frente, un ventanal enorme, y afuera
-   el skyline de la ciudad (con sus monumentos) y NUESTRA torre NP. */
-function escenaEdificio(c, W, H, t, E, rr, PC){
-  const noche = PC && PC.oscuridad > 0.3;
-  const CI = CIUDADES[E.c] || CIUDADES.tokio;
-  const hz = 800;                                   // línea del horizonte
-  const dark = noche ? '#141c2a' : '#7a90a8';
-  const dark2 = noche ? '#0d1420' : '#64798f';
-  const win = noche ? 'rgba(255,214,140,.92)' : 'rgba(255,255,255,.5)';
-  /* agua/bruma al fondo */
-  c.fillStyle = noche ? '#0a1424' : '#8fb2cc';
-  c.fillRect(0, hz-70, W, 70);
-  /* skyline genérico */
-  const edificio = (x, w, h, col) => {
-    c.fillStyle = col; c.fillRect(x, hz-h, w, h);
-    for(let wy = hz-h+18; wy < hz-14; wy += 30){
-      for(let wx = x+12; wx < x+w-10; wx += 22){
-        if((wx+wy) % 3 === 0){ c.fillStyle = win; c.fillRect(wx, wy, 7, 10); }
-      }
-    }
-  };
-  let x = -40, k = 0; const hs = [200,320,150,410,260,180,350,220,300,170];
-  while(x < W+40){ const w = 96 + (k%4)*30, h = hs[k%hs.length]; edificio(x, w, h, k%2?dark:dark2); x += w+18; k++; }
-  /* monumento según la ciudad */
-  if(E.c === 'tokio'){
-    /* Torre de Tokio (roja) */
-    const cx=W*0.34, g=hz, h=380;
-    c.strokeStyle='#e2653a'; c.fillStyle='#e2653a'; c.lineWidth=5;
-    c.beginPath(); c.moveTo(cx-70,g); c.lineTo(cx-20,g-h*0.5); c.lineTo(cx+20,g-h*0.5); c.lineTo(cx+70,g); c.stroke();
-    c.fillRect(cx-30,g-h*0.5,60,14); c.beginPath(); c.moveTo(cx-20,g-h*0.5); c.lineTo(cx-8,g-h); c.lineTo(cx+8,g-h); c.lineTo(cx+20,g-h*0.5); c.stroke();
-    c.fillRect(cx-3,g-h-40,6,44); c.beginPath(); c.arc(cx,g-h-44,6,0,7); c.fill();
-    /* Skytree */
-    const sx=W*0.7; c.fillStyle=noche?'#3a4d6a':'#a9bccf';
-    c.beginPath(); c.moveTo(sx-16,hz); c.lineTo(sx-5,hz-460); c.lineTo(sx+5,hz-460); c.lineTo(sx+16,hz); c.fill();
-    c.fillRect(sx-4,hz-620,8,160);
-  } else if(E.c === 'londres'){
-    /* Big Ben */
-    const bx=W*0.36, g=hz, h=360;
-    c.fillStyle=noche?'#5a4e3a':'#c9b48c'; c.fillRect(bx-26,g-h,52,h);
-    c.fillStyle=noche?'#e8d9a0':'#fff'; c.beginPath(); c.arc(bx,g-h+30,18,0,7); c.fill();
-    c.fillStyle='#8a6a3a'; c.beginPath(); c.moveTo(bx-30,g-h); c.lineTo(bx,g-h-52); c.lineTo(bx+30,g-h); c.fill();
-    /* London Eye */
-    const ex=W*0.66, ey=g-150, r=130; c.strokeStyle=noche?'#7fbfe0':'#9fd0ec'; c.lineWidth=5;
-    c.beginPath(); c.arc(ex,ey,r,0,7); c.stroke();
-    for(let a=0;a<16;a++){ c.beginPath(); c.moveTo(ex,ey); c.lineTo(ex+Math.cos(a/16*7)*r, ey+Math.sin(a/16*7)*r); c.lineWidth=1.5; c.stroke(); }
-  } else {
-    /* Nueva York · Empire State */
-    const nx=W*0.5, g=hz, h=520;
-    c.fillStyle=noche?'#2a3444':'#8595a8';
-    c.fillRect(nx-60,g-h*0.7,120,h*0.7); c.fillRect(nx-40,g-h,80,h*0.3);
-    c.fillRect(nx-6,g-h-70,12,70); c.fillStyle=noche?'#ffd06a':'#fff'; c.beginPath(); c.arc(nx,g-h-74,7,0,7); c.fill();
-  }
-  /* NUESTRA torre NorthPoint (verde, letrero NP) */
-  const npx = W*0.86, npg = hz, nph = 470, npw = 96;
-  c.fillStyle = noche ? '#0f2018' : '#2a4a3a'; c.fillRect(npx-npw/2, npg-nph, npw, nph);
-  c.strokeStyle = '#30d158'; c.lineWidth = 4; c.strokeRect(npx-npw/2, npg-nph, npw, nph);
-  c.fillStyle = noche ? 'rgba(78,224,138,.9)' : 'rgba(48,209,88,.7)';
-  for(let wy=npg-nph+22; wy<npg-16; wy+=30){ c.fillRect(npx-npw*0.28, wy, 8, 12); c.fillRect(npx+npw*0.12, wy, 8, 12); }
-  c.fillStyle='#0d1a13'; c.fillRect(npx-56, npg-nph-52, 112, 44); c.strokeRect(npx-56, npg-nph-52, 112, 44);
-  c.fillStyle='#4ee08a'; c.font='bold 30px "IBM Plex Mono", monospace'; c.textAlign='center'; c.fillText('NP', npx, npg-nph-20);
-  c.fillRect(npx-2, npg-nph-88, 4, 30); c.beginPath(); c.arc(npx, npg-nph-92, 7, 0, 7); c.fill();
-  /* ── LA OFICINA (interior, al frente) ── */
-  const wall = noche ? '#0c1017' : '#20262e';
-  c.fillStyle = wall;
-  c.fillRect(0, 0, 150, H); c.fillRect(W-150, 0, 150, H);         // muros laterales
-  c.fillRect(0, hz+70, W, H-(hz+70));                              // piso
-  c.fillStyle = noche ? 'rgba(255,255,255,.05)' : 'rgba(0,0,0,.1)';
-  c.fillRect(150, hz+70, W-300, 10);
-  /* mullions del ventanal */
-  c.fillStyle = wall;
-  [W/3, 2*W/3].forEach(mx => c.fillRect(mx-9, 60, 18, hz+10));
-  c.fillRect(140, 60, W-280, 16);                                  // cabecera del ventanal
-  /* escritorio + monito trabajando */
-  c.fillStyle = noche ? '#161b24' : '#3a3026';
-  c.fillRect(W*0.30, H-150, W*0.40, 40);                           // tablón del escritorio
-  c.fillStyle = noche ? '#0e1219' : '#2c241c';
-  c.fillRect(W*0.34, H-110, 16, 110); c.fillRect(W*0.64, H-110, 16, 110);
-  /* monitor con curva verde */
-  c.fillStyle = '#0b0f16'; c.fillRect(W*0.44, H-250, 220, 130);
-  c.fillStyle = '#0c2a1c'; c.fillRect(W*0.44+8, H-242, 204, 114);
-  c.strokeStyle = '#4ee08a'; c.lineWidth = 3; c.beginPath();
-  c.moveTo(W*0.44+16, H-160); c.lineTo(W*0.44+70, H-180); c.lineTo(W*0.44+120, H-168); c.lineTo(W*0.44+200, H-206); c.stroke();
-  c.fillStyle = noche ? '#161b24' : '#4a3e30'; c.fillRect(W*0.44+96, H-120, 28, 12);
-  /* planta */
-  c.fillStyle = noche ? '#12202a' : '#5a4632'; c.fillRect(W*0.70, H-136, 34, 40);
-  c.fillStyle = noche ? '#1e6b3a' : '#2f8b4a';
-  [[0,-30],[ -18,-16],[18,-16]].forEach(([dx,dy])=>{ c.beginPath(); c.ellipse(W*0.70+17+dx, H-136+dy, 16, 26, dx*0.02, 0, 7); c.fill(); });
-  /* taza */
-  c.fillStyle = noche ? '#3a2a1a' : '#e8e2d8'; c.fillRect(W*0.62, H-166, 26, 20);
-  try{ monitoPlano(c, W*0.54, H-118, lookDe((S.session&&S.session.user)||'andre.np'), 2.2,
-    { sentado:true, ropa:'#F4F6F8', brazoIzq:.5, brazoDer:.5 }); }catch(e){}
-  /* cartel */
-  cartel(bi('PISO 88 · ' + loc([CI.n, CI.en]), 'FLOOR 88 · ' + loc([CI.n, CI.en])),
-         bi('sesión de ' + loc([CI.n, CI.en]) + ' · en la oficina', loc([CI.n, CI.en]) + ' session · at the desk'));
-}
 
 function animaOficina(){
   const cv = $('#agOficina'); if(!cv) return;
-  if(typeof marcaOfiEscena === 'function') marcaOfiEscena();
   cancelAnimationFrame(ofiRAF);
   const paso = 4200;                      // cada mensaje dura ~4.2s
   const t0 = performance.now();
