@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>NORTHPOINT TERMINAL</title>
-<meta name="description" content="Terminal interno de Northpoint Capital Management. Mesa de futuros y portafolio propio.">
+<meta name="description" content="Terminal interno de NORTHPOINT. La mesa de futuros: journal, reglas de fondeo y camino a payout.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@300;400;500;600&display=swap" rel="stylesheet">
@@ -2579,7 +2579,7 @@ stop[stop-color="#9BC0DC"]{stop-color:var(--txt)}
           <span id="uRole">NORTHPOINT</span>
         </div>
       </button>
-      <a class="rail-exit" href="index.html">← NORTHPOINT.IO</a>
+      <a class="rail-exit" href="index.html">← NORTHPOINTCAPITAL.IO</a>
     </div>
   </aside>
 <div class="rail-velo" id="railVelo" aria-hidden="true"></div>
@@ -2612,7 +2612,7 @@ stop[stop-color="#9BC0DC"]{stop-color:var(--txt)}
       <section class="view" id="v-agentes">
         <div class="ag-head">
           <div>
-            <div class="micro" data-i18n="ag.k">Northpoint Capital Management</div>
+            <div class="micro" data-i18n="ag.k">Northpoint · Futures Desk</div>
             <h2 class="firm-title" data-i18n="ag.t">The Desk</h2>
           </div>
         </div>
@@ -2744,7 +2744,7 @@ stop[stop-color="#9BC0DC"]{stop-color:var(--txt)}
           <div class="panel hoja">
             <div class="hoja-h">
               <div>
-                <div class="micro">NORTHPOINT CAPITAL · SESSION SHEET</div>
+                <div class="micro">NORTHPOINT · SESSION SHEET</div>
                 <h3 id="hojaFecha" style="margin:4px 0 0">—</h3>
               </div>
               <div class="hoja-veredicto" id="hojaVeredicto">—</div>
@@ -2776,6 +2776,7 @@ stop[stop-color="#9BC0DC"]{stop-color:var(--txt)}
           <div id="pickMesa"></div>
           <span class="micro" id="acctSummary"></span>
           <div class="acct-bar-fin">
+            <button class="btn xs" id="btnCerrarDia2">Day close ✍</button>
             <button class="btn xs" id="btnAcctDet" aria-expanded="false" aria-controls="acctTable">Show detail</button>
             <button class="btn xs" id="btnAcctMgr" data-i18n="ac.gestionar">Gestionar</button>
           </div>
@@ -3312,8 +3313,21 @@ stop[stop-color="#9BC0DC"]{stop-color:var(--txt)}
         <div><label>Opens</label><input type="time" id="setOpen"></div>
         <div><label>Closes</label><input type="time" id="setClose"></div>
       </div>
-      <p class="micro" style="color:var(--faint);line-height:1.6;margin:6px 0 0">
+      <p class="micro" style="color:var(--faint);line-height:1.6;margin:6px 0 16px">
         Un trade fuera de esta ventana se marca solo.</p>
+      <!-- EL PLAN DE HOY. planDelDia() siempre supo leerlo de la sesión, pero
+           el único editor vivía en la vista de Rutina (guardada): declarar más
+           de un trade era imposible y todo segundo trade se marcaba violación
+           sin remedio. -->
+      <div class="f-row">
+        <div><label>Today's max trades</label><input type="number" id="stMaxT" min="1" max="10" step="1"></div>
+        <div><label>Today's target USD</label><input type="number" id="stObj" min="0" step="50"></div>
+      </div>
+      <div class="f-row" style="margin-top:10px">
+        <div><label>Today's max loss USD</label><input type="number" id="stStop" min="0" step="50"></div>
+        <div></div>
+      </div>
+      <p class="micro" id="stPlanNota" style="color:var(--faint);line-height:1.6;margin:6px 0 0"></p>
       <button class="btn primary sm mt2" id="setMesaSave">Save</button>
     </div>
 
@@ -3416,7 +3430,7 @@ stop[stop-color="#9BC0DC"]{stop-color:var(--txt)}
     <div class="login-brand">
       <div>
         <b>NORTHPOINT</b>
-        <span>TRADER BACKING · TERMINAL</span>
+        <span>FUTURES DESK · TERMINAL</span>
       </div>
     </div>
     <!-- PANTALLA 1 · ENTRAR (todo junto en un contenedor: ocultar campos
@@ -3470,7 +3484,7 @@ stop[stop-color="#9BC0DC"]{stop-color:var(--txt)}
       <div id="alErr" class="login-err"></div>
       <button class="btn primary" id="alGo" style="width:100%;margin-top:6px">Crear mi acceso</button>
     </div>
-    <p class="micro" style="margin-top:18px;text-align:center;font-size:9px;letter-spacing:.2em">CONFIDENCIAL · NORTHPOINT.IO</p>
+    <p class="micro" style="margin-top:18px;text-align:center;font-size:9px;letter-spacing:.2em">NORTHPOINTCAPITAL.IO</p>
   </div>
 </div>
 
@@ -3493,7 +3507,7 @@ const I18N = {
   'tit.np.k':          { es:'NORTHPOINT',             en:'NORTHPOINT' },
   'tit.agentes.t':     { es:'The Desk',       en:'The Desk' },
   'tit.ice.t':         { es:'Ice Vader',       en:'Ice Vader' },
-  'ag.k':              { es:'Northpoint Capital Management', en:'Northpoint Capital Management' },
+  'ag.k':              { es:'Northpoint · Mesa de futuros', en:'Northpoint · Futures Desk' },
   'ag.t':              { es:'The Desk',        en:'The Desk' },
   'ag.llaveSacar':     { es:'Sacar una llave en console.anthropic.com →', en:'Get a key at console.anthropic.com →' },
   'ag.llaveMala':      { es:'Esa no parece llave de Anthropic: debe empezar con sk-ant-', en:'That does not look like an Anthropic key: it must start with sk-ant-' },
@@ -5194,6 +5208,10 @@ function violations(trade, dayTrades){
 }
 function violationsRaw(trade, dayTrades){
   const v = [];
+  /* Un CSV importado es HISTORIAL, no disciplina de hoy: sin esto, cada trade
+     de Tradovate entraba con NO_SETUP + SIN_ALARMA (y el tope de trades del
+     día) y el journal se inundaba de rojo por operaciones ya cerradas. */
+  if(trade.importado) return v;
   const P = planDelDia(trade.date);
   /* Un día que mata la cuenta salía "limpio" porque nadie comparaba el P&L
      contra los límites. Se marca en el último trade del día para no repetirlo. */
@@ -5658,7 +5676,7 @@ addEventListener('keydown', e=>{ if(e.key==='Escape' && pickerAbierto) cerrarPic
 /* repinta todo lo que depende de la selección, sin perder el desplegable abierto */
 function refrescarSeleccion(){
   const v = vistaActual();
-  if(v === 'journal'){ renderDashboard(); renderJournal(); renderObjetivos(); }
+  if(v === 'journal'){ renderDashboard(); renderJournal(); pintaCierreBtn(); }
   else if(v === 'agentes') renderAgentes();
   else if(v === 'trades') renderTrades();
   else if(v === 'vida') renderVida();
@@ -6129,7 +6147,11 @@ function carreraCuenta(a){
   let p = previo, pico = previo, mEval = null;
   dias.forEach(d => {
     p += porDia[d]; pico = Math.max(pico, p);
-    if(!mEval && target > 0 && pico >= target) mEval = d;
+    /* el día del pase sólo existe si la cuenta VIVE su examen aquí: en una
+       registrada ya fondeada el examen es historia previa, y detectarlo sobre
+       sus trades se comía el día más grande como «día del pase» — su mejor día
+       no contaba ni para el colchón ni para el payout */
+    if(!yaFondeada && !mEval && target > 0 && pico >= target) mEval = d;
   });
   /* El pase se marcaba SÓLO recorriendo días de trades, así que una cuenta
      registrada con un saldo que ya alcanza el objetivo seguía diciendo «en
@@ -6639,7 +6661,7 @@ function repHTML(){
 
   let h = `<header class="rp-h">
     <div>
-      <span class="rp-k">NORTHPOINT CAPITAL MANAGEMENT</span>
+      <span class="rp-k">NORTHPOINT · FUTURES DESK</span>
       <h1>${titulo}</h1>
       <p class="rp-sub">${mismo ? fmtFecha(D.de) : fmtFecha(D.de) + ' — ' + fmtFecha(D.a)}
         ${quien ? ' · ' + esc(quien) : ''}</p>
@@ -6955,12 +6977,26 @@ function pintaPerfilSocio(){
     if(!ctas.length) return '';
     return `<div class="ps-caminos">` + ordenar(ctas).map(a => {
       const cc = carreraCuenta(a);
+      /* la quema se veía en el camino de Rutina (guardada) pero NO aquí, que es
+         donde de verdad se mira a un socio: una cuenta muerta parecía viva */
+      const q = quemaDetectada(a);
+      if(q || a.estado === 'quemada'){
+        return `<div class="ps-cam" style="opacity:.65">
+          <div class="ps-cam-h"><b>${esc(a.alias)}</b>
+            <span class="ps-cam-et" style="color:var(--down)">${bi('QUEMADA','BURNED')}</span>
+            <span class="mono">${q ? fmt$(q.balance) : ''}</span></div>
+          <p class="micro" style="text-transform:none;letter-spacing:.03em">${q
+            ? bi('Tocó su línea de drawdown el ' + fmtFecha(q.fecha) + '. Sale del balance y de la carrera; sus trades se conservan.',
+                 'Hit its drawdown line on ' + fmtFecha(q.fecha) + '. Out of the balance and the race; its trades are kept.')
+            : bi('Marcada como quemada en Ajustes.','Marked burned in Settings.')}</p>
+        </div>`;
+      }
       if(!cc.total){
         return `<div class="ps-cam">
           <div class="ps-cam-h"><b>${esc(a.alias)}</b><span class="mono">${fmt$(cc.balance)}</span></div>
           <p class="micro" style="text-transform:none;letter-spacing:.03em">${bi(
-            'Esta firma no está en el catálogo, así que no se calcula su vara. El profit sí es real.',
-            'This firm is not in the catalogue, so its bar is not computed. The profit is real.')}</p>
+            'Sin reglas escritas no hay vara que medir. El profit sí es real.',
+            'With no rules written there is no bar to measure. The profit is real.')}</p>
         </div>`;
       }
       const c1 = cc.target / cc.total * 100;
@@ -7005,6 +7041,9 @@ function pintaPerfilSocio(){
                 : `<b class="${bajo ? 'down' : ''}">${fmt$(h.linea)}</b>${h.fija ? ' ' + bi('(fijo)','(locked)') : ''}`}</span>
             <span style="text-align:right">${bi('OBJETIVO','GOAL')} <b>${metaDe(a)}</b></span>
           </div>`; })()}
+        ${(cc.pasoPago && (a.owner || DUENO_ORIGEN) === (S.session && S.session.user)) ? `
+          <div style="margin-top:6px"><button class="btn xs primary"
+            onclick="event.stopPropagation(); abrirCaja('ingreso')">${bi('Registrar el payout →','Log the payout →')}</button></div>` : ''}
         <!-- Una barra en cero no dice si es que no has ganado nada o si la app
              no se enteró. Ahora lo dice, y dice qué hacer. -->
         ${cc.pct === 0 ? `<p class="micro" style="text-transform:none;letter-spacing:.03em;color:var(--faint);margin-top:4px">${bi(
@@ -7218,29 +7257,7 @@ function renderCamino(){
   }).join('');
 }
 
-function renderObjetivos(){
-  /* Su hilera se retiró de Journal. La función se queda entera —las metas se
-     siguen calculando igual— y simplemente no pinta si no hay dónde. Sin esto,
-     el $('#dashKpis').innerHTML de abajo tumba el render completo de Journal. */
-  if(!$('#dashKpis')) return;
-  const M = metas(), R = pnlRanges(idsSel(), true);
-  const kpis = [
-    [tr('me.pnlHoy').toUpperCase(), R.dia, M.dia],
-    [tr('me.semana').toUpperCase(), R.semana, M.semana],
-    [tr('me.quincena').toUpperCase(), R.quincena, M.quincena],
-    [tr('me.mes').toUpperCase(), R.mes, M.mes],
-    [tr('me.anio').toUpperCase(), R.anio, M.anio],
-  ];
-  $('#dashKpis').innerHTML = kpis.map(([l,v,goal])=>{
-    const pct = goal>0 ? Math.max(0, Math.min(100, v/goal*100)) : 0;
-    return `<div class="panel kpi">
-      <div class="k-l">${l}</div>
-      <div class="k-v ${v>0?'up':v<0?'down':''}">${fmt$(v,true)}</div>
-      <div class="k-s">${tr('c.meta')} ${fmt$(goal)}</div>
-      <div class="bar"><i class="${v>=goal?'full':(v<0?'neg':'')}" style="width:${v<0?100:pct}%"></i></div>
-    </div>`;
-  }).join('');
-}
+
 
 /* ══════════ LAS CINTAS QUE NO SE DETIENEN ══════════
    Las hileras de tasas y de gráficos estaban quietas: había que arrastrarlas
@@ -8351,10 +8368,6 @@ Analiza el día de este trader. Si hay screenshots, comenta lo que se ve en el g
 /* las tres hileras se mueven igual: flechas, arrastre y rueda */
 /* Las flechas de las dos cintas se fueron con el scroll: corren solas y un
    botón que no mueve nada es peor que no tenerlo. */
-[['#objPrev','#dashKpis',-210],    ['#objNext','#dashKpis',210],
- ['#pfPrev','#pfKpis',-200],       ['#pfNext','#pfKpis',200]
-].forEach(([btn, rail, dx]) =>
-  $(btn)?.addEventListener('click', ()=> $(rail).scrollBy({left:dx, behavior:'smooth'})));
 
 function renderJournal(){
   /* El desempeño: objetivos, KPIs, gráficos y calendario. El historial
@@ -8547,7 +8560,21 @@ function renderTrades(){
         <td class="r mono dim">${t.exit??'—'}</td>
         <td class="r mono pnl-col ${t.pnl>0?'up':t.pnl<0?'down':''}">${fmt$(t.pnl,true)}</td>
         <td>${t.setupOk?`<span class="tag ok">${tr('j.valido').toUpperCase()}</span>`:`<span class="tag wr">${tr('j.incompleto').toUpperCase()}</span>`}</td>
-        <td>${v.length? v.map(x=>`<span class="tag bad">${tr('vio.'+x).toUpperCase()}</span>`).join('') : `<span class="tag ok">${tr('j.limpio').toUpperCase()}</span>`}</td>
+        <td onclick="event.stopPropagation()">${(() => {
+          /* el descarte vivía SOLO en la vista de Rutina, que está guardada:
+             las marcas se veían aquí pero no había forma de tocarlas */
+          const todas = violationsRaw(t, (diasTodos[d] || dt));
+          const fuera = todas.filter(x => vioDescartada(t, x));
+          return (v.length
+            ? v.map(x=>`<span class="tag bad vio-tag">${tr('vio.'+x).toUpperCase()}<button type="button" class="vio-x"
+                title="${bi('Descartar esta marca','Dismiss this breach')}"
+                onclick="abreDescarte('${t.id}','${x}')">✕</button></span>`).join('')
+            : (fuera.length ? '' : `<span class="tag ok">${tr('j.limpio').toUpperCase()}</span>`))
+          + fuera.map(x => { const dd = vioDescartada(t, x);
+              return `<span class="tag vio-off" title="${esc((dd && dd.motivo) || '')}">${tr('vio.'+x).toUpperCase()}
+                <button type="button" class="vio-x" title="${bi('Devolverla al registro','Put it back on the record')}"
+                  onclick="revierteDescarte('${t.id}','${x}')">↺</button></span>`; }).join('');
+        })()}</td>
         <td class="r j-acc" onclick="event.stopPropagation()">
           ${t.shot ? '<span class="j-clip" title="'+bi('tiene captura','has a screenshot')+'">◧</span>' : ''}
           <button class="btn-icon" onclick="reporteTrade('${t.id}')" title="${bi('Reporte','Report')}">▤</button>
@@ -9429,9 +9456,10 @@ async function doLogin(){
   }
   const usr = u && USERS[u];
   if(!usr){
-    const lista = SOCIOS_REALES.join(' · ');
-    $('#lgErr').textContent = bi('No reconozco a «' + escrito + '». Escribe tu usuario (' + lista + ') o el correo con el que te registraste.',
-                                 'I do not recognise "' + escrito + '". Use your username (' + lista + ') or the email you signed up with.');
+    /* sin enumerar a los socios: eso era regalarle los usuarios de la casa a
+       cualquier desconocido en la pantalla pública de acceso */
+    $('#lgErr').textContent = bi('No reconozco «' + escrito + '». Usa el correo con el que te registraste, o pídele a André que te dé de alta.',
+                                 'I do not recognise "' + escrito + '". Use the email you signed up with, or ask André to add you.');
     return;
   }
   if(cloudOn()){
@@ -9582,8 +9610,8 @@ const TOUR = [
     'De $0 a la casa en ocho fases. Cada una trae su ticket en aritmética —cuántas cuentas y de qué tamaño, qué rinde tu cuenta propia, cuánto entra al portafolio— y sus criterios de salida, que se verifican solos contra tus números.',
     'From $0 to the house in eight phases. Each one carries its ticket as arithmetic — how many accounts and what size, what your own account returns, how much goes into the portfolio — plus exit criteria that verify themselves against your real numbers.'] },
   { vista:null, t:['Una cosa más','One last thing'], clave:true, p:[
-    'En Ajustes pones tus cuentas, tu meta del año, tu ventana y tu monito. Y escribe tu tesis cada mañana antes de la apertura: es lo que separa una operación de una corazonada.',
-    'Settings is where your accounts, your yearly target, your window and your character live. And write your thesis every morning before the open: that is what separates a trade from a hunch.'] },
+    'En Ajustes pones tus cuentas, tu meta del año, tu ventana y tu monito.',
+    'Settings is where your accounts, your yearly target, your window and your character live.'] },
 ];
 let tourI = 0;
 
@@ -9665,6 +9693,13 @@ function renderAjustes(){
     const V = S.profile.ventana || { open: VENTANA.open, close: VENTANA.close };
     const hhmm = m => String(Math.floor(m/60)).padStart(2,'0') + ':' + String(m%60).padStart(2,'0');
     $('#setOpen').value = hhmm(V.open); $('#setClose').value = hhmm(V.close);
+    const plan = planDelDia(todayISO()), techo2 = maxTradesHoy();
+    if($('#stMaxT')){
+      $('#stMaxT').value = plan.maxT; $('#stObj').value = plan.obj || ''; $('#stStop').value = plan.stop || '';
+      $('#stPlanNota').textContent = bi(
+        'Sólo para HOY. La fase de tus cuentas pone el techo: ' + techo2 + ' trade' + (techo2 === 1 ? '' : 's') + '.',
+        'Today only. Your accounts\' phase caps it at ' + techo2 + ' trade' + (techo2 === 1 ? '' : 's') + '.');
+    }
   }
   if(tab === 'perfil'){
     renderAvatarSel();
@@ -9705,6 +9740,15 @@ $('#setMesaSave')?.addEventListener('click', ()=>{
   const min = t => { const [h,mm] = String(t||'').split(':').map(Number); return isFinite(h) ? h*60 + (mm||0) : null; };
   const o = min($('#setOpen').value), c = min($('#setClose').value);
   if(o != null && c != null && c > o){ S.profile.ventana = { open:o, close:c }; VENTANA.open = o; VENTANA.close = c; }
+  if($('#stMaxT')){
+    const ses2 = getSession(todayISO());
+    const mt = parseInt($('#stMaxT').value), ob = parseFloat($('#stObj').value), st = parseFloat($('#stStop').value);
+    ses2.rutina = { ...(ses2.rutina || {}) };
+    if(isFinite(mt) && mt >= 1) ses2.rutina.maxT = mt;
+    ses2.rutina.obj  = isFinite(ob) && ob > 0 ? ob : null;
+    ses2.rutina.stop = isFinite(st) && st > 0 ? st : null;
+    sellaCambio(ses2);
+  }
   save(); renderAll(); toast(bi('Guardado','Saved'));
 });
 /* al teclear la meta, el desglose se recalcula en vivo */
@@ -10246,7 +10290,7 @@ $('#impSave').addEventListener('click', () => {
     $('#impErr').textContent = bi('Elige al menos una cuenta.','Pick at least one account.'); return; }
   const yo = (S.session && S.session.user) || null;
   impPend.forEach(t => S.trades.push(sellaCambio({
-    id: uid(), ...t, por: yo, seq: ++S.seqTrade,
+    id: uid(), ...t, por: yo, seq: ++S.seqTrade, importado: true,
     accts: impCtasSel.length ? [...impCtasSel] : [SIN_CUENTA] })));
   const n = impPend.length; impPend = null;
   olvidaQuemas(); save(); closeOv(); renderAll(); updateBadges();
@@ -10526,6 +10570,40 @@ $('#btnCerrarDia')?.addEventListener('click', () => {
   toast(bi('Día cerrado ' + como + '.', 'Day closed ' + como + '.'));
 });
 $('#btnPos')?.addEventListener('click', ()=> openPos());
+
+/* El cierre del día, alcanzable: el botón original vivía en la vista de Rutina
+   (guardada), así que la hoja del día y ovReport quedaron sin camino. Éste vive
+   en Journal: mismo flujo, y al cerrar abre la hoja para copiarla. */
+$('#btnCerrarDia2')?.addEventListener('click', () => {
+  const iso = todayISO();
+  const ses = getSession(iso);
+  const dayTr = tradesByDay()[iso] || [];
+  const maxT = planDelDia(iso).maxT;
+  if(ses.cerrado){
+    if(!confirm(bi('El día ya está cerrado. ¿Reabrirlo?','The day is closed. Reopen it?'))) return;
+    ses.cerrado = null; sellaCambio(ses); save(); renderJournal(); pintaCierreBtn();
+    toast(bi('Día reabierto.','Day reopened.'));
+    return;
+  }
+  const cuantos = dayTr.length;
+  const como = !cuantos ? bi('sin disparar: no hubo setup','no shots: there was no setup')
+    : cuantos < maxT ? bi(cuantos + ' de ' + maxT + ' balas', cuantos + ' of ' + maxT + ' bullets')
+    : bi('con las ' + maxT + ' balas gastadas', 'with all ' + maxT + ' bullets spent');
+  if(!confirm(bi('Cerrar el día ' + como + '. Después de esto la sesión queda firmada.\n\n¿Cerrar?',
+                 'Close the day ' + como + '. After this the session is signed off.\n\nClose?'))) return;
+  ses.cerrado = { hora: horaMercadoAhora(), trades: cuantos, maxT,
+                  por: (S.session && S.session.user) || null, ts: Date.now() };
+  sellaCambio(ses); save(); pintaCierreBtn();
+  $('#repText').value = buildReport();
+  openOv('ovReport');
+  toast(bi('Día cerrado ' + como + '.', 'Day closed ' + como + '.'));
+});
+/* el botón dice en qué estado está el día */
+function pintaCierreBtn(){
+  const b = $('#btnCerrarDia2'); if(!b) return;
+  const cerrado = !!(getSession(todayISO()).cerrado);
+  b.textContent = cerrado ? bi('Día cerrado · reabrir','Day closed · reopen') : bi('Cerrar el día ✍','Day close ✍');
+}
 
 /* ════════ Badges del rail ════════ */
 function updateBadges(){
@@ -13195,7 +13273,7 @@ function render(view){
   if(view==='agentes') renderAgentes();
   else if(view==='sesion'){ renderSesion(); renderTix(); renderCamino(); }
   else if(view==='icevader') renderIceVader();
-  else if(view==='journal'){ renderDashboard(); renderJournal(); renderObjetivos(); }
+  else if(view==='journal'){ renderDashboard(); renderJournal(); }
   else if(view==='trades') renderTrades();
   else if(view==='posiciones') renderPosiciones();
   else if(view==='vida') renderVida();
