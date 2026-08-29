@@ -803,6 +803,30 @@ body.locked .app{visibility:hidden;pointer-events:none}
 .bat-dash-cell.win b{color:var(--up)}
 .bat-dash-cell.streak b{color:#e9cf46}
 @media(max-width:560px){.bat-dash-hd{flex-wrap:wrap}.bat-dash-lvl{width:100%}.bat-dash-grid{grid-template-columns:repeat(2,1fr)}}
+/* ── Alertas y recordatorios (El plan) ── */
+.alr-wrap{border:1px solid var(--line);border-radius:16px;background:var(--w02);padding:15px 16px 16px}
+.alr-top{display:flex;align-items:baseline;gap:10px;margin-bottom:13px;flex-wrap:wrap}
+.alr-title{font-size:14.5px;font-weight:900}
+.alr-sub{font-family:var(--mono);font-size:10.5px;color:var(--faint)}
+.alr-add{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap}
+.alr-in-time,.alr-in-txt,.alr-in-tz{background:var(--w03);border:1px solid var(--line);border-radius:10px;color:var(--txt);font-size:13px;padding:9px 11px;font-family:inherit}
+.alr-in-time{width:110px}
+.alr-in-txt{flex:1;min-width:130px}
+.alr-in-tz{width:96px}
+.alr-add-b{padding:9px 16px;border-radius:10px;border:none;cursor:pointer;background:var(--accent);color:#04120a;font-weight:800;font-size:13px}
+.alr-list{display:grid;gap:8px}
+.alr-row{display:flex;align-items:center;gap:11px;border:1px solid var(--line-soft);border-radius:11px;background:var(--w03);padding:10px 13px}
+.alr-row.off{opacity:.5}
+.alr-hora{font-family:var(--mono);font-size:15px;font-weight:800;min-width:48px}
+.alr-tz{font-family:var(--mono);font-size:9px;letter-spacing:.1em;color:var(--faint);border:1px solid var(--line);border-radius:6px;padding:2px 6px}
+.alr-txt{flex:1;min-width:0;font-size:13.5px}
+.alr-tog{flex:0 0 auto;width:38px;height:22px;border-radius:12px;border:1px solid var(--line);background:var(--w04);position:relative;cursor:pointer;transition:background .15s}
+.alr-tog.on{background:var(--up);border-color:var(--up)}
+.alr-tog i{position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:#fff;transition:left .15s}
+.alr-tog.on i{left:18px}
+.alr-del{flex:0 0 auto;width:26px;height:26px;border-radius:8px;border:1px solid var(--line);background:transparent;color:var(--faint);cursor:pointer;font-size:12px}
+.alr-del:hover{color:var(--down);border-color:var(--down)}
+.alr-vacio{font-family:var(--mono);font-size:11.5px;color:var(--faint);text-align:center;padding:10px}
 /* ── Colección de katanas ── */
 .kat-wrap{border:1px solid var(--line);border-radius:18px;background:linear-gradient(160deg,var(--w03),var(--w02));padding:16px 16px 18px;margin-bottom:18px}
 .kat-top{display:flex;align-items:center;gap:12px;margin-bottom:14px}
@@ -3714,6 +3738,7 @@ stop[stop-color="#9BC0DC"]{stop-color:var(--txt)}
         </div>
         <div class="panel pat mt" id="patrimonioHoy"></div>
         <div id="metasMods" class="mt"></div>
+        <div id="planAlertas" class="mt"></div>
       </section>
 
     </main>
@@ -17477,8 +17502,72 @@ function renderContrato(){
       `<span><b class="mono">${r[0]}</b> MX · <b class="mono">${r[1]}</b> NY — ${loc(r[2])}</span>`).join('')}</div>
   </div>`;
 }
+/* ── ALERTAS Y RECORDATORIOS ── anuncios a la hora que el operador elija.
+   Vienen sembrados con la rutina de Morelia (7:00/7:30/7:45/9:00) pero se
+   editan, apagan y borran. El checker corre siempre y avisa con un toast. ── */
+const RECORD_DEFAULT = [
+  { id:'r1', hora:'07:00', tz:'mx', txt:['Preparar la sesión','Prep the session'], on:true },
+  { id:'r2', hora:'07:30', tz:'mx', txt:['Abre el mercado · empieza el rango','Market opens · range starts'], on:true },
+  { id:'r3', hora:'07:45', tz:'mx', txt:['Rango cerrado · fija el plan','Range set · lock the plan'], on:true },
+  { id:'r4', hora:'09:00', tz:'mx', txt:['Revisar posiciones','Review positions'], on:true },
+];
+function recordatorios(){ if(!Array.isArray(S.recordatorios)) S.recordatorios = RECORD_DEFAULT.map(r=>({...r})); return S.recordatorios; }
+function rTxt(r){ return Array.isArray(r.txt) ? loc(r.txt) : (r.txt||''); }
+function chequeaAlertas(){
+  const R = Array.isArray(S.recordatorios) ? S.recordatorios : [];
+  if(!R.length) return;
+  const hoy = todayISO();
+  if(!window._alrFired) window._alrFired = {};
+  R.forEach(r=>{
+    if(!r.on) return;
+    const [hh,mm] = String(r.hora||'').split(':').map(Number);
+    if(isNaN(hh)||isNaN(mm)) return;
+    const tz = r.tz==='ny' ? 'America/New_York' : 'America/Mexico_City';
+    if(minutosEn(tz) === hh*60+mm && window._alrFired[r.id] !== hoy){
+      window._alrFired[r.id] = hoy;
+      toast('⏰ '+rTxt(r));
+    }
+  });
+}
+if(!window._alrIntv){ window._alrIntv = setInterval(chequeaAlertas, 20000); }
+function renderAlertas(){
+  const host = $('#planAlertas'); if(!host) return;
+  const R = recordatorios();
+  host.innerHTML = `
+    <div class="alr-wrap">
+      <div class="alr-top">
+        <span class="alr-title">⏰ ${bi('Alertas y recordatorios','Alerts & reminders')}</span>
+        <span class="alr-sub">${bi('te avisan a la hora que pongas','they ping you at the time you set')}</span>
+      </div>
+      <div class="alr-add">
+        <input type="time" id="alrHora" value="07:00" class="alr-in-time">
+        <input type="text" id="alrTxt" placeholder="${bi('¿Qué te recuerdo?','Remind you of…')}" class="alr-in-txt" maxlength="70">
+        <select id="alrTz" class="alr-in-tz"><option value="mx">Morelia</option><option value="ny">NY</option></select>
+        <button type="button" class="alr-add-b" id="alrAdd">${bi('Agregar','Add')}</button>
+      </div>
+      <div class="alr-list">
+        ${R.length ? R.slice().sort((a,b)=>String(a.hora).localeCompare(String(b.hora))).map(r=>`
+          <div class="alr-row ${r.on?'':'off'}">
+            <span class="alr-hora">${esc(r.hora)}</span>
+            <span class="alr-tz">${r.tz==='ny'?'NY':'MOR'}</span>
+            <span class="alr-txt">${esc(rTxt(r))}</span>
+            <button type="button" class="alr-tog ${r.on?'on':''}" data-tog="${r.id}" aria-label="${bi('prender/apagar','toggle')}"><i></i></button>
+            <button type="button" class="alr-del" data-del="${r.id}" aria-label="${bi('borrar','delete')}">✕</button>
+          </div>`).join('') : `<div class="alr-vacio">${bi('Sin recordatorios. Agrega el primero.','No reminders yet. Add your first.')}</div>`}
+      </div>
+    </div>`;
+  $('#alrAdd').onclick = () => {
+    const hora=$('#alrHora').value, txt=$('#alrTxt').value.trim(), tz=$('#alrTz').value;
+    if(!hora){ toast(bi('Pon una hora','Set a time')); return; }
+    recordatorios().push({ id:'r'+Date.now(), hora, tz, txt: txt || bi('Recordatorio','Reminder'), on:true });
+    save(); renderAlertas();
+  };
+  host.querySelectorAll('[data-tog]').forEach(b => b.onclick = () => { const r=recordatorios().find(x=>x.id===b.dataset.tog); if(r){ r.on=!r.on; save(); renderAlertas(); } });
+  host.querySelectorAll('[data-del]').forEach(b => b.onclick = () => { S.recordatorios = recordatorios().filter(x=>x.id!==b.dataset.del); save(); renderAlertas(); });
+}
 function renderMetas(){
-  const host = $('#metasMods'); if(!host) return;
+  const host = $('#metasMods'); if(!host){ renderAlertas(); return; }
+  renderAlertas();
   const P = patrimonio();
   const N = P.total;
   const idx = Math.max(0, PLAN_FASES.findIndex(f => N < f.a));
