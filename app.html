@@ -1829,6 +1829,22 @@ button.tag.quemada{text-decoration:line-through;text-decoration-color:var(--down
 .split-modo:hover{border-color:var(--line);color:var(--txt)}
 .split-modo.on{background:var(--accent);border-color:var(--accent);color:#08111f}
 .split-modo-d{color:var(--faint);margin:0 0 14px;line-height:1.5}
+/* análisis del portafolio: por qué cada clase + modos de entrada */
+.sl-analisis-t{font-family:var(--mono);font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--faint);margin:26px 0 12px}
+.sl-clases,.sl-entradas{display:grid;gap:10px}
+.sl-clase,.sl-entrada{display:flex;align-items:center;gap:14px;text-align:left;width:100%;
+  border:1px solid var(--line);border-radius:14px;background:var(--w02);padding:15px 17px;cursor:pointer;transition:border-color .14s,transform .14s}
+.sl-clase:hover,.sl-entrada:hover{border-color:var(--accent);transform:translateX(2px)}
+.sl-clase .sc-dot{width:12px;height:12px;border-radius:4px;flex:0 0 auto}
+.sc-txt{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}
+.sc-txt b{font-size:14.5px}
+.sc-txt>span{font-size:12.5px;color:var(--dim);line-height:1.5}
+.sl-entrada{flex-direction:column;align-items:flex-start;gap:5px}
+.sl-entrada b{font-size:14.5px}
+.sl-entrada>span:not(.sc-ver){font-size:12.5px;color:var(--dim);line-height:1.5}
+.sc-ver{font-family:var(--mono);font-size:10.5px;letter-spacing:.08em;color:var(--accent-deep,var(--dim));white-space:nowrap;flex:0 0 auto}
+.sl-clase .sc-ver{margin-left:auto}
+@media(max-width:640px){ .sl-clase .sc-ver{display:none} }
 .sl-donut-wrap{display:flex;gap:34px;align-items:center;flex-wrap:wrap}
 .sl-donut{position:relative;flex:0 0 220px;max-width:220px;margin:0 auto}
 .sl-donut .rd-centro b{font-size:26px}
@@ -3068,10 +3084,13 @@ stop[stop-color="#9BC0DC"]{stop-color:var(--txt)}
             </div>
           </div>
 
-          <div class="panel sl-card">
-            <div class="sl-master-t">MASTER PORTFOLIO · 20 POSITIONS</div>
-            <div class="sl-master" id="slMaster"></div>
-          </div>
+          <!-- POR QUÉ estas clases · el análisis NorthPoint -->
+          <div class="sl-analisis-t" data-i18n="pf.porque">Por qué NorthPoint recomienda cada clase</div>
+          <div class="sl-clases" id="slClases"></div>
+
+          <!-- CÓMO entrar al mercado -->
+          <div class="sl-analisis-t" data-i18n="pf.entrar">Cómo entrar al mercado</div>
+          <div class="sl-entradas" id="slEntradas"></div>
         </div>
 
         <!-- MIS POSICIONES · lo que ya compraste, con precio en vivo -->
@@ -3655,6 +3674,8 @@ const I18N = {
   'tit.payout.t':      { es:'Payout management',     en:'Payout management' },
   'pm.monto':          { es:'Monto del payout',      en:'Payout amount' },
   'pm.calcular':       { es:'Calcular',              en:'Calculate' },
+  'pf.porque':         { es:'Por qué NorthPoint recomienda cada clase', en:'Why NorthPoint recommends each class' },
+  'pf.entrar':         { es:'Cómo entrar al mercado', en:'How to enter the market' },
   'tit.mesa.k':        { es:'Operación diaria',      en:'Daily trading' },
   'tit.journal.t':     { es:'Journal',                    en:'Journal' },
   'tit.snow.k':        { es:'Mi dinero',             en:'My money' },
@@ -8890,13 +8911,14 @@ function pieSVG(segs, size = 210, hole = null){
   return `<svg viewBox="0 0 ${size} ${size}" class="rd-pie">${wedges}<circle cx="${cx}" cy="${cy}" r="${hr.toFixed(1)}" fill="var(--bg-2)"/></svg>`;
 }
 const TESIS_2040 = [
-  { n:'Chips / Semiconductors', pct:28, color:'#38BDF8' },
-  { n:'AI / Cloud / Software',  pct:25, color:'#6C8CF5' },
-  { n:'Crypto / Blockchain',    pct:18, color:'#8E6BC4' },
-  { n:'AI Networking',          pct:10, color:'#57C79B' },
-  { n:'Market ETF',             pct:8,  color:'#E8C25A' },
-  { n:'Energy + Materials',     pct:6,  color:'#E8975A' },
-  { n:'Bonds / Cash',           pct:5,  color:'#8A93A0' },
+  { id:'chips',      n:'Chips / Semiconductores', pct:26, color:'#38BDF8' },
+  { id:'ai',         n:'AI / Cloud / Software',   pct:22, color:'#6C8CF5' },
+  { id:'crypto',     n:'Crypto / Blockchain',     pct:16, color:'#8E6BC4' },
+  { id:'networking', n:'AI Networking',           pct:9,  color:'#57C79B' },
+  { id:'etf',        n:'ETFs de mercado',         pct:9,  color:'#E8C25A' },
+  { id:'rentas',     n:'Rentas / REITs',          pct:7,  color:'#C79A3A' },
+  { id:'energia',    n:'Energía + Materiales',    pct:6,  color:'#E8975A' },
+  { id:'bonos',      n:'Bonos / Efectivo',        pct:5,  color:'#8A93A0' },
 ];
 const MASTER_2040 = [
   ['NVDA','GPUs & AI factories',10],  ['BTC','Digital reserve',10],
@@ -9103,10 +9125,8 @@ function renderPayout(){
 }
 
 function renderPosiciones(){
-  const monto = (S.politica && S.politica.montoPayout) || 0;
-  const R = rueda(); const inv = R.find(x => x.grows) || R[0];
-  const mInv = Math.round(monto * (inv ? inv.pct : 0) / 100);
-
+  /* El donut da la composición; el peso ya no se muestra como número falso,
+     el foco es POR QUÉ NorthPoint recomienda cada clase. */
   $('#slDonut').innerHTML = pieSVG(TESIS_2040, 220) +
     `<div class="rd-centro"><b>2040</b><span>thesis</span></div>`;
   $('#slLeyenda').innerHTML = TESIS_2040.map(t => `
@@ -9114,15 +9134,35 @@ function renderPosiciones(){
       <span class="rd-dot" style="background:${t.color}"></span>
       <span class="sl-ley-n">${esc(t.n)}</span>
       <b class="mono">${t.pct}%</b>
-      <em class="mono">${mInv ? fmt$(Math.round(mInv * t.pct / 100)) : ''}</em>
     </div>`).join('');
 
-  $('#slMaster').innerHTML = MASTER_2040.map(([tk, d, pc]) => `
-    <div class="sl-m">
-      <b class="mono">${tk}</b><i>${esc(d)}</i>
-      <span class="mono">${pc}%</span>
-      <em class="mono">${mInv ? fmt$(Math.round(mInv * pc / 100)) : ''}</em>
-    </div>`).join('');
+  /* tarjetas de análisis: cada clase abre su hoja NorthPoint */
+  const P = window.PORTFOLIO_ANALISIS;
+  const ledeDe = html => { const m = (html||'').match(/lec-lede">([\s\S]*?)<\/p>/); return m ? m[1].replace(/<[^>]+>/g,'').trim() : ''; };
+  const clasesHost = $('#slClases');
+  if(clasesHost){
+    if(P && P.clases){
+      clasesHost.innerHTML = P.clases.map(c => `
+        <button type="button" class="sl-clase" data-clase="${c.id}">
+          <span class="sc-dot" style="background:${c.color}"></span>
+          <span class="sc-txt"><b>${esc(c.nombre)}</b><span>${esc(ledeDe(c.html))}</span></span>
+          <span class="sc-ver">${bi('Ver análisis','See analysis')} ›</span>
+        </button>`).join('');
+      clasesHost.querySelectorAll('[data-clase]').forEach(b => b.onclick = () => abreClase(b.dataset.clase));
+    } else clasesHost.innerHTML = `<p class="micro" style="color:var(--faint);padding:8px">${bi('El análisis se está cargando…','Analysis loading…')}</p>`;
+  }
+  const entHost = $('#slEntradas');
+  if(entHost){
+    if(P && P.entradas){
+      entHost.innerHTML = P.entradas.map(e => `
+        <button type="button" class="sl-entrada" data-entrada="${e.id}">
+          <b>${esc(e.nombre)}</b>
+          <span>${esc(ledeDe(e.html))}</span>
+          <span class="sc-ver">${bi('Ver cómo','See how')} ›</span>
+        </button>`).join('');
+      entHost.querySelectorAll('[data-entrada]').forEach(b => b.onclick = () => abreEntrada(b.dataset.entrada));
+    } else entHost.innerHTML = '';
+  }
 
   renderPosTabla();
 }
@@ -13433,6 +13473,7 @@ window.__np = { state: () => S, score: computeScore };
 <script src="academia/prog2.js"></script>
 <script src="academia/prog3.js"></script>
 <script src="academia/prog4.js"></script>
+<script src="academia/portfolio.js"></script>
 <script>
 /* ── Abrir una lección con su contenido extenso ── */
 let lecAbierta = null;
@@ -13458,6 +13499,7 @@ function abreLeccion(id){
     <b style="color:var(--txt);font-size:16px">${esc(info.titulo)}</b><br><br>
     ${bi('El contenido de esta lección se está preparando.','This lesson\'s content is being prepared.')}</div>`;
   $('#lecScroll').scrollTop = 0;
+  $('#lecMarca').style.display = '';
   marcaLecBtn(id);
   $('#ovLeccion').classList.add('on');
   document.body.style.overflow = 'hidden';
@@ -13467,6 +13509,28 @@ function cierraLeccion(){
   document.body.style.overflow = '';
   lecAbierta = null;
   if($('#v-academia') && $('#v-academia').classList.contains('on')) renderAcademia();
+}
+/* Abrir una hoja de análisis del portafolio (o un modo de entrada) en el mismo
+   visor de lecciones, pero sin el botón de "marcar como vista". */
+function abrePortDoc(sub, nombre, html){
+  $('#lecCual').textContent = sub;
+  const conTitulo = html.replace('<div class="lec">', `<div class="lec"><h1 class="lec-h1">${esc(nombre)}</h1>`);
+  $('#lecScroll').innerHTML = conTitulo;
+  $('#lecScroll').scrollTop = 0;
+  $('#lecMarca').style.display = 'none';
+  lecAbierta = null;
+  $('#ovLeccion').classList.add('on');
+  document.body.style.overflow = 'hidden';
+}
+function abreClase(id){
+  const P = window.PORTFOLIO_ANALISIS; if(!P) return;
+  const c = P.clases.find(x => x.id === id); if(!c) return;
+  abrePortDoc(bi('Portafolio · por qué la recomendamos','Portfolio · why we recommend it'), c.nombre, c.html);
+}
+function abreEntrada(id){
+  const P = window.PORTFOLIO_ANALISIS; if(!P) return;
+  const e = P.entradas.find(x => x.id === id); if(!e) return;
+  abrePortDoc(bi('Cómo entrar al mercado','How to enter the market'), e.nombre, e.html);
 }
 $('#lecVolver').addEventListener('click', cierraLeccion);
 $('#lecMarca').addEventListener('click', () => {
