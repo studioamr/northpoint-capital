@@ -1452,7 +1452,14 @@ body.locked .app{visibility:hidden;pointer-events:none}
 .lib-ov{position:fixed;inset:0;z-index:9200;background:rgba(2,3,5,.8);backdrop-filter:blur(7px);display:flex;align-items:center;justify-content:center;padding:18px;animation:fichaIn .18s ease;
   --lib-bg:#0b0c0f;--lib-ink:#eef1f5;--lib-line:rgba(255,255,255,.09);--lib-bar:#070809;--lib-brd:rgba(255,255,255,.14);--lib-dim:rgba(238,241,245,.55);--lib-btn:rgba(255,255,255,.06)}
 :root[data-theme=light] .lib-ov{--lib-bg:#fbfbfc;--lib-ink:#15171c;--lib-line:rgba(0,0,0,.1);--lib-bar:#f1f1f3;--lib-brd:rgba(0,0,0,.14);--lib-dim:rgba(21,23,28,.55);--lib-btn:rgba(0,0,0,.05)}
-.lib{width:min(650px,96vw);height:min(82vh,780px);display:flex;flex-direction:column;border-radius:16px;overflow:hidden;box-shadow:0 30px 90px rgba(0,0,0,.7);background:var(--lib-bg);border:1px solid var(--lib-brd)}
+.lib{position:relative;width:min(650px,96vw);height:min(82vh,780px);display:flex;flex-direction:column;border-radius:16px;overflow:hidden;box-shadow:0 30px 90px rgba(0,0,0,.7);background:var(--lib-bg);border:1px solid var(--lib-brd);perspective:1600px}
+.lib-cover{position:absolute;inset:0;z-index:6;background:linear-gradient(135deg,#141618,#050607);display:flex;align-items:center;justify-content:center;transform-origin:left center;box-shadow:inset 0 0 60px rgba(0,0,0,.6),8px 0 20px rgba(0,0,0,.5);border-radius:16px;animation:libOpen 1s cubic-bezier(.66,0,.28,1) forwards}
+.lib-cover::after{content:'';position:absolute;left:0;top:0;bottom:0;width:8px;background:linear-gradient(90deg,rgba(255,255,255,.14),transparent)}
+@keyframes libOpen{0%{transform:rotateY(0deg)}12%{transform:rotateY(-4deg)}100%{transform:rotateY(-118deg);opacity:0;pointer-events:none}}
+.lib-cover-in{text-align:center;color:#eef1f5;transform:translateZ(1px)}
+.lib-cover-in .lib-cover-em{display:block;font-size:34px;margin-bottom:10px;opacity:.9}
+.lib-cover-in>b{font-size:26px;font-weight:900;letter-spacing:.22em;display:block}
+.lib-cover-in .lib-cover-sub{display:block;font-family:var(--mono);font-size:10px;letter-spacing:.32em;color:#7ea88a;margin-top:6px}
 .lib-top{display:flex;align-items:center;gap:12px;padding:13px 18px;background:var(--lib-bar);color:var(--lib-ink);border-bottom:1px solid var(--lib-brd);flex:0 0 auto}
 .lib-top .lib-mark{display:flex;flex-direction:column;line-height:1.1}
 .lib-top .lib-mark b{font-size:14px;font-weight:900;letter-spacing:.16em}
@@ -1472,10 +1479,14 @@ body.locked .app{visibility:hidden;pointer-events:none}
 .lec-split .lec-doc{flex:1;min-width:0}
 .lec-split .lec-doc .lec,.lec-split .lec-doc .lec-cargando{max-width:none;margin:0;padding:34px 0 90px}
 .lec-side{flex:0 0 300px;position:sticky;top:0;padding-top:34px}
-.lec-libreta-cta{border:1px solid var(--line);border-radius:16px;background:var(--w03);padding:20px 18px;text-align:center}
-.lec-libreta-cta .lec-notas-h{margin-bottom:8px}
-.lec-libreta-p{font-size:12.5px;color:var(--dim);line-height:1.6;margin:0 0 16px}
-.lec-libreta-cta .btn.primary{width:100%}
+.lec-libreta-inline{--lib-bg:#0b0c0f;--lib-ink:#eef1f5;--lib-line:rgba(255,255,255,.09);--lib-bar:#070809;--lib-brd:rgba(255,255,255,.14);--lib-dim:rgba(238,241,245,.55);--lib-btn:rgba(255,255,255,.06)}
+:root[data-theme=light] .lec-libreta-inline{--lib-bg:#fbfbfc;--lib-ink:#15171c;--lib-line:rgba(0,0,0,.1);--lib-bar:#f1f1f3;--lib-brd:rgba(0,0,0,.14);--lib-dim:rgba(21,23,28,.55);--lib-btn:rgba(0,0,0,.05)}
+.lib.lib-inline{position:static;width:100%;height:460px;perspective:none;box-shadow:0 8px 24px rgba(0,0,0,.3)}
+.lib-inline .lib-top{padding:11px 14px}
+.lib-inline .lib-mark b{font-size:12px}
+.lib-inline .lib-paper textarea{font-size:15px;line-height:32px}
+.lib-inline .lib-b{padding:7px 10px;font-size:13px}
+@media(max-width:900px){.lib.lib-inline{height:400px}}
 .lec-notas{max-width:760px;margin:10px auto 0;padding:0 22px}
 .lec-side .lec-notas{max-width:none;margin:0;padding:0}
 .lec-notas-h{font-family:var(--mono);font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--faint);margin-bottom:10px}
@@ -9093,8 +9104,9 @@ function abreLibreta(){
   const ov=document.createElement('div'); ov.className='lib-ov';
   const cerrar=()=>{ document.removeEventListener('keydown', onKey); ov.remove(); };
   const onKey=(e)=>{ if(e.key==='Escape') cerrar(); };
-  const pinta=()=>{
+  const pinta=(primera)=>{
     ov.innerHTML=`<div class="lib">
+      ${primera?`<div class="lib-cover"><div class="lib-cover-in"><span class="lib-cover-em">◈</span><b>NORTHPOINT</b><span class="lib-cover-sub">${bi('LIBRETA','NOTEBOOK')}</span></div></div>`:''}
       <div class="lib-top"><div class="lib-mark"><b>NORTHPOINT</b><span>${bi('LIBRETA','NOTEBOOK')}</span></div><span class="lib-auto">● ${bi('se guarda solo','auto-saved')}</span><button type="button" class="lib-x" aria-label="${bi('cerrar','close')}">✕</button></div>
       <div class="lib-paper"><textarea id="libTa" spellcheck="false" placeholder="${bi('Escribe aquí tus notas de trading…','Write your trading notes here…')}">${esc(L.paginas[L.actual]||'')}</textarea></div>
       <div class="lib-nav">
@@ -9115,7 +9127,30 @@ function abreLibreta(){
   };
   ov.onclick=(e)=>{ if(e.target===ov) cerrar(); };
   document.addEventListener('keydown', onKey);
-  document.body.appendChild(ov); pinta();
+  document.body.appendChild(ov); pinta(true);
+}
+/* la misma libreta pero INLINE (para leer la lección y escribir a la vez) */
+function montaLibretaInline(box){
+  if(!box) return; const L=libretaEstado();
+  const pinta=()=>{
+    box.innerHTML=`<div class="lib lib-inline">
+      <div class="lib-top"><div class="lib-mark"><b>NORTHPOINT</b><span>${bi('LIBRETA','NOTEBOOK')}</span></div><span class="lib-auto">●</span></div>
+      <div class="lib-paper"><textarea id="lecLibTa" spellcheck="false" placeholder="${bi('Escribe aquí tus notas…','Write your notes here…')}">${esc(L.paginas[L.actual]||'')}</textarea></div>
+      <div class="lib-nav">
+        <button type="button" class="lib-b" id="lecLibPrev" ${L.actual===0?'disabled':''}>‹</button>
+        <span class="lib-pg">${L.actual+1}/${L.paginas.length}</span>
+        <button type="button" class="lib-b" id="lecLibNext" ${L.actual>=L.paginas.length-1?'disabled':''}>›</button>
+        <button type="button" class="lib-b add" id="lecLibAdd">+</button>
+        <button type="button" class="lib-b" id="lecLibExp" title="${bi('Pantalla completa','Full screen')}">⤢</button>
+      </div></div>`;
+    const ta=box.querySelector('#lecLibTa'); const g=()=>{ L.paginas[L.actual]=ta.value; };
+    ta.oninput=()=>{ L.paginas[L.actual]=ta.value; save(); };
+    box.querySelector('#lecLibPrev').onclick=()=>{ g(); if(L.actual>0)L.actual--; save(); pinta(); };
+    box.querySelector('#lecLibNext').onclick=()=>{ g(); if(L.actual<L.paginas.length-1)L.actual++; save(); pinta(); };
+    box.querySelector('#lecLibAdd').onclick=()=>{ g(); L.paginas.splice(L.actual+1,0,''); L.actual++; save(); pinta(); };
+    box.querySelector('#lecLibExp').onclick=abreLibreta;
+  };
+  pinta();
 }
 
 /* ══════════ CUADERNO NORTHPOINT ══════════
@@ -18728,16 +18763,12 @@ function abreLeccion(id){
     ${bi('El contenido de esta lección se está preparando.','This lesson\'s content is being prepared.')}</div>`;
   /* el cuaderno vive al LADO: en compu, el documento a la izquierda y la libreta
      a la derecha (columna fija que sigue mientras lees); en móvil, debajo. */
-  const notasHtml = `<aside class="lec-side"><div class="lec-libreta-cta">
-    <div class="lec-notas-h">📓 ${bi('Tu libreta','Your notebook')}</div>
-    <p class="lec-libreta-p">${bi('Tus apuntes viven en una sola libreta continua, guardada hoja por hoja.','Your notes live in one continuous notebook, saved page by page.')}</p>
-    <button type="button" class="btn primary" id="lecLibreta">📓 ${bi('Abrir mi libreta','Open my notebook')}</button>
-  </div></aside>`;
+  const notasHtml = `<aside class="lec-side"><div class="lec-libreta-inline" id="lecLibretaBox"></div></aside>`;
   $('#lecScroll').innerHTML = `<div class="lec-split"><div class="lec-doc">${cuerpo}</div>${notasHtml}</div>`;
   $('#lecScroll').scrollTop = 0;
   $('#lecMarca').style.display = '';
   marcaLecBtn(id);
-  $('#lecLibreta') && ($('#lecLibreta').onclick = abreLibreta);
+  montaLibretaInline($('#lecLibretaBox'));
   $('#ovLeccion').classList.add('on');
   document.body.style.overflow = 'hidden';
 }
