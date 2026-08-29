@@ -2668,30 +2668,24 @@ stop[stop-color="#9BC0DC"]{stop-color:var(--txt)}
 
       <!-- ════ TRADES (el historial completo, con registro y exportación) ════ -->
       <section class="view" id="v-trades">
-        <!-- DAILY TRADES (rediseño 28-ago-2026, orden de André): UN botón
-             grande que ES el registro — la captura de TradingView entra por
-             aquí, por Cmd+V o soltando el archivo en cualquier pantalla. Todo
-             lo demás es apoyo: filtros, export y la tabla. -->
-        <input type="file" id="capFile" accept="image/*" hidden>
-        <button type="button" id="btnCapturaGrande">
-          <span class="cg-ico">📸</span>
-          <span class="cg-t">Registrar trade</span>
-          <span class="cg-s">suelta o pega (⌘V) tu captura de TradingView aquí — o tócame</span>
-        </button>
-        <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin:14px 0 14px">
+        <!-- DAILY TRADES (29-ago-2026, orden de André): filtros arriba, el
+             botón grande ABAJO —justo arriba del historial—, y sin la fila de
+             botones. El botón abre el registro (P&L + captura); la captura
+             también entra pegándola (⌘V) o soltándola en cualquier pantalla. -->
+        <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin:0 0 14px">
           <div class="seg" id="jSeg">
             <button data-r="mes" class="on" data-i18n="j.mes">Mes</button>
             <button data-r="todo" data-i18n="j.todo">Todo</button>
           </div>
           <div id="pickJournal"></div>
           <span class="micro" id="jResumen"></span>
-          <div style="margin-left:auto;display:flex;gap:10px">
-            <button class="btn" id="btnExport" data-i18n="j.exportar">Exportar</button>
-            <button class="btn" onclick="abreReporte()">Reporte PDF</button>
-            <button class="btn" id="btnCSV3">Tradovate CSV</button>
-            <button class="btn" id="btnTrade">+ Manual</button>
-          </div>
         </div>
+
+        <button type="button" id="btnCapturaGrande">
+          <span class="cg-ico">📸</span>
+          <span class="cg-t">Registrar trade</span>
+          <span class="cg-s">tócame — o suelta / pega (⌘V) tu captura de TradingView en cualquier pantalla</span>
+        </button>
 
         <div class="panel mt">
           <div class="p-head"><h3 data-i18n="md.historial">Trade history</h3><span class="micro" id="jHistSub"></span></div>
@@ -7382,7 +7376,7 @@ function tShotPinta(){
   const z = $('#tShotZona'); if(!z) return;
   z.innerHTML = tShot
     ? `<div class="shot-prev"><img src="${tShot}" alt="Screenshot del trade"><button type="button" id="tShotQuitar">Quitar</button></div>
-       <button type="button" class="btn sm primary" id="tShotLeer" style="margin-top:8px;width:100%">✨ ${bi('Leer los datos de la captura','Read the trade from the screenshot')}</button>
+       ${llaveIA() ? `<button type="button" class="btn sm primary" id="tShotLeer" style="margin-top:8px;width:100%">✨ ${bi('Leer los datos de la captura','Read the trade from the screenshot')}</button>` : ''}
        <div id="tShotLeerCaja" class="micro" style="margin-top:6px;line-height:1.6"></div>`
     : `<div class="shot-drop" id="tShotDrop">Haz clic para subir la captura — o pégala aquí con Ctrl/Cmd+V</div>`;
   const d = $('#tShotDrop'); if(d) d.onclick = () => $('#tShotFile').click();
@@ -7437,24 +7431,12 @@ Reglas: los números SIN comas de miles. dir: en la herramienta larga el TP va a
 async function leerCaptura(){
   const caja = $('#tShotLeerCaja'); if(!caja || !tShot) return;
   if(!(await llaveIAAuto())){
-    if((S.session && S.session.user) === 'andre.np'){
-      /* el dueño de la llave es UNO: André. Nadie más ve jamás este campo. */
-      caja.innerHTML = `${bi('La mesa aún no tiene su llave de IA. Pégala una vez (empieza con','The desk has no AI key yet. Paste it once (starts with')} <code>sk-ant-</code>)
-        ${bi('y viaja sola a todos los equipos.','and it travels to every device on its own.')}
-        <div style="display:flex;gap:8px;margin-top:8px">
-          <input id="capLlaveIn" type="password" placeholder="sk-ant-..." style="flex:1;min-width:0">
-          <button type="button" class="btn sm primary" id="capLlaveOk">Save</button>
-        </div>`;
-      $('#capLlaveOk').onclick = () => {
-        const v = $('#capLlaveIn').value.trim();
-        if(!v.startsWith('sk-ant-')){ toast(tr('ag.llaveMala')); return; }
-        guardaLlaveIA(v); leerCaptura();
-      };
-    } else {
-      caja.innerHTML = bi(
-        'La lectura automática se prende sola en cuanto André abra su terminal: la llave de la mesa viaja por la nube. Mientras, llena las cajas a mano.',
-        'Automatic reading turns on by itself once André opens his terminal: the desk key travels through the cloud. Meanwhile, fill the boxes by hand.');
-    }
+    /* SIN CAMPOS DE LLAVE AQUÍ (orden de André): el registro manual es el
+       camino —el dinero y la foto— y la lectura automática aparece sola el
+       día que la mesa tenga su llave (viaja por la nube; se pega una sola
+       vez desde el análisis del día, no desde este modal). */
+    caja.textContent = bi('La lectura automática aún no está encendida: escribe el P&L y listo.',
+                          'Automatic reading is not on yet: type the P&L and you are done.');
     return;
   }
   const btn = $('#tShotLeer'); if(btn) btn.disabled = true;
@@ -7574,13 +7556,9 @@ document.addEventListener('drop', e => {
     else registraDeCaptura(d);
   });
 });
-$('#btnCapturaGrande')?.addEventListener('click', () => $('#capFile').click());
-$('#btnCSV3')?.addEventListener('click', () => $('#fileCSV')?.click());
-$('#capFile')?.addEventListener('change', e => {
-  const f = e.target.files && e.target.files[0];
-  e.target.value = '';
-  if(f) encogeImagen(f, d => registraDeCaptura(d));
-});
+/* el botón grande abre el registro de verdad: P&L + captura y Save. El
+   automático (pegar/soltar la captura donde sea) sigue vivo por su lado. */
+$('#btnCapturaGrande')?.addEventListener('click', () => openTrade());
 /* La orden se replica a varias cuentas (copiadora). Sin al menos una, el trade
    quedaría invisible para el journal, el score y los balances: por eso se exige. */
 let pendienteTix = null;
@@ -7641,7 +7619,7 @@ $('#tSave').addEventListener('click', ()=>{
 });
 
 /* export */
-$('#btnExport').addEventListener('click', ()=>{
+$('#btnExport')?.addEventListener('click', ()=>{
   /* El mismo journal daba cifras distintas según el selector, sin decirlo. Ahora
      salen las dos escalas: por cuenta y total proyectado, más cuántas cuentas son. */
   const rows = [['fecha','hora','instrumento','direccion','contratos','cuentas',
@@ -9266,7 +9244,7 @@ addEventListener('keydown', e=>{ if(e.key==='Escape') closeOv(); });
 
 
 
-$('#btnTrade').addEventListener('click', ()=> openTrade());
+$('#btnTrade')?.addEventListener('click', ()=> openTrade());
 /* ── PEDIR EL CORREO DE RECUPERACIÓN DESDE AQUÍ ──
    Antes esto sólo se podía disparar desde el panel de Supabase, y ese correo
    manda al Site URL del proyecto — que apunta a otra cosa porque el proyecto es
@@ -9453,7 +9431,7 @@ function renderTix(){
     pendienteTix = t.id;
     location.hash = 'journal';
     setTimeout(() => {
-      $('#btnTrade').click();
+      openTrade();
       /* el modal ya no tiene cajas de símbolo/dirección: viajan por tLeido */
       setTimeout(() => { tLeido = { sym: t.sym, dir: t.dir }; }, 60);
     }, 250);
