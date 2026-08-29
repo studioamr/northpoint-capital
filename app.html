@@ -784,6 +784,25 @@ body.locked .app{visibility:hidden;pointer-events:none}
   padding:11px 14px;margin-bottom:14px;font-size:13px;text-align:center}
 .bat-ciudad-btn{width:100%;margin:2px 0 22px}
 .bat-ciudad-nota{font-family:var(--mono);font-size:12px;color:var(--faint);text-align:center;margin-top:14px;line-height:1.6}
+/* banner de reto pendiente / batalla en curso (sobre el home) */
+.bat-banner{display:flex;align-items:center;gap:12px;border:1px solid var(--line);border-radius:14px;
+  background:var(--w02);padding:12px 14px;margin-bottom:16px}
+.bat-banner.reta{border-color:var(--accent);background:color-mix(in srgb, var(--accent) 9%, transparent)}
+.bat-banner.activo{border-color:var(--down);background:color-mix(in srgb, var(--down) 8%, transparent)}
+.bat-banner.prog{border-color:var(--line)}
+.bat-banner-ico{font-size:22px;flex:0 0 auto}
+.bat-banner-txt{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.bat-banner-txt b{font-size:14px;font-weight:800}
+.bat-banner-txt i{font-family:var(--mono);font-style:normal;font-size:11px;color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bat-banner-acc{display:flex;gap:7px;flex:0 0 auto}
+.bat-banner-acc .btn.sm{padding:8px 12px;font-size:12px}
+.bat-mini-spin{width:22px;height:22px;flex:0 0 auto;border-radius:50%;border:2.5px solid var(--line);border-top-color:var(--accent);animation:batSpin .9s linear infinite}
+/* barra superior de la batalla activa (salir sin trabarse) */
+.bat-activo-top{display:flex;align-items:center;gap:10px;margin-bottom:14px}
+.bat-activo-sede{flex:1;text-align:center;font-family:var(--mono);font-size:11px;letter-spacing:.06em;color:var(--faint);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bat-end{color:var(--down);border-color:color-mix(in srgb, var(--down) 40%, var(--line))}
+.bat-end:hover{border-color:var(--down)}
 /* ── Batallas 1v1 · LA CIUDAD (3 clases: pobres / clase media / ricos) ── */
 .bat-ciudad{position:relative;width:100%;aspect-ratio:400/460;height:auto;border-radius:18px;overflow:hidden;margin-bottom:22px;
   border:1px solid var(--line);
@@ -8747,13 +8766,69 @@ function batEraIdx(nw){ let i=0; for(let k=0;k<WEALTH_ERAS.length;k++){ if(nw>=W
 function batNivel100(nw){ if(nw<=0) return 0; return Math.max(0, Math.min(100, Math.round(Math.log10(Math.max(1,nw))/9*100))); }
 function batEraProg(nw){ const i=batEraIdx(nw), e=WEALTH_ERAS[i], nx=WEALTH_ERAS[i+1]||null;
   const prog = nx ? Math.max(0, Math.min(1, (nw-e.min)/(nx.min-e.min))) : 1; return { i, e, nx, prog }; }
-let batTick = null, batDir = 'L', batPantalla = 'home', batFmt = 'sesion', batSel = null, batViendo = null;
+let batTick = null, batDir = 'L', batPantalla = 'home', batFmt = 'sesion', batSel = null, batViendo = null, batMin = false;
 function batYo(){ return socioEnSesion() || DUENO_ORIGEN; }
 function batNom(uid){ return (USERS[uid] && USERS[uid].nombre) || uid; }
 function batOponentes(){ return SOCIOS_REALES.filter(u => u !== batYo()); }
 function batProfit(c, uid){ return ((c.trades && c.trades[uid]) || []).reduce((a,t) => a + (t.pnl||0), 0); }
 function batNTrades(c, uid){ return ((c.trades && c.trades[uid]) || []).length; }
-function batReset(){ S.challenge = null; batPantalla = 'home'; save(); renderBatalla(); }
+function batReset(){ S.challenge = null; batPantalla = 'home'; batMin = false; save(); renderBatalla(); }
+/* ── banner del reto pendiente/en curso, para NO trabar al usuario en una sola
+   pantalla: la invitación y la batalla minimizada viven como aviso en el home,
+   y el rival ve el reto como una notificación que puede aceptar ── */
+function batBannerHTML(c, yo){
+  if(!c) return '';
+  const soyHost = c.host===yo, soyRival = c.rival===yo;
+  const otro = soyHost ? c.rival : c.host;
+  if(c.estado==='invitado'){
+    if(soyRival) return `<div class="bat-banner reta">
+      <div class="bat-banner-ico">⚔</div>
+      <div class="bat-banner-txt"><b>${esc(batNom(c.host))} ${bi('te reta','challenges you')}</b><i>${batRetoTxt(c)}</i></div>
+      <div class="bat-banner-acc"><button type="button" class="btn primary sm" id="bnAcepta">${bi('Aceptar','Accept')}</button><button type="button" class="btn sm" id="bnRechaza">${bi('Rechazar','Decline')}</button></div></div>`;
+    return `<div class="bat-banner esperando">
+      <div class="bat-mini-spin"></div>
+      <div class="bat-banner-txt"><b>${bi('Esperando a','Waiting for')} ${esc(batNom(c.rival))}…</b><i>${bi('Invitación enviada','Invite sent')} · ${batRetoTxt(c)}</i></div>
+      <div class="bat-banner-acc"><button type="button" class="btn sm" id="bnCancela">${bi('Cancelar','Cancel')}</button></div></div>`;
+  }
+  if(c.estado==='programado'){
+    const falta = Math.max(0, c.inicio - Date.now());
+    const dd=Math.floor(falta/86400000), h=Math.floor(falta%86400000/3600000), m=Math.floor(falta%3600000/60000);
+    const cuenta = dd>0?`${dd}d ${h}h`:(h>0?`${h}h ${m}m`:`${m}m`);
+    return `<div class="bat-banner prog">
+      <div class="bat-banner-ico">🗓️</div>
+      <div class="bat-banner-txt"><b>${bi('Cita agendada','Match scheduled')} · ${esc(batDestino(c))}</b><i>${bi('empieza en','starts in')} <span id="bnCuenta">${cuenta}</span> · ${bi('vs','vs')} ${esc(batNom(otro))}</i></div>
+      <div class="bat-banner-acc"><button type="button" class="btn sm" id="bnCancela">${bi('Cancelar','Cancel')}</button></div></div>`;
+  }
+  if(c.estado==='activo'){
+    const restante=Math.max(0,c.fin-Date.now());
+    const hh=Math.floor(restante/3600000), mm=String(Math.floor(restante%3600000/60000)).padStart(2,'0'), ss=String(Math.floor(restante%60000/1000)).padStart(2,'0');
+    const reloj=(hh>0?String(hh).padStart(2,'0')+':':'')+mm+':'+ss;
+    const pYo=batProfit(c,yo);
+    return `<div class="bat-banner activo">
+      <div class="bat-banner-ico">🔴</div>
+      <div class="bat-banner-txt"><b>${bi('Batalla en curso','Battle in progress')} · <span id="bnReloj">${reloj}</span></b><i>${bi('vs','vs')} ${esc(batNom(otro))} · ${bi('vas','you')} <span id="bnProfit">${fmt$(pYo,true)}</span></i></div>
+      <div class="bat-banner-acc"><button type="button" class="btn primary sm" id="bnResume">${bi('Volver','Resume')}</button><button type="button" class="btn sm" id="bnTerminar">${bi('Terminar','End')}</button></div></div>`;
+  }
+  return '';
+}
+/* engancha los botones del banner (comparten lógica con las pantallas completas) */
+function batBannerBind(c, yo){
+  if(!c) return;
+  const acepta = () => {
+    c.trades = { [c.host]:[], [c.rival]:[] };
+    if(c.programado && c.programado > Date.now() + 9000){
+      c.estado='programado'; c.inicio=c.programado; c.fin=c.inicio+batDuracionMs(c.duracion,c.inicio);
+    } else {
+      c.estado='volando'; c.inicio=Date.now()+9000; c.fin=c.inicio+batDuracionMs(c.duracion,c.inicio);
+    }
+    batMin=false; batGuarda();
+  };
+  $('#bnAcepta') && ($('#bnAcepta').onclick = acepta);
+  $('#bnRechaza') && ($('#bnRechaza').onclick = () => { c.estado='cancelado'; save(); batReset(); });
+  $('#bnCancela') && ($('#bnCancela').onclick = () => { if(confirm(bi('¿Cancelar el reto?','Cancel the challenge?'))){ c.estado='cancelado'; save(); batReset(); } });
+  $('#bnResume') && ($('#bnResume').onclick = () => { batMin=false; renderBatalla(); });
+  $('#bnTerminar') && ($('#bnTerminar').onclick = () => { if(confirm(bi('¿Terminar la sesión ahora?','End the session now?'))){ c.estado='terminado'; c.fin=Date.now(); batMin=false; batGuarda(); } });
+}
 function batGuarda(){ save(); renderBatalla(); }
 /* ranking, puntos e historial de batallas */
 function batStats(){ if(!S.batStats || typeof S.batStats!=='object') S.batStats = {}; return S.batStats; }
@@ -8903,8 +8978,12 @@ function renderBatalla(){
   const c = S.challenge;
   if(batTick){ clearInterval(batTick); batTick = null; }
 
-  /* ── sin reto activo: LOBBY (ranking + historial) o SETUP (crear reto) ── */
-  if(!c || c.estado === 'cancelado'){
+  /* ── el home NO se traba: la invitación pendiente, la cita agendada y la
+     batalla minimizada viven como BANNER sobre el home; sólo la partida en vivo
+     (volando/activo maximizado/terminado) toma la pantalla completa ── */
+  const enHome = !c || c.estado === 'cancelado' || c.estado === 'invitado'
+    || c.estado === 'programado' || (c.estado === 'activo' && batMin);
+  if(enHome){
     if(batPantalla === 'setup'){
       const ops = batOponentes();
       /* estado de la búsqueda de partida, persistente entre re-renders */
@@ -8991,6 +9070,8 @@ function renderBatalla(){
         S.challenge = { id:'bt_'+uid(), host:yo, rival:batSel.op, formato:batFmt, sesion:sesFinal,
           duracion:durFinal, programado:batSel.cuando||null, estado:'invitado', creado:Date.now(), inicio:null, fin:null, trades:{} };
         batSel=null;
+        batPantalla='home';   // no se traba en "esperando": regresa al lobby con el aviso
+        toast(bi('Invitación enviada. Esperando que acepten.','Invite sent. Waiting for them to accept.'));
         batGuarda();
       };
       return;
@@ -9044,6 +9125,7 @@ function renderBatalla(){
           : `<span class="bat-lobby-t">${bi('0 → Billonario','0 → Billionaire')}</span>
              <button type="button" class="bat-ajustes" id="batAjustes" title="${bi('Ajustes','Settings')}">⚙</button>`}
       </div>
+      ${!viendo ? batBannerHTML(c, yo) : ''}
       ${viendo ? `<div class="bat-viendo">👀 ${bi('Esto es lo que ve','This is what')} <b>${esc(batNom(viendo))}</b> ${idi()==='en'?'sees':''}</div>` : ''}
       <div class="bat-home">${batHomeHTML(quien)}</div>
       ${viendo ? '' : `
@@ -9091,14 +9173,40 @@ function renderBatalla(){
       $('#batCiudadBtn').onclick = () => { batPantalla='ciudad'; renderBatalla(); };
     }
     root.querySelectorAll('[data-amigo]').forEach(b => b.onclick = () => { batViendo = b.dataset.amigo; renderBatalla(); });
+    /* banner del reto (invitación / cita / batalla minimizada) + su latido */
+    if(!viendo && c){
+      batBannerBind(c, yo);
+      if(c.estado==='invitado' || c.estado==='programado' || c.estado==='activo'){
+        batTick = setInterval(() => {
+          const cc = S.challenge;
+          if(!cc){ renderBatalla(); return; }
+          /* transiciones que sí exigen re-render completo */
+          if(cc.estado==='volando' || cc.estado==='terminado' || (cc.estado==='activo' && !batMin)){ renderBatalla(); return; }
+          if(cc.estado==='cancelado'){ batReset(); return; }
+          if(cc.estado==='programado' && Date.now() >= cc.inicio - 9000){ cc.estado='volando'; batGuarda(); return; }
+          if(cc.estado==='activo' && Date.now() >= cc.fin){ renderBatalla(); return; }
+          /* si nadie cambió de fase, sólo refresco el texto del banner (barato) */
+          const bR=$('#bnReloj'), bP=$('#bnProfit'), bC=$('#bnCuenta');
+          if(cc.estado==='activo' && bR){
+            const rst=Math.max(0,cc.fin-Date.now()), hh=Math.floor(rst/3600000);
+            bR.textContent=(hh>0?String(hh).padStart(2,'0')+':':'')+String(Math.floor(rst%3600000/60000)).padStart(2,'0')+':'+String(Math.floor(rst%60000/1000)).padStart(2,'0');
+            if(bP) bP.textContent=fmt$(batProfit(cc,yo),true);
+          } else if(cc.estado==='programado' && bC){
+            const f=Math.max(0,cc.inicio-Date.now()), dd=Math.floor(f/86400000), h=Math.floor(f%86400000/3600000), m=Math.floor(f%3600000/60000);
+            bC.textContent=dd>0?`${dd}d ${h}h`:(h>0?`${h}h ${m}m`:`${m}m`);
+          }
+        }, 1000);
+      }
+    }
     return;
   }
 
   const soyHost = c.host === yo, soyRival = c.rival === yo;
   const rivalDe = soyHost ? c.rival : c.host;
 
-  /* ── invitación enviada / recibida ── */
-  if(c.estado === 'invitado'){
+  /* ── (invitado y programado ya viven como banner en el home; aquí sólo la
+     partida en vivo) ── */
+  if(false && c.estado === 'invitado'){
     if(soyRival){
       const programadoFuturo = c.programado && c.programado > Date.now() + 60000;
       root.innerHTML = `
@@ -9139,8 +9247,8 @@ function renderBatalla(){
     return;
   }
 
-  /* ── programado: la cita quedó a futuro, se espera a la apertura de la sesión ── */
-  if(c.estado === 'programado'){
+  /* ── programado: ahora vive como banner en el home (código viejo inerte) ── */
+  if(false && c.estado === 'programado'){
     if(Date.now() >= c.inicio - 9000){ c.estado = 'volando'; batGuarda(); return; }
     const falta = c.inicio - Date.now();
     const dd = Math.floor(falta/86400000), h = Math.floor(falta%86400000/3600000), m = Math.floor(falta%3600000/60000);
@@ -9201,6 +9309,12 @@ function renderBatalla(){
         </div>`).join('') || `<div class="bt-log-empty">${bi('Sin trades aún','No trades yet')}</div>`;
     };
     root.innerHTML = `
+      <!-- BARRA: salir sin quedar trabado -->
+      <div class="bat-activo-top">
+        <button type="button" class="bat-volver" id="batMinBtn">‹ ${bi('Lobby','Lobby')}</button>
+        <span class="bat-activo-sede">${esc(batDestino(c))} · ${esc(batDurTxt(c.duracion))}</span>
+        <button type="button" class="btn sm bat-end" id="batEndBtn">⏹ ${bi('Terminar','End')}</button>
+      </div>
       <!-- ARRIBA: el rival (solo lectura) -->
       <div class="bat-panel rival ${!gano?'lead':''}">
         <div class="bat-panel-h">
@@ -9254,6 +9368,9 @@ function renderBatalla(){
     };
     $('#batGo').onclick = registrar;
     $('#batPnl').addEventListener('keydown', e => { if(e.key==='Enter'){ e.preventDefault(); registrar(); } });
+    /* salir sin quedar trabado: minimizar al lobby (la batalla sigue) o terminar ya */
+    $('#batMinBtn').onclick = () => { batMin = true; batPantalla = 'home'; renderBatalla(); };
+    $('#batEndBtn').onclick = () => { if(confirm(bi('¿Terminar la sesión ahora? Se guarda el resultado con el profit actual.','End the session now? The result is saved with the current profit.'))){ c.estado='terminado'; c.fin=Date.now(); batMin=false; batGuarda(); } };
     batTick = setInterval(renderBatalla, 1000);
     return;
   }
