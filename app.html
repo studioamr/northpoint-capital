@@ -5180,6 +5180,9 @@ function abreDescarte(tradeId, cod){
 window.abreDescarte = abreDescarte;
 window.revierteDescarte = (tradeId, cod) => {
   const t = (S.trades || []).find(x => x.id === tradeId); if(!t) return;
+  /* la fusión de viosOut es una unión: sin lápida, el descarte volvía desde la
+     nube en el siguiente pull y revertirlo era imposible */
+  marcaBorrado('vio:' + claveVio(t, cod));
   delete S.viosOut[claveVio(t, cod)];
   save(); renderAll();
   toast(bi('La marca vuelve al registro.','The breach is back on the record.'));
@@ -5299,7 +5302,7 @@ function computeScore(){
   const emo  = last.filter(t => { const v = vioOf(t); return !v.includes('REVENGE') && !v.includes('AFTER_WIN'); }).length / last.length;
   const dec  = last.filter(t => t.setupOk).length / last.length;
   const days = [...new Set(last.map(t=>t.date))];
-  const cons = days.filter(d => { const s = S.sessions[claveSesion(d)]; return s && (s.pre||[]).filter(Boolean).length >= 5; }).length / days.length;
+  const cons = days.filter(d => { const s = S.sessions[claveSesion(d)]; return s && (s.pre||[]).filter(chkOn).length >= 5; }).length / days.length;
   const dims = [
     { k:'Risk Discipline', v: risk },
     { k:'Emotion Control', v: emo },
@@ -6038,8 +6041,10 @@ window.borrarCuenta = id => {
   if(!confirm(`Delete account ${a.alias}? The trades keep their record.`)) return;
   marcaBorrado(id); S.accounts = S.accounts.filter(x=>x.id!==id);
   S.trades.forEach(t=>{
+    const tenia = (t.accts||[]).includes(id);
     t.accts = (t.accts||[]).filter(x=>x!==id);
     if(!t.accts.length) t.accts = [SIN_CUENTA];
+    if(tenia) sellaCambio(t);       // sin sello, la copia del otro re-ligaba el trade
   });
   S.ui.acctSel = { mode:'all', ids:[] };
   save(); renderAcctMgr(); renderDashboard(); renderAgentes(); toast('Account deleted');
@@ -6050,7 +6055,7 @@ window.asignarHuerfanos = destino => {
   /* Éste no sólo enseñaba lo ajeno: lo MOVÍA. Barría los trades sin cuenta de
      toda la mesa —los de Pablo también— y los metía a MIS cuentas, con su P&L.
      Se toca únicamente lo mío; lo de cada quien lo asigna cada quien. */
-  misTrades().forEach(t=>{ if(!Array.isArray(t.accts) || t.accts.includes(SIN_CUENTA)){ t.accts = [...ids]; n++; } });
+  misTrades().forEach(t=>{ if(!Array.isArray(t.accts) || t.accts.includes(SIN_CUENTA)){ t.accts = [...ids]; sellaCambio(t); n++; } });
   save(); renderAcctMgr(); renderDashboard(); renderAgentes();
   toast(n + ' trade' + (n>1?'s':'') + ' asignado' + (n>1?'s':''));
 };
@@ -7700,6 +7705,10 @@ function normalizaChk(arr, n){
   }
   return out;
 }
+/* Una casilla está HECHA si tiene firma y no está desmarcada. Desmarcar ya no
+   borra (null): escribe {out, t} — un null perdía SIEMPRE contra la copia de
+   la nube en la fusión y las palomitas quitadas volvían solas. */
+const chkOn = c => !!(c && !c.out);
 /* ── LOS TRES CHECKLISTS DE LA SESIÓN ──
    Restaurados el 25-ago-2026. El revert del journal (6333cd7) borró estas tres
    listas junto con el rediseño que André rechazó, pero se llevó de más: el
@@ -7760,7 +7769,7 @@ function getSession(iso){
 function chkHTML(items, arr, key){
   /* Hecho = verde y ya. La firma (quién y a qué hora) se sigue guardando en
      los datos por si la mesa la necesita, pero no se pinta: era ruido. */
-  return items.map((it,i)=>`<button class="chk ${arr[i]?'done':''}" data-k="${key}" data-i="${i}">
+  return items.map((it,i)=>`<button class="chk ${chkOn(arr[i])?'done':''}" data-k="${key}" data-i="${i}">
       <span class="box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M4 12l5 5L20 7"/></svg></span>
       <span style="flex:1;min-width:0"><b>${esc(it[0])}</b><span>${esc(it[1])}</span></span>
       ${it[2]?`<span class="t">${it[2]}</span>`:''}
@@ -7863,7 +7872,7 @@ function renderSesion(){
   /* ── checklists (el Score lee ses.pre: no se toca su forma) ── */
   $('#preList').innerHTML   = chkHTML(PRE_ITEMS_(), ses.pre, 'pre');
   $('#setupList').innerHTML = chkHTML(SETUP_ITEMS_(), ses.setup, 'setup');
-  const done = [...ses.pre, ...ses.setup].filter(Boolean).length;
+  const done = [...ses.pre, ...ses.setup].filter(chkOn).length;
 
   const okAll = ses.setup.every(Boolean);
   $('#setupVerdict').innerHTML = `
@@ -7953,7 +7962,7 @@ function renderSesion(){
   else if(vios.length){ vd.textContent = 'OFF PROTOCOL'; vd.className = 'hoja-veredicto mal'; }
   else { vd.textContent = 'PROFESSIONAL DAY'; vd.className = 'hoja-veredicto bien'; }
 
-  const cumplido = getSession(iso).pre.filter(Boolean).length;
+  const cumplido = getSession(iso).pre.filter(chkOn).length;
   const totalPre = PRE_RAW.length;
   const gan = dayTr.filter(t=>(t.pnl||0)>0).reduce((a,t)=>a+t.pnl,0);
   const perd = Math.abs(dayTr.filter(t=>(t.pnl||0)<0).reduce((a,t)=>a+t.pnl,0));
@@ -8040,9 +8049,11 @@ function renderSesion(){
     b.onclick = () => {
       const s = getSession(todayISO());
       const k = b.dataset.k, i = +b.dataset.i;
-      s[k][i] = s[k][i] ? null
-        : { u: (S.session && S.session.user) || null,
+      s[k][i] = chkOn(s[k][i])
+        ? { out: true, u: (S.session && S.session.user) || null, t: Date.now() }
+        : { u: (S.session && S.session.user) || null, t: Date.now(),
             ts: new Date().toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit',hour12:false}) };
+      sellaCambio(s);
       save(); renderSesion(); updateBadges();
     };
   });
@@ -8715,10 +8726,14 @@ $('#tSave').addEventListener('click', ()=>{
   if(pendienteTix && !editingTrade){
     data.tixId = pendienteTix;
     const tk = S.tickets.find(x => x.id === pendienteTix);
-    if(tk) tk.estado = 'ejecutada';
+    if(tk){ tk.estado = 'ejecutada'; sellaCambio(tk); }
     pendienteTix = null;
   }
-  if(editingTrade) sellaCambio(Object.assign(editingTrade, data));
+  if(editingTrade){
+    const vivo = S.trades.find(x => x.id === editingTrade.id) || (S.trades.push(editingTrade), editingTrade);
+    sellaCambio(Object.assign(vivo, data));
+    editingTrade = vivo;
+  }
   else S.trades.push(sellaCambio({ id: uid(), ...data }));
   save(); closeOv();
   render(location.hash.slice(1)||'agentes'); updateBadges();
@@ -8887,6 +8902,7 @@ function rueda(){
      || (!S.politica.ruedaTocada && S.politica.ruedaFase !== fase)){
     S.politica.rueda = ruedaDeFase(fase);
     S.politica.ruedaFase = fase;
+    S.politica.upd = Date.now();
   }
   return S.politica.rueda;
 }
@@ -8942,12 +8958,14 @@ function renderRueda(monto){
     S.politica.ruedaTocada = false;
     S.politica.rueda = ruedaDeFase(faseActualIdx());
     S.politica.ruedaFase = faseActualIdx();
+    S.politica.upd = Date.now();
     save(); renderPosiciones();
   };
   $$('#ruedaBox [data-rd]').forEach(sl => {
     sl.oninput = () => {
       ajustaRueda(sl.dataset.rd, +sl.value);
       S.politica.ruedaTocada = true;       // ya es tuya: deja de seguir la fase
+      S.politica.upd = Date.now();
       save(); renderPosiciones();
     };
   });
@@ -9032,12 +9050,14 @@ function renderPosTabla(){
 $('#pyCalc')?.addEventListener('click', () => {
   S.politica = S.politica || {};
   S.politica.montoPayout = Math.max(0, parseFloat($('#pyMonto').value) || 0);
+  S.politica.upd = Date.now();
   save(); renderPosiciones();
 });
 $('#pyMonto')?.addEventListener('keydown', e => { if(e.key === 'Enter') $('#pyCalc').click(); });
 
 window.delPos = id => {
   if(!confirm('Delete this position?')) return;
+  marcaBorrado(id);                     // sin lápida, la nube la resucitaba
   S.positions = S.positions.filter(p=>p.id!==id); save(); renderPosiciones();
 };
 let editingPos = null;
@@ -9070,7 +9090,12 @@ $('#pSave').addEventListener('click', ()=>{
     valor: $('#pVal').value==='' ? capital : parseFloat($('#pVal').value),
     notas: $('#pNotas').value.trim(),
   };
-  if(editingPos) Object.assign(editingPos, data);
+  if(editingPos){
+    /* re-resuelve por id: un cloudPull mientras el modal estaba abierto pudo
+       reemplazar S entero y dejar editingPos apuntando a un objeto muerto */
+    const vivo = S.positions.find(x => x.id === editingPos.id) || (S.positions.push(editingPos), editingPos);
+    sellaCambio(Object.assign(vivo, data));
+  }
   else S.positions.push({ id: uid(), ...data });
   save(); closeOv(); renderPosiciones(); toast('Position saved');
   editingPos = null;
@@ -9214,7 +9239,7 @@ let tixRechazando = null;
 window.abrirRechazo = id => { tixRechazando = id; $('#rjMotivo').value = ''; openOv('ovRechazo'); };
 $('#rjSave').addEventListener('click', ()=>{
   const t = S.tickets.find(x => x.id === tixRechazando);
-  if(t){ t.estado = 'rechazada'; t.motivo = $('#rjMotivo').value.trim(); save(); renderTix(); updateBadges(); toast('Anotada como no tomada'); }
+  if(t){ t.estado = 'rechazada'; t.motivo = $('#rjMotivo').value.trim(); sellaCambio(t); save(); renderTix(); updateBadges(); toast('Anotada como no tomada'); }
   closeOv(); tixRechazando = null;
 });
 
@@ -9515,7 +9540,8 @@ $('#btnLogout').addEventListener('click', ()=>{
      el token, si no los otros dos te siguen viendo en la mesa hasta 12 minutos
      después de que te fuiste. */
   const yo3 = S.session && S.session.user;
-  if(yo3 && S.presencia) delete S.presencia[yo3];
+  /* borrar la presencia aquí no servía: el merge por máximos la resucitaba
+     desde la nube. La UI ya la apaga sola por umbral de tiempo. */
   try{ save(); }catch(e){}
   setTimeout(() => {
     cloudLogout();
@@ -10482,7 +10508,7 @@ $('#btnCerrarDia')?.addEventListener('click', () => {
   const dayTr = tradesByDay()[iso] || [];
   const maxT = planDelDia(iso).maxT;
   if(ses.cerrado){
-    ses.cerrado = null; save();
+    ses.cerrado = null; sellaCambio(ses); save();
     S.ui.rtTab = 'live'; render('sesion');
     toast(bi('Día reabierto.','Day reopened.'));
     return;
@@ -10603,7 +10629,7 @@ $('#xSave').addEventListener('click', ()=>{
   S.tickets.push({
     id: uid(), fecha: $('#xFecha').value || todayISO(),
     sym: $('#xSym').value, dir: $('#xDir').value,
-    tesis, por: S.session.user, firmas: {}, estado: 'abierta'
+    tesis, por: S.session.user, firmas: {}, estado: 'abierta', upd: Date.now()
   });
   save(); closeOv(); renderTix(); updateBadges();
   toast('Tesis propuesta a la mesa');
@@ -10749,11 +10775,19 @@ function cloudLogout(){
 /* el pill reacciona en el momento en que se cae o vuelve la red */
 addEventListener('online',  ()=> cloudPaint());
 addEventListener('offline', ()=> cloudPaint());
+let _nubeAvisada = null;
 function cloudPaint(){
   /* Se pinta en dos lugares: el de Tesis y el de la barra superior, que
      acompaña a todas las vistas. Sin el de arriba nadie sabía, estando en Journal,
      si sus trades estaban llegando a los demás o se quedaban en su equipo. */
   [$('#cloudPill')].forEach(p => p && pintaPill(p));
+  /* el banner rojo del panel de miembros solo se repintaba al re-render de esa
+     vista: podías estar mirándola con los pushes ya muertos y verla limpia */
+  const falla = cloudOn() && cloudTok && cloudErr ? String(cloudErr) : null;
+  if(falla !== _nubeAvisada){
+    _nubeAvisada = falla;
+    if($('#pgFirma')) try{ renderFirmaCarrera(); }catch(e){}
+  }
 }
 /* El pill se pica y te dice POR QUÉ estás trabajando solo y cómo arreglarlo.
    La nube ya está viva (los tres usuarios existen en Supabase): el único motivo
@@ -10915,9 +10949,18 @@ function fusionarEstado(local, remoto){
     ['pre','setup','post'].forEach(k => {
       const a = mio[k] || [], b = suyo[k] || [];
       const n = Math.max(a.length, b.length);
-      combinada[k] = Array.from({length:n}, (_,i) => a[i] || b[i] || null);
+      combinada[k] = Array.from({length:n}, (_,i) => {
+        const x = a[i], y = b[i];
+        /* por sello: null=0, casilla legacy sin t=1, estampada=su t. Así un
+           desmarcado reciente le gana a la palomita vieja de la nube. */
+        const tt = c => c ? (+c.t || 1) : 0;
+        return tt(x) >= tt(y) ? (x || y || null) : y;
+      });
     });
-    f.sessions[dia] = { ...suyo, ...mio, ...combinada };
+    /* cerrado (la hoja del día) viaja con el upd de la sesión: reabrir el día
+       en un equipo ya no pierde contra el cierre viejo del otro */
+    const gana = (+(mio.upd) || 0) >= (+(suyo.upd) || 0) ? mio : suyo;
+    f.sessions[dia] = { ...suyo, ...mio, cerrado: gana.cerrado, ...combinada };
   });
   f.study    = { ...(remoto.study||{}), ...(local.study||{}),
                  lessons:{ ...((remoto.study||{}).lessons||{}), ...((local.study||{}).lessons||{}) },
@@ -10968,10 +11011,20 @@ function fusionarEstado(local, remoto){
        cae al correo de fábrica y se queda trabajando solo sin saberlo.
      · salidas  — las palomitas de salida de fase, con su fecha.
      · politica — la rueda de reparto calibrada a mano. */
-  ['viosOut','correos','salidas','politica'].forEach(k => {
+  ['viosOut','correos','salidas'].forEach(k => {
     if(typeof (local[k]) === 'object' || typeof (remoto[k]) === 'object')
       f[k] = { ...(remoto[k]||{}), ...(local[k]||{}) };
   });
+  /* las lápidas también mandan sobre viosOut y salidas: sin esto, revertir un
+     descarte o desmarcar una salida de fase resucitaba desde la nube en 8s */
+  const tumba = (pref, obj) => {
+    Object.keys(obj || {}).forEach(k => { if(tumbas[pref + k]) delete obj[k]; });
+  };
+  tumba('vio:', f.viosOut); tumba('sal:', f.salidas);
+  /* la política (rueda del reparto, monto de payout) se resuelve ENTERA por su
+     sello: el spread hacía que la calibración del otro socio nunca aterrizara */
+  const pL = local.politica, pR = remoto.politica;
+  f.politica = (!pR) ? pL : (!pL) ? pR : ((+pL.upd || 0) >= (+pR.upd || 0) ? pL : pR);
   return f;
 }
 /* lo que NO viaja: es de cada socio, no de la mesa */
@@ -11024,7 +11077,13 @@ async function cloudPull(){
       localStorage.setItem(LS, JSON.stringify(S));
       renderAll();
     }
-    cloudErr = null; cloudTs = Date.now(); cloudPaint();
+    /* un pull bueno NO borra el error si hay cambios SIN SUBIR: pintar verde
+       con un push muerto era mentirle al socio justo cuando más importaba.
+       En cambio sí destraba los reintentos: la red volvió. */
+    cloudTs = Date.now(); _pushFallos = 0;
+    if(_pushPend){ _pushPend = false; setTimeout(() => cloudPush(), 200); }
+    else cloudErr = null;
+    cloudPaint();
   }catch(e){ cloudErr = (e && e.message) || 'sin red'; cloudPaint(); }
 }
 
@@ -13087,7 +13146,8 @@ function renderMetas(){
   $$('#metasMods [data-sal]').forEach(b => b.onclick = () => {
     S.salidas = S.salidas || {};
     const k = b.dataset.sal;
-    if(S.salidas[k]) delete S.salidas[k]; else S.salidas[k] = todayISO();
+    if(S.salidas[k]){ marcaBorrado('sal:' + k); delete S.salidas[k]; }
+    else S.salidas[k] = todayISO();
     save(); renderMetas();
   });
 
@@ -13122,6 +13182,10 @@ function renderVida(){
   if($('#cajaIn'))  $('#cajaIn').onclick  = () => abrirCaja('ingreso');
   if($('#cajaOut')) $('#cajaOut').onclick = () => abrirCaja('gasto');
   $$('#vidaBox [data-del]').forEach(b => b.onclick = () => {
+    /* lápida + confirmación: borrar un movimiento de caja era un clic sin
+       preguntar Y resucitaba desde la nube en el siguiente pull */
+    if(!confirm(bi('¿Borrar este movimiento de caja?','Delete this cash movement?'))) return;
+    marcaBorrado(b.dataset.del);
     S.caja = (S.caja||[]).filter(x => x.id !== b.dataset.del);
     save(); renderVida(); renderMetas();
   });
