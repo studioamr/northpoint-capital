@@ -728,6 +728,10 @@ body.locked .app{visibility:hidden;pointer-events:none}
 .bat-cal-hora{font-family:var(--mono);font-size:10px;color:var(--faint);white-space:nowrap}
 .bat-cal-card.on{border-color:var(--accent);background:color-mix(in srgb, var(--accent) 14%, transparent);box-shadow:inset 0 0 0 1px var(--accent)}
 .bat-cal-card.ahora .bat-cal-ico{color:var(--accent)}
+.bat-f2{display:flex;gap:12px}.bat-f2 .bat-f{flex:1;min-width:0}
+.bat-f label em{font-style:normal;font-family:var(--mono);font-size:9px;color:var(--faint);text-transform:none;letter-spacing:0}
+.bat-inp{width:100%;background:var(--w03);border:1px solid var(--line);border-radius:10px;color:var(--txt);font-size:15px;font-weight:800;padding:10px 12px;font-family:var(--mono)}
+.bat-inp:focus{outline:none;border-color:var(--accent)}
 .bat-resumen{display:flex;flex-direction:column;gap:3px;border:1px dashed var(--line);border-radius:12px;
   padding:13px 15px;margin:4px 0 16px;background:var(--w02)}
 .bat-resumen-l{font-family:var(--mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--faint)}
@@ -10383,7 +10387,16 @@ function renderBatalla(){
             <div class="bat-ses-chips">${BAT_SESIONES.map(s=>`<button type="button" class="bat-ses-chip ${batSel.ses===s.id?'on':''}" data-ses="${s.id}"><b class="bat-ses-ico">${s.ico}</b><b>${loc(s.nom)}</b><i>${String(s.hora).padStart(2,'0')}:00 · ${Math.round(s.dur/60)}h</i></button>`).join('')}</div></div>` : ''}
           ${durHTML ? `<div class="bat-f"><label>${bi('Duración','Duration')}</label>${durHTML}</div>` : ''}
           <div class="bat-f"><label>${batFmt==='sesion'?bi('¿Qué día?','Which day?'):bi('¿Cuándo?','When?')}</label><div class="bat-cal">${cal}</div></div>
-          <div class="bat-resumen"><span class="bat-resumen-l">${bi('Tu reto','Your challenge')}</span><b id="batResumen">${batRetoTxt(retoPrev)}</b><span class="bat-resumen-w">${bi('mayor profit gana','most profit wins')}</span></div>
+          <div class="bat-f"><label>${bi('Balance inicial','Starting balance')}</label>
+            <div class="bat-durs">${[25000,50000,100000,150000].map(b=>`<button type="button" class="bat-dur ${(batSel.balance||50000)===b?'on':''}" data-bal="${b}">${fmt$(b)}</button>`).join('')}</div></div>
+          <div class="bat-f2">
+            <div class="bat-f"><label>${bi('Objetivo (TP)','Target (TP)')} <em>${bi('opcional','optional')}</em></label>
+              <input type="text" inputmode="numeric" id="batTP" class="bat-inp" placeholder="—" value="${batSel.tp?fmt$(+batSel.tp):''}"></div>
+            <div class="bat-f"><label>${bi('Drawdown máx.','Max drawdown')} <em>${bi('opcional','optional')}</em></label>
+              <input type="text" inputmode="numeric" id="batDD" class="bat-inp" placeholder="—" value="${batSel.dd?fmt$(+batSel.dd):''}"></div>
+          </div>
+          <div class="bat-resumen"><span class="bat-resumen-l">${bi('Tu reto','Your challenge')}</span><b id="batResumen">${batRetoTxt(retoPrev)}</b>
+            <span class="bat-resumen-w">${bi('Empiezan con','Start with')} ${fmt$(batSel.balance||50000)}${batSel.tp?` · TP ${fmt$(+batSel.tp)}`:''}${batSel.dd?` · DD ${fmt$(+batSel.dd)}`:''} · ${bi('mayor profit gana','most profit wins')}</span></div>
           <button type="button" class="btn primary bat-crear" id="batCrear">${bi('Enviar reto','Send challenge')} →</button>
         </div>`;
       $('#batVolverLobby').onclick = () => { batPantalla='home'; batSel=null; renderBatalla(); };
@@ -10392,11 +10405,15 @@ function renderBatalla(){
       root.querySelectorAll('[data-ses]').forEach(b=> b.onclick=()=>{ if(b.dataset.ses && b.classList.contains('bat-ses-chip')){ batSel.ses=b.dataset.ses; batSel.cuando=null; renderBatalla(); } });
       root.querySelectorAll('.bat-dur[data-dur]').forEach(b=> b.onclick=()=>{ batSel.dur = (b.dataset.dur==='finde'?'finde':(+b.dataset.dur||b.dataset.dur)); renderBatalla(); });
       root.querySelectorAll('.bat-cal-card').forEach(b=> b.onclick=()=>{ batSel.cuando = b.dataset.ts? +b.dataset.ts : null; batSel.cuandoSes = b.dataset.ses||null; renderBatalla(); });
+      root.querySelectorAll('[data-bal]').forEach(b=> b.onclick=()=>{ batSel.balance=+b.dataset.bal; renderBatalla(); });
+      const tpEl=$('#batTP'); if(tpEl){ tpEl.oninput=()=>{ batSel.tp=tpEl.value.replace(/[^\d]/g,''); }; tpEl.onblur=()=>renderBatalla(); }
+      const ddEl=$('#batDD'); if(ddEl){ ddEl.oninput=()=>{ batSel.dd=ddEl.value.replace(/[^\d]/g,''); }; ddEl.onblur=()=>renderBatalla(); }
       $('#batCrear').onclick = () => {
         if(!batSel.op){ toast(bi('Elige un rival','Pick an opponent')); return; }
         const sesFinal = batFmt==='sesion' ? batSel.ses : (batSel.cuandoSes||null);
         const durFinal = batFmt==='sesion' ? sesObj.dur : batSel.dur;
         S.challenge = { id:'bt_'+uid(), host:yo, rival:batSel.op, formato:batFmt, sesion:sesFinal, duracion:durFinal,
+          balance: batSel.balance||50000, tp: batSel.tp? +batSel.tp:null, dd: batSel.dd? +batSel.dd:null,
           programado: batSel.cuando||null, estado:'invitado', creado:Date.now(), inicio:null, fin:null, trades:{} };
         batSel=null; batPantalla='home';
         toast(bi('Reto enviado. Esperando que acepte.','Challenge sent. Waiting for them to accept.'));
