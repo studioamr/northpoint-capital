@@ -858,8 +858,12 @@ body.locked .app{visibility:hidden;pointer-events:none}
 .zen-katana-lbl em{font-family:var(--mono);font-size:9px;letter-spacing:.12em;text-transform:uppercase;font-style:normal}
 @media(max-width:560px){.zen-katana-wrap{width:210px;right:1%;top:22%}.zen-katana{height:96px}.zen-katana-aura{height:76px}.zen-katana-lbl b{font-size:13px}}
 .zen-hero-in{position:absolute;inset:0;display:flex;flex-direction:column;justify-content:flex-end;gap:12px;padding:18px 20px;line-height:1.2;z-index:3}
-.zen-ava{width:66px;height:66px;border-radius:16px;overflow:hidden;background:rgba(0,0,0,.3);box-shadow:0 4px 14px rgba(0,0,0,.5),0 0 0 2px rgba(255,255,255,.35);display:flex;align-items:center;justify-content:center}
+.zen-ava{position:relative;width:66px;height:66px;border-radius:16px;overflow:hidden;background:rgba(0,0,0,.3);box-shadow:0 4px 14px rgba(0,0,0,.5),0 0 0 2px rgba(255,255,255,.35);display:flex;align-items:center;justify-content:center}
 .zen-ava img,.zen-ava canvas,.zen-ava svg{width:100%;height:100%;object-fit:cover}
+.zen-ava.samurai{box-shadow:0 4px 14px rgba(0,0,0,.5),0 0 0 2px var(--belt,#fff),0 0 16px -3px var(--belt,#fff)}
+.zen-ava .hachimaki{position:absolute;left:-8%;right:-8%;top:19%;height:19%;background:linear-gradient(#d24a40,#a8302a);box-shadow:inset 0 1px 0 rgba(255,255,255,.18),inset 0 -1px 0 rgba(0,0,0,.32);z-index:4;display:flex;align-items:center;justify-content:center}
+.zen-ava .hachimaki::before{content:'';width:26%;height:56%;border-radius:50%;background:#f4f4f4;box-shadow:0 0 3px rgba(0,0,0,.25)}
+.zen-ava .hachimaki::after{content:'';position:absolute;right:8%;top:75%;width:34%;height:60%;background:linear-gradient(#c8443c,#a8302a);transform:rotate(14deg);border-radius:0 0 2px 2px}
 .zen-id{display:flex;flex-direction:column;gap:3px;text-shadow:0 2px 10px rgba(0,0,0,.55)}
 .zen-id>b{font-size:26px;font-weight:900;letter-spacing:-.01em;color:#fff}
 .zen-belt{font-family:var(--mono);font-size:12px;font-weight:800;color:#fff;display:inline-flex;align-items:center;gap:6px;width:fit-content;background:rgba(0,0,0,.32);border:1px solid var(--belt,#fff);border-radius:20px;padding:4px 12px;backdrop-filter:blur(3px)}
@@ -9731,40 +9735,55 @@ function batPintaHero(){
   }
   window._batHeroRAF=requestAnimationFrame(frame);
 }
-/* ── FONDO ZEN ── atardecer rosado, sol hinomaru, montañas, río y koi con
-   pétalos de sakura cayendo. Portada del perfil de Batallas. ── */
+/* ── FONDO ZEN ── cada katana tiene su propio paisaje: Himalaya nevado (blanca),
+   sabana dorada, atardecer sakura, bosque bambú, costa, lavanda, cañón, volcán,
+   noche estrellada. Cambia con la katana actual del jugador. ── */
+const ZEN_ESCENAS = [
+  { cielo:['#5b7da3','#8fb2d3','#c2dbee','#eef6fc'], sol:{x:.72,y:.32,r:64,col:'rgba(255,252,246,.95)',halo:'rgba(255,255,255,.4)'}, montes:[['#7a99ba',1],['#a2bfd8',.82],['#cfe2f0',.64]], nieve:true, agua:'rgba(178,208,230,.62)', part:'nieve', partCol:'rgba(255,255,255,.98)' },
+  { cielo:['#2e2410','#7a5a22','#caa03a','#f2dd94'], sol:{x:.72,y:.4,r:80,col:'rgba(255,208,96,.92)',halo:'rgba(255,226,150,.26)'}, montes:[['#6a5226',1],['#8a6c30',.82],['#b89a4a',.6]], agua:'rgba(180,150,80,.55)', part:'chispa', partCol:'rgba(255,228,150,.9)' },
+  { cielo:['#241d3c','#6d3b63','#c26b7a','#eaad8f'], sol:{x:.72,y:.4,r:82,col:'rgba(226,86,86,.9)',halo:'rgba(255,175,165,.22)'}, montes:[['#342c4a',1],['#4a3656',.82],['#3c3052',.66]], agua:'rgba(38,56,86,.78)', part:'sakura', partCol:'rgba(255,193,208,.92)' },
+  { cielo:['#0e2418','#274a30','#4e8a52','#a6cc78'], sol:{x:.7,y:.42,r:70,col:'rgba(232,246,182,.82)',halo:'rgba(200,240,160,.22)'}, montes:[['#173a24',1],['#245234',.82],['#356b40',.64]], agua:'rgba(30,70,45,.7)', part:'hoja', partCol:'rgba(150,214,120,.9)' },
+  { cielo:['#12233c','#274a6e','#3e82a8','#9ccadf'], sol:{x:.72,y:.4,r:74,col:'rgba(255,246,222,.86)',halo:'rgba(200,235,255,.24)'}, montes:[['#1c3a56',1],['#274e6e',.82],['#356a86',.62]], agua:'rgba(40,92,132,.82)', part:'chispa', partCol:'rgba(184,228,255,.85)' },
+  { cielo:['#1a1030','#3a2060','#6a3a8a','#c79ad6'], sol:{x:.7,y:.42,r:74,col:'rgba(255,204,242,.82)',halo:'rgba(222,172,242,.24)'}, montes:[['#241640',1],['#3a2258',.82],['#4e2e70',.64]], agua:'rgba(50,30,80,.72)', part:'luz', partCol:'rgba(224,176,255,.9)' },
+  { cielo:['#2a1a12','#5a3020','#8a5030','#d6995e'], sol:{x:.72,y:.42,r:78,col:'rgba(255,192,122,.86)',halo:'rgba(232,172,112,.22)'}, montes:[['#3a2016',1],['#5a3020',.82],['#7a4a2e',.64]], agua:'rgba(90,55,35,.7)', mesa:true, part:'chispa', partCol:'rgba(232,182,122,.8)' },
+  { cielo:['#2a0e0e','#5a1a1a','#a83030','#e5744f'], sol:{x:.7,y:.4,r:82,col:'rgba(255,122,80,.92)',halo:'rgba(255,110,80,.26)'}, montes:[['#2a1010',1],['#4a1818',.82],['#6a2424',.66]], agua:'rgba(70,20,20,.75)', part:'ceniza', partCol:'rgba(255,150,90,.88)' },
+  { cielo:['#05060f','#0e1428','#1a2340','#2a3350'], luna:{x:.72,y:.36,r:58,col:'rgba(236,240,255,.94)',halo:'rgba(180,200,255,.18)'}, montes:[['#0a0f1c',1],['#121a30',.82],['#1a2440',.64]], agua:'rgba(14,22,40,.82)', part:'estrella', partCol:'rgba(255,255,255,.95)' },
+];
+function zenMonte(c, W, base, layer, col, h, snow, mesa){
+  const seed=layer*7.13, rr=i=>((Math.sin((i+seed)*12.9898)*43758.5453)%1+1)%1;
+  const peaks=5+layer, step=(W+80)/peaks, pts=[];
+  for(let i=0;i<=peaks;i++){ const px=-40+i*step; const ph=base - h*(0.5+rr(i)*0.55); pts.push([px, mesa? base-h*(0.55+ (i%2)*0.2) : ph]); }
+  c.fillStyle=col; c.beginPath(); c.moveTo(-40,base); pts.forEach(p=>c.lineTo(p[0],p[1])); c.lineTo(W+40,base); c.closePath(); c.fill();
+  if(snow){ c.fillStyle='rgba(255,255,255,.92)'; pts.forEach(p=>{ if(p[1]<base-h*0.45){ c.beginPath(); c.moveTo(p[0],p[1]); c.lineTo(p[0]-15,p[1]+24); c.lineTo(p[0]+15,p[1]+24); c.closePath(); c.fill(); } }); }
+}
 function batPintaZen(){
   const cv=document.getElementById('batZenCv'); if(!cv) return;
   const c=cv.getContext('2d'); const W=cv.width, H=cv.height;
   cancelAnimationFrame(window._zenRAF||0);
+  const yo=(S.session||{}).user||''; const kw=batKatanasDe(yo);
+  const ki=KATANAS.reduce((mx,k,ix)=> kw.includes(k.id)?ix:mx,0);
+  const E=ZEN_ESCENAS[ki]||ZEN_ESCENAS[2];
   const t0=window._zenT0||(window._zenT0=performance.now());
-  if(!window._zenPetals){ const p=[]; for(let i=0;i<26;i++) p.push({x:Math.random()*W,y:Math.random()*H,s:5+Math.random()*7,sp:.35+Math.random()*.8,dr:Math.random()*6,sw:.4+Math.random()*.9}); window._zenPetals=p; }
-  const pet=window._zenPetals;
+  const rr=i=>((Math.sin(i*12.9898)*43758.5453)%1+1)%1;
+  if(!window._zenPart){ const p=[]; for(let i=0;i<28;i++) p.push({x:Math.random()*W,y:Math.random()*H,s:4+Math.random()*6,sp:.3+Math.random()*.9,dr:Math.random()*6,sw:.4+Math.random()*.9}); window._zenPart=p; }
+  const pet=window._zenPart;
   function frame(now){
-    const t=now-t0;
-    const g=c.createLinearGradient(0,0,0,H); g.addColorStop(0,'#241d3c'); g.addColorStop(.42,'#6d3b63'); g.addColorStop(.72,'#c26b7a'); g.addColorStop(1,'#eaad8f');
-    c.fillStyle=g; c.fillRect(0,0,W,H);
-    /* sol hinomaru */
-    c.fillStyle='rgba(255,175,165,.22)'; c.beginPath(); c.arc(W*0.72,H*0.40,118,0,7); c.fill();
-    c.fillStyle='rgba(226,86,86,.9)'; c.beginPath(); c.arc(W*0.72,H*0.40,82,0,7); c.fill();
-    /* montañas */
-    const mount=(mx,mh,col)=>{ c.fillStyle=col; c.beginPath(); c.moveTo(mx-300,H*0.72); c.lineTo(mx,H*0.72-mh); c.lineTo(mx+300,H*0.72); c.closePath(); c.fill(); };
-    mount(W*0.26,168,'rgba(52,44,74,.62)'); mount(W*0.54,132,'rgba(74,54,86,.52)'); mount(W*0.82,150,'rgba(60,48,82,.5)');
-    /* agua */
-    c.fillStyle='rgba(38,56,86,.78)'; c.fillRect(0,H*0.72,W,H*0.28);
-    for(let i=0;i<7;i++){ c.strokeStyle='rgba(255,255,255,.07)'; c.lineWidth=2; c.beginPath(); const y=H*0.76+i*13; c.moveTo(0,y); for(let x=0;x<=W;x+=36) c.lineTo(x,y+Math.sin((x+t*0.05)/58+i)*3); c.stroke(); }
-    /* reflejo del sol en el agua */
-    c.fillStyle='rgba(226,86,86,.16)'; c.fillRect(W*0.66,H*0.72,120,H*0.28);
-    /* koi */
-    const koi=(kx,ky,col,ph)=>{ const x=kx+Math.sin(t/1500+ph)*80, y=ky+Math.cos(t/1900+ph)*10; c.save(); c.translate(x,y); c.rotate(Math.cos(t/1500+ph)*0.32);
-      c.fillStyle=col; c.beginPath(); c.ellipse(0,0,17,7.5,0,0,7); c.fill();
-      c.beginPath(); c.moveTo(-15,0); c.lineTo(-28,-8+Math.sin(t/180)*3); c.lineTo(-28,8+Math.sin(t/180)*3); c.closePath(); c.fill();
-      c.fillStyle='rgba(255,255,255,.5)'; c.beginPath(); c.ellipse(6,-2,4,2,0,0,7); c.fill(); c.restore(); };
-    koi(W*0.30,H*0.85,'#ef7a3c',0); koi(W*0.58,H*0.92,'#f2eef0',2.4); koi(W*0.44,H*0.8,'#e2c14a',4.1);
-    /* pétalos de sakura */
-    pet.forEach(p=>{ p.y+=p.sp; p.x+=Math.sin((now/820)+p.dr)*p.sw; if(p.y>H){ p.y=-12; p.x=Math.random()*W; }
-      c.save(); c.translate(p.x,p.y); c.rotate(now/720+p.dr); c.fillStyle='rgba(255,193,208,.92)';
-      c.beginPath(); c.ellipse(0,0,p.s,p.s*0.58,0,0,7); c.fill(); c.restore(); });
+    const t=now-t0, base=H*0.72;
+    const g=c.createLinearGradient(0,0,0,H); E.cielo.forEach((col,idx)=> g.addColorStop(idx/(E.cielo.length-1),col)); c.fillStyle=g; c.fillRect(0,0,W,H);
+    if(E.part==='estrella'){ for(let i=0;i<64;i++){ c.fillStyle=`rgba(255,255,255,${.25+rr(i+3)*.6*(0.6+0.4*Math.sin(now/700+i))})`; c.fillRect(rr(i)*W, rr(i+9)*H*0.55, 1.7,1.7); } }
+    const disc=E.sol||E.luna;
+    if(disc){ c.fillStyle=disc.halo; c.beginPath(); c.arc(W*disc.x,H*disc.y,disc.r*1.55,0,7); c.fill(); c.fillStyle=disc.col; c.beginPath(); c.arc(W*disc.x,H*disc.y,disc.r,0,7); c.fill();
+      if(E.luna){ c.fillStyle='rgba(150,165,200,.32)'; [[.28,-.22,.16],[-.22,.24,.12],[.12,.36,.1]].forEach(([dx,dy,rf])=>{ c.beginPath(); c.arc(W*disc.x+disc.r*dx,H*disc.y+disc.r*dy,disc.r*rf,0,7); c.fill(); }); } }
+    E.montes.forEach((m,mi)=> zenMonte(c,W,base,mi,m[0],m[1]*H*0.36,E.nieve&&mi<2,E.mesa));
+    c.fillStyle=E.agua; c.fillRect(0,base,W,H-base);
+    for(let i=0;i<7;i++){ c.strokeStyle='rgba(255,255,255,.06)'; c.lineWidth=2; c.beginPath(); const y=base+8+i*13; c.moveTo(0,y); for(let x=0;x<=W;x+=36) c.lineTo(x,y+Math.sin((x+t*0.05)/58+i)*3); c.stroke(); }
+    if(disc){ c.fillStyle=disc.col.replace(/[\d.]+\)$/,'.14)'); c.fillRect(W*disc.x-60,base,120,H-base); }
+    if(E.part!=='estrella'){ pet.forEach(p=>{ p.y+=p.sp; p.x+=Math.sin((now/820)+p.dr)*p.sw; if(p.y>H){ p.y=-12; p.x=Math.random()*W; }
+      c.save(); c.globalAlpha=.85; c.fillStyle=E.partCol;
+      if(E.part==='sakura'||E.part==='hoja'){ c.translate(p.x,p.y); c.rotate(now/720+p.dr); c.beginPath(); c.ellipse(0,0,p.s,p.s*0.58,0,0,7); c.fill(); }
+      else if(E.part==='nieve'||E.part==='luz'){ c.beginPath(); c.arc(p.x,p.y,p.s*0.5,0,7); c.fill(); if(E.part==='luz'){ c.globalAlpha=.25; c.beginPath(); c.arc(p.x,p.y,p.s*1.3,0,7); c.fill(); } }
+      else { c.fillRect(p.x,p.y,p.s*0.6,p.s*0.7); }
+      c.restore(); }); }
     if(cv.isConnected) window._zenRAF=requestAnimationFrame(frame);
   }
   window._zenRAF=requestAnimationFrame(frame);
@@ -10095,7 +10114,7 @@ function renderBatalla(){
           <span class="zen-katana-lbl"><b>${loc(KATANAS[kActualIdx].n)}</b><em style="color:${KATANAS[kActualIdx].belt}">${bi('tu katana','your katana')} · ${loc(KATANAS[kActualIdx].cinta)}</em></span>
         </div>
         <div class="zen-hero-in">
-          <span class="zen-ava">${caraSocio(yo,72)}</span>
+          <span class="zen-ava samurai" style="--belt:${KATANAS[kActualIdx].belt}">${caraSocio(yo,72)}<i class="hachimaki"></i></span>
           <div class="zen-id">
             <b>${esc(batNom(yo))}</b>
             <span class="zen-belt" style="--belt:${KATANAS[kActualIdx].belt}">🗡️ ${bi('Cinta','Belt')} ${loc(KATANAS[kActualIdx].cinta)} · #${miPos||'—'}</span>
