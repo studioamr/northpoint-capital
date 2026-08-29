@@ -887,16 +887,25 @@ body.locked .app{visibility:hidden;pointer-events:none}
   .zen-stat b{font-size:16px}
 }
 /* ── Colección de katanas ── */
-.kat-wrap{position:relative;border:1px solid color-mix(in srgb,var(--kc,#888) 24%,var(--line));border-radius:18px;background:linear-gradient(160deg,color-mix(in srgb,var(--kc,#888) 7%,#14161b),#0e1014);padding:16px 16px 18px;margin-bottom:18px;overflow:hidden}
-.kat-wrap::before{content:'';position:absolute;inset:0;background:radial-gradient(130% 100% at 100% 0,color-mix(in srgb,var(--kc,#888) 9%,transparent),transparent 62%);pointer-events:none}
-.kat-title,.kat-banco b{position:relative}
+/* white glass shiny (blanco y negro) */
+.kat-wrap{position:relative;border:1px solid rgba(255,255,255,.16);border-radius:18px;
+  background:linear-gradient(157deg,rgba(46,49,56,.92),rgba(18,19,23,.96) 55%,rgba(10,11,14,.98));
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.16),inset 0 0 40px rgba(255,255,255,.03),0 12px 34px rgba(0,0,0,.45);
+  backdrop-filter:blur(8px);padding:16px 16px 18px;margin-bottom:18px;overflow:hidden}
+.kat-wrap::before{content:'';position:absolute;top:0;left:-40%;width:55%;height:100%;pointer-events:none;
+  background:linear-gradient(105deg,transparent,rgba(255,255,255,.14) 45%,rgba(255,255,255,.05) 55%,transparent);
+  transform:skewX(-18deg);animation:katSheen 7s ease-in-out infinite}
+@keyframes katSheen{0%,72%{left:-55%}88%,100%{left:130%}}
+.kat-wrap::after{content:'';position:absolute;inset:0;pointer-events:none;border-radius:18px;
+  background:radial-gradient(120% 80% at 50% -10%,rgba(255,255,255,.09),transparent 55%)}
+.kat-title,.kat-sub,.kat-banco,.kat-feat,.kat-grid,.kat-prog{position:relative;z-index:1}
 .kat-top{display:flex;align-items:center;gap:12px;margin-bottom:14px}
 .kat-top-l{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
 .kat-title{font-size:15px;font-weight:900;letter-spacing:-.01em}
 .kat-sub{font-family:var(--mono);font-size:10.5px;color:var(--faint)}
-.kat-banco{flex:0 0 auto;text-align:right;background:rgba(48,209,88,.08);border:1px solid rgba(48,209,88,.28);border-radius:12px;padding:7px 14px;line-height:1.15}
-.kat-banco span{display:block;font-family:var(--mono);font-size:9px;letter-spacing:.14em;color:var(--faint)}
-.kat-banco b{font-size:19px;font-weight:900;color:var(--up)}
+.kat-banco{flex:0 0 auto;text-align:right;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.24);border-radius:12px;padding:7px 15px;line-height:1.15;box-shadow:inset 0 1px 0 rgba(255,255,255,.2)}
+.kat-banco span{display:block;font-family:var(--mono);font-size:9px;letter-spacing:.14em;color:rgba(255,255,255,.65)}
+.kat-banco b{font-size:20px;font-weight:900;color:#8cf3ad;text-shadow:0 0 10px rgba(48,209,88,.4)}
 .kat-feat{display:flex;align-items:center;gap:14px;background:#0b1016;border:1px solid var(--kc,var(--line-soft));border-radius:14px;padding:12px 16px;margin-bottom:14px;box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--kc,#888) 22%,transparent)}
 .kat-feat-blade{position:relative;width:120px;height:52px;flex:0 0 auto}
 .kat-feat-lock{position:absolute;right:6px;top:2px;font-size:14px}
@@ -10403,6 +10412,8 @@ function renderBatalla(){
     const banco = batBanco(yo), miKat = batKatanasDe(yo);
     const kActualIdx = KATANAS.reduce((mx,k,i)=> miKat.includes(k.id)? i : mx, 0);
     const kEquipIdx = batEquipadaDe(yo);
+    const _bh = KATANAS[kEquipIdx].belt.replace('#','');
+    const katClaro = (parseInt(_bh.slice(0,2),16)*0.299 + parseInt(_bh.slice(2,4),16)*0.587 + parseInt(_bh.slice(4,6),16)*0.114)/255 > 0.72;
     const kProxIdx = KATANAS.findIndex(k=> !miKat.includes(k.id));
     root.innerHTML = `
       <div class="bat-lobby-top">
@@ -10429,7 +10440,7 @@ function renderBatalla(){
           </div>
         </div>
       </div>
-      <div class="kat-wrap" style="--kc:${KATANAS[kEquipIdx].belt}">
+      <div class="kat-wrap">
         <div class="kat-top">
           <div class="kat-top-l"><span class="kat-title">🗡️ ${bi('Colección de katanas','Katana collection')}</span><span class="kat-sub">${miKat.length} / ${KATANAS.length} · ${bi('gana batallas para comprarlas','win battles to buy them')}</span></div>
           <div class="kat-banco"><span>${bi('BANCO','BANK')}</span><b>${fmt$(banco)}</b></div>
@@ -10437,7 +10448,7 @@ function renderBatalla(){
         ${kProxIdx>=0 ? (()=>{ const nk=KATANAS[kProxIdx], falta=nk.precio-banco; return `
         <div class="kat-feat goal" style="--kc:${nk.belt}">
           <div class="kat-feat-blade">${katanaSVG(nk.belt, true)}<span class="kat-feat-lock">🔒</span></div>
-          <div class="kat-feat-txt"><em>${bi('SIGUIENTE KATANA','NEXT KATANA')}</em><b>${loc(nk.n)}</b><span class="kat-cinta" style="color:${nk.belt}">● ${bi('Cinta','Belt')} ${loc(nk.cinta)}</span></div>
+          <div class="kat-feat-txt"><em>${bi('SIGUIENTE KATANA','NEXT KATANA')}</em><b style="border-bottom:2px solid ${nk.belt};padding-bottom:1px;width:fit-content">${loc(nk.n)}</b></div>
           <div class="kat-feat-goal"><b>${fmt$(nk.precio)}</b>${falta<=0?`<button type="button" class="kat-buy" data-kat="${nk.id}">${bi('Forjar','Forge')}</button>`:`<span class="kat-falta">${bi('te faltan','need')} ${fmt$(falta)}</span>`}</div>
         </div>`;})() : `
         <div class="kat-feat done" style="--kc:${KATANAS[kActualIdx].belt}">
@@ -10449,8 +10460,7 @@ function renderBatalla(){
             return `<div class="kat-card ${owned?'owned':'locked'} ${cur?'cur':''}"${owned?` data-equip="${i}"`:''} style="--kc:${k.belt};--lvl:${i}">
               ${cur?`<span class="kat-aqui">${bi('EQUIPADA','EQUIPPED')}</span>`:''}
               <div class="kat-ico">${katanaSVG(k.belt, cur)}<span class="kat-kanji">${k.kanji}</span>${owned?'<span class="kat-badge ok">✓</span>':'<span class="kat-badge lock">🔒</span>'}</div>
-              <b class="kat-nom">${loc(k.n)}</b>
-              <span class="kat-cinta" style="color:${k.belt}">● ${loc(k.cinta)}</span>
+              <b class="kat-nom" style="border-bottom:2px solid ${k.belt}">${loc(k.n)}</b>
               ${owned ? (cur?`<span class="kat-estado owned">${bi('Equipada','Equipped')}</span>`:`<span class="kat-estado" style="opacity:.55">${bi('En tu colección','Owned')}</span>`)
                 : `<span class="kat-estado"><span class="kat-lock-mini">🔒</span> ${fmt$(k.precio)}</span>`}
             </div>`;}).join('')}
