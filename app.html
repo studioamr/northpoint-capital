@@ -800,6 +800,21 @@ body.locked .app{visibility:hidden;pointer-events:none}
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .bat-end{color:var(--down);border-color:color-mix(in srgb, var(--down) 40%, var(--line))}
 .bat-end:hover{border-color:var(--down)}
+/* party */
+.bat-party-jug{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+.bat-party-chip{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--line);border-radius:20px;
+  background:var(--w02);padding:5px 12px 5px 5px;font-size:12.5px;font-weight:600}
+.bat-party-nota{font-family:var(--mono);font-size:11px;color:var(--faint);margin:0}
+.bat-party-board{display:grid;gap:8px;margin:12px 0 16px}
+.bat-pboard-row{display:flex;align-items:center;gap:12px;border:1px solid var(--line-soft);border-radius:12px;background:var(--w02);padding:11px 14px}
+.bat-pboard-row.yo{border-color:var(--up)}
+.bat-pboard-row.lead{background:color-mix(in srgb, var(--up) 8%, transparent)}
+.bat-pboard-pos{font-family:var(--mono);font-size:14px;font-weight:700;color:var(--faint);min-width:26px;text-align:center}
+.bat-pboard-nom{flex:1;font-size:13.5px;font-weight:700;display:flex;flex-direction:column;gap:2px}
+.bat-pboard-nom em{color:var(--faint);font-style:normal;font-weight:400;font-size:11px}
+.bat-pboard-nom i{font-family:var(--mono);font-style:normal;font-size:10px;color:var(--faint);font-weight:400}
+.bat-pboard-p{font-family:var(--mono);font-size:16px}
+.bat-pboard-p.up{color:var(--up)} .bat-pboard-p.down{color:var(--down)}
 /* ── Batallas 1v1 · LA CIUDAD (3 clases: pobres / clase media / ricos) ── */
 .bat-ciudad{position:relative;width:100%;aspect-ratio:400/460;height:auto;border-radius:18px;overflow:hidden;margin-bottom:22px;
   border:1px solid var(--line);
@@ -8763,7 +8778,9 @@ function batEraIdx(nw){ let i=0; for(let k=0;k<WEALTH_ERAS.length;k++){ if(nw>=W
 function batNivel100(nw){ if(nw<=0) return 0; return Math.max(0, Math.min(100, Math.round(Math.log10(Math.max(1,nw))/9*100))); }
 function batEraProg(nw){ const i=batEraIdx(nw), e=WEALTH_ERAS[i], nx=WEALTH_ERAS[i+1]||null;
   const prog = nx ? Math.max(0, Math.min(1, (nw-e.min)/(nx.min-e.min))) : 1; return { i, e, nx, prog }; }
-let batTick = null, batDir = 'L', batPantalla = 'home', batFmt = 'sesion', batSel = null, batViendo = null, batMin = false;
+let batTick = null, batDir = 'L', batPantalla = 'home', batFmt = 'sesion', batSel = null, batViendo = null, batMin = false, batParty = false;
+/* jugadores de un reto: party = toda la mesa; 1v1 = host + rival */
+function batJugadores(c){ return (c && c.party && Array.isArray(c.jugadores)) ? c.jugadores.slice() : (c ? [c.host, c.rival] : []); }
 function batYo(){ return socioEnSesion() || DUENO_ORIGEN; }
 function batNom(uid){ return (USERS[uid] && USERS[uid].nombre) || uid; }
 function batOponentes(){ return SOCIOS_REALES.filter(u => u !== batYo()); }
@@ -8777,6 +8794,7 @@ function batBannerHTML(c, yo){
   if(!c) return '';
   const soyHost = c.host===yo, soyRival = c.rival===yo;
   const otro = soyHost ? c.rival : c.host;
+  const vsTxt = c.party ? '👥 '+batJugadores(c).length+' '+bi('jugadores','players') : bi('vs','vs')+' '+esc(batNom(otro));
   if(c.estado==='invitado'){
     if(soyRival) return `<div class="bat-banner reta">
       <div class="bat-banner-ico">⚔</div>
@@ -8792,8 +8810,8 @@ function batBannerHTML(c, yo){
     const dd=Math.floor(falta/86400000), h=Math.floor(falta%86400000/3600000), m=Math.floor(falta%3600000/60000);
     const cuenta = dd>0?`${dd}d ${h}h`:(h>0?`${h}h ${m}m`:`${m}m`);
     return `<div class="bat-banner prog">
-      <div class="bat-banner-ico">🗓️</div>
-      <div class="bat-banner-txt"><b>${bi('Cita agendada','Match scheduled')} · ${esc(batDestino(c))}</b><i>${bi('empieza en','starts in')} <span id="bnCuenta">${cuenta}</span> · ${bi('vs','vs')} ${esc(batNom(otro))}</i></div>
+      <div class="bat-banner-ico">${c.party?'👥':'🗓️'}</div>
+      <div class="bat-banner-txt"><b>${c.party?bi('Party agendada','Party scheduled'):bi('Cita agendada','Match scheduled')} · ${esc(batDestino(c))}</b><i>${bi('empieza en','starts in')} <span id="bnCuenta">${cuenta}</span> · ${vsTxt}</i></div>
       <div class="bat-banner-acc"><button type="button" class="btn sm" id="bnCancela">${bi('Cancelar','Cancel')}</button></div></div>`;
   }
   if(c.estado==='activo'){
@@ -8802,8 +8820,8 @@ function batBannerHTML(c, yo){
     const reloj=(hh>0?String(hh).padStart(2,'0')+':':'')+mm+':'+ss;
     const pYo=batProfit(c,yo);
     return `<div class="bat-banner activo">
-      <div class="bat-banner-ico">🔴</div>
-      <div class="bat-banner-txt"><b>${bi('Batalla en curso','Battle in progress')} · <span id="bnReloj">${reloj}</span></b><i>${bi('vs','vs')} ${esc(batNom(otro))} · ${bi('vas','you')} <span id="bnProfit">${fmt$(pYo,true)}</span></i></div>
+      <div class="bat-banner-ico">${c.party?'🎉':'🔴'}</div>
+      <div class="bat-banner-txt"><b>${c.party?bi('Party en curso','Party in progress'):bi('Batalla en curso','Battle in progress')} · <span id="bnReloj">${reloj}</span></b><i>${vsTxt} · ${bi('vas','you')} <span id="bnProfit">${fmt$(pYo,true)}</span></i></div>
       <div class="bat-banner-acc"><button type="button" class="btn primary sm" id="bnResume">${bi('Volver','Resume')}</button><button type="button" class="btn sm" id="bnTerminar">${bi('Terminar','End')}</button></div></div>`;
   }
   return '';
@@ -8833,6 +8851,15 @@ function batHist(){ if(!Array.isArray(S.batHistorial)) S.batHistorial = []; retu
 function batStatDe(uid){ const s = batStats()[uid]; return s || { pts:0, g:0, p:0, e:0 }; }
 function batRegistraResultado(c){
   if(c.registrado) return; c.registrado = true;
+  if(c.party){
+    /* PARTY · gana el de mayor profit: +3 al 1º, +1 a los demás por jugar */
+    const rank = batJugadores(c).map(u=>({u, p:batProfit(c,u)})).sort((a,b)=>b.p-a.p);
+    const st = batStats();
+    rank.forEach((r,idx)=>{ st[r.u]=st[r.u]||{pts:0,g:0,p:0,e:0}; if(idx===0 && r.p!==0){ st[r.u].pts+=3; st[r.u].g++; } else { st[r.u].pts+=1; st[r.u].p++; } });
+    batHist().unshift({ ts:Date.now(), party:true, jugadores:batJugadores(c), ganador:rank[0]&&rank[0].p!==0?rank[0].u:null, marcadores:rank, dur:c.duracion });
+    if(S.batHistorial.length > 40) S.batHistorial.length = 40;
+    save(); return;
+  }
   const pH = batProfit(c, c.host), pR = batProfit(c, c.rival);
   const gan = pH === pR ? null : (pH > pR ? c.host : c.rival);
   const st = batStats();
@@ -9174,15 +9201,20 @@ function renderBatalla(){
       const retoPrev = { sesion:sesResumen, programado:batSel.cuando, duracion:durActual, formato:batFmt };
       const fmts = [['sesion','🎯',bi('Sesión','Session')],['sprint','⚡',bi('Sprint','Sprint')],['maraton','🏁',bi('Maratón','Marathon')]];
 
+      const todos = [batYo(), ...ops];
       root.innerHTML = `
         <div class="bat-lobby-top">
           <button type="button" class="bat-volver" id="batVolverLobby">‹ ${bi('Lobby','Lobby')}</button>
-          <span class="bat-lobby-t">${bi('Buscar partida','Find a match')}</span>
+          <span class="bat-lobby-t">${batParty? '👥 '+bi('Party','Party') : bi('Buscar partida','Find a match')}</span>
         </div>
         <div class="bat-card">
-          <div class="bat-f"><label>${bi('Rival','Opponent')}</label>
-            <div class="bat-ops">${ops.map(u=>`<button type="button" class="bat-op ${batSel.op===u?'on':''}" data-op="${u}"><span class="bat-op-ava">${caraSocio(u,24)}</span>${esc(batNom(u))}</button>`).join('')}</div>
-          </div>
+          ${batParty
+            ? `<div class="bat-f"><label>${bi('Jugadores · toda la mesa','Players · the whole desk')}</label>
+                 <div class="bat-party-jug">${todos.map(u=>`<span class="bat-party-chip"><span class="bat-op-ava">${caraSocio(u,24)}</span>${esc(batNom(u))}</span>`).join('')}</div>
+                 <p class="bat-party-nota">${bi('Todos compiten a la vez. El de mayor profit gana.','Everyone competes at once. Most profit wins.')}</p></div>`
+            : `<div class="bat-f"><label>${bi('Rival','Opponent')}</label>
+                 <div class="bat-ops">${ops.map(u=>`<button type="button" class="bat-op ${batSel.op===u?'on':''}" data-op="${u}"><span class="bat-op-ava">${caraSocio(u,24)}</span>${esc(batNom(u))}</button>`).join('')}</div>
+               </div>`}
           <div class="bat-f"><label>${bi('Formato','Format')}</label>
             <div class="bat-fmt-tabs">${fmts.map(f=>`<button type="button" class="bat-fmt-tab ${batFmt===f[0]?'on':''}" data-fmt="${f[0]}"><b>${f[1]}</b>${f[2]}</button>`).join('')}</div>
           </div>
@@ -9191,11 +9223,11 @@ function renderBatalla(){
           ${durHTML ? `<div class="bat-f"><label>${bi('Duración','Duration')}</label>${durHTML}</div>` : ''}
           <div class="bat-f"><label>${batFmt==='sesion'?bi('¿Qué día?','Which day?'):bi('¿Cuándo?','When?')}</label>
             <div class="bat-cal">${calCards}</div></div>
-          <div class="bat-resumen"><span class="bat-resumen-l">${bi('Tu reto','Your challenge')}</span><b id="batResumen">${batRetoTxt(retoPrev)}</b><span class="bat-resumen-w">${bi('mayor profit gana','most profit wins')}</span></div>
-          <button type="button" class="btn primary bat-crear" id="batCrear">${bi('Crear reto y enviar invitación','Create challenge & send invite')} →</button>
+          <div class="bat-resumen"><span class="bat-resumen-l">${batParty?'👥 '+bi('La party','The party'):bi('Tu reto','Your challenge')}</span><b id="batResumen">${batRetoTxt(retoPrev)}</b><span class="bat-resumen-w">${bi('mayor profit gana','most profit wins')}</span></div>
+          <button type="button" class="btn primary bat-crear" id="batCrear">${batParty? '👥 '+bi('Iniciar la party','Start the party') : bi('Crear reto y enviar invitación','Create challenge & send invite')} →</button>
         </div>`;
 
-      $('#batVolverLobby').onclick = () => { batPantalla='home'; batSel=null; renderBatalla(); };
+      $('#batVolverLobby').onclick = () => { batPantalla='home'; batSel=null; batParty=false; renderBatalla(); };
       root.querySelectorAll('[data-op]').forEach(b=> b.onclick=()=>{ batSel.op=b.dataset.op; renderBatalla(); });
       root.querySelectorAll('[data-fmt]').forEach(b=> b.onclick=()=>{
         batFmt=b.dataset.fmt;
@@ -9207,9 +9239,21 @@ function renderBatalla(){
       root.querySelectorAll('.bat-dur[data-dur]').forEach(b=> b.onclick=()=>{ batSel.dur = (b.dataset.dur==='finde'?'finde':(+b.dataset.dur||b.dataset.dur)); renderBatalla(); });
       root.querySelectorAll('.bat-cal-card').forEach(b=> b.onclick=()=>{ batSel.cuando = b.dataset.ts? +b.dataset.ts : null; batSel.cuandoSes = b.dataset.ses||null; renderBatalla(); });
       $('#batCrear').onclick = () => {
-        if(!batSel.op){ toast(bi('Elige un rival','Pick an opponent')); return; }
         const sesFinal = batFmt==='sesion' ? batSel.ses : (batSel.cuandoSes||null);
         const durFinal = batFmt==='sesion' ? sesObj.dur : batSel.dur;
+        if(batParty){
+          /* PARTY · toda la mesa compite a la vez; arranca sin esperar aceptación */
+          const jug = [batYo(), ...ops];
+          const trades = {}; jug.forEach(u=> trades[u]=[]);
+          const prog = batSel.cuando && batSel.cuando > Date.now()+9000 ? batSel.cuando : null;
+          const ini = prog || Date.now()+9000;
+          S.challenge = { id:'bt_'+uid(), host:yo, party:true, jugadores:jug, rival:null, formato:batFmt, sesion:sesFinal,
+            duracion:durFinal, programado:prog, estado: prog?'programado':'volando', creado:Date.now(), inicio:ini, fin:ini+batDuracionMs(durFinal, ini), trades };
+          batSel=null; batParty=false; batPantalla='home'; batMin=false;
+          toast(bi('¡Party iniciada! Toda la mesa a competir.','Party started! The whole desk is in.'));
+          batGuarda(); return;
+        }
+        if(!batSel.op){ toast(bi('Elige un rival','Pick an opponent')); return; }
         S.challenge = { id:'bt_'+uid(), host:yo, rival:batSel.op, formato:batFmt, sesion:sesFinal,
           duracion:durFinal, programado:batSel.cuando||null, estado:'invitado', creado:Date.now(), inicio:null, fin:null, trades:{} };
         batSel=null;
@@ -9274,7 +9318,7 @@ function renderBatalla(){
       ${viendo ? '' : `
       <div class="bat-play">
         <button type="button" class="btn primary bat-play-b batalla" id="batNuevo">⚔ ${bi('¡Batalla!','Battle!')}</button>
-        <button type="button" class="btn bat-play-b party" disabled>👥 ${bi('¡Party!','Party!')} 🔒</button>
+        <button type="button" class="btn bat-play-b party" id="batParty">👥 ${bi('¡Party!','Party!')}</button>
       </div>`}
       <div class="bat-sec-t">${bi('La mesa','The desk')} · ${bi('toca a alguien para ver su escalera','tap someone to see their ladder')}</div>
       <div class="bat-amigos">
@@ -9301,6 +9345,13 @@ function renderBatalla(){
       <div class="bat-hist">
         ${hist.length ? hist.slice(0,10).map(h=>{
           const gn = h.ganador ? batNom(h.ganador) : bi('Empate','Tie');
+          if(h.party){
+            return `<div class="bat-hist-row">
+              <span class="bat-hist-vs">👥 ${bi('Party','Party')} <em>·</em> ${(h.jugadores||[]).length} ${bi('jug.','plr')}</span>
+              <span class="bat-hist-res">${(h.marcadores||[]).slice(0,1).map(m=>fmt$(m.p,true)).join('')}</span>
+              <span class="bat-hist-gan ${h.ganador?'w':''}">${h.ganador?'👑 '+esc(gn):esc(gn)}</span>
+            </div>`;
+          }
           return `<div class="bat-hist-row">
             <span class="bat-hist-vs">${esc(batNom(h.host))} <em>vs</em> ${esc(batNom(h.rival))}</span>
             <span class="bat-hist-res">${fmt$(h.pHost,true)} / ${fmt$(h.pRival,true)}</span>
@@ -9311,7 +9362,8 @@ function renderBatalla(){
 
     if(viendo){ $('#batVolverLobby').onclick = () => { batViendo=null; renderBatalla(); }; }
     else {
-      $('#batNuevo').onclick = () => { batPantalla='setup'; renderBatalla(); };
+      $('#batNuevo').onclick = () => { batParty=false; batPantalla='setup'; renderBatalla(); };
+      $('#batParty') && ($('#batParty').onclick = () => { batParty=true; batPantalla='setup'; renderBatalla(); });
       $('#batAjustes').onclick = () => { batPantalla='ajustes'; renderBatalla(); };
       $('#batCiudadBtn').onclick = () => { batPantalla='ciudad'; renderBatalla(); };
     }
@@ -9427,9 +9479,58 @@ function renderBatalla(){
         </div>
         <h2>${bi('Rumbo a','Bound for')} ${esc(destino)}…</h2>
         <div class="bat-count">${seg}</div>
-        <p>${esc(batNom(c.host))} <b>vs</b> ${esc(batNom(c.rival))} · ${esc(batDurTxt(c.duracion))}</p>
+        <p>${c.party? '👥 '+batJugadores(c).length+' '+bi('jugadores','players') : esc(batNom(c.host))+' <b>vs</b> '+esc(batNom(c.rival))} · ${esc(batDurTxt(c.duracion))}</p>
       </div>`;
     batTick = setInterval(renderBatalla, 250);
+    return;
+  }
+
+  /* ── PARTY activa: tablero de todos + tus controles ── */
+  if(c.estado === 'activo' && c.party){
+    if(Date.now() >= c.fin){ c.estado='terminado'; batGuarda(); return; }
+    const restante=Math.max(0,c.fin-Date.now());
+    const hh=Math.floor(restante/3600000), mm=String(Math.floor(restante%3600000/60000)).padStart(2,'0'), ss=String(Math.floor(restante%60000/1000)).padStart(2,'0');
+    const reloj=(hh>0?String(hh).padStart(2,'0')+':':'')+mm+':'+ss;
+    const rank = batJugadores(c).map(u=>({u, p:batProfit(c,u), n:batNTrades(c,u)})).sort((a,b)=>b.p-a.p);
+    root.innerHTML = `
+      <div class="bat-activo-top">
+        <button type="button" class="bat-volver" id="batMinBtn">‹ ${bi('Lobby','Lobby')}</button>
+        <span class="bat-activo-sede">👥 ${bi('Party','Party')} · ${esc(batDestino(c))} · ${esc(batDurTxt(c.duracion))}</span>
+        <button type="button" class="btn sm bat-end" id="batEndBtn">⏹ ${bi('Terminar','End')}</button>
+      </div>
+      <div class="bat-reloj-wrap"><span class="bat-vs-mini">👥 ${bi('PARTY','PARTY')}</span>
+        <div class="bat-reloj-grande mono">${reloj}</div><span class="bat-reloj-lbl">${bi('tiempo restante','time left')}</span></div>
+      <div class="bat-party-board">
+        ${rank.map((r,idx)=>`<div class="bat-pboard-row ${r.u===yo?'yo':''} ${idx===0&&r.p!==0?'lead':''}">
+          <span class="bat-pboard-pos">${idx===0&&r.p>0?'👑':'#'+(idx+1)}</span>
+          <span class="bat-rank-ava">${caraSocio(r.u,30)}</span>
+          <span class="bat-pboard-nom">${esc(batNom(r.u))}${r.u===yo?` <em>${bi('(tú)','(you)')}</em>`:''}<i>${r.n} ${bi('trades','trades')}</i></span>
+          <b class="bat-pboard-p ${r.p>=0?'up':'down'}">${fmt$(r.p,true)}</b></div>`).join('')}
+      </div>
+      <div class="bat-panel mio lead">
+        <div class="bat-panel-h"><span class="bat-panel-nom">${esc(batNom(yo))} <em>${bi('(tú)','(you)')}</em></span>
+          <b class="bat-panel-p ${batProfit(c,yo)>=0?'up':'down'}">${fmt$(batProfit(c,yo),true)}</b></div>
+        <div class="bt-controls" style="margin:6px 0 4px">
+          <div class="bt-dir" id="batTdir">
+            <button type="button" data-dir="L" class="${batDir==='L'?'on':''}">LONG</button>
+            <button type="button" data-dir="S" class="${batDir==='S'?'on':''}">SHORT</button>
+          </div>
+          <input type="number" id="batPnl" class="bt-pnl" step="0.01" placeholder="P&L $ (+/-)">
+          <button type="button" id="batGo" class="btn primary bt-go">+ ${bi('Registrar','Log')}</button>
+        </div>
+      </div>`;
+    $('#batTdir').onclick = e => { const b=e.target.closest('button[data-dir]'); if(!b) return; batDir=b.dataset.dir; $('#batTdir').querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b)); };
+    const registrar = () => {
+      const pnl=parseFloat($('#batPnl').value);
+      if(!isFinite(pnl)){ toast(bi('Falta el P&L','P&L is missing')); return; }
+      c.trades[yo]=c.trades[yo]||[]; c.trades[yo].push({dir:batDir,pnl,ts:Date.now()});
+      save(); $('#batPnl').value=''; animaSello(pnl); renderBatalla();
+    };
+    $('#batGo').onclick=registrar;
+    $('#batPnl').addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); registrar(); } });
+    $('#batMinBtn').onclick = () => { batMin=true; batPantalla='home'; renderBatalla(); };
+    $('#batEndBtn').onclick = () => { if(confirm(bi('¿Terminar la party ahora?','End the party now?'))){ c.estado='terminado'; c.fin=Date.now(); batMin=false; batGuarda(); } };
+    batTick=setInterval(renderBatalla,1000);
     return;
   }
 
@@ -9522,6 +9623,23 @@ function renderBatalla(){
   /* ── terminado: resumen y estadísticas ── */
   if(c.estado === 'terminado'){
     batRegistraResultado(c);   // suma puntos al ranking y guarda en el historial (una vez)
+    if(c.party){
+      const rank = batJugadores(c).map(u=>{ const ts=c.trades[u]||[]; const w=ts.filter(t=>t.pnl>0).length; return {u, p:batProfit(c,u), n:ts.length, w, l:ts.filter(t=>t.pnl<0).length, wr:ts.length?Math.round(w/ts.length*100):0}; }).sort((a,b)=>b.p-a.p);
+      const gan = rank[0] && rank[0].p!==0 ? rank[0].u : null;
+      root.innerHTML = `
+        <div class="bat-hero"><div class="bat-vs-ico">🎉</div><h2>${bi('Fin de la party','Party over')}</h2>
+          <p>${esc(batDestino(c))} · ${esc(batDurTxt(c.duracion))} · ${gan?bi('ganó ','won by ')+esc(batNom(gan)):bi('sin ganador','no winner')}</p></div>
+        <div class="bat-party-board" style="max-width:560px;margin:0 auto 18px">
+          ${rank.map((r,idx)=>`<div class="bat-pboard-row ${r.u===yo?'yo':''} ${idx===0&&r.p>0?'lead':''}">
+            <span class="bat-pboard-pos">${idx===0&&r.p>0?'👑':'#'+(idx+1)}</span>
+            <span class="bat-rank-ava">${caraSocio(r.u,30)}</span>
+            <span class="bat-pboard-nom">${esc(batNom(r.u))}${r.u===yo?` <em>${bi('(tú)','(you)')}</em>`:''}<i>${r.n} ${bi('trades','trades')} · ${r.wr}% WR</i></span>
+            <b class="bat-pboard-p ${r.p>=0?'up':'down'}">${fmt$(r.p,true)}</b></div>`).join('')}
+        </div>
+        <div class="bat-actions"><button type="button" class="btn primary" id="batOtra">${bi('Otra','Again')}</button></div>`;
+      $('#batOtra').onclick = batReset;
+      return;
+    }
     const pHost = batProfit(c, c.host), pRival = batProfit(c, c.rival);
     const ganador = pHost === pRival ? null : (pHost > pRival ? c.host : c.rival);
     const stat = (uid) => {
