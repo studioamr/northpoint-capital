@@ -824,6 +824,20 @@ body.locked .app{visibility:hidden;pointer-events:none}
 .belt.mini{width:26px;height:9px}.belt.mini .belt-k{width:8px;height:8px}
 .belt.big{width:64px;height:19px;border-radius:3px}.belt.big .belt-k{width:17px;height:17px}.belt.big .belt-a,.belt.big .belt-b{width:6px;height:18px}
 .belt.lit{box-shadow:inset 0 1px 0 rgba(255,255,255,.4),inset 0 -2px 3px rgba(0,0,0,.3),0 0 0 2px color-mix(in srgb,var(--bc) 70%,transparent),0 0 12px -1px var(--bc)}
+/* ── panel de banco ── */
+.bank-wrap{border:1px solid rgba(48,209,88,.32);border-radius:16px;background:linear-gradient(180deg,rgba(48,209,88,.08),var(--w02));padding:16px 18px;margin:14px 0 22px}
+.bank-head{display:flex;align-items:center;gap:13px;margin-bottom:12px}
+.bank-ico{font-size:26px;width:46px;height:46px;flex:0 0 auto;display:flex;align-items:center;justify-content:center;border-radius:13px;background:rgba(48,209,88,.14)}
+.bank-t{display:flex;flex-direction:column;gap:1px;line-height:1.1}
+.bank-t em{font-family:var(--mono);font-size:9px;letter-spacing:.18em;color:var(--faint);font-style:normal}
+.bank-t b{font-size:28px;font-weight:900;color:var(--up);letter-spacing:-.02em}
+.bank-goal{display:flex;align-items:center;justify-content:space-between;gap:10px;font-family:var(--mono);font-size:11.5px;color:var(--dim);margin-bottom:8px}
+.bank-goal b{font-weight:800}
+.bank-ready{color:var(--up);font-weight:800}
+.bank-falta{color:var(--txt);font-weight:800}
+.bank-bar{height:8px;border-radius:5px;background:var(--line-soft);overflow:hidden;margin-bottom:10px}
+.bank-bar i{display:block;height:100%;border-radius:5px;transition:width .6s}
+.bank-note{font-family:var(--mono);font-size:10px;letter-spacing:.02em;color:var(--faint)}
 /* ── panel de rango ── */
 .rank-wrap{border:1px solid var(--line);border-radius:16px;background:var(--w02);padding:15px 16px;margin-bottom:12px}
 .rank-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:13px;flex-wrap:wrap}
@@ -1125,11 +1139,7 @@ body.locked .app{visibility:hidden;pointer-events:none}
 .kat-card.cur .kat-ico{height:52px}
 .kat-aqui{position:absolute;top:-9px;left:50%;transform:translateX(-50%);font-family:var(--mono);font-size:8.5px;font-weight:800;letter-spacing:.14em;color:#0a0a0a;background:var(--kc);border-radius:20px;padding:3px 10px;box-shadow:0 2px 8px -2px var(--kc);white-space:nowrap}
 .kat-aqui.vista{background:transparent;color:var(--kc);border:1px solid var(--kc);box-shadow:none}
-.kat-card{transition:opacity .18s ease}
-/* al elegir una, las demás se atenúan para que solo resalte la seleccionada */
-.kat-grid:has(.kat-card.viewing) .kat-card:not(.viewing){opacity:.32}
-.kat-grid:has(.kat-card.viewing) .kat-card:not(.viewing):hover{opacity:.7}
-.kat-card.viewing{outline:2px solid var(--kc);outline-offset:2px;opacity:1}
+.kat-card.viewing{outline:2px solid var(--kc);outline-offset:2px}
 .kat-prog{display:flex;align-items:center;gap:10px;margin:14px 0 2px}
 .kat-prog-bar{flex:1;height:8px;border-radius:5px;background:var(--line-soft);overflow:hidden}
 .kat-prog-bar i{display:block;height:100%;border-radius:5px;background:linear-gradient(90deg,color-mix(in srgb,var(--kc) 60%,#000),var(--kc));transition:width .6s}
@@ -10995,7 +11005,6 @@ function renderBatalla(){
       <div class="kat-wrap">
         <div class="kat-top">
           <div class="kat-top-l"><span class="kat-title">🗡️ ${bi('Colección de katanas','Katana collection')}</span><span class="kat-sub">${miKat.length} / ${KATANAS.length} · ${bi('gana batallas para comprarlas','win battles to buy them')}</span></div>
-          <div class="kat-banco"><span>${bi('BANCO','BANK')}</span><b>${fmt$(banco)}</b></div>
         </div>
         ${kProxIdx>=0 ? (()=>{ const nk=KATANAS[kProxIdx], falta=nk.precio-banco; return `
         <div class="kat-feat goal" style="--kc:${nk.belt}">
@@ -11023,6 +11032,11 @@ function renderBatalla(){
           <span class="kat-prog-txt">${bi('progreso','progress')} · ${kActualIdx+1}/${KATANAS.length}</span>
         </div>
       </div>
+        <div class="bank-wrap">
+          <div class="bank-head"><span class="bank-ico">🏦</span><div class="bank-t"><em>${bi('TU BANCO','YOUR BANK')}</em><b>${fmt$(banco)}</b></div></div>
+          ${kProxIdx>=0 ? `<div class="bank-goal" style="--kc:${KATANAS[kProxIdx].belt}"><span class="bank-goal-l">${bi('Siguiente katana','Next katana')} · <b style="color:${KATANAS[kProxIdx].belt}">${loc(KATANAS[kProxIdx].n)}</b></span>${banco>=KATANAS[kProxIdx].precio?`<span class="bank-ready">${bi('¡listo para forjar!','ready to forge!')}</span>`:`<span class="bank-falta">${bi('faltan','need')} ${fmt$(KATANAS[kProxIdx].precio-banco)}</span>`}</div><div class="bank-bar"><i style="width:${Math.round(Math.min(1,banco/Math.max(1,KATANAS[kProxIdx].precio))*100)}%;background:${KATANAS[kProxIdx].belt}"></i></div>`:`<div class="bank-goal"><span class="bank-ready">${bi('Colección completa','Collection complete')}</span></div>`}
+          <div class="bank-note">${bi('Gana batallas para llenar tu banco y forjar katanas.','Win battles to fill your bank and forge katanas.')}</div>
+        </div>
         <div class="bat-sec-t">${bi('Jugadores de la mesa','Desk players')} · ${bi('toca un perfil','tap a profile')}</div>
         <div class="bat-jugs">
           ${ranking.map((r,i)=>{
@@ -11042,18 +11056,7 @@ function renderBatalla(){
             <span class="bat-jug-elo"><span class="bat-jug-dan">${beltHTML(KATANAS[batRango(r.elo)].belt,'mini')} ${batRangoTxt(r.elo)}</span><b>${r.elo}<em>ELO</em></b></span>
           </div>`;}).join('')}
         </div>
-        <div class="bat-sec-t">${bi('Historial','History')} · ${bi('toca para el reporte','tap for report')}</div>
-        <div class="bat-hist">
-        ${hist.length ? hist.slice(0,12).map((h,i)=>{
-          const gn = h.ganador ? batNom(h.ganador) : bi('Empate','Tie');
-          if(h.party){ return `<div class="bat-hist-row" data-hist="${i}"><span class="bat-hist-vs">${bi('Grupo','Group')} <em>·</em> ${(h.jugadores||[]).length}</span><span class="bat-hist-res">${bi('ver reporte','view report')} ›</span><span class="bat-hist-gan ${h.ganador?'w':''}">${esc(gn)}</span></div>`; }
-          return `<div class="bat-hist-row" data-hist="${i}">
-            <span class="bat-hist-vs">${esc(batNom(h.host))} <em>vs</em> ${esc(batNom(h.rival))}</span>
-            <span class="bat-hist-res">${fmt$(h.pHost,true)} / ${fmt$(h.pRival,true)}</span>
-            <span class="bat-hist-gan ${h.ganador?'w':''}">${esc(gn)} ›</span>
-          </div>`;
-        }).join('') : `<div class="bat-hist-vacio">${bi('Aún no hay batallas. ¡Reta a alguien!','No battles yet. Challenge someone!')}</div>`}
-        </div>`;
+        `;
 
     const _slides=$('#batSlides'), _tabs=root.querySelectorAll('[data-slide]');
     if(_slides){ _tabs.forEach(t=> t.onclick=()=>{ _slides.scrollTo({left:(+t.dataset.slide)*_slides.clientWidth, behavior:'smooth'}); });
