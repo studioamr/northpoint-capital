@@ -13658,7 +13658,8 @@ function deskEscenaDe(){
   if(e === 'casa') return { tipo:'finde', esc:'casa', c:'nyc', finde:true };
   /* los EDIFICIOS: la oficina NorthPoint en cada sesión (entorno de trabajo) */
   const ciudad = { asia:'tokio', londres:'londres', nyc:'nyc' }[e] || 'tokio';
-  return { tipo:'edificio', c:ciudad };
+  const sig = { tokio:'londres', londres:'nyc', nyc:'tokio' }[ciudad];
+  return { tipo:'edificio', c:ciudad, sig, restan:180 };
 }
 function marcaOfiEscena(){
   const cur = (S.ui && S.ui.deskEscena) || 'auto';
@@ -14241,6 +14242,1959 @@ function escenaFinde(c, W, H, t, E, rr, PC){
 
 let ofiTronó = false;
 
+let ofiHablando = null, ofiJunta = null;
+const ISO = { TW:96, TH:48, TZ:46, ox:800, oy:430, N:10, MUR:7, MEZ:3.5 };
+const iX = (x, y) => ISO.ox + (x - y) * ISO.TW/2;
+const iY = (x, y, z=0) => ISO.oy + (x + y) * ISO.TH/2 - z * ISO.TZ;
+
+function guionOficina(){
+  const g = [];
+  const di = (de, txt) => g.push({ de, txt });
+  const M = SISTEMA.meta, F = SISTEMA.fases;
+  const hhmm = m => String(Math.floor(m/60)).padStart(2,'0') + ':' + String(m%60).padStart(2,'0');
+  const P = id => (PERSONAJES.find(x => x.id === id) || {}).nom;
+  const lema = id => (PERSONAJES.find(x => x.id === id) || {}).lema || '';
+  const deberes = (quien, id) => (PERSONAJES.find(x=>x.id===id).roles||[])
+    .flatMap(r => (ROLES[r] ? ROLES[r].d : [])).forEach(d => di(quien, d));
+
+  const PABLO = P('pablo.np'), MATEO = P('mateo.np'), ANDRE = P('andre.np');
+
+  /* ── 1 · Pablo, CIO: la estrategia de la casa y el protocolo diario ── */
+  const e = ESTRS[0];
+  di(PABLO, lema('pablo.np'));
+  di(PABLO, `Operamos ${SISTEMA.instrumento} en ${SISTEMA.graficos.join(' y ')}. ${SISTEMA.estrategia}.`);
+  di(PABLO, `Ventana ${hhmm(e.ventana.open)} a ${hhmm(e.ventana.close)}, lunes a viernes. El rango se forma ${hhmm(e.ventana.orb1)}–${hhmm(e.ventana.orb2)}.`);
+  di(PABLO, e.entrada);
+  di(PABLO, 'If the checklist gives no valid setup, the best trade of the day is no trade.');
+
+  /* ── 2 · Mateo, CRO: los topes de cada fase ── */
+  di(MATEO, lema('mateo.np'));
+  Object.entries(F).forEach(([k, f]) => {
+    const nom = k === 'eval' ? 'En evaluación' : (k === 'buffer' ? 'En colchón' : 'En retiros');
+    di(MATEO, `${nom}: riesgo ${fmt$(f.maxPerdidaDia)} al día, objetivo ${fmt$(f.objetivoDia)}, ${f.maxTrades === 1 ? 'un solo trade' : f.maxTrades + ' trades estrictos'}.`
+         + (f.topeDia ? ` Y ningún día mayor a ${fmt$(f.topeDia)}.` : ''));
+  });
+  deberes(MATEO, 'mateo.np');
+  di(MATEO, 'Nunca minis. Sólo micros. Eso no se discute.');
+
+  /* ── 3 · André, Quant + COO: la target hecha números y la operación ── */
+  di(ANDRE, lema('andre.np'));
+  di(ANDRE, `La target es ${fmt$(M.anual)} al año: ${fmt$(M.mensual)} al mes, ${fmt$(M.quincenal)} la quincena.`);
+  di(ANDRE, `Eso son ${fmt$(M.semanal)} a la semana y ${fmt$(M.diaria)} al día. 0.6% diario, nada más.`);
+  deberes(ANDRE, 'andre.np');
+  di(ANDRE, 'Nada queda abierto después de las 8:30. Ese es el trato.');
+
+  /* ── 4 · Pablo, PM: mandato y reparto ── */
+  deberes(PABLO, 'pablo.np');
+  di(PABLO, 'Cada 15 días se parte así, y no se toca el orden:');
+  SISTEMA.reparto.forEach(r => di(PABLO, `${Math.round(r.pct*100)}% ${r.t} — ${r.d}`));
+
+  /* En la oficina sólo está el principal: se queda con SUS líneas. Un invitado
+     no tiene guion propio — trabaja en silencio. */
+  const mio = (PERSONAJES.find(x => x.id === (S.session && S.session.user)) || {}).nom;
+  return mio ? g.filter(d => d.de === mio) : [];
+}
+
+function losa(c, x, y, z, col, w=1, h=1){
+  c.beginPath();
+  c.moveTo(iX(x, y), iY(x, y, z));
+  c.lineTo(iX(x+w, y), iY(x+w, y, z));
+  c.lineTo(iX(x+w, y+h), iY(x+w, y+h, z));
+  c.lineTo(iX(x, y+h), iY(x, y+h, z));
+  c.closePath(); c.fillStyle = col; c.fill();
+}
+
+function caja(c, x, y, z, w, h, alto, col, luz=18, sombra=-30){
+  const top = z + alto;
+  losa(c, x, y, top, mez(col, luz), w, h);
+  c.beginPath();
+  c.moveTo(iX(x+w, y), iY(x+w, y, top)); c.lineTo(iX(x+w, y+h), iY(x+w, y+h, top));
+  c.lineTo(iX(x+w, y+h), iY(x+w, y+h, z)); c.lineTo(iX(x+w, y), iY(x+w, y, z));
+  c.closePath(); c.fillStyle = mez(col, sombra/2); c.fill();
+  c.beginPath();
+  c.moveTo(iX(x, y+h), iY(x, y+h, top)); c.lineTo(iX(x+w, y+h), iY(x+w, y+h, top));
+  c.lineTo(iX(x+w, y+h), iY(x+w, y+h, z)); c.lineTo(iX(x, y+h), iY(x, y+h, z));
+  c.closePath(); c.fillStyle = mez(col, sombra); c.fill();
+}
+
+function enMuro(c, lado, fn){
+  c.save();
+  if(lado === 'der') c.setTransform(ISO.TW/2,  ISO.TH/2, 0, -ISO.TZ, ISO.ox, ISO.oy);
+  else               c.setTransform(-ISO.TW/2, ISO.TH/2, 0, -ISO.TZ, ISO.ox, ISO.oy);
+  fn(c); c.restore();
+}
+
+function figura(c, s, habla, t){
+  const L = s.look || OFI.look[s.n]; if(!L) return;
+  const bx = iX(s.x, s.y), by = iY(s.x, s.y, s.z);
+  const f = s.flip ? -1 : 1;
+  const bob = habla ? Math.round(Math.sin(t/170) * 2.2) : 0;
+  const incl = L.porte === 'inclinado' ? 2 : (L.porte === 'encorvado' ? 3 : 0);
+  const S = 1.9;                                   // escala del avatar
+
+  c.save(); c.translate(bx, by + 16);
+  c.fillStyle = 'rgba(20,26,38,.22)';
+  c.beginPath(); c.ellipse(0, 0, 17, 8, 0, 0, 7); c.fill();
+  c.scale(f * S, S);
+  const P = (dx, dy, w, h, col) => { c.fillStyle = col; c.fillRect(dx, dy, w, h); };
+
+  const B = bob / S, I = incl / S;
+  // ── cuerpo ──
+  const anchoT = L.fuerte ? 14 : 12;
+  P(-anchoT/2, -17 + B + I, anchoT, 13, L.traje);
+  P(-anchoT/2, -17 + B + I, anchoT, 1.6, mez(L.traje, 26));            // luz en hombros
+  if(L.chaleco){ P(-anchoT/2 + 1, -16 + B + I, anchoT - 2, 11, mez(L.traje, -14)); }
+  if(L.capucha){ P(-anchoT/2 - 1, -18 + B + I, anchoT + 2, 4, mez(L.traje, 14)); }  // capucha caída
+  P(-2.2, -16.5 + B + I, 4.4, 10, L.camisa);                            // camisa
+  if(L.corbata) P(-1.2, -15 + B + I, 2.4, 7, L.ac);
+  P(-anchoT/2 - 2, -14 + B + I, 2, 9, mez(L.traje, -16));               // brazos
+  P(anchoT/2,      -14 + B + I, 2, 9, mez(L.traje, -16));
+  // ── cabeza, grande como Habbo ──
+  const hy = -29 + B + I;
+  P(-6.5, hy, 13, 12.5, L.piel);
+  P(-7, hy + 3, .8, 4, L.piel); P(6.2, hy + 3, .8, 4, L.piel);          // orejas
+  // pelo por personaje
+  if(L.greñas){ P(-7, hy - 1.6, 14, 4.6, L.pelo); P(-7.6, hy + .6, 1.4, 3, L.pelo); P(6.2, hy + .2, 1.6, 3.4, L.pelo); }
+  else if(L.capucha){ P(-6.5, hy - .6, 13, 3.4, L.pelo); }
+  else { P(-6.6, hy - 1, 13.2, 4, L.pelo); }
+  if(L.canas){ P(-6.6, hy - 1, 13.2, 1.3, '#D8DCE0'); }
+  if(L.barba){ P(-4.6, hy + 8.4, 9.2, 4, mez(L.pelo, 16)); }
+  // cara según el carácter
+  if(L.lentes){ P(-5, hy + 4.6, 4.2, 3.2, '#15191F'); P(.8, hy + 4.6, 4.2, 3.2, '#15191F'); P(-.8, hy + 5.8, 1.6, .7, '#15191F'); }
+  else {
+    P(-4.2, hy + 5, 2, 2.4, '#1B1B1B'); P(2.2, hy + 5, 2, 2.4, '#1B1B1B');
+    if(L.cara === 'ceño'){ P(-4.6, hy + 3.6, 2.8, 1, mez(L.pelo, 10)); P(1.8, hy + 3.6, 2.8, 1, mez(L.pelo, 10)); }
+    if(L.cara === 'sabio'){ P(-4.8, hy + 3.8, 3, .8, '#C9CDD2'); P(1.8, hy + 3.8, 3, .8, '#C9CDD2'); }
+  }
+  const boca = habla ? 2.2 : (L.cara === 'ceño' ? .7 : 1);
+  P(-1.8, hy + 9, 3.6, boca, habla ? '#5A2A30' : '#A87560');
+  if(L.cara === 'curioso' && !habla) P(1, hy + 9, 2.4, 1, '#A87560');    // media sonrisa
+  /* Si el socio subió una foto en vez de armar monito, la foto MANDA: se
+     recorta sobre la cabeza para que el de la silla sea de verdad él. */
+  if(s.foto){
+    const img = fotoLista(s.foto);
+    if(img){
+      c.save();
+      c.beginPath(); c.rect(-6.5, hy - 1, 13, 13.5); c.clip();
+      c.scale(f, 1);                        // la foto no se voltea con el cuerpo
+      const lado = 15.5;
+      c.drawImage(img, -lado/2, hy - 2, lado, lado);
+      c.restore();
+    }
+  }
+
+  // ── lo que trae en la mano ──
+  const pr = L.prop;
+  if(pr === 'taza'){ P(9, -8, 4.6, 4, '#FFFFFF'); P(13.4, -6.8, 1.4, 2, '#FFFFFF');
+                     c.globalAlpha = .5; P(9.6, -9.4, 3.4, 1.2, '#D8E4EC'); c.globalAlpha = 1; }
+  if(pr === 'puro'){ P(6, hy + 8.6, 5.4, 1.2, '#D8C6A8'); P(11.4, hy + 8.6, 1.4, 1.2, '#E07A4A');
+                     c.globalAlpha = .3; P(11.6, hy + 5, 1, 3.4, '#C8C8C8'); c.globalAlpha = 1; }
+  if(pr === 'carpeta'){ P(7.4, -13, 7, 9, '#C4544A'); P(8.6, -11.4, 4.6, .8, '#FFFFFF');
+                        P(8.6, -9.6, 4.6, .8, '#FFFFFF'); P(8.6, -7.8, 3, .8, '#FFFFFF'); }
+  if(pr === 'lupa'){ c.strokeStyle = '#8E6BC4'; c.lineWidth = 1.3;
+                     c.beginPath(); c.arc(11, -9, 3.4, 0, 7); c.stroke();
+                     c.globalAlpha = .3; c.fillStyle = '#8E6BC4'; c.beginPath(); c.arc(11, -9, 3.4, 0, 7); c.fill(); c.globalAlpha = 1;
+                     P(13, -6.6, 3.2, 1.2, '#8E6BC4'); }
+  if(pr === 'laptop'){ P(6.6, -9, 10, 5.6, '#2A3038'); P(7.6, -7.8, 8, 3.4, '#3EA97C');
+                       c.globalAlpha = .35; P(7.6, -7.8, 8, 1.2, '#9CE8C6'); c.globalAlpha = 1; }
+  if(pr === 'globo'){ c.fillStyle = '#3E6E96'; c.beginPath(); c.arc(11, -8, 4.6, 0, 7); c.fill();
+                      c.fillStyle = '#6FA8C8'; P(6.6, -8.4, 9, .8);
+                      P(10.6, -12.4, .8, 9, '#6FA8C8'); P(9.4, -3.4, 3.4, 1.2, '#8A6A4A'); }
+  if(pr === 'headset'){ P(-7.4, hy + 2, 1.8, 4.4, '#2A2E36'); P(5.6, hy + 2, 1.8, 4.4, '#2A2E36');
+                        P(-7, hy - 1.4, 14, 1.4, '#2A2E36'); P(-6, hy + 6, 3.4, .9, '#2A2E36');
+                        P(7.4, -12, 5.4, 7.4, '#20242A'); P(8.4, -10.8, 3.4, 5, '#C86A86'); }
+  c.restore();
+
+  // nombre
+  c.font = '11px "IBM Plex Mono", monospace'; c.textAlign = 'center';
+  c.fillStyle = habla ? L.ac : 'rgba(40,50,66,.42)';
+  /* arriba en el mezzanine la placa ya dice el nombre: sin doble rótulo */
+  if(!s.sinNombre) c.fillText(s.n, bx, by + 34);
+  if(habla){ c.fillStyle = L.ac; c.globalAlpha = .18;
+             c.beginPath(); c.ellipse(bx, by + 14, 24, 11, 0, 0, 7); c.fill(); c.globalAlpha = 1; }
+
+}
+
+function globo(c, s, txt, t){
+  const ax = iX(s.x, s.y), ay = iY(s.x, s.y, s.z) - 96;
+  c.font = '15px system-ui, -apple-system, sans-serif';
+  const ws = txt.split(' '); const ls = []; let ln = '';
+  ws.forEach(p => { const pr = ln ? ln + ' ' + p : p;
+    if(c.measureText(pr).width > 360){ ls.push(ln); ln = p; } else ln = pr; });
+  if(ln) ls.push(ln);
+  const vis = ls.slice(0, 3);
+  const w = Math.max(...vis.map(l => c.measureText(l).width)) + 30;
+  const h = vis.length * 21 + 22;
+  const bx = Math.max(12, Math.min(1588 - w, ax - w/2));
+  const by = Math.max(8, ay - h);
+  c.save(); c.shadowColor = 'rgba(20,30,50,.22)'; c.shadowBlur = 18; c.shadowOffsetY = 5;
+  c.fillStyle = 'rgba(255,255,255,.97)';
+  c.beginPath(); c.roundRect(bx, by, w, h, 10); c.fill();
+  c.restore();
+  c.strokeStyle = OFI.look[s.n].ac; c.lineWidth = 2;
+  c.beginPath(); c.roundRect(bx, by, w, h, 10); c.stroke();
+  c.fillStyle = 'rgba(255,255,255,.97)';
+  c.beginPath(); c.moveTo(ax - 8, by + h - 1); c.lineTo(ax, by + h + 12); c.lineTo(ax + 8, by + h - 1); c.closePath(); c.fill();
+  c.fillStyle = '#1E2733'; c.textAlign = 'left';
+  vis.forEach((l, i) => c.fillText(l, bx + 15, by + 26 + i*21));
+}
+
+function ventanitas(c, x, y, w, h, osc, rr, semilla, calido = '#FFE9AE'){
+  for(let wy = y + 10; wy < y + h - 8; wy += 16){
+    for(let wx = x + 6; wx < x + w - 8; wx += 12){
+      if(rr(wx * 3 + wy * 7 + semilla) < .45){
+        const on = rr(wx + wy + semilla) > .5;
+        c.fillStyle = on ? `rgba(255,233,174,${.28 + osc * .62})` : `rgba(150,170,220,${.14 + osc * .1})`;
+        c.fillRect(wx, wy, 6, 8);
+      }
+    }
+  }
+}
+
+function skylineCiudad(c, W, H, ciudad, osc, rr){
+  const suelo = 640;
+  const tinte = ciudad === 'tokio' ? [52,44,74] : ciudad === 'londres' ? [46,50,72] : [44,48,88];
+  const luzDia = 1 - osc;
+  const capaCol = (capa, al) => `rgba(${tinte[0] + capa*14},${tinte[1] + capa*16},${tinte[2] + capa*14},${al})`;
+
+  /* ── CADA CIUDAD ARMA SU HORIZONTE ──
+     Nada de repetir la misma tira de rectángulos con otro tinte: Manhattan
+     es vertical y art déco, Tokio tiene al Fuji detrás con templos y neón,
+     Londres es bajito, de ladrillo, con cúpulas y su Tower Bridge. */
+  if(ciudad === 'nyc'){
+    /* torres altas y flacas: coronas escalonadas, tinacos de agua, antenas */
+    for(let capa = 0; capa < 3; capa++){
+      const base = 470 + capa * 34, al = .3 + capa * .24;
+      for(let i = 0; i < 26; i++){
+        const bx = i * (W / 26) - 24 + rr(i + capa * 40) * 30;
+        const bw = W / 26 * (.55 + rr(i + capa * 7) * .5);
+        const bh = 110 + rr(i + capa * 13) * (210 + capa * 70);
+        const col = capaCol(capa, al);
+        c.fillStyle = col;
+        c.fillRect(bx, base - bh, bw, bh + 200);
+        const r1 = rr(i * 3 + capa * 17);
+        if(r1 < .3){                                   /* corona art déco */
+          c.fillRect(bx + bw * .18, base - bh - 16, bw * .64, 16);
+          c.fillRect(bx + bw * .34, base - bh - 28, bw * .32, 12);
+        } else if(r1 < .38){                           /* tinaco de agua (pocos: es un guiño, no una granja) */
+          const wx = bx + bw * .3, wy = base - bh;
+          c.fillStyle = `rgba(58,48,44,${Math.min(1, al + .2)})`;
+          c.fillRect(wx + 2, wy - 12, 3, 12); c.fillRect(wx + 15, wy - 12, 3, 12);
+          c.fillRect(wx, wy - 26, 20, 15);
+          c.beginPath(); c.moveTo(wx - 2, wy - 26); c.lineTo(wx + 10, wy - 35); c.lineTo(wx + 22, wy - 26);
+          c.closePath(); c.fill();
+          c.fillStyle = col;
+        } else if(r1 < .52){                           /* antena */
+          c.fillRect(bx + bw/2 - 2, base - bh - 36, 4, 36);
+          c.fillStyle = `rgba(255,90,90,${.3 + osc * .5})`;
+          c.fillRect(bx + bw/2 - 3, base - bh - 40, 6, 5);
+          c.fillStyle = col;
+        }
+        ventanitas(c, bx, base - bh, bw, bh, osc * (.5 + capa * .25), rr, capa * 91);
+      }
+    }
+  }
+  else if(ciudad === 'tokio'){
+    /* ══ EL MONTE FUJI ══ enorme, al fondo de todo, con su nieve dentada */
+    /* a la izquierda, donde el cuadro está libre: la postal clásica es el
+       Fuji con la torre roja delante */
+    const fx = 360, fpy = 258, fb = 648, fw = 560;
+    c.fillStyle = `rgba(94,107,142,${.5 + luzDia * .3})`;
+    c.beginPath();
+    c.moveTo(fx - fw, fb);
+    c.lineTo(fx - 62, fpy + 12); c.lineTo(fx - 28, fpy);
+    c.lineTo(fx + 6, fpy + 7); c.lineTo(fx + 42, fpy + 3);
+    c.lineTo(fx + fw, fb);
+    c.closePath(); c.fill();
+    c.fillStyle = `rgba(244,246,250,${.72 + luzDia * .22})`;
+    c.beginPath();
+    c.moveTo(fx - 152, fpy + 122);
+    c.lineTo(fx - 62, fpy + 12); c.lineTo(fx - 28, fpy);
+    c.lineTo(fx + 6, fpy + 7); c.lineTo(fx + 42, fpy + 3);
+    c.lineTo(fx + 138, fpy + 118);
+    for(let k = 0; k <= 7; k++){
+      const xx = (fx + 138) - (k / 7) * 290;
+      c.lineTo(xx, fpy + 118 + ((k % 2) ? 30 : 4));
+    }
+    c.closePath(); c.fill();
+
+    /* capa lejana: baja, y una de cada dos con techo de teja que la delata
+       como japonesa aunque esté a contraluz */
+    for(let i = 0; i < 24; i++){
+      const bx = i * (W / 24) - 20 + rr(i + 900) * 24;
+      const bw = W / 24 * (.6 + rr(i + 905) * .5);
+      const bh = 70 + rr(i + 910) * 130;
+      c.fillStyle = capaCol(0, .34);
+      c.fillRect(bx, 560 - bh, bw, bh + 240);
+      if(rr(i + 915) < .5){
+        c.fillStyle = 'rgba(46,38,58,.4)';
+        c.beginPath();
+        c.moveTo(bx - 7, 560 - bh); c.lineTo(bx + bw * .5, 560 - bh - 13);
+        c.lineTo(bx + bw + 7, 560 - bh); c.closePath(); c.fill();
+      }
+      ventanitas(c, bx, 560 - bh, bw, bh, osc * .45, rr, 700 + i);
+    }
+
+    /* ── TEMPLOS ── techos curvos con las puntas alzadas, entre los edificios */
+    const templo = (tx2, ty2, es, al) => {
+      c.fillStyle = `rgba(42,34,54,${al})`;
+      c.fillRect(tx2 - 44*es, ty2 - 42*es, 88*es, 42*es);
+      c.beginPath();
+      c.moveTo(tx2 - 72*es, ty2 - 40*es);
+      c.quadraticCurveTo(tx2, ty2 - 64*es, tx2 + 72*es, ty2 - 40*es);
+      c.lineTo(tx2 + 58*es, ty2 - 54*es);
+      c.quadraticCurveTo(tx2, ty2 - 72*es, tx2 - 58*es, ty2 - 54*es);
+      c.closePath(); c.fill();
+      c.fillRect(tx2 - 28*es, ty2 - 76*es, 56*es, 24*es);
+      c.beginPath();
+      c.moveTo(tx2 - 52*es, ty2 - 74*es);
+      c.quadraticCurveTo(tx2, ty2 - 96*es, tx2 + 52*es, ty2 - 74*es);
+      c.lineTo(tx2 + 40*es, ty2 - 86*es);
+      c.quadraticCurveTo(tx2, ty2 - 102*es, tx2 - 40*es, ty2 - 86*es);
+      c.closePath(); c.fill();
+      c.fillRect(tx2 - 2.5*es, ty2 - 108*es, 5*es, 10*es);
+      if(osc > .3){
+        c.fillStyle = 'rgba(255,214,138,.5)';
+        c.fillRect(tx2 - 30*es, ty2 - 30*es, 12*es, 14*es);
+        c.fillRect(tx2 + 18*es, ty2 - 30*es, 12*es, 14*es);
+      }
+    };
+    templo(150, 638, 1.1, .74);
+    templo(268, 632, .72, .6);
+    templo(1560, 636, 1.0, .7);
+
+    /* ── LA CAPA DE NEÓN ── edificios medianos con letreros verticales */
+    const NEON = ['#FF5A6E','#3EC9FF','#FFD34A','#7CFF6E','#FF8A3E','#D96EFF'];
+    for(let i = 0; i < 22; i++){
+      const bx = i * (W / 22) - 18 + rr(i + 930) * 26;
+      const bw = W / 22 * (.58 + rr(i + 935) * .5);
+      const bh = 70 + rr(i + 940) * 150;          // más bajos: Tokio no es Manhattan
+      c.fillStyle = capaCol(2, .56);
+      c.fillRect(bx, 620 - bh, bw, bh + 180);
+      const forma = rr(i + 942);
+      if(forma < .4){                              // parapeto de teja con alero
+        c.fillStyle = 'rgba(46,38,58,.72)';
+        c.beginPath();
+        c.moveTo(bx - 9, 620 - bh); c.lineTo(bx + bw * .5, 620 - bh - 16);
+        c.lineTo(bx + bw + 9, 620 - bh); c.closePath(); c.fill();
+      } else if(forma < .65){                      // marco de espectacular en la azotea
+        c.strokeStyle = 'rgba(120,110,132,.8)'; c.lineWidth = 3;
+        c.strokeRect(bx + 6, 620 - bh - 30, bw - 12, 24);
+        c.beginPath(); c.moveTo(bx + 10, 620 - bh); c.lineTo(bx + 10, 620 - bh - 30);
+        c.moveTo(bx + bw - 10, 620 - bh); c.lineTo(bx + bw - 10, 620 - bh - 30); c.stroke();
+        c.fillStyle = osc > .25 ? 'rgba(255,211,74,.85)' : 'rgba(230,234,240,.6)';
+        c.fillRect(bx + 8, 620 - bh - 28, bw - 16, 20);
+        c.fillStyle = 'rgba(20,16,28,.5)';
+        for(let k = 0; k * 14 + 12 < bw - 16; k++) c.fillRect(bx + 12 + k * 14, 620 - bh - 23, 8, 10);
+      } else {                                     // baliza roja de azotea
+        c.fillStyle = `rgba(255,90,90,${.3 + osc * .55})`;
+        c.beginPath(); c.arc(bx + bw/2, 620 - bh - 6, 4, 0, 7); c.fill();
+      }
+      ventanitas(c, bx, 620 - bh, bw, bh, osc * .7, rr, 800 + i);
+      if(rr(i + 950) < .55){
+        const nc = NEON[Math.floor(rr(i + 955) * NEON.length)];
+        const sx = bx + bw - 13, sy = 620 - bh + 12;
+        const sh = 46 + rr(i + 960) * 46;
+        c.fillStyle = osc > .25 ? nc : 'rgba(225,230,238,.55)';
+        c.fillRect(sx, sy, 9, sh);
+        if(osc > .25){
+          const h2 = c.createRadialGradient(sx + 4, sy + sh/2, 3, sx + 4, sy + sh/2, 34);
+          h2.addColorStop(0, nc + '55'); h2.addColorStop(1, nc + '00');
+          c.fillStyle = h2; c.fillRect(sx - 30, sy - 20, 68, sh + 40);
+        }
+        c.fillStyle = 'rgba(20,16,28,.5)';
+        for(let k = 0; k * 12 + 8 < sh; k++) c.fillRect(sx + 2, sy + 5 + k * 12, 5, 4);
+      }
+    }
+  }
+  else {
+    /* ══ LONDRES ══ perfil bajo: hileras de casas de ladrillo con chimeneas,
+       agujas de iglesia, la cúpula de St Paul y el Tower Bridge. */
+    /* capa lejana, bajita */
+    for(let i = 0; i < 26; i++){
+      const bx = i * (W / 26) - 18 + rr(i + 600) * 22;
+      const bw = W / 26 * (.62 + rr(i + 605) * .45);
+      const bh = 60 + rr(i + 610) * 120;
+      c.fillStyle = capaCol(0, .32);
+      c.fillRect(bx, 540 - bh, bw, bh + 260);
+      ventanitas(c, bx, 540 - bh, bw, bh, osc * .4, rr, 500 + i);
+    }
+
+    /* ── ST PAUL'S ── el tambor con columnas, la cúpula y su linterna */
+    const px2 = 84, py2 = 560;
+    c.fillStyle = 'rgba(158,150,138,.85)';
+    c.fillRect(px2 - 95, py2 - 60, 190, 60);
+    c.fillRect(px2 - 58, py2 - 106, 116, 48);
+    c.fillStyle = 'rgba(120,112,100,.85)';
+    for(let k = 0; k < 7; k++) c.fillRect(px2 - 50 + k * 16, py2 - 102, 5, 42);
+    c.fillStyle = 'rgba(112,118,110,.9)';
+    c.beginPath(); c.arc(px2, py2 - 106, 62, Math.PI, 0); c.closePath(); c.fill();
+    c.strokeStyle = 'rgba(90,96,90,.7)'; c.lineWidth = 2.4;
+    for(let k = -2; k <= 2; k++){
+      c.beginPath(); c.moveTo(px2 + k * 22, py2 - 106);
+      c.quadraticCurveTo(px2 + k * 13, py2 - 150, px2, py2 - 167); c.stroke();
+    }
+    c.fillStyle = 'rgba(158,150,138,.9)';
+    c.fillRect(px2 - 9, py2 - 186, 18, 20);
+    c.fillStyle = mez('#C9A96A', luzDia * 14);
+    c.beginPath(); c.arc(px2, py2 - 192, 5, 0, 7); c.fill();
+    c.fillRect(px2 - 1.5, py2 - 206, 3, 12); c.fillRect(px2 - 6, py2 - 201, 12, 3);
+    /* dos torres del frente */
+    [-82, 82].forEach(dx => {
+      c.fillStyle = 'rgba(148,140,128,.85)';
+      c.fillRect(px2 + dx - 12, py2 - 128, 24, 68);
+      c.beginPath(); c.arc(px2 + dx, py2 - 128, 12, Math.PI, 0); c.fill();
+    });
+
+    /* ── TOWER BRIDGE ── dos torres góticas y sus pasarelas */
+    const bx2 = 1650, by2 = 640;
+    c.strokeStyle = 'rgba(120,126,140,.8)'; c.lineWidth = 4;
+    c.beginPath(); c.moveTo(bx2 - 210, by2 - 36); c.quadraticCurveTo(bx2 - 140, by2 - 96, bx2 - 66, by2 - 100); c.stroke();
+    c.beginPath(); c.moveTo(bx2 + 210, by2 - 36); c.quadraticCurveTo(bx2 + 140, by2 - 96, bx2 + 66, by2 - 100); c.stroke();
+    [-66, 66].forEach(dx => {
+      const tx3 = bx2 + dx;
+      c.fillStyle = 'rgba(150,144,132,.92)';
+      c.fillRect(tx3 - 24, by2 - 150, 48, 150);
+      c.fillStyle = 'rgba(126,120,108,.92)';
+      c.beginPath(); c.moveTo(tx3 - 26, by2 - 150); c.lineTo(tx3, by2 - 186); c.lineTo(tx3 + 26, by2 - 150);
+      c.closePath(); c.fill();
+      [[-24,-150],[24,-150]].forEach(([ddx, ddy]) => {
+        c.fillStyle = 'rgba(126,120,108,.92)';
+        c.fillRect(tx3 + ddx - 5, by2 + ddy - 10, 10, 12);
+        c.beginPath(); c.moveTo(tx3 + ddx - 6, by2 + ddy - 10); c.lineTo(tx3 + ddx, by2 + ddy - 24);
+        c.lineTo(tx3 + ddx + 6, by2 + ddy - 10); c.closePath(); c.fill();
+      });
+      c.fillStyle = `rgba(200,222,240,${.35 + osc * .35})`;
+      for(let k = 0; k < 4; k++) c.fillRect(tx3 - 10, by2 - 138 + k * 30, 20, 16);
+    });
+    c.fillStyle = 'rgba(150,144,132,.9)';
+    c.fillRect(bx2 - 66, by2 - 128, 132, 10);
+    c.fillRect(bx2 - 66, by2 - 96, 132, 10);
+    c.fillStyle = mez('#4A7FA8', luzDia * 10);
+    c.fillRect(bx2 - 42, by2 - 56, 84, 34);
+
+    /* ── AGUJAS DE IGLESIA ── */
+    [520, 1080, 1360].forEach((ax, k) => {
+      const ay = 610, es = .8 + rr(k + 60) * .3;
+      c.fillStyle = 'rgba(132,126,116,.8)';
+      c.fillRect(ax - 10*es, ay - 74*es, 20*es, 74*es);
+      c.beginPath(); c.moveTo(ax - 12*es, ay - 74*es); c.lineTo(ax, ay - 130*es); c.lineTo(ax + 12*es, ay - 74*es);
+      c.closePath(); c.fill();
+      c.fillStyle = mez('#C9A96A', luzDia * 10);
+      c.fillRect(ax - 1.5, ay - 138*es, 3, 10);
+    });
+
+    /* ── LAS HILERAS DE CASAS ── ladrillo, techos a dos aguas y chimeneas */
+    for(let fila = 0; fila < 2; fila++){
+      const base = 600 + fila * 42;
+      for(let i = 0; i < 26; i++){
+        const hw = 74, hx = i * hw - 20 + fila * 30;
+        const hh = 46 + rr(i + fila * 50) * 26;
+        const ladrillo = [(146 + (i % 3) * 12), (94 + (i % 3) * 8), (82 + (i % 3) * 6)];
+        c.fillStyle = `rgba(${ladrillo[0]},${ladrillo[1]},${ladrillo[2]},${.5 + fila * .3})`;
+        c.fillRect(hx, base - hh, hw - 6, hh + 120);
+        /* techo a dos aguas */
+        c.fillStyle = `rgba(72,64,72,${.55 + fila * .3})`;
+        c.beginPath();
+        c.moveTo(hx - 3, base - hh); c.lineTo(hx + (hw - 6)/2, base - hh - 22);
+        c.lineTo(hx + hw - 3, base - hh); c.closePath(); c.fill();
+        /* chimenea con sus dos tubos */
+        const cx2 = hx + (hw - 6) * (.25 + rr(i + 77) * .5);
+        c.fillStyle = `rgba(96,72,64,${.6 + fila * .3})`;
+        c.fillRect(cx2 - 6, base - hh - 34, 12, 18);
+        c.fillRect(cx2 - 7, base - hh - 38, 5, 6); c.fillRect(cx2 + 2, base - hh - 38, 5, 6);
+        /* ventanitas georgianas */
+        c.fillStyle = `rgba(255,233,174,${(.24 + osc * .5) * (rr(i * 7 + fila) > .4 ? 1 : .3)})`;
+        c.fillRect(hx + 10, base - hh + 10, 12, 15);
+        c.fillRect(hx + 40, base - hh + 10, 12, 15);
+        c.fillStyle = `rgba(60,44,48,${.5 + fila * .3})`;
+        c.fillRect(hx + 26, base - hh + 8, 10, 26);
+      }
+    }
+  }
+
+  const T = (x, y, w, h, col) => { c.fillStyle = col; c.fillRect(x, y, w, h); };
+  const gris = '#4E4C6E', gris2 = '#63608A', claro = '#7C7AA4';
+
+  if(ciudad === 'nyc'){
+    /* Empire State: cuerpo escalonado y aguja */
+    const ex = 300;
+    T(ex, 300, 118, 340, gris2); T(ex + 16, 240, 86, 62, gris2); T(ex + 34, 190, 50, 52, claro);
+    T(ex + 54, 130, 10, 62, claro); T(ex + 56, 96, 6, 36, '#8E8CB4');
+    ventanitas(c, ex, 300, 118, 340, osc, rr, 11);
+    /* Chrysler: corona de arcos */
+    const cx2 = 1300;
+    T(cx2, 340, 96, 300, gris2);
+    for(let k = 0; k < 5; k++){ const w = 96 - k * 17;
+      T(cx2 + (96 - w) / 2, 340 - 34 - k * 30, w, 30, k % 2 ? claro : '#8E8CB4'); }
+    T(cx2 + 45, 150, 6, 44, '#A9A7CC');
+    ventanitas(c, cx2, 340, 96, 300, osc, rr, 23);
+    /* One WTC: prisma que se afina */
+    const wx2 = 1520;
+    c.fillStyle = claro; c.beginPath();
+    c.moveTo(wx2, 640); c.lineTo(wx2 + 12, 250); c.lineTo(wx2 + 74, 250); c.lineTo(wx2 + 86, 640);
+    c.closePath(); c.fill();
+    T(wx2 + 40, 170, 5, 82, '#A9A7CC');
+    ventanitas(c, wx2 + 14, 260, 58, 370, osc, rr, 37);
+  }
+  else if(ciudad === 'londres'){
+    /* The Shard: pirámide de vidrio */
+    const sx = 1330;
+    c.fillStyle = 'rgba(150,168,196,.85)'; c.beginPath();
+    c.moveTo(sx, 640); c.lineTo(sx + 26, 200); c.lineTo(sx + 44, 200); c.lineTo(sx + 70, 640);
+    c.closePath(); c.fill();
+    for(let k = 0; k < 12; k++) T(sx + 8 + k * .8, 250 + k * 32, 54 - k * 1.4, 2.4, 'rgba(255,255,255,.16)');
+    /* Gherkin: la bala */
+    const gx = 1180;
+    c.fillStyle = '#5E6B84'; c.beginPath();
+    c.ellipse(gx, 470, 42, 130, 0, 0, 7); c.fill();
+    T(gx - 42, 470, 84, 170, '#5E6B84');
+    c.strokeStyle = 'rgba(255,233,174,' + (.2 + osc * .4) + ')'; c.lineWidth = 2;
+    for(let k = 0; k < 7; k++){ c.beginPath(); c.moveTo(gx - 40, 380 + k * 36); c.lineTo(gx + 40, 356 + k * 36); c.stroke(); }
+    /* Big Ben */
+    const bx = 240;
+    T(bx, 330, 62, 310, '#6E6242'); T(bx - 6, 316, 74, 16, '#7E7250');
+    c.fillStyle = '#F0E6C8'; c.beginPath(); c.arc(bx + 31, 356, 20, 0, 7); c.fill();
+    c.strokeStyle = '#2E2A20'; c.lineWidth = 3;
+    c.beginPath(); c.moveTo(bx + 31, 356); c.lineTo(bx + 31, 342); c.stroke();
+    c.beginPath(); c.moveTo(bx + 31, 356); c.lineTo(bx + 43, 360); c.stroke();
+    c.fillStyle = '#6E6242'; c.beginPath();
+    c.moveTo(bx - 4, 316); c.lineTo(bx + 31, 244); c.lineTo(bx + 66, 316); c.closePath(); c.fill();
+    T(bx + 28, 218, 6, 28, '#8E8264');
+    ventanitas(c, bx, 400, 62, 240, osc, rr, 51, '#FFE3A0');
+    /* London Eye */
+    /* corrida a la izquierda: en 620 quedaba tapada por la torre de Northpoint */
+    const ex = 450, ey = 420, R = 100;
+    c.strokeStyle = 'rgba(190,206,230,.9)'; c.lineWidth = 5;
+    c.beginPath(); c.arc(ex, ey, R, 0, 7); c.stroke();
+    c.lineWidth = 1.6; c.strokeStyle = 'rgba(190,206,230,.55)';
+    for(let k = 0; k < 16; k++){ const an = k / 16 * Math.PI * 2;
+      c.beginPath(); c.moveTo(ex, ey); c.lineTo(ex + Math.cos(an) * R, ey + Math.sin(an) * R); c.stroke(); }
+    for(let k = 0; k < 16; k++){ const an = k / 16 * Math.PI * 2;
+      c.fillStyle = `rgba(255,233,174,${.35 + osc * .5})`;
+      c.beginPath(); c.arc(ex + Math.cos(an) * R, ey + Math.sin(an) * R, 5, 0, 7); c.fill(); }
+    c.strokeStyle = 'rgba(160,176,200,.9)'; c.lineWidth = 7;
+    c.beginPath(); c.moveTo(ex - 24, 640); c.lineTo(ex, ey); c.lineTo(ex + 24, 640); c.stroke();
+  }
+  else {
+    /* Tokio · la torre roja a franjas */
+    const tx = 400;
+    c.strokeStyle = '#C4483C'; c.lineWidth = 9;
+    c.beginPath(); c.moveTo(tx - 62, 640); c.lineTo(tx, 226); c.stroke();
+    c.beginPath(); c.moveTo(tx + 62, 640); c.lineTo(tx, 226); c.stroke();
+    c.lineWidth = 6;
+    for(let k = 0; k < 7; k++){ const yy = 640 - k * 58, an = (640 - yy) / 414;
+      const half = 62 * (1 - an);
+      c.strokeStyle = k % 2 ? '#E8E4DA' : '#C4483C';
+      c.beginPath(); c.moveTo(tx - half, yy); c.lineTo(tx + half, yy); c.stroke(); }
+    c.fillStyle = '#C4483C'; c.fillRect(tx - 34, 430, 68, 34);
+    c.fillStyle = '#8E3028'; c.fillRect(tx - 3, 150, 6, 78);
+    c.fillStyle = `rgba(255,120,90,${.4 + osc * .5})`;
+    c.beginPath(); c.arc(tx, 148, 6, 0, 7); c.fill();
+    /* Skytree: aguja larguísima */
+    const kx = 1420;
+    c.fillStyle = '#7A83A0'; c.beginPath();
+    c.moveTo(kx - 40, 640); c.lineTo(kx - 11, 250); c.lineTo(kx + 11, 250); c.lineTo(kx + 40, 640);
+    c.closePath(); c.fill();
+    c.fillStyle = '#8E96B4'; c.fillRect(kx - 26, 268, 52, 30);
+    c.fillStyle = '#7A83A0'; c.fillRect(kx - 3, 120, 6, 132);
+    c.fillStyle = `rgba(140,200,255,${.35 + osc * .5})`;
+    c.beginPath(); c.arc(kx, 118, 6, 0, 7); c.fill();
+    /* (las torres genéricas de Marunouchi se fueron: quedaban detrás de la
+       torre de Northpoint y lo único que asomaba parecía Manhattan) */
+  }
+  /* Abajo no puede quedar cielo vacío: la ciudad sigue hasta el borde del
+     cuadro, cada vez más oscura, como cuando miras desde arriba. */
+  const bajo = c.createLinearGradient(0, suelo - 40, 0, H);
+  bajo.addColorStop(0, `rgba(${tinte[0]},${tinte[1]},${tinte[2]},.55)`);
+  bajo.addColorStop(1, `rgba(${Math.round(tinte[0]*.45)},${Math.round(tinte[1]*.45)},${Math.round(tinte[2]*.5)},.95)`);
+  c.fillStyle = bajo; c.fillRect(0, suelo - 40, W, H - suelo + 40);
+  for(let i = 0; i < 16; i++){
+    const bx = i * (W / 16) - 30 + rr(i + 300) * 40;
+    const bw = W / 16 * (.7 + rr(i + 310) * .55);
+    const by = suelo + 20 + rr(i + 320) * 150;
+    c.fillStyle = `rgba(${tinte[0]+8},${tinte[1]+10},${tinte[2]+12},.5)`;
+    c.fillRect(bx, by, bw, H - by);
+    ventanitas(c, bx, by, bw, H - by, osc * .5, rr, 400 + i);
+  }
+}
+
+function edificioNY(c, x, base, s, rr){
+  c.fillStyle = '#232A33';
+  c.fillRect(x - 70*s, base - 230*s, 140*s, 230*s);
+  c.fillRect(x - 48*s, base - 320*s, 96*s, 90*s);
+  c.fillRect(x - 26*s, base - 390*s, 52*s, 70*s);
+  c.fillRect(x - 3*s, base - 430*s, 6*s, 42*s);
+  ventanitas(c, x - 60*s, base - 220*s, 120*s, 205*s, .6, rr, 31);
+  ventanitas(c, x - 40*s, base - 312*s, 80*s, 76*s, .6, rr, 47);
+}
+
+function edificioLondres(c, x, base, s, rr){
+  c.fillStyle = '#20262E';
+  c.beginPath();
+  c.moveTo(x - 42*s, base);
+  c.bezierCurveTo(x - 52*s, base - 160*s, x - 28*s, base - 260*s, x, base - 296*s);
+  c.bezierCurveTo(x + 28*s, base - 260*s, x + 52*s, base - 160*s, x + 42*s, base);
+  c.closePath(); c.fill();
+  c.strokeStyle = 'rgba(255,255,255,.10)'; c.lineWidth = 2;
+  for(let k = -1; k <= 1; k++){
+    c.beginPath(); c.moveTo(x + k*26*s, base - 20*s); c.lineTo(x - k*30*s, base - 250*s); c.stroke();
+  }
+  c.fillStyle = '#242B34';
+  c.fillRect(x + 58*s, base - 118*s, 66*s, 118*s);
+  ventanitas(c, x + 64*s, base - 110*s, 54*s, 100*s, .6, rr, 59);
+}
+
+function edificioTokio(c, x, base, s, t){
+  c.strokeStyle = '#2E343E'; c.lineWidth = 7*s; c.lineCap = 'round';
+  c.beginPath(); c.moveTo(x, base - 360*s); c.lineTo(x - 92*s, base); c.stroke();
+  c.beginPath(); c.moveTo(x, base - 360*s); c.lineTo(x + 92*s, base); c.stroke();
+  c.lineWidth = 3.5*s;
+  [[.28, 46],[.55, 66],[.82, 84]].forEach(([f, w]) => {
+    const y = base - 360*s * (1 - f);
+    c.beginPath(); c.moveTo(x - w*s, y); c.lineTo(x + w*s, y); c.stroke();
+  });
+  c.fillStyle = '#2A3038';
+  c.fillRect(x - 36*s, base - 218*s, 72*s, 24*s);
+  c.fillStyle = 'rgba(255,233,164,.75)';
+  c.fillRect(x - 30*s, base - 212*s, 60*s, 8*s);
+  c.strokeStyle = '#2E343E'; c.lineWidth = 4*s;
+  c.beginPath(); c.moveTo(x, base - 360*s); c.lineTo(x, base - 402*s); c.stroke();
+  c.fillStyle = `rgba(222,106,95,${.35 + .35 * Math.sin(t / 600)})`;
+  c.beginPath(); c.arc(x, base - 402*s, 5*s, 0, 7); c.fill();
+}
+
+function sueloDe(c, W, H, ciudad, osc, rr){
+  const luzDia = 1 - osc;
+  const S0 = 620;
+  const arbol = (tx, ty, es, hojas) => {
+    c.fillStyle = 'rgba(18,30,22,.26)';
+    c.beginPath(); c.ellipse(tx + 5, ty + 15, 17 * es, 6 * es, 0, 0, 7); c.fill();
+    c.fillStyle = '#3E2A1E'; c.fillRect(tx - 3 * es, ty, 6 * es, 16 * es);
+    hojas.forEach((col, k) => {
+      c.fillStyle = mez(col, luzDia * 16);
+      c.beginPath();
+      c.ellipse(tx + (k-1) * 9 * es, ty - (8 + k*7) * es, (15 - k*3) * es, (11 - k*2) * es, 0, 0, 7);
+      c.fill();
+    });
+  };
+  const farolas = (n, y0) => {
+    for(let i = 0; i < n; i++){
+      const fx = 140 + i * (W - 280) / (n - 1), fy = y0 + rr(i + 60) * 180;
+      c.fillStyle = '#2A2E38'; c.fillRect(fx - 2, fy, 4, 26);
+      c.fillStyle = osc > .3 ? '#FFE9AE' : '#8E96A4';
+      c.beginPath(); c.arc(fx, fy - 2, 5, 0, 7); c.fill();
+      if(osc > .3){
+        const h = c.createRadialGradient(fx, fy - 2, 2, fx, fy - 2, 46);
+        h.addColorStop(0, 'rgba(255,233,174,.24)'); h.addColorStop(1, 'rgba(255,233,174,0)');
+        c.fillStyle = h; c.beginPath(); c.arc(fx, fy - 2, 46, 0, 7); c.fill();
+      }
+    }
+  };
+
+  if(ciudad === 'nyc'){
+    /* CENTRAL PARK */
+    const verde = mez('#2E5C38', -8 + luzDia * 26), verde2 = mez('#376E42', -6 + luzDia * 24);
+    c.fillStyle = verde; c.fillRect(0, S0, W, H - S0);
+    for(let i = 0; i < 26; i++){
+      c.fillStyle = verde2;
+      c.beginPath();
+      c.ellipse(rr(i + 200) * W, 640 + rr(i + 210) * (H - 660),
+                90 + rr(i+220) * 150, 34 + rr(i+230) * 46, 0, 0, 7); c.fill();
+    }
+    c.strokeStyle = mez('#8E7A5E', -10 + luzDia * 22); c.lineCap = 'round'; c.lineWidth = 22;
+    c.beginPath(); c.moveTo(-40, 760); c.quadraticCurveTo(560, 690, 900, 900); c.stroke();
+    c.beginPath(); c.moveTo(W + 40, 740); c.quadraticCurveTo(1240, 700, 900, 900); c.stroke();
+    c.lineWidth = 15;
+    c.beginPath(); c.moveTo(120, 1120); c.quadraticCurveTo(700, 980, 1180, 1130); c.stroke();
+    const agua = c.createLinearGradient(0, 980, 0, 1090);
+    agua.addColorStop(0, mez('#3E6E8E', -14 + luzDia * 26));
+    agua.addColorStop(1, mez('#2A5270', -10 + luzDia * 20));
+    c.fillStyle = agua;
+    c.beginPath(); c.ellipse(360, 1030, 210, 62, -.06, 0, 7); c.fill();
+    c.strokeStyle = `rgba(255,255,255,${.1 + luzDia * .22})`; c.lineWidth = 3;
+    c.beginPath(); c.ellipse(360, 1030, 210, 62, -.06, 0, 7); c.stroke();
+    for(let i = 0; i < 5; i++){
+      c.fillStyle = `rgba(255,255,255,${.08 + luzDia * .16})`;
+      c.fillRect(250 + i * 46, 1012 + (i % 2) * 16, 40, 2.4);
+    }
+    farolas(9, 880);
+    for(let i = 0; i < 54; i++){
+      const lado = i % 2 ? 1 : -1;
+      arbol(900 + lado * (250 + rr(i) * 620), 680 + rr(i+3) * 450,
+            .78 + rr(i + 40) * .7, ['#2E5C38','#376E42','#2A5232']);
+    }
+  }
+  else if(ciudad === 'tokio'){
+    /* ══ HANAMI ══ El suelo entero es un parque de cerezos en flor: pasto,
+       petalos por todas partes, torii, pagoda, farolillos, bambu, koi. */
+    const musgo = mez('#3E6B44', -14 + luzDia * 26), musgo2 = mez('#4E7C52', -10 + luzDia * 24);
+    c.fillStyle = musgo; c.fillRect(0, S0, W, H - S0);
+    for(let i = 0; i < 24; i++){
+      c.fillStyle = musgo2;
+      c.beginPath();
+      c.ellipse(rr(i + 500) * W, 660 + rr(i + 510) * (H - 700),
+                110 + rr(i+520) * 170, 40 + rr(i+530) * 52, 0, 0, 7); c.fill();
+    }
+    /* alfombras de pétalos caídos en el pasto */
+    for(let i = 0; i < 16; i++){
+      c.fillStyle = `rgba(232,166,190,${.16 + luzDia * .22})`;
+      c.beginPath();
+      c.ellipse(rr(i + 560) * W, 700 + rr(i + 570) * (H - 740),
+                80 + rr(i+580) * 120, 26 + rr(i+590) * 34, 0, 0, 7); c.fill();
+    }
+    /* camino de piedras */
+    c.strokeStyle = mez('#A89C88', -14 + luzDia * 24); c.lineCap = 'round'; c.lineWidth = 26;
+    c.beginPath(); c.moveTo(-40, 800); c.quadraticCurveTo(520, 720, 900, 930); c.stroke();
+    c.beginPath(); c.moveTo(W + 40, 780); c.quadraticCurveTo(1290, 730, 900, 930); c.stroke();
+
+    /* el estanque de koi */
+    const ag = c.createLinearGradient(0, 950, 0, 1120);
+    ag.addColorStop(0, mez('#2E6B7A', -14 + luzDia * 26));
+    ag.addColorStop(1, mez('#1E4A5E', -10 + luzDia * 20));
+    c.fillStyle = ag;
+    c.beginPath(); c.ellipse(420, 1040, 270, 82, -.05, 0, 7); c.fill();
+    c.strokeStyle = mez('#6B6250', luzDia * 20); c.lineWidth = 9;
+    c.beginPath(); c.ellipse(420, 1040, 270, 82, -.05, 0, 7); c.stroke();
+    /* rocas al borde */
+    [[190,1092,26,13],[640,1088,22,11],[300,978,20,10],[560,986,24,12]].forEach(([x,y,rx,ry]) => {
+      c.fillStyle = mez('#78716A', luzDia * 18);
+      c.beginPath(); c.ellipse(x, y, rx, ry, 0, 0, 7); c.fill();
+      c.fillStyle = mez('#8E877E', luzDia * 16);
+      c.beginPath(); c.ellipse(x - rx*.2, y - ry*.35, rx*.6, ry*.5, 0, 0, 7); c.fill();
+    });
+    /* los koi */
+    [[330,1052,'#E8734A'],[470,1022,'#F2F0EA'],[540,1064,'#E8A63C']].forEach(([x,y,col],k) => {
+      c.fillStyle = col;
+      c.beginPath(); c.ellipse(x, y, 17, 7, k % 2 ? .2 : -.2, 0, 7); c.fill();
+      c.beginPath(); c.moveTo(x - 16, y); c.lineTo(x - 27, y - 6); c.lineTo(x - 27, y + 6); c.closePath(); c.fill();
+    });
+    /* el puente rojo */
+    c.strokeStyle = mez('#C4483C', luzDia * 14); c.lineWidth = 16;
+    c.beginPath(); c.moveTo(225, 1072); c.quadraticCurveTo(420, 950, 615, 1072); c.stroke();
+    c.strokeStyle = mez('#8E3028', luzDia * 10); c.lineWidth = 5;
+    c.beginPath(); c.moveTo(225, 1090); c.quadraticCurveTo(420, 968, 615, 1090); c.stroke();
+    c.strokeStyle = mez('#C4483C', luzDia * 20); c.lineWidth = 4;
+    for(let k = 0; k <= 6; k++){
+      const u = k / 6, bx = 225 + u * 390;
+      const by = 1072 - Math.sin(u * Math.PI) * 62;
+      c.beginPath(); c.moveTo(bx, by); c.lineTo(bx, by - 26); c.stroke();
+    }
+
+    /* ── EL TORII ── */
+    const tx = 1420, ty = 1000, tw = 150, th = 175;
+    c.fillStyle = mez('#C4483C', luzDia * 12);
+    c.fillRect(tx - tw/2, ty - th, 17, th); c.fillRect(tx + tw/2 - 17, ty - th, 17, th);
+    c.fillRect(tx - tw/2 - 14, ty - th + 44, tw + 28, 13);
+    c.fillStyle = mez('#A83A30', luzDia * 10);
+    c.beginPath();
+    c.moveTo(tx - tw/2 - 30, ty - th + 12); c.lineTo(tx + tw/2 + 30, ty - th + 12);
+    c.lineTo(tx + tw/2 + 22, ty - th + 28); c.lineTo(tx - tw/2 - 22, ty - th + 28); c.closePath(); c.fill();
+    c.fillStyle = mez('#C4483C', luzDia * 16);
+    c.fillRect(tx - 9, ty - th + 26, 18, 26);
+
+    /* ── LA PAGODA ── */
+    const gx = 1130, gy = 1010;
+    c.fillStyle = mez('#6E5A46', luzDia * 14); c.fillRect(gx - 9, gy - 118, 18, 118);
+    for(let k = 0; k < 4; k++){
+      const w = 108 - k * 22, yy = gy - 26 - k * 30;
+      c.fillStyle = mez('#8E4A3E', luzDia * 12);
+      c.beginPath();
+      c.moveTo(gx - w/2, yy); c.lineTo(gx, yy - 26); c.lineTo(gx + w/2, yy);
+      c.lineTo(gx + w/2 - 12, yy + 9); c.lineTo(gx - w/2 + 12, yy + 9); c.closePath(); c.fill();
+      c.fillStyle = mez('#E8E0D2', luzDia * 10);
+      c.fillRect(gx - w/2 + 15, yy + 8, w - 30, 22);
+    }
+    c.fillStyle = mez('#C9A96A', luzDia * 14); c.fillRect(gx - 3, gy - 152, 6, 30);
+
+    /* ── FAROLILLOS ── una hilera colgando entre postes */
+    for(let i = 0; i < 12; i++){
+      const fx = 120 + i * 145, fy = 760 + Math.sin(i * .9) * 16;
+      c.strokeStyle = 'rgba(60,50,44,.55)'; c.lineWidth = 2;
+      c.beginPath(); c.moveTo(fx, fy - 30); c.lineTo(fx, fy - 12); c.stroke();
+      c.fillStyle = osc > .3 ? '#F2925A' : mez('#D9604E', luzDia * 14);
+      c.beginPath(); c.ellipse(fx, fy, 12, 16, 0, 0, 7); c.fill();
+      c.fillStyle = 'rgba(60,40,36,.6)';
+      c.fillRect(fx - 7, fy - 16, 14, 3); c.fillRect(fx - 7, fy + 13, 14, 3);
+      if(osc > .3){
+        const h = c.createRadialGradient(fx, fy, 3, fx, fy, 52);
+        h.addColorStop(0, 'rgba(242,146,90,.3)'); h.addColorStop(1, 'rgba(242,146,90,0)');
+        c.fillStyle = h; c.beginPath(); c.arc(fx, fy, 52, 0, 7); c.fill();
+      }
+    }
+    /* la cuerda que los une */
+    c.strokeStyle = 'rgba(60,50,44,.4)'; c.lineWidth = 2.4;
+    c.beginPath();
+    for(let i = 0; i <= 12; i++) c.lineTo(120 + i * 145, 730 + Math.sin(i * .9) * 16);
+    c.stroke();
+
+    /* ── BAMBÚ ── matas a los costados */
+    [140, 300, 1600, 1740].forEach((bx, j) => {
+      for(let k = 0; k < 5; k++){
+        const x = bx + k * 15 - 30, alto = 210 + rr(j * 9 + k) * 130;
+        const yb = 1000 + rr(j * 5 + k) * 90;
+        c.fillStyle = mez('#5E8E4A', luzDia * 18);
+        c.fillRect(x, yb - alto, 8, alto);
+        c.fillStyle = mez('#4A7038', luzDia * 14);
+        for(let n = 1; n * 46 < alto; n++) c.fillRect(x, yb - n * 46, 8, 3.4);
+        c.fillStyle = mez('#6EA055', luzDia * 20);
+        [[-16,-10],[16,-24],[-14,-40]].forEach(([dx,dy]) => {
+          c.beginPath();
+          c.ellipse(x + 4 + dx, yb - alto + 26 + dy, 17, 5, dx < 0 ? -.5 : .5, 0, 7); c.fill();
+        });
+      }
+    });
+
+    /* ── LOS CEREZOS ── muchos, densos y muy rosas */
+    const sakura = (x, y, es) => {
+      c.fillStyle = 'rgba(18,30,22,.24)';
+      c.beginPath(); c.ellipse(x + 5, y + 15, 22 * es, 7 * es, 0, 0, 7); c.fill();
+      c.fillStyle = '#4A3428';
+      c.fillRect(x - 4 * es, y - 6 * es, 8 * es, 22 * es);
+      c.strokeStyle = '#4A3428'; c.lineWidth = 3.4 * es;
+      c.beginPath(); c.moveTo(x, y); c.lineTo(x - 15 * es, y - 22 * es); c.stroke();
+      c.beginPath(); c.moveTo(x, y); c.lineTo(x + 16 * es, y - 24 * es); c.stroke();
+      /* la copa: racimos de rosa en tres tonos */
+      const copa = [['#F2C2D4', -2], ['#E8A6BE', 0], ['#D98AA8', 2]];
+      copa.forEach(([col, d], ci) => {
+        c.fillStyle = mez(col, luzDia * 10);
+        [[0,-40,30],[-24,-30,22],[24,-32,22],[-13,-50,19],[15,-50,19],[0,-58,15]].forEach(([dx,dy,r]) => {
+          c.beginPath();
+          c.ellipse(x + (dx + d * 4) * es, y + (dy + d * 2) * es, r * es * (1 - ci * .12), r * es * .78, 0, 0, 7);
+          c.fill();
+        });
+      });
+    };
+    for(let i = 0; i < 56; i++){
+      const lado = i % 2 ? 1 : -1;
+      sakura(900 + lado * (250 + rr(i + 90) * 660), 700 + rr(i + 93) * 440, .72 + rr(i + 95) * .62);
+    }
+    /* pétalos flotando por todo el cuadro */
+    for(let i = 0; i < 90; i++){
+      const px2 = rr(i + 800) * W, py2 = S0 - 60 + rr(i + 810) * (H - S0 + 60);
+      c.fillStyle = `rgba(${232 + rr(i+820)*20},${150 + rr(i+830)*40},${180 + rr(i+840)*30},${.35 + rr(i+850) * .45})`;
+      c.beginPath();
+      c.ellipse(px2, py2, 4.5 + rr(i+860) * 3, 3 + rr(i+870) * 2, rr(i+880) * 3, 0, 7); c.fill();
+    }
+  }
+  else {
+    /* ══ LONDRES · EL PARQUE REAL ══
+       Fuera la explanada: la torre se planta en un royal park — césped con
+       franjas de podado, parterres geométricos de tulipanes, el quiosco de
+       música, sillas de lona a rayas, reja de hierro forjado y el lago al
+       frente con sus cisnes. Una cabina roja de acento, porque es Londres. */
+    const verde  = mez('#33633E', -8 + luzDia * 24);
+    const verde2 = mez('#3E7549', -6 + luzDia * 22);
+    c.fillStyle = verde; c.fillRect(0, S0, W, H - S0);
+    /* franjas de podado alternadas: la firma del césped inglés */
+    for(let k = 0; k < 9; k++){
+      if(k % 2) continue;
+      c.fillStyle = `rgba(255,255,255,${.035 + luzDia * .04})`;
+      c.beginPath();
+      c.moveTo(-40, S0 + 30 + k * 46); c.lineTo(W + 40, S0 + 62 + k * 46);
+      c.lineTo(W + 40, S0 + 108 + k * 46); c.lineTo(-40, S0 + 76 + k * 46);
+      c.closePath(); c.fill();
+    }
+    /* manchas de césped más claro */
+    for(let i = 0; i < 16; i++){
+      c.fillStyle = verde2;
+      c.beginPath();
+      c.ellipse(rr(i + 700) * W, 660 + rr(i + 710) * 260,
+                110 + rr(i+720) * 150, 34 + rr(i+730) * 42, 0, 0, 7); c.fill();
+    }
+
+    /* ── PARTERRES GEOMÉTRICOS ── tulipanes en rojo y amarillo */
+    const parterre = (px3, py3, rx, ry, colFlor) => {
+      c.fillStyle = mez('#5A4632', luzDia * 12);
+      c.beginPath(); c.ellipse(px3, py3, rx + 8, ry + 5, 0, 0, 7); c.fill();
+      c.fillStyle = mez('#4A5A36', luzDia * 16);
+      c.beginPath(); c.ellipse(px3, py3, rx, ry, 0, 0, 7); c.fill();
+      for(let k = 0; k < 24; k++){
+        const an = k / 24 * Math.PI * 2, u = .35 + rr(k + px3) * .55;
+        const fx = px3 + Math.cos(an) * rx * u, fy = py3 + Math.sin(an) * ry * u;
+        c.fillStyle = k % 3 ? colFlor : '#E8C23C';
+        c.fillRect(fx - 2.5, fy - 5, 5, 6);
+        c.fillStyle = mez('#3E7549', luzDia * 16);
+        c.fillRect(fx - 1, fy + 1, 2, 5);
+      }
+    };
+    parterre(250, 780, 90, 32, '#C4302B');
+    parterre(1560, 760, 96, 34, '#C4302B');
+    parterre(180, 1120, 76, 28, '#D95A8A');
+
+    /* ── EL QUIOSCO DE MÚSICA ── base de piedra, columnas y techo verde */
+    const qx = 1420, qy = 1020;
+    c.fillStyle = 'rgba(10,14,24,.22)';
+    c.beginPath(); c.ellipse(qx, qy + 26, 120, 26, 0, 0, 7); c.fill();
+    c.fillStyle = mez('#B4AA9A', luzDia * 16);
+    c.beginPath(); c.ellipse(qx, qy + 14, 108, 30, 0, 0, 7); c.fill();
+    c.fillStyle = mez('#9A9080', luzDia * 12);
+    c.beginPath(); c.ellipse(qx, qy + 20, 108, 30, 0, Math.PI * .04, Math.PI * .96); c.fill();
+    c.strokeStyle = mez('#3E5E48', luzDia * 14); c.lineWidth = 5;
+    for(let k = 0; k < 6; k++){
+      const an = Math.PI * (k / 5), bx = qx + Math.cos(an) * 92, br = qy + 8 - Math.sin(an) * 16;
+      c.beginPath(); c.moveTo(bx, br); c.lineTo(bx, br - 74); c.stroke();
+    }
+    c.fillStyle = mez('#3E5E48', luzDia * 16);
+    c.beginPath();
+    c.moveTo(qx - 116, qy - 66); c.lineTo(qx, qy - 122); c.lineTo(qx + 116, qy - 66);
+    c.closePath(); c.fill();
+    c.fillStyle = mez('#4E7058', luzDia * 18);
+    c.beginPath();
+    c.moveTo(qx - 116, qy - 66); c.lineTo(qx, qy - 100); c.lineTo(qx + 116, qy - 66);
+    c.lineTo(qx, qy - 88); c.closePath(); c.fill();
+    c.fillStyle = mez('#C9B48C', luzDia * 16);
+    c.fillRect(qx - 3, qy - 138, 6, 18);
+    /* barandal del quiosco */
+    c.strokeStyle = mez('#2E3038', luzDia * 12); c.lineWidth = 2.4;
+    for(let k = 0; k <= 12; k++){
+      const u = k / 12, bx = qx - 100 + u * 200;
+      c.beginPath(); c.moveTo(bx, qy + 12 - Math.sin(u * Math.PI) * 4); c.lineTo(bx, qy - 16); c.stroke();
+    }
+
+    /* ── SILLAS DE LONA a rayas verdes, regadas por el césped ── */
+    const tumbona = (sx, sy, flip) => {
+      const f = flip ? -1 : 1;
+      c.fillStyle = 'rgba(10,14,24,.2)';
+      c.beginPath(); c.ellipse(sx, sy + 12, 30, 7, 0, 0, 7); c.fill();
+      c.strokeStyle = mez('#6E5A42', luzDia * 14); c.lineWidth = 4;
+      c.beginPath(); c.moveTo(sx - 22 * f, sy + 10); c.lineTo(sx + 8 * f, sy - 26); c.stroke();
+      c.beginPath(); c.moveTo(sx + 20 * f, sy + 10); c.lineTo(sx - 4 * f, sy - 18); c.stroke();
+      for(let k = 0; k < 5; k++){
+        c.fillStyle = k % 2 ? '#E8E4DA' : mez('#3E7549', luzDia * 20);
+        const u = k / 5;
+        c.fillRect(sx - 16 * f + (24 * f) * u - 4, sy - 24 + u * 30, 9, 8);
+      }
+    };
+    tumbona(560, 840, false); tumbona(660, 880, true);
+    tumbona(1200, 800, false); tumbona(1690, 900, true);
+
+    /* ── LA REJA DE HIERRO ── separa el césped del lago */
+    const yR = 968;
+    c.strokeStyle = mez('#2A2C34', luzDia * 10); c.lineWidth = 3;
+    c.beginPath(); c.moveTo(0, yR - 26); c.lineTo(W, yR - 26); c.stroke();
+    c.beginPath(); c.moveTo(0, yR); c.lineTo(W, yR); c.stroke();
+    for(let x = 10; x < W; x += 26){
+      c.beginPath(); c.moveTo(x, yR + 2); c.lineTo(x, yR - 34); c.stroke();
+      c.fillStyle = mez('#2A2C34', luzDia * 10);
+      c.beginPath(); c.moveTo(x - 3, yR - 32); c.lineTo(x, yR - 42); c.lineTo(x + 3, yR - 32);
+      c.closePath(); c.fill();
+    }
+
+    /* ── EL LAGO (la Serpentine) con sus CISNES ── */
+    const ag = c.createLinearGradient(0, yR + 10, 0, H);
+    ag.addColorStop(0, mez('#3A6A88', -14 + luzDia * 24));
+    ag.addColorStop(1, mez('#274C66', -10 + luzDia * 18));
+    c.fillStyle = ag; c.fillRect(0, yR + 6, W, H - yR - 6);
+    for(let i = 0; i < 10; i++){
+      c.fillStyle = `rgba(255,255,255,${.05 + luzDia * .1})`;
+      c.fillRect(90 + i * 180, yR + 60 + (i % 3) * 40, 66, 3);
+    }
+    const cisne = (cx3, cy3, f) => {
+      c.fillStyle = '#F4F6F8';
+      c.beginPath(); c.ellipse(cx3, cy3, 20, 10, 0, 0, 7); c.fill();
+      c.strokeStyle = '#F4F6F8'; c.lineWidth = 5; c.lineCap = 'round';
+      c.beginPath(); c.moveTo(cx3 + 14 * f, cy3 - 2);
+      c.quadraticCurveTo(cx3 + 26 * f, cy3 - 22, cx3 + 20 * f, cy3 - 28); c.stroke();
+      c.fillStyle = '#E8913C';
+      c.beginPath(); c.moveTo(cx3 + 20 * f, cy3 - 30); c.lineTo(cx3 + 29 * f, cy3 - 27);
+      c.lineTo(cx3 + 20 * f, cy3 - 25); c.closePath(); c.fill();
+      c.strokeStyle = `rgba(255,255,255,${.2 + luzDia * .2})`; c.lineWidth = 2;
+      c.beginPath(); c.moveTo(cx3 - 24, cy3 + 8); c.lineTo(cx3 - 44, cy3 + 11); c.stroke();
+    };
+    cisne(360, 1060, 1); cisne(470, 1092, -1); cisne(1240, 1070, 1);
+
+    /* ── FAROLAS VICTORIANAS junto a la reja ── */
+    for(let i = 0; i < 7; i++){
+      const fx = 170 + i * 250, fy = yR - 40;
+      c.fillStyle = mez('#2E3038', luzDia * 12);
+      c.fillRect(fx - 4, fy - 96, 8, 96);
+      c.fillStyle = mez('#3A3D46', luzDia * 12);
+      c.beginPath();
+      c.moveTo(fx - 14, fy - 96); c.lineTo(fx + 14, fy - 96);
+      c.lineTo(fx + 8, fy - 124); c.lineTo(fx - 8, fy - 124); c.closePath(); c.fill();
+      c.fillStyle = osc > .3 ? '#FFE9AE' : mez('#9AA0AC', luzDia * 10);
+      c.fillRect(fx - 9, fy - 122, 18, 24);
+      if(osc > .3){
+        const h = c.createRadialGradient(fx, fy - 110, 4, fx, fy - 110, 60);
+        h.addColorStop(0, 'rgba(255,233,174,.3)'); h.addColorStop(1, 'rgba(255,233,174,0)');
+        c.fillStyle = h; c.beginPath(); c.arc(fx, fy - 110, 60, 0, 7); c.fill();
+      }
+    }
+
+    /* ── LA CABINA ROJA, una sola, porque es Londres ── */
+    const cab = (cx3, cy3, es) => {
+      c.fillStyle = 'rgba(10,12,20,.25)';
+      c.beginPath(); c.ellipse(cx3, cy3 + 3, 26 * es, 7 * es, 0, 0, 7); c.fill();
+      c.fillStyle = mez('#B0281B', luzDia * 12);
+      c.fillRect(cx3 - 24*es, cy3 - 96*es, 48*es, 96*es);
+      c.fillStyle = `rgba(200,222,240,${.4 + osc * .35})`;
+      for(let r2 = 0; r2 < 3; r2++)
+        for(let k = 0; k < 2; k++)
+          c.fillRect(cx3 - 18*es + k * 20*es, cy3 - 88*es + r2 * 26*es, 16*es, 22*es);
+      c.fillStyle = mez('#8E1F14', luzDia * 8);
+      c.fillRect(cx3 - 28*es, cy3 - 108*es, 56*es, 14*es);
+    };
+    cab(120, 900, .72);
+
+    /* ── PLÁTANOS DE SOMBRA, la arboleda del parque ── */
+    for(let i = 0; i < 30; i++){
+      const lado = i % 2 ? 1 : -1;
+      arbol(900 + lado * (270 + rr(i + 40) * 620), 690 + rr(i + 43) * 240,
+            .85 + rr(i + 45) * .7, ['#2A5233','#356240','#24472C']);
+    }
+    /* la niebla baja, que es la firma del clima */
+    const nieb = c.createLinearGradient(0, 640, 0, 880);
+    nieb.addColorStop(0, `rgba(200,210,224,${.14 + luzDia * .1})`);
+    nieb.addColorStop(1, 'rgba(200,210,224,0)');
+    c.fillStyle = nieb; c.fillRect(0, 640, W, 240);
+  }
+}
+/* ── LA OFICINA NORTHPOINT en la ciudad de la sesión (recuperada) ──
+   La torre con su piso de trading abierto; el skyline y el suelo cambian por
+   ciudad — Tokio con sakura, Londres, Nueva York. */
+function escenaEdificio(c, W, H, t, E, rr, PC){
+  const N = ISO.N;
+  const CI = CIUDADES[E.c] || CIUDADES.tokio;
+  const oscuridad = PC.oscuridad;
+  const arriba = false;
+  skylineCiudad(c, W, H, E.c, oscuridad, rr);
+
+  /* La mesa es la misma en las tres ciudades: la torre de Northpoint con su
+     piso de trading abierto. Lo que cambia es la ciudad de fondo y el suelo
+     donde se planta. */
+
+  /* ══ MANZANAS LATERALES · edificios bajos, árboles y avenida ══ */
+  const manzana = (ox0, oy0, lado) => {
+    c.save(); c.translate(ox0, oy0);
+    for(let i = 0; i < 7; i++){
+      const bx = lado * (i * 96) + rr(i)*18, by = i * 52 + rr(i+5)*14;
+      const bw = 118 + rr(i+2)*44, bh = 96 + rr(i+3)*120;
+      // bloque en isométrica sencilla
+      c.fillStyle = i % 2 ? '#4E4C6E' : '#585472';
+      c.beginPath();
+      c.moveTo(bx, by); c.lineTo(bx + bw*lado, by + bw*.5);
+      c.lineTo(bx + bw*lado, by + bw*.5 + bh); c.lineTo(bx, by + bh);
+      c.closePath(); c.fill();
+      c.fillStyle = i % 2 ? '#63608A' : '#6E6A92';
+      c.beginPath();
+      c.moveTo(bx, by); c.lineTo(bx - 74*lado, by + 38);
+      c.lineTo(bx - 74*lado, by + 38 + bh); c.lineTo(bx, by + bh);
+      c.closePath(); c.fill();
+      c.fillStyle = '#7C7AA4';
+      c.beginPath();
+      c.moveTo(bx, by); c.lineTo(bx + bw*lado, by + bw*.5);
+      c.lineTo(bx + (bw-74)*lado, by + bw*.5 + 38); c.lineTo(bx - 74*lado, by + 38);
+      c.closePath(); c.fill();
+      for(let wy = by + 24; wy < by + bh - 12; wy += 26){
+        for(let k = 0; k < 3; k++){
+          const wx = bx - (18 + k*20)*lado, wyy = wy + (18 + k*20)*.5;
+          c.fillStyle = rr(i*9+wy+k) < .55 ? '#FFE9AE' : '#3E3C5E';
+          c.fillRect(Math.min(wx, wx+9*lado), wyy, 9, 12);
+        }
+      }
+    }
+    c.restore();
+  };
+  manzana(250, 620, -1); manzana(1550, 620, 1);
+
+  sueloDe(c, W, H, E.c, oscuridad, rr);
+
+  /* ══ LA TORRE · cristal, muchos pisos, y la azotea abierta ══ */
+  const PISOS = 11;
+  const caraTorre = (lado, fn) => {
+    c.save();
+    if(lado === 'der') c.setTransform(-ISO.TW/2, ISO.TH/2, 0, -ISO.TZ, iX(N, 0), iY(N, 0, 0));
+    else               c.setTransform( ISO.TW/2, ISO.TH/2, 0, -ISO.TZ, iX(0, N), iY(0, N, 0));
+    fn(c); c.restore();
+  };
+  /* Tres arquitecturas, no tres tintes: THE OBSIDIAN (ladrillo negro con
+     arcos y cornisa dentada), KURENAI (laca roja con celosía de madera) y
+     THE EXCHANGE CLUB (georgiana con balcones de hierro y ventana de
+     guillotina). El estilo manda cómo se dibuja cada piso. */
+  const fachada = (c2, base, vidrio, banda) => {
+    const estilo = E.c;
+    c2.fillStyle = base; c2.fillRect(0, -PISOS, N, PISOS);
+    if(estilo === 'nyc'){
+      /* el aparejo del ladrillo: hiladas y juntas alternadas */
+      c2.fillStyle = 'rgba(0,0,0,.22)';
+      for(let f2 = 0; f2 < PISOS * 3; f2++) c2.fillRect(0, -f2 * .333 - .02, N, .022);
+      for(let f2 = 0; f2 < PISOS * 3; f2++)
+        for(let u = (f2 % 2) * .27; u < N; u += .54)
+          c2.fillRect(u, -f2 * .333 - .3, .02, .3);
+    }
+    for(let f = 0; f < PISOS; f++){
+      c2.fillStyle = banda || 'rgba(222,228,244,.9)'; c2.fillRect(0, -f - .1, N, .16);
+      if(estilo !== 'nyc'){ c2.fillStyle = 'rgba(255,255,255,.25)'; c2.fillRect(0, -f - .01, N, .05); }
+      if(estilo === 'londres'){
+        /* el balcón de hierro de cada nivel, con sus geranios */
+        c2.fillStyle = '#1A2438'; c2.fillRect(-.06, -f - .2, N + .12, .1);
+        c2.fillStyle = 'rgba(206,216,232,.75)';
+        for(let u = .05; u < N; u += .26) c2.fillRect(u, -f - .5, .045, .3);
+        c2.fillRect(-.06, -f - .52, N + .12, .05);
+        for(let u = .5; u < N; u += 1.7){
+          c2.fillStyle = '#3E6B44'; c2.fillRect(u, -f - .3, .3, .1);
+          c2.fillStyle = '#C4302B'; c2.fillRect(u + .04, -f - .36, .07, .07);
+          c2.fillRect(u + .17, -f - .37, .07, .07);
+        }
+      }
+      for(let u = .3; u < N - .5; u += .82){
+        const on = rr(u * 27 + f * 19) < .62;
+        const luzV = on ? (rr(u+f) > .74 ? 'rgba(255,240,196,.62)' : 'rgba(228,232,248,.4)')
+                        : 'rgba(70,80,120,.34)';
+        if(estilo === 'nyc'){
+          /* arco de medio punto: marco de piedra oscura y solo el PERFIL en
+             claro — que mande el ladrillo negro, no el marco */
+          c2.fillStyle = '#33373E';
+          c2.fillRect(u - .02, -f - .82, .64, .62);
+          c2.beginPath(); c2.arc(u + .3, -f - .8, .32, Math.PI, 0); c2.fill();
+          c2.fillStyle = luzV;
+          c2.fillRect(u + .02, -f - .78, .56, .56);
+          c2.beginPath(); c2.arc(u + .3, -f - .77, .27, Math.PI, 0); c2.fill();
+          c2.strokeStyle = 'rgba(214,218,224,.55)'; c2.lineWidth = .03;
+          c2.beginPath(); c2.arc(u + .3, -f - .8, .325, Math.PI, 0); c2.stroke();
+          c2.fillStyle = '#C9CDD4'; c2.fillRect(u + .265, -f - 1.16, .07, .06);
+        } else if(estilo === 'tokio'){
+          c2.fillStyle = vidrio; c2.fillRect(u - .04, -f - .84, .68, .64);
+          c2.fillStyle = luzV; c2.fillRect(u, -f - .8, .6, .58);
+          /* la celosía de madera encima del cristal */
+          c2.fillStyle = 'rgba(94,58,42,.85)';
+          for(let k = 0; k < 4; k++) c2.fillRect(u + .05 + k * .15, -f - .8, .035, .58);
+          c2.fillRect(u, -f - .53, .6, .035);
+        } else {
+          /* guillotina georgiana: marco blanco y parteluz en cruz */
+          c2.fillStyle = '#EDE6D8'; c2.fillRect(u - .05, -f - .86, .7, .68);
+          c2.fillStyle = luzV; c2.fillRect(u, -f - .8, .6, .58);
+          c2.fillStyle = '#EDE6D8';
+          c2.fillRect(u + .27, -f - .8, .06, .58); c2.fillRect(u, -f - .54, .6, .05);
+        }
+        if(on && rr(u*5+f*3) > .5){
+          c2.fillStyle = 'rgba(60,66,102,.5)'; c2.fillRect(u + .12, -f - .48, .32, .22);
+        }
+      }
+    }
+    /* remates del estilo */
+    if(estilo === 'nyc'){
+      c2.fillStyle = '#E8EAEC'; c2.fillRect(-.1, -PISOS - .2, N + .2, .22);
+      for(let u = 0; u < N; u += .3) c2.fillRect(u, -PISOS + .02, .16, .1);   // dentículos
+      /* hiedra colgando de la cornisa */
+      for(let u = .6; u < N; u += 1.9){
+        const largo = .5 + rr(u * 7) * .9;
+        c2.fillStyle = 'rgba(47,107,68,.9)';
+        c2.fillRect(u, -PISOS + .1, .06, largo);
+        for(let k = 0; k < 4; k++)
+          c2.fillRect(u - .07 + (k % 2) * .14, -PISOS + .2 + k * largo / 4, .1, .08);
+      }
+    } else if(estilo === 'tokio'){
+      /* el doble alero de teja, con sus esquinas */
+      c2.fillStyle = '#2E2A28'; c2.fillRect(-.28, -PISOS - .2, N + .56, .26);
+      c2.fillStyle = '#3E3834'; c2.fillRect(-.28, -PISOS - .2, N + .56, .07);
+      c2.fillStyle = '#26221F'; c2.fillRect(-.14, -PISOS - .44, N + .28, .2);
+      for(let u = -.2; u < N + .2; u += .22){
+        c2.fillStyle = 'rgba(255,255,255,.09)'; c2.fillRect(u, -PISOS - .02, .09, .05);
+      }
+    } else {
+      c2.fillStyle = '#EDE6D8'; c2.fillRect(-.12, -PISOS - .18, N + .24, .2);   // cornisa
+      c2.fillStyle = '#1A2438'; c2.fillRect(-.12, -PISOS - .3, N + .24, .1);
+    }
+  };
+  /* La torre se viste según la plaza: cristal azul en Manhattan, blanco con
+     acentos rojos en Tokio, piedra de Portland con marcos claros en Londres.
+     El rótulo cambia de tinta con ella. */
+  const TRAJE_TORRE = {
+    nyc:     { der:'#23262E', izq:'#1A1D24', vidrio:'rgba(110,124,148,.4)',  vidrio2:'rgba(96,110,134,.36)',  tinta:'#E8EAEE', banda:'rgba(201,169,106,.85)' },
+    tokio:   { der:'#B23A30', izq:'#992E26', vidrio:'rgba(255,214,200,.3)',  vidrio2:'rgba(255,200,186,.26)', tinta:'#FFEFE9', banda:'#7E241E' },
+    londres: { der:'#2E4A78', izq:'#253E68', vidrio:'rgba(178,200,230,.36)', vidrio2:'rgba(160,184,218,.32)', tinta:'#E9EFF9', banda:'rgba(233,239,249,.8)' },
+  };
+  const TT = TRAJE_TORRE[E.c] || TRAJE_TORRE.nyc;
+  caraTorre('der', c2 => fachada(c2, TT.der, TT.vidrio, TT.banda));
+  caraTorre('izq', c2 => fachada(c2, TT.izq, TT.vidrio2, TT.banda));
+
+  if(E.c === 'tokio'){
+    /* el letrero vertical de neón, como en Dotonbori */
+    caraTorre('der', c2 => {
+      c2.fillStyle = '#7E241E'; c2.fillRect(N - .78, -PISOS + .5, .62, 4.4);
+      c2.fillStyle = oscuridad > .25 ? '#FF6A5A' : '#E8B4AC';
+      for(let k = 0; k < 6; k++){
+        c2.fillRect(N - .66, -PISOS + .75 + k * .68, .38, .34);
+        c2.fillStyle = '#7E241E';
+        c2.fillRect(N - .58, -PISOS + .84 + k * .68, .22, .06);
+        c2.fillStyle = oscuridad > .25 ? '#FF6A5A' : '#E8B4AC';
+      }
+    });
+  }
+
+  /* rótulo en la fachada */
+  const rotX = iX(N, 5.2), rotY = iY(N, 5.2, -3.4);
+  c.save(); c.translate(rotX, rotY); c.transform(1, -.5, 0, 1, 0, 0);
+  c.textAlign = 'center'; c.fillStyle = TT.tinta;
+  c.font = 'bold 46px "IBM Plex Mono", monospace'; c.fillText('NORTHPOINT', 0, 0);
+  c.restore();
+
+  /* ── LA DECORACIÓN ── cada oficina con su interiorismo completo:
+     piso, muros, escritorios, sillas, isla, barra, sala y elevador. */
+  const DECOS = {
+    nyc: {      /* negro y latón: la mesa de Manhattan */
+      piso1:'#2B2F38', piso2:'#242830', pisoLinea:'rgba(201,169,106,.16)',
+      muroDer:'#3A4048', muroIzq:'#31363E',
+      escritorio:'#33383F', silla:'#1C2026', silla2:'#262B32',
+      isla:'#22262E', islaTop:'#2E333C',
+      barra:'#2A2E36', barraTop:'#C9A96A', alacena:'#33383F',
+      sofa1:'#8C6A3E', sofa2:'#9A7648', cojin:'#B08A54',
+      mesa1:'#2A2E36', mesa2:'#C9A96A',
+      alfombra:'#4A3A28', macetero:'#2E333C',
+      elevMarco:'#C9A96A', elevPuerta:'#8E7A50',
+      ceoAlfombra:'#3A2F20', ceoDesk:'#1C2026', ceoSilla:'#C9A96A',
+      staffTraje:'#2A303A',
+    },
+    tokio: {    /* blanco, madera clara y laca roja */
+      piso1:'#F2EEE6', piso2:'#E9E4D8', pisoLinea:'rgba(178,58,48,.2)',
+      muroDer:'#F6F1E8', muroIzq:'#EDE7DA',
+      escritorio:'#FAF7F1', silla:'#B23A30', silla2:'#C4483C',
+      isla:'#F4F0E8', islaTop:'#FFFFFF',
+      barra:'#E9E3D6', barraTop:'#B23A30', alacena:'#F4EFE6',
+      sofa1:'#C4483C', sofa2:'#D05648', cojin:'#E8E0D0',
+      mesa1:'#D8CFBC', mesa2:'#8E2F27',
+      alfombra:'#D8C89A', macetero:'#EDE7DA',
+      elevMarco:'#8E2F27', elevPuerta:'#B23A30',
+      ceoAlfombra:'#C9B584', ceoDesk:'#8E6B46', ceoSilla:'#B23A30',
+      staffTraje:'#4A4038',
+    },
+    londres: {  /* azul marino, roble y bronce */
+      piso1:'#2E3E5E', piso2:'#283656', pisoLinea:'rgba(201,180,140,.18)',
+      muroDer:'#3A4A6E', muroIzq:'#324264',
+      escritorio:'#8E6B46', silla:'#26406A', silla2:'#2E4A78',
+      isla:'#7A5C3E', islaTop:'#9A7850',
+      barra:'#6E5438', barraTop:'#C9B48C', alacena:'#3A4A6E',
+      sofa1:'#3E5E48', sofa2:'#487054', cojin:'#C9B48C',
+      mesa1:'#6E5438', mesa2:'#C9B48C',
+      alfombra:'#7E2F35', macetero:'#3A4A6E',
+      elevMarco:'#8E7A50', elevPuerta:'#A6906A',
+      ceoAlfombra:'#6E2A30', ceoDesk:'#5E4630', ceoSilla:'#2E4A78',
+      staffTraje:'#33436A',
+    },
+  };
+  const DECO = DECOS[E.c] || DECOS.nyc;
+
+  /* ══ AZOTEA ══ */
+  for(let x = 0; x < N; x++) for(let y = 0; y < N; y++){
+    losa(c, x, y, 0, (x + y) % 2 ? DECO.piso1 : DECO.piso2);
+    c.strokeStyle = DECO.pisoLinea; c.lineWidth = 1;
+    c.beginPath();
+    c.moveTo(iX(x, y), iY(x, y, 0)); c.lineTo(iX(x+1, y), iY(x+1, y, 0));
+    c.lineTo(iX(x+1, y+1), iY(x+1, y+1, 0)); c.lineTo(iX(x, y+1), iY(x, y+1, 0));
+    c.closePath(); c.stroke();
+  }
+  /* ══ MUROS DEL FONDO · el muro de pantallas de la mesa ══ */
+  const MURO = 3.4;
+  const enPared = (lado, fn) => {
+    c.save();
+    if(lado === 'der') c.setTransform(ISO.TW/2,  ISO.TH/2, 0, -ISO.TZ, ISO.ox, ISO.oy);
+    else               c.setTransform(-ISO.TW/2, ISO.TH/2, 0, -ISO.TZ, ISO.ox, ISO.oy);
+    fn(c); c.restore();
+  };
+  const paredPantallas = (c2, tono, semilla) => {
+    c2.fillStyle = tono; c2.fillRect(0, 0, N, MURO);
+    c2.fillStyle = mez(tono, 16); c2.fillRect(0, 0, N, .1);
+    c2.fillStyle = 'rgba(60,70,100,.16)'; c2.fillRect(0, MURO - .12, N, .12);
+    /* rejilla de monitores: dos hileras a lo largo de todo el muro */
+    for(let fila = 0; fila < 2; fila++){
+      for(let k = 0; k < 9; k++){
+        const mx = .32 + k * (N - .8) / 9, my = 1.15 + fila * 1.02;
+        const mw = (N - .8) / 9 * .86, mh = .86;
+        c2.fillStyle = '#12161E'; c2.fillRect(mx, my, mw, mh);
+        c2.fillStyle = '#0A121C'; c2.fillRect(mx + .03, my + .04, mw - .06, mh - .1);
+        const tipo = (k + fila * 3 + semilla) % 3;
+        if(tipo === 0){                                    // velas
+          for(let q = 0; q < 7; q++){
+            const f = (Math.sin((q + k * 2 + semilla) * 1.6 + t / 880) + 1) / 2;
+            const alto = .06 + f * .5;
+            c2.fillStyle = f > .5 ? 'rgba(96,214,164,.95)' : 'rgba(232,112,100,.95)';
+            c2.fillRect(mx + .08 + q * (mw - .16) / 7, my + .68 - alto, (mw - .16) / 11, alto);
+          }
+        } else if(tipo === 1){                             // línea de precio
+          c2.strokeStyle = 'rgba(120,196,246,.9)'; c2.lineWidth = .045;
+          c2.beginPath();
+          for(let q = 0; q <= 12; q++){
+            const px2 = mx + .06 + q * (mw - .12) / 12;
+            const py2 = my + .44 - Math.sin(q * .7 + k + t / 1000) * .2;
+            q ? c2.lineTo(px2, py2) : c2.moveTo(px2, py2);
+          }
+          c2.stroke();
+        } else {                                           // libro de órdenes
+          for(let q = 0; q < 8; q++){
+            c2.fillStyle = q < 4 ? 'rgba(96,214,164,.6)' : 'rgba(232,112,100,.6)';
+            c2.fillRect(mx + .07, my + .12 + q * .09, (mw - .14) * (.3 + ((q * 7 + k) % 5) / 7), .05);
+          }
+        }
+        c2.fillStyle = 'rgba(150,190,230,.22)'; c2.fillRect(mx, my, mw, .05);
+      }
+    }
+  };
+  enPared('der', c2 => paredPantallas(c2, DECO.muroDer, 0));
+  enPared('izq', c2 => paredPantallas(c2, DECO.muroIzq, 2));
+  if(E.c === 'nyc'){
+    /* la hiedra del Obsidian: cae del canto superior de los dos muros */
+    const hiedra = c2 => {
+      for(let u = .8; u < N; u += 1.6){
+        const largo = .35 + rr(u * 13) * .5;
+        c2.fillStyle = 'rgba(47,107,68,.92)';
+        c2.fillRect(u, MURO - largo, .07, largo);
+        for(let k = 0; k < 3; k++)
+          c2.fillRect(u - .08 + (k % 2) * .16, MURO - largo * (k + 1) / 3.4, .12, .09);
+      }
+    };
+    enPared('der', hiedra); enPared('izq', hiedra);
+  }
+  /* puerta y reloj en el muro izquierdo */
+  enPared('izq', c2 => {
+    c2.fillStyle = '#8A5E3C'; c2.fillRect(8.4, 0, 1.2, 2.1);
+    c2.fillStyle = '#754E30'; c2.fillRect(8.5, .08, 1.0, 1.94);
+    c2.fillStyle = '#D8C08A'; c2.fillRect(9.35, 1.0, .1, .16);
+    /* el elevador: marco del tema, dos hojas metálicas y su indicador */
+    c2.fillStyle = DECO.elevMarco; c2.fillRect(6.45, 0, 1.7, 2.35);
+    c2.fillStyle = DECO.elevPuerta;
+    c2.fillRect(6.58, 0, .69, 2.2); c2.fillRect(7.33, 0, .69, 2.2);
+    c2.fillStyle = 'rgba(255,255,255,.25)';
+    c2.fillRect(6.62, 0, .08, 2.2); c2.fillRect(7.37, 0, .08, 2.2);
+    c2.fillStyle = 'rgba(10,12,16,.6)'; c2.fillRect(7.27, 0, .06, 2.2);
+    /* el número del piso, siempre 88 */
+    c2.fillStyle = '#12161E'; c2.fillRect(7.02, 2.45, .56, .3);
+    c2.fillStyle = '#5FD3A6';
+    [[0,0],[.1,0],[.2,0]].forEach(([dx]) => c2.fillRect(7.08 + dx * 2, 2.52, .07, .16));
+  });
+  const relX = iX(0, 7.2), relY = iY(0, 7.2, 2.75);
+  c.save(); c.translate(relX, relY); c.transform(1, .5, 0, 1, 0, 0);
+  c.fillStyle = '#FFFFFF'; c.beginPath(); c.arc(0, 0, 15, 0, 7); c.fill();
+  c.strokeStyle = '#3A4456'; c.lineWidth = 2; c.beginPath(); c.arc(0, 0, 15, 0, 7); c.stroke();
+  const ny = new Date(Date.now() - 2 * 3600 * 1000);
+  const hh = (ny.getHours() % 12 + ny.getMinutes()/60) / 12 * 6.283 - 1.571;
+  const mm = ny.getMinutes() / 60 * 6.283 - 1.571;
+  c.strokeStyle = '#1E2733'; c.lineWidth = 2.4;
+  c.beginPath(); c.moveTo(0,0); c.lineTo(Math.cos(hh)*7, Math.sin(hh)*7); c.stroke();
+  c.lineWidth = 1.6;
+  c.beginPath(); c.moveTo(0,0); c.lineTo(Math.cos(mm)*11, Math.sin(mm)*11); c.stroke();
+  c.restore();
+
+  // pretil con barandal de cristal en las dos caras frontales
+  const pretil = (x, y, w, h) => {
+    caja(c, x, y, 0, w, h, .34, '#E8ECF2', 12, -20);
+    c.globalAlpha = .34; caja(c, x, y, .34, w, h, .8, '#AECAE0', 22, -8); c.globalAlpha = 1;
+    caja(c, x - .02, y - .02, 1.14, w + .04, h + .04, .07, '#C6CEDA', 20, -16);
+  };
+  for(let y = 0; y < N; y++) pretil(N - .12, y, .12, 1);
+  for(let x = 0; x < N; x++) pretil(x, N - .12, 1, .12);
+
+  /* ══ MESA DE TRADING · filas de escritorios con pantallas ══ */
+  const piezas = []; const add = (d, fn) => piezas.push({ d, fn });
+  const puesto = (x, y, sem, giro) => {
+    add(x + y, c2 => {
+      caja(c2, x, y, 0, giro ? .8 : 1.5, giro ? 1.5 : .8, .82, DECO.escritorio, 10, -22);
+      const mw = giro ? .12 : .62, mh = giro ? .62 : .12;
+      const mx = x + (giro ? .1 : .42), my = y + (giro ? .42 : .1);
+      caja(c2, mx, my, .82, mw, mh, .52, '#1C222C');
+      const px0 = iX(mx, my), py0 = iY(mx, my, 1.34);
+      c2.fillStyle = '#0A1420';
+      losa(c2, mx, my, 1.34, '#0A1420', mw + .02, mh + .02);
+      for(let k = 0; k < 6; k++){
+        const f = (Math.sin((k + sem) * 1.9 + t / 950) + 1) / 2;
+        const alto = 3 + f * 12;
+        c2.fillStyle = f > .5 ? 'rgba(96,214,164,.95)' : 'rgba(228,110,98,.95)';
+        c2.fillRect(px0 - 12 + k * 5, py0 - 4 - alto/2, 2.6, alto);
+      }
+      c2.fillStyle = 'rgba(160,200,232,.3)'; c2.fillRect(px0 - 14, py0 - 14, 30, 2);
+    });
+  };
+  // hileras pegadas a los dos muros, más una isla de puestos al centro
+  for(let i = 0; i < 5; i++) puesto(1.1 + i * 1.55, .35, i * 3, false);
+  for(let i = 0; i < 3; i++) puesto(.35, 1.1 + i * 1.55, i * 3 + 1, true);
+  for(let i = 0; i < 4; i++) puesto(2.0 + i * 1.55, 2.1, i * 5 + 2, false);
+  for(let i = 0; i < 2; i++) puesto(2.1, 3.6 + i * 1.55, i * 5 + 4, true);
+  /* sillas de cada puesto */
+  const silla = (x, y) => add(x + y + .1, c2 => {
+    caja(c2, x, y, 0, .52, .5, .38, DECO.silla, 14, -22);
+    caja(c2, x, y + .36, 0, .52, .1, .92, DECO.silla2, 16, -24);
+  });
+  for(let i = 0; i < 5; i++) silla(1.3 + i * 1.55, 1.15);
+  for(let i = 0; i < 3; i++) silla(1.15, 1.3 + i * 1.55);
+  for(let i = 0; i < 4; i++) silla(2.2 + i * 1.55, 2.9);
+  // el centro: isla de trabajo — salvo en Tokio, donde es el tsuboniwa
+  if(E.c === 'tokio'){
+    add(11, c2 => {
+      /* pasarela de madera alrededor */
+      caja(c2, 4.35, 4.35, 0, 3.5, 2.7, .14, '#8E6B46', 12, -20);
+      /* la grava, rastrillada */
+      losa(c2, 4.65, 4.65, .15, '#D8D2C2', 2.9, 2.1);
+      c2.strokeStyle = 'rgba(150,140,120,.5)'; c2.lineWidth = 1.2;
+      for(let k = 0; k < 6; k++){
+        c2.beginPath();
+        c2.moveTo(iX(4.75, 4.85 + k * .32), iY(4.75, 4.85 + k * .32, .16));
+        c2.lineTo(iX(7.45, 4.85 + k * .32), iY(7.45, 4.85 + k * .32, .16));
+        c2.stroke();
+      }
+      /* las tres rocas */
+      [[5.1, 5.0, .34],[6.6, 5.9, .42],[6.9, 4.95, .26]].forEach(([rx, ry, rs]) => {
+        caja(c2, rx, ry, .15, rs, rs * .85, rs * .9, '#78716A', 14, -18);
+        losa(c2, rx + .04, ry + .04, .15 + rs * .9, '#8E877E', rs - .08, rs * .85 - .08);
+      });
+      /* el farol de piedra */
+      caja(c2, 6.85, 6.35, .15, .3, .3, .5, '#8E8C84', 12, -18);
+      caja(c2, 6.8, 6.3, .65, .4, .4, .14, '#78766E', 12, -18);
+      /* el arce rojo */
+      const ax2 = iX(5.6, 6.15), ay2 = iY(5.6, 6.15, .16);
+      c2.fillStyle = '#4A3428'; c2.fillRect(ax2 - 3, ay2 - 30, 6, 30);
+      [['#C4483C',0,-38,20,12],['#D95A4A',-14,-30,14,9],['#B23A30',14,-30,14,9],['#D95A4A',0,-48,13,8]]
+        .forEach(([col,dx,dy,rx2,ry2]) => {
+          c2.fillStyle = col; c2.beginPath(); c2.ellipse(ax2 + dx, ay2 + dy, rx2, ry2, 0, 0, 7); c2.fill();
+        });
+      /* pétalos cayendo al patio, en loop */
+      for(let k = 0; k < 8; k++){
+        const fase2 = ((t / 900 + k * .37) % 1);
+        const px4 = ax2 - 18 + ((k * 53) % 60), py4 = ay2 - 44 + fase2 * 52;
+        c2.fillStyle = `rgba(217,90,74,${.85 - fase2 * .5})`;
+        c2.fillRect(px4 + Math.sin(fase2 * 9 + k) * 5, py4, 3.4, 2.6);
+      }
+    });
+  } else {
+    /* El centro era una losa oscura enorme sin uso: ahora es LA MESA DE JUNTAS,
+       que es lo que le faltaba a la planta. Queda en el eje del elevador, a la
+       vista, y sin estorbar la circulación. */
+    add(11, c2 => {
+      /* alfombra que la asienta */
+      losa(c2, 4.15, 4.15, .01, DECO.alfombra, 3.9, 3.1);
+      /* mesa larga: tapa del tono de la casa con CANTO del acento — el dorado
+         macizo se comía el piso entero */
+      losa(c2, 4.5, 4.5, .73, DECO.mesa2, 3.2, 2.4);                 // el canto
+      caja(c2, 4.6, 4.6, 0, 3.0, 2.2, .74, mez(DECO.mesa1, -6), 10, -22);
+      losa(c2, 4.62, 4.62, .755, mez(DECO.mesa1, 22), 2.96, 2.16);   // la tapa
+      losa(c2, 4.75, 4.75, .757, mez(DECO.mesa1, 32), 2.7, 1.9);     // el brillo del centro
+      /* lo que hay encima: dos vasos, una carpeta y el mando de la pantalla */
+      c2.fillStyle = '#FFFFFF';
+      c2.beginPath(); c2.ellipse(iX(5.4, 5.2), iY(5.4, 5.2, .76), 6, 3.4, 0, 0, 7); c2.fill();
+      c2.beginPath(); c2.ellipse(iX(6.6, 6.1), iY(6.6, 6.1, .76), 6, 3.4, 0, 0, 7); c2.fill();
+      losa(c2, 6.1, 5.2, .76, '#E8EEF4', .42, .32);
+      losa(c2, 5.0, 6.1, .76, mez(DECO.mesa2, -22), .3, .22);
+    });
+    /* ocho sillas alrededor, dos por lado */
+    [[4.35, 4.95],[4.35, 5.85],[7.75, 4.95],[7.75, 5.85],
+     [5.2, 4.3],[6.4, 4.3],[5.2, 6.9],[6.4, 6.9]].forEach(([sx, sy], i) => {
+      add(sx + sy + .3, c2 => {
+        /* sillas con respaldo alto y un filo claro para que se lean sobre el piso */
+        caja(c2, sx, sy, 0, .46, .44, .4, mez(DECO.silla, 10), 16, -20);
+        const atras = (i < 4) ? (sx < 5 ? -.09 : .37) : 0;
+        if(i < 4) caja(c2, sx + atras, sy, 0, .11, .44, .86, mez(DECO.silla2, 14), 18, -22);
+        else caja(c2, sx, sy + (sy < 5 ? -.09 : .37), 0, .46, .11, .86, mez(DECO.silla2, 14), 18, -22);
+      });
+    });
+  }
+
+  /* ── LAS PIEZAS FIRMA DE LONDRES: chimenea encendida y mesa de ajedrez ── */
+  if(E.c === 'londres'){
+    add(12.9, c2 => {
+      /* la chimenea de piedra, con repisa */
+      caja(c2, 6.35, 6.3, 0, 1.15, .5, 1.35, '#8E8478', 12, -22);
+      caja(c2, 6.3, 6.25, 1.35, 1.25, .6, .12, '#A69A8A', 12, -18);
+      /* el hogar y el fuego vivo */
+      const hx2 = iX(6.92, 6.62), hy2 = iY(6.92, 6.62, .62);
+      c2.fillStyle = '#1A1512'; c2.fillRect(hx2 - 13, hy2 - 16, 26, 20);
+      for(let k = 0; k < 4; k++){
+        const fl = (Math.sin(t / 110 + k * 1.9) + 1) / 2;
+        c2.fillStyle = k % 2 ? `rgba(232,145,60,${.6 + fl * .4})` : `rgba(255,200,90,${.5 + fl * .5})`;
+        c2.beginPath();
+        c2.ellipse(hx2 - 6 + k * 4, hy2 - 2 - fl * 6, 3.2, 5 + fl * 4, 0, 0, 7); c2.fill();
+      }
+      const glow = c2.createRadialGradient(hx2, hy2, 3, hx2, hy2, 34);
+      glow.addColorStop(0, 'rgba(255,170,80,.28)'); glow.addColorStop(1, 'rgba(255,170,80,0)');
+      c2.fillStyle = glow; c2.beginPath(); c2.arc(hx2, hy2, 34, 0, 7); c2.fill();
+      /* leños */
+      c2.fillStyle = '#4A3428'; c2.fillRect(hx2 - 10, hy2 + 1, 20, 3);
+    });
+    add(17.9, c2 => {
+      /* la mesa de ajedrez con sus dos sillas */
+      caja(c2, 9.05, 8.6, 0, .56, .56, .4, '#6E5438', 12, -20);
+      losa(c2, 9.09, 8.64, .41, '#EDE6D8', .48, .48);
+      for(let cx4 = 0; cx4 < 4; cx4++) for(let cy4 = 0; cy4 < 4; cy4++)
+        if((cx4 + cy4) % 2) losa(c2, 9.09 + cx4 * .12, 8.64 + cy4 * .12, .415, '#26406A', .12, .12);
+      caja(c2, 8.55, 8.62, 0, .4, .4, .34, DECO.silla, 12, -20);
+      caja(c2, 9.68, 8.62, 0, .4, .4, .34, DECO.silla, 12, -20);
+    });
+  }
+  /* cocineta: barra, alacenas y una cafetera */
+  add(9.2, c2 => {
+    caja(c2, 7.4, .35, 0, 2.2, 1.0, .95, DECO.barra, 10, -22);
+    losa(c2, 7.46, .41, .96, DECO.barraTop, 2.08, .88);
+    caja(c2, 7.7, .55, .96, .35, .3, .5, '#2E3540', 14, -22);   // cafetera
+    losa(c2, 7.74, .59, 1.47, '#C4544A', .27, .22);
+    [0, .42, .84].forEach(d => {                                 // tazas
+      c2.fillStyle = '#FFFFFF';
+      c2.beginPath(); c2.ellipse(iX(8.5 + d*.3, .6), iY(8.5 + d*.3, .6, .97), 5, 3, 0, 0, 7); c2.fill();
+    });
+    // alacenas colgadas
+    caja(c2, 7.4, -.35, 1.9, 2.2, .35, .9, DECO.alacena, 10, -20);
+  });
+  /* sala de espera: alfombra, sofá, dos sillones y la mesita */
+  add(14.9, c2 => {
+    losa(c2, 7.15, 6.85, .01, DECO.alfombra, 2.75, 2.45);
+    losa(c2, 7.27, 6.97, .02, mez(DECO.alfombra, 14), 2.51, 2.21);
+  });
+  const sillon = (x, y, giro) => add(x + y + .15, c2 => {
+    caja(c2, x, y, 0, .62, .62, .4, DECO.sofa1, 14, -22);
+    if(giro) caja(c2, x, y, .4, .18, .62, .42, DECO.sofa2, 16, -24);
+    else     caja(c2, x, y, .4, .62, .18, .42, DECO.sofa2, 16, -24);
+    caja(c2, x + (giro ? .2 : .1), y + (giro ? .1 : .2), .41, .4, .4, .1, DECO.cojin, 12, -18);
+  });
+  sillon(7.25, 8.35, true);
+  sillon(9.0, 7.3, false);
+  add(15.4, c2 => {
+    caja(c2, 7.6, 7.2, 0, 2.0, .8, .42, DECO.sofa1, 16, -24);
+    caja(c2, 7.6, 7.2, .42, 2.0, .22, .5, DECO.sofa2, 16, -24);
+    [.3, .9, 1.5].forEach(d => caja(c2, 7.65 + d, 7.34, .43, .42, .42, .12, DECO.cojin, 14, -20));
+    caja(c2, 7.9, 8.3, 0, 1.0, .7, .34, DECO.mesa1, 12, -20);
+    losa(c2, 8.05, 8.42, .35, DECO.mesa2, .7, .46);
+  });
+
+  /* ── LA OFICINA DEL CEO ──
+     La esquina izquierda es del jefe: mamparas de cristal, alfombra propia,
+     escritorio ejecutivo con su lámpara y silla de respaldo alto. Quien esté
+     en sesión se sienta AQUÍ, no en un puesto más. */
+  /* ══ PLANTA BAJA · el vestíbulo del elevador ══
+     Aquí había una oficina de cristal plantada JUSTO enfrente de las puertas
+     del elevador: al salir te dabas de bruces con un escritorio. Los socios ya
+     tienen sus despachos arriba, así que este frente se despeja y se convierte
+     en lo que debe ser — el lugar por donde se entra a la casa: tapete, dos
+     macetas altas que enmarcan las puertas, banca de espera y recepción. */
+  add(9.55, c2 => {
+    /* tapete de bienvenida, alineado con el eje del elevador */
+    losa(c2, .35, 6.15, .01, DECO.ceoAlfombra, 2.0, 2.1);
+    losa(c2, .5, 6.3, .02, mez(DECO.ceoAlfombra, 14), 1.7, 1.8);
+    /* la marca en el piso, discreta */
+    c2.font = 'bold 11px "IBM Plex Mono", monospace';
+    c2.textAlign = 'center';
+    c2.fillStyle = 'rgba(255,255,255,.22)';
+    c2.fillText('NORTHPOINT', iX(1.35, 7.2), iY(1.35, 7.2, .03));
+    c2.textAlign = 'left';
+  });
+  /* las dos macetas que enmarcan las puertas — bajas, no tapan nada */
+  [[.32, 6.05], [.32, 8.05]].forEach(([px, py], i) => {
+    add(px + py + .25, c2 => {
+      caja(c2, px, py, 0, .5, .5, .55, DECO.macetero, 12, -20);
+      const cx = iX(px + .25, py + .25), cy = iY(px + .25, py + .25, .55);
+      [['#2F6B44', 0, -15, 9, 16], ['#3B8354', -7, -9, 7, 13], ['#489A63', 7, -11, 7, 12]]
+        .forEach(([col, dx, dy, rx, ry]) => {
+          c2.fillStyle = col;
+          c2.beginPath(); c2.ellipse(cx + dx, cy + dy, rx, ry, dx / 40, 0, 7); c2.fill();
+        });
+    });
+  });
+  /* banca de espera contra el muro, para quien llega antes de la apertura */
+  add(11.4, c2 => {
+    caja(c2, 2.35, 6.35, 0, .5, 1.7, .42, DECO.sofa1, 12, -20);
+    losa(c2, 2.4, 6.4, .43, DECO.sofa2, .4, 1.6);
+    caja(c2, 2.78, 6.35, .42, .09, 1.7, .5, mez(DECO.sofa1, -12), 10, -22);
+    /* dos cojines del color de la casa */
+    [6.6, 7.5].forEach(cy2 => caja(c2, 2.45, cy2, .43, .3, .45, .16, DECO.cojin, 10, -14));
+  });
+  /* recepción: mostrador en L mirando al elevador */
+  add(12.6, c2 => {
+    caja(c2, 3.25, 6.2, 0, .55, 2.0, 1.05, DECO.barra, 12, -22);
+    losa(c2, 3.2, 6.15, 1.06, DECO.barraTop, .68, 2.1);
+    caja(c2, 3.25, 5.55, 0, 1.5, .55, 1.05, DECO.barra, 12, -22);
+    losa(c2, 3.2, 5.5, 1.06, DECO.barraTop, 1.6, .68);
+    /* pantalla de turnos y el timbre */
+    caja(c2, 3.45, 6.6, 1.06, .1, .5, .34, '#12161E');
+    const sx2 = iX(3.5, 6.85), sy2 = iY(3.5, 6.85, 1.3);
+    c2.fillStyle = 'rgba(96,214,164,.85)';
+    for(let k = 0; k < 3; k++) c2.fillRect(sx2 - 6, sy2 - 8 + k * 5, 11 - k * 3, 2.4);
+    c2.fillStyle = '#D8DCE2';
+    c2.beginPath(); c2.ellipse(iX(3.95, 5.8), iY(3.95, 5.8, 1.1), 5, 2.6, 0, 0, 7); c2.fill();
+  });
+
+
+  /* ════════ LAS PIEZAS DE LUJO ════════
+     Una firma que va por $150M no se ve como un cuarto con escritorios. Aquí
+     viven las cuatro piezas que hacen que el piso se sienta caro, y las tres
+     ciudades las tienen — cambiando de material, no de idea:
+
+       · el muro de la marca detrás de recepción, retroiluminado
+       · la fuente de agua, con el agua MOVIÉNDOSE
+       · el acuario, que es el lujo que todo el mundo mira
+       · y la vitrina de la casa: la armadura en Tokio, el bar art déco en
+         Nueva York, la biblioteca con su globo en Londres
+
+     Cada ciudad pone su cultura en el piso, no un tinte encima del mismo mueble. */
+  const LUJO = {
+    nyc:     { agua:'#7EC8D8', pila:'#E8E4DC', pilaTop:'#C9A96A', metal:'#C9A96A',
+               vitrina:'#1C2026', vidrio:'rgba(190,214,232,.30)', muroLogo:'#1A1E26' },
+    tokio:   { agua:'#8ED8C8', pila:'#6B6250', pilaTop:'#8E877E', metal:'#B23A30',
+               vitrina:'#8E6B46', vidrio:'rgba(214,226,232,.26)', muroLogo:'#E4DCCC' },
+    londres: { agua:'#8EC0D8', pila:'#C9C2B4', pilaTop:'#A6906A', metal:'#A6906A',
+               vitrina:'#5E4630', vidrio:'rgba(200,214,232,.28)', muroLogo:'#22304C' },
+  };
+  const LJ = LUJO[E.c] || LUJO.nyc;
+
+  /* ── EL MURO DE LA MARCA ── detrás del mostrador, con su luz por atrás */
+  add(12.4, c2 => {
+    caja(c2, 4.1, 5.5, 0, .16, 2.7, 2.1, LJ.muroLogo, 8, -18);
+    const mx = iX(4.18, 6.85), my = iY(4.18, 6.85, 1.45);
+    /* el halo del retroiluminado */
+    const halo = c2.createRadialGradient(mx, my, 4, mx, my, 78);
+    halo.addColorStop(0, 'rgba(96,214,164,.30)'); halo.addColorStop(1, 'rgba(96,214,164,0)');
+    c2.fillStyle = halo; c2.beginPath(); c2.arc(mx, my, 78, 0, 7); c2.fill();
+    c2.save(); c2.translate(mx, my); c2.rotate(.4635);        // al plano del muro
+    c2.font = 'bold 15px "IBM Plex Mono", monospace'; c2.textAlign = 'center';
+    c2.fillStyle = 'rgba(255,255,255,.92)'; c2.fillText('NORTHPOINT', 0, 0);
+    c2.font = '7px "IBM Plex Mono", monospace';
+    c2.fillStyle = 'rgba(255,255,255,.5)'; c2.fillText('CAPITAL  MANAGEMENT', 0, 12);
+    c2.restore(); c2.textAlign = 'left';
+  });
+
+  /* ── LA FUENTE ── tres platos de piedra, un chorro y el agua que se mueve de
+     verdad: los anillos se abren con el reloj, no son una textura pintada. */
+  add(13.1, c2 => {
+    const fx = 4.55, fy = 8.35, r = 1.5;
+    /* la pila: base ancha, borde y el vaso de agua */
+    caja(c2, fx, fy, 0, r, r, .34, LJ.pila, 12, -22);
+    losa(c2, fx + .06, fy + .06, .35, LJ.pilaTop, r - .12, r - .12);
+    losa(c2, fx + .2, fy + .2, .36, mez(LJ.agua, -18), r - .4, r - .4);
+    const cx = iX(fx + r/2, fy + r/2), cy = iY(fx + r/2, fy + r/2, .37);
+    /* los anillos del agua, abriéndose */
+    for(let k = 0; k < 3; k++){
+      const u = ((t / 1400 + k / 3) % 1);
+      c2.strokeStyle = `rgba(255,255,255,${.42 * (1 - u)})`;
+      c2.lineWidth = 2 - u;
+      c2.beginPath(); c2.ellipse(cx, cy, 8 + u * 34, 4 + u * 17, 0, 0, 7); c2.stroke();
+    }
+    /* el pedestal y el chorro */
+    caja(c2, fx + r/2 - .16, fy + r/2 - .16, .36, .32, .32, .62, LJ.pilaTop, 14, -20);
+    const jx = iX(fx + r/2, fy + r/2), jy = iY(fx + r/2, fy + r/2, .98);
+    c2.fillStyle = LJ.metal;
+    c2.beginPath(); c2.ellipse(jx, jy, 7, 3.5, 0, 0, 7); c2.fill();
+    /* el agua cayendo, en gotas que suben y bajan en bucle */
+    for(let k = 0; k < 22; k++){
+      const u = ((t / 620 + k / 22) % 1);
+      const ang = (k / 22) * 6.283;
+      const dx = Math.cos(ang) * u * 26, dz = 34 * (1 - (2 * u - 1) * (2 * u - 1));
+      c2.fillStyle = `rgba(255,255,255,${.5 - u * .32})`;
+      c2.beginPath(); c2.ellipse(jx + dx, jy - dz + u * 8, 2.2, 3, 0, 0, 7); c2.fill();
+    }
+    /* el brillo del agua quieta */
+    c2.fillStyle = 'rgba(255,255,255,.16)';
+    c2.beginPath(); c2.ellipse(cx - 14, cy - 4, 16, 6, -.3, 0, 7); c2.fill();
+  });
+
+  /* ── EL ACUARIO ── el lujo que todo el mundo se queda viendo. Peces que
+     cruzan de verdad y el agua con su gradiente. */
+  add(15.6, c2 => {
+    const ax = 8.75, ay = 4.25, aw = .6, ah = 2.3;
+    caja(c2, ax, ay, 0, aw, ah, .55, LJ.vitrina, 10, -20);        // el mueble
+    /* el agua va TRANSLÚCIDA: un bloque opaco de dos tiles de alto tapaba media
+       mesa y se leía como una pared, no como un acuario. */
+    c2.save(); c2.globalAlpha = .62;
+    caja(c2, ax, ay, .55, aw, ah, .95, mez(LJ.agua, -26), 8, -16);
+    c2.restore();
+    /* el marco de la tapa, del metal de la casa */
+    caja(c2, ax - .03, ay - .03, 1.5, aw + .06, ah + .06, .07, LJ.metal, 14, -18);
+    /* frente de cristal con su reflejo */
+    const p1 = [iX(ax, ay + ah), iY(ax, ay + ah, 1.5)], p2 = [iX(ax + aw, ay + ah), iY(ax + aw, ay + ah, 1.5)];
+    const g2 = c2.createLinearGradient(p1[0], p1[1], p2[0], p2[1] + 60);
+    g2.addColorStop(0, 'rgba(255,255,255,.20)'); g2.addColorStop(.5, 'rgba(255,255,255,.05)');
+    g2.addColorStop(1, 'rgba(255,255,255,.16)');
+    c2.fillStyle = g2;
+    c2.beginPath();
+    c2.moveTo(p1[0], p1[1]); c2.lineTo(p2[0], p2[1]);
+    c2.lineTo(p2[0], iY(ax + aw, ay + ah, .55)); c2.lineTo(p1[0], iY(ax, ay + ah, .55));
+    c2.closePath(); c2.fill();
+    /* la arena y las algas del fondo */
+    const bx = iX(ax + .1, ay + ah), by = iY(ax + .1, ay + ah, .59);
+    c2.fillStyle = mez('#C9B48C', -10);
+    c2.fillRect(bx, by - 6, (iX(ax + aw - .1, ay + ah) - bx), 7);
+    for(let k = 0; k < 7; k++){
+      const gx2 = bx + 14 + k * 26 + Math.sin(t / 900 + k) * 3;
+      c2.strokeStyle = 'rgba(78,168,120,.75)'; c2.lineWidth = 3;
+      c2.beginPath(); c2.moveTo(gx2, by - 4);
+      c2.quadraticCurveTo(gx2 + Math.sin(t / 700 + k) * 8, by - 24, gx2 + Math.sin(t / 700 + k) * 4, by - 42);
+      c2.stroke();
+    }
+    /* los peces, cruzando */
+    const anchoPx = iX(ax + aw, ay + ah) - iX(ax, ay + ah);
+    [['#E8A63C', .00, 16], ['#E8734A', .38, 30], ['#6ECFE8', .70, 22], ['#F2F0EA', .55, 40]]
+      .forEach(([col, fase, alto], k) => {
+        const u = ((t / (2600 + k * 700) + fase) % 1);
+        const dir = k % 2 ? 1 : -1;
+        const px2 = p1[0] + (dir > 0 ? u : 1 - u) * anchoPx;
+        const py2 = by - alto + Math.sin(t / 800 + k * 2) * 5;
+        c2.fillStyle = col;
+        c2.beginPath(); c2.ellipse(px2, py2, 7, 3.6, 0, 0, 7); c2.fill();
+        c2.beginPath();
+        c2.moveTo(px2 - 6 * dir, py2); c2.lineTo(px2 - 12 * dir, py2 - 3.4);
+        c2.lineTo(px2 - 12 * dir, py2 + 3.4); c2.closePath(); c2.fill();
+      });
+    /* las burbujas */
+    for(let k = 0; k < 9; k++){
+      const u = ((t / 2100 + k / 9) % 1);
+      c2.fillStyle = `rgba(255,255,255,${.34 * (1 - u)})`;
+      c2.beginPath();
+      c2.arc(bx + 30 + k * 24, by - u * 58, 1.6 + u * 1.6, 0, 7); c2.fill();
+    }
+    /* la luz de la tapa */
+    const lx = iX(ax + aw / 2, ay + ah / 2), ly = iY(ax + aw / 2, ay + ah / 2, 1.55);
+    const lg = c2.createRadialGradient(lx, ly, 4, lx, ly, 66);
+    lg.addColorStop(0, 'rgba(160,230,240,.26)'); lg.addColorStop(1, 'rgba(160,230,240,0)');
+    c2.fillStyle = lg; c2.beginPath(); c2.arc(lx, ly, 66, 0, 7); c2.fill();
+  });
+
+  /* ── LA VITRINA DE LA CASA ── la misma esquina, tres culturas distintas.
+     Aquí es donde el piso deja de ser genérico. */
+  add(11.7, c2 => {
+    const vx = 7.35, vy = 3.2;
+    /* Todo lo de aquí se dibuja en píxeles alrededor de un punto, así que se
+       escala desde ese punto: a tamaño natural la armadura era un borrón. */
+    const zoomC = iX(vx + .65, vy + .3), zoomY = iY(vx + .65, vy + .3, .32);
+    c2.save(); c2.translate(zoomC, zoomY); c2.scale(1.55, 1.55); c2.translate(-zoomC, -zoomY);
+    if(E.c === 'tokio'){
+      /* LA ARMADURA · un yoroi en su vitrina, sobre tarima de madera */
+      caja(c2, vx, vy, 0, 1.3, .62, .3, '#6E4E32', 12, -20);
+      const ax2 = iX(vx + .65, vy + .3), ay2 = iY(vx + .65, vy + .3, .32);
+      c2.fillStyle = '#8E2F27';                                   // el dō (peto)
+      c2.beginPath();
+      c2.moveTo(ax2 - 17, ay2 - 40); c2.lineTo(ax2 + 17, ay2 - 40);
+      c2.lineTo(ax2 + 13, ay2 - 6); c2.lineTo(ax2 - 13, ay2 - 6); c2.closePath(); c2.fill();
+      c2.fillStyle = 'rgba(0,0,0,.25)';                            // las lamas
+      for(let k = 0; k < 5; k++) c2.fillRect(ax2 - 15 + k, ay2 - 36 + k * 6, 30 - k * 2, 1.6);
+      c2.fillStyle = '#B23A30';                                    // los sode (hombreras)
+      c2.fillRect(ax2 - 27, ay2 - 40, 10, 20); c2.fillRect(ax2 + 17, ay2 - 40, 10, 20);
+      c2.fillStyle = '#2A2420';                                    // el men-yoroi
+      c2.beginPath(); c2.ellipse(ax2, ay2 - 48, 10, 9, 0, 0, 7); c2.fill();
+      c2.fillStyle = '#C9A96A';                                    // el kuwagata (cuernos)
+      c2.beginPath();
+      c2.moveTo(ax2 - 3, ay2 - 56); c2.lineTo(ax2 - 13, ay2 - 76); c2.lineTo(ax2 - 7, ay2 - 56); c2.closePath(); c2.fill();
+      c2.beginPath();
+      c2.moveTo(ax2 + 3, ay2 - 56); c2.lineTo(ax2 + 13, ay2 - 76); c2.lineTo(ax2 + 7, ay2 - 56); c2.closePath(); c2.fill();
+      /* la katana en su soporte, al lado */
+      c2.strokeStyle = '#D8DCE2'; c2.lineWidth = 3;
+      c2.beginPath(); c2.moveTo(ax2 + 34, ay2 - 26); c2.quadraticCurveTo(ax2 + 52, ay2 - 34, ax2 + 66, ay2 - 24); c2.stroke();
+      c2.strokeStyle = '#8E2F27'; c2.lineWidth = 4;
+      c2.beginPath(); c2.moveTo(ax2 + 66, ay2 - 24); c2.lineTo(ax2 + 76, ay2 - 20); c2.stroke();
+    } else if(E.c === 'nyc'){
+      /* EL BAR ART DÉCO · barra de latón, botellería retroiluminada y copas */
+      caja(c2, vx, vy, 0, 1.5, .62, 1.0, LJ.vitrina, 12, -22);
+      losa(c2, vx - .04, vy - .04, 1.01, LJ.metal, 1.58, .7);
+      const bx2 = iX(vx + .12, vy + .5), by2 = iY(vx + .12, vy + .5, 1.02);
+      const anchoB = iX(vx + 1.38, vy + .5) - bx2;
+      /* el mueble de botellas por detrás, con su luz cálida */
+      c2.fillStyle = 'rgba(201,169,106,.16)'; c2.fillRect(bx2, by2 - 74, anchoB, 74);
+      for(let k = 0; k < 11; k++){
+        const h2 = 20 + (k % 4) * 7;
+        c2.fillStyle = ['#8E6B46','#3E5E48','#7E2F35','#C9A96A','#2E4A78'][k % 5];
+        c2.fillRect(bx2 + 7 + k * (anchoB - 16) / 11, by2 - 12 - h2, 6, h2);
+        c2.fillStyle = 'rgba(255,255,255,.3)';
+        c2.fillRect(bx2 + 7 + k * (anchoB - 16) / 11, by2 - 12 - h2, 2, h2);
+      }
+      /* tres copas de martini sobre la barra */
+      [0, 1, 2].forEach(k => {
+        const gx3 = bx2 + 22 + k * 26, gy3 = by2 - 6;
+        c2.fillStyle = 'rgba(232,240,248,.85)';
+        c2.beginPath();
+        c2.moveTo(gx3 - 6, gy3 - 14); c2.lineTo(gx3 + 6, gy3 - 14); c2.lineTo(gx3, gy3 - 6); c2.closePath(); c2.fill();
+        c2.fillRect(gx3 - .8, gy3 - 6, 1.6, 6);
+        c2.fillRect(gx3 - 4, gy3, 8, 1.6);
+      });
+    } else {
+      /* LA BIBLIOTECA · roble, lomos de piel y el globo terráqueo del club */
+      caja(c2, vx, vy, 0, 1.5, .5, 1.9, LJ.vitrina, 10, -20);
+      const bx3 = iX(vx + .1, vy + .42), by3 = iY(vx + .1, vy + .42, 1.9);
+      const anchoL = iX(vx + 1.4, vy + .42) - bx3;
+      for(let f2 = 0; f2 < 4; f2++){
+        const yy = by3 + 8 + f2 * 22;
+        c2.fillStyle = 'rgba(0,0,0,.3)'; c2.fillRect(bx3, yy + 16, anchoL, 3);
+        for(let k = 0; k < 16; k++){
+          const lw = 3 + (k % 3);
+          c2.fillStyle = ['#6E2A30','#3E5E48','#5E4630','#22304C','#7E5A2E'][(k + f2) % 5];
+          c2.fillRect(bx3 + 4 + k * (anchoL - 10) / 16, yy + 16 - (11 + (k % 4) * 3), lw, 11 + (k % 4) * 3);
+        }
+      }
+      /* el globo terráqueo sobre su pie */
+      const gx4 = iX(vx + 1.75, vy + .3), gy4 = iY(vx + 1.75, vy + .3, .0);
+      c2.fillStyle = '#5E4630';
+      c2.beginPath(); c2.moveTo(gx4 - 9, gy4); c2.lineTo(gx4 + 9, gy4); c2.lineTo(gx4 + 3, gy4 - 16); c2.lineTo(gx4 - 3, gy4 - 16); c2.closePath(); c2.fill();
+      c2.fillStyle = '#2E6B8E';
+      c2.beginPath(); c2.arc(gx4, gy4 - 32, 16, 0, 7); c2.fill();
+      c2.fillStyle = '#4E8E5A';
+      c2.beginPath(); c2.ellipse(gx4 - 5, gy4 - 37, 7, 5, .3, 0, 7); c2.fill();
+      c2.beginPath(); c2.ellipse(gx4 + 6, gy4 - 27, 5, 7, -.2, 0, 7); c2.fill();
+      c2.strokeStyle = LJ.metal; c2.lineWidth = 2.2;
+      c2.beginPath(); c2.arc(gx4, gy4 - 32, 19, -.4, 3.6); c2.stroke();
+    }
+    c2.restore();
+  });
+
+  // jardineras y palmeras del borde
+  [[8.4, 2.2],[8.4, 6.0],[2.2, 8.4],[6.2, 8.4],[8.6, 8.6]].forEach(([px, py], i) => {
+    add(px + py + .2, c2 => {
+      caja(c2, px, py, 0, .8, .8, .42, DECO.macetero, 12, -20);
+      const cx = iX(px + .4, py + .4), cy = iY(px + .4, py + .4, .42);
+      [['#2F6B44', 0, -14, 13, 8],['#3B8354', -11, -8, 11, 7],['#3B8354', 11, -8, 11, 7],
+       ['#489A63', 0, -26, 10, 6],['#2F6B44', -8, -21, 9, 6],['#489A63', 8, -21, 9, 6]]
+       .forEach(([col, dx, dy, rx, ry]) => {
+        c2.fillStyle = col; c2.beginPath(); c2.ellipse(cx + dx, cy + dy, rx, ry, dx/30, 0, 7); c2.fill();
+      });
+    });
+  });
+  /* Paneles y molinos viven FUERA del cuarto, detrás del edificio. Con d=.4
+     cualquier pieza del piso los tapaba… pero el muro de monitores se pinta
+     fuera de la lista, así que eran ELLOS los que atravesaban el muro. Con un
+     d muy negativo se pintan primero y el muro los cubre, que es lo natural. */
+  add(-99, c2 => {
+    for(let k = 0; k < 3; k++){
+      const sx = .4 + k * 1.5;
+      caja(c2, sx, -1.5, 0, 1.3, 1.0, .5, '#39406A', 14, -22);
+      losa(c2, sx, -1.5, .52, '#2B3358', 1.3, 1.0);
+      for(let q = 0; q < 3; q++) losa(c2, sx + .06 + q*.42, -1.44, .53, '#4A5A96', .34, .88);
+    }
+  });
+  [[-1.2, 2.2],[-1.2, 6.4]].forEach(([tx, ty], i) => {
+    add(-98 + i * .01, c2 => {
+      const bx = iX(tx, ty), by = iY(tx, ty, 0);
+      c2.strokeStyle = '#C6CEDA'; c2.lineWidth = 3;
+      c2.beginPath(); c2.moveTo(bx, by); c2.lineTo(bx, by - 96); c2.stroke();
+      const a = t / 340 + i * 2;
+      c2.lineWidth = 2.4;
+      for(let b = 0; b < 3; b++){
+        const ang = a + b * 2.094;
+        c2.beginPath(); c2.moveTo(bx, by - 96);
+        c2.lineTo(bx + Math.cos(ang) * 26, by - 96 + Math.sin(ang) * 13); c2.stroke();
+      }
+    });
+  });
+
+
+  /* ══ EL SEGUNDO PISO · el mezzanine de los socios ══
+     Una banda elevada a lo largo del muro del fondo: arriba las tres oficinas
+     principales — PABLO, MATEO y ANDRÉ, cada una con su placa — y abajo sigue
+     la mesa de los trabajadores. z = 2.6 calculado para que las cabezas del
+     staff pasen limpias bajo la losa. */
+  {
+    const MZ = 2.6, FONDO = 2.35;
+    const MEZA = ({
+      nyc:     { baranda:'#C9A96A', placa:'#14171C', tinta:'#E8EAEE' },
+      tokio:   { baranda:'#5E3A2A', placa:'#F6F1E4', tinta:'#7E241E' },
+      londres: { baranda:'#C9B48C', placa:'#1A2438', tinta:'#E9EFF9' },
+    })[E.c] || { baranda:'#C9A96A', placa:'#14171C', tinta:'#E8EAEE' };
+    /* columnas que la cargan */
+    [1.2, 3.7, 6.2].forEach(cx2 => add(cx2 + FONDO - .1, c2 => {
+      caja(c2, cx2, FONDO - .42, 0, .3, .3, MZ, DECO.muroDer, 8, -24);
+    }));
+    /* la losa, en franjas de a metro para que la profundidad case */
+    for(let fx = 0; fx < N; fx++){
+      add(fx + FONDO + .01, c2 => {
+        caja(c2, fx, 0, MZ, 1.001, FONDO, .16, DECO.isla, 10, -18);
+      });
+    }
+    /* piso del mezzanine: mismo ajedrez del piso de abajo, más tenue */
+    add(FONDO + .02, c2 => {
+      for(let fx = 0; fx < N; fx++) for(let fy = 0; fy < 3; fy++){
+        c2.globalAlpha = .5;
+        losa(c2, fx, fy * .78, MZ + .16, (fx + fy) % 2 ? DECO.piso1 : DECO.piso2, 1, .78);
+        c2.globalAlpha = 1;
+      }
+    });
+    /* las tres oficinas: escritorio al frente, silla al fondo, mampara de
+       cristal entre una y otra, y su placa en el barandal */
+    const NOMS = [['pablo.np','PABLO'], ['mateo.np','GERARDO'], ['andre.np','ANDRÉ']];
+    NOMS.forEach((par, k) => {
+      const x0 = .5 + k * 3.15;
+      add(x0 + FONDO + .5, c2 => {
+        /* alfombra del despacho */
+        c2.globalAlpha = .8;
+        losa(c2, x0 + .2, .25, MZ + .17, DECO.ceoAlfombra, 2.4, 1.7);
+        c2.globalAlpha = 1;
+        /* escritorio mirando a la mesa */
+        caja(c2, x0 + .55, 1.15, MZ + .16, 1.6, .58, .5, DECO.ceoDesk, 10, -22);
+        caja(c2, x0 + 1.02, 1.22, MZ + .66, .55, .1, .38, '#10141C', 8, -20);
+        /* lamparita de latón */
+        caja(c2, x0 + .65, 1.2, MZ + .66, .09, .09, .3, MEZA.baranda, 10, -14);
+        /* la silla del socio, contra el muro */
+        caja(c2, x0 + .95, .38, MZ + .16, .52, .5, .4, DECO.ceoSilla, 14, -22);
+        caja(c2, x0 + .95, .3, MZ + .16, .52, .1, .96, DECO.ceoSilla, 8, -26);
+      });
+      /* mamparas de cristal entre despachos */
+      if(k < 2) add(x0 + 2.9 + FONDO + .3, c2 => {
+        c2.globalAlpha = .28;
+        caja(c2, x0 + 2.92, .1, MZ + .16, .07, 2.0, 1.4, '#AECAE0', 16, -6);
+        c2.globalAlpha = 1;
+      });
+      /* placa con el nombre, colgada del barandal. La profundidad va por encima
+         de TODAS las franjas de la losa (la última es N + FONDO): si no, la losa
+         se comía media placa y los nombres salían «PABL…», «MATE», «…NDRÉ». */
+      add(N + FONDO + 2 + k * .01, c2 => {
+        caja(c2, x0 + .85, 2.16, MZ + .16, 1.0, .07, .36, MEZA.placa, 8, -16);
+        c2.font = 'bold 11px "IBM Plex Mono", monospace'; c2.textAlign = 'center';
+        c2.fillStyle = MEZA.tinta;
+        c2.fillText(par[1], iX(x0 + 1.35, 2.2), iY(x0 + 1.35, 2.2, MZ + .38));
+        c2.textAlign = 'left';
+      });
+    });
+    /* barandal con hueco para la escalera */
+    for(let bx2 = .15; bx2 < N - .1; bx2 += .55){
+      if(bx2 > 8.25 && bx2 < 9.75) continue;
+      add(bx2 + FONDO + .6, c2 => {
+        caja(c2, bx2, 2.24, MZ + .16, .07, .07, .5, MEZA.baranda, 12, -14);
+      });
+    }
+    add(FONDO + 8.6, c2 => {
+      caja(c2, 0, 2.24, MZ + .66, 8.3, .09, .09, MEZA.baranda, 14, -12);
+      caja(c2, 9.72, 2.24, MZ + .66, N - 9.72, .09, .09, MEZA.baranda, 14, -12);
+    });
+    /* la escalera: ocho peldaños macizos hasta el hueco */
+    for(let j = 0; j < 8; j++){
+      const sy = FONDO + (7 - j) * .32;
+      add(8.55 + sy + .32, c2 => {
+        caja(c2, 8.55, sy, 0, 1.15, .33, (j + 1) * .345, DECO.isla, 10, -18);
+      });
+    }
+  }
+
+  /* ══ LA GENTE ══ */
+  piezas.sort((a, b) => a.d - b.d).forEach(p => p.fn(c));
+  /* el personal de la casa: cinco analistas en los puestos, con el traje del
+     tema de la ciudad. Son plantilla, no socios: no hablan ni tienen perfil. */
+  const STAFF = [
+    { n:'', x:1.32, y:1.12, flip:true,  look:{ piel:'#E8B48C', pelo:'#14100C', traje:DECO.staffTraje, camisa:'#E9EDF2', ac:'#7A88A0', porte:'erguido',  cara:'sereno' } },
+    { n:'', x:2.86, y:1.12, flip:true,  look:{ piel:'#8D5A3B', pelo:'#0E0C0A', traje:DECO.staffTraje, camisa:'#EFE8D8', ac:'#7A88A0', porte:'inclinado', cara:'concentrado' } },
+    { n:'', x:4.42, y:1.12, flip:true,  look:{ piel:'#F5D8B4', pelo:'#7A4020', traje:DECO.staffTraje, camisa:'#FFFFFF', ac:'#7A88A0', porte:'erguido',  cara:'curioso', greñas:true } },
+    { n:'', x:1.12, y:2.86, flip:false, look:{ piel:'#C98F63', pelo:'#181410', traje:DECO.staffTraje, camisa:'#E8F2EE', ac:'#7A88A0', porte:'tenso',    cara:'ceño', lentes:true } },
+    { n:'', x:3.78, y:2.86, flip:true,  look:{ piel:'#D9A377', pelo:'#8A8F98', traje:DECO.staffTraje, camisa:'#F2EDE0', ac:'#7A88A0', porte:'encorvado', cara:'sabio', canas:true } },
+  ];
+  STAFF.forEach(s2 => figura(c, s2, false, t));
+  /* Sólo la gente real: los socios registrados (y el invitado si entró).
+     Los analistas de relleno se fueron — la oficina es de los usuarios. */
+  const gente = sillasActivas().map(s =>
+    ({ d:s.x + s.y, dib:() => figura(c, s, ofiHablando === s.n, t) }));
+  gente.sort((a, b) => a.d - b.d).forEach(g => g.dib());
+  OFI_HIT = sillasActivas().map(s => ({ n:s.n, x:iX(s.x, s.y), y:iY(s.x, s.y, s.z) }));
+
+  /* Los globos de diálogo se retiraron: la escena habla sola. El guion
+     sigue vivo por si algún día vuelve, pero ya no se pinta. */
+
+  /* El cartel es de la ciudad en la que estás — antes decía NEW YORK
+     estuvieras donde estuvieras, que era justo el error que se veía en Tokio. */
+  c.textAlign = 'center';
+  c.font = '700 44px -apple-system, "Segoe UI", sans-serif';
+  c.fillStyle = 'rgba(255,255,255,.96)';
+  c.fillText(loc([CI.n, CI.en]), W/2, 150);
+  c.font = '15px "IBM Plex Mono", monospace';
+  c.fillStyle = 'rgba(255,255,255,.52)';
+  const restan = E.restan || 0;
+  const hR = Math.floor(restan / 60), mR = Math.round(restan % 60);
+  const sig = CIUDADES[E.sig] || CIUDADES.tokio;
+  c.fillText(`${CI.sub}  ·  ${bi('vuela a','flies to')} ${loc([sig.n, sig.en])} ${bi('en','in')} ${hR ? hR + 'h ' : ''}${mR}m`, W/2, 186);
+
+  c.font = '12px "IBM Plex Mono", monospace'; c.textAlign = 'left';
+  c.fillStyle = 'rgba(255,255,255,.4)';
+  c.fillText('NORTHPOINT CAPITAL · ' + CI.sub + ' · ' + loc([CI.n, CI.en]), 24, H - 22);
+
+}
+
 function dibujaOficina(t){
   const cv = $('#agOficina'); if(!cv) return;
   const c = cv.getContext('2d');
@@ -14285,103 +16239,6 @@ function dibujaOficina(t){
   if(E.tipo === 'finde'){ escenaFinde(c, W, H, t, E, rr, PC); return; }
   if(E.tipo === 'edificio'){ escenaEdificio(c, W, H, t, E, rr, PC); return; }
 
-}
-
-/* ── LA OFICINA · el edificio NorthPoint en la ciudad de la sesión ──
-   Estás dentro del piso: el escritorio al frente, un ventanal enorme, y afuera
-   el skyline de la ciudad (con sus monumentos) y NUESTRA torre NP. */
-function escenaEdificio(c, W, H, t, E, rr, PC){
-  const noche = PC && PC.oscuridad > 0.3;
-  const CI = CIUDADES[E.c] || CIUDADES.tokio;
-  const hz = 800;                                   // línea del horizonte
-  const dark = noche ? '#141c2a' : '#7a90a8';
-  const dark2 = noche ? '#0d1420' : '#64798f';
-  const win = noche ? 'rgba(255,214,140,.92)' : 'rgba(255,255,255,.5)';
-  /* agua/bruma al fondo */
-  c.fillStyle = noche ? '#0a1424' : '#8fb2cc';
-  c.fillRect(0, hz-70, W, 70);
-  /* skyline genérico */
-  const edificio = (x, w, h, col) => {
-    c.fillStyle = col; c.fillRect(x, hz-h, w, h);
-    for(let wy = hz-h+18; wy < hz-14; wy += 30){
-      for(let wx = x+12; wx < x+w-10; wx += 22){
-        if((wx+wy) % 3 === 0){ c.fillStyle = win; c.fillRect(wx, wy, 7, 10); }
-      }
-    }
-  };
-  let x = -40, k = 0; const hs = [200,320,150,410,260,180,350,220,300,170];
-  while(x < W+40){ const w = 96 + (k%4)*30, h = hs[k%hs.length]; edificio(x, w, h, k%2?dark:dark2); x += w+18; k++; }
-  /* monumento según la ciudad */
-  if(E.c === 'tokio'){
-    /* Torre de Tokio (roja) */
-    const cx=W*0.34, g=hz, h=380;
-    c.strokeStyle='#e2653a'; c.fillStyle='#e2653a'; c.lineWidth=5;
-    c.beginPath(); c.moveTo(cx-70,g); c.lineTo(cx-20,g-h*0.5); c.lineTo(cx+20,g-h*0.5); c.lineTo(cx+70,g); c.stroke();
-    c.fillRect(cx-30,g-h*0.5,60,14); c.beginPath(); c.moveTo(cx-20,g-h*0.5); c.lineTo(cx-8,g-h); c.lineTo(cx+8,g-h); c.lineTo(cx+20,g-h*0.5); c.stroke();
-    c.fillRect(cx-3,g-h-40,6,44); c.beginPath(); c.arc(cx,g-h-44,6,0,7); c.fill();
-    /* Skytree */
-    const sx=W*0.7; c.fillStyle=noche?'#3a4d6a':'#a9bccf';
-    c.beginPath(); c.moveTo(sx-16,hz); c.lineTo(sx-5,hz-460); c.lineTo(sx+5,hz-460); c.lineTo(sx+16,hz); c.fill();
-    c.fillRect(sx-4,hz-620,8,160);
-  } else if(E.c === 'londres'){
-    /* Big Ben */
-    const bx=W*0.36, g=hz, h=360;
-    c.fillStyle=noche?'#5a4e3a':'#c9b48c'; c.fillRect(bx-26,g-h,52,h);
-    c.fillStyle=noche?'#e8d9a0':'#fff'; c.beginPath(); c.arc(bx,g-h+30,18,0,7); c.fill();
-    c.fillStyle='#8a6a3a'; c.beginPath(); c.moveTo(bx-30,g-h); c.lineTo(bx,g-h-52); c.lineTo(bx+30,g-h); c.fill();
-    /* London Eye */
-    const ex=W*0.66, ey=g-150, r=130; c.strokeStyle=noche?'#7fbfe0':'#9fd0ec'; c.lineWidth=5;
-    c.beginPath(); c.arc(ex,ey,r,0,7); c.stroke();
-    for(let a=0;a<16;a++){ c.beginPath(); c.moveTo(ex,ey); c.lineTo(ex+Math.cos(a/16*7)*r, ey+Math.sin(a/16*7)*r); c.lineWidth=1.5; c.stroke(); }
-  } else {
-    /* Nueva York · Empire State */
-    const nx=W*0.5, g=hz, h=520;
-    c.fillStyle=noche?'#2a3444':'#8595a8';
-    c.fillRect(nx-60,g-h*0.7,120,h*0.7); c.fillRect(nx-40,g-h,80,h*0.3);
-    c.fillRect(nx-6,g-h-70,12,70); c.fillStyle=noche?'#ffd06a':'#fff'; c.beginPath(); c.arc(nx,g-h-74,7,0,7); c.fill();
-  }
-  /* NUESTRA torre NorthPoint (verde, letrero NP) */
-  const npx = W*0.86, npg = hz, nph = 470, npw = 96;
-  c.fillStyle = noche ? '#0f2018' : '#2a4a3a'; c.fillRect(npx-npw/2, npg-nph, npw, nph);
-  c.strokeStyle = '#30d158'; c.lineWidth = 4; c.strokeRect(npx-npw/2, npg-nph, npw, nph);
-  c.fillStyle = noche ? 'rgba(78,224,138,.9)' : 'rgba(48,209,88,.7)';
-  for(let wy=npg-nph+22; wy<npg-16; wy+=30){ c.fillRect(npx-npw*0.28, wy, 8, 12); c.fillRect(npx+npw*0.12, wy, 8, 12); }
-  c.fillStyle='#0d1a13'; c.fillRect(npx-56, npg-nph-52, 112, 44); c.strokeRect(npx-56, npg-nph-52, 112, 44);
-  c.fillStyle='#4ee08a'; c.font='bold 30px "IBM Plex Mono", monospace'; c.textAlign='center'; c.fillText('NP', npx, npg-nph-20);
-  c.fillRect(npx-2, npg-nph-88, 4, 30); c.beginPath(); c.arc(npx, npg-nph-92, 7, 0, 7); c.fill();
-  /* ── LA OFICINA (interior, al frente) ── */
-  const wall = noche ? '#0c1017' : '#20262e';
-  c.fillStyle = wall;
-  c.fillRect(0, 0, 150, H); c.fillRect(W-150, 0, 150, H);         // muros laterales
-  c.fillRect(0, hz+70, W, H-(hz+70));                              // piso
-  c.fillStyle = noche ? 'rgba(255,255,255,.05)' : 'rgba(0,0,0,.1)';
-  c.fillRect(150, hz+70, W-300, 10);
-  /* mullions del ventanal */
-  c.fillStyle = wall;
-  [W/3, 2*W/3].forEach(mx => c.fillRect(mx-9, 60, 18, hz+10));
-  c.fillRect(140, 60, W-280, 16);                                  // cabecera del ventanal
-  /* escritorio + monito trabajando */
-  c.fillStyle = noche ? '#161b24' : '#3a3026';
-  c.fillRect(W*0.30, H-150, W*0.40, 40);                           // tablón del escritorio
-  c.fillStyle = noche ? '#0e1219' : '#2c241c';
-  c.fillRect(W*0.34, H-110, 16, 110); c.fillRect(W*0.64, H-110, 16, 110);
-  /* monitor con curva verde */
-  c.fillStyle = '#0b0f16'; c.fillRect(W*0.44, H-250, 220, 130);
-  c.fillStyle = '#0c2a1c'; c.fillRect(W*0.44+8, H-242, 204, 114);
-  c.strokeStyle = '#4ee08a'; c.lineWidth = 3; c.beginPath();
-  c.moveTo(W*0.44+16, H-160); c.lineTo(W*0.44+70, H-180); c.lineTo(W*0.44+120, H-168); c.lineTo(W*0.44+200, H-206); c.stroke();
-  c.fillStyle = noche ? '#161b24' : '#4a3e30'; c.fillRect(W*0.44+96, H-120, 28, 12);
-  /* planta */
-  c.fillStyle = noche ? '#12202a' : '#5a4632'; c.fillRect(W*0.70, H-136, 34, 40);
-  c.fillStyle = noche ? '#1e6b3a' : '#2f8b4a';
-  [[0,-30],[ -18,-16],[18,-16]].forEach(([dx,dy])=>{ c.beginPath(); c.ellipse(W*0.70+17+dx, H-136+dy, 16, 26, dx*0.02, 0, 7); c.fill(); });
-  /* taza */
-  c.fillStyle = noche ? '#3a2a1a' : '#e8e2d8'; c.fillRect(W*0.62, H-166, 26, 20);
-  try{ monitoPlano(c, W*0.54, H-118, lookDe((S.session&&S.session.user)||'andre.np'), 2.2,
-    { sentado:true, ropa:'#F4F6F8', brazoIzq:.5, brazoDer:.5 }); }catch(e){}
-  /* cartel */
-  cartel(bi('PISO 88 · ' + loc([CI.n, CI.en]), 'FLOOR 88 · ' + loc([CI.n, CI.en])),
-         bi('sesión de ' + loc([CI.n, CI.en]) + ' · en la oficina', loc([CI.n, CI.en]) + ' session · at the desk'));
 }
 
 function animaOficina(){
