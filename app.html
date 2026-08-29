@@ -1146,6 +1146,13 @@ button.st-chip:hover{border-color:rgba(255,255,255,.45)}
 .nj-body{align-items:stretch}
 .nj-intro{margin:0 0 2px;font-size:13px;line-height:1.55;color:rgba(255,255,255,.8)}
 .nj-intro b{color:#fff}
+.nj-reglas{display:flex;flex-direction:column;gap:7px;border:1px solid rgba(255,255,255,.1);border-radius:12px;background:rgba(255,255,255,.03);padding:13px 15px;margin-bottom:2px}
+.nj-reglas>div{display:flex;align-items:flex-start;gap:10px;font-size:12px;line-height:1.5;color:rgba(255,255,255,.78)}
+.nj-reglas b{color:#fff}
+.nj-reglas i{font-style:normal;flex:0 0 20px;height:20px;border-radius:50%;background:rgba(48,209,88,.14);border:1px solid rgba(48,209,88,.45);color:#6fe39a;font-family:var(--mono);font-size:10px;font-weight:800;display:flex;align-items:center;justify-content:center;margin-top:1px}
+.nj-reglas .peligro{color:#ffb0a8}
+.nj-reglas .peligro i{background:rgba(255,90,80,.14);border-color:rgba(255,90,80,.5);color:#ff8a7e}
+.nj-reglas .peligro b{color:#ff8a7e}
 .nj-prev{display:flex;justify-content:center;padding:4px 0 2px}
 .nj-prev canvas{width:220px;height:220px;flex:0 0 auto;background:radial-gradient(60% 55% at 50% 62%,rgba(255,255,255,.07),transparent 75%);border-radius:16px}
 .nj-row{display:flex;gap:9px;flex-wrap:wrap}
@@ -9949,6 +9956,16 @@ function batBanco(u){ const st=batStackObj();
 function batPico(u){ batBanco(u); return S.batPico[u]; }
 const BAT_BIENVENIDA = 50000; /* la feria de bienvenida al registrarte */
 function batStackSet(u,val){ const st=batStackObj(); st[u]=Math.round(val); if(st[u]>(S.batPico[u]||0)) S.batPico[u]=st[u]; }
+/* ── LA MUERTE ── si tu bank se acaba, tu ninja MUERE: pierdes la colección y
+   al ninja mismo. Renaces creando uno nuevo, con la bienvenida de $50k. */
+function batMuere(u){
+  batStackSet(u, 0); if(S.batPico) S.batPico[u]=0;
+  if(S.batKatanas) S.batKatanas[u]=['blanca'];
+  if(S.batEquipada) delete S.batEquipada[u];
+  if(S.batNinja) delete S.batNinja[u];
+  const esYo = (typeof batYo==='function') && u===batYo();
+  if(!esYo) batStackSet(u, BAT_BIENVENIDA); /* los rivales renacen solos */
+}
 /* quiebra: tu stack vuelve al inicial (las katanas son tu récord de victorias, no se pierden) */
 function batQuiebra(u){ const st=batStackObj(); st[u]=BAT_STACK_INI; S.batPico[u]=BAT_STACK_INI; if(S.batEquipada) delete S.batEquipada[u]; }
 /* las katanas son COLECCIONABLES que se desbloquean GANANDO PARTIDAS:
@@ -9988,7 +10005,7 @@ function batAplicaEconomia(c){
 }
 function batRegistraResultado(c){
   if(c.registrado) return; c.registrado = true;
-  const st = batStats(); const yo=(S.session||{}).user;
+  const st = batStats(); const yo=batYo();
   const ensure=u=>{ st[u]=st[u]||{pts:0,g:0,p:0,e:0}; };
 
   const paga=(u, profit)=>{ /* pago del ganador: base + profit ×3, por el mult del evento,
@@ -9997,9 +10014,10 @@ function batRegistraResultado(c){
     batStackSet(u, batBanco(u)+pago);
     try{ if(u===yo) window._batPagoFlash={monto:pago, mult:(c.mult||1)}; }catch(e){}
   };
-  const cobra=(u)=>{ /* si pierdes, pagas el fee fijo — el banco SÍ puede irse a rojo */
+  const cobra=(u)=>{ /* si pierdes, pagas el fee fijo — y si el bank se acaba, MUERES */
     batStackSet(u, batBanco(u)-BAT_FEE);
     try{ if(u===yo) window._batFeeFlash={monto:BAT_FEE}; }catch(e){}
+    if(batBanco(u) < 0){ batMuere(u); try{ if(u===yo){ window._batFeeFlash=null; window._batMuerteFlash=true; } }catch(e){} }
   };
 
   if(c.party){
@@ -11405,11 +11423,12 @@ function renderBatalla(){
             <div class="como-flow">
               <span class="como-rail" aria-hidden="true"></span>
               ${[
-                {c:'#EDEFF2', g:'#cfd6e0', t:bi('Reta a un socio','Challenge a partner'), p:bi('Un duelo de trading con tiempo. Cada quien registra su P&L. El de mayor profit gana.','A timed trading duel. Each logs their P&L. Most profit wins.')},
-                {c:'#E7C24A', g:'#E7C24A', t:bi('Si ganas, te pagan','Win and get paid'), p:bi('Base $5,000 + tu profit ×3, directo a tu banco. Si pierdes pagas un fee fijo de $2,000.','Base $5,000 + your profit ×3, straight to your bank. Lose and you pay a flat $2,000 fee.')},
-                {c:'#4FAE6A', g:'#4FAE6A', t:bi('Los eventos pagan más','Events pay more'), p:bi('Gana durante una sesión (×2) o un torneo (×3) y el pago se multiplica.','Win during a session (×2) or a tournament (×3) and the payout multiplies.')},
-                {c:'#C8443C', g:'#C8443C', t:bi('Forja katanas con tu lana','Forge katanas with your cash'), p:bi('Ahorra y compra las 9 espadas, de Shiro a Kuro ($1M). Entre más alta tu katana, más te pagan por victoria.','Save up and buy all 9 swords, Shiro to Kuro ($1M). The higher your katana, the bigger your payouts.')},
-                {c:'#23272E', g:'#9aa7bb', t:bi('Tu mundo sube contigo','Your world rises with you'), p:bi('El escenario evoluciona con tu espada. La meta: la colección completa y ser el mejor de la firma.','The stage evolves with your sword. The goal: the full collection — be the best in the firm.')}
+                {c:'#EDEFF2', g:'#cfd6e0', t:bi('Regístrate y crea tu ninja','Register and create your ninja'), p:bi('Al entrar recibes $50,000 de bienvenida: tu bank. Tu ninja te representa en todos los mundos.','You start with a $50,000 welcome bonus: your bank. Your ninja represents you in every world.')},
+                {c:'#E7C24A', g:'#E7C24A', t:bi('Reta a un socio','Challenge a partner'), p:bi('Un duelo de trading con tiempo. Cada quien registra su P&L. El de mayor profit gana.','A timed trading duel. Each logs their P&L. Most profit wins.')},
+                {c:'#4FAE6A', g:'#4FAE6A', t:bi('Si ganas, te pagan','Win and get paid'), p:bi('Base $5,000 + tu profit ×3, directo a tu bank. Si pierdes pagas un fee fijo de $2,000.','Base $5,000 + your profit ×3, straight to your bank. Lose and you pay a flat $2,000 fee.')},
+                {c:'#3E82C8', g:'#3E82C8', t:bi('Los eventos pagan más','Events pay more'), p:bi('Gana durante una sesión (×2) o un torneo (×3) y el pago se multiplica.','Win during a session (×2) or a tournament (×3) and the payout multiplies.')},
+                {c:'#C8443C', g:'#C8443C', t:bi('Forja katanas con tu lana','Forge katanas with your cash'), p:bi('Compra las 9 espadas, de Shiro a Kuro ($1M). Entre más alta tu katana, más te pagan — y tu mundo evoluciona con tu espada.','Buy all 9 swords, Shiro to Kuro ($1M). The higher your katana, the bigger your payouts — and your world evolves with your sword.')},
+                {c:'#23272E', g:'#ff6a5e', t:bi('Si tu bank se acaba, tu ninja muere','If your bank runs dry, your ninja dies'), p:bi('Pierdes tu colección y a tu ninja. Renaces forjando uno nuevo, con otros $50,000. La meta: la colección completa sin morir — ser el mejor de la firma.','You lose your collection and your ninja. You are reborn by forging a new one, with a fresh $50,000. The goal: the full collection without dying — be the best in the firm.')}
               ].map((s,i)=>`
               <div class="como-step" style="--kc:${s.g};animation-delay:${(i*0.22+0.08).toFixed(2)}s">
                 <div class="como-node"><span class="como-sw" style="animation-delay:${(i*0.4).toFixed(2)}s">${katanaSVG(s.c,true)}</span><em>${i+1}</em></div>
@@ -11436,7 +11455,7 @@ function renderBatalla(){
           <div class="ars-top"><b class="titulo-tinta">${tituloTinta(batNom(u))}</b>${esYo?`<span class="ars-cash">${bi('tu perfil','your profile')}</span>`:''}<button type="button" class="ars-x" id="perfX" aria-label="${bi('cerrar','close')}">✕</button></div>
           <div class="evt-body">
             <div class="perf-card">
-              <canvas id="perfCv" width="640" height="600"></canvas>
+              <canvas id="perfCv" width="640" height="740"></canvas>
               <div class="perf-card-in"><b>${esc(batNom(u))}</b><span style="color:${kEq.belt}">${loc(kEq.n)} · ${loc(ZEN_ESCENAS[batEquipadaDe(u)].bioma)}</span></div>
             </div>
             <div class="perf-head">
@@ -11458,37 +11477,9 @@ function renderBatalla(){
               <div class="perf-st"><em>${bi('P&L EN DUELOS','DUEL P&L')}</em><b style="color:${pTot>=0?'#6fe39a':'#ff6a5e'}">${fmt$(pTot,true)}</b></div>
               <div class="perf-st"><em>${bi('MEJOR DUELO','BEST DUEL')}</em><b>${best!=null?fmt$(best,true):'—'}</b></div>
             </div>
-            ${esYo?'':(()=>{
-              /* LA RIÑA: lo que duele entre ustedes */
-              const dH2 = batHist().filter(h=>!h.party && ((h.host===yo&&h.rival===u)||(h.host===u&&h.rival===yo)));
-              const ult = dH2[0]||null;
-              let rMia=0, rSuya=0;
-              for(const h of dH2){ if(h.ganador===yo){ if(rSuya) break; rMia++; } else if(h.ganador===u){ if(rMia) break; rSuya++; } else break; }
-              const misPerd=dH2.filter(h=>h.ganador===u).length, susPerd=dH2.filter(h=>h.ganador===yo).length;
-              const ver = h2.wa>h2.wb ? {t:bi('Lo tienes dominado','You own this rivalry'),c:'#6fe39a'}
-                        : h2.wb>h2.wa ? {t:bi('Te trae dominado','They own you right now'),c:'#ff6a5e'}
-                        : (h2.n? {t:bi('Están parejos','Dead even'),c:'#ffd76a'} : {t:bi('Cero historia entre ustedes','No history yet'),c:'rgba(255,255,255,.6)'});
-              const uf = ult? new Date(ult.ts) : null;
-              const ultTxt = ult? (uf.getDate()+' '+uf.toLocaleDateString(idi()==='es'?'es-MX':'en-US',{month:'short'}).replace('.','').toUpperCase()+' · '+(ult.ganador===yo?bi('tuya','yours'):ult.ganador===u?bi('suya','theirs'):bi('empate','tie'))) : '—';
-              const rachaTxt = rMia? rMia+' '+bi('tuyas seguidas','yours in a row') : rSuya? rSuya+' '+bi('suyas seguidas','theirs in a row') : '—';
-              const taunt = !dH2.length ? bi('Cero duelos entre ustedes. ¿Quién tiene miedo?','Zero duels between you. Who’s scared?')
-                : rSuya>=2 ? bi('Lleva '+rSuya+' seguidas sobre ti. ¿Se lo vas a permitir?','They’ve taken '+rSuya+' straight. Letting that slide?')
-                : ult&&ult.ganador===u ? bi('La última fue suya. Cóbrasela.','They took the last one. Collect.')
-                : ult&&ult.ganador===yo ? bi('La última fue tuya. No la sueltes.','The last one was yours. Keep it.')
-                : bi('Empataron la última. Eso no se queda así.','Last one was a tie. That can’t stand.');
-              const cta = !dH2.length? bi('Primer duelo','First duel') : (ult&&ult.ganador===u)? bi('Cobrar revancha','Take revenge') : bi('Defender la corona','Defend the crown');
-              return `
-            <div class="evt-sec">${bi('LA RIÑA','THE FEUD')}</div>
-            <div class="riv-verdict" style="--vc:${ver.c}">${ver.t}</div>
-            <div class="perf-h2h"><div><b>${h2.wa}</b><span>${bi('tuyas','yours')}</span></div><div class="perf-h2h-m">${h2.n} ${bi('duelos','duels')}${h2.emp?' · '+h2.emp+' '+bi('empates','ties'):''}</div><div><b>${h2.wb}</b><span>${bi('suyas','theirs')}</span></div></div>
-            <div class="perf-grid">
-              <div class="perf-st"><em>${bi('ÚLTIMO DUELO','LAST DUEL')}</em><b style="color:${ult?(ult.ganador===yo?'#6fe39a':ult.ganador===u?'#ff6a5e':'#ffd76a'):'inherit'}">${ultTxt}</b></div>
-              <div class="perf-st"><em>${bi('RACHA ENTRE USTEDES','H2H STREAK')}</em><b style="color:${rMia?'#6fe39a':rSuya?'#ff6a5e':'inherit'}">${rachaTxt}</b></div>
-              <div class="perf-st"><em>${bi('TE HA COSTADO','COST YOU')}</em><b style="color:${misPerd?'#ff6a5e':'inherit'}">${misPerd?'-'+fmt$(misPerd*BAT_FEE):'—'}</b></div>
-              <div class="perf-st"><em>${bi('LE HAS COSTADO','COST THEM')}</em><b style="color:${susPerd?'#6fe39a':'inherit'}">${susPerd?'-'+fmt$(susPerd*BAT_FEE):'—'}</b></div>
-            </div>
-            <div class="riv-taunt">${taunt}</div>
-            <button type="button" class="btn primary stage-btn" data-perfretar="${u}" style="width:100%">${cta}</button>`;})()}
+            ${esYo?'':`
+            <div class="evt-sec">${bi('RÉCORD ENTRE USTEDES','YOUR RECORD VS THEM')}</div>
+            <div class="perf-h2h"><div><b>${h2.wa}</b><span>${bi('tuyas','yours')}</span></div><div class="perf-h2h-m">${h2.n} ${bi('duelos','duels')}${h2.emp?' · '+h2.emp+' '+bi('empates','ties'):''}</div><div><b>${h2.wb}</b><span>${bi('suyas','theirs')}</span></div></div>`}
             <div class="evt-sec">${bi('DUELOS RECIENTES','RECENT DUELS')}</div>
             ${histU.length? histU.map(x=>{ const h=x.h; const gn=h.ganador?batNom(h.ganador):bi('Empate','Tie');
               const fd=new Date(h.ts||Date.now()), fdd=fd.getDate(), fdm=fd.toLocaleDateString(idi()==='es'?'es-MX':'en-US',{month:'short'}).replace('.','').toUpperCase();
@@ -11505,7 +11496,15 @@ function renderBatalla(){
           return `<div class="ars-ov nj-ov">
           <div class="ars-top"><b>${nuevo?bi('Crea tu ninja','Create your ninja'):bi('Tu ninja','Your ninja')}</b>${nuevo?'':`<button type="button" class="ars-x" id="njX" aria-label="${bi('cerrar','close')}">✕</button>`}</div>
           <div class="evt-body nj-body">
-            ${nuevo?`<p class="nj-intro">${bi('Bienvenido a Battles,','Welcome to Battles,')} <b>${esc(batNom(yo))}</b>. ${bi('Este ninja te representará en todos los entornos. Hazlo tuyo.','This ninja will represent you in every world. Make it yours.')}</p>`:''}
+            ${nuevo?`<p class="nj-intro">${bi('Bienvenido a Battles,','Welcome to Battles,')} <b>${esc(batNom(yo))}</b>. ${bi('Este ninja te representará en todos los entornos. Hazlo tuyo.','This ninja will represent you in every world. Make it yours.')}</p>
+            <div class="nj-reglas">
+              <div><i>1</i>${bi('Al entrar recibes','You start with a')} <b>${fmt$(BAT_BIENVENIDA)}</b> ${bi('de bienvenida — tu bank.','welcome bonus — your bank.')}</div>
+              <div><i>2</i>${bi('Reta a tus socios: el de mayor P&L gana el duelo.','Challenge your partners: most P&L wins the duel.')}</div>
+              <div><i>3</i>${bi('Si ganas te pagan','Win and get paid')} <b>$5,000 + ${bi('tu profit','your profit')} ×3</b> · ${bi('si pierdes pagas','lose and you pay a')} <b>$2,000</b> ${bi('de fee.','fee.')}</div>
+              <div><i>4</i>${bi('Los eventos pagan','Events pay')} <b>×2</b> ${bi('y los torneos','and tournaments')} <b>×3</b>.</div>
+              <div><i>5</i>${bi('Compra las 9 katanas con tu lana — tu mundo evoluciona con tu espada.','Buy all 9 katanas with your cash — your world evolves with your sword.')}</div>
+              <div class="peligro"><i>☠</i>${bi('Si tu bank se acaba, tu ninja MUERE: pierdes todo y empiezas de nuevo.','If your bank runs dry, your ninja DIES: you lose everything and start over.')}</div>
+            </div>`:''}
             <div class="nj-prev"><canvas id="njCv" width="240" height="240"></canvas></div>
             ${filas.map(f=>`
             <div class="evt-sec">${f[1]}</div>
@@ -11551,8 +11550,8 @@ function renderBatalla(){
     const pcv=$('#perfCv'); cancelAnimationFrame(window._perfRAF||0);
     if(pcv && window._batPerfil){ const uid=window._batPerfil, px=pcv.getContext('2d');
       const Ei=ZEN_ESCENAS[batEquipadaDe(uid)]||ZEN_ESCENAS[0], belt=KATANAS[batEquipadaDe(uid)].belt, njp=batNinjaDe(uid);
-      const pp=[]; for(let i=0;i<16;i++) pp.push({x:Math.random()*640,y:Math.random()*600,s:4+Math.random()*5,sp:.3+Math.random()*.8,dr:Math.random()*6,sw:.5});
-      const pintaPf=(t)=>{ if(!pcv.isConnected) return; zenDibujaEscena(px,640,600,Ei,t||0,pp,belt,njp); window._perfRAF=requestAnimationFrame(pintaPf); };
+      const pp=[]; for(let i=0;i<16;i++) pp.push({x:Math.random()*640,y:Math.random()*740,s:4+Math.random()*5,sp:.3+Math.random()*.8,dr:Math.random()*6,sw:.5});
+      const pintaPf=(t)=>{ if(!pcv.isConnected) return; zenDibujaEscena(px,640,740,Ei,t||0,pp,belt,njp); window._perfRAF=requestAnimationFrame(pintaPf); };
       window._perfRAF=requestAnimationFrame(pintaPf); }
     /* la curva de progreso (P&L acumulado) — se dibuja sola, estilo backtesting */
     const eqcv=$('#perfEq'); cancelAnimationFrame(window._eqRAF||0);
@@ -11603,7 +11602,9 @@ function renderBatalla(){
       toast('🗡️ '+bi('¡Forjaste','Forged')+' '+loc(k.n)+'!'); renderBatalla(); });
     root.querySelectorAll('[data-equip]').forEach(b=> b.onclick=()=>{ batEquipar(yo,+b.dataset.equip); renderBatalla(); });
     requestAnimationFrame(batPintaZen);   // el mundo del stage según tu katana más alta
-    if(window._batPagoFlash){ const f=window._batPagoFlash; window._batPagoFlash=null; window._batWinFlash=null;
+    if(window._batMuerteFlash){ window._batMuerteFlash=null; window._batPagoFlash=null; window._batFeeFlash=null; window._batWinFlash=null;
+      setTimeout(()=>toast('☠ '+bi('Tu bank se acabó — tu ninja ha muerto. Forja uno nuevo para renacer.','Your bank ran dry — your ninja died. Forge a new one to be reborn.')), 340);
+    } else if(window._batPagoFlash){ const f=window._batPagoFlash; window._batPagoFlash=null; window._batWinFlash=null;
       const el=root.querySelector('.st-chip.bank'); if(el) el.classList.add('elo-up');
       if(typeof animaBotin==='function') setTimeout(()=>animaBotin(batBanco(yo), f.monto), 200);
       if(!f.bienvenida) setTimeout(()=>toast(bi('Victoria · te pagaron','Victory · you got paid')+' '+fmt$(f.monto)+(f.mult>1?' (×'+f.mult+')':'')), 340);
