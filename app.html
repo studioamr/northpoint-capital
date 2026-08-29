@@ -714,6 +714,7 @@ body.locked .app{visibility:hidden;pointer-events:none}
 .bat-ses-chip{flex:1;min-width:96px;border:1px solid var(--line);border-radius:14px;background:var(--bg,#0b0f16);
   display:flex;flex-direction:column;align-items:center;gap:5px;text-align:center;
   color:var(--txt);padding:12px;cursor:pointer;transition:all .14s}
+.bat-ses-ico{font-size:26px;line-height:1;font-weight:400}
 .bat-ses-chip b{font-size:13.5px;font-weight:700}
 .bat-ses-chip i{font-family:var(--mono);font-style:normal;font-size:10.5px;color:var(--faint)}
 .bat-ses-chip.on{border-color:var(--accent);background:color-mix(in srgb, var(--accent) 12%, transparent)}
@@ -9549,14 +9550,31 @@ function renderBatalla(){
     /* ── NUEVO RETO · sólo rival + duración ── */
     if(batPantalla === 'setup'){
       const ops = batOponentes();
-      if(!batSel || !ops.includes(batSel.op)) batSel = { op: ops[0]||null, ses:'asia', dur:30, cuando:null };
+      if(!batSel || !ops.includes(batSel.op)) batSel = { op: ops[0]||null, ses:'asia', dur:30, cuando:null, cuandoSes:null };
       const sesObj = batSesion(batSel.ses);
-      /* calendario: "Ahora" + próximas aperturas de la sesión elegida */
-      let cal = `<button type="button" class="bat-cal-card ahora ${!batSel.cuando?'on':''}" data-ts="">
-        <span class="bat-cal-dia">${bi('Ahora','Now')}</span><span class="bat-cal-hora">${bi('al instante','instant')}</span></button>`;
-      batProxAperturas(sesObj.hora, 5).forEach(d=>{ const t=batDiaTxt(d.getTime()), ts=d.getTime();
-        cal += `<button type="button" class="bat-cal-card ${batSel.cuando===ts?'on':''}" data-ts="${ts}">
-          <span class="bat-cal-dia">${t.dia}</span><span class="bat-cal-hora">${t.hora}</span></button>`; });
+      if(batFmt==='sesion' && !batSel.cuando){ const ap=batProxAperturas(sesObj.hora,1)[0]; if(ap){ batSel.cuando=ap.getTime(); batSel.cuandoSes=batSel.ses; } }
+      /* CALENDARIO por formato */
+      let cal='';
+      if(batFmt==='sesion'){
+        batProxAperturas(sesObj.hora, 6).forEach(d=>{ const t=batDiaTxt(d.getTime()), ts=d.getTime();
+          cal += `<button type="button" class="bat-cal-card ${batSel.cuando===ts?'on':''}" data-ts="${ts}" data-ses="${batSel.ses}">
+            <span class="bat-cal-ico">${sesObj.ico}</span><span class="bat-cal-dia">${t.dia}</span><span class="bat-cal-hora">${t.hora}</span></button>`; });
+      } else {
+        cal += `<button type="button" class="bat-cal-card ahora ${!batSel.cuando?'on':''}" data-ts="" data-ses="">
+          <span class="bat-cal-ico">⚡</span><span class="bat-cal-dia">${bi('Ahora','Now')}</span><span class="bat-cal-hora">${bi('al instante','instant')}</span></button>`;
+        let ups=[]; BAT_SESIONES.forEach(s=> batProxAperturas(s.hora,2).forEach(d=> ups.push({ts:d.getTime(), s})));
+        ups.sort((a,b)=>a.ts-b.ts); ups.slice(0,6).forEach(u=>{ const t=batDiaTxt(u.ts);
+          cal += `<button type="button" class="bat-cal-card ${batSel.cuando===u.ts?'on':''}" data-ts="${u.ts}" data-ses="${u.s.id}">
+            <span class="bat-cal-ico">${u.s.ico}</span><span class="bat-cal-dia">${t.dia} ${t.hora}</span><span class="bat-cal-hora">${loc(u.s.nom)}</span></button>`; });
+      }
+      /* DURACIÓN según formato */
+      let durHTML='';
+      if(batFmt==='sprint') durHTML = `<div class="bat-durs">${BAT_SPRINTS.map(d=>`<button type="button" class="bat-dur ${batSel.dur===d.min?'on':''}" data-dur="${d.min}">${d.t}</button>`).join('')}</div>`;
+      else if(batFmt==='maraton') durHTML = `<div class="bat-durs">${BAT_MARATON.map(d=>`<button type="button" class="bat-dur ${String(batSel.dur)===String(d.min)?'on':''}" data-dur="${d.min}">${d.ico} ${loc(d.t)}</button>`).join('')}</div>`;
+      const durActual = batFmt==='sesion' ? sesObj.dur : batSel.dur;
+      const sesResumen = batFmt==='sesion' ? batSel.ses : (batSel.cuandoSes||null);
+      const retoPrev = { sesion:sesResumen, programado:batSel.cuando, duracion:durActual, formato:batFmt };
+      const fmts = [['sesion','🌏',bi('Sesión','Session')],['sprint','⚡',bi('Sprint','Sprint')],['maraton','🏁',bi('Maratón','Marathon')]];
       root.innerHTML = `
         <div class="bat-lobby-top">
           <button type="button" class="bat-volver" id="batVolverLobby">‹ ${bi('Atrás','Back')}</button>
@@ -9565,22 +9583,26 @@ function renderBatalla(){
         <div class="bat-card">
           <div class="bat-f"><label>${bi('¿A quién retas?','Who do you challenge?')}</label>
             <div class="bat-ops">${ops.map(u=>`<button type="button" class="bat-op ${batSel.op===u?'on':''}" data-op="${u}"><span class="bat-op-ava">${caraSocio(u,24)}</span>${esc(batNom(u))}</button>`).join('')}</div></div>
-          <div class="bat-f"><label>${bi('Sesión','Session')}</label>
-            <div class="bat-ses-chips">${BAT_SESIONES.map(s=>`<button type="button" class="bat-ses-chip ${batSel.ses===s.id?'on':''}" data-ses="${s.id}"><span class="bat-mundito">${batMundito(s.id)}</span><b>${loc(s.nom)}</b><i>${String(s.hora).padStart(2,'0')}:00 · ${Math.round(s.dur/60)}h</i></button>`).join('')}</div></div>
-          <div class="bat-f"><label>${bi('¿Cuándo?','When?')}</label><div class="bat-cal">${cal}</div></div>
-          <div class="bat-f"><label>${bi('Duración','Duration')}</label>
-            <div class="bat-durs">${BAT_DUR.map(d=>`<button type="button" class="bat-dur ${batSel.dur===d.min?'on':''}" data-min="${d.min}">${d.t}</button>`).join('')}</div></div>
-          <p class="bat-party-nota">${bi('Vuelan a','You fly to')} ${esc(loc(sesObj.ciudad))}. ${bi('Cada quien registra su P&L; el de mayor profit gana.','Each logs their P&L; most profit wins.')}</p>
-          <button type="button" class="btn primary bat-crear" id="batCrear">${bi('Enviar reto','Send challenge')}</button>
+          <div class="bat-f"><label>${bi('Formato','Format')}</label>
+            <div class="bat-fmt-tabs">${fmts.map(f=>`<button type="button" class="bat-fmt-tab ${batFmt===f[0]?'on':''}" data-fmt="${f[0]}"><b>${f[1]}</b>${f[2]}</button>`).join('')}</div></div>
+          ${batFmt==='sesion' ? `<div class="bat-f"><label>${bi('Sesión','Session')}</label>
+            <div class="bat-ses-chips">${BAT_SESIONES.map(s=>`<button type="button" class="bat-ses-chip ${batSel.ses===s.id?'on':''}" data-ses="${s.id}"><b class="bat-ses-ico">${s.ico}</b><b>${loc(s.nom)}</b><i>${String(s.hora).padStart(2,'0')}:00 · ${Math.round(s.dur/60)}h</i></button>`).join('')}</div></div>` : ''}
+          ${durHTML ? `<div class="bat-f"><label>${bi('Duración','Duration')}</label>${durHTML}</div>` : ''}
+          <div class="bat-f"><label>${batFmt==='sesion'?bi('¿Qué día?','Which day?'):bi('¿Cuándo?','When?')}</label><div class="bat-cal">${cal}</div></div>
+          <div class="bat-resumen"><span class="bat-resumen-l">${bi('Tu reto','Your challenge')}</span><b id="batResumen">${batRetoTxt(retoPrev)}</b><span class="bat-resumen-w">${bi('mayor profit gana','most profit wins')}</span></div>
+          <button type="button" class="btn primary bat-crear" id="batCrear">${bi('Enviar reto','Send challenge')} →</button>
         </div>`;
       $('#batVolverLobby').onclick = () => { batPantalla='home'; batSel=null; renderBatalla(); };
       root.querySelectorAll('[data-op]').forEach(b=> b.onclick=()=>{ batSel.op=b.dataset.op; renderBatalla(); });
-      root.querySelectorAll('[data-ses]').forEach(b=> b.onclick=()=>{ batSel.ses=b.dataset.ses; batSel.cuando=null; renderBatalla(); });
-      root.querySelectorAll('.bat-cal-card').forEach(b=> b.onclick=()=>{ batSel.cuando = b.dataset.ts? +b.dataset.ts : null; renderBatalla(); });
-      root.querySelectorAll('[data-min]').forEach(b=> b.onclick=()=>{ batSel.dur=+b.dataset.min; renderBatalla(); });
+      root.querySelectorAll('[data-fmt]').forEach(b=> b.onclick=()=>{ batFmt=b.dataset.fmt; if(batFmt==='sprint') batSel.dur=30; else if(batFmt==='maraton') batSel.dur=1440; batSel.cuando=null; batSel.cuandoSes=null; renderBatalla(); });
+      root.querySelectorAll('[data-ses]').forEach(b=> b.onclick=()=>{ if(b.dataset.ses && b.classList.contains('bat-ses-chip')){ batSel.ses=b.dataset.ses; batSel.cuando=null; renderBatalla(); } });
+      root.querySelectorAll('.bat-dur[data-dur]').forEach(b=> b.onclick=()=>{ batSel.dur = (b.dataset.dur==='finde'?'finde':(+b.dataset.dur||b.dataset.dur)); renderBatalla(); });
+      root.querySelectorAll('.bat-cal-card').forEach(b=> b.onclick=()=>{ batSel.cuando = b.dataset.ts? +b.dataset.ts : null; batSel.cuandoSes = b.dataset.ses||null; renderBatalla(); });
       $('#batCrear').onclick = () => {
         if(!batSel.op){ toast(bi('Elige un rival','Pick an opponent')); return; }
-        S.challenge = { id:'bt_'+uid(), host:yo, rival:batSel.op, sesion:batSel.ses, duracion:batSel.dur,
+        const sesFinal = batFmt==='sesion' ? batSel.ses : (batSel.cuandoSes||null);
+        const durFinal = batFmt==='sesion' ? sesObj.dur : batSel.dur;
+        S.challenge = { id:'bt_'+uid(), host:yo, rival:batSel.op, formato:batFmt, sesion:sesFinal, duracion:durFinal,
           programado: batSel.cuando||null, estado:'invitado', creado:Date.now(), inicio:null, fin:null, trades:{} };
         batSel=null; batPantalla='home';
         toast(bi('Reto enviado. Esperando que acepte.','Challenge sent. Waiting for them to accept.'));
