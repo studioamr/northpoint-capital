@@ -968,7 +968,10 @@ button.st-chip:hover{border-color:rgba(255,255,255,.45)}
 .stage-btn{width:min(430px,100%);padding:16px;font-size:15.5px;font-weight:800;border-radius:14px;box-shadow:0 12px 30px -8px rgba(0,0,0,.6)}
 .stage-next{font-family:var(--mono);font-size:11px;color:rgba(255,255,255,.88);text-shadow:0 1px 4px rgba(0,0,0,.7);background:rgba(8,11,18,.5);border-radius:20px;padding:4px 13px;backdrop-filter:blur(4px)}
 /* la colección vive DENTRO del stage */
-.ars-ov{position:absolute;inset:12px;z-index:5;background:rgba(6,9,14,.9);backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,.12);border-radius:14px;line-height:1.35;display:flex;flex-direction:column;overflow:hidden}
+.ars-ov{position:absolute;inset:12px;z-index:5;background:rgba(6,9,14,.9);backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,.12);border-radius:14px;line-height:1.35;display:flex;flex-direction:column;overflow:hidden;
+  /* el juego es una ventana OSCURA siempre: sus tokens no siguen el theme claro */
+  --txt:#e8ebf0;--dim:rgba(255,255,255,.66);--faint:rgba(255,255,255,.5);--line:rgba(255,255,255,.14);--line-soft:rgba(255,255,255,.09);
+  --w02:rgba(255,255,255,.03);--w04:rgba(255,255,255,.06);--w07:rgba(255,255,255,.09);--panel-bg:#10141b;--sheen:rgba(255,255,255,.08);color:var(--txt)}
 .ars-top{display:flex;align-items:center;gap:12px;padding:13px 16px;border-bottom:1px solid rgba(255,255,255,.08)}
 .ars-top>b{font-size:14px;font-weight:800;color:#fff;flex:1}
 .ars-cash{font-family:var(--mono);font-size:11px;color:rgba(255,255,255,.7)}
@@ -11027,6 +11030,10 @@ function animaBotin(final, monto){
   el.appendChild(pop); setTimeout(()=>pop.remove(),1700);
   setTimeout(()=>el.classList.remove('banco-flash'),1500);
 }
+/* "en cuánto tiempo": 2d 3h · 4h 12m · 35m */
+function batEnTiempo(ms){ if(ms<=0) return bi('ya','now'); const h=Math.floor(ms/3600000), m=Math.floor(ms%3600000/60000);
+  return h>=24? Math.floor(h/24)+'d '+(h%24)+'h' : (h>0? h+'h '+m+'m' : m+'m'); }
+const batHHMM = ts => { const d=new Date(ts); return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'); };
 /* ── Torneos: en vivo, tus torneos, próximos ── */
 function batTorneos(){
   const now=new Date(); const D=86400000;
@@ -11034,10 +11041,10 @@ function batTorneos(){
   if(!S.batTorneosInsc) S.batTorneosInsc={};
   const insc=S.batTorneosInsc;
   const defs=[
-    {id:'asia',   nom:['Copa Asia','Asia Cup'],            ico:'🇯🇵', col:'#4a90d9', premio:5000,  cupo:32, offDay:0, hora:7,  durh:3},
-    {id:'londres',nom:['Abierto de Londres','London Open'],ico:'🇬🇧', col:'#c9a227', premio:8000,  cupo:48, offDay:1, hora:2,  durh:4},
-    {id:'ny',     nom:['Maratón NY','NY Marathon'],        ico:'🗽', col:'#30d158', premio:12000, cupo:64, offDay:2, hora:8,  durh:6},
-    {id:'kuro',   nom:['Torneo Kuro','Kuro Invitational'], ico:'🐉', col:'#8a6bd6', premio:25000, cupo:16, offDay:5, hora:9,  durh:8}
+    {id:'asia',   nom:['Copa Asia','Asia Cup'],            ico:'🇯🇵', col:'#4a90d9', premio:5000,  costo:1000, cupo:32, offDay:0, hora:7,  durh:3},
+    {id:'londres',nom:['Abierto de Londres','London Open'],ico:'🇬🇧', col:'#c9a227', premio:8000,  costo:1500, cupo:48, offDay:1, hora:2,  durh:4},
+    {id:'ny',     nom:['Maratón NY','NY Marathon'],        ico:'🗽', col:'#30d158', premio:12000, costo:2000, cupo:64, offDay:2, hora:8,  durh:6},
+    {id:'kuro',   nom:['Torneo Kuro','Kuro Invitational'], ico:'🐉', col:'#8a6bd6', premio:25000, costo:5000, cupo:16, offDay:5, hora:9,  durh:8}
   ];
   return defs.map((t,i)=>{
     const inicio=base + t.offDay*D + t.hora*3600000;
@@ -11518,23 +11525,29 @@ function renderBatalla(){
           <div class="ars-top"><b>${bi('Eventos','Events')}</b><span class="ars-cash">${bi('gana ahí y te pagan más','win there for a bigger payout')}</span><button type="button" class="ars-x" id="evX" aria-label="${bi('cerrar','close')}">✕</button></div>
           <div class="evt-body">
             <div class="evt-sec">${bi('TUS COMPETENCIAS','YOUR COMPETITIONS')}</div>
-            ${(()=>{ const filas2=[];
+            ${(()=>{ const filas2=[], AHORA=Date.now();
               if(c){ const rv=c.party?(batJugadores(c).find(u2=>u2!==yo)||c.rival):(c.host===yo?c.rival:c.host);
                 const est=c.estado==='activo'?bi('EN CURSO','LIVE'):c.estado==='invitado'?bi('INVITACIÓN','INVITED'):bi('AGENDADO','SCHEDULED');
-                filas2.push(`<div class="ag-row live"><div class="ag-when"><b>${bi('HOY','NOW')}</b><span>● ${est}</span></div><div class="ag-i"><b>${bi('Duelo vs','Duel vs')} ${esc(batNom(rv))}</b><span>${esc(batDurTxt(c.duracion))}${(c.mult||1)>1?` · ${bi('paga','pays')} <i>×${c.mult}</i>`:''}</span></div></div>`); }
+                const resta=c.estado==='activo'&&c.fin?` · ${bi('quedan','left')} <i>${batEnTiempo(c.fin-AHORA)}</i>`:'';
+                filas2.push(`<div class="ag-row live"><div class="ag-when"><b>${bi('HOY','NOW')}</b><span>● ${est}</span></div><div class="ag-i"><b>${bi('Duelo vs','Duel vs')} ${esc(batNom(rv))}</b><span>${esc(batDurTxt(c.duracion))}${resta}${(c.mult||1)>1?` · ${bi('paga','pays')} <i>×${c.mult}</i>`:''} · ${bi('el que pierde paga','loser pays')} ${fmt$(BAT_FEE)}</span></div></div>`); }
               batTorneos().filter(t=>t.inscrito).forEach(t=>{ const dt=batDiaTxt(t.inicio);
-                filas2.push(`<div class="ag-row" style="--kc:${t.col}"><div class="ag-when"><b>${t.estado==='live'?bi('HOY','NOW'):dt.hora}</b><span>${t.estado==='live'?'● '+bi('EN VIVO','LIVE'):esc(dt.dia)}</span></div><div class="ag-i"><b>${t.ico} ${loc(t.nom)}</b><span>${bi('inscrito','joined')} · ${bi('premio','prize')} <i>${fmt$(t.premio)}</i> · ${bi('paga','pays')} <i>×3</i></span></div><span class="evt-tag">${bi('Inscrito','Joined')}</span></div>`); });
+                const cuando=t.estado==='live'?`${bi('quedan','left')} <i>${batEnTiempo(t.fin-AHORA)}</i>`:`${bi('empieza en','starts in')} <i>${batEnTiempo(t.inicio-AHORA)}</i>`;
+                filas2.push(`<div class="ag-row ${t.estado==='live'?'live':''}" style="--kc:${t.col}"><div class="ag-when"><b>${t.estado==='live'?bi('HOY','NOW'):dt.hora}</b><span>${t.estado==='live'?'● '+bi('EN VIVO','LIVE'):esc(dt.dia)}</span></div><div class="ag-i"><b>${t.ico} ${loc(t.nom)}</b><span>${esc(dt.dia)} ${dt.hora} → ${batHHMM(t.fin)} (${t.durh}h) · ${cuando}</span><span>${bi('premio','prize')} <i>${fmt$(t.premio)}</i> · ${bi('paga','pays')} <i>×3</i> · ${bi('cupo','spots')} ${t.inscritos}/${t.cupo}</span></div><span class="evt-tag">${bi('Inscrito','Joined')}</span></div>`); });
               return filas2.length? filas2.join('') : `<div class="evt-vacio">${bi('No estás dentro de ninguna todavía','You are not in any yet')}</div>`; })()}
             <div class="evt-sec">${bi('SESIÓN ACTUAL','CURRENT SESSION')}</div>
             ${(()=>{ const h=new Date().getHours(); const viva=BAT_SESIONES.find(s=>{ const fin=s.hora+Math.round(s.dur/60); return h>=s.hora && h<fin; });
-              return viva?`<div class="ag-row live"><div class="ag-when"><b>${String(viva.hora).padStart(2,'0')}:00</b><span>● ${bi('EN VIVO','LIVE')}</span></div><div class="ag-i"><b>${viva.ico} ${loc(viva.nom)}</b><span>${Math.round(viva.dur/60)}h · ${bi('paga','pays')} <i>×2</i></span></div><button type="button" class="btn primary sm" data-abreses="${viva.id}" data-mult="2">${bi('Retar','Battle')}</button></div>`
-              :`<div class="evt-vacio">${bi('Ninguna sesión en vivo ahora','No session live right now')}</div>`; })()}
+              if(!viva) return `<div class="evt-vacio">${bi('Ninguna sesión en vivo ahora','No session live right now')}</div>`;
+              const finH=(viva.hora+Math.round(viva.dur/60))%24; const d2=new Date(); d2.setHours(finH,0,0,0); if(d2.getTime()<Date.now()) d2.setDate(d2.getDate()+1);
+              return `<div class="ag-row live"><div class="ag-when"><b>${String(viva.hora).padStart(2,'0')}:00</b><span>● ${bi('EN VIVO','LIVE')}</span></div><div class="ag-i"><b>${viva.ico} ${loc(viva.nom)}</b><span>${String(viva.hora).padStart(2,'0')}:00 → ${String(finH).padStart(2,'0')}:00 (${Math.round(viva.dur/60)}h) · ${bi('quedan','left')} <i>${batEnTiempo(d2.getTime()-Date.now())}</i></span><span>${bi('paga','pays')} <i>×2</i> · ${bi('entrada gratis · el que pierde paga','free entry · loser pays')} ${fmt$(BAT_FEE)}</span></div><button type="button" class="btn primary sm" data-abreses="${viva.id}" data-mult="2">${bi('Retar','Battle')}</button></div>`; })()}
             <div class="evt-sec">${bi('PRÓXIMAS SESIONES','UPCOMING SESSIONS')}</div>
             ${BAT_SESIONES.map(s=>{ const ap=batProxAperturas(s.hora,1)[0], dt=ap?batDiaTxt(ap.getTime()):null;
-              return `<div class="ag-row"><div class="ag-when"><b>${dt?dt.hora:String(s.hora).padStart(2,'0')+':00'}</b><span>${dt?esc(dt.dia):''}</span></div><div class="ag-i"><b>${s.ico} ${loc(s.nom)}</b><span>${Math.round(s.dur/60)}h · ${bi('paga','pays')} <i>×2</i></span></div><button type="button" class="btn sm" data-abreses="${s.id}" data-mult="2">${bi('Retar','Battle')}</button></div>`; }).join('')}
+              const finH=(s.hora+Math.round(s.dur/60))%24;
+              const falta=ap?` · ${bi('empieza en','starts in')} <i>${batEnTiempo(ap.getTime()-Date.now())}</i>`:'';
+              return `<div class="ag-row"><div class="ag-when"><b>${dt?dt.hora:String(s.hora).padStart(2,'0')+':00'}</b><span>${dt?esc(dt.dia):''}</span></div><div class="ag-i"><b>${s.ico} ${loc(s.nom)}</b><span>${String(s.hora).padStart(2,'0')}:00 → ${String(finH).padStart(2,'0')}:00 (${Math.round(s.dur/60)}h)${falta}</span><span>${bi('paga','pays')} <i>×2</i> · ${bi('entrada gratis','free entry')}</span></div><button type="button" class="btn sm" data-abreses="${s.id}" data-mult="2">${bi('Retar','Battle')}</button></div>`; }).join('')}
             <div class="evt-sec">${bi('SIGUIENTES TORNEOS','NEXT TOURNAMENTS')}</div>
-            ${batTorneos().map(t=>{ const dt=batDiaTxt(t.inicio);
-              return `<div class="ag-row ${t.estado==='live'?'live':''}" style="--kc:${t.col}"><div class="ag-when"><b>${t.estado==='live'?bi('HOY','NOW'):dt.hora}</b><span>${t.estado==='live'?'● '+bi('EN VIVO','LIVE'):esc(dt.dia)}</span></div><div class="ag-i"><b>${t.ico} ${loc(t.nom)}</b><span>${bi('premio','prize')} <i>${fmt$(t.premio)}</i> · ${bi('paga','pays')} <i>×3</i></span></div>${t.inscrito?`<span class="evt-tag">${bi('Inscrito','Joined')}</span>`:`<button type="button" class="btn primary sm" data-trnjoin="${t.id}">${bi('Unirme','Join')}</button>`}</div>`; }).join('')}
+            ${batTorneos().map(t=>{ const dt=batDiaTxt(t.inicio); const AHORA=Date.now();
+              const cuando=t.estado==='live'?`${bi('quedan','left')} <i>${batEnTiempo(t.fin-AHORA)}</i>`:`${bi('empieza en','starts in')} <i>${batEnTiempo(t.inicio-AHORA)}</i>`;
+              return `<div class="ag-row ${t.estado==='live'?'live':''}" style="--kc:${t.col}"><div class="ag-when"><b>${t.estado==='live'?bi('HOY','NOW'):dt.hora}</b><span>${t.estado==='live'?'● '+bi('EN VIVO','LIVE'):esc(dt.dia)}</span></div><div class="ag-i"><b>${t.ico} ${loc(t.nom)}</b><span>${esc(dt.dia)} ${dt.hora} → ${batHHMM(t.fin)} (${t.durh}h) · ${cuando}</span><span>${bi('entrada','entry')} <i>${fmt$(t.costo)}</i> · ${bi('premio','prize')} <i>${fmt$(t.premio)}</i> · ${bi('paga','pays')} <i>×3</i> · ${bi('cupo','spots')} ${t.inscritos}/${t.cupo}</span></div>${t.inscrito?`<span class="evt-tag">${bi('Inscrito','Joined')}</span>`:`<button type="button" class="btn primary sm" data-trnjoin="${t.id}">${bi('Unirme','Join')} · ${fmt$(t.costo)}</button>`}</div>`; }).join('')}
           </div>
         </div>`:''}
         ${window._batSetup?`
@@ -11667,7 +11680,12 @@ function renderBatalla(){
     if(_slides){ _tabs.forEach(t=> t.onclick=()=>{ _slides.scrollTo({left:(+t.dataset.slide)*_slides.clientWidth, behavior:'smooth'}); });
       _slides.onscroll=()=>{ const idx=Math.round(_slides.scrollLeft/Math.max(1,_slides.clientWidth)); _tabs.forEach((t,i)=> t.classList.toggle('on', i===idx)); }; }
     root.querySelectorAll('[data-abreses]').forEach(b=> b.onclick=()=>{ batSel={ops:[],ses:b.dataset.abreses,dur:30,cuando:null,mult:+(b.dataset.mult||1),fmt:'sesion'}; window._batEventos=false; window._batSetup=true; renderBatalla(); });
-    root.querySelectorAll('[data-trnjoin]').forEach(b=> b.onclick=(e)=>{ e.stopPropagation(); const id=b.dataset.trnjoin; if(!S.batTorneosInsc) S.batTorneosInsc={}; S.batTorneosInsc[id]=true; save(); toast('🏆 '+bi('Te inscribiste al torneo','Joined the tournament')); renderBatalla(); });
+    root.querySelectorAll('[data-trnjoin]').forEach(b=> b.onclick=(e)=>{ e.stopPropagation(); const id=b.dataset.trnjoin;
+      const t=batTorneos().find(x=>x.id===id); const costo=(t&&t.costo)||0;
+      if(batBanco(yo)<costo){ toast(bi('No te alcanza la entrada','Not enough for the entry')+' · '+fmt$(costo)); return; }
+      batStackSet(yo, batBanco(yo)-costo);
+      if(!S.batTorneosInsc) S.batTorneosInsc={}; S.batTorneosInsc[id]=true; save();
+      toast(bi('Inscrito al torneo · entrada','Joined the tournament · entry')+' −'+fmt$(costo)); renderBatalla(); });
     $('#batNuevo').onclick = () => { if(!window._batSetup||!batSel) batSel={ops:[],ses:null,dur:30,cuando:null,mult:1,fmt:'reloj'}; window._batSetup=true; window._batArsenal=false; window._batEventos=false; renderBatalla(); };
     $('#batAjustes') && ($('#batAjustes').onclick = () => { batPantalla='ajustes'; renderBatalla(); });
     $('#stEventos') && ($('#stEventos').onclick = () => { window._batEventos=true; window._batArsenal=false; window._batSetup=false; window._batComo=false; renderBatalla(); });
@@ -11687,33 +11705,98 @@ function renderBatalla(){
     $('#njX') && ($('#njX').onclick = () => { window._batCrearNinja=false; window._njCfg=null; renderBatalla(); });
     $('#onbGo') && ($('#onbGo').onclick = () => { window._batOnb='como'; renderBatalla(); });
     $('#comoGo') && ($('#comoGo').onclick = () => { window._batOnb='crear'; renderBatalla(); });
-    /* la montaña de noche con la estrella NorthPoint brillando en lo alto */
+    /* ══ EL INICIO ══ la montaña detallada de noche: roca facetada, cornisa de
+       nieve, tormenta con ráfagas, fauna — y el ninja contemplando LA ESTRELLA. */
     const ocv=$('#onbCv'); cancelAnimationFrame(window._onbRAF||0);
     if(ocv){ const ox=ocv.getContext('2d'); const OW=900, OH=1280;
-      const stars=[]; for(let i=0;i<90;i++){ const r=(a)=>((Math.sin((i+a)*12.9898)*43758.5453)%1+1)%1; stars.push({x:r(1)*OW, y:r(2)*OH*0.62, s:0.8+r(3)*1.8, f:r(4)*6.3}); }
+      const rr2=(i,a)=>((Math.sin((i+(a||0))*12.9898)*43758.5453)%1+1)%1;
+      const stars=[]; for(let i=0;i<130;i++) stars.push({x:rr2(i,1)*OW, y:rr2(i,2)*OH*0.58, s:0.7+rr2(i,3)*1.9, f:rr2(i,4)*6.3});
+      const copos=[]; for(let i=0;i<150;i++) copos.push({x:rr2(i,7)*OW, y:rr2(i,8)*OH, s:0.9+rr2(i,9)*2.4, v:60+rr2(i,10)*130, f:rr2(i,11)*6.3});
+      const rachas=[]; for(let i=0;i<22;i++) rachas.push({y:OH*0.3+rr2(i,13)*OH*0.6, l:70+rr2(i,14)*160, v:420+rr2(i,15)*420, o:rr2(i,16)*OW});
+      const aves2=[]; for(let i=0;i<3;i++) aves2.push({cx:OW*(0.3+i*0.2), cy:OH*(0.3+rr2(i,18)*0.08), r:26+rr2(i,19)*30, f:rr2(i,20)*6.3, v:(i%2?1:-1)*(0.00025+rr2(i,21)*0.0002)});
+      const AP={x:OW*0.5, y:OH*0.335};   /* la cima */
+      let last=0;
       const pintaO=(t)=>{ if(!ocv.isConnected) return;
+        const dt=Math.min(0.05,(t-last)/1000)||0.016; last=t;
+        /* cielo profundo */
         const g=ox.createLinearGradient(0,0,0,OH);
-        g.addColorStop(0,'#04060f'); g.addColorStop(0.55,'#0a1024'); g.addColorStop(1,'#101a33');
+        g.addColorStop(0,'#02040c'); g.addColorStop(0.45,'#081020'); g.addColorStop(0.8,'#0e1830'); g.addColorStop(1,'#15223f');
         ox.fillStyle=g; ox.fillRect(0,0,OW,OH);
-        stars.forEach(s3=>{ ox.fillStyle=`rgba(255,255,255,${0.28+0.5*Math.abs(Math.sin(t/900+s3.f))})`; ox.fillRect(s3.x,s3.y,s3.s,s3.s); });
-        /* LA ESTRELLA NORTHPOINT: alta, pulsando, con sus rayos */
-        const ex2=OW*0.5, ey=OH*0.16, pul=1+0.1*Math.sin(t/600);
+        stars.forEach(s3=>{ ox.fillStyle=`rgba(255,255,255,${0.22+0.55*Math.abs(Math.sin(t/900+s3.f))})`; ox.fillRect(s3.x,s3.y,s3.s,s3.s); });
+        /* LA ESTRELLA: flota alto, pulsa, y su luz baja hasta la cima */
+        const ex2=OW*0.5, ey=OH*0.135 + Math.sin(t/1900)*12, pul=1+0.09*Math.sin(t/620);
         ox.save();
-        ox.fillStyle='rgba(140,255,180,.09)'; ox.beginPath(); ox.arc(ex2,ey,90*pul,0,7); ox.fill();
-        ox.fillStyle='rgba(180,255,210,.16)'; ox.beginPath(); ox.arc(ex2,ey,46*pul,0,7); ox.fill();
-        ox.strokeStyle='rgba(220,255,235,.9)'; ox.lineWidth=2.4;
-        ox.beginPath(); ox.moveTo(ex2-34*pul,ey); ox.lineTo(ex2+34*pul,ey); ox.moveTo(ex2,ey-34*pul); ox.lineTo(ex2,ey+34*pul); ox.stroke();
-        ox.lineWidth=1.1; ox.beginPath(); ox.moveTo(ex2-16*pul,ey-16*pul); ox.lineTo(ex2+16*pul,ey+16*pul); ox.moveTo(ex2+16*pul,ey-16*pul); ox.lineTo(ex2-16*pul,ey+16*pul); ox.stroke();
-        ox.fillStyle='#eafff2'; ox.beginPath(); ox.arc(ex2,ey,7*pul,0,7); ox.fill();
+        const cone=ox.createLinearGradient(0,ey,0,AP.y);
+        cone.addColorStop(0,'rgba(190,255,220,.10)'); cone.addColorStop(1,'rgba(190,255,220,0)');
+        ox.fillStyle=cone; ox.beginPath(); ox.moveTo(ex2-14,ey); ox.lineTo(ex2+14,ey); ox.lineTo(ex2+92,AP.y); ox.lineTo(ex2-92,AP.y); ox.closePath(); ox.fill();
+        ox.fillStyle='rgba(140,255,180,.08)'; ox.beginPath(); ox.arc(ex2,ey,100*pul,0,7); ox.fill();
+        ox.fillStyle='rgba(180,255,210,.15)'; ox.beginPath(); ox.arc(ex2,ey,50*pul,0,7); ox.fill();
+        ox.strokeStyle='rgba(224,255,238,.92)'; ox.lineWidth=2.6;
+        ox.beginPath(); ox.moveTo(ex2-38*pul,ey); ox.lineTo(ex2+38*pul,ey); ox.moveTo(ex2,ey-38*pul); ox.lineTo(ex2,ey+38*pul); ox.stroke();
+        ox.lineWidth=1.1; ox.beginPath(); ox.moveTo(ex2-17*pul,ey-17*pul); ox.lineTo(ex2+17*pul,ey+17*pul); ox.moveTo(ex2+17*pul,ey-17*pul); ox.lineTo(ex2-17*pul,ey+17*pul); ox.stroke();
+        ox.fillStyle='#ecfff4'; ox.beginPath(); ox.arc(ex2,ey,7.5*pul,0,7); ox.fill();
         ox.restore();
-        /* cordillera lejana y LA montaña alta */
-        ox.fillStyle='#0a0e1c'; ox.beginPath(); ox.moveTo(0,OH*0.78);
-        ox.lineTo(OW*0.14,OH*0.62); ox.lineTo(OW*0.3,OH*0.74); ox.lineTo(OW*0.42,OH*0.66); ox.lineTo(OW,OH*0.8); ox.lineTo(OW,OH); ox.lineTo(0,OH); ox.closePath(); ox.fill();
-        ox.fillStyle='#0d1222'; ox.beginPath(); ox.moveTo(OW*0.12,OH); ox.lineTo(OW*0.5,OH*0.34); ox.lineTo(OW*0.88,OH); ox.closePath(); ox.fill();
-        ox.fillStyle='rgba(235,240,250,.85)'; ox.beginPath(); ox.moveTo(OW*0.5,OH*0.34);
-        ox.lineTo(OW*0.545,OH*0.415); ox.lineTo(OW*0.515,OH*0.405); ox.lineTo(OW*0.5,OH*0.435); ox.lineTo(OW*0.478,OH*0.4); ox.lineTo(OW*0.455,OH*0.415); ox.closePath(); ox.fill();
-        /* el ninja en la cima, mirando la estrella */
-        zenNinja(ox, OW*0.5, OH*0.345, 1.5, t*0.45, 0, '#9aa3b2', {traje:'#0a0d14', banda:'#d6dce8', buf:'#b53a2e'});
+        /* aves circulando lejos, bajo la estrella */
+        aves2.forEach(av=>{ const an=t*av.v+av.f, bx2=av.cx+Math.cos(an)*av.r*2.2, by2=av.cy+Math.sin(an)*av.r*0.5;
+          const w2=Math.sin(t/160+av.f)*3;
+          ox.strokeStyle='rgba(200,210,225,.5)'; ox.lineWidth=1.6; ox.beginPath();
+          ox.moveTo(bx2-6,by2+w2); ox.quadraticCurveTo(bx2,by2-3,bx2,by2); ox.quadraticCurveTo(bx2,by2-3,bx2+6,by2+w2); ox.stroke(); });
+        /* cordilleras lejanas (2 capas) con nieve en las puntas */
+        const ridge=(pts,col,nievePts)=>{ ox.fillStyle=col; ox.beginPath(); ox.moveTo(pts[0][0],pts[0][1]);
+          pts.forEach(p2=>ox.lineTo(p2[0],p2[1])); ox.lineTo(OW,OH); ox.lineTo(0,OH); ox.closePath(); ox.fill();
+          (nievePts||[]).forEach(i2=>{ const p2=pts[i2]; ox.fillStyle='rgba(226,233,246,.5)'; ox.beginPath();
+            ox.moveTo(p2[0],p2[1]); ox.lineTo(p2[0]+26,p2[1]+34); ox.lineTo(p2[0]+8,p2[1]+28); ox.lineTo(p2[0],p2[1]+38); ox.lineTo(p2[0]-9,p2[1]+26); ox.lineTo(p2[0]-26,p2[1]+34); ox.closePath(); ox.fill(); }); };
+        ridge([[0,OH*0.66],[OW*0.1,OH*0.56],[OW*0.2,OH*0.63],[OW*0.32,OH*0.52],[OW*0.44,OH*0.64],[OW*0.62,OH*0.55],[OW*0.78,OH*0.66],[OW*0.9,OH*0.58],[OW,OH*0.68]],'#070b16',[1,3,5,7]);
+        ridge([[0,OH*0.76],[OW*0.16,OH*0.64],[OW*0.34,OH*0.75],[OW*0.7,OH*0.62],[OW*0.88,OH*0.76],[OW,OH*0.7]],'#0a0f1e',[1,3]);
+        /* ══ LA MONTAÑA: dos caras (luz de luna / sombra), roca y nieve ══ */
+        const L=OW*0.10, R=OW*0.90;
+        /* cara iluminada */
+        ox.fillStyle='#151d34'; ox.beginPath(); ox.moveTo(L,OH); ox.lineTo(AP.x,AP.y); ox.lineTo(AP.x,OH); ox.closePath(); ox.fill();
+        /* cara en sombra */
+        ox.fillStyle='#090d19'; ox.beginPath(); ox.moveTo(AP.x,AP.y); ox.lineTo(R,OH); ox.lineTo(AP.x,OH); ox.closePath(); ox.fill();
+        /* vetas de ROCA en la cara iluminada */
+        ox.fillStyle='rgba(6,9,17,.55)';
+        [[0.30,0.62,0.05],[0.38,0.52,0.045],[0.335,0.78,0.07],[0.43,0.70,0.05],[0.46,0.46,0.028]].forEach(v2=>{
+          const vx=OW*v2[0], vy=OH*v2[1], vw=OW*v2[2];
+          ox.beginPath(); ox.moveTo(vx,vy); ox.lineTo(vx+vw,vy+OH*0.05); ox.lineTo(vx+vw*0.7,vy+OH*0.16); ox.lineTo(vx-vw*0.35,vy+OH*0.1); ox.closePath(); ox.fill(); });
+        /* riscos que asoman en la cara oscura */
+        ox.fillStyle='rgba(22,30,52,.5)';
+        [[0.56,0.55],[0.62,0.68],[0.58,0.82]].forEach(v2=>{ const vx=OW*v2[0], vy=OH*v2[1];
+          ox.beginPath(); ox.moveTo(vx,vy); ox.lineTo(vx+OW*0.05,vy+OH*0.035); ox.lineTo(vx+OW*0.02,vy+OH*0.08); ox.lineTo(vx-OW*0.015,vy+OH*0.05); ox.closePath(); ox.fill(); });
+        /* CASQUETE de nieve con borde irregular + cornisa */
+        ox.fillStyle='rgba(232,238,250,.94)'; ox.beginPath(); ox.moveTo(AP.x,AP.y);
+        ox.lineTo(AP.x+OW*0.052,AP.y+OH*0.075); ox.lineTo(AP.x+OW*0.032,AP.y+OH*0.062); ox.lineTo(AP.x+OW*0.022,AP.y+OH*0.095);
+        ox.lineTo(AP.x+OW*0.002,AP.y+OH*0.07); ox.lineTo(AP.x-OW*0.018,AP.y+OH*0.1); ox.lineTo(AP.x-OW*0.034,AP.y+OH*0.066);
+        ox.lineTo(AP.x-OW*0.052,AP.y+OH*0.082); ox.closePath(); ox.fill();
+        /* la cara en sombra del casquete */
+        ox.fillStyle='rgba(174,187,210,.85)'; ox.beginPath(); ox.moveTo(AP.x,AP.y);
+        ox.lineTo(AP.x+OW*0.052,AP.y+OH*0.075); ox.lineTo(AP.x+OW*0.028,AP.y+OH*0.058); ox.lineTo(AP.x+OW*0.006,AP.y+OH*0.02); ox.closePath(); ox.fill();
+        /* manchones de nieve pegados a la pendiente */
+        ox.fillStyle='rgba(226,233,246,.13)';
+        [[0.43,0.55,0.032],[0.385,0.67,0.042],[0.545,0.63,0.03],[0.46,0.8,0.052],[0.41,0.9,0.06]].forEach(v2=>{
+          ox.beginPath(); ox.ellipse(OW*v2[0],OH*v2[1],OW*v2[2],OH*0.006,(v2[0]<0.5?-0.62:0.62),0,7); ox.fill(); });
+        /* niebla que cruza lenta */
+        const fog=(fy,vel,al)=>{ const fx=((t*vel)%(OW*1.6))-OW*0.3;
+          const fg=ox.createRadialGradient(fx,fy,10,fx,fy,OW*0.3);
+          fg.addColorStop(0,`rgba(190,205,230,${al})`); fg.addColorStop(1,'rgba(190,205,230,0)');
+          ox.fillStyle=fg; ox.beginPath(); ox.ellipse(fx,fy,OW*0.3,OH*0.03,0,0,7); ox.fill(); };
+        fog(OH*0.6,0.015,0.05); fog(OH*0.78,-0.011,0.06); fog(OH*0.48,0.008,0.035);
+        /* FAUNA: el leopardo de las nieves cruza la ladera baja */
+        zenLeopardo(ox, OW, OH*0.9, t);
+        /* EL NINJA · el protagonista, contemplando la estrella desde la cima */
+        const halo=ox.createRadialGradient(AP.x,AP.y-46,4,AP.x,AP.y-46,110);
+        halo.addColorStop(0,'rgba(190,255,220,.12)'); halo.addColorStop(1,'rgba(190,255,220,0)');
+        ox.fillStyle=halo; ox.beginPath(); ox.arc(AP.x,AP.y-46,110,0,7); ox.fill();
+        zenNinja(ox, AP.x, AP.y+4, 2.1, t, 0, '#9aa3b2', {traje:'#0a0d14', banda:'#d6dce8', buf:'#b53a2e'});
+        /* TORMENTA: nieve con viento + ráfagas */
+        const viento=Math.sin(t/2600)*90+40;
+        copos.forEach(p2=>{ p2.y+=p2.v*dt; p2.x+=(viento+Math.sin(t/500+p2.f)*30)*dt;
+          if(p2.y>OH){ p2.y=-8; p2.x=rr2(p2.f*99,3)*OW; } if(p2.x>OW+10) p2.x=-10; if(p2.x<-10) p2.x=OW+10;
+          ox.fillStyle=`rgba(255,255,255,${0.35+0.45*Math.abs(Math.sin(p2.f+t/700))})`; ox.beginPath(); ox.arc(p2.x,p2.y,p2.s,0,7); ox.fill(); });
+        const gust=Math.max(0,Math.sin(t/3300));
+        if(gust>0.25){ ox.strokeStyle=`rgba(255,255,255,${0.1*gust})`; ox.lineWidth=1.6;
+          rachas.forEach(rp=>{ const rx=((t*rp.v*0.001*OW*0.12)+rp.o)%(OW+rp.l)-rp.l;
+            ox.beginPath(); ox.moveTo(rx,rp.y); ox.lineTo(rx+rp.l,rp.y-rp.l*0.12); ox.stroke(); }); }
         window._onbRAF=requestAnimationFrame(pintaO); };
       window._onbRAF=requestAnimationFrame(pintaO); }
     root.querySelectorAll('[data-njedit]').forEach(b=> b.onclick=()=>{ window._njCfg={...((S.batNinja||{})[yo]||NJ_DEF)}; window._batCrearNinja=true; window._batPerfil=null; renderBatalla(); });
