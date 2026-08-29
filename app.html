@@ -743,19 +743,16 @@ body.locked .app{visibility:hidden;pointer-events:none}
 .bat-cur b{font-family:var(--mono);font-size:14px;font-weight:700;white-space:nowrap}
 .bat-cur i{font-family:var(--mono);font-style:normal;font-size:8.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
 .bat-hero2{position:relative;border-radius:20px;overflow:hidden;border:1px solid var(--line);
-  background:linear-gradient(180deg,var(--h1,#2b4a6b) 0%,var(--h2,#111f33) 100%);
-  aspect-ratio:16/12;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;margin-bottom:14px}
-.bat-hero-etapa{position:absolute;top:14px;left:0;right:0;text-align:center;font-family:var(--mono);font-size:11px;
-  letter-spacing:.18em;text-transform:uppercase;color:rgba(255,255,255,.82);text-shadow:0 1px 4px rgba(0,0,0,.5)}
-.bat-hero-glow{position:absolute;left:50%;top:52%;width:60%;aspect-ratio:1;transform:translate(-50%,-50%);
-  background:radial-gradient(circle,rgba(255,255,255,.22),transparent 65%);pointer-events:none}
-.bat-hero-emoji{position:relative;font-size:clamp(90px,26vw,150px);line-height:1;z-index:1;
-  filter:drop-shadow(0 10px 16px rgba(0,0,0,.45));animation:batBob 3.4s ease-in-out infinite}
-@keyframes batBob{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
-.bat-hero-piso{position:absolute;left:0;right:0;bottom:52px;height:1px;background:rgba(255,255,255,.14);
-  box-shadow:0 0 40px 22px rgba(0,0,0,.28)}
-.bat-hero-nom{position:relative;z-index:1;font-size:22px;font-weight:900;letter-spacing:-.01em;color:#fff;
-  text-shadow:0 2px 10px rgba(0,0,0,.5);margin-bottom:16px}
+  aspect-ratio:16/12;margin-bottom:14px;background:#0c1322}
+.bat-escena{position:absolute;inset:0;width:100%;height:100%;display:block}
+.bat-hero-etapa{position:absolute;top:12px;left:0;right:0;text-align:center;font-family:var(--mono);font-size:11px;
+  letter-spacing:.18em;text-transform:uppercase;color:rgba(255,255,255,.9);text-shadow:0 1px 4px rgba(0,0,0,.7);z-index:2}
+.bat-hero-monito{position:absolute;left:50%;bottom:16%;transform:translateX(-50%);width:32%;max-width:150px;height:auto;
+  z-index:1;image-rendering:pixelated;filter:drop-shadow(0 6px 10px rgba(0,0,0,.4));animation:batBob 3.6s ease-in-out infinite}
+@keyframes batBob{0%,100%{transform:translateX(-50%) translateY(0)}50%{transform:translateX(-50%) translateY(-6px)}}
+.bat-hero-nom{position:absolute;left:0;right:0;bottom:0;z-index:2;text-align:center;
+  font-size:21px;font-weight:900;letter-spacing:-.01em;color:#fff;padding:22px 0 14px;
+  text-shadow:0 2px 12px rgba(0,0,0,.7);background:linear-gradient(0deg,rgba(0,0,0,.55),transparent)}
 .bat-assets{display:flex;justify-content:center;gap:8px;flex-wrap:wrap;margin-bottom:16px}
 .bat-asset{width:38px;height:38px;border-radius:11px;display:flex;align-items:center;justify-content:center;
   font-size:19px;background:var(--w02);border:1px solid var(--line-soft);filter:grayscale(1);opacity:.45}
@@ -8848,6 +8845,153 @@ function batRegistraResultado(c){
 }
 
 /* ── HOME · 0 → Billonario · la tarjeta central que evoluciona con tu riqueza ── */
+/* ══ ESCENAS DE CADA ETAPA · el fondo cuenta la subida de $0 a billonario ══
+   De un callejón → cuarto → depa con monitores → casa → villa con alberca →
+   yate → penthouse → imperio en una isla. Cada una es un dibujo SVG lleno de
+   detalle; el monito de cada quien se para encima (canvas aparte). */
+function batEscenaSVG(i){
+  const D = `def${i}`;   // ids únicos por etapa (evita choque de gradientes)
+  const sky=(a,b)=>`<defs><linearGradient id="sky${D}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${a}"/><stop offset="1" stop-color="${b}"/></linearGradient></defs><rect width="400" height="300" fill="url(#sky${D})"/>`;
+  const sun=(x,y,r,a,b)=>`<radialGradient id="sun${D}"><stop offset="0" stop-color="${a}"/><stop offset=".5" stop-color="${a}"/><stop offset="1" stop-color="${b||a}" stop-opacity="0"/></radialGradient><circle cx="${x}" cy="${y}" r="${r*2.6}" fill="url(#sun${D})"/><circle cx="${x}" cy="${y}" r="${r}" fill="${a}"/>`;
+  const mtn=(y,c,o=1)=>`<path d="M0,${y} L60,${y-38} L110,${y-12} L170,${y-46} L230,${y-16} L300,${y-42} L360,${y-14} L400,${y-32} L400,300 L0,300 Z" fill="${c}" opacity="${o}"/>`;
+  const palm=(x,y,s,c='#2e7d3a')=>`<g transform="translate(${x},${y}) scale(${s})"><rect x="-2.5" y="-40" width="5" height="40" rx="2" fill="#7a5a30"/><g fill="${c}"><path d="M0,-40 q-24,-5 -36,6 q17,-4 36,-1z"/><path d="M0,-40 q24,-5 36,6 q-17,-4 -36,-1z"/><path d="M0,-40 q-15,-17 -32,-16 q15,2 32,9z"/><path d="M0,-40 q15,-17 32,-16 q-15,2 -32,9z"/><path d="M0,-42 q-5,-16 -1,-25 q6,11 5,24z"/></g></g>`;
+  const car=(x,y,s,body='#c62b2b')=>`<g transform="translate(${x},${y}) scale(${s})"><path d="M-22,0 L-16,-9 L10,-11 L20,-3 L22,0 Z" fill="${body}"/><path d="M-13,-8 L8,-9 L15,-4 L-13,-4 Z" fill="#bfe3ff" opacity=".8"/><rect x="-24" y="-1" width="48" height="4" rx="2" fill="${body}"/><circle cx="-13" cy="3" r="4.5" fill="#111"/><circle cx="13" cy="3" r="4.5" fill="#111"/><circle cx="-13" cy="3" r="1.8" fill="#888"/><circle cx="13" cy="3" r="1.8" fill="#888"/></g>`;
+  const heli=(x,y,s)=>`<g transform="translate(${x},${y}) scale(${s})"><ellipse cx="0" cy="0" rx="13" ry="6" fill="#20242b"/><path d="M8,-1 L26,-2 L26,1 L9,3 Z" fill="#20242b"/><rect x="24" y="-5" width="3" height="7" fill="#20242b"/><rect x="-14" y="-9" width="28" height="2.4" rx="1" fill="#3a4048"><animateTransform attributeName="transform" type="rotate" from="0 0 -8" to="360 0 -8" dur=".18s" repeatCount="indefinite"/></rect><rect x="-1" y="-9" width="2" height="4" fill="#3a4048"/></g>`;
+  const water=(y,c1='#2f9fd0',c2='#0e5f86')=>`<defs><linearGradient id="w${D}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${c1}"/><stop offset="1" stop-color="${c2}"/></linearGradient></defs><rect x="0" y="${y}" width="400" height="${300-y}" fill="url(#w${D})"/><g stroke="#ffffff" stroke-opacity=".25" stroke-width="1.4"><line x1="30" y1="${y+18}" x2="90" y2="${y+18}"/><line x1="150" y1="${y+30}" x2="230" y2="${y+30}"/><line x1="280" y1="${y+22}" x2="350" y2="${y+22}"/><line x1="70" y1="${y+48}" x2="160" y2="${y+48}"/></g>`;
+  const skyline=(y,c)=>{ let s=''; let x=-10; const hs=[70,110,55,130,90,150,80,120,60,140,95]; let k=0; while(x<410){ const w=20+(k%4)*6, h=hs[k%hs.length]; s+=`<rect x="${x}" y="${y-h}" width="${w}" height="${h}" fill="${c}"/>`; for(let wy=y-h+8; wy<y-6; wy+=12){ if((k+wy)%3===0) s+=`<rect x="${x+w/2-1}" y="${wy}" width="2.5" height="3" fill="#ffd98a" opacity=".8"/>`; } x+=w+3; k++; } return s; };
+
+  switch(i){
+    case 0: /* CALLEJÓN · en la calle */
+      return `${sky('#171a22','#0c0e14')}
+        <rect x="0" y="150" width="400" height="150" fill="#1c1a18"/>
+        <polygon points="0,60 150,90 150,300 0,300" fill="#33302c"/>
+        <polygon points="400,60 250,90 250,300 400,300" fill="#2a2724"/>
+        ${[80,110,140,170].map(y=>`<rect x="20" y="${y}" width="30" height="16" fill="#413b34" opacity=".7"/>`).join('')}
+        ${[80,110,140,170].map(y=>`<rect x="350" y="${y}" width="30" height="16" fill="#38332d" opacity=".7"/>`).join('')}
+        <g opacity=".9"><rect x="60" y="26" width="4" height="120" fill="#2a2a2a"/><rect x="46" y="24" width="34" height="8" rx="3" fill="#2a2a2a"/><circle cx="63" cy="40" r="20" fill="#ffe6a8" opacity=".18"/><rect x="58" y="32" width="10" height="8" fill="#ffe6a8"/></g>
+        <rect x="150" y="205" width="80" height="40" rx="3" fill="#2f6b4f"/><rect x="150" y="205" width="80" height="8" fill="#264f3c"/><text x="190" y="232" font-size="9" fill="#8fdcae" text-anchor="middle" font-family="monospace">$</text>
+        <rect x="300" y="225" width="34" height="22" rx="2" fill="#7a5a30"/>
+        <ellipse cx="120" cy="285" rx="60" ry="10" fill="#0d0f14" opacity=".6"/>
+        <text x="270" y="120" font-size="26" fill="#5a3f7a" opacity=".5" font-family="monospace" transform="rotate(-6 270 120)">NP</text>
+        <rect x="255" y="250" width="26" height="16" fill="#6b4a2e"/>`;
+
+    case 1: /* ESQUINA AL AMANECER · primer billete */
+      return `${sky('#f7b26a','#ffe3b0')}${sun(330,70,26,'#fff2c8','#ffb04d')}
+        ${skyline(150,'#b98a5a')}
+        <rect x="0" y="150" width="400" height="150" fill="#8a6b46"/>
+        <rect x="0" y="150" width="400" height="8" fill="#75593a"/>
+        <g><rect x="150" y="120" width="70" height="40" fill="#c94b4b"/><rect x="150" y="112" width="70" height="10" fill="#e85d5d"/><rect x="146" y="158" width="78" height="6" fill="#7a3030"/><rect x="180" y="98" width="4" height="22" fill="#555"/><path d="M150,112 q35,-26 70,0" fill="#e85d5d"/><text x="185" y="146" font-size="12" text-anchor="middle">🌮</text></g>
+        <g transform="translate(300,150)"><circle cx="-10" cy="-2" r="12" fill="none" stroke="#333" stroke-width="3"/><circle cx="14" cy="-2" r="12" fill="none" stroke="#333" stroke-width="3"/><path d="M-10,-2 L2,-16 L14,-2 M2,-16 L6,-16" stroke="#c62b2b" stroke-width="3" fill="none"/></g>
+        <g fill="#ffd94a"><circle cx="120" cy="100" r="4"/><circle cx="135" cy="118" r="3"/><circle cx="110" cy="128" r="3.4"/></g>
+        <rect x="70" y="60" width="4" height="90" fill="#4a4a4a"/><circle cx="72" cy="60" r="8" fill="#ffe6a8"/>`;
+
+    case 2: /* CUARTO DE NOCHE · ahorrando */
+      return `${sky('#1e2740','#101726')}
+        <rect x="0" y="0" width="400" height="300" fill="#243247"/>
+        <rect x="24" y="20" width="150" height="120" rx="4" fill="#0d1420"/><rect x="24" y="20" width="150" height="120" rx="4" fill="none" stroke="#3a4d68" stroke-width="4"/>
+        ${skyline(140,'#0a1524').replace(/y-h/g,'')}
+        <g>${[40,70,100,130,160].map(x=>`<rect x="${x}" y="60" width="6" height="${20+((x)%40)}" fill="#7fd0ff" opacity=".7"/>`).join('')}</g>
+        <rect x="200" y="120" width="170" height="20" fill="#3a4a5e"/><rect x="210" y="60" width="150" height="62" rx="3" fill="#11151c"/><rect x="216" y="66" width="138" height="50" fill="#0c2a1c"/>
+        <polyline points="222,108 244,96 262,102 284,80 306,88 330,66 350,72" fill="none" stroke="#4ee08a" stroke-width="2.5"/>
+        <rect x="150" y="180" width="120" height="14" rx="3" fill="#8a5a3a"/><rect x="150" y="188" width="120" height="40" fill="#5a3a24"/><rect x="150" y="168" width="46" height="18" rx="4" fill="#c9d6e6"/>
+        <g transform="translate(320,210)"><ellipse cx="0" cy="0" rx="20" ry="15" fill="#f4a0c0"/><circle cx="-8" cy="-4" r="2" fill="#111"/><rect x="-3" y="-16" width="6" height="4" fill="#e07ba0"/><path d="M8,-6 q10,-4 10,4" stroke="#f4a0c0" stroke-width="4" fill="none"/></g>
+        <g transform="translate(60,205)"><rect x="-4" y="-30" width="8" height="30" fill="#6b4f2a"/><ellipse cx="0" cy="-34" rx="16" ry="14" fill="#2f8a44"/></g>`;
+
+    case 3: /* DEPA CON MONITORES · primera fondeada */
+      return `${sky('#12233b','#0b1626')}
+        <rect x="0" y="0" width="400" height="300" fill="#1a2a3e"/>
+        <rect x="210" y="16" width="174" height="150" rx="4" fill="#0a1322"/>${skyline(150,'#12233c')}
+        <rect x="210" y="16" width="174" height="150" rx="4" fill="none" stroke="#2f4a68" stroke-width="5"/>
+        <rect x="0" y="150" width="400" height="150" fill="#243141"/>
+        <rect x="30" y="150" width="230" height="14" fill="#33465c"/>
+        ${[[40,90],[132,88],[196,86]].map(([x,w])=>`<rect x="${x}" y="70" width="${w}" height="60" rx="3" fill="#0c1016"/><rect x="${x+4}" y="74" width="${w-8}" height="52" fill="#0a2418"/><polyline points="${x+6},118 ${x+w*0.3},104 ${x+w*0.55},110 ${x+w-8},86" fill="none" stroke="#4ee08a" stroke-width="2"/>`).join('')}
+        <g fill="#0c1016">${[[70,130],[150,128],[210,126]].map(([x,y])=>`<rect x="${x-6}" y="${y}" width="12" height="6"/>`).join('')}</g>
+        <g transform="translate(300,206)"><rect x="-10" y="-6" width="20" height="12" rx="2" fill="#3a2a1a"/><path d="M-8,-6 q10,-10 16,0" fill="none" stroke="#e8e2d8" stroke-width="2"/><rect x="8" y="-3" width="6" height="5" rx="2" fill="none" stroke="#e8e2d8" stroke-width="1.5"/><g stroke="#cfc" stroke-opacity=".5"><path d="M-4,-10 q-2,-4 0,-7"/><path d="M2,-10 q-2,-4 0,-7"/></g></g>
+        <g transform="translate(60,205)"><rect x="-4" y="-34" width="8" height="34" fill="#5a3f22"/><ellipse cx="0" cy="-40" rx="20" ry="18" fill="#2f8a44"/></g>`;
+
+    case 4: /* CASA SUBURBANA · clase media */
+      return `${sky('#8ec5f0','#dfeffb')}${sun(64,58,22,'#fff6cf','#ffe08a')}
+        <g fill="#ffffff" opacity=".85"><ellipse cx="150" cy="60" rx="34" ry="14"/><ellipse cx="300" cy="44" rx="28" ry="12"/></g>
+        <rect x="0" y="196" width="400" height="104" fill="#7cbf5a"/><rect x="0" y="196" width="400" height="8" fill="#6aa84c"/>
+        <g><rect x="120" y="150" width="150" height="70" fill="#e8ddc8"/><polygon points="110,150 195,110 280,150" fill="#9c4a3a"/><rect x="150" y="176" width="26" height="44" fill="#6b4a2e"/><circle cx="171" cy="200" r="1.8" fill="#333"/><rect x="205" y="164" width="36" height="30" fill="#bfe3ff"/><rect x="205" y="164" width="36" height="30" fill="none" stroke="#fff" stroke-width="3"/><line x1="223" y1="164" x2="223" y2="194" stroke="#fff" stroke-width="2"/></g>
+        <rect x="270" y="210" width="70" height="10" fill="#c9c4bc"/>${car(300,218,1,'#3b6fb0')}
+        <g transform="translate(70,196)"><rect x="-5" y="-44" width="10" height="44" fill="#7a5230"/><circle cx="0" cy="-58" r="30" fill="#4a9c44"/><circle cx="-20" cy="-46" r="20" fill="#3f8c3a"/><circle cx="20" cy="-46" r="20" fill="#57ad4e"/></g>
+        <g fill="none" stroke="#fff" stroke-width="2" opacity=".8"><path d="M330,70 q6,-6 12,0"/><path d="M344,74 q6,-6 12,0"/></g>
+        <g fill="#eee">${[130,150,170,190,210,230,250,270].map(x=>`<rect x="${x}" y="188" width="4" height="12"/>`).join('')}</g>`;
+
+    case 5: /* CASA MODERNA CON ALBERCA · acomodado */
+      return `${sky('#7fb8ea','#e7d6b0')}${sun(60,54,20,'#fff1c4','#ffc266')}
+        ${mtn(150,'#9ab0c8',.6)}
+        <rect x="0" y="196" width="400" height="104" fill="#63a24a"/>
+        <rect x="150" y="120" width="180" height="76" fill="#e9e4dc"/><rect x="150" y="120" width="180" height="14" fill="#cfcabf"/><rect x="150" y="112" width="180" height="8" fill="#3a3a3a"/>
+        <rect x="164" y="140" width="150" height="44" fill="#2a3540" opacity=".85"/><g stroke="#fff" stroke-opacity=".5"><line x1="200" y1="140" x2="200" y2="184"/><line x1="240" y1="140" x2="240" y2="184"/><line x1="280" y1="140" x2="280" y2="184"/></g>
+        <rect x="30" y="210" width="150" height="60" rx="8" fill="#2fa4d6"/><rect x="30" y="210" width="150" height="60" rx="8" fill="url(#w${D})" opacity=".5"/><g stroke="#fff" stroke-opacity=".4"><line x1="50" y1="230" x2="120" y2="230"/><line x1="70" y1="250" x2="150" y2="250"/></g>
+        ${palm(360,210,1.5)}${palm(20,205,1.1)}
+        ${car(300,214,.95,'#e0e0e0')}
+        <rect x="196" y="238" width="40" height="8" rx="4" fill="#d8cdb8"/><rect x="200" y="230" width="6" height="10" fill="#c94b4b"/>`;
+
+    case 6: /* VILLA CON INFINITY POOL · millonario */
+      return `${sky('#f2a25a','#ffe0a8')}${sun(300,80,30,'#fff2c8','#ff8a3d')}
+        ${mtn(140,'#c98a5a',.5)}${water(210,'#2f9fd0','#125f86')}
+        <rect x="120" y="120" width="200" height="90" fill="#efe9df"/><rect x="120" y="112" width="200" height="10" fill="#2c2c2c"/><rect x="120" y="150" width="200" height="8" fill="#cfc7b8"/>
+        <rect x="136" y="126" width="168" height="22" fill="#243038" opacity=".85"/><rect x="136" y="164" width="168" height="40" fill="#2a3843" opacity=".85"/>
+        <rect x="90" y="200" width="220" height="26" fill="#37b0dd"/><rect x="90" y="200" width="220" height="26" fill="url(#w${D})" opacity=".4"/>
+        <g stroke="#fff" stroke-opacity=".35"><line x1="120" y1="212" x2="200" y2="212"/><line x1="150" y1="220" x2="260" y2="220"/></g>
+        ${palm(70,200,1.6)}${palm(345,196,1.4)}
+        ${car(150,236,1,'#c62b2b')}${car(240,236,.9,'#222')}
+        <g fill="#ffffff" opacity=".8"><ellipse cx="120" cy="46" rx="26" ry="10"/><ellipse cx="330" cy="36" rx="20" ry="8"/></g>`;
+
+    case 7: /* SUPERYATE · magnate (como tu referencia) */
+      return `${sky('#eaa15a','#ffe6bf')}${sun(320,64,28,'#fff2cf','#ff9a4a')}
+        ${mtn(150,'#5c7a56',.9)}${mtn(160,'#3f5c3c',.7)}
+        ${water(168,'#37b6e0','#0f5f88')}
+        <g><polygon points="70,168 350,168 320,228 110,228" fill="#eef1f4"/><rect x="120" y="120" width="180" height="50" rx="6" fill="#dfe4ea"/><rect x="128" y="126" width="164" height="20" fill="#2a3a4a" opacity=".85"/><rect x="150" y="92" width="120" height="30" rx="5" fill="#eef1f4"/><rect x="158" y="98" width="104" height="16" fill="#2a3a4a" opacity=".85"/><rect x="205" y="70" width="8" height="24" fill="#c9ccd2"/><rect x="140" y="150" width="120" height="16" rx="3" fill="#37b6e0"/><g stroke="#c9ccd2" stroke-width="1.5"><line x1="120" y1="150" x2="300" y2="150"/></g></g>
+        <rect x="0" y="150" width="70" height="60" fill="#2f7d3a"/>${palm(30,150,1.3)}${palm(52,158,1)}
+        <g transform="translate(360,196)"><ellipse cx="0" cy="0" rx="16" ry="5" fill="#e4e8ec"/><path d="M0,-4 q10,-2 14,2 q-8,2 -14,1z" fill="#7fd0ff"/></g>
+        <g fill="#ffffff" opacity=".8"><ellipse cx="110" cy="44" rx="28" ry="11"/><ellipse cx="300" cy="34" rx="22" ry="9"/></g>`;
+
+    case 8: /* PENTHOUSE DE NOCHE · imperio */
+      return `${sky('#141d33','#0a1020')}
+        <g fill="#ffffff">${[[40,40],[90,26],[150,60],[210,34],[280,52],[340,30],[70,90],[250,80]].map(([x,y])=>`<circle cx="${x}" cy="${y}" r="1.2" opacity=".8"/>`).join('')}</g>
+        <circle cx="60" cy="50" r="16" fill="#f7f0d0"/><circle cx="54" cy="46" r="14" fill="#141d33"/>
+        ${skyline(196,'#141f38')}
+        <rect x="0" y="196" width="400" height="104" fill="#12161e"/>
+        <rect x="20" y="196" width="360" height="10" fill="#1c222c"/>
+        <rect x="40" y="150" width="130" height="46" rx="6" fill="#1fa6d8"/><rect x="40" y="150" width="130" height="46" rx="6" fill="url(#w${D})" opacity=".45"/>
+        <g stroke="#cfe" stroke-opacity=".3"><line x1="60" y1="164" x2="140" y2="164"/><line x1="80" y1="180" x2="150" y2="180"/></g>
+        <g fill="#20242c">${[210,240,270,300,330,360].map(x=>`<rect x="${x}" y="150" width="5" height="46"/>`).join('')}</g>
+        <rect x="205" y="146" width="160" height="5" fill="#2c333d"/>
+        ${heli(320,70,1.2)}
+        ${palm(190,196,1.2,'#2a7d40')}`;
+
+    case 9: /* IMPERIO EN LA ISLA · billonario (todo) */
+      return `${sky('#f0a6d0','#ffd9a0')}${sun(70,66,30,'#fff2d8','#ff8fb0')}
+        ${mtn(150,'#7a6ea0',.8)}${mtn(162,'#5a5286',.6)}
+        ${water(176,'#33b0e0','#0e5c86')}
+        <rect x="240" y="176" width="160" height="60" fill="#5aa84a"/><rect x="240" y="176" width="160" height="60" fill="#4e9c42" opacity=".5"/>
+        <g><circle cx="330" cy="196" r="14" fill="#7bc26a"/><rect x="342" y="176" width="2" height="20" fill="#eee"/><polygon points="344,176 356,180 344,184" fill="#c62b2b"/></g>
+        <g><rect x="150" y="120" width="150" height="66" fill="#ece6db"/><rect x="150" y="112" width="150" height="10" fill="#2c2c2c"/><rect x="150" y="150" width="150" height="8" fill="#3a3a3a"/><rect x="164" y="126" width="122" height="22" fill="#233" opacity=".85"/><rect x="164" y="162" width="122" height="20" fill="#2a3a43" opacity=".85"/><rect x="120" y="160" width="60" height="46" fill="#d8d0c0"/></g>
+        <rect x="120" y="196" width="150" height="20" fill="#33b0e0"/><rect x="120" y="196" width="150" height="20" fill="url(#w${D})" opacity=".4"/>
+        ${palm(110,196,1.7)}${palm(300,150,1.3)}${palm(360,196,1.5)}
+        <g transform="translate(330,238)"><polygon points="-40,-6 40,-6 30,14 -30,14" fill="#eef1f4"/><rect x="-20" y="-20" width="42" height="16" rx="4" fill="#dfe4ea"/><rect x="-14" y="-16" width="30" height="9" fill="#2a3a4a" opacity=".8"/></g>
+        ${car(150,232,.9,'#c62b2b')}${car(210,232,.85,'#20242a')}
+        ${heli(70,120,1)}`;
+  }
+  return sky('#2b4a6b','#111f33');
+}
+
+/* dibuja el monito de cuerpo entero (el que armó al registrarse) parado en la escena */
+function batPintaMonito(){
+  const cv = document.getElementById('batMonitoCv'); if(!cv || typeof monitoPlano!=='function') return;
+  const uidM = cv.dataset.uid || batYo(); const dpr = devicePixelRatio||1;
+  const W=150, H=200;
+  cv.width=W*dpr; cv.height=H*dpr;
+  const ctx=cv.getContext('2d'); ctx.setTransform(dpr,0,0,dpr,0,0); ctx.clearRect(0,0,W,H);
+  ctx.imageSmoothingEnabled=false;
+  ctx.save(); ctx.globalAlpha=.28; ctx.fillStyle='#000'; ctx.beginPath(); ctx.ellipse(W/2, H-12, 30, 8, 0, 0, Math.PI*2); ctx.fill(); ctx.restore();
+  try{ monitoPlano(ctx, W/2, H-14, lookDe(uidM), 1.85, {}); }catch(e){}
+}
+
 function batHomeHTML(uid){
   const nw = batPatrimonio(uid);
   const { i, e, nx, prog } = batEraProg(nw);
@@ -8866,11 +9010,10 @@ function batHomeHTML(uid){
         <span class="bat-cur"><b>🏆 ${st.pts}</b><i>${bi('puntos','points')}</i></span>
       </div>
     </div>
-    <div class="bat-hero2" style="--h1:${e.sky[0]};--h2:${e.sky[1]}">
+    <div class="bat-hero2">
+      <svg class="bat-escena" viewBox="0 0 400 300" preserveAspectRatio="xMidYMid slice" aria-hidden="true">${batEscenaSVG(i)}</svg>
       <div class="bat-hero-etapa">${bi('Etapa','Stage')} ${i+1} / ${WEALTH_ERAS.length}</div>
-      <div class="bat-hero-glow"></div>
-      <div class="bat-hero-emoji">${e.emoji}</div>
-      <div class="bat-hero-piso"></div>
+      <canvas class="bat-hero-monito" id="batMonitoCv" data-uid="${uid}" width="150" height="200"></canvas>
       <div class="bat-hero-nom">${esc(loc(e.t))}</div>
     </div>
     <div class="bat-assets">${assets}</div>
@@ -9173,6 +9316,7 @@ function renderBatalla(){
       $('#batCiudadBtn').onclick = () => { batPantalla='ciudad'; renderBatalla(); };
     }
     root.querySelectorAll('[data-amigo]').forEach(b => b.onclick = () => { batViendo = b.dataset.amigo; renderBatalla(); });
+    requestAnimationFrame(batPintaMonito);   // el monito de cada quien, parado en su escena
     /* banner del reto (invitación / cita / batalla minimizada) + su latido */
     if(!viendo && c){
       batBannerBind(c, yo);
