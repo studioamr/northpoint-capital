@@ -2914,6 +2914,13 @@ stop[stop-color="#9BC0DC"]{stop-color:var(--txt)}
               <div id="dayEmpty"></div>
             </div>
           </div>
+          <div class="panel md-ch2">
+            <div class="p-head"><h3 data-i18n="md.conteo">Trades acumulados</h3><span class="micro" id="cntLabel"></span></div>
+            <div class="p-body">
+              <canvas id="cntCanvas" height="220"></canvas>
+              <div id="cntEmpty"></div>
+            </div>
+          </div>
         </div>
 
         <!-- calendario -->
@@ -3721,6 +3728,7 @@ const I18N = {
   'md.enVerde':  { es:'en verde',               en:'green' },
   'md.acum':     { es:'P&L acumulado',          en:'Cumulative P&L' },
   'md.porDia':   { es:'P&L por día',            en:'P&L per day' },
+  'md.conteo':   { es:'Trades acumulados',      en:'Cumulative trades' },
   'md.sinMuestra':{ es:'Sin muestra suficiente todavía.', en:'Not enough sample yet.' },
   'md.enConstruccion':{ es:'en construcción',   en:'in progress' },
   'md.faltan':   { es:'faltan %n trades',       en:'%n trades to go' },
@@ -6936,7 +6944,7 @@ function renderDashboard(){
   ].join('');
 
   /* ── las curvas (el Northpoint Score se retiró) ── */
-  drawEquity(); drawDaily();
+  drawEquity(); drawDaily(); drawConteo();
 
   /* ── extremos: el mejor, el total y el peor ── */
   const mejor = todos.length ? todos.reduce((a,t)=>(t.pnl||0)>(a.pnl||0)?t:a) : null;
@@ -7043,6 +7051,42 @@ function drawDaily(){
   });
   const verdes = vals.filter(v=>v>0).length;
   $('#dayLabel').textContent = `${vals.length} ${tr('md.dias').toUpperCase()} · ${verdes} ${tr('md.enVerde').toUpperCase()}`;
+}
+
+/* ── Conteo de trades: cuántos llevas acumulados y cómo va overall ── */
+function drawConteo(){
+  const byDay = tradesByDay();
+  const dias = Object.keys(byDay).sort();
+  const fills = dias.flatMap(d => byDay[d]);
+  if(fills.length < 1){ vacio('cntCanvas', tr('md.sinMuestra')); $('#cntLabel').textContent = ''; return; }
+  limpiaVacio('cntCanvas');
+  const L = lienzo('cntCanvas', 220); if(!L) return;
+  const { c, W, H } = L;
+  const n = fills.length;
+  const IZQ = 8, DER = W-10, TOP = 16, BOT = H-24;
+  const X = i => IZQ + i*(DER-IZQ)/Math.max(1, n);
+  const Y = v => TOP + (BOT-TOP)*(1 - v/Math.max(1, n));
+  const azul = '#3E8BFF';
+  /* rejilla horizontal ligera */
+  c.strokeStyle = cssVar('--w08') || 'rgba(255,255,255,.08)'; c.lineWidth = 1;
+  [0, .5, 1].forEach(f => { const y = TOP + (BOT-TOP)*(1-f); c.beginPath(); c.moveTo(IZQ, y); c.lineTo(DER, y); c.stroke(); });
+  /* área bajo la curva de conteo (0..n, escalón por trade) */
+  c.beginPath(); c.moveTo(X(0), Y(0));
+  for(let i=1;i<=n;i++) c.lineTo(X(i), Y(i));
+  c.lineTo(X(n), Y(0)); c.closePath();
+  const g = c.createLinearGradient(0, TOP, 0, BOT);
+  g.addColorStop(0, 'rgba(62,139,255,.24)'); g.addColorStop(1, 'rgba(62,139,255,0)');
+  c.fillStyle = g; c.fill();
+  /* la línea creciente */
+  c.beginPath(); c.moveTo(X(0), Y(0));
+  for(let i=1;i<=n;i++) c.lineTo(X(i), Y(i));
+  c.strokeStyle = azul; c.lineWidth = 2.2; c.lineJoin = 'round'; c.lineCap = 'round'; c.stroke();
+  /* punto final con el total */
+  c.beginPath(); c.arc(X(n), Y(n), 5, 0, 7); c.fillStyle = azul; c.fill();
+  c.font = 'bold 13px "IBM Plex Mono", monospace'; c.fillStyle = azul; c.textAlign = 'right'; c.textBaseline = 'bottom';
+  c.fillText(n + '', X(n) - 8, Y(n) - 2);
+  const gan = fills.filter(t => (t.pnl||0) > 0).length, per = fills.filter(t => (t.pnl||0) < 0).length;
+  $('#cntLabel').textContent = `${n} TRADES · ${gan}G · ${per}P`;
 }
 
 /* ── radar del Score: las cuatro dimensiones de un vistazo ── */
@@ -13397,7 +13441,7 @@ function renderAll(){ applyProfile(); aplicarIdioma(); pintaPlegado(); render(vi
 addEventListener('resize', ()=>{
   /* al redibujar la curva hay que repintar la copia de la cinta: si no, el
      original se actualiza y la mitad del bucle sigue enseñando datos viejos */
-  if($('#v-journal').classList.contains('on')){ drawEquity(); repintaCintas(); }
+  if($('#v-journal').classList.contains('on')){ drawEquity(); drawDaily(); drawConteo(); }
   if($('#v-entreno') && $('#v-entreno').classList.contains('on')) btDibuja(1);
   if($('#v-log') && $('#v-log').classList.contains('on')) lgDibuja(1);
 });
