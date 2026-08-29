@@ -1181,6 +1181,13 @@ button.st-chip:hover{border-color:rgba(255,255,255,.45)}
 .tm-chip i{font-style:normal}
 .tm-sw{display:inline-flex;gap:3px}
 .tm-sw i{width:11px;height:11px;border-radius:3px;display:block}
+/* ── el menú de Ajustes: mismos chips que Apariencia, un solo lenguaje visual ── */
+.set-tabs{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:20px}
+.set-tabs button{border:1px solid var(--line);border-radius:10px;background:var(--w02);color:var(--dim);
+  font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.04em;padding:9px 15px;cursor:pointer;transition:all .14s}
+.set-tabs button:hover{border-color:var(--dim);color:var(--txt)}
+.set-tabs button.on{border-color:var(--accent);color:var(--txt);background:var(--w04);box-shadow:inset 0 0 0 1px var(--accent)}
+
 /* reglas con apoyo visual */
 .rg{display:flex;align-items:center;gap:15px;border:1px solid rgba(255,255,255,.1);border-radius:14px;background:rgba(255,255,255,.03);padding:13px 15px}
 .rg-v{flex:0 0 92px;height:52px;display:flex;align-items:center;justify-content:center;border-radius:11px;background:rgba(255,255,255,.04);position:relative;overflow:hidden}
@@ -4771,9 +4778,8 @@ stop[stop-color="#9BC0DC"]{stop-color:var(--txt)}
     <h3 id="ovSet-t">Settings</h3>
     <p class="sub" id="setSub"></p>
 
-    <div class="seg" id="setTabs" style="margin-bottom:16px">
+    <div class="set-tabs" id="setTabs">
       <button type="button" data-st="cuentas" class="on">Accounts</button>
-      <button type="button" data-st="mesa">The desk</button>
       <button type="button" data-st="perfil">Profile</button>
       <button type="button" data-st="apariencia">Appearance</button>
       <button type="button" data-st="datos">Data</button>
@@ -4833,12 +4839,9 @@ stop[stop-color="#9BC0DC"]{stop-color:var(--txt)}
         <input type="file" id="avFile" accept="image/*" hidden>
       </div>
 
-      <div class="f-row" style="margin-top:12px">
-        <div><label>Theme</label>
-          <select id="setTema"><option value="dark">Dark</option><option value="light">Light</option></select></div>
-      </div>
+      <select id="setTema" hidden><option value="dark">Dark</option><option value="light">Light</option></select>
 
-      <div id="claveAviso" style="margin-top:14px"></div>
+      <div id="claveAviso" style="margin-top:18px"></div>
       <div class="f-full" style="margin-top:6px">
         <label data-i18n="cl.titulo">Change password</label>
         <div class="f-row3">
@@ -13772,13 +13775,14 @@ document.addEventListener('keydown', e=>{
 /* ══ AJUSTES · el panel de control de la plataforma ══ */
 function abreAjustes(tab = 'cuentas'){
   const u = currentUser(); if(!u) return;
+  if(tab === 'mesa') tab = 'cuentas';   /* The desk se ocultó de Ajustes: ya no es una pestaña alcanzable */
   $('#setSub').textContent = u.nombre;
   setTab(tab); renderAjustes(); openOv('ovSet');
 }
 function setTab(tab){
   S.ui.setTab = tab;
   $$('#setTabs button').forEach(b => b.classList.toggle('on', b.dataset.st === tab));
-  ['cuentas','mesa','perfil','apariencia','datos'].forEach(k => { const d = $('#st-' + k); if(d) d.hidden = k !== tab; });
+  ['cuentas','mesa','perfil','apariencia','datos'].forEach(k => { const d = $('#st-' + k); if(d) d.hidden = (k !== tab) || (k==='mesa'); });
 }
 $('#setTabs').addEventListener('click', e => {
   const b = e.target.closest('button'); if(!b) return;
@@ -13833,7 +13837,7 @@ $('#voGo')?.addEventListener('click', () => {
   _vioPend = null;
 });
 
-$('#btnSettings').addEventListener('click', ()=> abreAjustes(S.ui.setTab || 'cuentas'));
+$('#btnSettings').addEventListener('click', ()=> abreAjustes(S.ui.setTab === 'mesa' ? 'cuentas' : (S.ui.setTab || 'cuentas')));
 $('#setMesaSave')?.addEventListener('click', ()=>{
   const m = parseFloat($('#setMeta').value);
   if(isFinite(m) && m > 0){ S.profile.metaAnual = Math.round(m); delete S.profile.metaMes; }
