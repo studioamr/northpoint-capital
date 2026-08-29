@@ -648,22 +648,26 @@ body.locked .app{visibility:hidden;pointer-events:none}
 .bat-vuelo h2{font-size:24px;font-weight:900}
 .bat-count{font-family:var(--mono);font-size:72px;font-weight:600;color:var(--accent);line-height:1;margin:12px 0}
 .bat-vuelo p{font-family:var(--mono);font-size:13px;color:var(--dim)}
-/* activo */
-.bat-top{border:1px solid var(--line);border-radius:16px;background:var(--w02);padding:18px 20px}
-.bat-marcador{display:flex;align-items:center;gap:16px;justify-content:center}
-.bat-lado{flex:1;text-align:center;padding:14px;border-radius:12px;border:1px solid transparent}
-.bat-lado.lead{border-color:var(--up);background:rgba(48,209,88,.07)}
-.bat-nom{font-size:13px;font-weight:700;display:block}
-.bat-nom em{color:var(--faint);font-style:normal;font-weight:400;font-size:11px}
-.bat-p{font-family:var(--mono);font-weight:600;font-size:28px;display:block;margin:6px 0 2px}
-.bat-p.up{color:var(--up)} .bat-p.down{color:var(--down)}
-.bat-nt{font-family:var(--mono);font-size:10.5px;color:var(--faint)}
-.bat-vs{font-family:var(--mono);font-size:12px;color:var(--faint);letter-spacing:.1em}
-.bat-reloj{text-align:center;font-size:32px;font-weight:600;color:var(--txt);margin-top:14px;letter-spacing:.04em}
-.bat-hint{font-family:var(--mono);font-size:11px;color:var(--faint);margin:10px 0;line-height:1.5}
-.bat-log{border:1px solid var(--line);border-radius:14px;background:var(--w02);overflow:hidden;margin-top:6px}
-.bat-log .bt-log-row{padding:10px 16px;border-bottom:1px solid var(--line-soft)}
-.bat-log .bt-log-row:last-child{border-bottom:none}
+/* activo · rival arriba, tú abajo, temporizador grande en medio */
+.bat-panel{border:1px solid var(--line);border-radius:16px;background:var(--w02);padding:16px 18px}
+.bat-panel.rival{border-color:var(--line-soft)}
+.bat-panel.lead{border-color:var(--up);box-shadow:inset 0 0 0 1px rgba(48,209,88,.25)}
+.bat-panel-h{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
+.bat-panel-nom{font-size:14px;font-weight:800}
+.bat-panel-nom em{color:var(--faint);font-style:normal;font-weight:400;font-size:12px}
+.bat-panel-p{font-family:var(--mono);font-weight:600;font-size:26px;margin-left:auto}
+.bat-panel-p.up{color:var(--up)} .bat-panel-p.down{color:var(--down)}
+.bat-panel-nt{font-family:var(--mono);font-size:10.5px;color:var(--faint);width:100%;text-align:right;margin-top:-2px}
+.bat-graf{position:relative;width:100%;height:150px;border-radius:12px;background:rgba(127,127,127,.06);border:1px solid var(--line-soft);overflow:hidden;margin:12px 0}
+.bat-graf canvas{display:block;width:100%;height:100%}
+.bat-graf-e{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:11px;color:var(--faint)}
+.bat-panel-log{border:1px solid var(--line-soft);border-radius:11px;overflow:hidden;max-height:170px;overflow-y:auto}
+.bat-panel-log .bt-log-row{padding:9px 14px;border-bottom:1px solid var(--line-soft)}
+.bat-panel-log .bt-log-row:last-child{border-bottom:none}
+.bat-reloj-wrap{text-align:center;padding:16px 0}
+.bat-vs-mini{font-family:var(--mono);font-size:11px;letter-spacing:.18em;color:var(--faint);display:block}
+.bat-reloj-grande{font-family:var(--mono);font-weight:600;font-size:clamp(44px,11vw,68px);line-height:1;color:var(--txt);letter-spacing:.02em;margin:6px 0}
+.bat-reloj-lbl{font-family:var(--mono);font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--faint)}
 /* resumen */
 .bat-res-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;max-width:640px;margin:0 auto}
 .bat-res-card{border:1px solid var(--line);border-radius:16px;background:var(--w02);padding:22px 18px;text-align:center;position:relative}
@@ -8507,33 +8511,59 @@ function renderBatalla(){
     const reloj = (hh>0 ? String(hh).padStart(2,'0')+':' : '') + mm + ':' + ss;
     const pYo = batProfit(c, yo), pRival = batProfit(c, rivalDe);
     const gano = pYo >= pRival;
+    /* mini registro de un jugador (solo lectura, para el panel de arriba) */
+    const filas = (u) => {
+      const ts = (c.trades[u]||[]); let acc = 0;
+      return ts.map(t=>{ acc+=t.pnl; return {t,acc}; }).reverse().slice(0,20).map(({t,acc})=>`
+        <div class="bt-log-row" style="grid-template-columns:66px 1fr 1fr">
+          <span class="dir ${t.dir==='S'?'S':'L'}">${t.dir==='S'?'SHORT':'LONG'}</span>
+          <span class="pnl ${t.pnl>=0?'up':'down'}">${fmt$(t.pnl,true)}</span>
+          <span class="acc">${fmt$(acc,true)}</span>
+        </div>`).join('') || `<div class="bt-log-empty">${bi('Sin trades aún','No trades yet')}</div>`;
+    };
     root.innerHTML = `
-      <div class="bat-top">
-        <div class="bat-marcador">
-          <div class="bat-lado ${gano?'lead':''}">
-            <span class="bat-nom">${esc(batNom(yo))} <em>${bi('(tú)','(you)')}</em></span>
-            <b class="bat-p ${pYo>=0?'up':'down'}">${fmt$(pYo,true)}</b>
-            <span class="bat-nt">${batNTrades(c,yo)} ${bi('trades','trades')}</span>
-          </div>
-          <div class="bat-vs">VS</div>
-          <div class="bat-lado ${!gano?'lead':''}">
-            <span class="bat-nom">${esc(batNom(rivalDe))}</span>
-            <b class="bat-p ${pRival>=0?'up':'down'}">${fmt$(pRival,true)}</b>
-            <span class="bat-nt">${batNTrades(c,rivalDe)} ${bi('trades','trades')}</span>
-          </div>
+      <!-- ARRIBA: el rival (solo lectura) -->
+      <div class="bat-panel rival ${!gano?'lead':''}">
+        <div class="bat-panel-h">
+          <span class="bat-panel-nom">${esc(batNom(rivalDe))}</span>
+          <b class="bat-panel-p ${pRival>=0?'up':'down'}">${fmt$(pRival,true)}</b>
+          <span class="bat-panel-nt">${batNTrades(c,rivalDe)} ${bi('trades','trades')}</span>
         </div>
-        <div class="bat-reloj mono">${reloj}</div>
+        <div class="bat-graf"><canvas id="batGrafRival"></canvas><div id="batGrafRivalE" class="bat-graf-e"></div></div>
+        <div class="bat-panel-log">${filas(rivalDe)}</div>
       </div>
-      <div class="bt-controls" style="margin-top:16px">
-        <div class="bt-dir" id="batTdir">
-          <button type="button" data-dir="L" class="${batDir==='L'?'on':''}">LONG</button>
-          <button type="button" data-dir="S" class="${batDir==='S'?'on':''}">SHORT</button>
+
+      <!-- EN MEDIO: temporizador grande -->
+      <div class="bat-reloj-wrap">
+        <span class="bat-vs-mini">VS</span>
+        <div class="bat-reloj-grande mono">${reloj}</div>
+        <span class="bat-reloj-lbl">${bi('tiempo restante','time left')}</span>
+      </div>
+
+      <!-- ABAJO: tú (con tus controles) -->
+      <div class="bat-panel mio ${gano?'lead':''}">
+        <div class="bat-panel-h">
+          <span class="bat-panel-nom">${esc(batNom(yo))} <em>${bi('(tú)','(you)')}</em></span>
+          <b class="bat-panel-p ${pYo>=0?'up':'down'}">${fmt$(pYo,true)}</b>
+          <span class="bat-panel-nt">${batNTrades(c,yo)} ${bi('trades','trades')}</span>
         </div>
-        <input type="number" id="batPnl" class="bt-pnl" step="0.01" placeholder="P&L $ (+/-)">
-        <button type="button" id="batGo" class="btn primary bt-go">+ ${bi('Registrar','Log')}</button>
-      </div>
-      <div class="bat-hint">${bi('Registra tus trades del challenge. Tu rival ve tu marcador al sincronizar.','Log your challenge trades. Your rival sees your score on sync.')}</div>
-      <div class="bat-log" id="batLog"></div>`;
+        <div class="bt-controls" style="margin:6px 0 12px">
+          <div class="bt-dir" id="batTdir">
+            <button type="button" data-dir="L" class="${batDir==='L'?'on':''}">LONG</button>
+            <button type="button" data-dir="S" class="${batDir==='S'?'on':''}">SHORT</button>
+          </div>
+          <input type="number" id="batPnl" class="bt-pnl" step="0.01" placeholder="P&L $ (+/-)">
+          <button type="button" id="batGo" class="btn primary bt-go">+ ${bi('Registrar','Log')}</button>
+        </div>
+        <div class="bat-graf"><canvas id="batGrafYo"></canvas><div id="batGrafYoE" class="bat-graf-e"></div></div>
+        <div class="bat-panel-log">${filas(yo)}</div>
+      </div>`;
+    /* gráficas en vivo de cada jugador */
+    const vac = bi('Sin trades aún','No trades yet');
+    requestAnimationFrame(() => {
+      pintaCurva($('#batGrafRival'), $('#batGrafRivalE'), (c.trades[rivalDe]||[]).map(t=>t.pnl||0), 1, vac);
+      pintaCurva($('#batGrafYo'), $('#batGrafYoE'), (c.trades[yo]||[]).map(t=>t.pnl||0), 1, vac);
+    });
     /* controles */
     $('#batTdir').onclick = e => { const b = e.target.closest('button[data-dir]'); if(!b) return; batDir = b.dataset.dir; $('#batTdir').querySelectorAll('button').forEach(x=>x.classList.toggle('on', x===b)); };
     const registrar = () => {
@@ -8545,15 +8575,6 @@ function renderBatalla(){
     };
     $('#batGo').onclick = registrar;
     $('#batPnl').addEventListener('keydown', e => { if(e.key==='Enter'){ e.preventDefault(); registrar(); } });
-    /* mi registro */
-    const mis = (c.trades[yo]||[]);
-    let acc = 0;
-    $('#batLog').innerHTML = mis.map((t,i)=>{ acc+=t.pnl; return { t, acc, i }; }).reverse().map(({t,acc})=>`
-      <div class="bt-log-row" style="grid-template-columns:66px 1fr 1fr">
-        <span class="dir ${t.dir==='S'?'S':'L'}">${t.dir==='S'?'SHORT':'LONG'}</span>
-        <span class="pnl ${t.pnl>=0?'up':'down'}">${fmt$(t.pnl,true)}</span>
-        <span class="acc">${fmt$(acc,true)}</span>
-      </div>`).join('') || `<div class="bt-log-empty">${bi('Aún no registras trades.','No trades logged yet.')}</div>`;
     batTick = setInterval(renderBatalla, 1000);
     return;
   }
