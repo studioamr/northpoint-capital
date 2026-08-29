@@ -2010,8 +2010,8 @@ button.st-chip:hover{border-color:rgba(255,255,255,.45)}
 .tseal-ov{position:fixed;inset:0;z-index:200;display:flex;align-items:center;justify-content:center;pointer-events:none}
 .tseal-badge{width:96px;height:96px;border-radius:50%;display:flex;align-items:center;justify-content:center;
   font-size:44px;animation:tSeal .5s cubic-bezier(.2,1.4,.4,1) both}
-.tseal-badge.win{background:rgba(48,209,88,.18);border:2px solid var(--up);color:var(--up)}
-.tseal-badge.loss{background:rgba(255,59,48,.16);border:2px solid var(--down);color:var(--down)}
+.tseal-badge.win{background:color-mix(in srgb,var(--up) 18%,transparent);border:2px solid var(--up);color:var(--up)}
+.tseal-badge.loss{background:color-mix(in srgb,var(--down) 16%,transparent);border:2px solid var(--down);color:var(--down)}
 .tconf{position:fixed;width:9px;height:9px;border-radius:2px;z-index:200;pointer-events:none;
   animation:tConfBurst .9s ease-out forwards}
 .shot-prev{position:relative;border:1px solid var(--line);border-radius:10px;overflow:hidden}
@@ -8504,8 +8504,10 @@ function drawEquity(){
   ctx.strokeStyle = gris; ctx.lineWidth = 1; ctx.setLineDash([3,5]);
   ctx.beginPath(); ctx.moveTo(IZQ, Y(0)); ctx.lineTo(DER, Y(0)); ctx.stroke();
 
-  /* área bajo la curva */
-  const verde = pts[pts.length-1] >= 0, rgb = verde ? '87,199,155' : '222,106,95';
+  /* área bajo la curva · sigue la PALETA elegida, no un verde/rojo fijo */
+  const hexRgb = hx => { const m=/^#?([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(hx||''); return m? [parseInt(m[1],16),parseInt(m[2],16),parseInt(m[3],16)].join(',') : '87,199,155'; };
+  const colUp = cssVar('--up') || '#57C79B', colDn = cssVar('--down') || '#DE6A5F';
+  const verde = pts[pts.length-1] >= 0, rgb = verde ? hexRgb(colUp) : hexRgb(colDn);
   const grad = ctx.createLinearGradient(0, Y(max), 0, Y(min));
   grad.addColorStop(0, 'rgba('+rgb+',.22)'); grad.addColorStop(1, 'rgba('+rgb+',0)');
   ctx.beginPath(); ctx.moveTo(X(0), Y(pts[0]));
@@ -8515,7 +8517,7 @@ function drawEquity(){
 
   /* la línea */
   ctx.beginPath(); pts.forEach((v,i) => i ? ctx.lineTo(X(i),Y(v)) : ctx.moveTo(X(i),Y(v)));
-  ctx.strokeStyle = verde ? '#57C79B' : '#DE6A5F';
+  ctx.strokeStyle = verde ? colUp : colDn;
   ctx.lineWidth = 1.7; ctx.lineJoin = 'round'; ctx.lineCap = 'round'; ctx.stroke();
 
   /* UN PUNTO POR TRADE — hueco si ganó, relleno si perdió. Con muchos fills
@@ -8527,15 +8529,15 @@ function drawEquity(){
       if(i === 0) return;               // el origen no es un trade
       const gano = (fills[i-1].pnl||0) >= 0;
       ctx.beginPath(); ctx.arc(X(i), Y(v), r, 0, 7);
-      ctx.fillStyle = gano ? (cssVar('--bg') || '#080808') : '#DE6A5F';
+      ctx.fillStyle = gano ? (cssVar('--bg') || '#080808') : colDn;
       ctx.fill();
-      ctx.strokeStyle = gano ? '#57C79B' : '#DE6A5F'; ctx.lineWidth = 1.4; ctx.stroke();
+      ctx.strokeStyle = gano ? colUp : colDn; ctx.lineWidth = 1.4; ctx.stroke();
     });
   }
   /* dónde vas ahora */
   const ult = pts.length-1;
   ctx.beginPath(); ctx.arc(X(ult), Y(pts[ult]), r + 1.6, 0, 7);
-  ctx.fillStyle = verde ? '#57C79B' : '#DE6A5F'; ctx.fill();
+  ctx.fillStyle = verde ? colUp : colDn; ctx.fill();
 
   $('#eqLabel').textContent = fills.length + ' ' + tr('j.trades') + ' · '
     + bi('hoyo ','worst ') + fmt$(hoyo, true);
@@ -9103,8 +9105,10 @@ function pintaCurva(cv, empty, pnls, prog, vacioMsg, opts){
   const cCero = claro ? 'rgba(0,0,0,.28)' : 'rgba(255,255,255,.18)';
   const cTxt  = claro ? 'rgba(0,0,0,.5)'  : 'rgba(255,255,255,.42)';
   const cTxtT = claro ? 'rgba(0,0,0,.75)' : 'rgba(255,255,255,.7)';
-  const cOro  = '#D9A441', cRojo = '#E5484D', cVerde = '#1F9D57';
-  const col_up = claro ? cVerde : '#30D158', col_dn = claro ? cRojo : '#FF453A';
+  const cOro  = '#D9A441';
+  /* la curva sigue la PALETA elegida (Clásica/Océano/Oro/Sakura), no un
+     verde/rojo fijo — lee las mismas --up/--down que ya pinta toda la UI */
+  const col_up = cssVar('--up') || (claro?'#1F9D57':'#30D158'), col_dn = cssVar('--down') || (claro?'#E5484D':'#FF453A');
 
   const pts = [0]; let acc = 0;
   pnls.forEach(p => { acc += (p||0); pts.push(acc); });
@@ -12845,7 +12849,8 @@ function animaSello(pnl){
   document.body.appendChild(ov);
   if(win){
     const cx = innerWidth/2, cy = innerHeight/2;
-    const cols = ['#30D158','#8FE9AB','#FFFFFF','#B8F5CC'];
+    const colUp = cssVar('--up') || '#30D158';
+    const cols = [colUp, mez(colUp,110), '#FFFFFF', mez(colUp,150)];
     for(let i=0;i<26;i++){
       const c = document.createElement('i');
       c.className = 'tconf';
