@@ -4052,7 +4052,7 @@ stop[stop-color="#9BC0DC"]{stop-color:var(--txt)}
       </a>
       <a class="item" href="#batalla" data-view="batalla">
         <svg viewBox="0 0 24 24" fill="none" stroke-width="1.6"><path d="M14.5 4l5.5 5.5-3 3-5.5-5.5zM10 8.5L4 14.5 4 20l5.5 0 6-6M13 11l-6 6"/></svg>
-        <span data-i18n="nav.batalla">Batallas</span>
+        <span data-i18n="nav.batalla">Kuro</span>
       </a>
     </nav>
 
@@ -5136,8 +5136,8 @@ const I18N = {
   'nav.academia': { es:'Academia', en:'Academy' },
   'nav.cuaderno': { es:'Cuaderno', en:'Notebook' },
   'tit.cuaderno.t': { es:'Cuaderno', en:'Notebook' },
-  'nav.batalla': { es:'Batallas', en:'Battles' },
-  'tit.batalla.t': { es:'Batallas', en:'Battles' },
+  'nav.batalla': { es:'Kuro', en:'Kuro' },
+  'tit.batalla.t': { es:'Kuro', en:'Kuro' },
   'tit.entreno.k': { es:'Entrenamiento', en:'Training' },
   'tit.entreno.t': { es:'Backtesting', en:'Backtesting' },
   'tit.academia.t': { es:'Academia', en:'Academy' },
@@ -10962,7 +10962,7 @@ function batCeremonia(tipo, d){
   } else if(tipo==='muerte'){
     inner=`<em class="cer-skull">☠</em>
       <b>${bi('TU NINJA HA MUERTO','YOUR NINJA HAS DIED')}</b>
-      <span>${bi('el bank se acabó · renaces forjando uno nuevo con','your bank ran dry · be reborn with a fresh')} ${fmt$(BAT_BIENVENIDA)}</span>`;
+      <span>${bi('el bank se acabó · el kit fue una sola vez: renaces desde cero','your bank ran dry · the kit was one-time: you restart from zero')}</span>`;
   }
   ov.innerHTML=`<canvas class="cer-cv"></canvas><div class="cer-in">${inner}</div>`;
   document.body.appendChild(ov);
@@ -11511,11 +11511,13 @@ function renderBatalla(){
           <div class="ars-top"><b>${bi('Tu colección','Your collection')}</b><span class="ars-cash" style="color:${banco>=0?'#6fe39a':'#ff6a5e'}">${fmt$(banco)} ${bi('en el banco','in the bank')}</span><button type="button" class="ars-x" id="arsX" aria-label="${bi('cerrar','close')}">✕</button></div>
           <div class="ars-grid">
             ${KATANAS.map((k,i)=>{ const owned=miKat.includes(k.id), cur=(i===kEquipIdx&&owned), alcanza=banco>=k.precio;
+              const prevOk = i===0 || miKat.includes(KATANAS[i-1].id);   /* EN ORDEN: primero la anterior */
               return `<div class="ars-card ${owned?'owned':'locked'} ${cur?'cur':''}" style="--kc:${k.belt}">
                 <span class="ars-kanji">${k.kanji}</span>
                 <div class="ars-sw">${katanaSVG(k.belt, true, !owned)}</div>
                 <b class="ars-nom" style="border-bottom:2px solid ${k.belt}">${loc(k.n)}</b>
                 ${owned? (cur?`<span class="ars-tag">${bi('Equipada','Equipped')}</span>`:`<button type="button" class="ars-eq" data-equip="${i}">${bi('Equipar','Equip')}</button>`)
+                  : !prevOk? `<span class="ars-precio">${fmt$(k.precio)} · ${bi('antes forja','forge first')} <b style="color:${KATANAS[i-1].belt}">${loc(KATANAS[i-1].n)}</b></span>`
                   : (alcanza?`<button type="button" class="ars-buy" data-forja="${i}">${bi('Forjar','Forge')} · ${fmt$(k.precio)}</button>`:`<span class="ars-precio">🔒 ${fmt$(k.precio)}</span>`)}
               </div>`;}).join('')}
           </div>
@@ -11562,12 +11564,12 @@ function renderBatalla(){
             <div class="como-flow">
               <span class="como-rail" aria-hidden="true"></span>
               ${[
-                {c:'#EDEFF2', g:'#cfd6e0', t:bi('Regístrate y crea tu ninja','Register and create your ninja'), p:bi('Al entrar recibes $50,000 de bienvenida: tu bank. Tu ninja te representa en todos los mundos.','You start with a $50,000 welcome bonus: your bank. Your ninja represents you in every world.')},
+                {c:'#EDEFF2', g:'#cfd6e0', t:bi('Regístrate y crea tu ninja','Register and create your ninja'), p:bi('Al entrar canjeas tu kit de bienvenida de $50,000 — UNA sola vez en la vida. Tu ninja te representa en todos los mundos.','You redeem your one-time $50,000 welcome kit. Your ninja represents you in every world.')},
                 {c:'#E7C24A', g:'#E7C24A', t:bi('Reta a un socio','Challenge a partner'), p:bi('Un duelo de trading con tiempo. Cada quien registra su P&L. El de mayor profit gana.','A timed trading duel. Each logs their P&L. Most profit wins.')},
                 {c:'#4FAE6A', g:'#4FAE6A', t:bi('Si ganas, te pagan','Win and get paid'), p:bi('Base $5,000 + tu profit ×3, directo a tu bank. Si pierdes pagas un fee fijo de $2,000.','Base $5,000 + your profit ×3, straight to your bank. Lose and you pay a flat $2,000 fee.')},
                 {c:'#3E82C8', g:'#3E82C8', t:bi('Los eventos pagan más','Events pay more'), p:bi('Gana durante una sesión (×2) o un torneo (×3) y el pago se multiplica.','Win during a session (×2) or a tournament (×3) and the payout multiplies.')},
                 {c:'#C8443C', g:'#C8443C', t:bi('Forja katanas con tu lana','Forge katanas with your cash'), p:bi('Compra las 9 espadas, de Shiro a Kuro ($1M). Entre más alta tu katana, más te pagan — y tu mundo evoluciona con tu espada.','Buy all 9 swords, Shiro to Kuro ($1M). The higher your katana, the bigger your payouts — and your world evolves with your sword.')},
-                {c:'#23272E', g:'#ff6a5e', t:bi('Si tu bank se acaba, tu ninja muere','If your bank runs dry, your ninja dies'), p:bi('Pierdes tu colección y a tu ninja. Renaces forjando uno nuevo, con otros $50,000. La meta: la colección completa sin morir — ser el mejor de la firma.','You lose your collection and your ninja. You are reborn by forging a new one, with a fresh $50,000. The goal: the full collection without dying — be the best in the firm.')}
+                {c:'#23272E', g:'#ff6a5e', t:bi('Si tu bank se acaba, tu ninja muere','If your bank runs dry, your ninja dies'), p:bi('Pierdes tu colección y a tu ninja — y el kit no se repite: renaces desde cero. La meta: la colección completa sin morir — ser el mejor de la firma.','You lose your collection and your ninja — and the kit never repeats: you restart from zero. The goal: the full collection without dying — be the best in the firm.')}
               ].map((s,i)=>`
               <div class="como-step" style="--kc:${s.g};animation-delay:${(i*0.22+0.08).toFixed(2)}s">
                 <div class="como-node"><span class="como-sw" style="animation-delay:${(i*0.4).toFixed(2)}s">${katanaSVG(s.c,true)}</span><em>${i+1}</em></div>
@@ -11637,8 +11639,8 @@ function renderBatalla(){
             <canvas id="onbCv" width="900" height="1280"></canvas>
             <div class="onb-in">
               <em>NORTHPOINT</em>
-              <b>BATTLES</b>
-              <span>${bi('Duelos de trading entre socios. Forja tu leyenda.','Trading duels between partners. Forge your legend.')}</span>
+              <b>KURO</b>
+              <span>${bi('Duelos de trading entre socios. El camino a la katana negra.','Trading duels between partners. The road to the black katana.')}</span>
               <button type="button" class="btn primary stage-btn" id="onbGo">${bi('Iniciar','Start')}</button>
             </div>
           </div>`;
@@ -11647,7 +11649,7 @@ function renderBatalla(){
             <div class="evt-body nj-body">
               <div class="rg"><span class="rg-v">
                   <svg viewBox="0 0 64 44"><ellipse cx="26" cy="34" rx="17" ry="6" fill="#c9a227"/><ellipse cx="26" cy="34" rx="17" ry="6" fill="none" stroke="#8a6a10"/><ellipse cx="26" cy="28" rx="17" ry="6" fill="#e7c24a"/><ellipse cx="26" cy="22" rx="17" ry="6" fill="#f4d76a"/><text x="47" y="26" font-size="17" font-weight="800" fill="#f4d76a">$</text></svg>
-                </span><div><b>${bi('Recibes','You start with')} ${fmt$(BAT_BIENVENIDA)}</b><p>${bi('Tu feria de bienvenida: ese es tu bank para empezar.','Your welcome bonus: that is your starting bank.')}</p></div></div>
+                </span><div><b>${bi('Canjeas','You redeem')} ${fmt$(BAT_BIENVENIDA)}</b><p>${bi('Tu kit de bienvenida — una sola vez en la vida. Ese es tu bank para empezar.','Your welcome kit — one time only. That is your starting bank.')}</p></div></div>
               <div class="rg"><span class="rg-v rg-x"><i>${katanaSVG('#EDEFF2',true)}</i><i>${katanaSVG('#C8443C',true)}</i></span>
                 <div><b>${bi('Reta a tus socios','Challenge your partners')}</b><p>${bi('Un duelo de trading con tiempo: el de mayor P&L gana.','A timed trading duel: most P&L wins.')}</p></div></div>
               <div class="rg"><span class="rg-v rg-pago"><b class="up">+$5,000</b><b class="dn">−$2,000</b></span>
@@ -11655,7 +11657,7 @@ function renderBatalla(){
               <div class="rg"><span class="rg-v rg-mult"><b>×2</b><b class="oro">×3</b></span>
                 <div><b>${bi('Los eventos pagan más','Events pay more')}</b><p>${bi('Sesiones pagan ×2 y torneos ×3.','Sessions pay ×2 and tournaments ×3.')}</p></div></div>
               <div class="rg"><span class="rg-v rg-kats"><i>${katanaSVG('#EDEFF2',true)}</i><i>${katanaSVG('#4FAE6A',true)}</i><i>${katanaSVG('#23272E',true)}</i></span>
-                <div><b>${bi('Compra las 9 katanas con tu lana','Buy all 9 katanas with your cash')}</b><p>${bi('De Shiro a Kuro ($1M). Cada espada abre su propio mundo.','From Shiro to Kuro ($1M). Each sword opens its own world.')}</p></div></div>
+                <div><b>${bi('Forja las 9 katanas EN ORDEN','Forge all 9 katanas IN ORDER')}</b><p>${bi('De Shiro a Kuro ($1M): no puedes forjar una sin la anterior. Cada espada abre su propio mundo.','From Shiro to Kuro ($1M): you can’t forge one without the previous. Each sword opens its own world.')}</p></div></div>
               <button type="button" class="btn primary stage-btn" id="comoGo">${bi('Elegir mi ninja','Choose my ninja')} →</button>
             </div>
           </div>`;
@@ -11670,7 +11672,7 @@ function renderBatalla(){
             ${filas.map(f=>`
             <div class="evt-sec">${f[1]}</div>
             <div class="nj-row">${NJ_OPCIONES[f[0]].map(o=>`<button type="button" class="nj-sw ${window._njCfg[f[0]]===o[0]?'on':''}" data-njk="${f[0]}" data-njv="${o[0]}" title="${o[1]}" style="--c:${o[0]}"></button>`).join('')}</div>`).join('')}
-            <button type="button" class="btn primary stage-btn" id="njOk">${sinNinja?bi('¡Listo! Entrégame mi bank','Done! Hand me my bank'):bi('Guardar','Save')}</button>
+            <button type="button" class="btn primary stage-btn" id="njOk">${sinNinja?(!(S.batKit&&S.batKit[yo])?bi('¡Listo! Entrégame mi kit','Done! Hand me my kit'):bi('¡Listo! Renacer','Done! Be reborn')):bi('Guardar','Save')}</button>
           </div>
         </div>`;})()}
       </div>
@@ -11699,9 +11701,15 @@ function renderBatalla(){
     root.querySelectorAll('[data-njk]').forEach(b=> b.onclick=()=>{ window._njCfg[b.dataset.njk]=b.dataset.njv; renderBatalla(); });
     $('#njOk') && ($('#njOk').onclick = () => { S.batNinja=S.batNinja||{}; const nuevo=!S.batNinja[yo];
       S.batNinja[yo]={...window._njCfg};
-      if(nuevo){ batStackSet(yo, batBanco(yo)+BAT_BIENVENIDA); window._batPagoFlash={monto:BAT_BIENVENIDA,mult:1,bienvenida:true}; }
+      /* el KIT de bienvenida se canjea UNA sola vez en la vida */
+      let kitDado=false;
+      if(nuevo){ if(!S.batKit) S.batKit={};
+        if(!S.batKit[yo]){ S.batKit[yo]=true; kitDado=true;
+          batStackSet(yo, batBanco(yo)+BAT_BIENVENIDA); window._batPagoFlash={monto:BAT_BIENVENIDA,mult:1,bienvenida:true}; } }
       save(); window._batCrearNinja=false; window._batOnb=null;
-      toast(nuevo?bi('Tu ninja está listo · feria de bienvenida: +'+fmt$(BAT_BIENVENIDA),'Your ninja is ready · welcome bonus: +'+fmt$(BAT_BIENVENIDA)):bi('Ninja actualizado','Ninja updated')); renderBatalla(); });
+      toast(kitDado?bi('Tu ninja está listo · kit de bienvenida: +'+fmt$(BAT_BIENVENIDA),'Your ninja is ready · welcome kit: +'+fmt$(BAT_BIENVENIDA))
+        :nuevo?bi('Renaciste. El kit de bienvenida fue una sola vez — a ganar desde cero.','Reborn. The welcome kit was one-time — earn it back from zero.')
+        :bi('Ninja actualizado','Ninja updated')); renderBatalla(); });
     $('#njX') && ($('#njX').onclick = () => { window._batCrearNinja=false; window._njCfg=null; renderBatalla(); });
     $('#onbGo') && ($('#onbGo').onclick = () => { window._batOnb='como'; renderBatalla(); });
     $('#comoGo') && ($('#comoGo').onclick = () => { window._batOnb='crear'; renderBatalla(); });
@@ -11866,6 +11874,7 @@ function renderBatalla(){
     $('#setX') && ($('#setX').onclick = () => { window._batSetup=false; batSel=null; renderBatalla(); });
     if(window._batSetup) batSetupBind(root, yo, ()=>{ window._batSetup=false; batSel=null; });
     root.querySelectorAll('[data-forja]').forEach(b=> b.onclick=()=>{ const i=+b.dataset.forja, k=KATANAS[i]; const bal=batBanco(yo);
+      if(i>0 && !batKatanasDe(yo).includes(KATANAS[i-1].id)){ toast(bi('Las katanas se forjan en orden: primero','Katanas are forged in order: first')+' '+loc(KATANAS[i-1].n)); return; }
       if(bal<k.precio){ toast(bi('No te alcanza todavía. Gana más duelos.','Not enough yet. Win more duels.')); return; }
       batStackSet(yo, bal-k.precio); batKatanasDe(yo).push(k.id); if(!S.batEquipada)S.batEquipada={}; S.batEquipada[yo]=k.id; save();
       renderBatalla(); setTimeout(()=>batCeremonia('forja',{k}), 180); });
