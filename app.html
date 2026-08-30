@@ -1715,6 +1715,13 @@ button.st-chip:hover{border-color:rgba(255,255,255,.45)}
 .bat-reloj-wrap{text-align:center;padding:16px 0}
 .bat-vs-mini{font-family:var(--mono);font-size:11px;letter-spacing:.18em;color:var(--faint);display:block}
 .bat-reloj-grande{font-family:var(--mono);font-weight:600;font-size:clamp(44px,11vw,68px);line-height:1;color:var(--txt);letter-spacing:.02em;margin:6px 0}
+/* LO QUE SE JUEGA — cinco datos en una tira bajo el reloj */
+.bat-bote{display:flex;flex-wrap:wrap;justify-content:center;gap:6px;margin-top:10px}
+.bat-bote span{display:flex;flex-direction:column;align-items:center;gap:2px;
+  padding:6px 11px;border:1px solid var(--line);border-radius:9px;background:var(--w02)}
+.bat-bote i{font-style:normal;font-family:var(--mono);font-size:8px;letter-spacing:.14em;color:var(--faint)}
+.bat-bote b{font-size:13px;font-weight:700;color:var(--txt)}
+.bat-bote b.up{color:var(--up)} .bat-bote b.down{color:var(--down)}
 .bat-reloj-lbl{font-family:var(--mono);font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--faint)}
 /* resumen */
 .bat-res-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;max-width:640px;margin:0 auto}
@@ -6066,6 +6073,22 @@ function migrar(s){
     if(!t.date || typeof t.date !== 'string') t.date = '1970-01-01';
     if(t.time == null) t.time = '';
   });
+  /* ══ EL DOJO SE EMPAREJA (30-ago-2026) ══
+     El banco de KURO se sembraba con victorias×$8,000: entrar por primera vez
+     te regalaba una fortuna «por haber peleado» —dinero que nadie ganó— y con
+     esa bolsa se compraban de golpe media escalera de katanas, porque la
+     misma cuenta pagaba entradas Y forjas. Se empareja a todos: $50,000 de
+     banco, la espada principal (Shiro) y cero en la bolsa de forja, que ahora
+     es la ÚNICA que compra katanas y sólo se llena ganando duelos.
+
+     El sello es una CONSTANTE, no Date.now(): con la hora de cada máquina, el
+     equipo que abriera después «ganaba» la fusión y volvía a emparejar lo que
+     el otro ya había vuelto a ganar. */
+  const TS_DOJO_PAREJO = 1788220800000;   /* 30-ago-2026, fijo a propósito */
+  if(!s.dojoParejo){
+    s.batStack = {}; s.batPico = {}; s.batGanado = {}; s.batKatanas = {}; s.batEquipada = {};
+    s.dojoParejo = TS_DOJO_PAREJO;
+  }
   /* ══ EL CAMINO ES UNO (28-ago-2026) ══
      Fuera el aparato de reglas por cuenta: toda cuenta corre los mismos
      $6,100. a.reglas se borra del estado — el motor ya no lo lee, y dejarlo
@@ -6594,8 +6617,18 @@ function sessionState(now = ahora()){
   const m  = minutosEn(TZ_MERCADO, now);
   const wd = diaSemanaEn(TZ_MERCADO, now);
   /* el fin de semana REAL de futuros: viernes 17:00 → domingo 18:00 NY */
-  if((wd === 5 && m >= 17*60) || wd === 6 || (wd === 0 && m < 18*60))
+  if((wd === 5 && m >= 17*60) || wd === 6 || (wd === 0 && m < 18*60)){
+    /* EL DOMINGO ES EL DÍA: la etiqueta decía «ASIA DOM 18:00 NY» los tres
+       días del fin de semana por igual, así que el domingo —cuando la
+       apertura es en un rato— se leía igual que el sábado. Ahora dice HOY y
+       cuánto falta. */
+    if(wd === 0){
+      const faltan = 18*60 - m, fh = Math.floor(faltan/60), fm = faltan%60;
+      return { k:'off', txt: bi('ASIA ABRE HOY 18:00 NY · en ','ASIA OPENS TODAY 6 PM NY · in ')
+        + (fh>0 ? fh+'h '+String(fm).padStart(2,'0')+'m' : fm+'m') };
+    }
     return { k:'off', txt: bi('FIN DE SEMANA · ASIA DOM 18:00 NY','WEEKEND · ASIA SUN 6 PM NY') };
+  }
   if(m >= 17*60 && m < 18*60) return { k:'off', txt:'MARKET CLOSED · 17–18 NY' };
   /* la ventana propia, con sus horas derivadas de VENTANA para que las
      etiquetas no vuelvan a quedarse viejas (decían 7:30 de la era Morelia) */
@@ -10196,10 +10229,22 @@ function katanaSVG(hex, flat, oculta){
    ganando duelos; si la quiebras, reinicio total. Meta: la katana negra. ── */
 function batStackObj(){ if(!S.batStack) S.batStack={}; if(!S.batPico) S.batPico={}; return S.batStack; }
 function batBanco(u){ const st=batStackObj();
-  if(st[u]==null){ const r=batStatDe(u); const seed=(r.g||0)*8000; st[u]=seed; if(S.batPico[u]==null) S.batPico[u]=seed; }
+  /* $50k PAREJO PARA TODOS (André, 30-ago-2026). Antes el banco de quien no
+     tenía uno se SEMBRABA con victorias×$8,000: entrabas por primera vez y ya
+     traías una fortuna por haber peleado — dinero que nadie ganó. Se fue. */
+  if(st[u]==null){ st[u]=BAT_BIENVENIDA; if(S.batPico[u]==null) S.batPico[u]=BAT_BIENVENIDA; }
   if(S.batPico[u]==null) S.batPico[u]=st[u];
   return st[u];
 }
+/* ── LO GANADO ── la bolsa con la que se forjan las katanas, y SÓLO ella.
+   Aquí entra lo que pagan las victorias; NUNCA la feria de bienvenida. Con
+   una sola bolsa, los $50k de entrada alcanzaban para comprarse varias
+   espadas de salida sin haber peleado una vez: la escalera entera regalada.
+   Ahora el banco es para BUSCAR PARTIDA (entradas y fees) y lo forjado sale
+   de lo que ganaste peleando. */
+function batGanadoObj(){ if(!S.batGanado) S.batGanado={}; return S.batGanado; }
+function batGanado(u){ const g=batGanadoObj(); if(g[u]==null) g[u]=0; return g[u]; }
+function batGanadoSet(u,val){ batGanadoObj()[u]=Math.max(0,Math.round(val)); batStamp(u); }
 function batPico(u){ batBanco(u); return S.batPico[u]; }
 const BAT_BIENVENIDA = 50000; /* la feria de bienvenida al registrarte */
 function batStackSet(u,val){ const st=batStackObj(); st[u]=Math.round(val); if(st[u]>(S.batPico[u]||0)) S.batPico[u]=st[u]; batStamp(u); }
@@ -10245,6 +10290,7 @@ function batRegistraResultado(c){
     const kBuff = 1;   /* el buff de KATA se fue con el módulo; el gancho queda por si vuelve */
     const pago=Math.round((BAT_PAGO_BASE + Math.max(0,profit)*3) * (c.mult||1) * (1+katanaBono(batKatRango(u)).loot) * kBuff);
     batStackSet(u, batBanco(u)+pago);
+    batGanadoSet(u, batGanado(u)+pago);   /* sólo lo PELEADO forja katanas */
     try{ if(u===yo) window._batPagoFlash={monto:pago, mult:(c.mult||1), rival: c.party?null:(u===c.host?c.rival:c.host)}; }catch(e){}
   };
   const cobra=(u)=>{ /* si pierdes, pagas el fee fijo — y si el bank se acaba, MUERES */
@@ -10817,7 +10863,11 @@ const NJ_OPCIONES = {
 function batNinjaDe(u){ const nj=(S.batNinja||{})[u]; if(nj) return nj;
   /* rivales sin registro: ninja determinístico a partir de su uid */
   let h=0; for(const ch of String(u||'')) h=(h*31+ch.charCodeAt(0))>>>0;
-  return { traje:NJ_OPCIONES.traje[h%NJ_OPCIONES.traje.length][0], banda:NJ_OPCIONES.banda[(h>>3)%NJ_OPCIONES.banda.length][0], buf:NJ_OPCIONES.buf[(h>>5)%NJ_OPCIONES.buf.length][0] }; }
+  /* >>> y no >>: el hash es sin signo y pasa de 2^31 seguido; con el
+     desplazamiento CON signo, (h>>3) sale NEGATIVO, el módulo también, y el
+     arreglo devuelve undefined — reventaba la vista de batalla entera para
+     cualquier rival que aún no tuviera ninja guardado. */
+  return { traje:NJ_OPCIONES.traje[h%NJ_OPCIONES.traje.length][0], banda:NJ_OPCIONES.banda[(h>>>3)%NJ_OPCIONES.banda.length][0], buf:NJ_OPCIONES.buf[(h>>>5)%NJ_OPCIONES.buf.length][0] }; }
 function zenNinja(c,x,base,s,now,ph,col,nj,flip,anda){ const kc=col||'#b53a2e';
   const cfg = nj||NJ_DEF;
   const bob = anda ? Math.sin(now/140+(ph||0))*1.1 : Math.sin(now/900+(ph||0))*1.5;
@@ -11504,7 +11554,7 @@ function renderBatalla(){
       if(tipoR===null){ tipoR=t2; streak=1; } else if(tipoR===t2){ streak++; } else break;
     }
     const rachaTxt = streak? (tipoR==='w'?'🔥 '+streak:'❄ '+streak) : '—';
-    const banco = batBanco(yo), miKat = batKatanasDe(yo);
+    const banco = batBanco(yo), forjaBolsa = batGanado(yo), miKat = batKatanasDe(yo);
     const kActualIdx = KATANAS.reduce((mx,k,i)=> miKat.includes(k.id)? i : mx, -1);
     const miBelt = kActualIdx>=0 ? KATANAS[kActualIdx].belt : '#9aa3b2';
     const kEquipIdx = batEquipadaDe(yo);
@@ -11560,7 +11610,13 @@ function renderBatalla(){
         </div>
         ${window._batArsenal?`
         <div class="ars-ov">
-          <div class="ars-top"><b>${bi('Tu colección','Your collection')}</b><span class="ars-cash" style="color:${banco>=0?'#6fe39a':'#ff6a5e'}">${fmt$(banco)} ${bi('en el banco','in the bank')}</span><button type="button" class="ars-x" id="arsX" aria-label="${bi('cerrar','close')}">✕</button></div>
+          <!-- DOS BOLSAS y se dice cuál sirve aquí: el banco paga entradas,
+               lo forjado compra katanas. Con una sola, la feria de bienvenida
+               compraba media escalera sin pelear. -->
+          <div class="ars-top"><b>${bi('Tu colección','Your collection')}</b>
+            <span class="ars-cash" style="color:#e7c24a">⚒ ${fmt$(forjaBolsa)} ${bi('para forjar','to forge')}</span>
+            <span class="ars-cash" style="opacity:.62">· ${fmt$(banco)} ${bi('banco (partidas)','bank (matches)')}</span>
+            <button type="button" class="ars-x" id="arsX" aria-label="${bi('cerrar','close')}">✕</button></div>
           <div class="ars-scroll">
             ${(()=>{ const kEq=KATANAS[kEquipIdx]||KATANAS[0];
               return `<div class="ars-hero" style="--kc:${kEq.belt}">
@@ -11569,7 +11625,7 @@ function renderBatalla(){
                 <div class="ars-hero-i"><b style="border-bottom:3px solid ${kEq.belt}">${loc(kEq.n)}</b><span class="ars-tag">${bi('Equipada','Equipped')}</span></div>
               </div>`; })()}
             <div class="ars-grid">
-            ${KATANAS.map((k,i)=>{ const owned=miKat.includes(k.id), cur=(i===kEquipIdx&&owned), alcanza=banco>=k.precio;
+            ${KATANAS.map((k,i)=>{ const owned=miKat.includes(k.id), cur=(i===kEquipIdx&&owned), alcanza=forjaBolsa>=k.precio;
               if(cur) return '';   /* la equipada ya está en grande arriba */
               const prevOk = i===0 || miKat.includes(KATANAS[i-1].id);   /* EN ORDEN: primero la anterior */
               return `<div class="ars-card ${owned?'owned':'locked'} ${cur?'cur':''}" style="--kc:${k.belt}">
@@ -11578,7 +11634,7 @@ function renderBatalla(){
                 <b class="ars-nom" style="border-bottom:2px solid ${k.belt}">${loc(k.n)}</b>
                 ${owned? (cur?`<span class="ars-tag">${bi('Equipada','Equipped')}</span>`:`<button type="button" class="ars-eq" data-equip="${i}">${bi('Equipar','Equip')}</button>`)
                   : (prevOk && alcanza)?`<button type="button" class="ars-buy" data-forja="${i}">${bi('Forjar','Forge')} · ${fmt$(k.precio)}</button>`
-                  : `<span class="ars-precio">🔒 ${fmt$(k.precio)}</span>`}
+                  : `<span class="ars-precio">${prevOk?'⚒':'🔒'} ${fmt$(k.precio)}</span>`}
               </div>`;}).join('')}
             </div>
           </div>
@@ -11894,10 +11950,11 @@ function renderBatalla(){
     $('#arsX') && ($('#arsX').onclick = () => { window._batArsenal=false; renderBatalla(); });
     $('#setX') && ($('#setX').onclick = () => { window._batSetup=false; batSel=null; renderBatalla(); });
     if(window._batSetup) batSetupBind(root, yo, ()=>{ window._batSetup=false; batSel=null; });
-    root.querySelectorAll('[data-forja]').forEach(b=> b.onclick=()=>{ const i=+b.dataset.forja, k=KATANAS[i]; const bal=batBanco(yo);
+    root.querySelectorAll('[data-forja]').forEach(b=> b.onclick=()=>{ const i=+b.dataset.forja, k=KATANAS[i]; const bal=batGanado(yo);
       if(i>0 && !batKatanasDe(yo).includes(KATANAS[i-1].id)){ toast(bi('Las katanas se forjan en orden: primero','Katanas are forged in order: first')+' '+loc(KATANAS[i-1].n)); return; }
-      if(bal<k.precio){ toast(bi('No te alcanza todavía. Gana más duelos.','Not enough yet. Win more duels.')); return; }
-      batStackSet(yo, bal-k.precio); batKatanasDe(yo).push(k.id); if(!S.batEquipada)S.batEquipada={}; S.batEquipada[yo]=k.id; save();
+      /* de LO GANADO, nunca del banco: el banco es para buscar partida */
+      if(bal<k.precio){ toast(bi('Se forja con lo que GANAS peleando, no con tu banco.','Forged with what you WIN, not with your bank.')); return; }
+      batGanadoSet(yo, bal-k.precio); batKatanasDe(yo).push(k.id); if(!S.batEquipada)S.batEquipada={}; S.batEquipada[yo]=k.id; save();
       renderBatalla(); setTimeout(()=>batCeremonia('forja',{k}), 180); });
     root.querySelectorAll('[data-equip]').forEach(b=> b.onclick=()=>{ batEquipar(yo,+b.dataset.equip); renderBatalla(); });
     window._zenDuelo=null;   /* la pelea vive DENTRO de la batalla, no en el dashboard */
@@ -12095,8 +12152,11 @@ function renderBatalla(){
   if(c.estado === 'activo'){
     if(Date.now() >= c.fin){ c.estado = 'terminado'; batGuarda(); return; }
     const restante = Math.max(0, c.fin - Date.now());
-    const mm = String(Math.floor(restante/60000)).padStart(2,'0'), ss = String(Math.floor(restante%60000/1000)).padStart(2,'0');
+    /* MINUTOS DE LA HORA, no minutos totales: sin el módulo, 3h 59m 19s se
+       pintaba «03:239:19» — la hora aparte y los 239 minutos completos. */
     const hh = Math.floor(restante/3600000);
+    const mm = String(Math.floor(restante%3600000/60000)).padStart(2,'0');
+    const ss = String(Math.floor(restante%60000/1000)).padStart(2,'0');
     const reloj = (hh>0 ? String(hh).padStart(2,'0')+':' : '') + mm + ':' + ss;
     const pYo = batProfit(c, yo), pRival = batProfit(c, rivalDe);
     const gano = pYo >= pRival;
@@ -12130,11 +12190,24 @@ function renderBatalla(){
         <div class="bat-panel-log">${filas(rivalDe)}</div>
       </div>
 
-      <!-- EN MEDIO: temporizador grande -->
+      <!-- EN MEDIO: temporizador grande + LO QUE SE JUEGA (André, 30-ago).
+           El duelo no decía en ninguna parte cuánto paga ganar ni cuánto
+           cuesta perder: se peleaba a ciegas. El bote se calcula con los
+           profits de AHORA, así que se mueve con la pelea. -->
       <div class="bat-reloj-wrap">
         <span class="bat-vs-mini">VS</span>
         <div class="bat-reloj-grande mono">${reloj}</div>
         <span class="bat-reloj-lbl">${bi('tiempo restante','time left')}</span>
+        ${(()=>{ const lider = gano ? pYo : pRival;
+          const bolsa = Math.round((BAT_PAGO_BASE + Math.max(0,lider)*3) * (c.mult||1)
+                        * (1 + katanaBono(batKatRango(gano?yo:rivalDe)).loot));
+          return `<div class="bat-bote">
+            <span><i>${bi('GANA','WINNER TAKES')}</i><b class="up">${fmt$(bolsa)}</b></span>
+            <span><i>${bi('PIERDE','LOSER PAYS')}</i><b class="down">−${fmt$(BAT_FEE)}</b></span>
+            <span><i>${bi('MULT','MULT')}</i><b>×${c.mult||1}</b></span>
+            <span><i>${bi('VA GANANDO','LEADING')}</i><b>${esc(gano?bi('tú','you'):batNom(rivalDe))}</b></span>
+            <span><i>${bi('DIFERENCIA','GAP')}</i><b>${fmt$(Math.abs(pYo-pRival))}</b></span>
+          </div>`; })()}
       </div>
 
       <!-- ABAJO: tú (con tus controles) -->
@@ -15495,7 +15568,9 @@ function fusionarEstado(local, remoto){
   Object.keys(local.batT||{}).forEach(u2 => { bT[u2]=Math.max(+bT[u2]||0, +(local.batT||{})[u2]||0); });
   f.batT = bT;
   const localManda = u2 => (+(local.batT||{})[u2]||0) >= (+(remoto.batT||{})[u2]||0);
-  ['batStack','batPico','batStats','batKatanas','batEquipada','batKit','batNinja','juego'].forEach(k=>{
+  /* batGanado viaja con los demás: es la bolsa que forja katanas y sin
+     fusionarla, forjar en el celular no se veía en la laptop (y al revés). */
+  ['batStack','batPico','batGanado','batStats','batKatanas','batEquipada','batKit','batNinja','juego'].forEach(k=>{
     const L=local[k]||{}, R2=remoto[k]||{}, out={};
     new Set([...Object.keys(L),...Object.keys(R2)]).forEach(u2=>{
       out[u2] = (u2 in L) && (!(u2 in R2) || localManda(u2)) ? L[u2] : R2[u2];
