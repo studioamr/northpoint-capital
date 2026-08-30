@@ -14255,6 +14255,7 @@ function renderApariencia(){
       <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:8px">
         <button type="button" class="btn sm" id="apzResetRank">${bi('Reiniciar el leaderboard','Reset the leaderboard')}</button>
         <button type="button" class="btn sm" id="apzLimpiaHist">${bi('Borrar el historial de duelos','Clear the duel history')}</button>
+        <button type="button" class="btn sm" id="apzResetMiCuenta">${bi('Reiniciar mi cuenta a $50,000 y 0 wins','Reset my account to $50,000 and 0 wins')}</button>
       </div>
     </div>`;
   box.querySelectorAll('[data-tema]').forEach(b=> b.onclick=()=>{ applyTheme(b.dataset.tema); $('#setTema') && ($('#setTema').value=b.dataset.tema); renderApariencia(); });
@@ -14262,6 +14263,14 @@ function renderApariencia(){
   box.querySelectorAll('[data-paleta]').forEach(b=> b.onclick=()=>{ temaCfg().paleta=b.dataset.paleta; save(); aplicaPaleta(); renderApariencia(); });
   $('#apzResetRank').onclick = () => { if(confirm(bi('¿Reiniciar el leaderboard?','Reset the leaderboard?'))){ S.batStats={}; save(); toast(bi('Leaderboard reiniciado','Leaderboard reset')); } };
   $('#apzLimpiaHist').onclick = () => { if(confirm(bi('¿Borrar el historial?','Clear history?'))){ S.batHistorial=[]; save(); toast(bi('Historial borrado','History cleared')); } };
+  $('#apzResetMiCuenta').onclick = () => {
+    const u = (S.session||{}).user; if(!u) return;
+    if(confirm(bi('¿Reiniciar TU cuenta de Kuro a $50,000 y 0 wins? Solo afecta tu cuenta.','Reset YOUR Kuro account to $50,000 and 0 wins? Only affects your account.'))){
+      batStackSet(u, 50000);
+      const st = batStats(); st[u] = st[u] || {pts:0,g:0,p:0,e:0}; st[u].g = 0;
+      batStamp(u); save(); toast(bi('Tu cuenta quedó en $50,000 y 0 wins','Your account is now $50,000 and 0 wins'));
+    }
+  };
 }
 
 
