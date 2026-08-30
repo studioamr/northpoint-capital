@@ -1728,7 +1728,18 @@ button.st-chip:hover{border-color:rgba(255,255,255,.45)}
   border:1px solid var(--line);border-radius:99px;padding:3px 10px}
 .bat-sede-ses.viva{color:#3a7d5c;border-color:rgba(87,199,155,.5);background:rgba(87,199,155,.1)}
 .bat-sede-dur{font-family:var(--mono);font-size:9.5px;letter-spacing:.1em;color:var(--faint)}
-/* EL DUELO de abajo: la escena de la sede a todo lo ancho */
+/* EL VS ENTRE LAS DOS GRÁFICAS: late, y cada mitad lleva el color de la
+   katana de cada quien — de un vistazo se ve quién es quién. */
+.bat-vs-grande{display:flex;align-items:center;gap:16px;margin:18px 0}
+.vsg-linea{flex:1;height:1px;background:linear-gradient(90deg,transparent,var(--line),transparent)}
+.vsg-txt{font-family:var(--mono);font-weight:700;font-size:clamp(30px,6vw,46px);
+  letter-spacing:.1em;line-height:1;
+  background:linear-gradient(100deg,var(--cA) 0%,var(--cA) 42%,var(--txt) 50%,var(--cB) 58%,var(--cB) 100%);
+  -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
+  animation:vsLate 2.4s ease-in-out infinite}
+@keyframes vsLate{0%,100%{transform:scale(1);opacity:.9}50%{transform:scale(1.09);opacity:1}}
+@media (prefers-reduced-motion:reduce){ .vsg-txt{animation:none} }
+/* EL DUELO de la sede a todo lo ancho */
 .bat-duelo{position:relative;margin-top:14px;border:1px solid var(--line);border-radius:16px;overflow:hidden}
 .bat-duelo canvas{display:block;width:100%;height:auto;aspect-ratio:1200/420}
 .bat-duelo-pie{position:absolute;left:0;right:0;bottom:0;display:flex;justify-content:space-between;
@@ -12269,10 +12280,20 @@ function renderBatalla(){
           </span>`; })()}
         <button type="button" class="btn sm bat-end" id="batEndBtn">⏹ ${bi('Terminar','End')}</button>
       </div>
-      <!-- EL ORDEN (André, 30-ago-2026): lo que se juega hasta ARRIBA, luego el
-           reloj, TÚ primero —eres a quien vienes a ver—, después la animación
-           del duelo y hasta el final la ficha del rival. Sin cajas alrededor:
-           las tarjetas ya son cajas y encajarlas otra vez las apretaba. -->
+
+      <!-- EL ORDEN (André, 30-ago-2026): LA PELEA hasta arriba —es lo primero
+           que se quiere ver al entrar—, luego el reloj y lo que se juega, tu
+           ficha para registrar, el VS grande y al final la de él. Sin cajas
+           alrededor: las tarjetas ya son cajas y encajarlas otra vez apretaba. -->
+      <div class="bat-duelo">
+        <canvas id="dueloCv" width="1200" height="420"></canvas>
+        <div class="bat-duelo-pie">
+          <span>${esc(batNom(yo))}</span>
+          <b>${esc(loc(batMundo(c).bioma).toUpperCase())}</b>
+          <span>${esc(batNom(rivalDe))}</span>
+        </div>
+      </div>
+
       <div class="bat-reloj-wrap">
         <span class="bat-vs-mini">VS</span>
         <div class="bat-reloj-grande mono">${reloj}</div>
@@ -12309,16 +12330,12 @@ function renderBatalla(){
         <div class="bat-panel-log">${filas(yo)}</div>
       </div>
 
-      <!-- ABAJO DEL TODO: EL DUELO. Los dos ninjas peleando en el mundo de la
-           sede — abajo había un hueco muerto del alto de una pantalla. Se
-           mueven solos (acecho) y se cruzan katanas cuando cae un trade. -->
-      <div class="bat-duelo">
-        <canvas id="dueloCv" width="1200" height="420"></canvas>
-        <div class="bat-duelo-pie">
-          <span>${esc(batNom(yo))}</span>
-          <b>${esc(loc(batMundo(c).bioma).toUpperCase())}</b>
-          <span>${esc(batNom(rivalDe))}</span>
-        </div>
+      <!-- ENTRE LAS DOS GRÁFICAS: el VS, en grande y latiendo. Marca dónde
+           acaba lo tuyo y empieza lo suyo, que antes se pegaban sin corte. -->
+      <div class="bat-vs-grande" aria-hidden="true">
+        <i class="vsg-linea"></i>
+        <b class="vsg-txt" style="--cA:${KATANAS[batEquipadaDe(yo)].belt};--cB:${KATANAS[batEquipadaDe(rivalDe)].belt}">VS</b>
+        <i class="vsg-linea"></i>
       </div>
 
       <!-- AL FINAL: la ficha del rival, sólo lectura -->
@@ -12415,6 +12432,11 @@ function renderBatalla(){
           dx.restore(); }
         window._dueloRAF=requestAnimationFrame(pinta);
       };
+      /* SE PINTA YA, en el mismo golpe en que se creó el lienzo, y no sólo en
+         el próximo cuadro: la batalla activa reconstruye su innerHTML cada
+         segundo, así que esperar al RAF dejaba un lienzo EN BLANCO compositado
+         una vez por segundo — la escena parpadeaba. */
+      pinta(performance.now());
       window._dueloRAF=requestAnimationFrame(pinta);
     })();
 
