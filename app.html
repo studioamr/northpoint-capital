@@ -981,9 +981,8 @@ button.st-chip:hover{border-color:rgba(255,255,255,.45)}
 /* chip de espada equipada — con su espacio grande */
 .st-chip.armas{padding:7px 16px 8px}
 .st-sw{display:flex;align-items:center;gap:10px}
-.st-sw svg{width:96px;height:30px;filter:drop-shadow(0 0 7px var(--kc,#fff)) drop-shadow(0 2px 3px rgba(0,0,0,.55))}
 .st-sw span{font-size:14.5px;font-family:Georgia,'Hiragino Mincho ProN','Yu Mincho',serif;font-weight:700}
-@media(max-width:700px){ .st-sw svg{width:62px;height:20px} .st-sw span{font-size:12px} }
+@media(max-width:700px){ .st-sw span{font-size:12px} }
 /* botón secundario del stage */
 .stage-btn.sec{background:rgba(8,11,18,.62);border:1px solid rgba(255,255,255,.22);color:#fff;backdrop-filter:blur(6px);padding:11px;font-size:12.5px;font-weight:700;box-shadow:none}
 .stage-btn.sec:hover{border-color:rgba(255,255,255,.5)}
@@ -10707,7 +10706,7 @@ function zenSakuraTree(c,x,base,s){ c.strokeStyle='#33241f'; c.lineWidth=9*s; c.
 function zenNubes(c,W,H,now,col,esc){ esc=esc||1; c.fillStyle=col||'rgba(255,255,255,.9)';
   const n=esc>1.3?5:4;
   for(let k=0;k<n;k++){ const cx=((k*W/n)+now*0.006)%(W+220*esc)-110*esc, cy=H*(0.13+(k%2)*0.1);
-    c.beginPath(); [[0,0,28],[30,5,32],[58,0,26],[-26,7,22],[16,-15,22],[42,-12,20]].forEach(([dx,dy,r])=>{ c.moveTo(cx+(dx+r)*esc,cy+dy*esc); c.arc(cx+dx*esc,cy+dy*esc,r*esc,0,7); }); c.fill(); c.fillRect(cx-26*esc,cy,88*esc,22*esc); } }
+    c.beginPath(); [[0,0,28],[30,5,32],[58,0,26],[-26,7,22],[16,-15,22],[42,-12,20]].forEach(([dx,dy,r])=>{ c.moveTo(cx+(dx+r)*esc,cy+dy*esc); c.arc(cx+dx*esc,cy+dy*esc,r*esc,0,7); }); c.rect(cx-26*esc,cy,88*esc,22*esc); c.fill(); } }
 /* tormenta de nieve exagerada: ráfagas diagonales + velo blanco */
 function zenTormenta(c,W,H,now,rr){ c.fillStyle='rgba(255,255,255,.07)'; c.fillRect(0,0,W,H);
   c.strokeStyle='rgba(255,255,255,.55)'; c.lineWidth=1.7;
@@ -10971,16 +10970,32 @@ function batHistDetalle(h){
 }
 function batPintaZen(){
   const cv=document.getElementById('batZenCv'); if(!cv) return;
-  const c=cv.getContext('2d'); const W=cv.width, H=cv.height;
+  const c=cv.getContext('2d');
   cancelAnimationFrame(window._zenRAF||0);
   const _u=(S.session||{}).user||'';
   window._zenNinja = batNinjaDe(_u);
   const _iv=(window._zenVista!=null && window._zenVista>=0 && window._zenVista<KATANAS.length) ? window._zenVista : batEquipadaDe(_u);
   const E=ZEN_ESCENAS[_iv]||ZEN_ESCENAS[2];
+  const poderHex=KATANAS[_iv].belt;
+  // la escena se dibuja en coordenadas CSS (W,H); el buffer real del canvas
+  // se ajusta al tamaño mostrado × devicePixelRatio para que no se vea borroso
+  // al estirarse dentro de .zen-stage (que crece con el alto del viewport)
+  let W=900, H=1200;
+  function ajustaTamano(){
+    const dpr=Math.min(2, window.devicePixelRatio||1);
+    const cw=cv.clientWidth||W, ch=cv.clientHeight||H;
+    const pw=Math.round(cw*dpr), ph=Math.round(ch*dpr);
+    if(cv.width!==pw || cv.height!==ph){ cv.width=pw; cv.height=ph; }
+    c.setTransform(dpr,0,0,dpr,0,0);
+    W=cw; H=ch;
+  }
+  ajustaTamano();
   if(!window._zenPart){ const p=[]; for(let i=0;i<28;i++) p.push({x:Math.random()*W,y:Math.random()*H,s:4+Math.random()*6,sp:.3+Math.random()*.9,dr:Math.random()*6,sw:.4+Math.random()*.9}); window._zenPart=p; }
   const pet=window._zenPart;
-  const poderHex=KATANAS[_iv].belt;
-  function frame(now){ if(!cv.isConnected) return; if(cv.offsetParent===null){ window._zenRAF=requestAnimationFrame(frame); return; } zenDibujaEscena(c,W,H,E,now,pet,poderHex); window._zenRAF=requestAnimationFrame(frame); }
+  window.removeEventListener('resize', window._zenResize||function(){});
+  window._zenResize=ajustaTamano;
+  window.addEventListener('resize', window._zenResize);
+  function frame(now){ if(!cv.isConnected) return; if(cv.offsetParent===null){ window._zenRAF=requestAnimationFrame(frame); return; } ajustaTamano(); zenDibujaEscena(c,W,H,E,now,pet,poderHex); window._zenRAF=requestAnimationFrame(frame); }
   window._zenRAF=requestAnimationFrame(frame);
 }
 /* ══ CEREMONIAS ══ los tres momentos grandes, a pantalla completa:
@@ -11533,7 +11548,7 @@ function renderBatalla(){
           <div class="stage-stats">
             <div class="st-chip wins"><em>${bi('VICTORIAS','WINS')}</em><b>${mi.g||0}</b></div>
             <div class="st-chip bank"><em>BANK</em><b style="color:${banco>=0?'#6fe39a':'#ff6a5e'}">${fmt$(banco)}</b></div>
-            <button type="button" class="st-chip armas" id="stArsenal" style="--kc:${KATANAS[kEquipIdx].belt}"><em>${bi('EQUIPADA','EQUIPPED')}</em><b class="st-sw">${katanaSVG(KATANAS[kEquipIdx].belt,true)}<span style="color:${KATANAS[kEquipIdx].belt}">${loc(KATANAS[kEquipIdx].n)}</span></b></button>
+            <button type="button" class="st-chip armas" id="stArsenal" style="--kc:${KATANAS[kEquipIdx].belt}"><em>${bi('EQUIPADA','EQUIPPED')}</em><b class="st-sw"><span style="color:${KATANAS[kEquipIdx].belt}">${loc(KATANAS[kEquipIdx].n)}</span></b></button>
             <button type="button" class="st-gear" id="batAjustes" aria-label="${bi('Ajustes','Settings')}"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="3.2"/><path d="M12 3v2.5M12 18.5V21M4.2 7l2.2 1.3M17.6 15.7l2.2 1.3M4.2 17l2.2-1.3M17.6 8.3l2.2-1.3"/></svg></button>
           </div>
         </div>
