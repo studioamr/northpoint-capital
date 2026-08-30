@@ -1747,10 +1747,6 @@ button.st-chip:hover{border-color:rgba(255,255,255,.45)}
 /* EL DUELO de la sede a todo lo ancho */
 .bat-duelo{position:relative;margin-top:14px;border:1px solid var(--line);border-radius:16px;overflow:hidden}
 .bat-duelo canvas{display:block;width:100%;height:auto;aspect-ratio:1200/420}
-.bat-duelo-pie{position:absolute;left:0;right:0;bottom:0;display:flex;justify-content:space-between;
-  align-items:center;gap:12px;padding:8px 14px;background:linear-gradient(180deg,transparent,rgba(0,0,0,.55));
-  font-family:var(--mono);font-size:9.5px;letter-spacing:.12em;color:rgba(255,255,255,.86)}
-.bat-duelo-pie b{font-size:10.5px;letter-spacing:.2em;color:#fff}
 /* LO QUE SE JUEGA — cinco datos en una tira bajo el reloj */
 /* FLEX y no grid: con cinco datos en una rejilla de 3 o 5 columnas, la
    última fila dejaba una celda vacía que enseñaba el fondo de la rejilla
@@ -1764,6 +1760,7 @@ button.st-chip:hover{border-color:rgba(255,255,255,.45)}
 .bat-bote b{font-size:13px;font-weight:700;color:var(--txt)}
 .bat-bote b.up{color:var(--up)} .bat-bote b.down{color:var(--down)}
 .bat-reloj-lbl{font-family:var(--mono);font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--faint)}
+.bat-reloj-wrap.porArrancar .bat-reloj-grande{color:var(--dim)}
 /* resumen */
 .bat-res-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;max-width:640px;margin:0 auto}
 .bat-res-card{border:1px solid var(--line);border-radius:16px;background:var(--w02);padding:22px 18px;text-align:center;position:relative}
@@ -10029,6 +10026,14 @@ function batSesionEstado(c, now){
   let faltan = ini - m; if(faltan <= 0) faltan += 1440;
   return { viva:false, min:faltan, ses:S2 };
 }
+/* ms EXACTOS hasta que abre la sesión: batSesionEstado da minutos enteros y
+   un reloj grande necesita el segundero. Se le resta lo corrido del minuto. */
+function batMsAbre(c, now){
+  const t = now || ahora();
+  const E = batSesionEstado(c, t);
+  if(E.viva) return 0;
+  return Math.max(0, E.min*60000 - (t.getSeconds()*1000 + t.getMilliseconds()));
+}
 function batMinTxt(min){
   const h = Math.floor(min/60), mm = Math.round(min%60);
   return h>0 ? h+'h '+String(mm).padStart(2,'0')+'m' : mm+'m';
@@ -12243,7 +12248,22 @@ function renderBatalla(){
 
   /* ── activo: el challenge corre ── */
   if(c.estado === 'activo'){
-    if(Date.now() >= c.fin){ c.estado = 'terminado'; batGuarda(); return; }
+    /* ── EL DUELO ARRANCA CUANDO ABRE SU KILLZONE (André, 30-ago-2026) ──
+       Antes el reloj de la pelea empezaba a correr en cuanto se creaba el
+       reto: Asia abría en 31 min y el duelo de 4 h ya iba en 2:13 — se
+       consumía solo, antes de que nadie pudiera operar. Ahora, mientras la
+       sesión no abre, el duelo ESPERA (y el reloj grande cuenta al inicio);
+       al abrir se sella su arranque y de ahí salen sus horas completas. */
+    const enEspera = !batSesionEstado(c).viva && !c.arrancado;
+    if(!enEspera){
+      if(!c.arrancado){
+        c.arrancado = Date.now();
+        c.fin = c.arrancado + (c.duracion||30)*60000;
+        batGuarda();
+        toast(bi('¡Empieza el duelo!','The duel begins!'));
+      }
+      if(Date.now() >= c.fin){ c.estado = 'terminado'; batGuarda(); return; }
+    }
     const restante = Math.max(0, c.fin - Date.now());
     /* MINUTOS DE LA HORA, no minutos totales: sin el módulo, 3h 59m 19s se
        pintaba «03:239:19» — la hora aparte y los 239 minutos completos. */
@@ -12292,18 +12312,30 @@ function renderBatalla(){
            alrededor: las tarjetas ya son cajas y encajarlas otra vez apretaba. -->
       <div class="bat-duelo">
         <canvas id="dueloCv" width="1200" height="420"></canvas>
-        <div class="bat-duelo-pie">
-          <span>${esc(batNom(yo))}</span>
-          <b>${esc(loc(batMundo(c).bioma).toUpperCase())}</b>
-          <span>${esc(batNom(rivalDe))}</span>
-        </div>
       </div>
 
-      <div class="bat-reloj-wrap">
-        <span class="bat-vs-mini">VS</span>
-        <div class="bat-reloj-grande mono">${reloj}</div>
-        <span class="bat-reloj-lbl">${bi('tiempo restante','time left')}</span>
-      </div>
+      <!-- EL RELOJ GRANDE cuenta AL INICIO mientras la killzone no ha abierto
+           (André, 30-ago-2026): decía «tiempo restante» de un duelo que aún no
+           empezaba —Asia abría en 31 min y el número marcaba 2:13 de pelea—.
+           Al abrir, pasa solo a contar lo que queda. -->
+      ${(()=>{ const E3 = batSesionEstado(c);
+        if(enEspera){
+          const ms = batMsAbre(c);
+          const hh2 = Math.floor(ms/3600000);
+          const mm2 = String(Math.floor(ms%3600000/60000)).padStart(2,'0');
+          const ss2 = String(Math.floor(ms%60000/1000)).padStart(2,'0');
+          const cuenta = (hh2>0 ? String(hh2).padStart(2,'0')+':' : '') + mm2 + ':' + ss2;
+          return `<div class="bat-reloj-wrap porArrancar">
+            <span class="bat-vs-mini">${esc(loc(E3.ses.nom).toUpperCase())} · ${String(E3.ses.hora).padStart(2,'0')}:00 NY</span>
+            <div class="bat-reloj-grande mono">${cuenta}</div>
+            <span class="bat-reloj-lbl">${bi('para empezar','until it starts')}</span>
+          </div>`;
+        }
+        return `<div class="bat-reloj-wrap">
+          <span class="bat-vs-mini">VS</span>
+          <div class="bat-reloj-grande mono">${reloj}</div>
+          <span class="bat-reloj-lbl">${bi('tiempo restante','time left')}</span>
+        </div>`; })()}
 
       ${(()=>{ const lider = gano ? pYo : pRival;
         const bolsa = Math.round((BAT_PAGO_BASE + Math.max(0,lider)*3) * (c.mult||1)
