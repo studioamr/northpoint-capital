@@ -2827,14 +2827,17 @@ button.tag.quemada{text-decoration:line-through;text-decoration-color:var(--down
 .algo-item{border:1px solid var(--line-soft);border-radius:12px;background:var(--w02);padding:13px 15px}
 .algo-item b{display:block;font-size:13px;font-weight:700;margin-bottom:5px}
 .algo-item p{font-size:12px;line-height:1.55;color:var(--dim);margin:0}
-.algo-page-wrap{padding:16px}
+.algo-shots2{display:grid;grid-template-columns:1fr 1fr;gap:14px;padding:16px}
 .algo-shot{border:1px solid var(--line-soft);border-radius:12px;overflow:hidden;background:var(--w02)}
 .algo-shot img{display:block;width:100%;height:auto}
 .algo-shot figcaption{margin:0;padding:10px 16px;font-family:var(--mono);font-size:10.5px;letter-spacing:.03em;color:var(--faint);border-top:1px solid var(--line-soft)}
-.algo-shot-big{margin-bottom:16px}
-.algo-page-txt{font-size:13.5px;line-height:1.75;color:var(--dim);max-width:78ch}
-.algo-page-txt p{margin:0 0 12px}
-.algo-page-txt p:last-child{margin-bottom:0}
+.algo-ticker{overflow:hidden;border-top:1px solid var(--line-soft);background:var(--w02);padding:10px 0;-webkit-mask-image:linear-gradient(90deg,transparent,#000 24px,#000 calc(100% - 24px),transparent);mask-image:linear-gradient(90deg,transparent,#000 24px,#000 calc(100% - 24px),transparent)}
+.algo-ticker-track{display:inline-flex;white-space:nowrap;animation:algoTicker 26s linear infinite}
+.algo-ticker-track span{display:inline-block;padding:0 28px;font-size:12.5px;line-height:1.5;color:var(--dim)}
+.algo-ticker-track span b{color:var(--txt);font-weight:700}
+@keyframes algoTicker{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+@media (prefers-reduced-motion:reduce){.algo-ticker-track{animation:none}}
+@media (max-width:760px){.algo-shots2{grid-template-columns:1fr}}
 .algo-code-wrap{padding:18px 20px 20px}
 .algo-tabs{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:14px}
 .algo-tabs button{font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.03em;border:1px solid var(--line);border-radius:9px;background:var(--w02);color:var(--dim);padding:8px 14px;cursor:pointer}
@@ -4221,19 +4224,17 @@ stop[stop-color="#9BC0DC"]{stop-color:var(--txt)}
           <p class="algo-sub" id="algoIntro"></p>
         </div>
 
-        <div class="panel mt2 algo-page-wrap">
-          <div class="algo-tabs" id="algoPageTabs"></div>
-          <figure class="algo-shot algo-shot-big" id="algoShotDiaFig">
+        <div class="panel mt2 algo-shots2">
+          <figure class="algo-shot">
             <img id="algoShotDia" alt="" />
             <figcaption id="algoShotDiaCap"></figcaption>
+            <div class="algo-ticker"><div class="algo-ticker-track" id="algoTickerDia"></div></div>
           </figure>
-          <div class="algo-page-txt" id="algoPageDia"></div>
-
-          <figure class="algo-shot algo-shot-big" id="algoShotEstFig" hidden>
+          <figure class="algo-shot">
             <img id="algoShotEst" alt="" />
             <figcaption id="algoShotEstCap"></figcaption>
+            <div class="algo-ticker"><div class="algo-ticker-track" id="algoTickerEst"></div></div>
           </figure>
-          <div class="algo-page-txt" id="algoPageEst" hidden></div>
         </div>
 
         <div class="panel mt2 algo-code-wrap">
@@ -21652,42 +21653,18 @@ function renderAlgoritmo(){
 
   const setTxt = (id,es,en) => { const el = document.getElementById(id); if(el) el.textContent = bi(es,en); };
   const setImg = (id,src) => { const el = document.getElementById(id); if(el && src) el.src = src; };
+  const setTicker = (id,es,en) => {
+    const el = document.getElementById(id); if(!el) return;
+    const txt = bi(es,en);
+    el.innerHTML = `<span>${esc(txt)}</span><span>${esc(txt)}</span>`;
+  };
 
   setImg('algoShotDia', typeof ALGO_SHOT_DIA !== 'undefined' ? ALGO_SHOT_DIA : '');
   setTxt('algoShotDiaCap','KZP · DÍA en el chart real — Micro E-mini Nasdaq-100 (MNQ), 5m','KZP · DÍA on the real chart — Micro E-mini Nasdaq-100 (MNQ), 5m');
+  setTicker('algoTickerDia','KZP · DÍA — killzones de Asia, Londres, ORB y NY con su liquidez viva · los FVG más cercanos al precio, incluidos los que nacen dentro del ORB · ORB Targets portado de LuxAlgo con sesgo diario y objetivos numerados · panel PLAN: rutina diaria de 5 etapas, fase del contrato de 30 días y agenda de alertas.','KZP · DÍA — Asia, London, ORB and NY killzones with live liquidity · the nearest FVG to price, including the ones born inside the ORB · ORB Targets ported from LuxAlgo with daily bias and numbered targets · PLAN panel: 5-stage daily routine, 30-day contract phase and alert schedule.');
   setImg('algoShotEst', typeof ALGO_SHOT_ESTRUCTURA !== 'undefined' ? ALGO_SHOT_ESTRUCTURA : '');
   setTxt('algoShotEstCap','KZP · ESTRUCTURA en el chart real — solo el rango, el AOI y el Fibonacci','KZP · ESTRUCTURA on the real chart — just the range, the AOI and the Fibonacci');
-
-  const pageDia = $('#algoPageDia');
-  if(pageDia) pageDia.innerHTML = `<p>${esc(bi(
-    'KZP · DÍA cubre el mercado del día: killzones de Asia, Londres, ORB y NY con su liquidez viva, los FVG más cercanos al precio (incluidos los que nacen dentro del ORB), el ORB Targets portado de LuxAlgo con sesgo diario y objetivos numerados, y el panel PLAN — rutina de 5 etapas, fase del contrato de 30 días y agenda de alertas.',
-    'KZP · DÍA covers the day market: Asia, London, ORB and NY killzones with live liquidity, the nearest FVG to price (including the ones born inside the ORB), ORB Targets ported from LuxAlgo with daily bias and numbered targets, and the PLAN panel — 5-stage routine, 30-day contract phase and alert schedule.'
-  ))}</p>`;
-
-  const pageEst = $('#algoPageEst');
-  if(pageEst) pageEst.innerHTML = `<p>${esc(bi(
-    'Cómo se usa: mira el AOI para ver la franja donde el precio ya ha reaccionado antes — ahí golpea más.',
-    'How to use it: watch the AOI for the band where price has already reacted before — that\'s where it hits hardest.'
-  ))}</p><p>${esc(bi(
-    'Cuando el rango se rompe, el Order Block es la última vela contraria antes del impulso — ahí siempre cuelga el stop.',
-    'When the range breaks, the Order Block is the last opposite candle before the impulse — the stop always hangs from there.'
-  ))}</p><p>${esc(bi(
-    'La entrada sale del retroceso 0.79 cuando coincide con un FVG; si no, el nivel se marca solo. El objetivo lo eliges entre 1:1, 1:2, rompimiento o liquidez más cercana, y la posición se dibuja completa — entrada, stop y objetivo — igual que la herramienta Long/Short de TradingView.',
-    'Entry comes from the 0.79 retracement when it lines up with an FVG; otherwise the level is marked on its own. Choose the target between 1:1, 1:2, breakout or nearest liquidity, and the position draws in full — entry, stop and target — just like TradingView\'s Long/Short tool.'
-  ))}</p>`;
-
-  const pageTabs = $('#algoPageTabs');
-  if(pageTabs){
-    pageTabs.innerHTML = `<button type="button" class="on" data-algopage="dia">${esc(bi('KZP · DÍA','KZP · DÍA'))}</button><button type="button" data-algopage="est">${esc(bi('KZP · ESTRUCTURA','KZP · ESTRUCTURA'))}</button>`;
-    pageTabs.querySelectorAll('[data-algopage]').forEach(b => b.onclick = () => {
-      const dia = b.dataset.algopage === 'dia';
-      pageTabs.querySelectorAll('[data-algopage]').forEach(x => x.classList.toggle('on', x===b));
-      $('#algoShotDiaFig').hidden = !dia;
-      $('#algoPageDia').hidden = !dia;
-      $('#algoShotEstFig').hidden = dia;
-      $('#algoPageEst').hidden = dia;
-    });
-  }
+  setTicker('algoTickerEst','KZP · ESTRUCTURA — el rango donde opera el precio, encerrado entre un HIGH y un LOW · el AOI, la franja más tocada · el Order Block, la última vela contraria antes del impulso que rompió el rango · el mejor FVG del rango · niveles Fibonacci sobre ese mismo rango · la posición completa: entrada, stop siempre detrás del Order Block y objetivo a elegir.','KZP · ESTRUCTURA — the range price is trading in, boxed between a HIGH and a LOW · the AOI, the most-touched zone · the Order Block, the last opposite candle before the impulse that broke the range · the best FVG in the range · Fibonacci levels over that same range · a full position: entry, stop always behind the Order Block and a target you choose.');
 
   if(!ALGO_SCRIPTS.some(s=>s.id===algoActivo)) algoActivo = ALGO_SCRIPTS[0] ? ALGO_SCRIPTS[0].id : null;
   const tabs = $('#algoTabs');
