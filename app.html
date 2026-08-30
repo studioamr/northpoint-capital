@@ -18991,11 +18991,9 @@ const ALGO_PINE_KZP_DIA = `// This source code is subject to the terms of the Mo
 // © LuxAlgo — CC BY-NC-SA 4.0 (https://creativecommons.org/licenses/by-nc-sa/4.0/).
 //
 // ═══════════════════════════════════════════════════════════════
-//  K Z P   ·   D Í A                                NorthPoint
-//  Un SOLO script con las dos estrategias juntas: el mercado
-//  del día (killzones, ORB, FVG) y la estructura (rango, AOI,
-//  Order Block, Fibonacci y la posición). Sale de fábrica ya
-//  puesto igualito a como lo traes en pantalla.
+//  K Z P   ·   D Í A                              NorthPoint
+//  Setup 1 de 2 · el mercado del día. El otro script es
+//  KZP · ESTRUCTURA (rango, AOI, Fib, el mejor FVG y la posición).
 //
 //  QUÉ HACE (y nada más):
 //   1. ASIA, LONDRES, ORB (9:30-9:45) y NY (9:30-16:00, caja
@@ -19052,96 +19050,35 @@ const ALGO_PINE_KZP_DIA = `// This source code is subject to the terms of the Mo
 //
 //   6. PALETA (grupo 0): un solo selector pinta TODO — killzones,
 //      EMAs, FVG, rango, Fib, la posición, ORB Targets y el panel —
-//      con colores que combinan entre sí. Tres son AZULES, hechas
-//      para jugar con tonos de azul en las dos estrategias a la vez:
-//      Azul hielo (claro y frío), Azul noche (para tema oscuro) y
-//      Azul acero (azul grisáceo, el más sobrio). Además Clásica,
-//      Nórdico, Tinta, Grafito, Bosque y Océano; y Personalizado,
-//      que respeta el color que elijas grupo por grupo. TODO lo que
+//      con colores que combinan entre sí. Son DIEZ y cada una tiene
+//      su carácter: Azul marino (la puesta), Clásica, Grafito,
+//      Tinta, Bosque, Océano, Ciruela, Cobre, Nórdico y Militar;
+//      más Personalizado, que respeta el color que elijas grupo
+//      por grupo. Ponla igual en los dos scripts y el chart entero
+//      se lee como una sola pieza. TODO lo que
 //      se dibuja tiene su color en la config, y los grupos 8 y 9
 //      traen su propio interruptor para saltarse la paleta cuando
 //      quieres que el rango y la posición manden. La transparencia
 //      de las zonas también se ajusta ahí.
-//
-//   7. RANGO · FVG DEL RANGO · AOI · ORDER BLOCK (grupo 8): el
-//      tramo queda encerrado entre un HIGH y un LOW, y adentro se
-//      pintan los FVG vivos que caen dentro de él — los que sirven
-//      para entrar, porque están donde estás operando. Eso viene
-//      prendido — y es UNO SOLO, el mejor: va en la dirección del
-//      trade y gana el que se encime con el Order Block, caiga en el
-//      AOI y esté más cerca del precio. Ese mismo es el hueco de
-//      donde sale la entrada, y por eso se resalta una sola vez. Con
-//      él van el AOI (la franja más tocada, con un ◦ en cada toque y
-//      mínimo 3) y el ORDER BLOCK, que se va al infinito por la
-//      derecha igual que el HIGH y el LOW. Todo por default.
-//      Cuando el impulso rompe el rango con CIERRE, se pinta el
-//      ORDER BLOCK que lo provocó: la última vela contraria antes
-//      del golpe. TODO esto se lee de un TF fijo que eliges — 1h,
-//      15m o 5m — igual que los FVG: cambias el chart y la
-//      estructura no se mueve.
-//
-//   8. FIBONACCI · GANN · PLAN (grupo 9): los niveles (0, 0.25,
-//      0.5, 0.62, 0.705, 0.79, 1 — editables, y apagados por
-//      default) se trazan sobre el MISMO rango del grupo 8, con el
-//      0 donde terminó el impulso y el 1 donde arrancó. El PLAN ya
-//      NO tiene interruptor: vive con la rama B y lo único que
-//      eliges es cómo se calcula — de dónde sale la entrada, qué
-//      tan agresiva es, y el OBJETIVO con sus 4 opciones (1:1, 1:2,
-//      rompimiento o liquidez más cercana). Así queda:
-//      · por default la entrada busca el 0.79 CON FVG: solo entra
-//        si un hueco vivo toca ese retroceso, que es la confluencia
-//        de CAZADOR 79; si ninguno llega, marca el nivel solo.
-//        También puede salir del ORDER BLOCK, del FVG MÁS INTERESANTE
-//        (el que va en la dirección del trade y tiene más
-//        confluencia: se encima con el OB, cae en el AOI y está
-//        más cerca del precio — se marca con contorno) o de un
-//        nivel del Fibonacci, lo que elijas;
-//      · qué tan adentro de esa zona entras lo decide la
-//        AGRESIVIDAD: primer toque, mitad o fondo;
-//      · el SL SIEMPRE cuelga del otro lado del Order Block, de su
-//        mecha: debajo del LOW del bloque para comprar, arriba del
-//        HIGH para vender — sin importar de dónde salga la entrada,
-//        porque el bloque es lo que no debe romperse;
-//      · y se dibuja UNA posición, igualita a la herramienta
-//        Long/Short Position de TradingView: flota a la derecha de
-//        la última vela, con la caja azul del premio arriba, la
-//        caja gris del riesgo abajo, la línea de la entrada
-//        partiéndolas y el RR a un lado. El objetivo del premio lo eliges —
-//        1:1, 1:2, el ROMPIMIENTO (hasta dónde llegó el impulso) o
-//        la LIQUIDEZ más cercana que quede FUERA del rompimiento —
-//        y los otros tres siguen calculados en el tooltip.
 //
 //  AJUSTES: la config trae solo lo que de verdad se mueve. Todo lo
 //  demás — los textos de la rutina, los estilos del port de
 //  LuxAlgo, los nombres de las sesiones y los colores que ya salen
 //  de la paleta — quedó fijo en su mejor valor dentro del código.
 //
-//  QUÉ VER: hasta arriba de la config hay dos interruptores
-//  maestros. La rama A prende o apaga de un golpe el mercado del
-//  día (ORB, killzones y FVG) y la rama B la estructura (rango,
-//  AOI, Order Block, Fibonacci y plan). Los toggles de cada grupo
-//  siguen ahí para irse metiendo pieza por pieza; la rama solo
-//  manda por encima, y apagarla no borra ningún ajuste.
+//  ESTILO: los recuadros (FVG y cajas de killzone) van SIN línea
+//  de borde, y el título de cada uno va centrado dentro de su
+//  propio recuadro. Los precios exactos no se imprimen encima del
+//  chart: viven en el tooltip de cada etiqueta.
 //
-//  ESTILO: los recuadros (FVG, Order Block y cajas de killzone)
-//  van SIN línea de borde, y el título de cada uno va centrado
-//  dentro de su propio recuadro. El AOI y las líneas del rango
-//  SÍ llevan contorno, en naranja, porque son las que tienen que
-//  saltar a la vista. Los precios exactos no se imprimen encima
-//  del chart: viven en el tooltip de cada etiqueta.
-//
-//  SETUP INICIAL (lo que ves al pegarlo, sin tocar nada):
-//   · Paleta Azul marino — todo en tonos de azul y gris.
+//  SETUP INICIAL (así se ve al pegarlo, sin tocar nada):
+//   · Paleta Azul marino.
 //   · Killzones ASIA · LNDN · ORB · NY con sus H/L y etiquetas;
 //     ASIA y LONDRES con su franja sombreada.
-//   · Caja del OR con ORH / ORL / ORM y las señales ▲▼.
-//     Los objetivos numerados vienen APAGADOS.
+//   · Caja del OR con ORH / ORL / ORM y las señales ▲▼; los
+//     objetivos numerados vienen APAGADOS.
 //   · FVG de 5m: el alcista y el bajista más cercanos, más los
 //     que nacen dentro del ORB.
-//   · Estructura leída en 5m: rango HIGH / LOW en línea sólida
-//     delgada, AOI, Order Block, Fibonacci 0 · 0.25 · 0.5 ·
-//     0.62 · 0.705 · 0.79 · 1 y la caja de la posición con su
-//     RR, con el objetivo puesto en el Rompimiento.
 //   · Panel de la rutina abajo a la izquierda.
 //   · Medias móviles APAGADAS.
 //  Todo eso se prende y se apaga en el grupo 1 · Qué ver.
@@ -19152,37 +19089,16 @@ const ALGO_PINE_KZP_DIA = `// This source code is subject to the terms of the Mo
 //@version=6
 indicator("KZP · DÍA", "KZP · DÍA", overlay = true, max_lines_count = 500, max_boxes_count = 500, max_labels_count = 500, max_bars_back = 500)
 
-// ── QUÉ VER ────────────────────────────────────────────────────
-// Dos interruptores maestros arriba de todo. Cada rama apaga de un
-// golpe todo su bloque, sin perder los ajustes de adentro: así
-// puedes ver una sola a la vez, las dos juntas, o irte metiendo
-// pieza por pieza con los toggles de cada grupo.
-gR = "· Qué ver ·"
-ramaA = input.bool(true, "A · Mercado del día  —  ORB, killzones y FVG", group = gR, tooltip = "UN LADO: la lectura del día. Las cuatro killzones con su liquidez, la caja del OR con sus objetivos y señales, y los FVG (los dos más cercanos al precio y todos los del ORB en 1m). Apagando esto se va TODO eso de un jalón.")
-ramaB = input.bool(true, "B · Estructura  —  rango, Fib, FVG del rango y la posición", group = gR, tooltip = "EL OTRO LADO: el rango con su HIGH y su LOW, los niveles de Fibonacci sobre ese rango, los FVG que caen DENTRO del rango, y la posible entrada con su stop y sus objetivos. El AOI y el Order Block viven aquí también, pero apagados: se prenden en el grupo 8 cuando los quieras. Apagando esto se va TODO eso de un jalón.")
-
 // ── 1 · QUÉ VER ────────────────────────────────────────────────
 // Todos los interruptores juntos, hasta arriba: prendes y apagas
 // cada cosa desde aquí, sin ir a buscarla grupo por grupo. Lo que
 // apagues no pierde sus ajustes, solo deja de dibujarse.
 gV = "1 · Qué ver"
-// >>>SOLO-DIA
 verPanel    = input.bool(true, "Panel de la rutina", group = gV, tooltip = "La tabla de la esquina: sesión en curso, etapa del día, fase del contrato, agenda, liquidez viva y los tickers de cada sesión.")
 inVerFVG    = input.bool(true, "FVG más cercano (los 2 del día)", group = gV, tooltip = "Solo dos: el FVG alcista más cercano al precio y el bajista más cercano, leídos del TF del grupo 5.")
 inVerFvgORB = input.bool(true, "FVG dentro del ORB", group = gV, tooltip = "Los huecos que se forman dentro de la ventana del ORB (9:30-9:45), medidos con las velas del gráfico que estés viendo: en 1m salen los de 1m, en 5m los de 5m. El que se invierte no se borra — el rectángulo se corta en esa vela y ahí se queda, en el color contrario. Todos se borran cuando abre ASIA, como el resto del ORB.")
 tTog        = input.bool(false, "Objetivos del ORB", group = gV, tooltip = "Los niveles numerados cada 50% del rango del OR, arriba y abajo.")
 sigTog      = input.bool(true, "Señales ▲▼ del rompimiento", group = gV, tooltip = "La flecha que aparece cuando el precio rompe el ORH o el ORL. Se re-arma al volver al ORM.")
-// <<<SOLO-DIA
-// >>>SOLO-ESTRUCTURA
-inVerRango  = input.bool(true, "Rango · HIGH y LOW", group = gV, tooltip = "El tramo donde anda el precio: su techo y su piso. Es la base de todo lo demás — el Fibonacci, el FVG del rango y la posición se miden sobre él, así que apagarlo solo esconde las dos líneas.")
-inVerFvgRg  = input.bool(true, "El mejor FVG del rango", group = gV, tooltip = "UN SOLO hueco: el de más confluencia dentro del rango y en la dirección del trade. Es el mismo del que sale la entrada.")
-fvgFueraOB  = input.bool(true, "No repetir el FVG si ya está dentro del OB", group = gV, tooltip = "Cuando el hueco cae completo dentro del Order Block es la misma zona pintada dos veces. Prendido, se deja solo el bloque y el chart respira; la entrada se sigue calculando igual desde ese hueco.")
-inVerAOI    = input.bool(true, "AOI · la franja más tocada", group = gV, tooltip = "La franja por la que el precio ha pasado más veces, con un ◦ en cada toque.")
-inVerOB     = input.bool(true, "Order Block", group = gV, tooltip = "La última vela contraria antes del impulso que rompió el rango. De ahí cuelga siempre el stop, aunque la escondas.")
-inVerFib    = input.bool(true, "Fibonacci / Gann", group = gV, tooltip = "Los niveles sobre el rango, con el 0 donde terminó el impulso y el 1 donde arrancó.")
-inVerPos    = input.bool(true, "Caja de la posición (entrada, SL y objetivo)", group = gV, tooltip = "La ficha que flota a la derecha con la entrada, el stop y el premio. Apagándola se van la caja y el RR; el rango, el AOI, el Order Block y los FVG se quedan.")
-inVerRR     = input.bool(true, "Etiqueta del RR en la caja", group = gV, tooltip = "El texto LONG/SHORT con el ratio y el objetivo, escrito dentro de la caja. Apágalo si quieres la ficha pelona.")
-// <<<SOLO-ESTRUCTURA
 
 // ── 0 · PALETA ─────────────────────────────────────────────────
 // Una sola decisión pinta TODO el indicador (killzones, EMAs, FVG,
@@ -19190,7 +19106,7 @@ inVerRR     = input.bool(true, "Etiqueta del RR en la caja", group = gV, tooltip
 // paleta usa 5 papeles: alza, baja, acento, neutro y suave.
 // "Personalizado" respeta los colores que elijas grupo por grupo.
 g0 = "0 · Paleta"
-paleta = input.string("Azul marino", "Paleta", options = ["Azul marino", "Azul hielo", "Azul acero", "Clásica", "Nórdico", "Tinta", "Grafito", "Bosque", "Océano", "Personalizado"], group = g0, tooltip = "AZUL MARINO viene por default: pinta las dos estrategias completas en tonos de azul marino — killzones, ORB, FVG, rango, AOI, Order Block, Fib y la posición. Azul hielo es la versión clara y fría; Azul acero la grisácea y sobria. Clásica son los colores de siempre de TradingView, y luego las de antes. Personalizado respeta el color que elijas TÚ en cada grupo.")
+paleta = input.string("Azul marino", "Paleta", options = ["Azul marino", "Clásica", "Grafito", "Tinta", "Bosque", "Océano", "Ciruela", "Cobre", "Nórdico", "Militar", "Personalizado"], group = g0, tooltip = "Un solo selector pinta TODO: killzones, ORB, FVG, rango, AOI, Order Block, Fib, la posición y el panel. Diez paletas, cada una con su carácter — AZUL MARINO (default, la de siempre) · CLÁSICA (verde y rojo de TradingView) · GRAFITO (gris azulado con ámbar) · TINTA (hueso y vermellón) · BOSQUE (verdes y terracota) · OCÉANO (turquesa y coral) · CIRUELA (morados y rosa) · COBRE (naranjas y marrón) · NÓRDICO (azul frío y rojo apagado) · MILITAR (olivas y arena). Y PERSONALIZADO, que respeta el color que elijas TÚ grupo por grupo.")
 transZona = input.int(88, "Transparencia de las zonas", minval = 60, maxval = 97, group = g0, tooltip = "Qué tan tenues se ven los rellenos (FVG, caja del OR, cajas de killzone). Más alto = más discreto. 88 es un buen punto para que la vela siempre se lea encima.")
 
 // ── 1 · KILLZONES ──────────────────────────────────────────────
@@ -19296,62 +19212,6 @@ minFVG  = input.float(2, "Tamaño mínimo del FVG (pts)", minval = 0.25, group =
 minFvgORB = input.float(0.25, "Tamaño mínimo del FVG del ORB (pts)", minval = 0.25, group = g5, tooltip = "En 0.25 se marcan TODOS los huecos que se formen dentro del ORB, del tamaño que sean. Súbelo si en tu gráfico salen demasiados chiquitos.")
 txtFvgORB = input.bool(true, "Ponerles título", group = g5, tooltip = "Cada hueco lleva su nombre (FVG ↑ / iFVG ↓) al arranque de su caja. Si dos quedan tan pegados que se encimarían, solo se escribe el primero: nunca vas a ver títulos amontonados.")
 
-// ── 8 · RANGO · AOI · ORDER BLOCK ──────────────────────────────
-// El tramo actual queda encerrado entre un HIGH y un LOW. Dentro de
-// ese encierro se busca el AOI: la franja donde el precio ya rebotó
-// varias veces (soporte y resistencia interna). Se marca cada test
-// del AOI, y cuando el impulso rompe el rango se pinta el Order
-// Block que lo provocó — la última vela contraria antes del golpe.
-g8 = "8 · Rango · AOI · Order Block"
-rgVelas   = input.int(80, "Qué tanto atrás mira el rango (velas)", minval = 20, maxval = 200, group = g8, tooltip = "Cuántas velas del TF de estructura entran al cálculo del rango. 80 velas de 15m ≈ 20 horas: el tramo que de verdad estás operando. Si lo subes mucho, el HIGH y el LOW se van a niveles viejísimos y acaban fuera de la pantalla.")
-tfEstSel  = input.string("5m", "TF de la estructura", options = ["1h", "15m", "5m"], group = g8, tooltip = "El rango, el AOI y el Order Block se leen SIEMPRE de este timeframe, igual que los FVG. Te mueves de 1m a 1h en el chart y la estructura no cambia: sigue siendo la de 1h, 15m o 5m que elegiste.")
-pivAOI    = input.int(5, "Sensibilidad del swing (velas)", minval = 2, maxval = 20, group = g8, tooltip = "Cuántas velas del TF elegido a cada lado necesita un pico para contar como swing. Más alto = menos swings, rangos más grandes.")
-minToques = input.int(3, "Toques mínimos para que sea AOI", minval = 3, maxval = 12, group = g8, tooltip = "El mínimo son 3 toques, y entre más tenga mejor: el AOI es la franja MÁS TOCADA de todo lo que hay hacia atrás — no se encierra en el rango, mira desde donde estamos hasta donde alcance la memoria. Con 3 sale casi siempre; con 5 o 6 solo las franjas que el precio ha machacado de verdad. Si lo subes mucho y ninguna llega, no se dibuja nada.")
-anchoAOI  = input.float(10, "Grosor MÁXIMO del AOI (% del tramo)", minval = 2, maxval = 40, step = 1, group = g8, tooltip = "El techo de la búsqueda. El AOI se prueba en cinco grosores, del más flaco al más gordo, y se queda con el PRIMERO que junte los toques mínimos: así siempre sale lo más apretado que se pueda. Baja esto si aun así lo quieres más fino; súbelo si en tu instrumento no encuentra nada.")
-nPivAOI   = input.int(12, "Swings que forman el rango", minval = 4, maxval = 30, group = g8, tooltip = "Cuántos swings recientes se miran para sacar el alto y el bajo del tramo.")
-aoiGrosor = input.int(2, "Grosor del borde del AOI", minval = 0, maxval = 4, group = g8, tooltip = "0 deja el AOI sin contorno, solo con su relleno.")
-aoiEstilo = input.string("Sólida", "Estilo del borde del AOI", options = ["Punteada", "Rayada", "Sólida"], group = g8)
-verToques = input.bool(true, "Marcar los tests del AOI", group = g8, tooltip = "Pone una marca discreta cada vez que el precio entra al AOI viniendo de fuera. Solo aplica si el rango está prendido.")
-obCuerpo  = input.bool(false, "Order Block solo con el cuerpo", group = g8, tooltip = "Prendido usa solo el cuerpo (apertura a cierre), una caja más chica y limpia. Apagado usa la vela completa, mecha a mecha.")
-rgInf     = input.bool(true, "Líneas del rango infinitas", group = g8, tooltip = "Prendido, el HIGH y el LOW se van hasta el infinito por la derecha. Siempre arrancan EN la mecha que los formó — nunca antes de ella — así que la línea nace en el pico y de ahí sigue.")
-rgEstilo  = input.string("Sólida", "Estilo de las líneas H/L", options = ["Punteada", "Rayada", "Sólida"], group = g8, tooltip = "RAYADA por default a propósito: las killzones del otro script pintan líneas SÓLIDAS, así que con el rayado sabes de un vistazo cuál línea es el rango y cuál es liquidez de sesión.")
-rgGrosor  = input.int(1, "Grosor de las líneas H/L", minval = 1, maxval = 4, group = g8)
-col8Prop  = input.bool(false, "Usar MIS colores en el grupo 8", group = g8, tooltip = "Prendido, los colores de abajo mandan aunque tengas puesta una paleta — así el rango y el AOI siempre saltan a la vista. Apagado, se pintan con los colores de la paleta del grupo 0.")
-inColAOI  = input.color(#1c4f82, "AOI", inline = "C8", group = g8)
-inColRg   = input.color(#0a2342, "Rango H/L", inline = "C8", group = g8)
-inColObUp = input.color(#4a90d9, "OB demanda", inline = "C8b", group = g8)
-inColObDn = input.color(#0a2342, "OB oferta", inline = "C8b", group = g8, tooltip = "Los dos tonos del Order Block. El claro es demanda (compra) y el quemado es oferta (venta).")
-inColFrUp = input.color(#2e6da4, "FVG del rango ↑", inline = "C8c", group = g8)
-inColFrDn = input.color(#0a2342, "FVG del rango ↓", inline = "C8c", group = g8, tooltip = "Los huecos que caen dentro del rango pueden ir en su propio color, distinto al de los FVG de la rama A. Con la paleta puesta (y el interruptor de arriba apagado) toman los colores de la paleta.")
-tfEst = tfEstSel == "1h" ? "60" : tfEstSel == "15m" ? "15" : "5"
-
-// ── 9 · FIBONACCI / GANN + PLAN DE TRADE ───────────────────────
-// Los niveles se trazan sobre el MISMO rango del grupo 8, con el 0
-// en el extremo donde terminó el impulso y el 1 donde arrancó. De
-// ahí sale el plan: entras en el retroceso profundo (0.79), el stop
-// va detrás del extremo, y los tres objetivos son 1:1, el rompimiento
-// de estructura y la primera liquidez contraria que quede libre.
-g9 = "9 · Fibonacci · Gann · Plan"
-// La posición se pinta igualita a la herramienta Long/Short Position
-// de TradingView: caja azul el premio, caja gris el riesgo, y una
-// línea fina en la entrada partiéndolas. Las medidas van en VELAS
-// DEL CHART, así se ve igual en 1m que en 1h.
-nivelesTxt = input.string("0, 0.25, 0.5, 0.62, 0.705, 0.79, 1", "Niveles", group = g9, tooltip = "Separados por coma. Los de fábrica mezclan la cuadrícula de Gann (0.25, 0.5, 0.75) con los Fibonacci que usas (0.62, 0.705, 0.79). Puedes poner los que quieras.")
-baseEnt  = input.string("0.79 con FVG", "La entrada sale de", options = ["0.79 con FVG", "Order Block", "FVG más interesante", "Nivel del Fibonacci"], group = g9, tooltip = "0.79 con FVG: busca el retroceso 0.79 y solo entra si un FVG vivo lo toca — la confluencia que usas tú; si ningún hueco llega ahí, se marca el nivel solo. Order Block: la última vela contraria antes del impulso que rompió. FVG más interesante: entre todos los huecos vivos escoge el que va en la dirección del trade y tiene más confluencia (se encima con el Order Block, con el AOI, y está más cerca del precio); lo marca con contorno. Nivel del Fibonacci: el retroceso que pongas abajo.")
-agresiv  = input.string("Media (50% de la zona)", "Qué tan agresiva la entrada", options = ["Agresiva (primer toque)", "Media (50% de la zona)", "Conservadora (fondo)"], group = g9, tooltip = "Dónde entras dentro del Order Block o del FVG. Agresiva: en el primer borde que toca el precio — entras seguro pero con el stop más lejos. Media: a la mitad. Conservadora: hasta el fondo de la zona — mejor precio y stop más corto, pero a veces no llega.")
-nivEntrada = input.float(0.79, "Entrada en el nivel (si usas Fib)", minval = 0.1, maxval = 0.99, step = 0.005, group = g9, tooltip = "El retroceso donde entras cuando la base es el Fibonacci. 0.79 es el profundo que usas tú.")
-posDonde = input.string("A la derecha, en el aire", "Dónde va la caja", options = ["A la derecha, en el aire", "Pegada a la última vela", "Más lejos a la derecha", "Encima de las últimas velas"], group = g9, tooltip = "Dónde se acomoda la ficha de la posición. Por default va A LA DERECHA, flotando en el aire después de la última vela — sin tapar el precio, igual que la herramienta Long Position de TradingView. Si tu margen derecho es muy chico y no la alcanzas a ver, usa \\"Pegada a la última vela\\"; y si prefieres leerla sobre el precio, \\"Encima de las últimas velas\\".")
-posAncho = input.int(20, "Ancho de la caja (velas)", minval = 5, maxval = 200, group = g9, tooltip = "Qué tan ancha es la ficha, contada en velas del chart. Así conserva el mismo tamaño en 1m que en 1h.")
-int posHueco = posDonde == "Pegada a la última vela" ? 1 : posDonde == "Más lejos a la derecha" ? 12 : posDonde == "Encima de las últimas velas" ? -posAncho - 1 : 4
-inFibGrosor = input.int(1, "Grosor de los niveles", minval = 1, maxval = 3, group = g9)
-inColFib = input.color(#7b93ad, "Niveles Fib", inline = "C9", group = g9)
-inColSL  = input.color(#0a2342, "Riesgo", inline = "C9", group = g9)
-inColEnt = input.color(#4a90d9, "Entrada", inline = "C9b", group = g9)
-inColTP  = input.color(#2e6da4, "Premio", inline = "C9b", group = g9, tooltip = "Los colores de la posición: la caja de abajo es el riesgo, la de arriba el premio y la línea de en medio la entrada. Vienen en el azul y el gris de la herramienta de TradingView. Solo mandan con la paleta en Personalizado o con el interruptor de colores propios del grupo 9.")
-col9Prop = input.bool(false, "Usar MIS colores en el grupo 9", group = g9, tooltip = "Prendido, los cuatro colores de arriba mandan aunque tengas puesta una paleta. Apagado, el Fib y la posición se pintan con la paleta del grupo 0 — así juegas con los azules sin tocar nada más.")
-objetivo = input.string("Rompimiento", "Objetivo de la posición", options = ["TP1 · 1:1", "TP2 · 1:2", "Rompimiento", "Liquidez más cercana"], group = g9, tooltip = "Con esto se calcula la posición. Cuatro formas de poner el premio: 1:1 y 1:2 salen del riesgo; ROMPIMIENTO es hasta dónde llegó el impulso que salió de la zona; LIQUIDEZ MÁS CERCANA es el primer H o L de killzone que siga sin tomarse más allá del rompimiento. El stop no depende de esto: siempre cuelga del otro lado del Order Block, con su colchón. Los otros tres objetivos siguen calculados y los ves en el tooltip de la etiqueta del RR.")
-colchonSL = input.float(15, "Colchón del stop (% de la zona)", minval = 0, maxval = 60, step = 5, group = g9, tooltip = "Qué tanto pasa el stop del extremo de la zona de entrada, en porcentaje de la altura de esa zona.")
-
 // ── 6 · ORB TARGETS (LuxAlgo) ──────────────────────────────────
 g6 = "6 · ORB Targets (LuxAlgo)"
 showHist = input.bool(false, "Mostrar sesiones anteriores", group = g6, tooltip = "La sesión del OR es la fila ORB del grupo 1 (default 09:30-09:45 NY). Apagado: solo se ve el OR del día.")
@@ -19389,47 +19249,20 @@ agendaTxt = input.text_area("06:30 Despierta · revisa las noticias del día\\n0
 // pAcento→ LONDRES, EMA lenta, fase EVAL
 // pNeutro→ ORB, niveles del OR (ORH/ORL/ORM)
 // pSuave → EMA rápida, MA de sesión
-// default = Clásica: los colores de siempre de TradingView
-color pAlza   = #089981
-color pBaja   = #f23645
-color pAcento = #2962ff
-color pNeutro = #787b86
-color pSuave  = #e0a800
-if paleta == "Azul marino"
-    // todo el combo en azul marino: lo que sube en azul medio, lo
-    // que baja en marino casi negro, y un azul brillante de acento
-    pAlza   := #2e6da4
-    pBaja   := #0a2342
-    pAcento := #1c4f82
-    pNeutro := #7b93ad
-    pSuave  := #4a90d9
-else if paleta == "Azul hielo"
-    // azul vivo arriba, tinta profunda abajo; todo frío
-    pAlza   := #2f86ff
-    pBaja   := #123f6b
-    pAcento := #6fb6ff
-    pNeutro := #93a8bd
-    pSuave  := #21b8e0
-else if paleta == "Azul acero"
-    // azul grisáceo industrial, el más sobrio de los tres
-    pAlza   := #3f7ea8
-    pBaja   := #1f4256
-    pAcento := #5f9ec7
-    pNeutro := #8494a0
-    pSuave  := #3fb0c9
-else if paleta == "Nórdico"
-    pAlza   := #6b9e78
-    pBaja   := #bf616a
-    pAcento := #5e81ac
-    pNeutro := #4c566a
-    pSuave  := #d3a24a
-else if paleta == "Tinta"
-    // hueso y tinta con UN solo color fuerte: el vermellón
-    pAlza   := #2f4858
-    pBaja   := #c1452f
-    pAcento := #7d8a94
-    pNeutro := #a39d92
-    pSuave  := #a97449
+// default = Azul marino, la paleta de la casa; cada rama de abajo la
+// pisa con su propio juego de cinco colores
+color pAlza   = #2e6da4
+color pBaja   = #0a2342
+color pAcento = #1c4f82
+color pNeutro = #7b93ad
+color pSuave  = #4a90d9
+if paleta == "Clásica"
+    // los colores de siempre de TradingView
+    pAlza   := #089981
+    pBaja   := #f23645
+    pAcento := #2962ff
+    pNeutro := #787b86
+    pSuave  := #e0a800
 else if paleta == "Grafito"
     // gris azulado de arriba a abajo, con un ámbar para lo urgente
     pAlza   := #3b82a8
@@ -19437,34 +19270,67 @@ else if paleta == "Grafito"
     pAcento := #7fa3b8
     pNeutro := #9aa4ae
     pSuave  := #c08a3e
+else if paleta == "Tinta"
+    // hueso y tinta con UN solo color fuerte: el vermellón
+    pAlza   := #2f4858
+    pBaja   := #c1452f
+    pAcento := #7d8a94
+    pNeutro := #a39d92
+    pSuave  := #a97449
 else if paleta == "Bosque"
+    // verde de monte y terracota, tierra de principio a fin
     pAlza   := #4c8b6a
     pBaja   := #b5654a
     pAcento := #2f6b5e
     pNeutro := #7d7466
     pSuave  := #ad8b1c
 else if paleta == "Océano"
+    // turquesa y coral sobre un azul petróleo
     pAlza   := #2a9d8f
     pBaja   := #e07a5f
     pAcento := #264653
     pNeutro := #7d98a1
     pSuave  := #c99a3f
+else if paleta == "Ciruela"
+    // morados de vino con un rosa para lo que urge
+    pAlza   := #7d5ba6
+    pBaja   := #4a1f3d
+    pAcento := #a06cd5
+    pNeutro := #9b8aa6
+    pSuave  := #d98cb3
+else if paleta == "Cobre"
+    // naranja quemado y marrón, metal caliente
+    pAlza   := #c9722e
+    pBaja   := #5c2e1a
+    pAcento := #b5561f
+    pNeutro := #a89383
+    pSuave  := #d9a441
+else if paleta == "Nórdico"
+    // azul frío, rojo apagado y un dorado tenue
+    pAlza   := #6b9e78
+    pBaja   := #bf616a
+    pAcento := #5e81ac
+    pNeutro := #4c566a
+    pSuave  := #d3a24a
+else if paleta == "Militar"
+    // olivas, khaki y arena; nada brilla, todo se lee
+    pAlza   := #7d9a52
+    pBaja   := #3d3b2a
+    pAcento := #8a7a3d
+    pNeutro := #9a9781
+    pSuave  := #c9b458
 
 bool palPers = paleta == "Personalizado"
 
-// ── qué se dibuja: la rama maestra manda sobre cada toggle
-useA = ramaA and inUseA
-useL = ramaA and inUseL
-useO = ramaA and inUseO
-useN = ramaA and inUseN
-verFVG = ramaA and inVerFVG
-verFvgORB = ramaA and inVerFvgORB
-verRango = ramaB and inVerRango
-verFvgRg = ramaB and inVerFvgRg
-verAOI = ramaB and inVerAOI
-verOB = ramaB and inVerOB
-verFib = ramaB and inVerFib
-verPlan = ramaB and inVerPos
+// este script es SOLO el mercado del día; cada pieza se prende o se
+// apaga con su propio toggle
+bool ramaA = true
+useA = inUseA
+useL = inUseL
+useO = inUseO
+useN = inUseN
+verFVG = inVerFVG
+verFvgORB = inVerFvgORB
 
 // colores efectivos: con una paleta puesta mandan sus cinco papeles;
 // en "Personalizado" manda el color que elegiste en cada grupo
@@ -19488,23 +19354,6 @@ red          = palPers ? inRed   : color.new(pBaja, 45)
 greenFill    = palPers ? inGreenFill : color.new(pAlza, math.min(97, transZona + 4))
 redFill      = palPers ? inRedFill   : color.new(pBaja, math.min(97, transZona + 4))
 
-// los grupos 8 y 9 pueden saltarse la paleta con su propio interruptor
-// cada capa en un papel distinto para que NO se confundan cuando
-// los dos scripts están encima: las líneas del rango en el tono más
-// oscuro (mandan), el Order Block en gris azulado (contexto), los
-// FVG en azul vivo (lo accionable) y el AOI en el tono claro, casi
-// un lavado de fondo
-colAOI  = (palPers or col8Prop) ? inColAOI  : pSuave
-colRg   = (palPers or col8Prop) ? inColRg   : pBaja
-colObUp = (palPers or col8Prop) ? inColObUp : pNeutro
-colObDn = (palPers or col8Prop) ? inColObDn : pNeutro
-colFrUp = (palPers or col8Prop) ? inColFrUp : pAlza
-colFrDn = (palPers or col8Prop) ? inColFrDn : pAcento
-colFib  = (palPers or col9Prop) ? inColFib  : pNeutro
-colSL   = (palPers or col9Prop) ? inColSL   : pNeutro
-colEnt  = (palPers or col9Prop) ? inColEnt  : pSuave
-colTP   = (palPers or col9Prop) ? inColTP   : pAlza
-fibGrosor = inFibGrosor
 
 // ═══ MOTOR DE KILLZONES ════════════════════════════════════════
 // Una sola sesión viva por killzone (la más reciente); su alto y su
@@ -19672,7 +19521,7 @@ var array<int>   fX = array.new_int()
 [fvLC, fvHC, fvCC, fvHA, fvLA, fvTb, fvTc] = request.security(syminfo.tickerid, tfFVG, [low[1], high[1], close[1], high[3], low[3], time[2], time[1]], lookahead = barmerge.lookahead_on)
 bool htfNueva = not na(fvTc) and fvTc != nz(fvTc[1], fvTc)
 
-if (verFVG or verFvgRg) and htfNueva
+if verFVG and htfNueva
     if fvLC > fvHA and (fvLC - fvHA) >= minFVG
         array.push(fS, 1)
         array.push(fT, fvLC)
@@ -19832,484 +19681,6 @@ if barstate.islast
             // margen de la derecha, a la altura de su zona. Y si dos
             // quedarían pegados, solo se escribe el primero.
             array.push(gLb, label.new(x + (xFin - x) / 2, (t + b) / 2, "", xloc = xloc.bar_time, style = label.style_label_center, color = #ffffff00, textcolor = #ffffff00, size = size.tiny, tooltip = (inv ? "Hueco del ORB ya invertido · " : "Hueco del ORB · ") + timeframe.period + " · " + str.tostring(b, format.mintick) + "–" + str.tostring(t, format.mintick)))
-
-// ═══ RANGO · AOI · ORDER BLOCK ═════════════════════════════════
-// Todo esto se lee del TF elegido en el grupo 8 (1h, 15m o 5m), no
-// del chart: se guardan las velas cerradas de ese TF en memoria y
-// la estructura se calcula sobre ellas. Cambias el chart y la
-// lectura no se mueve, igual que con los FVG.
-//
-// 1. El tramo queda encerrado entre un HIGH y un LOW (los swings
-//    más altos y más bajos de la ventana).
-// 2. Aparte, el AOI POR TOQUES: UNA franja, la más golpeada. Se
-//    mira desde donde estamos HACIA ATRÁS todo lo que haya, se
-//    barre en 61 franjas y se cuenta cuántas veces entró el precio
-//    a cada una. Mínimo 3 toques, entre más mejor. NO se encierra
-//    en el rango, y se dibuja desde su PRIMER toque — sin frenarla —
-//    para ver cómo se ha usado esa zona.
-// 3. Cada uno de esos toques se marca con ◦.
-// 4. Cuando el impulso rompe el rango con CIERRE, se pinta el
-//    Order Block que lo provocó: la última vela contraria antes
-//    del rompimiento.
-
-// ── velas cerradas del TF de estructura, guardadas en memoria
-[eO, eH, eL, eC, eT] = request.security(syminfo.tickerid, tfEst, [open[1], high[1], low[1], close[1], time[1]], lookahead = barmerge.lookahead_on)
-bool estNueva = not na(eT) and eT != nz(eT[1], eT)
-var array<float> kO = array.new_float()
-var array<float> kH = array.new_float()
-var array<float> kL = array.new_float()
-var array<float> kC = array.new_float()
-var array<int>   kT = array.new_int()
-if (verRango or verFvgRg or verAOI or verOB or verFib or verPlan) and estNueva
-    array.push(kO, eO)
-    array.push(kH, eH)
-    array.push(kL, eL)
-    array.push(kC, eC)
-    array.push(kT, eT)
-while array.size(kT) > 200
-    array.shift(kO)
-    array.shift(kH)
-    array.shift(kL)
-    array.shift(kC)
-    array.shift(kT)
-
-var array<box>   aoiBxs = array.new<box>()
-var array<label> aoiLbs = array.new<label>()
-var line  rgHLn = na
-var line  rgLLn = na
-var label rgHLb = na
-var label rgLLb = na
-var box   obBx = na
-var label obLb = na
-var array<label> aoiTests = array.new<label>()
-var array<line>  fibLn  = array.new<line>()
-var array<label> fibLb  = array.new<label>()
-var array<line>  planLn = array.new<line>()
-var array<label> planLb = array.new<label>()
-var array<box>   planBx = array.new<box>()
-var array<box>   fvgRgBx = array.new<box>()
-var array<label> fvgRgLb = array.new<label>()
-var label planAviso = na
-
-
-if barstate.islast
-    for bx in aoiBxs
-        box.delete(bx)
-    for lb in aoiLbs
-        label.delete(lb)
-    array.clear(aoiBxs)
-    array.clear(aoiLbs)
-    line.delete(rgHLn)
-    line.delete(rgLLn)
-    label.delete(rgHLb)
-    label.delete(rgLLb)
-    box.delete(obBx)
-    label.delete(obLb)
-    for lb in aoiTests
-        label.delete(lb)
-    array.clear(aoiTests)
-    for ln in fibLn
-        line.delete(ln)
-    for lb in fibLb
-        label.delete(lb)
-    for ln in planLn
-        line.delete(ln)
-    for lb in planLb
-        label.delete(lb)
-    for bx in planBx
-        box.delete(bx)
-    array.clear(fibLn)
-    array.clear(fibLb)
-    array.clear(planLn)
-    array.clear(planLb)
-    array.clear(planBx)
-    for bx in fvgRgBx
-        box.delete(bx)
-    for lb in fvgRgLb
-        label.delete(lb)
-    array.clear(fvgRgBx)
-    array.clear(fvgRgLb)
-    label.delete(planAviso)
-
-    // si el plan está prendido y aun así no se dibuja nada, el motivo
-    // se va guardando aquí y al final sale como aviso en el chart:
-    // así nunca te quedas mirando una pantalla vacía sin saber por qué
-    bool planOk = false
-    string planPorque = "faltan velas de " + tfEstSel + ": deja que cargue el chart"
-
-    int n = array.size(kT)
-    if n > pivAOI * 2 + 4
-        planPorque := "no encuentro swings: baja la sensibilidad del swing (grupo 8)"
-        int paso = n > 1 ? array.get(kT, n - 1) - array.get(kT, n - 2) : 0
-
-        // ── swings del TF elegido: un pico es swing si manda sobre
-        // las pivAOI velas de cada lado
-        pvV = array.new_float()
-        pvI = array.new_int()
-        // solo la ventana reciente: si mira demasiado atrás, el HIGH
-        // y el LOW se van a niveles viejos y salen de la pantalla
-        int desdeV = math.max(pivAOI, n - rgVelas)
-        for i = desdeV to n - 1 - pivAOI
-            float hi = array.get(kH, i)
-            float lo = array.get(kL, i)
-            bool esAlto = true
-            bool esBajo = true
-            for d = 1 to pivAOI
-                if array.get(kH, i - d) > hi or array.get(kH, i + d) > hi
-                    esAlto := false
-                if array.get(kL, i - d) < lo or array.get(kL, i + d) < lo
-                    esBajo := false
-            if esAlto
-                array.push(pvV, hi)
-                array.push(pvI, i)
-            if esBajo
-                array.push(pvV, lo)
-                array.push(pvI, i)
-
-        // ── rango del tramo: alto y bajo de los últimos swings
-        float rgH = na
-        float rgL = na
-        int   rgHI = na
-        int   rgLI = na
-        int m = array.size(pvV)
-        if m >= 3
-            int desde = math.max(0, m - nPivAOI)
-            rgH := array.get(pvV, desde)
-            rgL := array.get(pvV, desde)
-            rgHI := array.get(pvI, desde)
-            rgLI := array.get(pvI, desde)
-            // se guarda EN QUÉ vela quedó cada extremo: ahí nace su línea
-            for i = desde to m - 1
-                float v = array.get(pvV, i)
-                if v > rgH
-                    rgH := v
-                    rgHI := array.get(pvI, i)
-                if v < rgL
-                    rgL := v
-                    rgLI := array.get(pvI, i)
-
-            int tFin = array.get(kT, n - 1) + paso
-            // ── rango: cada línea NACE en la mecha que la formó y de
-            // ahí va a la derecha, al infinito
-            if verRango
-                int tH = array.get(kT, rgHI)
-                int tL = array.get(kT, rgLI)
-                string estilo = rgEstilo == "Sólida" ? line.style_solid : rgEstilo == "Rayada" ? line.style_dashed : line.style_dotted
-                rgHLn := line.new(tH, rgH, tFin, rgH, xloc = xloc.bar_time, color = color.new(colRg, 25), width = rgGrosor, style = estilo, extend = rgInf ? extend.right : extend.none)
-                rgLLn := line.new(tL, rgL, tFin, rgL, xloc = xloc.bar_time, color = color.new(colRg, 25), width = rgGrosor, style = estilo, extend = rgInf ? extend.right : extend.none)
-                // pegados al final de su línea, en negritas y con un
-                // respiro mayor que el de las killzones para que no se
-                // encimen con ellas
-                rgHLb := label.new(tFin + pasoBar * 9, rgH, kzNegrita ? f_negrita("HIGH · " + tfEstSel) : "HIGH · " + tfEstSel, xloc = xloc.bar_time, style = label.style_label_left, color = #ffffff00, textcolor = color.new(colRg, 15), size = size.tiny, tooltip = "Alto del rango · " + tfEstSel + " · " + str.tostring(rgH, format.mintick))
-                rgLLb := label.new(tFin + pasoBar * 9, rgL, kzNegrita ? f_negrita("LOW · " + tfEstSel) : "LOW · " + tfEstSel, xloc = xloc.bar_time, style = label.style_label_left, color = #ffffff00, textcolor = color.new(colRg, 15), size = size.tiny, tooltip = "Bajo del rango · " + tfEstSel + " · " + str.tostring(rgL, format.mintick))
-
-            // ── AOI POR TOQUES · EL MÁS APRETADO ─────────────
-            // La franja por la que el precio ha pasado más veces,
-            // pero lo más FLACA posible: se prueban cinco grosores,
-            // del más delgado al más gordo, y gana el PRIMERO que
-            // junte los toques mínimos. Así el AOI queda apretado y
-            // no una barra gigante que abarca medio chart. Los
-            // toques se cuentan desde donde estamos HACIA ATRÁS en
-            // todo lo que hay en memoria — no se encierra en el
-            // rango — y la caja arranca en su PRIMER toque.
-            float aoiT = na
-            float aoiB = na
-            int   aoiI = na
-            int   aoiN = 0
-            float todoH = array.get(kH, 0)
-            float todoL = array.get(kL, 0)
-            for i = 0 to n - 1
-                todoH := math.max(todoH, array.get(kH, i))
-                todoL := math.min(todoL, array.get(kL, i))
-            float span = todoH - todoL
-            if span > 0
-                for gi = 1 to 5
-                    if na(aoiT)
-                        // gi = 1 es el más flaco; solo se engorda si
-                        // con ese grosor no hubo toques suficientes
-                        float medio = span * anchoAOI * gi / 1000
-                        float mejorC = 999999999.0
-                        int   mejorN = 0
-                        float bT = na
-                        float bB = na
-                        int   bI = na
-                        for p = 0 to 40
-                            float c = todoL + span * p / 40
-                            float bt = c + medio
-                            float bb = c - medio
-                            int cnt = 0
-                            int prim = -1
-                            bool fuera = true
-                            for i = 0 to n - 1
-                                bool dentro = array.get(kH, i) >= bb and array.get(kL, i) <= bt
-                                if dentro and fuera
-                                    cnt += 1
-                                    if prim < 0
-                                        prim := i
-                                fuera := not dentro
-                            float dc = math.abs(c - close)
-                            if cnt > mejorN or (cnt == mejorN and cnt > 0 and dc < mejorC)
-                                mejorN := cnt
-                                mejorC := dc
-                                bT := bt
-                                bB := bb
-                                bI := prim
-                        if mejorN >= minToques
-                            aoiT := bT
-                            aoiB := bB
-                            aoiI := bI
-                            aoiN := mejorN
-
-            // ── la franja, desde su primer toque
-            if verAOI and not na(aoiT)
-                int tAoi = array.get(kT, aoiI)
-                string aoiEst = aoiEstilo == "Punteada" ? line.style_dotted : aoiEstilo == "Rayada" ? line.style_dashed : line.style_solid
-                // el AOI va MÁS LLENO que las demás zonas: es la que
-                // tiene que resaltar. Y su nombre va escrito DENTRO de
-                // la caja, no en una etiqueta suelta que pueda chocar
-                array.push(aoiBxs, box.new(tAoi, aoiT, tFin, aoiB, xloc = xloc.bar_time, border_color = aoiGrosor > 0 ? colAOI : #ffffff00, border_width = aoiGrosor, border_style = aoiEst, bgcolor = color.new(colAOI, math.max(60, transZona - 18)), extend = rgInf ? extend.right : extend.none, text = "AOI · " + tfEstSel, text_size = size.tiny, text_color = color.new(colAOI, 10), text_halign = text.align_left, text_valign = text.align_center))
-                array.push(aoiLbs, label.new(tAoi + (tFin - tAoi) / 2, (aoiT + aoiB) / 2, "", xloc = xloc.bar_time, style = label.style_label_center, color = #ffffff00, textcolor = #ffffff00, size = size.tiny, tooltip = "La franja más tocada · " + tfEstSel + " · " + str.tostring(aoiB, format.mintick) + "–" + str.tostring(aoiT, format.mintick) + " · " + str.tostring(aoiN) + " toques · grosor " + str.tostring(aoiT - aoiB, "#.##") + " pts"))
-                // cada entrada a la franja viniendo de fuera
-                if verToques
-                    bool fuera = true
-                    for i = aoiI to n - 1
-                        bool dentro = array.get(kH, i) >= aoiB and array.get(kL, i) <= aoiT
-                        if dentro and fuera
-                            array.push(aoiTests, label.new(array.get(kT, i), (aoiT + aoiB) / 2, "◦", xloc = xloc.bar_time, style = label.style_label_center, color = #ffffff00, textcolor = color.new(colAOI, 20), size = size.tiny))
-                            if array.size(aoiTests) > 40
-                                label.delete(array.shift(aoiTests))
-                        fuera := not dentro
-
-            planPorque := "el rango salió plano"
-            // ── dirección del impulso que formó el rango ──────────
-            // Si el LOW es el extremo más reciente, el precio vino de
-            // arriba: el impulso fue BAJISTA y arrancó en el HIGH.
-            float alto = rgH - rgL
-            bool bajista = rgLI > rgHI
-            float pFin = bajista ? rgL : rgH
-            float pIni = bajista ? rgH : rgL
-            int tFib = array.get(kT, math.max(rgHI, rgLI))
-
-            // ── Order Block: la vela que ORIGINÓ ese impulso ──────
-            // Va pegado al extremo de donde salió el movimiento, no
-            // donde el precio anda ahora. Impulso bajista → la última
-            // vela ALCISTA en el HIGH: es oferta, y el trade que sale
-            // de ahí es de VENTA. Impulso alcista → la última vela
-            // BAJISTA en el LOW: demanda, y el trade es de COMPRA.
-            // La caja se va al infinito por la derecha, como el rango.
-            float obT = na
-            float obB = na
-            float obWT = na
-            float obWB = na
-            bool  obLong = not bajista
-            int   obIdx = -1
-            bool  usaOB = verOB or verPlan
-            if usaOB
-                int pivote = bajista ? rgHI : rgLI
-                for j = pivote to math.max(0, pivote - 25)
-                    bool esOB = bajista ? array.get(kC, j) > array.get(kO, j) : array.get(kC, j) < array.get(kO, j)
-                    if esOB
-                        obIdx := j
-                        break
-                if obIdx < 0
-                    // si no hay ninguna vela contraria cerca, se usa
-                    // la del propio extremo
-                    obIdx := pivote
-                obT := obCuerpo ? math.max(array.get(kO, obIdx), array.get(kC, obIdx)) : array.get(kH, obIdx)
-                obB := obCuerpo ? math.min(array.get(kO, obIdx), array.get(kC, obIdx)) : array.get(kL, obIdx)
-                // el extremo REAL de la vela, mecha incluida: el stop
-                // siempre va del otro lado de esto, nunca adentro
-                obWT := array.get(kH, obIdx)
-                obWB := array.get(kL, obIdx)
-                if verOB or (verPlan and baseEnt == "Order Block")
-                    color obCol = obLong ? colObUp : colObDn
-                    int obIni = array.get(kT, obIdx)
-                    int obFin = array.get(kT, n - 1) + paso
-                    obBx := box.new(obIni, obT, obFin, obB, xloc = xloc.bar_time, border_color = #ffffff00, bgcolor = color.new(obCol, transZona), extend = extend.right, text = "OB " + (obLong ? "↑" : "↓") + " · " + tfEstSel, text_size = size.tiny, text_color = color.new(obCol, 10), text_halign = text.align_left, text_valign = text.align_center)
-                    obLb := label.new(obIni + (obFin - obIni) / 2, (obT + obB) / 2, "", xloc = xloc.bar_time, style = label.style_label_center, color = #ffffff00, textcolor = #ffffff00, size = size.tiny, tooltip = "Order Block " + tfEstSel + " · la última vela " + (bajista ? "alcista pegada al HIGH: zona de oferta" : "bajista pegada al LOW: zona de demanda") + " · " + str.tostring(obB, format.mintick) + "–" + str.tostring(obT, format.mintick))
-
-            // ── EL MEJOR FVG DEL RANGO ───────────────────────
-            // Uno solo, no una docena: de todos los huecos vivos que
-            // se meten al rango se marca EL MEJOR — el que se encima
-            // con el Order Block, el que cae en un AOI y el que está
-            // más cerca del precio. Ese es el hueco del setup, el
-            // mismo del que puede salir la entrada.
-            float frT = na
-            float frB = na
-            int   frX = na
-            bool  dirTrade = obIdx >= 0 ? obLong : not bajista
-            if array.size(fS) > 0
-                int ladoTr = dirTrade ? 1 : -1
-                float mejorF = -1.0
-                for i = 0 to array.size(fS) - 1
-                    float zt = array.get(fT, i)
-                    float zb = array.get(fB, i)
-                    // tiene que caber ENTERO dentro del rango: si se
-                    // sale por arriba o por abajo, no es del tramo
-                    if array.get(fS, i) == ladoTr and zb >= rgL and zt <= rgH
-                        float pt = 0.0
-                        if obIdx >= 0 and zt >= obB and zb <= obT
-                            pt += 3
-                        if not na(aoiT) and zt >= aoiB and zb <= aoiT
-                            pt += 2
-                        float d = close > zt ? close - zt : close < zb ? zb - close : 0.0
-                        pt += 1 / (1 + d / math.max(syminfo.mintick, alto * 0.01))
-                        if pt > mejorF
-                            mejorF := pt
-                            frT := zt
-                            frB := zb
-                            frX := array.get(fX, i)
-                // si el hueco vive DENTRO del Order Block es la misma
-                // zona pintada dos veces: se deja solo el bloque
-                bool tapadoPorOB = fvgFueraOB and obIdx >= 0 and frT <= obT and frB >= obB
-                if verFvgRg and not na(frT) and not tapadoPorOB
-                    color cz = dirTrade ? colFrUp : colFrDn
-                    array.push(fvgRgBx, box.new(frX, frT, tFin, frB, xloc = xloc.bar_time, border_color = #ffffff00, bgcolor = color.new(cz, transZona), text = "FVG " + (dirTrade ? "↑" : "↓") + " · " + tfFVG, text_size = size.tiny, text_color = color.new(cz, 10), text_halign = text.align_left, text_valign = text.align_center))
-                    array.push(fvgRgLb, label.new(frX + (tFin - frX) / 2, (frT + frB) / 2, "", xloc = xloc.bar_time, style = label.style_label_center, color = #ffffff00, textcolor = #ffffff00, size = size.tiny, tooltip = "El mejor FVG del rango · " + tfFVG + " · " + str.tostring(frB, format.mintick) + "–" + str.tostring(frT, format.mintick) + " · confluencia " + str.tostring(mejorF, "#.#")))
-
-            // ── Fibonacci / Gann sobre el MISMO rango ──────────────
-            // El 0 va donde TERMINÓ el impulso y el 1 donde arrancó.
-            if (verFib or verPlan) and alto > 0
-                planPorque := "no hay de dónde sacar la entrada: cambia \\"La entrada sale de\\" en el grupo 9"
-                if verFib and array.size(str.split(nivelesTxt, ",")) > 0
-                    niveles = str.split(nivelesTxt, ",")
-                    for i = 0 to array.size(niveles) - 1
-                        float r = nz(str.tonumber(str.replace_all(array.get(niveles, i), " ", "")), -1)
-                        if r >= 0
-                            float py = pFin + (pIni - pFin) * r
-                            array.push(fibLn, line.new(tFib, py, tFin, py, xloc = xloc.bar_time, color = color.new(colFib, 35), width = fibGrosor))
-                            array.push(fibLb, label.new(tFin + paso, py, str.tostring(r), xloc = xloc.bar_time, style = label.style_label_left, color = #ffffff00, textcolor = color.new(colFib, 10), size = size.tiny, tooltip = "Nivel " + str.tostring(r) + " · " + str.tostring(py, format.mintick)))
-
-                // ── PLAN: entrada, stop y cuatro objetivos ─────────
-                // La entrada sale del Order Block (o del nivel del
-                // fib si así lo eliges), y qué tan adentro del bloque
-                // entras lo decide la agresividad.
-                bool desdeOB = baseEnt == "Order Block" and obIdx >= 0
-                bool con79 = baseEnt == "0.79 con FVG"
-                bool quiereFVG = con79 or baseEnt == "FVG más interesante"
-                // ── el FVG donde va la entrada: es EL MISMO que
-                // ya se marcó arriba, el mejor del rango en la
-                // dirección del trade. En el modo 0.79 solo se
-                // acepta si además TOCA ese retroceso; si no lo
-                // toca, la entrada va en el nivel pelón.
-                float feT = na
-                float feB = na
-                bool  dirLong = dirTrade
-                float nivel79 = pFin + (pIni - pFin) * nivEntrada
-                if quiereFVG and not na(frT)
-                    float tol79 = alto * 0.02
-                    bool sirve = con79 ? (frT >= nivel79 - tol79 and frB <= nivel79 + tol79) : true
-                    if sirve
-                        feT := frT
-                        feB := frB
-                bool desdeFVG = quiereFVG and not na(feT)
-                if verPlan and (desdeOB or desdeFVG or con79 or baseEnt == "Nivel del Fibonacci")
-                    bool esLong = desdeOB or desdeFVG ? dirLong : not bajista
-                    float entrada = na
-                    float sl = na
-                    float zonaT = desdeFVG ? feT : obT
-                    float zonaB = desdeFVG ? feB : obB
-                    if desdeOB or desdeFVG
-                        float grueso = zonaT - zonaB
-                        // agresiva = el primer borde que toca el precio
-                        // conservadora = el borde de más adentro
-                        entrada := agresiv == "Media (50% de la zona)" ? (zonaT + zonaB) / 2 : esLong ? (agresiv == "Agresiva (primer toque)" ? zonaT : zonaB) : (agresiv == "Agresiva (primer toque)" ? zonaB : zonaT)
-                        // el stop SIEMPRE del otro lado del Order Block,
-                        // colgado de su mecha: para una compra debajo del
-                        // LOW del bloque, para una venta arriba del HIGH.
-                        // Aunque entres desde un FVG, el que manda es el
-                        // bloque, porque es la zona que no debe romperse.
-                        float slT = na(obWT) ? zonaT : math.max(obWT, zonaT)
-                        float slB = na(obWB) ? zonaB : math.min(obWB, zonaB)
-                        sl := esLong ? slB - (slT - slB) * colchonSL / 100 : slT + (slT - slB) * colchonSL / 100
-                    else
-                        // ningún hueco llegó al 0.79: se marca el nivel
-                        // solo, pero el stop sigue colgado del bloque
-                        entrada := nivel79
-                        sl := na(obWT) ? (bajista ? pIni + alto * colchonSL / 100 : pIni - alto * colchonSL / 100) : (esLong ? obWB - (obWT - obWB) * colchonSL / 100 : obWT + (obWT - obWB) * colchonSL / 100)
-                    float rr = math.abs(sl - entrada)
-                    planPorque := "el stop quedó pegado a la entrada"
-                    if rr > 0
-                        planOk := true
-                        float tp1 = esLong ? entrada + rr : entrada - rr
-                        float tp2 = esLong ? entrada + rr * 2 : entrada - rr * 2
-                        // rompimiento: hasta dónde llegó el impulso
-                        float tpRompe = esLong ? rgH : rgL
-                        if obIdx >= 0
-                            tpRompe := esLong ? array.get(kH, obIdx) : array.get(kL, obIdx)
-                            for i = obIdx to n - 1
-                                tpRompe := esLong ? math.max(tpRompe, array.get(kH, i)) : math.min(tpRompe, array.get(kL, i))
-                        // liquidez contraria: la primera de killzone
-                        // que siga libre más allá del rompimiento
-                        float tpLiq = na
-                        string liqNom = ""
-                        liqP = array.new_float()
-                        liqN = array.new_string()
-                        if useA and kzA.activa
-                            if kzA.hiVivo
-                                array.push(liqP, kzA.hiLn.get_y1())
-                                array.push(liqN, txtA + " H")
-                            if kzA.loVivo
-                                array.push(liqP, kzA.loLn.get_y1())
-                                array.push(liqN, txtA + " L")
-                        if useL and kzL.activa
-                            if kzL.hiVivo
-                                array.push(liqP, kzL.hiLn.get_y1())
-                                array.push(liqN, txtL + " H")
-                            if kzL.loVivo
-                                array.push(liqP, kzL.loLn.get_y1())
-                                array.push(liqN, txtL + " L")
-                        if useN and kzN.activa
-                            if kzN.hiVivo
-                                array.push(liqP, kzN.hiLn.get_y1())
-                                array.push(liqN, txtN + " H")
-                            if kzN.loVivo
-                                array.push(liqP, kzN.loLn.get_y1())
-                                array.push(liqN, txtN + " L")
-                        // la primera que quede MÁS ALLÁ del rompimiento:
-                        // si está antes, no es una cuarta etapa, es la
-                        // misma parada que el TP3
-                        float mejorD = 999999999.0
-                        if array.size(liqP) > 0
-                            for i = 0 to array.size(liqP) - 1
-                                float v = array.get(liqP, i)
-                                bool sirve = esLong ? v > tpRompe : v < tpRompe
-                                float d = math.abs(v - tpRompe)
-                                if sirve and d < mejorD
-                                    mejorD := d
-                                    tpLiq := v
-                                    liqNom := array.get(liqN, i)
-
-                        // ── el objetivo elegido de los cuatro
-                        float tp = objetivo == "TP1 · 1:1" ? tp1 : objetivo == "TP2 · 1:2" ? tp2 : objetivo == "Rompimiento" ? tpRompe : nz(tpLiq, tpRompe)
-                        // si el objetivo elegido queda del lado malo
-                        // (aún no hay rompimiento ni liquidez), se cae al 1:2
-                        if esLong ? tp <= entrada : tp >= entrada
-                            tp := tp2
-                        // ── la posición, igual que la herramienta de
-                        // TradingView: flotando a la derecha de la
-                        // última vela, en el aire. Arriba de la entrada
-                        // el premio (azul), abajo el riesgo (gris), y la
-                        // línea de la entrada partiéndolas, y el RR
-                        // escrito DENTRO de la caja. Va contada en
-                        // velas del chart (posHueco / posAncho), no en
-                        // velas del TF de estructura: así conserva el
-                        // mismo tamaño en cualquier temporalidad.
-                        int x1 = bar_index + posHueco
-                        int x2 = x1 + posAncho
-                        array.push(planBx, box.new(x1, entrada, x2, sl, border_color = #ffffff00, bgcolor = color.new(colSL, 82)))
-                        array.push(planBx, box.new(x1, tp, x2, entrada, border_color = #ffffff00, bgcolor = color.new(colTP, 88)))
-                        array.push(planLn, line.new(x1, entrada, x2, entrada, color = color.new(chart.fg_color, 30), width = 1))
-                        float ratio = math.abs(tp - entrada) / rr
-                        if inVerRR
-                            array.push(planLb, label.new(int((x1 + x2) / 2), (tp + entrada) / 2, (esLong ? "LONG" : "SHORT") + "  1:" + str.tostring(ratio, "#.#") + "\\n" + objetivo + (objetivo == "Liquidez más cercana" and not na(tpLiq) ? " (" + liqNom + ")" : ""), style = label.style_label_center, color = #ffffff00, textcolor = colEnt, size = size.tiny, tooltip = "Entrada " + str.tostring(entrada, format.mintick) + "  ·  SL " + str.tostring(sl, format.mintick) + "  ·  TP " + str.tostring(tp, format.mintick) + "\\nRiesgo " + str.tostring(rr, "#.##") + " pts  ·  premio " + str.tostring(math.abs(tp - entrada), "#.##") + " pts\\n\\nOtros objetivos: 1:1 " + str.tostring(tp1, format.mintick) + "  ·  1:2 " + str.tostring(tp2, format.mintick) + "  ·  rompimiento " + str.tostring(tpRompe, format.mintick) + (na(tpLiq) ? "" : "  ·  liq " + liqNom + " " + str.tostring(tpLiq, format.mintick))))
-
-
-    // el plan está prendido y aun así no salió nada: en vez de dejar
-    // el chart vacío, se dice en pantalla POR QUÉ
-    if verPlan and not planOk
-        planAviso := label.new(bar_index, close, "PLAN sin dibujar\\n" + planPorque, style = label.style_label_right, color = color.new(chart.bg_color, 15), textcolor = colEnt, size = size.small, tooltip = "El plan de trade está prendido, pero no hay con qué dibujarlo todavía · " + planPorque)
-
 
 // ═══ ORB TARGETS (LuxAlgo) ═════════════════════════════════════
 // Derivado de "Opening Range with Breakouts & Targets [LuxAlgo]"
