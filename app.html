@@ -1734,7 +1734,12 @@ button.st-chip:hover{border-color:rgba(255,255,255,.45)}
 .vsg-linea{flex:1;height:1px;background:linear-gradient(90deg,transparent,var(--line),transparent)}
 .vsg-txt{font-family:var(--mono);font-weight:700;font-size:clamp(30px,6vw,46px);
   letter-spacing:.1em;line-height:1;
-  background:linear-gradient(100deg,var(--cA) 0%,var(--cA) 42%,var(--txt) 50%,var(--cB) 58%,var(--cB) 100%);
+  /* katanas claras (ej. Shiro #EDEFF2) casi no se ven contra el fondo del
+     tema — se mezcla cada color con --txt para que el VS siempre tenga
+     contraste, sin perder el tinte de la katana de cada quien */
+  --vA:color-mix(in srgb, var(--cA) 55%, var(--txt) 45%);
+  --vB:color-mix(in srgb, var(--cB) 55%, var(--txt) 45%);
+  background:linear-gradient(100deg,var(--vA) 0%,var(--vA) 42%,var(--txt) 50%,var(--vB) 58%,var(--vB) 100%);
   -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
   animation:vsLate 2.4s ease-in-out infinite}
 @keyframes vsLate{0%,100%{transform:scale(1);opacity:.9}50%{transform:scale(1.09);opacity:1}}
@@ -9962,7 +9967,7 @@ const BAT_DUR = [
    El reto se cita en la PRÓXIMA apertura de la sesión elegida — como buscar
    partida: eliges cancha (Asia/Londres/NY), horario y formato. */
 const BAT_SESIONES = [
-  { id:'asia',    ico:'🇯🇵', ciudad:['Tokio','Tokyo'],      nom:['Asia','Asia'],        hora:19, dur:240 },
+  { id:'asia',    ico:'🇯🇵', ciudad:['Tokio','Tokyo'],      nom:['Asia','Asia'],        hora:20, dur:240 },
   { id:'londres', ico:'🇬🇧', ciudad:['Londres','London'],   nom:['Londres','London'],   hora:1,  dur:180 },
   { id:'ny',      ico:'🗽', ciudad:['Nueva York','New York'], nom:['Nueva York','New York'], hora:7, dur:180 },
 ];
@@ -10014,7 +10019,7 @@ function batSesionEstado(c, now){
   const t = now || ahora();
   const m = minutosEn(TZ_MERCADO, t), wd = diaSemanaEn(TZ_MERCADO, t);
   const ini = S2.hora*60, fin = ini + S2.dur;
-  /* la ventana puede cruzar la medianoche (Asia abre 19:00 y dura 4 h) */
+  /* la ventana puede cruzar la medianoche (Asia abre 20:00 y dura 4 h) */
   const dentro = (fin <= 1440) ? (m >= ini && m < fin) : (m >= ini || m < (fin-1440));
   const habil = (wd>=1 && wd<=5) || (wd===0 && S2.id==='asia');
   if(dentro && habil){
