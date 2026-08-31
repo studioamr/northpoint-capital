@@ -1860,6 +1860,7 @@ button.st-chip:hover{border-color:rgba(255,255,255,.45)}
 .bm-hx.w{color:#6fe39a;background:rgba(87,199,155,.12)}
 .bm-hx.l{color:#ff8a7e;background:rgba(255,110,95,.1)}
 .bm-hx em{font-style:normal;font-size:8px;font-weight:400;opacity:.8}
+.bm-hx-vacio{font-family:var(--mono);font-size:9.5px;letter-spacing:.08em;color:rgba(255,255,255,.4)}
 .bm-challenge:hover{filter:brightness(1.1)}
 .bm-ganado{font-family:var(--mono);font-size:10px;letter-spacing:.1em;color:rgba(255,255,255,.55);margin:18px 0 0}
 /* PLAY: el botón grande, encima de Battle */
@@ -11171,17 +11172,19 @@ function bossPintaFicha(){
          medirte cuando quieras. Antes, un jefe vencido era una ficha muerta. -->
     ${(()=>{ const uid2 = BOSS_UID(i);
       const mios = batHist().filter(h => h.rival === uid2 || h.host === uid2);
-      if(!mios.length) return '';
       const g = mios.filter(h => h.ganador && h.ganador !== uid2).length;
+      /* SIEMPRE VISIBLE, aunque esté en cero: se escondía cuando no había
+         peleas, que es justo cuando más falta hace saber que ahí va a
+         quedar el registro y que se le puede volver a retar. */
       return `<div class="bm-sec">${bi('TU HISTORIAL CONTRA ÉL','YOUR RECORD AGAINST HIM')}</div>
         <div class="bm-hist">
           <div class="bm-hist-r"><b>${g}</b><i>${bi('ganados','won')}</i></div>
           <div class="bm-hist-r"><b>${mios.length - g}</b><i>${bi('perdidos','lost')}</i></div>
-          <div class="bm-hist-l">${mios.slice(0,6).map(h=>{
+          <div class="bm-hist-l">${mios.length ? mios.slice(0,6).map(h=>{
             const gane = h.ganador && h.ganador !== uid2;
             const mio = h.host === uid2 ? h.pRival : h.pHost;
             return `<span class="bm-hx ${gane?'w':'l'}" title="${esc(fmtFecha(new Date(h.ts).toISOString().slice(0,10)))}">${gane?'W':'L'}<em>${fmt$(Math.round(mio||0),true)}</em></span>`;
-          }).join('')}</div>
+          }).join('') : `<span class="bm-hx-vacio">${bi('todavía no lo peleas','you have not fought him yet')}</span>`}</div>
         </div>`; })()}
 
     ${hecho ? `<p class="bm-ganado">${bi('Ya lo venciste. Su katana es tuya.','You beat him. His katana is yours.')}</p>
@@ -11979,18 +11982,25 @@ function zenNinja(c,x,base,s,now,ph,col,nj,flip,anda){ const kc=col||'#b53a2e';
      hoja pintada del color de la cinta, y así ninguna parecía una katana.
      Como en el arsenal — filo de acero, empuñadura de color. */
   c.lineCap = 'round';
-  c.strokeStyle = '#d7dee7'; c.lineWidth = 1.8*s; c.beginPath();
+  c.strokeStyle = '#d7dee7'; c.lineWidth = 2.6*s; c.beginPath();
   if(corta){ const bx2=2*s, by2=-27*s, len=17*s; c.moveTo(bx2,by2); c.lineTo(bx2+Math.cos(aSl)*len, by2+Math.sin(aSl)*len); }
   else { c.moveTo(-9*s,-38*s); c.lineTo(9*s,-16*s); }
   c.stroke();
-  c.strokeStyle = 'rgba(255,255,255,.9)'; c.lineWidth = 0.7*s; c.beginPath();
+  c.strokeStyle = 'rgba(255,255,255,.95)'; c.lineWidth = 1.0*s; c.beginPath();
   if(corta){ const bx2=2*s, by2=-27*s, len=17*s; c.moveTo(bx2,by2); c.lineTo(bx2+Math.cos(aSl)*len, by2+Math.sin(aSl)*len); }
   else { c.moveTo(-9*s,-38*s); c.lineTo(9*s,-16*s); }
   c.stroke();
-  /* EL MANGO, del color de su katana */
-  c.strokeStyle=kc; c.lineWidth=3.2*s; c.lineCap='round'; c.beginPath();
-  if(corta){ c.moveTo(2*s,-27*s); c.lineTo(2*s-Math.cos(aSl)*5*s, -27*s-Math.sin(aSl)*5*s); }
-  else { c.moveTo(-9*s,-38*s); c.lineTo(-13.5*s,-43.5*s); }
+  /* EL MANGO, del color de su katana — MÁS DELGADO QUE LA HOJA. Iba a 3.2
+     contra 1.8 de hoja, así que en el retrato parecía una segunda espada
+     cruzada del color de la cinta. Un mango es un mango. */
+  c.strokeStyle=kc; c.lineWidth=2.2*s; c.lineCap='round'; c.beginPath();
+  if(corta){ c.moveTo(2*s,-27*s); c.lineTo(2*s-Math.cos(aSl)*4*s, -27*s-Math.sin(aSl)*4*s); }
+  else { c.moveTo(-9.5*s,-38.6*s); c.lineTo(-12.5*s,-42.4*s); }
+  c.stroke();
+  /* la guarda, entre mango y hoja */
+  c.strokeStyle='#c9ced6'; c.lineWidth=1.1*s; c.beginPath();
+  if(corta){ c.moveTo(1*s,-25.6*s); c.lineTo(3*s,-28.4*s); }
+  else { c.moveTo(-10.6*s,-36.6*s); c.lineTo(-7.4*s,-39.4*s); }
   c.stroke();
   c.fillStyle=cfg.traje; c.beginPath(); c.arc(0,-33*s,5.6*s,0,7); c.fill();
   /* EL ANTIFAZ: franja del color de su katana sobre los ojos, y los ojos
@@ -23272,6 +23282,7 @@ function renderAlgoritmo(){
         sub: ['MNQ · 5 minutos','MNQ · 5 minutes'],
         cl: [['El rango de apertura y su ruptura','The opening range and its break'],
              ['Las killzones de Asia, Londres y NY','The Asia, London and NY killzones'],
+             ['Los FVG y cuándo se invierten','FVGs and when they invert'],
              ['Las entradas marcadas donde ocurrieron','Entries marked where they happened']] },
       { img: typeof ALGO_SHOT_ESTRUCTURA !== 'undefined' ? ALGO_SHOT_ESTRUCTURA : '',
         t: ['NP ESTRUCTURA','NP ESTRUCTURA'],
