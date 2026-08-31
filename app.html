@@ -12668,6 +12668,9 @@ function zenDibujaEscena(c, W, H, E, now, pet, poderHex, njCfg){
   if(E.buda) zenBuda(c, W*0.5, base-2, 1.35, E.budaCol);
   if(E.arbolGigante) zenArbolGigante(c, W*0.5, base, 1.35, E.arbolCol);
   if(E.casas){ zenCasaJaponesa(c, W*0.63, base, 1.25); zenCasaJaponesa(c, W*0.79, base, 1.0); zenCasaJaponesa(c, W*0.53, base, 0.85); }
+  /* SU CASA: una sola, chiquita, de madera — la del coleccionista. De ahí sale
+     al jardín, así que tiene que verse la puerta por la que salió. */
+  if(E.casita){ zenCasaJaponesa(c, W*(E.casitaX||0.18), base, E.casitaS||1.05, E.casitaCol||'#c9a97e'); }
   if(E.faro) zenFaro(c, W*0.15, base, 1.35);
   /* ninjas NPC dando vida a la escena */
   /* TU ninja: quieto en su lugar, apenas respirando (la bufanda ondea sola).
@@ -12731,7 +12734,19 @@ function zenDibujaEscena(c, W, H, E, now, pet, poderHex, njCfg){
   if(E.frase) zenFrase(c, W*0.055, H*0.14, E.frase, E.fraseCol||'rgba(255,255,255,.5)');
   zenPoder(c,W,H,now,poderHex);   /* el poder de la katana energiza el fondo */
 }
-function zenEscenaDe(uid){ return ZEN_ESCENAS[batEquipadaDe(uid)]||ZEN_ESCENAS[2]; }
+/* EL MUNDO DEL LOBBY (André, 31-ago-2026): mientras no le ganes a NADIE sigues
+   en el jardín, con tu espada de madera. El mundo cambia cuando cambias de
+   espada — ésa es la promesa, y antes se rompía: entrabas por primera vez y ya
+   estabas en las nieves de Shiro sin habérselas ganado. */
+function zenEscenaDe(uid){
+  const yo2 = (typeof batYo === 'function') ? batYo() : null;
+  if(uid === yo2){
+    let alguna = false;
+    try{ alguna = Object.keys(bossVencidos()).length > 0; }catch(e){}
+    if(!alguna) return ZEN_JARDIN;
+  }
+  return ZEN_ESCENAS[batEquipadaDe(uid)] || ZEN_ESCENAS[2];
+}
 /* el monito del jugador de cuerpo entero, en pose de samurái con su katana alzada */
 function batPintaMonito(){
   const cv=document.getElementById('zenMonitoCv'); if(!cv || typeof monitoPlano!=='function') return;
@@ -13404,13 +13419,17 @@ function bokkenSVG(){
 const ZEN_JARDIN = { bioma:['El jardín','The garden'], sinNinja:true,
   etapa:['EL PRINCIPIO','THE BEGINNING'],
   cielo:['#3f93cf','#71b7e2','#aed7ee','#e4f2fa'],
-  sol:{x:.76,y:.22,r:66,col:'rgba(255,250,226,.95)',halo:'rgba(255,244,192,.30)'},
-  montes:[['#3f7549',1],['#5d9963',.7]], agua:'rgba(96,152,112,.45)',
+  sol:{x:.84,y:.34,r:60,col:'rgba(255,250,226,.95)',halo:'rgba(255,244,192,.30)'},
+  montes:[['#3f7549',1],['#5d9963',.7]],
+  /* el agua del jardín: un estanque claro, con su puente y sus lotos */
+  agua:'rgba(108,168,178,.55)', puente:true, lotos:true, cascada:true,
   nubes:true, nubesCol:'rgba(255,255,255,.94)', nubesEsc:1.5,
-  arbolGigante:true, arbolCol:'#2b6a38',
-  flores:true, floresCol:'rgba(238,152,198,.95)',
+  /* SU CASA de madera, chiquita, a la izquierda: de ahí salió */
+  casita:true, casitaX:0.15, casitaS:1.05, casitaCol:'#c9a97e',
+  sakuraGigante:true, arbolGigante:true, arbolCol:'#2b6a38',
+  flores:true, floresCol:'rgba(244,150,196,.96)',
   pasto:true, pastoCol:'rgba(34,80,42,.85)',
-  part:'sakura', partCol:'rgba(255,202,216,.95)' };
+  part:'sakura', partCol:'rgba(255,202,216,.96)' };
 
 /* ══ EL RÓTULO DEL MUNDO ══ el nombre de la etapa, escrito en el cielo:
    letras finas muy espaciadas y un filete a cada lado. No es una etiqueta de
@@ -23405,16 +23424,16 @@ if verPanel and barstate.islast
 // al día—. Abajo, la estadística de TU setup medida en este mismo
 // chart: de todos los días cargados, cuántos rompieron el ORB y de
 // esos cuántos llegaron a 1:1 y a 1:2 con el stop en el ORM.
-gT = "14 · Panel técnico"
-verTec  = input.bool(true, "Panel técnico", group = gT, tooltip = "Tabla aparte con dos mitades: TU PLAN (stop y objetivos en puntos, gasolina del día, contexto) y TU SETUP (qué tan seguido el ORB rompe y paga, contado sobre las velas que tengas cargadas).")
-posTec  = input.string("Abajo derecha", "Posición", options = ["Abajo derecha", "Abajo centro", "Abajo izquierda", "Arriba derecha", "Arriba centro", "Arriba izquierda"], inline = "T0", group = gT)
-tamTec  = input.string("Pequeño", "", options = ["Diminuto", "Pequeño", "Normal"], inline = "T0", group = gT)
-contratos = input.int(2, "Contratos (minis)", minval = 1, group = gT, tooltip = "Con esto y el riesgo del grupo 4 se calcula cuántos PUNTOS vale tu stop. Con $500, 2 minis de MNQ ($2 el punto) son 125 puntos.")
-lenRSI  = input.int(14, "RSI", minval = 2, inline = "TL1", group = gT)
-lenADX  = input.int(14, "ADX", minval = 2, inline = "TL1", group = gT)
-lenATR  = input.int(14, "ATR", minval = 2, inline = "TL1", group = gT)
-lenVol  = input.int(20, "Volumen", minval = 2, inline = "TL2", group = gT)
-diasADR = input.int(14, "Días del ADR", minval = 2, maxval = 60, inline = "TL2", group = gT)
+gTec = "14 · Panel técnico"
+verTec  = input.bool(true, "Panel técnico", group = gTec, tooltip = "Tabla aparte con dos mitades: TU PLAN (stop y objetivos en puntos, gasolina del día, contexto) y TU SETUP (qué tan seguido el ORB rompe y paga, contado sobre las velas que tengas cargadas).")
+posTec  = input.string("Abajo derecha", "Posición", options = ["Abajo derecha", "Abajo centro", "Abajo izquierda", "Arriba derecha", "Arriba centro", "Arriba izquierda"], inline = "T0", group = gTec)
+tamTec  = input.string("Pequeño", "", options = ["Diminuto", "Pequeño", "Normal"], inline = "T0", group = gTec)
+contratos = input.int(2, "Contratos (minis)", minval = 1, group = gTec, tooltip = "Con esto y el riesgo del grupo 4 se calcula cuántos PUNTOS vale tu stop. Con $500, 2 minis de MNQ ($2 el punto) son 125 puntos.")
+lenRSI  = input.int(14, "RSI", minval = 2, inline = "TL1", group = gTec)
+lenADX  = input.int(14, "ADX", minval = 2, inline = "TL1", group = gTec)
+lenATR  = input.int(14, "ATR", minval = 2, inline = "TL1", group = gTec)
+lenVol  = input.int(20, "Volumen", minval = 2, inline = "TL2", group = gTec)
+diasADR = input.int(14, "Días del ADR", minval = 2, maxval = 60, inline = "TL2", group = gTec)
 
 // ── cálculos, todos a nivel global (Pine lo exige) ─────────────
 float rsiV = ta.rsi(close, lenRSI)
