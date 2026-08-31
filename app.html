@@ -24234,13 +24234,15 @@ if verPanel and barstate.islast
     // el ORB cuenta DESDE EL BREAK: el nivel que rompió, hacia dónde
     // y cuántos puntos lleva desde ahí. Antes de romper no hay número
     float brPts = brLado == 0 ? na : (close - brNiv) * brLado
-    string tkO1 = not dibujable ? tfAviso : brLado != 0 ? (brLado == 1 ? "ORH " : "ORL ") + str.tostring(brNiv, format.mintick) : orbHecho ? "sin romper" : "espera las 9:30"
+    // sin break no hay nada que decir: la fila entera se queda en
+    // blanco hasta que el precio se sale del ORB
+    string tkO1 = not dibujable or brLado == 0 ? "" : (brLado == 1 ? "ORH " : "ORL ") + str.tostring(brNiv, format.mintick)
     string flO  = not dibujable or brLado == 0 ? "" : brLado == 1 ? "↑" : "↓"
     string tkO1c = not dibujable or brLado == 0 ? "" : str.tostring(close, format.mintick)
     string tkO2 = not dibujable or brLado == 0 ? "" : f_fmtPts(brPts)
     color cNetO = not dibujable or brLado == 0 ? color.gray : brPts >= 0 ? cAlza : cBaja
-    string tipO = brLado == 0 ? (orbHecho ? "El precio sigue dentro del ORB · " + str.tostring(orh - orl, "#.##") + " pts de rango." : "El ORB se forma de 9:30 a 9:45 NY.") : "Rompió el " + (brLado == 1 ? "ORH" : "ORL") + " en " + str.tostring(brNiv, format.mintick) + " · lleva " + f_fmtPts(brPts) + " · lo más lejos que llegó: " + str.tostring(brMax, "#.##") + " pts · el ORB midió " + str.tostring(orh - orl, "#.##") + " pts"
-    table.cell(panel, 0, 12, txtO, text_color = colO, text_size = tamTxt)
+    string tipO = brLado == 0 ? "" : "Rompió el " + (brLado == 1 ? "ORH" : "ORL") + " en " + str.tostring(brNiv, format.mintick) + " · lleva " + f_fmtPts(brPts) + " · lo más lejos que llegó: " + str.tostring(brMax, "#.##") + " pts · el ORB midió " + str.tostring(orh - orl, "#.##") + " pts"
+    table.cell(panel, 0, 12, brLado == 0 ? "" : txtO, text_color = colO, text_size = tamTxt)
     table.cell(panel, 1, 12, tkO1, text_color = not dibujable ? color.gray : chart.fg_color, text_size = tamTxt, tooltip = tipO)
     table.cell(panel, 2, 12, flO, text_color = cNetO, text_size = tamTxt, tooltip = tipO)
     table.cell(panel, 3, 12, tkO1c, text_color = chart.fg_color, text_size = tamTxt, tooltip = tipO)
