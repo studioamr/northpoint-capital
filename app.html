@@ -24319,10 +24319,13 @@ if verPanel and barstate.islast
     string flO  = not dibujable or brLado == 0 ? "" : brLado == 1 ? "↑" : "↓"
     string tkO1c = not dibujable or brLado == 0 ? "" : str.tostring(close, format.mintick)
     string tkO2 = not dibujable or brLado == 0 ? "" : f_fmtPts(brPts)
-    color cNetO = not dibujable or brLado == 0 ? color.gray : brPts > 0 ? cAlza : pSuave
+    // el color lo manda la DIRECCIÓN del break, no el avance: rompió
+    // arriba, verde; rompió abajo, rojo. Que marque 0 ya dice solo
+    // que el precio se devolvió adentro
+    color cNetO = not dibujable or brLado == 0 ? color.gray : brLado == 1 ? cAlza : cBaja
     string tipO = brLado == 0 ? "" : "Rompió el " + (brLado == 1 ? "ORH" : "ORL") + " en " + str.tostring(brNiv, format.mintick) + " · lleva " + f_fmtPts(brPts) + " · lo más lejos que llegó: " + str.tostring(brMax, "#.##") + " pts · el ORB midió " + str.tostring(orh - orl, "#.##") + " pts"
     table.cell(panel, 0, 12, brLado == 0 ? "" : txtO, text_color = colO, text_size = tamTxt)
-    table.cell(panel, 1, 12, tkO1, text_color = not dibujable ? color.gray : chart.fg_color, text_size = tamTxt, tooltip = tipO)
+    table.cell(panel, 1, 12, tkO1, text_color = not dibujable or brLado == 0 ? color.gray : cNetO, text_size = tamTxt, tooltip = tipO)
     table.cell(panel, 2, 12, flO, text_color = cNetO, text_size = tamTxt, tooltip = tipO)
     table.cell(panel, 3, 12, tkO1c, text_color = chart.fg_color, text_size = tamTxt, tooltip = tipO)
     table.cell(panel, 4, 12, tkO2, text_color = cNetO, text_size = tamTxt, tooltip = tipO)
