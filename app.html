@@ -15546,7 +15546,7 @@ function lgLog(){
     const n = parseFloat(String(v).replace(/[^0-9.\-]/g, ''));
     if(!isFinite(n)){ toast(bi('Ese número no se entiende.','That number does not parse.')); return; }
     t.pnl = n; sellaCambio(t); save();
-    lgStats(); lgDibuja(1); lgLog(); lgHoy(); lgHistorial(); updateBadges();
+    lgRepinta();
     toast(bi('Trade corregido · ','Trade fixed · ') + fmt$(n, true));
   });
   const vac = $('#lgVaciar');
@@ -15558,7 +15558,7 @@ function lgLog(){
     if((r||'').trim().toUpperCase() !== 'BORRAR') return;
     S.trades.forEach(marcaBorradoObj);      /* sin lápida, la nube los devuelve */
     S.trades = []; S.seqTrade = 0; save();
-    lgBalancePanel(); lgStats(); lgDibuja(1); lgLog(); lgHoy(); lgHistorial(); updateBadges();
+    lgRepinta();
     toast(bi('Se borraron ' + n + ' trades. Registra el que sí llevas.',
              n + ' trades deleted. Log the one you actually have.'));
   };
@@ -15569,8 +15569,7 @@ function lgLog(){
        splice a secas. La fusión es una UNIÓN, así que en el siguiente sync el
        trade volvía desde el servidor — se borraban y reaparecían una y otra
        vez. Otras pantallas ya marcaban la lápida; ésta no. */
-    if(i>=0){ marcaBorradoObj(S.trades[i]); S.trades.splice(i,1); save();
-      lgBalancePanel(); lgStats(); lgDibuja(1); lgLog(); lgHoy(); lgHistorial(); updateBadges(); }
+    if(i>=0){ marcaBorradoObj(S.trades[i]); S.trades.splice(i,1); save(); lgRepinta(); }
   });
   host.querySelectorAll('.lg-img').forEach(b => b.onclick = () => {
     const t = S.trades.find(x=>x.id===b.dataset.img); if(!t) return;
@@ -15610,6 +15609,18 @@ function imgInit(){
   $('#btNomCrear').addEventListener('click', crear);
   $('#btNomIn').addEventListener('keydown', e => { if(e.key==='Enter'){ e.preventDefault(); crear(); } });
 }
+/* ══ UN SOLO REPINTADO ══ (André, 31-ago-2026)
+   Cada sitio que tocaba un trade repintaba SU propia lista de cosas, y el de
+   agregar no incluía el panel del día: registrabas el trade, la curva se movía
+   y las barras de arriba —objetivo y drawdown— se quedaban donde estaban hasta
+   que cambiabas de cuenta o recargabas. Justo al revés de para qué sirven: la
+   barra de drawdown es la que te dice cuándo parar, y sólo sirve si se mueve
+   con el trade que la mueve. Ahora todo el Log repinta desde aquí. */
+function lgRepinta(anima){
+  lgBalancePanel(); lgHoy(); lgStats();
+  if(anima) lgAnima(); else lgDibuja(1);
+  lgLog(); updateBadges();
+}
 function lgAgrega(){
   const pnl = parseFloat($('#lgPnl').value);
   if(!isFinite(pnl)){ toast(bi('Falta el P&L','P&L is missing')); $('#lgPnl').focus(); return; }
@@ -15627,7 +15638,7 @@ function lgAgrega(){
   }));
   save();
   $('#lgPnl').value = '';
-  lgCtas(); lgStats(); lgAnima(); lgLog(); animaSello(pnl); updateBadges();
+  lgCtas(); lgRepinta(true); animaSello(pnl);
   $('#lgPnl').focus();
 }
 /* ══ LA SESIÓN DEL DÍA ══ (André, 31-ago-2026)
@@ -15976,7 +15987,9 @@ function renderLog(){
     const list = lgTradesReales(); if(!list.length) return;
     const ultimo = list[list.length-1];
     const i = S.trades.findIndex(x=>x.id===ultimo.id);
-    if(i>=0){ S.trades.splice(i,1); save(); lgStats(); lgDibuja(1); lgLog(); updateBadges(); }
+    /* con lápida: sin ella la fusión —que es una UNIÓN— lo devuelve en el
+       siguiente sync, que es el «los borro y vuelven a aparecer» de siempre */
+    if(i>=0){ marcaBorradoObj(S.trades[i]); S.trades.splice(i,1); save(); lgRepinta(); }
   });
   /* Ajustar objetivo y drawdown de la cuenta que se está viendo */
   $('#lgAjustar').addEventListener('click', () => {
