@@ -23772,7 +23772,6 @@ tDia = not na(time("", sesDia, tz))
 [netA, rngAh, rngAl, opA] = f_move(tA)
 [netL, rngLh, rngLl, opL] = f_move(tL)
 [netN, rngNh, rngNl, opN] = f_move(tNY)
-[netO, rngOh, rngOl, opO] = f_move(tO)
 [netD, rngDh, rngDl, opD] = f_move(tDia)
 
 // ── ¿EL NÚMERO ES DE HOY? (André, 30-ago-2026) ────────────────
@@ -23798,6 +23797,30 @@ if tL and not tL[1]
     lHoy := true
 if tNY and not tNY[1]
     nyHoy := true
+// ── EL ORB DESPUÉS DEL BREAK ───────────────────────────────────
+// Del ORB lo que se opera no es el rango: es lo que el precio hace
+// UNA VEZ que se sale. Aquí se guarda por qué lado rompió, en qué
+// nivel, y cuánto lleva desde ahí. Se arma solo con el ORB del día
+// ya cerrado y se reinicia al abrir ASIA, igual que el resto.
+var int   brLado = 0
+var float brNiv  = na
+var float brMax  = 0.0
+if tA and not tA[1]
+    brLado := 0
+    brNiv  := na
+    brMax  := 0.0
+bool orbHecho = oHoy and not tO and not na(orh) and not na(orl) and orh > orl
+if orbHecho
+    if brLado == 0
+        if close > orh
+            brLado := 1
+            brNiv  := orh
+        else if close < orl
+            brLado := -1
+            brNiv  := orl
+    if brLado != 0
+        brMax := math.max(brMax, brLado == 1 ? high - brNiv : brNiv - low)
+
 // ═══ PANEL PLAN ════════════════════════════════════════════════
 // 1 = viva (sin tomar), 0 = tomada, -1 = sin datos
 f_vivo(kzona k, bool use, bool esHigh) =>
@@ -24181,15 +24204,15 @@ if verPanel and barstate.islast
     table.cell(panel, 2, 11, flN, text_color = cNetN, text_size = tamTxt, tooltip = tipN)
     table.cell(panel, 3, 11, tkN1c, text_color = chart.fg_color, text_size = tamTxt, tooltip = tipN)
     table.cell(panel, 4, 11, tkN2, text_color = cNetN, text_size = tamTxt, tooltip = tipN)
-    // el ORB en la misma línea de las sesiones, con LO QUE MIDIÓ:
-    // el rango es el número que de verdad se usa del ORB
-    bool hayO = (tO or oHoy) and not na(netO)
-    string tkO1 = not dibujable ? tfAviso : hayO ? f_tkAbre(opO, netO) : "espera las 9:30"
-    string flO  = not dibujable or not hayO ? "" : f_tkFlecha(netO)
-    string tkO1c = not dibujable or not hayO ? "" : f_tkCierra(opO, netO)
-    string tkO2 = not dibujable or not hayO or na(rngOh) or na(rngOl) ? "" : str.tostring(rngOh - rngOl, "#.##") + " pts"
-    color cNetO = dibujable and hayO ? f_colPts(netO) : color.gray
-    string tipO = dibujable and hayO ? "El ORB midió " + str.tostring(rngOh - rngOl, "#.##") + " pts · ORH " + str.tostring(rngOh, format.mintick) + " · ORL " + str.tostring(rngOl, format.mintick) + " · neto " + f_fmtPts(netO) : ""
+    // el ORB cuenta DESDE EL BREAK: el nivel que rompió, hacia dónde
+    // y cuántos puntos lleva desde ahí. Antes de romper no hay número
+    float brPts = brLado == 0 ? na : (close - brNiv) * brLado
+    string tkO1 = not dibujable ? tfAviso : brLado != 0 ? (brLado == 1 ? "ORH " : "ORL ") + str.tostring(brNiv, format.mintick) : orbHecho ? "sin romper" : "espera las 9:30"
+    string flO  = not dibujable or brLado == 0 ? "" : brLado == 1 ? "↑" : "↓"
+    string tkO1c = not dibujable or brLado == 0 ? "" : str.tostring(close, format.mintick)
+    string tkO2 = not dibujable or brLado == 0 ? "" : f_fmtPts(brPts)
+    color cNetO = not dibujable or brLado == 0 ? color.gray : brPts >= 0 ? cAlza : cBaja
+    string tipO = brLado == 0 ? (orbHecho ? "El precio sigue dentro del ORB · " + str.tostring(orh - orl, "#.##") + " pts de rango." : "El ORB se forma de 9:30 a 9:45 NY.") : "Rompió el " + (brLado == 1 ? "ORH" : "ORL") + " en " + str.tostring(brNiv, format.mintick) + " · lleva " + f_fmtPts(brPts) + " · lo más lejos que llegó: " + str.tostring(brMax, "#.##") + " pts · el ORB midió " + str.tostring(orh - orl, "#.##") + " pts"
     table.cell(panel, 0, 12, txtO, text_color = colO, text_size = tamTxt)
     table.cell(panel, 1, 12, tkO1, text_color = not dibujable ? color.gray : chart.fg_color, text_size = tamTxt, tooltip = tipO)
     table.cell(panel, 2, 12, flO, text_color = cNetO, text_size = tamTxt, tooltip = tipO)
