@@ -1780,10 +1780,15 @@ button.st-chip:hover{border-color:rgba(255,255,255,.45)}
    cero y el overlay absoluto no se veía */
 #batRoot.puerta{min-height:calc(100vh - 150px)}
 /* ── LA PELÍCULA DE KURO ── */
-.peli-ov{position:fixed;inset:0;z-index:80;background:#05070d;display:flex;flex-direction:column;
+/* LA PELÍCULA VA POR ENCIMA DE TODO (André, 31-ago-2026): con z-index 80 el
+   menú lateral (z 50, pero pintado después) se le montaba encima y el texto
+   quedaba cortado detrás de los links. Una película se ve a pantalla completa
+   o no se ve. */
+.peli-ov{position:fixed;inset:0;z-index:220;background:#05070d;display:flex;flex-direction:column;
   align-items:center;justify-content:flex-end;overflow:hidden;padding:0}
 .peli-ov canvas{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
-.peli-in{position:relative;z-index:2;width:100%;max-width:680px;padding:0 26px 34px;text-align:left}
+.peli-in{position:relative;z-index:2;width:100%;max-width:720px;margin:0 auto;
+  padding:0 30px 40px;text-align:left}
 .peli-kanji{position:absolute;right:26px;bottom:calc(100% + 8px);font-size:78px;line-height:1;
   font-weight:700;color:rgba(255,255,255,.10);pointer-events:none}
 .peli-acto{display:block;font-family:var(--mono);font-size:9px;letter-spacing:.28em;
@@ -1795,7 +1800,7 @@ button.st-chip:hover{border-color:rgba(255,255,255,.45)}
   font-family:var(--mono);font-size:10px;letter-spacing:.14em;padding:9px 15px;border-radius:99px;cursor:pointer}
 .peli-b:hover{color:#fff;border-color:rgba(255,255,255,.45)}
 /* 'saltar' se montaba encima del kanji: va fijo en la esquina de arriba */
-.peli-saltar{position:fixed;right:20px;top:18px;z-index:3;border:1px solid rgba(255,255,255,.16);
+.peli-saltar{position:fixed;right:20px;top:18px;z-index:230;border:1px solid rgba(255,255,255,.16);
   background:rgba(8,10,16,.55);color:rgba(255,255,255,.6);font-family:var(--mono);font-size:10px;
   letter-spacing:.18em;padding:7px 13px;border-radius:99px;cursor:pointer}
 .peli-saltar:hover{color:#fff}
@@ -13359,6 +13364,14 @@ function batPuerta(){
 /* el cuadro de cada acto: su mundo, su ninja y el velo para que se lea */
 function batPintaPeli(A){
   const pcv = $('#peliCv'); cancelAnimationFrame(window._peliRAF||0); if(!pcv) return;
+  /* EL LIENZO DEL TAMAÑO DE LA PANTALLA (André, 31-ago-2026): iba fijo en
+     1200×700 con object-fit:cover, así que en una ventana alta el recorte
+     agrandaba al ninja hasta la mitad del cuadro. Pintando a la forma real del
+     hueco no hay recorte. */
+  const dpr = Math.min(2, window.devicePixelRatio || 1);
+  const cw = Math.max(320, pcv.clientWidth || window.innerWidth);
+  const ch = Math.max(320, pcv.clientHeight || window.innerHeight);
+  pcv.width = Math.round(cw*dpr); pcv.height = Math.round(ch*dpr);
   const px = pcv.getContext('2d'), PW = pcv.width, PH = pcv.height;
   const E0 = ZEN_ESCENAS[A.esc] || ZEN_ESCENAS[0];
   const E = batEscenaViva({ ...E0, sinNinja:true }, { sesion:null, id:'peli'+A.kanji });
@@ -13370,7 +13383,9 @@ function batPintaPeli(A){
   const pinta = (t) => { if(!pcv.isConnected) return;
     try{ zenDibujaEscena(px, PW, PH, E, t, pet, col); }
     catch(e){ px.fillStyle='#0b0f18'; px.fillRect(0,0,PW,PH); }
-    try{ zenNinja(px, PW*0.5, PH*0.70, 3.2, t, 0, col, nj, false, 'guardia'); }catch(e){}
+    /* el ninja, a escala del cuadro: en una ventana alta 3.2 lo volvía un gigante */
+    const esc = Math.max(1.5, Math.min(3.4, PH/230));
+    try{ zenNinja(px, PW*0.5, PH*0.72, esc, t, 0, col, nj, false, 'guardia'); }catch(e){}
     const vg = px.createLinearGradient(0, PH*0.30, 0, PH);
     vg.addColorStop(0,'rgba(6,8,14,0)'); vg.addColorStop(0.55,'rgba(6,8,14,.72)'); vg.addColorStop(1,'rgba(6,8,14,.95)');
     px.fillStyle = vg; px.fillRect(0, PH*0.30, PW, PH*0.70);
