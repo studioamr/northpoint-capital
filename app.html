@@ -1708,6 +1708,13 @@ button.st-chip:hover{border-color:rgba(255,255,255,.45)}
 .bat-vuelo p{font-family:var(--mono);font-size:13px;color:var(--dim)}
 /* activo · rival arriba, tú abajo, temporizador grande en medio */
 .bat-panel{border:1px solid var(--line);border-radius:16px;background:var(--w02);padding:16px 18px;margin:0}
+/* EL RIVAL sobre su ecosistema: el mundo de fondo y su ficha encima */
+.bat-panel.sinGraf{position:relative;padding:0;overflow:hidden;min-height:150px}
+.bat-rival-esc{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:0}
+.bat-rival-in{position:relative;z-index:1;padding:16px 18px}
+.bat-panel.sinGraf .bat-panel-nom,.bat-panel.sinGraf .bat-panel-nt{color:rgba(255,255,255,.9)}
+.bat-panel.sinGraf .bt-log-row{color:rgba(255,255,255,.85)}
+.bat-panel.sinGraf .bt-log-empty{color:rgba(255,255,255,.55)}
 .bat-panel.rival{border-color:var(--line-soft)}
 .bat-panel.lead{border-color:var(--up);box-shadow:inset 0 0 0 1px rgba(48,209,88,.25)}
 .bat-panel-h{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
@@ -10384,7 +10391,13 @@ function batH2H(a, b){
 /* jugadores de un reto: party = toda la mesa; 1v1 = host + rival */
 function batJugadores(c){ return (c && c.party && Array.isArray(c.jugadores)) ? c.jugadores.slice() : (c ? [c.host, c.rival] : []); }
 function batYo(){ return socioEnSesion() || DUENO_ORIGEN; }
-function batNom(uid){ return (USERS[uid] && USERS[uid].nombre) || uid; }
+function batNom(uid){
+  /* un jefe se llama por su nombre, no por su id: sin esto el duelo mostraba
+     «boss:0» en la ficha del rival */
+  const _b = (typeof bossDeUid === 'function') ? bossDeUid(uid) : null;
+  if(_b) return _b.nom;
+  return (USERS[uid] && USERS[uid].nombre) || uid;
+}
 function batOponentes(){ return SOCIOS_REALES.filter(u => u !== batYo()); }
 function batProfit(c, uid){ return ((c.trades && c.trades[uid]) || []).reduce((a,t) => a + (t.pnl||0), 0); }
 function batNTrades(c, uid){ return ((c.trades && c.trades[uid]) || []).length; }
@@ -11370,6 +11383,9 @@ function batKatanasDe(u){ if(!S.batKatanas) S.batKatanas={}; if(!Array.isArray(S
 /* la katana EQUIPADA (la que define tu ecosistema y tu espada del perfil).
    Por defecto la más alta que tengas; el jugador la cambia picando otra suya. */
 function batEquipadaDe(u){
+  /* el jefe porta SU katana — la que suelta al caer */
+  const _bk = (typeof bossDeUid === 'function') ? bossDeUid(u) : null;
+  if(_bk) return _bk.kat;
   const kw=batKatanasDe(u); const maxi=KATANAS.reduce((mx,k,i)=> kw.includes(k.id)?i:mx,0);
   if(!S.batEquipada) S.batEquipada={};
   const eq=S.batEquipada[u]; const i=eq? KATANAS.findIndex(k=>k.id===eq):-1;
@@ -11973,10 +11989,9 @@ function zenNinja(c,x,base,s,now,ph,col,nj,flip,anda){ const kc=col||'#b53a2e';
   /* corte de katana cada ~8 s (cuando está quieto) */
   const cicloSl = (now+ (ph||0)*1000) % 8400, corta = anda==='corte' && cicloSl < 460, aSl = corta ? (-0.95 + (cicloSl/460)*1.6) : 0;
   c.save(); c.translate(x,base+bob); if(flip) c.scale(-1,1);
-  /* piernas: alternan al caminar */
-  const p1 = anda ? Math.sin(now/150)*2.2*s : 0, p2 = -p1;
-  c.fillStyle=cfg.traje; c.fillRect(-5*s,-14*s+Math.max(0,p1),4*s,14*s-Math.max(0,p1)); c.fillRect(2*s,-14*s+Math.max(0,p2),4*s,14*s-Math.max(0,p2));
-  c.fillRect(-6.5*s,-30*s,13*s,18*s);
+  /* ── LA KATANA VA PRIMERO: se dibujaba DESPUÉS del torso y le cruzaba el
+     cuerpo por delante, como si la llevara pegada al pecho. Pintándola antes
+     queda a la espalda, que es donde va. ── */
   /* la katana: en la espalda — o cortando el aire */
   /* LA HOJA ES ACERO, EL MANGO ES DE SU COLOR (André). Estaba al revés: la
      hoja pintada del color de la cinta, y así ninguna parecía una katana.
@@ -12021,6 +12036,11 @@ function zenNinja(c,x,base,s,now,ph,col,nj,flip,anda){ const kc=col||'#b53a2e';
   if(corta){ c.moveTo(1*s,-25.6*s); c.lineTo(3*s,-28.4*s); }
   else { c.moveTo(-10.6*s,-36.6*s); c.lineTo(-7.4*s,-39.4*s); }
   c.stroke();
+
+  /* piernas: alternan al caminar */
+  const p1 = anda ? Math.sin(now/150)*2.2*s : 0, p2 = -p1;
+  c.fillStyle=cfg.traje; c.fillRect(-5*s,-14*s+Math.max(0,p1),4*s,14*s-Math.max(0,p1)); c.fillRect(2*s,-14*s+Math.max(0,p2),4*s,14*s-Math.max(0,p2));
+  c.fillRect(-6.5*s,-30*s,13*s,18*s);
   c.fillStyle=cfg.traje; c.beginPath(); c.arc(0,-33*s,5.6*s,0,7); c.fill();
   /* EL ANTIFAZ: franja del color de su katana sobre los ojos, y los ojos
      encima. Sin esto la cabeza era un círculo negro y a la distancia del
@@ -13628,22 +13648,51 @@ function renderBatallaInterno(){
         <i class="vsg-linea"></i>
       </div>
 
-      <!-- AL FINAL: la ficha del rival, sólo lectura -->
-      <div class="bat-panel rival ${!gano?'lead':''}">
-        <div class="bat-panel-h">
-          <span class="bat-panel-nom">${esc(batNom(rivalDe))}</span>
-          <b class="bat-panel-p ${pRival>=0?'up':'down'}">${fmt$(pRival,true)}</b>
-          <span class="bat-panel-nt">${batNTrades(c,rivalDe)} ${bi('trades','trades')}</span>
+      <!-- EL RIVAL, SIN GRÁFICA (André): su curva no aportaba nada — lo que
+           importa de él es su P&L, y ese ya está en grande. En su lugar, ÉL:
+           vivo en su ecosistema, con su nombre y su marcador encima. -->
+      <div class="bat-panel rival sinGraf ${!gano?'lead':''}">
+        <canvas id="rivalEscenaCv" class="bat-rival-esc" width="1000" height="420"></canvas>
+        <div class="bat-rival-in">
+          <div class="bat-panel-h">
+            <span class="bat-panel-nom">${esc(batNom(rivalDe))}</span>
+            <b class="bat-panel-p ${pRival>=0?'up':'down'}">${fmt$(pRival,true)}</b>
+            <span class="bat-panel-nt">${batNTrades(c,rivalDe)} ${bi('trades','trades')}</span>
+          </div>
+          <div class="bat-panel-log">${filas(rivalDe)}</div>
         </div>
-        <div class="bat-graf"><canvas id="batGrafRival"></canvas><div id="batGrafRivalE" class="bat-graf-e"></div></div>
-        <div class="bat-panel-log">${filas(rivalDe)}</div>
       </div>`;
-    /* gráficas en vivo de cada jugador */
+    /* la gráfica del rival se fue; la tuya se queda */
     const vac = bi('Sin trades aún','No trades yet');
     requestAnimationFrame(() => {
-      pintaCurva($('#batGrafRival'), $('#batGrafRivalE'), (c.trades[rivalDe]||[]).map(t=>t.pnl||0), 1, vac);
       pintaCurva($('#batGrafYo'), $('#batGrafYoE'), (c.trades[yo]||[]).map(t=>t.pnl||0), 1, vac);
     });
+    /* ── EL RIVAL EN SU ECOSISTEMA ── de fondo, su mundo (el de su katana),
+       y él de pie encima. Se ve a quién te enfrentas mientras operas. */
+    (()=>{ const rv=$('#rivalEscenaCv'); cancelAnimationFrame(window._rvRAF||0); if(!rv) return;
+      const rx=rv.getContext('2d'), RW=rv.width, RH=rv.height;
+      const kIdx = batEquipadaDe(rivalDe), kR = KATANAS[kIdx];
+      const E0 = ZEN_ESCENAS[kIdx] || ZEN_ESCENAS[0];
+      const E = { ...E0, sinNinja:true, frase:null };
+      const rr2 = i => ((Math.sin(i*12.9898)*43758.5453)%1+1)%1;
+      const pet = Array.from({length:16},(_,k)=>({ x:rr2(k)*RW, y:rr2(k+9)*RH, s:3+rr2(k+18)*4,
+        sp:.4+rr2(k+27)*.9, dr:rr2(k+36)*6.3, sw:.5+rr2(k+45)*.8 }));
+      const njR = batNinjaDe(rivalDe);
+      const pintaR=(t)=>{ if(!rv.isConnected) return;
+        if(rv.offsetParent===null){ window._rvRAF=requestAnimationFrame(pintaR); return; }
+        rx.clearRect(0,0,RW,RH);
+        try{ zenDibujaEscena(rx, RW, RH, E, t, pet, kR.belt); }catch(e){ rx.fillStyle='#12161d'; rx.fillRect(0,0,RW,RH); }
+        /* él, de pie a la derecha, mirando hacia ti */
+        rx.fillStyle='rgba(0,0,0,.3)';
+        rx.beginPath(); rx.ellipse(RW*0.80, RH*0.80, 42, 11, 0,0,7); rx.fill();
+        try{ zenNinja(rx, RW*0.80, RH*0.80, 2.4, t*0.5, 0, kR.belt, njR, true, 'corte'); }catch(e){}
+        /* un velo para que el texto de encima se lea */
+        const g4=rx.createLinearGradient(0,0,0,RH);
+        g4.addColorStop(0,'rgba(6,9,14,.72)'); g4.addColorStop(.55,'rgba(6,9,14,.45)'); g4.addColorStop(1,'rgba(6,9,14,.8)');
+        rx.fillStyle=g4; rx.fillRect(0,0,RW,RH);
+        window._rvRAF=requestAnimationFrame(pintaR); };
+      pintaR(performance.now()); window._rvRAF=requestAnimationFrame(pintaR);
+    })();
     /* ⛩️ EL DUELO DE ABAJO — la escena de LA SEDE (Tokio, Londres o NY, no el
        bioma de tu katana) con los dos ninjas peleando dentro. Se acechan con
        una deriva lenta, se acercan y cruzan katanas cada pocos segundos, y
