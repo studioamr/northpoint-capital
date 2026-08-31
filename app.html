@@ -4890,12 +4890,12 @@ stop[stop-color="#9BC0DC"]{stop-color:var(--txt)}
 
       <!-- ════ EL PLAN · de $0 a la casa, por fases contra tu patrimonio real ════ -->
       <section class="view" id="v-plan">
-        <div style="display:flex;align-items:baseline;gap:12px;margin-bottom:12px;flex-wrap:wrap">
-          <span class="micro" data-i18n="vd.plan">The plan · from $0 to the house</span>
-          <span class="micro" id="metaSub" style="margin-left:auto;color:var(--faint)"></span>
-        </div>
+        <!-- FUERA la cabecera 'de $0 a la casa', el 'PHASE 0 · needs' y el
+             CONTRATO DE 30 DÍAS (André, 31-ago-2026): la tira de días, el
+             'HOY · EXAMEN' y la rutina repetían lo que ya dice el panel del
+             gráfico, que es el que tienes enfrente al operar. Dos sitios
+             diciendo la misma jornada es de donde salen las contradicciones. -->
         <div id="tuPanel" class="mt"></div>
-        <div id="contrato30" class="mt"></div>
         <div class="panel pat mt" id="patrimonioHoy"></div>
         <div id="metasMods" class="mt"></div>
       </section>
@@ -7626,7 +7626,7 @@ function refrescarSeleccion(){
   else if(v === 'agentes') renderAgentes();
   else if(v === 'trades') renderTrades();
   else if(v === 'vida') renderVida();
-  else if(v === 'plan'){ renderTuPanel(); renderContrato(); renderMetas(); }
+  else if(v === 'plan'){ renderTuPanel(); renderMetas(); }
   else if(v === 'posiciones') renderPosiciones();
   else { renderPicker($('#pickMesa')); renderPicker($('#pickJournal')); }
 }
@@ -16693,7 +16693,7 @@ $('#cjSave').addEventListener('click', ()=>{
   S.caja.push({ id:uid(), fecha:todayISO(), tipo:cajaTipo, concepto, monto:Math.abs(monto) });
   /* la caja alimenta el "cobrado" de los KPIs del portafolio: refrescar ambos */
   /* la caja mueve el portafolio y también la escalera de objetivos */
-  save(); closeOv(); renderVida(); renderTuPanel(); renderContrato(); renderMetas(); renderPosiciones();
+  save(); closeOv(); renderVida(); renderTuPanel(); renderMetas(); renderPosiciones();
   toast(cajaTipo === 'ingreso' ? 'Income logged' : 'Expense logged');
 });
 
@@ -25812,7 +25812,9 @@ function renderMetas(){
   const fa = PLAN_FASES[iActual];
   const dentro = Math.max(0, Math.min(1, (N - fa.de) / (fa.a - fa.de)));
 
-  $('#metaSub').innerHTML = `<b style="color:var(--txt)">PHASE ${fa.r}</b> · ${bi('needs','needs')} ${fmt$(Math.max(0, fa.a - N))}`;
+  /* el rótulo 'PHASE n · needs' se quitó de la vista con la cabecera */
+  const _ms = $('#metaSub');
+  if(_ms) _ms.innerHTML = `<b style="color:var(--txt)">PHASE ${fa.r}</b> · ${bi('needs','needs')} ${fmt$(Math.max(0, fa.a - N))}`;
   $('#patrimonioHoy').innerHTML =
     `<div class="pat-top">
        <div>
@@ -25988,7 +25990,7 @@ function renderMetas(){
   }).join('');
 
   $$('#metasMods [data-pt]').forEach(b => b.onclick = () => {
-    S.ui.planTab = b.dataset.pt; save(); renderContrato(); renderMetas();
+    S.ui.planTab = b.dataset.pt; save(); renderMetas();
   });
 
   $$('#metasMods [data-sal]').forEach(b => b.onclick = () => {
@@ -25996,7 +25998,7 @@ function renderMetas(){
     const k = b.dataset.sal;
     if(S.salidas[k]){ marcaBorrado('sal:' + k); delete S.salidas[k]; }
     else S.salidas[k] = todayISO();
-    save(); renderContrato(); renderMetas();
+    save(); renderMetas();
   });
 
 }
@@ -26035,7 +26037,7 @@ function renderVida(){
     if(!confirm(bi('¿Borrar este movimiento de caja?','Delete this cash movement?'))) return;
     marcaBorrado(b.dataset.del);
     S.caja = (S.caja||[]).filter(x => x.id !== b.dataset.del);
-    save(); renderVida(); renderContrato(); renderMetas();
+    save(); renderVida(); renderMetas();
   });
 }
 
@@ -26052,7 +26054,7 @@ function render(view){
   else if(view==='payout') renderPayout();
   else if(view==='posiciones') renderPosiciones();
   else if(view==='vida') renderVida();
-  else if(view==='plan'){ renderTuPanel(); renderContrato(); renderMetas(); }
+  else if(view==='plan'){ renderTuPanel(); renderMetas(); }
   updateBadges();
 }
 /* Los alias del hash los traducía show() pero NO se reescribía la URL, así que
