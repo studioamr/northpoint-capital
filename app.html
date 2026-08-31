@@ -11315,7 +11315,13 @@ function bossPintaMapa(){
       c.lineTo(W+40, yAbajo + 80);
       c.closePath(); c.clip();
       c.translate(0, yArriba);
-      try{ zenDibujaEscena(c, W, alto, E, t + i*1700, window._bmPets[i], beltDe(i)); }catch(e){}
+      /* LA ESCENA SE PINTA MÁS ALTA QUE SU RECORTE (André, 31-ago-2026):
+         el recorte del tramo baja 80 px MÁS de lo que medía la escena, así que
+         esos 80 px quedaban vacíos y por el hueco se veía el cielo del tramo de
+         abajo — de ahí que el pasto, el bambú y los montes salieran cortados en
+         seco. Pintándola 120 px más alta, el suelo llega hasta el final del
+         recorte y el corte queda dentro de la tierra, donde no se nota. */
+      try{ zenDibujaEscena(c, W, alto + 120, E, t + i*1700, window._bmPets[i], beltDe(i)); }catch(e){}
       c.restore();
     }
     /* una bruma sobre cada unión, para que el corte entre escenas desaparezca */
@@ -23080,6 +23086,7 @@ tDia = not na(time("", sesDia, tz))
 [netA, rngAh, rngAl, opA] = f_move(tA)
 [netL, rngLh, rngLl, opL] = f_move(tL)
 [netN, rngNh, rngNl, opN] = f_move(tNY)
+[netO, rngOh, rngOl, opO] = f_move(tO)
 [netD, rngDh, rngDl, opD] = f_move(tDia)
 
 // ── ¿EL NÚMERO ES DE HOY? (André, 30-ago-2026) ────────────────
@@ -23092,11 +23099,15 @@ tDia = not na(time("", sesDia, tz))
 // número viejo.
 var bool aHoy  = false
 var bool lHoy  = false
+var bool oHoy  = false
 var bool nyHoy = false
 if tA and not tA[1]
     aHoy  := true
     lHoy  := false
+    oHoy  := false
     nyHoy := false
+if tO and not tO[1]
+    oHoy := true
 if tL and not tL[1]
     lHoy := true
 if tNY and not tNY[1]
@@ -23219,7 +23230,7 @@ if array.size(agLin) > 0
             if m >= 0 and mdBarra >= m and nz(mdBarra[1], 1441) < m
                 alert("NP A+ ⏰ " + ln, alert.freq_once_per_bar)
 
-var table panel = table.new(posPanel == "Arriba centro" ? position.top_center : posPanel == "Arriba izquierda" ? position.top_left : posPanel == "Abajo derecha" ? position.bottom_right : posPanel == "Abajo centro" ? position.bottom_center : posPanel == "Abajo izquierda" ? position.bottom_left : position.top_right, 5, 13, chart.bg_color, chart.fg_color, 2, chart.fg_color, 1)
+var table panel = table.new(posPanel == "Arriba centro" ? position.top_center : posPanel == "Arriba izquierda" ? position.top_left : posPanel == "Abajo derecha" ? position.bottom_right : posPanel == "Abajo centro" ? position.bottom_center : posPanel == "Abajo izquierda" ? position.bottom_left : position.top_right, 5, 14, chart.bg_color, chart.fg_color, 2, chart.fg_color, 1)
 tamTxt = tamPanel == "Diminuto" ? size.tiny : tamPanel == "Normal" ? size.normal : tamPanel == "Grande" ? size.large : size.small
 
 if verPanel and barstate.islast
@@ -23485,11 +23496,25 @@ if verPanel and barstate.islast
     table.cell(panel, 2, 11, flN, text_color = cNetN, text_size = tamTxt, tooltip = tipN)
     table.cell(panel, 3, 11, tkN1c, text_color = chart.fg_color, text_size = tamTxt, tooltip = tipN)
     table.cell(panel, 4, 11, tkN2, text_color = cNetN, text_size = tamTxt, tooltip = tipN)
-    table.cell(panel, 0, 12, "TOTAL", text_color = chart.fg_color, text_size = tamTxt)
-    table.cell(panel, 1, 12, tkD1, text_color = not dibujable ? color.gray : chart.fg_color, text_size = tamTxt, tooltip = tipD)
-    table.cell(panel, 2, 12, flD, text_color = cNetD, text_size = tamTxt, tooltip = tipD)
-    table.cell(panel, 3, 12, tkD1c, text_color = chart.fg_color, text_size = tamTxt, tooltip = tipD)
-    table.cell(panel, 4, 12, tkD2, text_color = cNetD, text_size = tamTxt, tooltip = tipD)
+    // el ORB en la misma línea de las sesiones, con LO QUE MIDIÓ:
+    // el rango es el número que de verdad se usa del ORB
+    bool hayO = (tO or oHoy) and not na(netO)
+    string tkO1 = not dibujable ? tfAviso : hayO ? f_tkAbre(opO, netO) : "espera las 9:30"
+    string flO  = not dibujable or not hayO ? "" : f_tkFlecha(netO)
+    string tkO1c = not dibujable or not hayO ? "" : f_tkCierra(opO, netO)
+    string tkO2 = not dibujable or not hayO or na(rngOh) or na(rngOl) ? "" : str.tostring(rngOh - rngOl, "#.##") + " pts"
+    color cNetO = dibujable and hayO ? f_colPts(netO) : color.gray
+    string tipO = dibujable and hayO ? "El ORB midió " + str.tostring(rngOh - rngOl, "#.##") + " pts · ORH " + str.tostring(rngOh, format.mintick) + " · ORL " + str.tostring(rngOl, format.mintick) + " · neto " + f_fmtPts(netO) : ""
+    table.cell(panel, 0, 12, txtO, text_color = colO, text_size = tamTxt)
+    table.cell(panel, 1, 12, tkO1, text_color = not dibujable ? color.gray : chart.fg_color, text_size = tamTxt, tooltip = tipO)
+    table.cell(panel, 2, 12, flO, text_color = cNetO, text_size = tamTxt, tooltip = tipO)
+    table.cell(panel, 3, 12, tkO1c, text_color = chart.fg_color, text_size = tamTxt, tooltip = tipO)
+    table.cell(panel, 4, 12, tkO2, text_color = dibujable and hayO ? colO : color.gray, text_size = tamTxt, tooltip = tipO)
+    table.cell(panel, 0, 13, "TOTAL", text_color = chart.fg_color, text_size = tamTxt)
+    table.cell(panel, 1, 13, tkD1, text_color = not dibujable ? color.gray : chart.fg_color, text_size = tamTxt, tooltip = tipD)
+    table.cell(panel, 2, 13, flD, text_color = cNetD, text_size = tamTxt, tooltip = tipD)
+    table.cell(panel, 3, 13, tkD1c, text_color = chart.fg_color, text_size = tamTxt, tooltip = tipD)
+    table.cell(panel, 4, 13, tkD2, text_color = cNetD, text_size = tamTxt, tooltip = tipD)
     // filas de texto largo → columnas 1-4 fusionadas; en las filas de
     // sesión cada pieza tiene su celda: abrió · → · cerró · puntos
     // (se hace UNA sola vez)
