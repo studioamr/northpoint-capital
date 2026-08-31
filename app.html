@@ -1801,6 +1801,26 @@ button.st-chip:hover{border-color:rgba(255,255,255,.45)}
 .ars-hero.madera .ars-hero-sw{filter:none}
 .ars-hero-p{margin:8px 0 0;font-size:11.5px;line-height:1.55;color:rgba(255,255,255,.55);
   max-width:46ch}
+.c30-prot{margin-top:10px;padding:9px 12px;border:1px solid rgba(233,180,70,.24);
+  border-radius:10px;background:rgba(233,180,70,.06)}
+.c30-prot span{font-size:11.5px;letter-spacing:.02em;color:#e9b446}
+/* ── TU PANEL · las cuentas reales al frente del plan ── */
+.tp-filas{display:flex;flex-direction:column;gap:8px;margin-top:4px}
+.tp-fila{display:grid;grid-template-columns:1.6fr repeat(3,1fr);gap:14px;align-items:center;
+  padding:12px 14px;border:1px solid var(--line-soft);border-radius:12px;background:var(--w02)}
+.tp-fila.apretada{border-color:rgba(255,106,94,.34)}
+.tp-id b{display:block;font-family:var(--mono);font-size:12px;font-weight:600;letter-spacing:.02em}
+.tp-id span{display:block;font-family:var(--mono);font-size:9.5px;color:var(--faint);margin-top:3px;
+  letter-spacing:.08em;text-transform:uppercase}
+.tp-n i{display:block;font-family:var(--mono);font-size:8px;letter-spacing:.16em;color:var(--faint);
+  font-style:normal;margin-bottom:4px}
+.tp-n b{font-family:var(--mono);font-size:14px;font-weight:600;font-variant-numeric:tabular-nums}
+.tp-n b.up{color:var(--up)} .tp-n b.down{color:var(--down)} .tp-n b.mal{color:var(--down)}
+.tp-n em{display:block;font-family:var(--mono);font-size:9.5px;font-style:normal;color:var(--faint);margin-top:3px}
+@media(max-width:760px){
+  .tp-fila{grid-template-columns:1fr 1fr;row-gap:12px}
+  .tp-id{grid-column:1/-1}
+}
 /* ── LOS NUEVE ── pantalla negra, KURO arriba, 3×3 de ninjas y 3×3 de espadas.
    Cuelga del body: dentro de la columna de contenido su z-index quedaba
    encerrado y el menú se le montaba encima. */
@@ -4874,6 +4894,7 @@ stop[stop-color="#9BC0DC"]{stop-color:var(--txt)}
           <span class="micro" data-i18n="vd.plan">The plan · from $0 to the house</span>
           <span class="micro" id="metaSub" style="margin-left:auto;color:var(--faint)"></span>
         </div>
+        <div id="tuPanel" class="mt"></div>
         <div id="contrato30" class="mt"></div>
         <div class="panel pat mt" id="patrimonioHoy"></div>
         <div id="metasMods" class="mt"></div>
@@ -6812,7 +6833,13 @@ function saludDe(a){
      propia suma y la de aquí ignoraba el reinicio de la evaluación: la misma
      cuenta aparecía con $50,500 en un lado y $47,500 en otro. */
   const cc = carreraCuenta(a);
-  let bal = cc.balance, pico = a.start;
+  /* EL PICO INCLUYE EL BALANCE INICIAL (André, 31-ago-2026): arrancaba en
+     a.start —el balance del día que la registraste— y para una cuenta que
+     viene EN DRAWDOWN eso mueve la línea hacia abajo con ella. Sus dos evals,
+     dadas de alta a \$48,870.50 de un tamaño de \$50,000, salían con \$2,000 de
+     margen cuando les quedaban \$870: la cuenta YA ESTUVO en 50k, y un trailing
+     no se olvida de eso. El pico es el máximo entre lo que traías y el tamaño. */
+  let bal = cc.balance, pico = Math.max(a.start || 0, a.size || 0);
   /* el pico también se mide en la etapa que corresponde: ya fondeada, desde el
      reinicio; en evaluación, sobre el acumulado */
   let corrido = cc.pasoEval ? a.start : a.start;
@@ -6820,7 +6847,7 @@ function saludDe(a){
     if(cc.pasoEval && cc.mEval && d <= cc.mEval) return;
     corrido += porDia[d]; pico = Math.max(pico, corrido);
   });
-  pico = Math.max(pico, a.start);
+  pico = Math.max(pico, a.start || 0, a.size || 0);
   const hoy = todayISO();
   const base = { balance:bal, pico, dias:dias.length, hoy:porDia[hoy]||0, reglas:R };
   /* Sin drawdown escrito no hay línea que dibujar, y dibujar una de todos
@@ -7599,7 +7626,7 @@ function refrescarSeleccion(){
   else if(v === 'agentes') renderAgentes();
   else if(v === 'trades') renderTrades();
   else if(v === 'vida') renderVida();
-  else if(v === 'plan'){ renderContrato(); renderMetas(); }
+  else if(v === 'plan'){ renderTuPanel(); renderContrato(); renderMetas(); }
   else if(v === 'posiciones') renderPosiciones();
   else { renderPicker($('#pickMesa')); renderPicker($('#pickJournal')); }
 }
@@ -7908,8 +7935,14 @@ const CAMINO_MITAD = CAMINO_TOTAL / 2;
 function carreraCuenta(a){
   const yaFondeada = !!a.fase && a.fase !== 'eval';
   const tam = (a.size > 0) ? a.size : (a.start || 0);
-  /* lo que ya traías ganado al registrarla: Balance now − tamaño */
-  const previo = Math.max(0, (a.start || 0) - tam);
+  /* Lo que traías al registrarla: Balance now − tamaño.
+     PUEDE SER NEGATIVO (André, 31-ago-2026). Estaba con Math.max(0, …), así que
+     una cuenta dada de alta EN DRAWDOWN —sus dos evals de FundedNext, a
+     \$48,870.50 y \$48,960.40 de un tamaño de \$50,000— aparecía en \$50,000
+     limpios, como si no debiera nada. El terminal le decía que tenía \$2,000 de
+     margen cuando le quedaban \$870. Ese redondeo hacia el lado cómodo es
+     exactamente el que revienta una cuenta. */
+  const previo = (a.start || 0) - tam;
   const porDia = {};
   const hoyISO = todayISO();
   S.trades.forEach(t => { if(t.date >= a.desde && t.date <= hoyISO && (t.accts||[]).includes(a.id))
@@ -16660,7 +16693,7 @@ $('#cjSave').addEventListener('click', ()=>{
   S.caja.push({ id:uid(), fecha:todayISO(), tipo:cajaTipo, concepto, monto:Math.abs(monto) });
   /* la caja alimenta el "cobrado" de los KPIs del portafolio: refrescar ambos */
   /* la caja mueve el portafolio y también la escalera de objetivos */
-  save(); closeOv(); renderVida(); renderContrato(); renderMetas(); renderPosiciones();
+  save(); closeOv(); renderVida(); renderTuPanel(); renderContrato(); renderMetas(); renderPosiciones();
   toast(cajaTipo === 'ingreso' ? 'Income logged' : 'Expense logged');
 });
 
@@ -24712,6 +24745,35 @@ if barstate.islast
                 // siempre va del otro lado de esto, nunca adentro
                 obWT := array.get(kH, obIdx)
                 obWB := array.get(kL, obIdx)
+                // ── EL ORDER BLOCK VA DENTRO DE LA ESTRUCTURA ──────
+                // (André, 31-ago-2026) El rango sale de los swings de
+                // una ventana; el Order Block se busca hacia atrás y
+                // puede quedar de una vela ANTERIOR a esa ventana, con
+                // su mecha por debajo del LOW. Ahí el dibujo mentía: el
+                // bloque que originó el movimiento colgaba fuera de su
+                // propio rango. Si sobresale, el rango se estira hasta
+                // taparlo —y con él se recalculan la dirección y los
+                // Fibonacci, que se miden sobre ese mismo tramo.
+                if not na(obWB) and obWB < rgL
+                    rgL := obWB
+                    rgLI := obIdx
+                    if not na(rgLLn)
+                        rgLLn.set_xy1(array.get(kT, obIdx), rgL)
+                        rgLLn.set_xy2(tFin, rgL)
+                    if not na(rgLLb)
+                        rgLLb.set_y(rgL)
+                if not na(obWT) and obWT > rgH
+                    rgH := obWT
+                    rgHI := obIdx
+                    if not na(rgHLn)
+                        rgHLn.set_xy1(array.get(kT, obIdx), rgH)
+                        rgHLn.set_xy2(tFin, rgH)
+                    if not na(rgHLb)
+                        rgHLb.set_y(rgH)
+                alto := rgH - rgL
+                bajista := rgLI > rgHI
+                pFin := bajista ? rgL : rgH
+                pIni := bajista ? rgH : rgL
                 if verOB or (verPlan and baseEnt == "Order Block")
                     color obCol = obLong ? colObUp : colObDn
                     int obIni = array.get(kT, obIdx)
@@ -25593,17 +25655,27 @@ function cartillaFase(f, i){
    que se ve en The plan: qué día es hoy, en qué fase estás y qué toca. */
 const CONTRATO = {
   de: '2026-08-31', a: '2026-09-30', payoutDia: '2026-09-21',
+  /* LAS ESPECIFICACIONES SALEN DEL PANEL NP A+ del gráfico (André, 31-ago-2026).
+     Estaban desalineadas con él y son la misma jornada: el terminal decía
+     «4 mini · 1:2 · objetivo +$1,000» en el examen y «2 mini · 1:1 · +$500» en
+     el colchón; el panel dice DOS MINIS y «1:1 a 1:2 · target $500 a $1000» en
+     las dos, que es lo que de verdad operas. Si el panel y el terminal dicen
+     cosas distintas sobre el mismo día, uno de los dos te va a hacer romper una
+     regla — y el que tienes enfrente al operar es el panel. */
   fases: [
     { de:'2026-08-31', a:'2026-09-04', k:'EVAL',
-      t:['EXAMEN','EVALUATION'], spec:'4 mini · 1 trade · 1:2 · riesgo $500 · objetivo +$1,000',
+      t:['EXAMEN','EVALUATION'], spec:'2 minis · 1 trade · 1:1 a 1:2 · riesgo $500 · target $500 a $1,000',
       meta:['pasar: 50k → 53k','pass: 50k → 53k'] },
     { de:'2026-09-07', a:'2026-09-18', k:'BUFF',
-      t:['COLCHÓN','BUFFER'], spec:'2 mini · 1 trade · 1:1 · riesgo $500 · objetivo +$500',
+      t:['COLCHÓN','BUFFER'], spec:'2 minis · 1 trade · 1:1 a 1:2 · riesgo $500 · target $500 a $1,000',
       meta:['+$500 al día: 50k → 52.5k','+$500 a day: 50k → 52.5k'] },
     { de:'2026-09-21', a:'2026-09-30', k:'PAYOUT',
-      t:['PAYOUTS DIARIOS','DAILY PAYOUTS'], spec:'1 mini · 1 trade · +$250 al día',
+      t:['PAYOUTS DIARIOS','DAILY PAYOUTS'], spec:'1 mini · 1 trade · 1:1 a 1:2 · riesgo $250 · cobro diario',
       meta:['cobrar todos los días','collect every day'] },
   ],
+  /* el protocolo, tal como lo dice el panel */
+  protocolo: ['Sin señal no hay trade · 1 posición al día · protege la cuenta',
+              'No signal, no trade · one position a day · protect the account'],
   rutina: [
     ['7:00', '9:00',  ['premarket','premarket']],
     ['7:30', '9:30',  ['apertura NY','NY open']],
@@ -25612,6 +25684,77 @@ const CONTRATO = {
   ],
   setups: 'A+ SETUPS · ORB + killzones + EMAs 14/50 + SMC · entry al break',
 };
+/* ══════════ TU PANEL ══════════ (André, 31-ago-2026)
+   El plan estaba escrito para UNA cuenta abstracta: un contrato de 30 días con
+   examen, colchón y payouts. Tu panel real son cinco cuentas de dos firmas y en
+   fases distintas — tres de Apex ya fondeadas y dos de FundedNext en
+   evaluación, las dos por debajo de su balance inicial.
+   Esto lee las cuentas que TIENES dadas de alta y dice, de cada una, dónde está
+   parada y qué le falta hoy. Si no coincide con tu tablero, el que manda es tu
+   tablero: aquí se corrige en Ajustes → Cuentas. */
+function renderTuPanel(){
+  const host = $('#tuPanel'); if(!host) return;
+  const ctas = mias(S.accounts || []).filter(a => a.estado === 'activa' && a.tipo !== 'sim');
+  if(!ctas.length){
+    host.innerHTML = `<div class="panel"><div class="micro" style="color:var(--faint)">
+      ${bi('Sin cuentas dadas de alta. El plan de abajo es el genérico.',
+           'No accounts registered. The plan below is the generic one.')}</div></div>`;
+    return;
+  }
+  const filas = ctas.map(a => {
+    const S2 = saludDe(a) || {};
+    const R  = reglasDe(a) || {};
+    const bal = S2.balance != null ? S2.balance : (a.start || 0);
+    const pnl = bal - (a.size || a.start || 0);
+    /* CUÁNTO LE QUEDA ANTES DE MORIR: del balance a la línea de drawdown. Es el
+       número que de verdad manda un día malo, y no salía en ningún lado. */
+    const margen = (S2.linea != null) ? (bal - S2.linea) : null;
+    const objetivo = R.target > 0 ? R.target : null;
+    const falta = objetivo != null ? Math.max(0, (a.size || a.start) + objetivo - bal) : null;
+    const fase = a.fase === 'eval' ? bi('evaluación','evaluation')
+               : a.fase === 'payout' ? bi('cobrando','collecting')
+               : bi('colchón','buffer');
+    return { a, bal, pnl, margen, falta, objetivo, fase };
+  });
+  const tot = filas.reduce((x,f)=>x+f.bal, 0);
+  const enRiesgo = filas.filter(f => f.margen != null && f.margen < 1200).length;
+  host.innerHTML = `
+    <div class="panel">
+      <div class="bd-t">${bi('TU PANEL','YOUR DESK')} · <b>${filas.length}</b> ${bi('cuentas','accounts')}
+        <span style="margin-left:auto;font-family:var(--mono);font-size:11px;color:var(--dim)">
+          ${fmt$(tot)} ${bi('en total','total')}</span></div>
+      <div class="tp-filas">
+        ${filas.map(f => `
+          <div class="tp-fila ${f.margen != null && f.margen < 1200 ? 'apretada' : ''}">
+            <div class="tp-id">
+              <b>${esc(f.a.alias)}</b>
+              <span>${esc(f.a.firma || '—')} · ${f.fase}</span>
+            </div>
+            <div class="tp-n">
+              <i>${bi('BALANCE','BALANCE')}</i>
+              <b class="${f.pnl>=0?'up':'down'}">${fmt$(f.bal)}</b>
+              <em>${fmt$(f.pnl, true)}</em>
+            </div>
+            <div class="tp-n">
+              <i>${bi('LE QUEDA','ROOM LEFT')}</i>
+              <b class="${f.margen != null && f.margen < 1200 ? 'mal' : ''}">${f.margen != null ? fmt$(f.margen) : '—'}</b>
+              <em>${bi('al drawdown','to drawdown')}</em>
+            </div>
+            <div class="tp-n">
+              <i>${f.a.fase === 'payout' ? bi('YA COBRA','COLLECTING') : bi('LE FALTA','TO TARGET')}</i>
+              <b>${f.a.fase === 'payout' ? '—' : (f.falta != null ? fmt$(f.falta) : '—')}</b>
+              <em>${f.objetivo != null && f.a.fase !== 'payout' ? bi('para pasar','to pass') : ''}</em>
+            </div>
+          </div>`).join('')}
+      </div>
+      ${enRiesgo ? `<p class="bd-roto" style="margin-top:12px">${bi(
+        enRiesgo + ' cuenta' + (enRiesgo>1?'s':'') + ' con menos de $1,200 de margen. Un día malo la' + (enRiesgo>1?'s':'') + ' saca.',
+        enRiesgo + ' account' + (enRiesgo>1?'s':'') + ' with less than $1,200 of room. One bad day takes ' + (enRiesgo>1?'them':'it') + ' out.')}</p>` : ''}
+      <p class="micro" style="color:var(--faint);margin-top:10px;line-height:1.55">${bi(
+        'Sale de las cuentas que tienes dadas de alta. Si no cuadra con tu tablero, manda tu tablero: corrígelo en Ajustes → Cuentas.',
+        'Built from the accounts you registered. If it does not match your dashboard, your dashboard wins: fix it in Settings → Accounts.')}</p>
+    </div>`;
+}
 function faseContrato(iso){
   if(iso < CONTRATO.de || iso > CONTRATO.a) return null;
   return CONTRATO.fases.find(f => iso >= f.de && iso <= f.a) || null;   // hueco = fin de semana
@@ -25655,6 +25798,9 @@ function renderContrato(){
                                 : bi('Contrato cumplido','Contract complete'))}</b></div>`}
     <div class="c30-rutina">${CONTRATO.rutina.map(r =>
       `<span><b class="mono">${r[0]}</b> MX · <b class="mono">${r[1]}</b> NY — ${loc(r[2])}</span>`).join('')}</div>
+    <!-- EL PROTOCOLO, tal como lo dice el panel del gráfico: es la línea que
+         te frena antes de entrar, y no estaba en el terminal. -->
+    <div class="c30-prot"><span class="mono">${esc(loc(CONTRATO.protocolo))}</span></div>
   </div>`;
 }
 function renderMetas(){
@@ -25906,7 +26052,7 @@ function render(view){
   else if(view==='payout') renderPayout();
   else if(view==='posiciones') renderPosiciones();
   else if(view==='vida') renderVida();
-  else if(view==='plan'){ renderContrato(); renderMetas(); }
+  else if(view==='plan'){ renderTuPanel(); renderContrato(); renderMetas(); }
   updateBadges();
 }
 /* Los alias del hash los traducía show() pero NO se reescribía la URL, así que
