@@ -24698,6 +24698,7 @@ indicator("NP ESTRUCTURA", "NP ESTRUCTURA", overlay = true, max_lines_count = 50
 // cada cosa desde aquí, sin ir a buscarla grupo por grupo. Lo que
 // apagues no pierde sus ajustes, solo deja de dibujarse.
 gV = "1 · Qué ver"
+inVerCanal  = input.bool(true, "Canal de regresión", group = gV, tooltip = "La recta que mejor le queda al precio de las últimas velas, con sus bandas. Se mide en su propia temporalidad —5m, 15m o 1h, la que elijas en el grupo 11— sin importar en cuál estés parado. No toca nada de la estructura: es una capa aparte para leer la inclinación y saber si el precio va estirado hacia un borde o cómodo por el centro.")
 inVerORB    = input.bool(true, "ORB · la killzone del OR (9:30-9:45)", group = gV, tooltip = "Aquí el ORB solo se calcula, no se pinta —de dibujarlo se encarga el script del día—, así que esto apaga su H/L por si prendes \\"Dibujar las killzones aquí\\" en el grupo 1.")
 inVerTit    = input.bool(true, "Título LONGS / SHORTS del rango", group = gV, tooltip = "El letrero grande que dice de qué lado se busca el trade, sacado de la dirección del rango: si el impulso fue BAJISTA dice SHORTS y se pone ARRIBA del HIGH; si fue ALCISTA dice LONGS y se pone ABAJO del LOW. Va en la misma letra gruesa de los demás nombres.")
 inVerInt    = input.bool(false, "Estructura INTERNA (el tramo de adentro)", group = gV, tooltip = "Dentro del rango grande el precio va armando tramos más chicos. Esto dibuja el de AHORA —su alto y su bajo, punteados— para que veas la estructura interna sin perder la de fondo. Su sensibilidad se ajusta en el grupo 8.")
@@ -24899,6 +24900,25 @@ escGrosorLn = input.int(1, "Grosor de la línea de la entrada", minval = 1, maxv
 escColP = input.color(#089981, "Premio", inline = "E3", group = g10, tooltip = "Los dos colores de la escalera. Vienen en el rojo y el verde de la herramienta Long/Short Position de TradingView a propósito: son las únicas cajas del script que NO siguen la paleta, porque lo que tienen que gritar es riesgo abajo, premio arriba. Si prefieres que se apaguen, súbeles la transparencia.")
 escTrans = input.int(80, "Transparencia de las cajas", minval = 40, maxval = 96, group = g10, tooltip = "Qué tan encimables son. 80 deja ver las velas y las killzones por debajo; bájala si quieres que las cajas manden.")
 
+// ── 11 · CANAL DE REGRESIÓN ────────────────────────────────────
+// (André, 31-ago-2026) La recta que mejor le queda al precio de las
+// últimas N velas, con sus bandas a cada lado. Dice tres cosas de un
+// vistazo: hacia dónde va la pendiente, qué tan lejos del centro anda
+// el precio ahora, y dónde están los bordes. Se mide en SU PROPIA
+// temporalidad —5m, 15m o 1h— sin importar en cuál estés parado, así
+// que el canal de 1h se ve igualito aunque trabajes en 1 minuto.
+g11 = "11 · Canal de regresión"
+canTF = input.string("15m", "Temporalidad del canal", options = ["5m", "15m", "1h"], group = g11, tooltip = "En qué velas se mide la recta. 5m para el canal del día, 15m para el de la sesión, 1h para el de la semana. No tiene que ser la misma en la que estés viendo el chart: el canal de 1h se dibuja igual aunque estés en 1 minuto.")
+canLen = input.int(100, "Cuántas velas mide", minval = 10, maxval = 1000, group = g11, tooltip = "Cuántas velas de ESA temporalidad entran en el cálculo. 100 velas de 15m son unos dos días y medio de mercado; 100 de 1h son casi un mes.")
+canDesv = input.float(2, "Ancho del canal (desviaciones)", minval = 0.1, maxval = 5, step = 0.1, group = g11, tooltip = "Qué tan lejos del centro van los bordes, medido en desviaciones del error de la recta —no de la volatilidad a secas—, que es lo correcto para un canal de regresión. Con 2, el precio pasa dentro del canal la gran mayoría del tiempo y tocar un borde SÍ significa algo.")
+canBanda1 = input.bool(true, "Banda interior", inline = "K1", group = g11)
+canDesv1 = input.float(1, "", minval = 0.1, maxval = 5, step = 0.1, inline = "K1", group = g11, tooltip = "Un segundo par de líneas más pegadas al centro, para leer el canal por dentro: entre el centro y esta banda es zona tranquila, de aquí al borde ya es estirón.")
+canExt = input.bool(true, "Proyectarlo a la derecha", group = g11, tooltip = "Las tres líneas siguen de largo hacia el futuro con la misma pendiente. Así ves a qué precio llegaría cada borde si el canal aguanta.")
+canRelleno = input.bool(true, "Rellenar el canal", group = g11)
+canLbl = input.bool(true, "Etiqueta con la pendiente", group = g11, tooltip = "Al final del canal: la temporalidad, hacia dónde apunta y cuántos puntos sube o baja de punta a punta. En el tooltip van los tres precios de ahorita.")
+canGrosor = input.int(1, "Grosor", minval = 1, maxval = 4, inline = "K2", group = g11)
+inColCanal = input.color(#1c4f82, "Color", inline = "K2", group = g11, tooltip = "Con la paleta puesta el canal toma el color de acento de esa paleta; en Personalizado manda este.")
+
 // ═══ PALETA: de 5 papeles salen TODOS los colores ══════════════
 // pAlza  → NY, FVG alcista, objetivos alcistas, señal ▲, cifras en verde
 // pBaja  → ASIA, FVG bajista, objetivos bajistas, señal ▼, cifras en rojo
@@ -24945,6 +24965,7 @@ verOB = inVerOB
 verFib = inVerFib
 verPlan = inVerPos
 verEsc = inVerEsc
+verCanal = inVerCanal
 // las killzones NO se dibujan aquí: se calculan calladas para que la
 // posición pueda apuntar a la liquidez que sigue sin tomarse
 verLblsKZ = verLbls and dibujarKZ
@@ -24977,6 +24998,7 @@ fvgDn = inFvgDn
 // FVG en azul vivo (lo accionable) y el AOI en el tono claro, casi
 // un lavado de fondo
 colAOI  = (palPers or inColAOI != #1c4f82) ? inColAOI  : pSuave
+colCanal = palPers ? inColCanal : pAcento
 colRg   = (palPers or inColRg != #0a2342) ? inColRg   : pBaja
 colObUp = inColObUp
 colObDn = inColObDn
@@ -26231,6 +26253,59 @@ if barstate.islast
     // el chart vacío, se dice en pantalla POR QUÉ
     if verPlan and not planOk
         planAviso := label.new(bar_index, close, "PLAN sin dibujar\\n" + planPorque, style = label.style_label_right, color = color.new(chart.bg_color, 15), textcolor = colEnt, size = size.small, tooltip = "El plan de trade está prendido, pero no hay con qué dibujarlo todavía · " + planPorque)
+
+
+// ═══ CANAL DE REGRESIÓN ════════════════════════════════════════
+// La recta de mínimos cuadrados de las últimas canLen velas de SU
+// temporalidad, con las bandas a canDesv desviaciones del ERROR de
+// la recta (no de la volatilidad pelona): se saca del stdev del
+// precio castigado por lo bien que la recta lo explica, que es lo
+// que hace de verdad un canal de regresión. Se redibuja completo en
+// la última vela, como todo lo demás de este script.
+tfCanal = canTF == "5m" ? "5" : canTF == "15m" ? "15" : "60"
+[cnY2, cnY1, cnSd, cnT0] = request.security(syminfo.tickerid, tfCanal, [ta.linreg(close, canLen, 0), ta.linreg(close, canLen, canLen - 1), ta.stdev(close, canLen) * math.sqrt(math.max(0, 1 - math.pow(nz(ta.correlation(close, bar_index, canLen)), 2))), time[canLen - 1]], lookahead = barmerge.lookahead_on)
+
+var line canC  = na
+var line canU  = na
+var line canD  = na
+var line canU1 = na
+var line canD1 = na
+var linefill canF1 = na
+var linefill canF2 = na
+var label canLb = na
+
+if barstate.islast
+    line.delete(canC)
+    line.delete(canU)
+    line.delete(canD)
+    line.delete(canU1)
+    line.delete(canD1)
+    linefill.delete(canF1)
+    linefill.delete(canF2)
+    label.delete(canLb)
+    if verCanal and not na(cnY1) and not na(cnY2) and not na(cnT0)
+        float sd  = nz(cnSd)
+        float aU  = cnY2 + sd * canDesv
+        float aD  = cnY2 - sd * canDesv
+        float bU  = cnY1 + sd * canDesv
+        float bD  = cnY1 - sd * canDesv
+        canEst = canExt ? extend.right : extend.none
+        canC := line.new(cnT0, cnY1, time, cnY2, xloc = xloc.bar_time, color = color.new(colCanal, 20), width = canGrosor, style = line.style_dashed, extend = canEst)
+        canU := line.new(cnT0, bU, time, aU, xloc = xloc.bar_time, color = color.new(colCanal, 35), width = canGrosor, extend = canEst)
+        canD := line.new(cnT0, bD, time, aD, xloc = xloc.bar_time, color = color.new(colCanal, 35), width = canGrosor, extend = canEst)
+        if canBanda1
+            canU1 := line.new(cnT0, cnY1 + sd * canDesv1, time, cnY2 + sd * canDesv1, xloc = xloc.bar_time, color = color.new(colCanal, 60), width = 1, style = line.style_dotted, extend = canEst)
+            canD1 := line.new(cnT0, cnY1 - sd * canDesv1, time, cnY2 - sd * canDesv1, xloc = xloc.bar_time, color = color.new(colCanal, 60), width = 1, style = line.style_dotted, extend = canEst)
+        if canRelleno
+            canF1 := linefill.new(canU, canC, color.new(colCanal, 93))
+            canF2 := linefill.new(canC, canD, color.new(colCanal, 93))
+        if canLbl
+            float pend = cnY2 - cnY1
+            // dónde anda el precio DENTRO del canal: 0 el borde de
+            // abajo, 100 el de arriba. Es la lectura de un vistazo
+            float ancho = math.max(aU - aD, syminfo.mintick)
+            float pos = math.min(115, math.max(-15, (close - aD) / ancho * 100))
+            canLb := label.new(time, cnY2, kzNegrita ? f_negrita("CANAL " + canTF + " " + (pend > 0 ? "↑" : pend < 0 ? "↓" : "→")) : "CANAL " + canTF + " " + (pend > 0 ? "↑" : pend < 0 ? "↓" : "→"), xloc = xloc.bar_time, style = label.style_label_left, color = #ffffff00, textcolor = color.new(colCanal, 10), size = tamLbl, tooltip = "Canal de regresión · " + canTF + " · " + str.tostring(canLen) + " velas\\nDe punta a punta " + (pend > 0 ? "sube " : pend < 0 ? "baja " : "va plano, ") + str.tostring(math.abs(pend), "#.##") + " pts\\n\\nBorde de arriba " + str.tostring(aU, format.mintick) + "\\nCentro " + str.tostring(cnY2, format.mintick) + "\\nBorde de abajo " + str.tostring(aD, format.mintick) + "\\n\\nEl precio va al " + str.tostring(pos, "#") + "% del canal (0 = borde de abajo, 100 = el de arriba).\\nEl ancho sale del error de la recta, no de la volatilidad pelona: mientras mejor explique la recta al precio, más flaco el canal.")
 `;
 const ALGO_SCRIPTS = [
   { id:'kzp-dia', archivo:'NP A+.pine', nombre:['NP A+','NP A+'], codigo: ALGO_PINE_KZP_DIA },
