@@ -197,8 +197,15 @@ hr.linea{border:none;border-top:1px solid var(--hair);margin:0}
 .modos{display:grid;grid-template-columns:repeat(2,1fr);gap:1px;background:var(--hair);
   border:1px solid var(--hair);border-radius:14px;overflow:hidden}
 @media(max-width:760px){.modos{grid-template-columns:1fr}}
-.modo{position:relative;background:var(--void);padding:26px 24px;overflow:hidden;
+.modo{position:relative;background:var(--void);padding:26px 24px 20px;overflow:hidden;
+  display:flex;flex-direction:column;
   transition:background .35s cubic-bezier(.2,.7,.2,1)}
+/* el séptimo cierra la rejilla: con siete tarjetas en dos columnas quedaba una
+   celda vacía al final y ese hueco se leía como un error de maquetado */
+.modo.ancho{grid-column:1/-1}
+.mo-vis{display:block;margin-top:auto;padding-top:18px;height:96px}
+.modo.ancho .mo-vis{height:112px}
+.mo-vis canvas{display:block;width:100%;height:100%}
 .modo:hover{background:rgba(237,239,242,.045)}
 /* la línea que barre el borde de arriba al pasar el cursor */
 .mo-linea{position:absolute;top:0;left:0;height:1px;width:100%;
@@ -1116,15 +1123,135 @@ var MESA = [
     ['EVENTOS',  'Un rival por killzone, ya puesto. La semana decide quién y cambia sola cada lunes. Ahí se paga doble.'],
     ['TORNEO',   'Uno a la semana. Viernes, ocho horas, dieciséis lugares. Entrada $5,000, bolsa $25,000. Uno se la lleva.']
   ];
+  var lienzos = [];
   MODOS.forEach(function(m, i){
     var d = document.createElement('div'); d.className = 'modo rev';
+    /* el séptimo cierra la rejilla: siete tarjetas en dos columnas dejaban una
+       celda vacía al final, y ese hueco se leía como un error de maquetado */
+    if(i === MODOS.length - 1) d.classList.add('ancho');
     d.style.transitionDelay = (i*80) + 'ms';
     d.innerHTML = '<span class="mo-n">' + String(i+1).padStart(2,'0') + '</span>' +
       '<span class="mo-t">' + m[0] + '</span>' +
       '<span class="mo-p">' + m[1] + '</span>' +
+      '<span class="mo-vis"><canvas></canvas></span>' +
       '<i class="mo-linea"></i>';
     host.appendChild(d);
+    lienzos.push({ cv: d.querySelector('canvas'), i: i, caja: d });
   });
+
+  /* ══ UN DIBUJO VIVO POR MODO ══ (André, 31-ago-2026)
+     Siete párrafos seguidos se leen como un contrato. Cada modo tiene ahora su
+     propia animación —las dos curvas del reto, el reloj de la killzone, la
+     tabla de la party, el cuadro del torneo— que dice en dos segundos lo que
+     el párrafo tarda en explicar. Van en canvas y no en GIF: pesan cero, se ven
+     nítidas en cualquier pantalla y se apagan solas cuando no están en cuadro. */
+  var UP = '#57C79B', DIM = 'rgba(237,239,242,.24)', TIN = 'rgba(237,239,242,.85)';
+  function pintaModo(c, W, H, i, t){
+    c.clearRect(0,0,W,H);
+    var M = 14, w = W - M*2, h = H - M*2, y0 = M, x0 = M;
+    var ciclo = (t % 7000) / 7000;
+    if(i === 0){                       /* RETOS · dos curvas compitiendo */
+      [[UP, 0, 1], [TIN, 1.7, 0.62]].forEach(function(q, k){
+        c.strokeStyle = q[0]; c.lineWidth = 2; c.lineJoin='round';
+        c.globalAlpha = k ? .55 : 1;
+        c.beginPath();
+        for(var p2=0; p2<=48; p2++){
+          var u = p2/48, av = Math.min(1, ciclo*1.35);
+          if(u > av) break;
+          var yy = y0 + h - (Math.sin(u*7 + q[1])*0.16 + u*q[2]*0.78 + 0.10)*h;
+          if(p2===0) c.moveTo(x0, yy); else c.lineTo(x0 + u*w, yy);
+        }
+        c.stroke(); c.globalAlpha = 1;
+      });
+    } else if(i === 1){                /* SESIÓN · el día y sus tres killzones */
+      var kz = [['ASIA',0,.34],['LONDRES',.34,.66],['NY',.66,1]];
+      var act = Math.floor(ciclo*3) % 3;
+      kz.forEach(function(z, k){
+        var a = x0 + z[1]*w, b = x0 + z[2]*w;
+        c.fillStyle = k === act ? 'rgba(87,199,155,.16)' : 'rgba(237,239,242,.05)';
+        c.fillRect(a, y0 + h*0.34, b-a-3, h*0.30);
+        c.fillStyle = k === act ? UP : DIM;
+        c.font = '600 8px "IBM Plex Mono", monospace'; c.textAlign='left';
+        c.fillText(z[0], a, y0 + h*0.24);
+        if(k === act){
+          var uu = (ciclo*3) % 1;
+          c.fillStyle = UP; c.fillRect(a, y0 + h*0.34, (b-a-3)*uu, h*0.30);
+          c.fillStyle = TIN; c.fillRect(a + (b-a-3)*uu - 1, y0 + h*0.22, 2, h*0.56);
+        }
+      });
+    } else if(i === 2){                /* SPRINT · una barra que se llena rápido */
+      var u2 = Math.min(1, ((t % 2600)/2600) * 1.25);
+      c.fillStyle = 'rgba(237,239,242,.06)'; c.fillRect(x0, y0+h*0.42, w, h*0.16);
+      c.fillStyle = UP; c.fillRect(x0, y0+h*0.42, w*u2, h*0.16);
+      c.fillStyle = TIN; c.fillRect(x0 + w*u2 - 1, y0+h*0.30, 2, h*0.40);
+      c.font = '600 8px "IBM Plex Mono", monospace'; c.textAlign='right';
+      c.fillStyle = DIM; c.fillText('1 h', x0+w, y0+h*0.86);
+    } else if(i === 3){                /* MARATÓN · varios días seguidos */
+      var n2 = 5, gap = 8, bw = (w - gap*(n2-1))/n2;
+      for(var d2=0; d2<n2; d2++){
+        var uu2 = Math.max(0, Math.min(1, ciclo*n2 - d2));
+        c.fillStyle = 'rgba(237,239,242,.06)';
+        c.fillRect(x0 + d2*(bw+gap), y0+h*0.30, bw, h*0.40);
+        c.fillStyle = d2 % 2 ? 'rgba(87,199,155,.55)' : UP;
+        c.fillRect(x0 + d2*(bw+gap), y0 + h*0.70 - h*0.40*uu2, bw, h*0.40*uu2);
+      }
+    } else if(i === 4){                /* PARTY · la tabla viva */
+      var filas = [0,1,2,3].map(function(k){
+        return { k:k, v: 0.35 + (Math.sin(t/900 + k*2.1)*0.5+0.5)*0.6 }; });
+      var orden = filas.slice().sort(function(a,b){ return b.v - a.v; });
+      orden.forEach(function(f, k){
+        var yy = y0 + k*(h/4), bh = h/4 - 7;
+        c.fillStyle = k === 0 ? UP : 'rgba(237,239,242,.20)';
+        c.fillRect(x0 + 16, yy, (w-16)*f.v, bh);
+        c.fillStyle = k === 0 ? UP : DIM;
+        c.font = '600 8px "IBM Plex Mono", monospace'; c.textAlign='left';
+        c.fillText(k === 0 ? '1' : String(k+1), x0, yy + bh*0.8);
+      });
+    } else if(i === 5){                /* EVENTOS · la semana rota el rival */
+      var dia = Math.floor(ciclo*7) % 7, r2 = Math.min(h,w)/2;
+      for(var k2=0; k2<7; k2++){
+        var cx2 = x0 + (k2+0.5)*(w/7), cy2 = y0 + h*0.46;
+        c.beginPath(); c.arc(cx2, cy2, k2 === dia ? 7 : 4, 0, 7);
+        c.fillStyle = k2 === dia ? UP : 'rgba(237,239,242,.16)'; c.fill();
+        if(k2 === 0){ c.font='600 8px "IBM Plex Mono", monospace'; c.textAlign='center';
+          c.fillStyle = DIM; c.fillText('LUN', cx2, y0 + h*0.92); }
+      }
+      c.strokeStyle = 'rgba(237,239,242,.10)'; c.lineWidth = 1;
+      c.beginPath(); c.moveTo(x0, y0+h*0.46); c.lineTo(x0+w, y0+h*0.46); c.stroke();
+    } else {                           /* TORNEO · el cuadro que se cierra */
+      var rondas = [8,4,2,1], enc = Math.floor(ciclo*4.2);
+      rondas.forEach(function(n3, r3){
+        var colx = x0 + r3*(w/4), bh2 = h/n3;
+        for(var q2=0; q2<n3; q2++){
+          var yy2 = y0 + q2*bh2 + bh2*0.5;
+          c.fillStyle = r3 <= enc ? (r3===3 ? UP : 'rgba(87,199,155,.5)') : 'rgba(237,239,242,.13)';
+          c.fillRect(colx, yy2 - 2, w/4 - 14, 4);
+          if(r3 < 3 && r3 <= enc){
+            c.strokeStyle = 'rgba(87,199,155,.30)'; c.lineWidth = 1;
+            c.beginPath(); c.moveTo(colx + w/4 - 14, yy2);
+            c.lineTo(colx + w/4 - 8, yy2);
+            c.lineTo(colx + w/4 - 8, y0 + (Math.floor(q2/2))*bh2*2 + bh2);
+            c.stroke();
+          }
+        }
+      });
+    }
+  }
+  var raf2 = 0;
+  function loop2(t){
+    lienzos.forEach(function(L){
+      var r = L.caja.getBoundingClientRect();
+      if(r.bottom < -80 || r.top > (innerHeight||800) + 80) return;
+      var cv = L.cv, D = Math.min(2, devicePixelRatio||1);
+      var W = cv.offsetWidth, H = cv.offsetHeight;
+      if(!W || !H) return;
+      if(cv.width !== W*D){ cv.width = W*D; cv.height = H*D; }
+      var c = cv.getContext('2d'); c.setTransform(D,0,0,D,0,0);
+      pintaModo(c, W, H, L.i, t||0);
+    });
+    raf2 = requestAnimationFrame(loop2);
+  }
+  if(!REDUCE) loop2(0); else loop2(3000);
 })();
 
 /* ══════════════ LOS NUEVE RETOS ══════════════ */
