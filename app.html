@@ -24297,14 +24297,16 @@ if verPanel and barstate.islast
     table.cell(panel, 4, 11, tkN2, text_color = cNetN, text_size = tamTxt, tooltip = tipN)
     // el ORB cuenta DESDE EL BREAK: el nivel que rompió, hacia dónde
     // y cuántos puntos lleva desde ahí. Antes de romper no hay número
-    float brPts = brLado == 0 ? na : (close - brNiv) * brLado
+    // el contador arranca en 0 en el nivel roto y solo sube: si el
+    // precio se regresa adentro del ORB marca 0, nunca en negativo
+    float brPts = brLado == 0 ? na : math.max(0, (close - brNiv) * brLado)
     // sin break no hay nada que decir: la fila entera se queda en
     // blanco hasta que el precio se sale del ORB
     string tkO1 = not dibujable or brLado == 0 ? "" : (brLado == 1 ? "ORH " : "ORL ") + str.tostring(brNiv, format.mintick)
     string flO  = not dibujable or brLado == 0 ? "" : brLado == 1 ? "↑" : "↓"
     string tkO1c = not dibujable or brLado == 0 ? "" : str.tostring(close, format.mintick)
     string tkO2 = not dibujable or brLado == 0 ? "" : f_fmtPts(brPts)
-    color cNetO = not dibujable or brLado == 0 ? color.gray : brPts >= 0 ? cAlza : cBaja
+    color cNetO = not dibujable or brLado == 0 ? color.gray : brPts > 0 ? cAlza : pSuave
     string tipO = brLado == 0 ? "" : "Rompió el " + (brLado == 1 ? "ORH" : "ORL") + " en " + str.tostring(brNiv, format.mintick) + " · lleva " + f_fmtPts(brPts) + " · lo más lejos que llegó: " + str.tostring(brMax, "#.##") + " pts · el ORB midió " + str.tostring(orh - orl, "#.##") + " pts"
     table.cell(panel, 0, 12, brLado == 0 ? "" : txtO, text_color = colO, text_size = tamTxt)
     table.cell(panel, 1, 12, tkO1, text_color = not dibujable ? color.gray : chart.fg_color, text_size = tamTxt, tooltip = tipO)
