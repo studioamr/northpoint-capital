@@ -23396,6 +23396,133 @@ if verPanel and barstate.islast
             table.merge_cells(panel, 1, 8, 4, 8)
         // la celda de NY en la fila de liquidez ocupa las columnas 3-4
         unido := true
+
+// ═══ 14 · PANEL TÉCNICO ════════════════════════════════════════
+// No es una lista de indicadores por lucirlos: es lo que TU plan
+// necesita saber antes de apretar el botón. Arriba, los números
+// traducidos a tu operativa —cuántos puntos vale tu stop de $500 con
+// tus contratos, dónde caen el 1:1 y el 1:2, cuánta gasolina le queda
+// al día—. Abajo, la estadística de TU setup medida en este mismo
+// chart: de todos los días cargados, cuántos rompieron el ORB y de
+// esos cuántos llegaron a 1:1 y a 1:2 con el stop en el ORM.
+gT = "14 · Panel técnico"
+verTec  = input.bool(true, "Panel técnico", group = gT, tooltip = "Tabla aparte con dos mitades: TU PLAN (stop y objetivos en puntos, gasolina del día, contexto) y TU SETUP (qué tan seguido el ORB rompe y paga, contado sobre las velas que tengas cargadas).")
+posTec  = input.string("Abajo derecha", "Posición", options = ["Abajo derecha", "Abajo centro", "Abajo izquierda", "Arriba derecha", "Arriba centro", "Arriba izquierda"], inline = "T0", group = gT)
+tamTec  = input.string("Pequeño", "", options = ["Diminuto", "Pequeño", "Normal"], inline = "T0", group = gT)
+contratos = input.int(2, "Contratos (minis)", minval = 1, group = gT, tooltip = "Con esto y el riesgo del grupo 4 se calcula cuántos PUNTOS vale tu stop. Con $500, 2 minis de MNQ ($2 el punto) son 125 puntos.")
+lenRSI  = input.int(14, "RSI", minval = 2, inline = "TL1", group = gT)
+lenADX  = input.int(14, "ADX", minval = 2, inline = "TL1", group = gT)
+lenATR  = input.int(14, "ATR", minval = 2, inline = "TL1", group = gT)
+lenVol  = input.int(20, "Volumen", minval = 2, inline = "TL2", group = gT)
+diasADR = input.int(14, "Días del ADR", minval = 2, maxval = 60, inline = "TL2", group = gT)
+
+// ── cálculos, todos a nivel global (Pine lo exige) ─────────────
+float rsiV = ta.rsi(close, lenRSI)
+[diPlus, diMinus, adxV] = ta.dmi(lenADX, lenADX)
+float atrV = ta.atr(lenATR)
+float volProm = ta.sma(volume, lenVol)
+float vwapV = ta.vwap
+[dH, dL] = request.security(syminfo.tickerid, "D", [high, low], lookahead = barmerge.lookahead_on)
+float adrV = request.security(syminfo.tickerid, "D", ta.sma(high - low, diasADR)[1], lookahead = barmerge.lookahead_on)
+
+// ── ESTADÍSTICA DE TU SETUP ────────────────────────────────────
+// Se mide lo que tú haces: al cerrar el ORB se guardan sus niveles;
+// si el precio rompe con CIERRE durante NY, se sigue el trade con el
+// stop en el ORM y se anota si llegó a 1:1 y a 1:2. Si en la misma
+// vela caben stop y objetivo, gana el stop: mejor una estadística
+// pesimista que una que promete de más.
+var int   stDias   = 0
+var int   stBreak  = 0
+var int   st1R     = 0
+var int   st2R     = 0
+var float stOrbSum = 0.0
+var float eOrh = na
+var float eOrl = na
+var float eOrm = na
+var int   eDir = 0
+var bool  eGano1 = false
+var bool  eGano2 = false
+var bool  eMuerto = false
+
+if tO[1] and not tO and orh > orl
+    eOrh := orh
+    eOrl := orl
+    eOrm := math.avg(orh, orl)
+    eDir := 0
+    eGano1 := false
+    eGano2 := false
+    eMuerto := false
+    stDias += 1
+    stOrbSum += orh - orl
+
+if not na(eOrh) and tN and not tO
+    if eDir == 0
+        if close > eOrh
+            eDir := 1
+            stBreak += 1
+        else if close < eOrl
+            eDir := -1
+            stBreak += 1
+    else if not eMuerto
+        float rPts = eDir == 1 ? eOrh - eOrm : eOrm - eOrl
+        bool pegoStop = eDir == 1 ? low <= eOrm : high >= eOrm
+        if pegoStop
+            eMuerto := true
+        else if rPts > 0
+            float t1 = eDir == 1 ? eOrh + rPts : eOrl - rPts
+            float t2 = eDir == 1 ? eOrh + rPts * 2 : eOrl - rPts * 2
+            if not eGano1 and (eDir == 1 ? high >= t1 : low <= t1)
+                eGano1 := true
+                st1R += 1
+            if eGano1 and not eGano2 and (eDir == 1 ? high >= t2 : low <= t2)
+                eGano2 := true
+                st2R += 1
+
+var table tec = table.new(posTec == "Abajo centro" ? position.bottom_center : posTec == "Abajo izquierda" ? position.bottom_left : posTec == "Arriba derecha" ? position.top_right : posTec == "Arriba centro" ? position.top_center : posTec == "Arriba izquierda" ? position.top_left : position.bottom_right, 3, 12, chart.bg_color, chart.fg_color, 2, chart.fg_color, 1)
+tamT = tamTec == "Diminuto" ? size.tiny : tamTec == "Normal" ? size.normal : size.small
+
+f_filaT(int fi, string etq, string val, string lee, color c) =>
+    table.cell(tec, 0, fi, etq, text_color = color.gray, text_size = tamT, text_halign = text.align_left)
+    table.cell(tec, 1, fi, val, text_color = chart.fg_color, text_size = tamT, text_halign = text.align_right)
+    table.cell(tec, 2, fi, lee, text_color = c, text_size = tamT, text_halign = text.align_left)
+    0
+
+if verTec and barstate.islast
+    // ── TU PLAN, en puntos ────────────────────────────────────
+    float valPto = syminfo.pointvalue * contratos
+    float stopPts = valPto > 0 ? riesgoDia / valPto : na
+    f_filaT(0, "TU PLAN", timeframe.period, str.tostring(contratos) + " minis · $" + str.tostring(riesgoDia), chart.fg_color)
+    f_filaT(1, "Stop", na(stopPts) ? "—" : str.tostring(stopPts, "#.#") + " pts", "es tu −$" + str.tostring(riesgoDia), pBaja)
+    f_filaT(2, "Objetivos", na(stopPts) ? "—" : str.tostring(stopPts, "#.#") + " / " + str.tostring(stopPts * 2, "#.#") + " pts", "1:1 · 1:2", pAlza)
+
+    // gasolina del día: si ya hizo su rango, no le pidas un 1:2
+    float rangoHoy = na(dH) or na(dL) ? na : dH - dL
+    float pctADR = na(rangoHoy) or na(adrV) or adrV == 0 ? na : rangoHoy / adrV * 100
+    string adrTxt = na(pctADR) ? "—" : pctADR >= 100 ? "ya dio su rango" : pctADR >= 80 ? "casi todo" : pctADR >= 50 ? "va a la mitad" : "le queda camino"
+    color adrCol = na(pctADR) ? color.gray : pctADR >= 100 ? pBaja : pctADR >= 80 ? pSuave : pAlza
+    f_filaT(3, "Rango hoy", na(rangoHoy) ? "—" : str.tostring(rangoHoy, "#.#") + " pts", na(pctADR) ? "—" : str.tostring(pctADR, "#") + "% del ADR · " + adrTxt, adrCol)
+    f_filaT(4, "ATR " + str.tostring(lenATR), str.tostring(atrV, "#.##") + " pts", na(stopPts) ? "—" : (stopPts >= atrV * 1.5 ? "tu stop respira" : "tu stop va apretado"), na(stopPts) ? color.gray : stopPts >= atrV * 1.5 ? pAlza : pSuave)
+
+    // ── CONTEXTO ──────────────────────────────────────────────
+    string adxTxt = adxV >= 40 ? "tendencia fuerte" : adxV >= 25 ? "con tendencia" : adxV >= 20 ? "arrancando" : "rango · cuidado"
+    color adxCol = adxV >= 25 ? (diPlus > diMinus ? pAlza : pBaja) : pSuave
+    f_filaT(5, "ADX " + str.tostring(lenADX), str.tostring(adxV, "#.#"), adxTxt + (adxV >= 25 ? (diPlus > diMinus ? " ↑" : " ↓") : ""), adxCol)
+    string rsiTxt = rsiV >= 70 ? "sobrecompra" : rsiV <= 30 ? "sobreventa" : rsiV >= 55 ? "con fuerza" : rsiV <= 45 ? "con peso" : "neutro"
+    color rsiCol = rsiV >= 70 ? pBaja : rsiV <= 30 ? pAlza : rsiV >= 55 ? pAlza : rsiV <= 45 ? pBaja : color.gray
+    f_filaT(6, "RSI " + str.tostring(lenRSI), str.tostring(rsiV, "#.#"), rsiTxt, rsiCol)
+    float volRel = na(volProm) or volProm == 0 ? na : volume / volProm
+    string volTxt = na(volRel) ? "sin dato" : volRel >= 2 ? "muy alto" : volRel >= 1.3 ? "alto" : volRel <= 0.6 ? "flojo · no fuerces" : "normal"
+    f_filaT(7, "Volumen", na(volRel) ? "—" : str.tostring(volRel, "#.#") + "x", volTxt, na(volRel) ? color.gray : volRel >= 1.3 ? pAlza : volRel <= 0.6 ? pSuave : color.gray)
+    float dVwap = close - vwapV
+    f_filaT(8, "VWAP", str.tostring(vwapV, format.mintick), (dVwap >= 0 ? "+" : "") + str.tostring(dVwap, "#.#") + " pts · " + (dVwap >= 0 ? "compradores" : "vendedores"), dVwap >= 0 ? pAlza : pBaja)
+
+    // ── TU SETUP, medido aquí ─────────────────────────────────
+    f_filaT(9, "TU SETUP", str.tostring(stDias) + " días", stDias < 20 ? "pocos datos aún" : "medido en este chart", stDias < 20 ? pSuave : color.gray)
+    float pctBreak = stDias == 0 ? na : stBreak * 100.0 / stDias
+    f_filaT(10, "Rompe el ORB", na(pctBreak) ? "—" : str.tostring(pctBreak, "#") + "%", str.tostring(stBreak) + " de " + str.tostring(stDias) + " días · ORB " + (stDias == 0 ? "—" : str.tostring(stOrbSum / stDias, "#.#") + " pts"), color.gray)
+    float p1 = stBreak == 0 ? na : st1R * 100.0 / stBreak
+    float p2 = stBreak == 0 ? na : st2R * 100.0 / stBreak
+    f_filaT(11, "Paga 1:1 · 1:2", na(p1) ? "—" : str.tostring(p1, "#") + "% · " + str.tostring(p2, "#") + "%", na(p2) ? "—" : (p2 >= 50 ? "el 1:2 sale seguido" : p1 >= 50 ? "el 1:1 sí, el 1:2 no tanto" : "cuesta · sé selectivo"), na(p2) ? color.gray : p2 >= 50 ? pAlza : p1 >= 50 ? pSuave : pBaja)
  `;
 const ALGO_PINE_KZP_ESTRUCTURA = `// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
 // Idea de killzones con H/L derivada de "ICT Killzones & Pivots [TFO]" © tradeforopp.
