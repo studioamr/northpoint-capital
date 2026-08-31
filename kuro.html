@@ -738,6 +738,26 @@ function katana(c, W, H, col){
     c.fillStyle='rgba(190,208,238,.55)';
     c.beginPath(); c.arc(lx-lr*0.3,ly-lr*0.22,lr*0.20,0,7); c.fill();
     c.beginPath(); c.arc(lx+lr*0.28,ly+lr*0.18,lr*0.14,0,7); c.fill();
+    /* ══ LA ESTRELLA FUGAZ ══ una cada catorce segundos, con su cola. Si
+       cruzaran todo el rato no sería un momento: hay que alcanzarla. */
+    (function(){
+      var ci = 14000, k = Math.floor(now/ci), u = (now % ci)/ci;
+      if(u > 0.16) return;
+      var v = u/0.16, r0 = rnd(k*3.7), r1 = rnd(k*8.1);
+      var x0 = W*(0.10 + r0*0.55), y0 = H*(0.04 + r1*0.20);
+      var lg = W*(0.16 + rnd(k*5.5)*0.16), ca = Math.PI*0.22 + rnd(k*2.2)*0.16;
+      var x1 = x0 + Math.cos(ca)*lg*v, y1 = y0 + Math.sin(ca)*lg*v;
+      var fade = Math.sin(v*Math.PI);
+      var gf = c.createLinearGradient(x1 - Math.cos(ca)*lg*0.34, y1 - Math.sin(ca)*lg*0.34, x1, y1);
+      gf.addColorStop(0,'rgba(226,240,255,0)');
+      gf.addColorStop(1,'rgba(238,248,255,'+(0.85*fade)+')');
+      c.strokeStyle = gf; c.lineWidth = 1.8; c.lineCap='round';
+      c.beginPath(); c.moveTo(x1 - Math.cos(ca)*lg*0.34, y1 - Math.sin(ca)*lg*0.34);
+      c.lineTo(x1, y1); c.stroke();
+      var gh = c.createRadialGradient(x1,y1,0,x1,y1,9);
+      gh.addColorStop(0,'rgba(255,255,255,'+(0.9*fade)+')'); gh.addColorStop(1,'rgba(255,255,255,0)');
+      c.fillStyle = gh; c.beginPath(); c.arc(x1,y1,9,0,7); c.fill();
+    })();
     /* nubes altas cruzando el cielo */
     for(var na=0;na<5;na++){
       var da = ((now/(110000 + rnd(na*2.2)*70000)) + rnd(na*6.1)) % 1.4 - 0.2;
@@ -996,6 +1016,30 @@ function katana(c, W, H, col){
           { espalda:true, cuerpo:'#05070C', casco:'#05070C',
             filo:'#2B3444', mango:'#05070C', ojos:'rgba(214,228,255,.92)' });
 
+    /* ══ LA TORMENTA DE NIEVE ══
+       Va DELANTE de todo, y a propósito son partículas y no una capa de color:
+       un velo translúcido sobre la roca sólo la aclara —y eso se lee como
+       vidrio, que es justo lo que costó quitar—. Un copo que se mueve sí dice
+       que hay algo entre tú y la montaña. */
+    var viento = Math.sin(now/5200)*0.45 + 0.85;
+    for(var nv=0; nv<220; nv++){
+      var prof2 = rnd(nv*3.3);                       /* 0 lejos, 1 cerca */
+      var vel2 = 0.16 + prof2*0.62;
+      var yy2 = ((rnd(nv*1.7)*H*1.3 + now*vel2*0.09) % (H*1.3)) - H*0.15;
+      var xx2 = ((rnd(nv*5.5)*W*1.3 + now*vel2*viento*0.052 + Math.sin(now/1400 + nv)*22*prof2)
+                 % (W*1.3)) - W*0.15;
+      c.fillStyle = 'rgba(236,244,255,'+(0.16 + prof2*0.62)+')';
+      c.beginPath(); c.arc(xx2, yy2, 0.5 + prof2*2.0, 0, 7); c.fill();
+    }
+    /* la ráfaga cercana: unas pocas grandes y borrosas, cruzando rápido */
+    for(var rg=0; rg<14; rg++){
+      var u3 = ((now/(2600 + rnd(rg*4.4)*2400)) + rnd(rg*8.8)) % 1;
+      c.save(); c.globalAlpha = 0.16*Math.sin(u3*Math.PI);
+      c.fillStyle = '#EFF5FF';
+      c.beginPath();
+      c.ellipse(u3*W*1.3 - W*0.15, rnd(rg*2.2)*H, 9 + rnd(rg)*13, 2.2, -0.22, 0, 7);
+      c.fill(); c.restore();
+    }
     /* viñeta suave: el cielo no se apaga, sólo se recoge en los bordes */
     var vg = c.createRadialGradient(W/2,H*0.46,H*0.34,W/2,H*0.46,H*1.02);
     vg.addColorStop(0,'rgba(5,10,24,0)'); vg.addColorStop(1,'rgba(5,10,24,.62)');
