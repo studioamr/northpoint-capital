@@ -1749,34 +1749,17 @@ button.st-chip:hover{border-color:rgba(255,255,255,.45)}
 @media (prefers-reduced-motion:reduce){ .bm-panel{transition:none} }
 /* la ficha de un jefe cerrado: silueta y nada más */
 .bm-ficha.bloqueada{text-align:center;padding:26px 18px 24px}
-.bm-silueta{width:96px;height:96px;margin:0 auto 14px;border-radius:50%;display:flex;
-  align-items:center;justify-content:center;border:2px dashed rgba(255,255,255,.22);
-  background:rgba(255,255,255,.04)}
-.bm-silueta span{font-size:38px;font-weight:900;color:rgba(255,255,255,.28)}
-.bm-bloq{font-size:14px;font-weight:700;color:rgba(255,255,255,.8);margin:0}
-.bm-bloq-2{font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;
-  color:rgba(255,255,255,.5);margin:8px 0 0}
-.bm-bloq-2 b{color:#fff}
+.bm-bloq-nom{display:block;font-size:19px;font-weight:900;letter-spacing:.14em;color:rgba(255,255,255,.55)}
+.bm-bloq-kat{display:block;font-family:var(--mono);font-size:11px;letter-spacing:.12em;margin-top:3px;opacity:.75}
+.bm-bloq-2{font-family:var(--mono);font-size:10px;letter-spacing:.1em;
+  color:rgba(255,255,255,.45);margin:14px 0 0}
+.bm-bloq-2 b{color:rgba(255,255,255,.75)}
 .bm-cerrar{position:absolute;top:12px;right:12px;width:30px;height:30px;border-radius:9px;
   border:1px solid rgba(255,255,255,.2);background:rgba(0,0,0,.4);color:#fff;cursor:pointer;font-size:13px}
 /* EL RETRATO del ninja, en grande */
 .bm-retrato{display:flex;justify-content:center;margin:-6px 0 4px}
 .bm-retrato canvas{width:170px;height:170px}
 /* EL PREMIO: la katana flotando sobre su aura */
-.bm-premio{display:flex;flex-direction:column;align-items:center;gap:5px;margin:2px 0 14px}
-.bm-premio-et{font-family:var(--mono);font-size:8px;letter-spacing:.24em;color:rgba(255,255,255,.42)}
-.bm-espada{position:relative;width:100%;max-width:290px;padding:14px 0 10px;display:flex;
-  align-items:center;justify-content:center;animation:espFlota 3.6s ease-in-out infinite}
-.bm-espada::before{content:'';position:absolute;left:50%;top:50%;width:78%;height:120%;
-  transform:translate(-50%,-50%);border-radius:50%;
-  background:radial-gradient(ellipse at center, color-mix(in srgb, var(--kc) 42%, transparent), transparent 70%);
-  filter:blur(6px)}
-.bm-espada svg{position:relative;width:100%;height:38px;filter:drop-shadow(0 6px 14px rgba(0,0,0,.6))}
-.bm-espada-kanji{position:absolute;left:50%;top:-4px;transform:translateX(-50%);
-  font-size:34px;color:color-mix(in srgb, var(--kc) 30%, transparent);pointer-events:none}
-.bm-premio-nom{font-size:14px;font-weight:800;letter-spacing:.08em}
-@keyframes espFlota{0%,100%{transform:translateY(0)}50%{transform:translateY(-7px)}}
-@media (prefers-reduced-motion:reduce){ .bm-espada{animation:none} }
 .bm-nodos{position:absolute;inset:0}
 .bm-nodo{position:absolute;transform:translate(-50%,-50%);display:flex;flex-direction:column;
   align-items:center;gap:1px;min-width:56px;padding:5px 9px;border-radius:12px;cursor:pointer;
@@ -10990,6 +10973,47 @@ function bossPintaNodos(){
     document.getElementById('bossFicha')?.scrollIntoView({block:'nearest', behavior:'smooth'});
   });
 }
+/* EL RETRATO de un ninja con su katana cruzada atrás. `vivo` en false lo
+   pinta como silueta —para los que aún no desbloqueas—, pero la espada se ve
+   igual: es lo que vas a ganarle. */
+function bmPintaRetrato(k, vivo){
+  const cv = document.getElementById('bmNinjaCv'); if(!cv) return;
+  cancelAnimationFrame(window._bmNjRAF||0);
+  const cx = cv.getContext('2d'), NW = cv.width, NH = cv.height;
+  const nj = vivo ? { traje:'#141820', banda:k.belt, buf:k.belt }
+                  : { traje:'#0a0c11', banda:'#1a1f28', buf:'#1a1f28', antifaz:false };
+  const pinta = (t) => {
+    if(!cv.isConnected) return;
+    cx.clearRect(0,0,NW,NH);
+    const g = cx.createRadialGradient(NW/2, NH*0.52, 8, NW/2, NH*0.52, NW*0.52);
+    g.addColorStop(0, k.belt + (vivo ? '38' : '18')); g.addColorStop(1,'rgba(0,0,0,0)');
+    cx.fillStyle = g; cx.fillRect(0,0,NW,NH);
+    /* LA KATANA, cruzada detrás y meciéndose */
+    cx.save();
+    cx.translate(NW/2, NH*0.5 + Math.sin(t/900)*5);
+    cx.rotate(-0.62);
+    cx.globalAlpha = vivo ? 0.95 : 0.7;
+    cx.shadowColor = k.belt; cx.shadowBlur = vivo ? 22 : 9;
+    const L = NW*0.42;
+    cx.strokeStyle = k.belt; cx.lineWidth = 7; cx.lineCap='round';
+    cx.beginPath(); cx.moveTo(-L, 0); cx.lineTo(L*0.62, 0); cx.stroke();
+    cx.shadowBlur = 0;
+    cx.strokeStyle = 'rgba(255,255,255,.85)'; cx.lineWidth = 2.2;
+    cx.beginPath(); cx.moveTo(-L, -1.6); cx.lineTo(L*0.62, -1.6); cx.stroke();
+    cx.fillStyle = '#c9ced6'; cx.fillRect(L*0.60, -8, 5, 16);
+    cx.strokeStyle = '#2a2f39'; cx.lineWidth = 8;
+    cx.beginPath(); cx.moveTo(L*0.66, 0); cx.lineTo(L*0.95, 0); cx.stroke();
+    cx.restore();
+    /* el ninja, delante */
+    cx.fillStyle = 'rgba(0,0,0,.34)';
+    cx.beginPath(); cx.ellipse(NW/2, NH-26, 50, 12, 0,0,7); cx.fill();
+    try{ zenNinja(cx, NW/2, NH-26, 2.5, t*0.5, 0,
+                  vivo ? k.belt : '#2a2f39', nj, false, vivo ? 'corte' : false); }catch(e){}
+    window._bmNjRAF = requestAnimationFrame(pinta);
+  };
+  pinta(performance.now());
+  window._bmNjRAF = requestAnimationFrame(pinta);
+}
 /* LA FICHA: un panel que sube sobre el mapa cuando picas a un ninja. Trae
    SU IMAGEN en grande, LO QUE TE PIDE, sus reglas, las etapas y el botón. */
 function bossPintaFicha(){
@@ -11007,10 +11031,12 @@ function bossPintaFicha(){
     host.classList.add('on');
     host.innerHTML = `<div class="bm-ficha bloqueada" style="--kc:${k.belt}">
       <button type="button" class="bm-cerrar" id="bmFichaX" aria-label="${bi('cerrar','close')}">✕</button>
-      <div class="bm-silueta"><span>?</span></div>
-      <p class="bm-bloq">${bi('Este ninja no se ha dejado ver.','This ninja has not shown himself yet.')}</p>
-      <p class="bm-bloq-2">${bi('Vence primero a','First beat')} <b>${esc(KURO_BOSSES[bossActual()].nom)}</b>.</p>
+      <div class="bm-retrato"><canvas id="bmNinjaCv" width="260" height="260"></canvas></div>
+      <b class="bm-bloq-nom">${esc(b.nom)}</b>
+      <span class="bm-bloq-kat" style="color:${k.belt}">${esc(loc(k.n))}</span>
+      <p class="bm-bloq-2">🔒 ${bi('Vence primero a','First beat')} <b>${esc(KURO_BOSSES[bossActual()].nom)}</b></p>
     </div>`;
+    bmPintaRetrato(k, false);
     document.getElementById('bmFichaX').onclick = () => {
       window._bossSel = null; bossPintaFicha();
       document.querySelectorAll('[data-boss]').forEach(x=>x.classList.remove('sel'));
@@ -11060,16 +11086,6 @@ function bossPintaFicha(){
     <button type="button" class="bm-cerrar" id="bmFichaX" aria-label="${bi('cerrar','close')}">✕</button>
     <!-- EL NINJA EN GRANDE: se dibuja con su katana y sus colores -->
     <div class="bm-retrato"><canvas id="bmNinjaCv" width="260" height="260"></canvas></div>
-    <!-- LA ESPADA QUE SUELTA AL CAER: flotando, con su aura y su kanji. Es el
-         premio, y hasta ahora sólo se nombraba en letra chica. -->
-    <div class="bm-premio">
-      <span class="bm-premio-et">${bi('DESBLOQUEAS','YOU UNLOCK')}</span>
-      <div class="bm-espada" style="--kc:${k.belt}">
-        <span class="bm-espada-kanji">${k.kanji}</span>
-        ${katanaSVG(k.belt, true)}
-      </div>
-      <b class="bm-premio-nom" style="color:${k.belt}">${esc(loc(k.n))}</b>
-    </div>
     <div class="bm-f-h">
       <div class="bm-f-id">
         <b>${esc(b.nom)}</b>
@@ -11135,21 +11151,10 @@ function bossPintaFicha(){
     document.querySelectorAll('[data-boss]').forEach(x=>x.classList.remove('sel'));
   };
   /* su retrato, animado, con la katana de su nivel */
-  (()=>{ const cv=document.getElementById('bmNinjaCv'); if(!cv) return;
-    cancelAnimationFrame(window._bmNjRAF||0);
-    const cx=cv.getContext('2d'), NW=cv.width, NH=cv.height;
-    const nj={ traje:'#141820', banda:k.belt, buf:k.belt };
-    const pinta=(t)=>{ if(!cv.isConnected) return;
-      cx.clearRect(0,0,NW,NH);
-      const g=cx.createRadialGradient(NW/2,NH*0.55,10,NW/2,NH*0.55,NW*0.5);
-      g.addColorStop(0, k.belt+'2e'); g.addColorStop(1,'rgba(0,0,0,0)');
-      cx.fillStyle=g; cx.fillRect(0,0,NW,NH);
-      cx.fillStyle='rgba(0,0,0,.32)';
-      cx.beginPath(); cx.ellipse(NW/2, NH-30, 52, 13, 0,0,7); cx.fill();
-      try{ zenNinja(cx, NW/2, NH-30, 2.6, t*0.5, 0, k.belt, nj, false, 'corte'); }catch(e){}
-      window._bmNjRAF=requestAnimationFrame(pinta); };
-    pinta(performance.now()); window._bmNjRAF=requestAnimationFrame(pinta);
-  })();
+  /* EL RETRATO: el ninja Y SU KATANA en una sola estampa — la hoja cruzada
+     detrás de él. Antes la espada iba en un bloque aparte pegado debajo y se
+     veía como un añadido. */
+  bmPintaRetrato(k, true);
 }
 
 /* ── QUIÉN TE TOCA ── el primero al que no le has ganado. No se puede retar
