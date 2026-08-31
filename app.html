@@ -1776,6 +1776,36 @@ button.st-chip:hover{border-color:rgba(255,255,255,.45)}
 .lg-cerrar-ses{border:1px solid var(--line);background:transparent;color:var(--faint);
   font-family:var(--mono);font-size:8.5px;letter-spacing:.12em;padding:2px 8px;border-radius:99px;cursor:pointer}
 .lg-cerrar-ses:hover{color:var(--txt)}
+/* la puerta de Kuro ocupa la pantalla: sin lobby debajo, el contenedor medía
+   cero y el overlay absoluto no se veía */
+#batRoot.puerta{min-height:calc(100vh - 150px)}
+/* ── LA PELÍCULA DE KURO ── */
+.peli-ov{position:fixed;inset:0;z-index:80;background:#05070d;display:flex;flex-direction:column;
+  align-items:center;justify-content:flex-end;overflow:hidden;padding:0}
+.peli-ov canvas{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.peli-in{position:relative;z-index:2;width:100%;max-width:680px;padding:0 26px 34px;text-align:left}
+.peli-kanji{position:absolute;right:26px;bottom:calc(100% + 8px);font-size:78px;line-height:1;
+  font-weight:700;color:rgba(255,255,255,.10);pointer-events:none}
+.peli-acto{display:block;font-family:var(--mono);font-size:9px;letter-spacing:.28em;
+  color:rgba(255,255,255,.42);margin-bottom:10px}
+.peli-t{display:block;font-size:30px;font-weight:800;line-height:1.1;color:#fff;letter-spacing:-.01em}
+.peli-p{margin:14px 0 22px;font-size:14.5px;line-height:1.65;color:rgba(255,255,255,.78);max-width:58ch}
+.peli-bts{display:flex;align-items:center;gap:14px}
+.peli-b{border:1px solid rgba(255,255,255,.2);background:transparent;color:rgba(255,255,255,.7);
+  font-family:var(--mono);font-size:10px;letter-spacing:.14em;padding:9px 15px;border-radius:99px;cursor:pointer}
+.peli-b:hover{color:#fff;border-color:rgba(255,255,255,.45)}
+/* 'saltar' se montaba encima del kanji: va fijo en la esquina de arriba */
+.peli-saltar{position:fixed;right:20px;top:18px;z-index:3;border:1px solid rgba(255,255,255,.16);
+  background:rgba(8,10,16,.55);color:rgba(255,255,255,.6);font-family:var(--mono);font-size:10px;
+  letter-spacing:.18em;padding:7px 13px;border-radius:99px;cursor:pointer}
+.peli-saltar:hover{color:#fff}
+.onb-salir{display:block;margin:14px auto 0;border:0;background:transparent;color:rgba(255,255,255,.45);
+  font-family:var(--mono);font-size:10px;letter-spacing:.2em;cursor:pointer}
+.onb-salir:hover{color:#fff}
+@media(max-width:560px){
+  .peli-t{font-size:23px} .peli-p{font-size:13.5px} .peli-kanji{font-size:54px;right:20px}
+  .peli-in{padding:0 20px 26px}
+}
 /* ── LA CABECERA DE LA PELEA: contra quién ── */
 .bat-cabeza{position:relative;border:1px solid var(--line);border-radius:14px;
   background:var(--w02);padding:16px 18px;margin-bottom:12px;overflow:hidden}
@@ -1791,14 +1821,17 @@ button.st-chip:hover{border-color:rgba(255,255,255,.45)}
 .bc-sub{display:block;font-size:13px;color:var(--dim);margin-top:6px}
 .bc-pide{position:relative;margin:12px 0 0;font-size:13px;line-height:1.55;color:var(--txt);
   max-width:62ch;border-top:1px solid var(--line-soft);padding-top:11px}
-/* el 1v1: los dos nombres, cada uno de su color */
-.bat-cabeza.duelo{display:flex;align-items:center;justify-content:center;gap:20px}
-.bc-lado{text-align:right;flex:1}
-.bc-lado.der{text-align:left}
-.bc-lado b{display:block;font-size:22px;font-weight:800;line-height:1.1;color:var(--kc)}
-.bc-lado i{display:block;font-family:var(--mono);font-size:9px;font-style:normal;letter-spacing:.16em;
-  text-transform:uppercase;color:var(--faint);margin-top:5px}
-.bc-vs{font-family:var(--mono);font-size:11px;letter-spacing:.24em;color:var(--faint)}
+/* el 1v1: los dos nombres con el MISMO peso; el color va en la raya */
+.bat-cabeza.duelo{display:flex;align-items:center;justify-content:center;gap:24px}
+.bc-lado{flex:1;display:flex;flex-direction:column;align-items:flex-end}
+.bc-lado.der{align-items:flex-start}
+.bc-lado b{font-size:21px;font-weight:700;line-height:1.15;letter-spacing:-.01em;color:var(--txt)}
+.bc-lado u{display:block;width:38px;height:3px;border-radius:2px;background:var(--kc);
+  margin-top:7px;text-decoration:none}
+.bc-lado i{font-family:var(--mono);font-size:8.5px;font-style:normal;letter-spacing:.18em;
+  color:var(--faint);margin-top:7px}
+.bc-vs{font-family:var(--mono);font-size:10px;letter-spacing:.3em;color:var(--faint);
+  padding:0 2px;align-self:center}
 @media(max-width:560px){
   .bc-nom{font-size:26px} .bc-kanji{font-size:48px}
   .bc-lado b{font-size:18px}
@@ -7244,6 +7277,13 @@ function show(view){
   if(view === 'sesion' || view === 'icevader') view = 'journal';
   if(!TITLES[view]) view = 'agentes';
   if(view !== 'batalla' && typeof batTick !== 'undefined' && batTick){ clearInterval(batTick); batTick = null; }
+  /* KURO SIEMPRE ABRE POR SU PORTADA (André, 31-ago-2026): la cubierta con la
+     montaña sólo la veía quien entraba por primera vez; el resto caía directo
+     en el lobby, sin puerta. Ahora cada visita empieza ahí — y de ahí sales a
+     la película o de vuelta a la app. */
+  if(view === 'batalla' && window._batPortadaVista !== true){
+    window._batPortada = true; window._batPortadaVista = true; }
+  if(view !== 'batalla') window._batPortadaVista = false;
   $$('.view').forEach(v=>v.classList.remove('on'));
   $('#v-'+view).classList.add('on');
   $$('.rail a.item').forEach(a=>a.classList.toggle('on', a.dataset.view===view));
@@ -10308,6 +10348,38 @@ function batMundo(c){ return BAT_MUNDOS[(c&&c.sesion)||'asia'] || BAT_MUNDOS.asi
    sede, así que dentro de un cuadro no parpadea, dura un rato, y a los dos
    socios les toca la MISMA lluvia. Si fuera azar puro cada quien vería un
    clima distinto en el mismo duelo. */
+/* ══ LA PELÍCULA DE KURO ══ (André, 31-ago-2026)
+   Seis actos. Cada uno se pinta en uno de los nueve mundos de verdad —los
+   mismos donde después vas a pelear— con el ninja de esa katana.
+   La historia no es adorno: cada acto explica una regla del juego, que a su
+   vez es una regla de operar. Quien la lea entra sabiendo por qué el colchón
+   va antes que el récord y por qué el quinto retiro mata la cuenta. */
+const KURO_PELI = [
+  { esc:8, kat:8, kanji:'九',
+    t:['Nueve katanas','Nine katanas'],
+    p:['Hace mil años, nueve maestros forjaron nueve espadas. En cada una encerraron una lección que no se puede enseñar hablando — sólo se gana peleando. Luego las repartieron por nueve mundos y se fueron.',
+       'A thousand years ago, nine masters forged nine swords. Into each they sealed a lesson that cannot be taught by talking — only earned by fighting. Then they scattered them across nine worlds and left.'] },
+  { esc:0, kat:0, kanji:'白',
+    t:['Shiro, la blanca','Shiro, the white'],
+    p:['La primera es blanca porque todavía no tiene historia. No la gana el que más sabe: la gana el que aparece. Mil dólares, una sesión, sin trucos. Casi todos mueren aquí — no por difícil, por aburrida.',
+       'The first is white because it has no history yet. It is not won by whoever knows most: it is won by whoever shows up. One thousand dollars, one session, no tricks. Most die here — not because it is hard, because it is boring.'] },
+  { esc:3, kat:3, kanji:'減',
+    t:['Las de en medio no piden más','The middle ones ask for less'],
+    p:['Aquí el camino se voltea. Las katanas de en medio no piden más ganancia: piden menos manos. Menos trades, menos riesgo, la misma cifra. El que sube a fuerza de apretar el gatillo se queda parado en este mundo para siempre.',
+       'Here the road turns. The middle katanas do not ask for more profit: they ask for fewer hands. Fewer trades, less risk, the same number. Whoever climbs by pulling the trigger stops in this world forever.'] },
+  { esc:4, kat:4, kanji:'銀',
+    t:['El banco es la vida','The bank is your life'],
+    p:['Un ninja no muere cuando pierde un duelo. Muere cuando se le acaba el banco. Por eso el colchón se cuida antes que el récord: un mal día no puede costarte la cuenta, y ninguna racha vale quedarte sin espada.',
+       'A ninja does not die when he loses a duel. He dies when his bank runs out. That is why the cushion comes before the record: one bad day cannot cost you the account, and no streak is worth losing your sword.'] },
+  { esc:7, kat:7, kanji:'五',
+    t:['Cinco retiros','Five payouts'],
+    p:['Nadie te lo dice al firmar: la cuenta no dura para siempre. Al quinto retiro se acaba, la ganes o la pierdas. Por eso los últimos maestros no pelean más — pelean mejor. Cada retiro que sacas es uno que ya no vuelve.',
+       'Nobody tells you when you sign: the account does not last forever. At the fifth payout it ends, win or lose. That is why the last masters do not fight more — they fight better. Every payout you take is one that never comes back.'] },
+  { esc:8, kat:8, kanji:'黒',
+    t:['Kuro','Kuro'],
+    p:['La novena es negra y nadie la ha forjado. No se compra ni se gana en un duelo: la hereda el que sigue de pie cuando las otras ocho ya están en su cinturón. Nueve katanas, nueve pruebas, ninguna de suerte.',
+       'The ninth is black and no one has forged it. It is not bought or won in a duel: it goes to whoever is still standing once the other eight are on his belt. Nine katanas, nine trials, none of them luck.'] },
+];
 const BAT_CLIMAS = [
   { id:'despejado', peso:34, n:['Despejado','Clear'],    ico:'✦' },
   { id:'nubes',     peso:24, n:['Nublado','Cloudy'],     ico:'☁' },
@@ -10540,7 +10612,11 @@ function batDurTxt(dur){
   const m=+dur; if(!isFinite(m)) return '—';
   if(m>=43200) return bi('1 mes','1 month'); if(m>=10080) return bi('1 semana','1 week');
   if(m>=1440) return '24 h'; const s=BAT_SPRINTS.find(x=>x.min===m); if(s) return s.t;
-  if(m%60===0) return (m/60)+' h'; return m+' min';
+  /* EN HORAS (André, 31-ago-2026): '390 min' se lee como un número suelto;
+     '6 h 30' se entiende de un vistazo. Sólo se dice en minutos abajo de 60. */
+  if(m%60===0) return (m/60)+' h';
+  if(m>60) return Math.floor(m/60)+' h '+String(m%60).padStart(2,'0');
+  return m+' min';
 }
 /* ciudad destino del vuelo según la sesión del reto */
 function batDestino(c){ const s=BAT_SESIONES.find(x=>x.id===(c&&c.sesion)); return s? loc(s.ciudad) : bi('Tokio','Tokyo'); }
@@ -13126,8 +13202,185 @@ function batLimpiaZombi(){
   try{ save(); }catch(_){}
   return true;
 }
+/* ══ LA PUERTA DE KURO ══ (André, 31-ago-2026)
+   Portada y película se pintaban dentro de la plantilla del LOBBY, así que con
+   un duelo vivo la pantalla salía directo al duelo y la puerta no aparecía
+   nunca. Ahora se dibuja antes que nada y se queda con el control hasta que
+   entras o te sales. */
+/* la cubierta de Kuro: la montaña, la estrella y la nieve. Estaba dentro
+   del binder del lobby, así que la portada sólo se podía pintar desde ahí.
+   Como función se pinta desde donde haga falta. (André, 31-ago-2026) */
+function batPintaPortada(){
+  const ocv=$('#onbCv'); cancelAnimationFrame(window._onbRAF||0);
+  if(ocv){ const ox=ocv.getContext('2d'); const OW=900, OH=1280;
+    const rr2=(i,a)=>((Math.sin((i+(a||0))*12.9898)*43758.5453)%1+1)%1;
+    const stars=[]; for(let i=0;i<130;i++) stars.push({x:rr2(i,1)*OW, y:rr2(i,2)*OH*0.58, s:0.7+rr2(i,3)*1.9, f:rr2(i,4)*6.3});
+    const copos=[]; for(let i=0;i<150;i++) copos.push({x:rr2(i,7)*OW, y:rr2(i,8)*OH, s:0.9+rr2(i,9)*2.4, v:60+rr2(i,10)*130, f:rr2(i,11)*6.3});
+    const rachas=[]; for(let i=0;i<22;i++) rachas.push({y:OH*0.3+rr2(i,13)*OH*0.6, l:70+rr2(i,14)*160, v:420+rr2(i,15)*420, o:rr2(i,16)*OW});
+    const aves2=[]; for(let i=0;i<3;i++) aves2.push({cx:OW*(0.3+i*0.2), cy:OH*(0.3+rr2(i,18)*0.08), r:26+rr2(i,19)*30, f:rr2(i,20)*6.3, v:(i%2?1:-1)*(0.00025+rr2(i,21)*0.0002)});
+    const AP={x:OW*0.5, y:OH*0.335};   /* la cima */
+    let last=0;
+    const pintaO=(t)=>{ if(!ocv.isConnected) return; if(ocv.offsetParent===null){ window._onbRAF=requestAnimationFrame(pintaO); return; }
+      const dt=Math.min(0.05,(t-last)/1000)||0.016; last=t;
+      /* cielo profundo */
+      const g=ox.createLinearGradient(0,0,0,OH);
+      g.addColorStop(0,'#02040c'); g.addColorStop(0.45,'#081020'); g.addColorStop(0.8,'#0e1830'); g.addColorStop(1,'#15223f');
+      ox.fillStyle=g; ox.fillRect(0,0,OW,OH);
+      stars.forEach(s3=>{ ox.fillStyle=`rgba(255,255,255,${0.22+0.55*Math.abs(Math.sin(t/900+s3.f))})`; ox.fillRect(s3.x,s3.y,s3.s,s3.s); });
+      /* LA ESTRELLA: flota alto, pulsa, y su luz baja hasta la cima */
+      const ex2=OW*0.5, ey=OH*0.135 + Math.sin(t/1900)*12, pul=1+0.09*Math.sin(t/620);
+      ox.save();
+      const cone=ox.createLinearGradient(0,ey,0,AP.y);
+      cone.addColorStop(0,'rgba(190,255,220,.10)'); cone.addColorStop(1,'rgba(190,255,220,0)');
+      ox.fillStyle=cone; ox.beginPath(); ox.moveTo(ex2-14,ey); ox.lineTo(ex2+14,ey); ox.lineTo(ex2+92,AP.y); ox.lineTo(ex2-92,AP.y); ox.closePath(); ox.fill();
+      ox.fillStyle='rgba(140,255,180,.08)'; ox.beginPath(); ox.arc(ex2,ey,100*pul,0,7); ox.fill();
+      ox.fillStyle='rgba(180,255,210,.15)'; ox.beginPath(); ox.arc(ex2,ey,50*pul,0,7); ox.fill();
+      ox.strokeStyle='rgba(224,255,238,.92)'; ox.lineWidth=2.6;
+      ox.beginPath(); ox.moveTo(ex2-38*pul,ey); ox.lineTo(ex2+38*pul,ey); ox.moveTo(ex2,ey-38*pul); ox.lineTo(ex2,ey+38*pul); ox.stroke();
+      ox.lineWidth=1.1; ox.beginPath(); ox.moveTo(ex2-17*pul,ey-17*pul); ox.lineTo(ex2+17*pul,ey+17*pul); ox.moveTo(ex2+17*pul,ey-17*pul); ox.lineTo(ex2-17*pul,ey+17*pul); ox.stroke();
+      ox.fillStyle='#ecfff4'; ox.beginPath(); ox.arc(ex2,ey,7.5*pul,0,7); ox.fill();
+      ox.restore();
+      /* aves circulando lejos, bajo la estrella */
+      aves2.forEach(av=>{ const an=t*av.v+av.f, bx2=av.cx+Math.cos(an)*av.r*2.2, by2=av.cy+Math.sin(an)*av.r*0.5;
+        const w2=Math.sin(t/160+av.f)*3;
+        ox.strokeStyle='rgba(200,210,225,.5)'; ox.lineWidth=1.6; ox.beginPath();
+        ox.moveTo(bx2-6,by2+w2); ox.quadraticCurveTo(bx2,by2-3,bx2,by2); ox.quadraticCurveTo(bx2,by2-3,bx2+6,by2+w2); ox.stroke(); });
+      /* cordilleras lejanas (2 capas) con nieve en las puntas */
+      const ridge=(pts,col,nievePts)=>{ ox.fillStyle=col; ox.beginPath(); ox.moveTo(pts[0][0],pts[0][1]);
+        pts.forEach(p2=>ox.lineTo(p2[0],p2[1])); ox.lineTo(OW,OH); ox.lineTo(0,OH); ox.closePath(); ox.fill();
+        (nievePts||[]).forEach(i2=>{ const p2=pts[i2]; ox.fillStyle='rgba(226,233,246,.5)'; ox.beginPath();
+          ox.moveTo(p2[0],p2[1]); ox.lineTo(p2[0]+26,p2[1]+34); ox.lineTo(p2[0]+8,p2[1]+28); ox.lineTo(p2[0],p2[1]+38); ox.lineTo(p2[0]-9,p2[1]+26); ox.lineTo(p2[0]-26,p2[1]+34); ox.closePath(); ox.fill(); }); };
+      ridge([[0,OH*0.66],[OW*0.1,OH*0.56],[OW*0.2,OH*0.63],[OW*0.32,OH*0.52],[OW*0.44,OH*0.64],[OW*0.62,OH*0.55],[OW*0.78,OH*0.66],[OW*0.9,OH*0.58],[OW,OH*0.68]],'#070b16',[1,3,5,7]);
+      ridge([[0,OH*0.76],[OW*0.16,OH*0.64],[OW*0.34,OH*0.75],[OW*0.7,OH*0.62],[OW*0.88,OH*0.76],[OW,OH*0.7]],'#0a0f1e',[1,3]);
+      /* ══ LA MONTAÑA: dos caras (luz de luna / sombra), roca y nieve ══ */
+      const L=OW*0.10, R=OW*0.90;
+      /* cara iluminada */
+      ox.fillStyle='#151d34'; ox.beginPath(); ox.moveTo(L,OH); ox.lineTo(AP.x,AP.y); ox.lineTo(AP.x,OH); ox.closePath(); ox.fill();
+      /* cara en sombra */
+      ox.fillStyle='#090d19'; ox.beginPath(); ox.moveTo(AP.x,AP.y); ox.lineTo(R,OH); ox.lineTo(AP.x,OH); ox.closePath(); ox.fill();
+      /* vetas de ROCA en la cara iluminada */
+      ox.fillStyle='rgba(6,9,17,.55)';
+      [[0.30,0.62,0.05],[0.38,0.52,0.045],[0.335,0.78,0.07],[0.43,0.70,0.05],[0.46,0.46,0.028]].forEach(v2=>{
+        const vx=OW*v2[0], vy=OH*v2[1], vw=OW*v2[2];
+        ox.beginPath(); ox.moveTo(vx,vy); ox.lineTo(vx+vw,vy+OH*0.05); ox.lineTo(vx+vw*0.7,vy+OH*0.16); ox.lineTo(vx-vw*0.35,vy+OH*0.1); ox.closePath(); ox.fill(); });
+      /* riscos que asoman en la cara oscura */
+      ox.fillStyle='rgba(22,30,52,.5)';
+      [[0.56,0.55],[0.62,0.68],[0.58,0.82]].forEach(v2=>{ const vx=OW*v2[0], vy=OH*v2[1];
+        ox.beginPath(); ox.moveTo(vx,vy); ox.lineTo(vx+OW*0.05,vy+OH*0.035); ox.lineTo(vx+OW*0.02,vy+OH*0.08); ox.lineTo(vx-OW*0.015,vy+OH*0.05); ox.closePath(); ox.fill(); });
+      /* CASQUETE de nieve con borde irregular + cornisa */
+      ox.fillStyle='rgba(232,238,250,.94)'; ox.beginPath(); ox.moveTo(AP.x,AP.y);
+      ox.lineTo(AP.x+OW*0.052,AP.y+OH*0.075); ox.lineTo(AP.x+OW*0.032,AP.y+OH*0.062); ox.lineTo(AP.x+OW*0.022,AP.y+OH*0.095);
+      ox.lineTo(AP.x+OW*0.002,AP.y+OH*0.07); ox.lineTo(AP.x-OW*0.018,AP.y+OH*0.1); ox.lineTo(AP.x-OW*0.034,AP.y+OH*0.066);
+      ox.lineTo(AP.x-OW*0.052,AP.y+OH*0.082); ox.closePath(); ox.fill();
+      /* la cara en sombra del casquete */
+      ox.fillStyle='rgba(174,187,210,.85)'; ox.beginPath(); ox.moveTo(AP.x,AP.y);
+      ox.lineTo(AP.x+OW*0.052,AP.y+OH*0.075); ox.lineTo(AP.x+OW*0.028,AP.y+OH*0.058); ox.lineTo(AP.x+OW*0.006,AP.y+OH*0.02); ox.closePath(); ox.fill();
+      /* manchones de nieve pegados a la pendiente */
+      ox.fillStyle='rgba(226,233,246,.13)';
+      [[0.43,0.55,0.032],[0.385,0.67,0.042],[0.545,0.63,0.03],[0.46,0.8,0.052],[0.41,0.9,0.06]].forEach(v2=>{
+        ox.beginPath(); ox.ellipse(OW*v2[0],OH*v2[1],OW*v2[2],OH*0.006,(v2[0]<0.5?-0.62:0.62),0,7); ox.fill(); });
+      /* niebla que cruza lenta */
+      const fog=(fy,vel,al)=>{ const fx=((t*vel)%(OW*1.6))-OW*0.3;
+        const fg=ox.createRadialGradient(fx,fy,10,fx,fy,OW*0.3);
+        fg.addColorStop(0,`rgba(190,205,230,${al})`); fg.addColorStop(1,'rgba(190,205,230,0)');
+        ox.fillStyle=fg; ox.beginPath(); ox.ellipse(fx,fy,OW*0.3,OH*0.03,0,0,7); ox.fill(); };
+      fog(OH*0.6,0.015,0.05); fog(OH*0.78,-0.011,0.06); fog(OH*0.48,0.008,0.035);
+      /* FAUNA: el leopardo de las nieves cruza la ladera baja */
+      zenLeopardo(ox, OW, OH*0.9, t);
+      /* EL NINJA · el protagonista, contemplando la estrella desde la cima */
+      const halo=ox.createRadialGradient(AP.x,AP.y-46,4,AP.x,AP.y-46,110);
+      halo.addColorStop(0,'rgba(190,255,220,.12)'); halo.addColorStop(1,'rgba(190,255,220,0)');
+      ox.fillStyle=halo; ox.beginPath(); ox.arc(AP.x,AP.y-46,110,0,7); ox.fill();
+      zenNinja(ox, AP.x, AP.y+4, 2.1, t, 0, '#9aa3b2', {traje:'#0a0d14', banda:'#d6dce8', buf:'#b53a2e'});
+      /* TORMENTA: nieve con viento + ráfagas */
+      const viento=Math.sin(t/2600)*90+40;
+      copos.forEach(p2=>{ p2.y+=p2.v*dt; p2.x+=(viento+Math.sin(t/500+p2.f)*30)*dt;
+        if(p2.y>OH){ p2.y=-8; p2.x=rr2(p2.f*99,3)*OW; } if(p2.x>OW+10) p2.x=-10; if(p2.x<-10) p2.x=OW+10;
+        ox.fillStyle=`rgba(255,255,255,${0.35+0.45*Math.abs(Math.sin(p2.f+t/700))})`; ox.beginPath(); ox.arc(p2.x,p2.y,p2.s,0,7); ox.fill(); });
+      const gust=Math.max(0,Math.sin(t/3300));
+      if(gust>0.25){ ox.strokeStyle=`rgba(255,255,255,${0.1*gust})`; ox.lineWidth=1.6;
+        rachas.forEach(rp=>{ const rx=((t*rp.v*0.001*OW*0.12)+rp.o)%(OW+rp.l)-rp.l;
+          ox.beginPath(); ox.moveTo(rx,rp.y); ox.lineTo(rx+rp.l,rp.y-rp.l*0.12); ox.stroke(); }); }
+      window._onbRAF=requestAnimationFrame(pintaO); };
+    window._onbRAF=requestAnimationFrame(pintaO); }
+}
+function batPuerta(){
+  const root = $('#batRoot'); if(!root) return false;
+  const yo = batYo();
+  if(window._batPortada){
+    cancelAnimationFrame(window._peliRAF||0);
+    root.classList.add('puerta');
+    root.innerHTML = `<div class="ars-ov nj-ov onb-ov">
+      <canvas id="onbCv" width="900" height="1280"></canvas>
+      <div class="onb-in">
+        <em>NORTHPOINT</em>
+        <b>KURO</b>
+        <span>${bi('Duelos de trading entre socios. El camino a la katana negra.','Trading duels between partners. The road to the black katana.')}</span>
+        <button type="button" class="btn primary stage-btn" id="onbGo">${bi('Iniciar','Start')}</button>
+        <button type="button" class="onb-salir" id="onbSalir">${bi('salir','exit')}</button>
+      </div></div>`;
+    batPintaPortada();
+    $('#onbGo').onclick = () => { cancelAnimationFrame(window._onbRAF||0);
+      window._batPortada=false; window._batPeli=0; renderBatalla(); };
+    $('#onbSalir').onclick = () => { cancelAnimationFrame(window._onbRAF||0);
+      window._batPortada=false; window._batPeli=null; show('agentes'); };
+    return true;
+  }
+  if(window._batPeli == null){ root.classList.remove('puerta'); return false; }
+  cancelAnimationFrame(window._onbRAF||0);
+  root.classList.add('puerta');
+  const A = KURO_PELI[window._batPeli];
+  if(!A){ window._batPeli=null; root.classList.remove('puerta'); return false; }
+  const ult = window._batPeli >= KURO_PELI.length - 1;
+  const salir = () => { cancelAnimationFrame(window._peliRAF||0); window._batPeli=null;
+    if(!((S.batNinja||{})[yo])) window._batOnb='como';
+    renderBatalla(); };
+  root.innerHTML = `<div class="ars-ov peli-ov">
+    <canvas id="peliCv" width="1200" height="700"></canvas>
+    <div class="peli-in">
+      <span class="peli-kanji">${esc(A.kanji)}</span>
+      <button type="button" class="peli-saltar" id="peliSaltar">${bi('saltar','skip')}</button>
+      <span class="peli-acto">${window._batPeli+1} / ${KURO_PELI.length}</span>
+      <b class="peli-t">${esc(loc(A.t))}</b>
+      <p class="peli-p">${esc(loc(A.p))}</p>
+      <div class="peli-bts">
+        ${window._batPeli>0?`<button type="button" class="peli-b" id="peliAtras">‹ ${bi('atrás','back')}</button>`:''}
+        <button type="button" class="btn primary stage-btn" id="peliSig">${ult?bi('Entrar al dojo','Enter the dojo'):bi('Seguir','Next')} →</button>
+      </div>
+    </div></div>`;
+  batPintaPeli(A);
+  $('#peliSig').onclick = () => { cancelAnimationFrame(window._peliRAF||0);
+    if(ult) salir(); else { window._batPeli++; renderBatalla(); } };
+  $('#peliAtras') && ($('#peliAtras').onclick = () => { cancelAnimationFrame(window._peliRAF||0);
+    window._batPeli = Math.max(0, window._batPeli-1); renderBatalla(); });
+  $('#peliSaltar').onclick = salir;
+  return true;
+}
+/* el cuadro de cada acto: su mundo, su ninja y el velo para que se lea */
+function batPintaPeli(A){
+  const pcv = $('#peliCv'); cancelAnimationFrame(window._peliRAF||0); if(!pcv) return;
+  const px = pcv.getContext('2d'), PW = pcv.width, PH = pcv.height;
+  const E0 = ZEN_ESCENAS[A.esc] || ZEN_ESCENAS[0];
+  const E = batEscenaViva({ ...E0, sinNinja:true }, { sesion:null, id:'peli'+A.kanji });
+  const kk = KATANAS[A.kat] || {};
+  const col = kk.belt || '#EDEFF2';
+  const pet = Array.from({length:44},()=>({ x:Math.random()*PW, y:Math.random()*PH,
+    s:3+Math.random()*4, sp:0.5+Math.random()*1.2, dr:Math.random()*6.3, sw:0.5+Math.random() }));
+  const nj = { traje:'#0f1218', banda:col, buf:col };
+  const pinta = (t) => { if(!pcv.isConnected) return;
+    try{ zenDibujaEscena(px, PW, PH, E, t, pet, col); }
+    catch(e){ px.fillStyle='#0b0f18'; px.fillRect(0,0,PW,PH); }
+    try{ zenNinja(px, PW*0.5, PH*0.70, 3.2, t, 0, col, nj, false, 'guardia'); }catch(e){}
+    const vg = px.createLinearGradient(0, PH*0.30, 0, PH);
+    vg.addColorStop(0,'rgba(6,8,14,0)'); vg.addColorStop(0.55,'rgba(6,8,14,.72)'); vg.addColorStop(1,'rgba(6,8,14,.95)');
+    px.fillStyle = vg; px.fillRect(0, PH*0.30, PW, PH*0.70);
+    window._peliRAF = requestAnimationFrame(pinta); };
+  window._peliRAF = requestAnimationFrame(pinta);
+}
 function renderBatalla(){
   try{ batLimpiaZombi(); }catch(_){}
+  try{ if(batPuerta()) return; }catch(e){ window._batPortada=false; window._batPeli=null; }
+  const _rt = $('#batRoot'); if(_rt) _rt.classList.remove('puerta');
   try{ renderBatallaInterno(); }
   catch(e){
     const root = $('#batRoot'); if(!root) return;
@@ -13688,98 +13941,7 @@ function renderBatallaInterno(){
     $('#comoGo') && ($('#comoGo').onclick = () => { window._batOnb='crear'; renderBatalla(); });
     /* ══ EL INICIO ══ la montaña detallada de noche: roca facetada, cornisa de
        nieve, tormenta con ráfagas, fauna — y el ninja contemplando LA ESTRELLA. */
-    const ocv=$('#onbCv'); cancelAnimationFrame(window._onbRAF||0);
-    if(ocv){ const ox=ocv.getContext('2d'); const OW=900, OH=1280;
-      const rr2=(i,a)=>((Math.sin((i+(a||0))*12.9898)*43758.5453)%1+1)%1;
-      const stars=[]; for(let i=0;i<130;i++) stars.push({x:rr2(i,1)*OW, y:rr2(i,2)*OH*0.58, s:0.7+rr2(i,3)*1.9, f:rr2(i,4)*6.3});
-      const copos=[]; for(let i=0;i<150;i++) copos.push({x:rr2(i,7)*OW, y:rr2(i,8)*OH, s:0.9+rr2(i,9)*2.4, v:60+rr2(i,10)*130, f:rr2(i,11)*6.3});
-      const rachas=[]; for(let i=0;i<22;i++) rachas.push({y:OH*0.3+rr2(i,13)*OH*0.6, l:70+rr2(i,14)*160, v:420+rr2(i,15)*420, o:rr2(i,16)*OW});
-      const aves2=[]; for(let i=0;i<3;i++) aves2.push({cx:OW*(0.3+i*0.2), cy:OH*(0.3+rr2(i,18)*0.08), r:26+rr2(i,19)*30, f:rr2(i,20)*6.3, v:(i%2?1:-1)*(0.00025+rr2(i,21)*0.0002)});
-      const AP={x:OW*0.5, y:OH*0.335};   /* la cima */
-      let last=0;
-      const pintaO=(t)=>{ if(!ocv.isConnected) return; if(ocv.offsetParent===null){ window._onbRAF=requestAnimationFrame(pintaO); return; }
-        const dt=Math.min(0.05,(t-last)/1000)||0.016; last=t;
-        /* cielo profundo */
-        const g=ox.createLinearGradient(0,0,0,OH);
-        g.addColorStop(0,'#02040c'); g.addColorStop(0.45,'#081020'); g.addColorStop(0.8,'#0e1830'); g.addColorStop(1,'#15223f');
-        ox.fillStyle=g; ox.fillRect(0,0,OW,OH);
-        stars.forEach(s3=>{ ox.fillStyle=`rgba(255,255,255,${0.22+0.55*Math.abs(Math.sin(t/900+s3.f))})`; ox.fillRect(s3.x,s3.y,s3.s,s3.s); });
-        /* LA ESTRELLA: flota alto, pulsa, y su luz baja hasta la cima */
-        const ex2=OW*0.5, ey=OH*0.135 + Math.sin(t/1900)*12, pul=1+0.09*Math.sin(t/620);
-        ox.save();
-        const cone=ox.createLinearGradient(0,ey,0,AP.y);
-        cone.addColorStop(0,'rgba(190,255,220,.10)'); cone.addColorStop(1,'rgba(190,255,220,0)');
-        ox.fillStyle=cone; ox.beginPath(); ox.moveTo(ex2-14,ey); ox.lineTo(ex2+14,ey); ox.lineTo(ex2+92,AP.y); ox.lineTo(ex2-92,AP.y); ox.closePath(); ox.fill();
-        ox.fillStyle='rgba(140,255,180,.08)'; ox.beginPath(); ox.arc(ex2,ey,100*pul,0,7); ox.fill();
-        ox.fillStyle='rgba(180,255,210,.15)'; ox.beginPath(); ox.arc(ex2,ey,50*pul,0,7); ox.fill();
-        ox.strokeStyle='rgba(224,255,238,.92)'; ox.lineWidth=2.6;
-        ox.beginPath(); ox.moveTo(ex2-38*pul,ey); ox.lineTo(ex2+38*pul,ey); ox.moveTo(ex2,ey-38*pul); ox.lineTo(ex2,ey+38*pul); ox.stroke();
-        ox.lineWidth=1.1; ox.beginPath(); ox.moveTo(ex2-17*pul,ey-17*pul); ox.lineTo(ex2+17*pul,ey+17*pul); ox.moveTo(ex2+17*pul,ey-17*pul); ox.lineTo(ex2-17*pul,ey+17*pul); ox.stroke();
-        ox.fillStyle='#ecfff4'; ox.beginPath(); ox.arc(ex2,ey,7.5*pul,0,7); ox.fill();
-        ox.restore();
-        /* aves circulando lejos, bajo la estrella */
-        aves2.forEach(av=>{ const an=t*av.v+av.f, bx2=av.cx+Math.cos(an)*av.r*2.2, by2=av.cy+Math.sin(an)*av.r*0.5;
-          const w2=Math.sin(t/160+av.f)*3;
-          ox.strokeStyle='rgba(200,210,225,.5)'; ox.lineWidth=1.6; ox.beginPath();
-          ox.moveTo(bx2-6,by2+w2); ox.quadraticCurveTo(bx2,by2-3,bx2,by2); ox.quadraticCurveTo(bx2,by2-3,bx2+6,by2+w2); ox.stroke(); });
-        /* cordilleras lejanas (2 capas) con nieve en las puntas */
-        const ridge=(pts,col,nievePts)=>{ ox.fillStyle=col; ox.beginPath(); ox.moveTo(pts[0][0],pts[0][1]);
-          pts.forEach(p2=>ox.lineTo(p2[0],p2[1])); ox.lineTo(OW,OH); ox.lineTo(0,OH); ox.closePath(); ox.fill();
-          (nievePts||[]).forEach(i2=>{ const p2=pts[i2]; ox.fillStyle='rgba(226,233,246,.5)'; ox.beginPath();
-            ox.moveTo(p2[0],p2[1]); ox.lineTo(p2[0]+26,p2[1]+34); ox.lineTo(p2[0]+8,p2[1]+28); ox.lineTo(p2[0],p2[1]+38); ox.lineTo(p2[0]-9,p2[1]+26); ox.lineTo(p2[0]-26,p2[1]+34); ox.closePath(); ox.fill(); }); };
-        ridge([[0,OH*0.66],[OW*0.1,OH*0.56],[OW*0.2,OH*0.63],[OW*0.32,OH*0.52],[OW*0.44,OH*0.64],[OW*0.62,OH*0.55],[OW*0.78,OH*0.66],[OW*0.9,OH*0.58],[OW,OH*0.68]],'#070b16',[1,3,5,7]);
-        ridge([[0,OH*0.76],[OW*0.16,OH*0.64],[OW*0.34,OH*0.75],[OW*0.7,OH*0.62],[OW*0.88,OH*0.76],[OW,OH*0.7]],'#0a0f1e',[1,3]);
-        /* ══ LA MONTAÑA: dos caras (luz de luna / sombra), roca y nieve ══ */
-        const L=OW*0.10, R=OW*0.90;
-        /* cara iluminada */
-        ox.fillStyle='#151d34'; ox.beginPath(); ox.moveTo(L,OH); ox.lineTo(AP.x,AP.y); ox.lineTo(AP.x,OH); ox.closePath(); ox.fill();
-        /* cara en sombra */
-        ox.fillStyle='#090d19'; ox.beginPath(); ox.moveTo(AP.x,AP.y); ox.lineTo(R,OH); ox.lineTo(AP.x,OH); ox.closePath(); ox.fill();
-        /* vetas de ROCA en la cara iluminada */
-        ox.fillStyle='rgba(6,9,17,.55)';
-        [[0.30,0.62,0.05],[0.38,0.52,0.045],[0.335,0.78,0.07],[0.43,0.70,0.05],[0.46,0.46,0.028]].forEach(v2=>{
-          const vx=OW*v2[0], vy=OH*v2[1], vw=OW*v2[2];
-          ox.beginPath(); ox.moveTo(vx,vy); ox.lineTo(vx+vw,vy+OH*0.05); ox.lineTo(vx+vw*0.7,vy+OH*0.16); ox.lineTo(vx-vw*0.35,vy+OH*0.1); ox.closePath(); ox.fill(); });
-        /* riscos que asoman en la cara oscura */
-        ox.fillStyle='rgba(22,30,52,.5)';
-        [[0.56,0.55],[0.62,0.68],[0.58,0.82]].forEach(v2=>{ const vx=OW*v2[0], vy=OH*v2[1];
-          ox.beginPath(); ox.moveTo(vx,vy); ox.lineTo(vx+OW*0.05,vy+OH*0.035); ox.lineTo(vx+OW*0.02,vy+OH*0.08); ox.lineTo(vx-OW*0.015,vy+OH*0.05); ox.closePath(); ox.fill(); });
-        /* CASQUETE de nieve con borde irregular + cornisa */
-        ox.fillStyle='rgba(232,238,250,.94)'; ox.beginPath(); ox.moveTo(AP.x,AP.y);
-        ox.lineTo(AP.x+OW*0.052,AP.y+OH*0.075); ox.lineTo(AP.x+OW*0.032,AP.y+OH*0.062); ox.lineTo(AP.x+OW*0.022,AP.y+OH*0.095);
-        ox.lineTo(AP.x+OW*0.002,AP.y+OH*0.07); ox.lineTo(AP.x-OW*0.018,AP.y+OH*0.1); ox.lineTo(AP.x-OW*0.034,AP.y+OH*0.066);
-        ox.lineTo(AP.x-OW*0.052,AP.y+OH*0.082); ox.closePath(); ox.fill();
-        /* la cara en sombra del casquete */
-        ox.fillStyle='rgba(174,187,210,.85)'; ox.beginPath(); ox.moveTo(AP.x,AP.y);
-        ox.lineTo(AP.x+OW*0.052,AP.y+OH*0.075); ox.lineTo(AP.x+OW*0.028,AP.y+OH*0.058); ox.lineTo(AP.x+OW*0.006,AP.y+OH*0.02); ox.closePath(); ox.fill();
-        /* manchones de nieve pegados a la pendiente */
-        ox.fillStyle='rgba(226,233,246,.13)';
-        [[0.43,0.55,0.032],[0.385,0.67,0.042],[0.545,0.63,0.03],[0.46,0.8,0.052],[0.41,0.9,0.06]].forEach(v2=>{
-          ox.beginPath(); ox.ellipse(OW*v2[0],OH*v2[1],OW*v2[2],OH*0.006,(v2[0]<0.5?-0.62:0.62),0,7); ox.fill(); });
-        /* niebla que cruza lenta */
-        const fog=(fy,vel,al)=>{ const fx=((t*vel)%(OW*1.6))-OW*0.3;
-          const fg=ox.createRadialGradient(fx,fy,10,fx,fy,OW*0.3);
-          fg.addColorStop(0,`rgba(190,205,230,${al})`); fg.addColorStop(1,'rgba(190,205,230,0)');
-          ox.fillStyle=fg; ox.beginPath(); ox.ellipse(fx,fy,OW*0.3,OH*0.03,0,0,7); ox.fill(); };
-        fog(OH*0.6,0.015,0.05); fog(OH*0.78,-0.011,0.06); fog(OH*0.48,0.008,0.035);
-        /* FAUNA: el leopardo de las nieves cruza la ladera baja */
-        zenLeopardo(ox, OW, OH*0.9, t);
-        /* EL NINJA · el protagonista, contemplando la estrella desde la cima */
-        const halo=ox.createRadialGradient(AP.x,AP.y-46,4,AP.x,AP.y-46,110);
-        halo.addColorStop(0,'rgba(190,255,220,.12)'); halo.addColorStop(1,'rgba(190,255,220,0)');
-        ox.fillStyle=halo; ox.beginPath(); ox.arc(AP.x,AP.y-46,110,0,7); ox.fill();
-        zenNinja(ox, AP.x, AP.y+4, 2.1, t, 0, '#9aa3b2', {traje:'#0a0d14', banda:'#d6dce8', buf:'#b53a2e'});
-        /* TORMENTA: nieve con viento + ráfagas */
-        const viento=Math.sin(t/2600)*90+40;
-        copos.forEach(p2=>{ p2.y+=p2.v*dt; p2.x+=(viento+Math.sin(t/500+p2.f)*30)*dt;
-          if(p2.y>OH){ p2.y=-8; p2.x=rr2(p2.f*99,3)*OW; } if(p2.x>OW+10) p2.x=-10; if(p2.x<-10) p2.x=OW+10;
-          ox.fillStyle=`rgba(255,255,255,${0.35+0.45*Math.abs(Math.sin(p2.f+t/700))})`; ox.beginPath(); ox.arc(p2.x,p2.y,p2.s,0,7); ox.fill(); });
-        const gust=Math.max(0,Math.sin(t/3300));
-        if(gust>0.25){ ox.strokeStyle=`rgba(255,255,255,${0.1*gust})`; ox.lineWidth=1.6;
-          rachas.forEach(rp=>{ const rx=((t*rp.v*0.001*OW*0.12)+rp.o)%(OW+rp.l)-rp.l;
-            ox.beginPath(); ox.moveTo(rx,rp.y); ox.lineTo(rx+rp.l,rp.y-rp.l*0.12); ox.stroke(); }); }
-        window._onbRAF=requestAnimationFrame(pintaO); };
-      window._onbRAF=requestAnimationFrame(pintaO); }
+    batPintaPortada();
     root.querySelectorAll('[data-njedit]').forEach(b=> b.onclick=()=>{ window._njCfg={...((S.batNinja||{})[yo]||NJ_DEF)}; window._batCrearNinja=true; window._batPerfil=null; renderBatalla(); });
     /* preview del ninja en vivo */
     const njcv=$('#njCv'); cancelAnimationFrame(window._njRAF||0);
@@ -14067,12 +14229,9 @@ function renderBatallaInterno(){
             <span class="bat-sede-l1">
               <b class="bat-sede-nom">${esc(_ses === _ciu ? _ciu : _ses + ' · ' + _ciu)}</b>
             </span>
-            <span class="bat-sede-l2">
-              <span class="bat-sede-ses ${E2.viva?'viva':''}">${E2.viva
-                ? '● ' + bi('KILLZONE ABIERTA · cierra en ','KILLZONE OPEN · closes in ') + batMinTxt(E2.min)
-                : bi('abre en ','opens in ') + batMinTxt(E2.min) + ' · ' + batSesAbreTxt(E2.ses) + ' NY'}</span>
-              <span class="bat-sede-dur">${esc(batDurTxt(c.duracion))}${(c.arrancado && c.fin && c.fin < c.arrancado + batDuracionMs(c.duracion, c.arrancado) - 60000) ? ' · ' + bi('hasta el cierre','until close') : ''} · ${(()=>{ const K=batClima(c); return K.ico + ' ' + esc(loc(K.n)); })()}</span>
-            </span>
+            <!-- SÓLO LA CIUDAD (André, 31-ago-2026): debajo iban 'abre en 21m ·
+                 02:00 NY' y '390 min · hasta el cierre'. Cuatro relojes en una
+                 cabecera donde ya hay un reloj gigante abajo. -->
           </span>`; })()}
         <button type="button" class="btn sm bat-end" id="batEndBtn">⏹ ${bi('Terminar','End')}</button>
       </div>
@@ -14102,13 +14261,18 @@ function renderBatallaInterno(){
             <p class="bc-pide">${esc(loc(b4.pide))}</p>
           </div>`;
         }
+        /* LOS DOS NOMBRES IGUALES (André, 31-ago-2026): iban pintados del color
+           de su katana, y con la blanca de Shiro el nombre se perdía contra el
+           fondo mientras el otro gritaba. Ahora los dos en el mismo tono y con
+           el mismo cuerpo; el color va en una raya debajo, que es donde no
+           estorba. */
         const kY = KATANAS[batEquipadaDe(yo)] || {}, kR = KATANAS[batEquipadaDe(rivalDe)] || {};
         return `<div class="bat-cabeza duelo">
           <span class="bc-lado" style="--kc:${kY.belt||'#9aa3b2'}">
-            <b>${esc(batNom(yo))}</b><i>${bi('tú','you')}</i></span>
+            <b>${esc(batNom(yo))}</b><u></u><i>${bi('TÚ','YOU')}</i></span>
           <span class="bc-vs">VS</span>
           <span class="bc-lado der" style="--kc:${kR.belt||'#9aa3b2'}">
-            <b>${esc(batNom(rivalDe))}</b><i>${esc(loc(kR.n||['','']))}</i></span>
+            <b>${esc(batNom(rivalDe))}</b><u></u><i>${esc(loc(kR.n||['','']).toUpperCase())}</i></span>
         </div>`; })()}
 
       <div class="bat-duelo">
