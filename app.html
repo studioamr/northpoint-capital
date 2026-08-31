@@ -1782,15 +1782,20 @@ button.st-chip:hover{border-color:rgba(255,255,255,.45)}
 /* ── EL CÓMIC DE KURO · zona de carga ──
    Cuelga del body: dentro de la columna de contenido su z-index quedaba
    encerrado y el menú se le montaba encima. */
-.comic-ov{position:fixed;inset:0;z-index:220;background:#06080e;display:flex;flex-direction:column;
-  overflow:hidden}
-.comic-top{flex:0 0 auto;padding:18px clamp(18px,4vw,44px) 12px;display:flex;align-items:baseline;gap:14px;
+/* LA HOJA SCROLLEA DE VERDAD (André, 31-ago-2026): con la hoja como hijo flex
+   de alto fijo, el grid comprimía cada viñeta de 333 px a 145 y se comía el
+   pie de cuadro — se veían puras estampas sin texto. Ahora la página entera
+   scrollea y las viñetas miden lo que miden. */
+.comic-ov{position:fixed;inset:0;z-index:220;background:#06080e;overflow-y:auto;
+  padding-bottom:78px}
+.comic-top{position:sticky;top:0;z-index:4;background:#06080e;
+  padding:18px clamp(18px,4vw,44px) 12px;display:flex;align-items:baseline;gap:14px;
   border-bottom:1px solid rgba(255,255,255,.07)}
 .comic-k{font-family:var(--mono);font-size:9px;letter-spacing:.24em;color:rgba(255,255,255,.4)}
 .comic-tit{font-size:clamp(15px,1.6vw,20px);font-weight:700;color:#fff;letter-spacing:-.01em}
-.comic-hoja{flex:1 1 auto;overflow-y:auto;padding:clamp(14px,2.4vw,26px) clamp(18px,4vw,44px) 22px;
+.comic-hoja{padding:clamp(14px,2.4vw,26px) clamp(18px,4vw,44px) 26px;
   display:grid;gap:clamp(10px,1.4vw,18px);
-  grid-template-columns:repeat(3,1fr);align-content:start}
+  grid-template-columns:repeat(3,1fr);align-items:start}
 .comic-vin{position:relative;margin:0;border:1px solid rgba(255,255,255,.13);border-radius:12px;
   overflow:hidden;background:#0a0e17;opacity:0;transform:translateY(16px) scale(.985);
   transition:opacity .55s ease, transform .55s cubic-bezier(.2,.7,.3,1)}
@@ -1811,7 +1816,8 @@ button.st-chip:hover{border-color:rgba(255,255,255,.45)}
 .comic-vin.final figcaption b{font-size:20px}
 .comic-vin figcaption p{margin:6px 0 0;font-size:12px;line-height:1.55;color:rgba(255,255,255,.66)}
 .comic-vin.final figcaption p{font-size:13.5px;max-width:70ch}
-.comic-pie{flex:0 0 auto;border-top:1px solid rgba(255,255,255,.09);background:#05070d}
+.comic-pie{position:fixed;left:0;right:0;bottom:0;z-index:5;
+  border-top:1px solid rgba(255,255,255,.09);background:#05070d}
 .comic-carga{height:3px;background:rgba(255,255,255,.08)}
 .comic-carga i{display:block;height:100%;width:0;background:rgba(255,255,255,.8);transition:width .12s linear}
 .comic-pie-in{display:flex;align-items:center;justify-content:space-between;gap:16px;
@@ -13379,7 +13385,7 @@ function batPuerta(){
    Los nueve cuadros son los nueve jefes, con su color y su mundo, así que lo
    que ves aquí es literalmente el tablero que vas a jugar. */
 const KURO_COMIC = [
-  { pc:0,   esc:0, kat:0, kanji:'始',
+  { pc:0,   esc:7, kat:0, kanji:'始',
     t:['Llegas sin nada','You arrive with nothing'],
     p:['Un kit de bienvenida, un ninja sin espada y una regla: aquí no se compra el rango, se pelea.',
        'A welcome kit, a ninja with no sword, and one rule: rank is not bought here, it is fought for.'] },
@@ -13466,8 +13472,19 @@ function batComic(){
       cv.width = Math.round(w*dpr); cv.height = Math.round(h*dpr);
       const g = cv.getContext('2d'); g.setTransform(dpr,0,0,dpr,0,0);
       const kk = KATANAS[C.kat] || {}, col = kk.belt || '#EDEFF2';
-      const E = batEscenaViva({ ...(ZEN_ESCENAS[C.esc]||ZEN_ESCENAS[0]), sinNinja:true },
-                              { sesion:null, id:'comic'+ix });
+      /* CADA VIÑETA, SU PROPIA LUZ (André, 31-ago-2026): con la hora de tu
+         reloj las nueve salían del mismo color y con la misma lluvia, y el
+         cómic parecía la misma estampa repetida. Ahora la luz AVANZA con el
+         camino —amanece en el cuadro 0 y anochece en Kuro—, que además cuenta
+         la historia sin decirla. Y sin lluvia: aquí estorba, no ambienta.
+         Sin la frase japonesa de la escena: a tamaño de viñeta tapa medio
+         cuadro y compite con el kanji del número. */
+      const HORA = [6.2, 8.5, 10.5, 13, 15.5, 17.5, 19, 20.5, 21.4];
+      const d0 = new Date(); d0.setHours(0,0,0,0);
+      const cuando = d0.getTime() + (HORA[ix] || 12)*3600000;
+      const E = batEscenaViva({ ...(ZEN_ESCENAS[C.esc]||ZEN_ESCENAS[0]), sinNinja:true, frase:null },
+                              { sesion:null, id:'comic'+ix }, cuando);
+      E.lluvia = false; E.rayos = false;
       const pet = Array.from({length:26},(_,i)=>({ x:(i*137)%w, y:(i*91)%h,
         s:2+(i%4), sp:0.8, dr:i, sw:0.5 }));
       const t = 3000 + ix*1700;   /* cada estampa en un instante distinto */
@@ -13478,8 +13495,16 @@ function batComic(){
       try{
         if(ix === 0) zenNinja(g, w*0.5, h*0.72, esc2, t, 0, col, nj, false, 'guardia');
         else if(ix === KURO_COMIC.length-1){
-          /* la última: el ninja con la katana negra, de frente y en grande */
-          zenNinja(g, w*0.5, h*0.74, esc2*1.25, t, 0, col, nj, false, 'guardia');
+          /* LA ÚLTIMA es el premio y salía casi invisible: la katana negra
+             sobre un mundo de noche es negro sobre negro. Se le pone un halo
+             detrás para recortarlo, y va más grande. (André, 31-ago-2026) */
+          const hx = w*0.5, hy = h*0.60;
+          const halo = g.createRadialGradient(hx, hy, 4, hx, hy, h*0.55);
+          halo.addColorStop(0, 'rgba(150,175,225,.30)');
+          halo.addColorStop(0.5, 'rgba(120,145,200,.10)');
+          halo.addColorStop(1, 'rgba(120,145,200,0)');
+          g.fillStyle = halo; g.fillRect(0,0,w,h);
+          zenNinja(g, hx, h*0.76, esc2*1.5, t, 0, col, nj, false, 'guardia');
         } else if(ix % 2){
           zenNinja(g, w*0.36, h*0.72, esc2, t, 0, col, nj, false, 'corte:0.55');
         } else {
