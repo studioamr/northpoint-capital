@@ -9371,16 +9371,30 @@ function tiraLlaveIA(mala){
   try{ localStorage.removeItem(LLAVE_IA); }catch(e){}
   if(S.llaveIA && S.llaveIA.k === mala){ S.llaveIA = { k:'', ts: Date.now() }; try{ save(); }catch(e){} }
 }
-function abrirDia(iso){
-  const trs = tradesByDay()[iso] || [];
-  if(!trs.length) return;
+function abrirDia(iso, opts){
+  /* SE ABRE SIEMPRE (André, 31-ago-2026): tradesByDay() filtra por la cuenta
+     que tengas SELECCIONADA arriba, así que picar una sesión pasada mientras
+     mirabas otra cuenta no abría nada — un clic que no hace nada parece que
+     está roto. Desde el registro se pide con todas: el día es el día. */
+  const O = opts || {};
+  let trs = tradesByDay()[iso] || [];
+  if(!trs.length && O.todas) trs = (tradesByDay(null) || {})[iso] || [];
+  if(!trs.length && O.todas) trs = misTrades().filter(t => t.date === iso);
+  if(!trs.length && !O.todas) return;
   diaAbierto = iso;
   const pnl = trs.reduce((a,t)=>a+(t.pnl||0),0);
   const wins = trs.filter(t=>(t.pnl||0)>0).length;
   const loss = trs.filter(t=>(t.pnl||0)<0).length;
   const vios = [...new Set(trs.flatMap(t => violations(t, trs)))];
   $('#diaTitle').textContent = fmtFecha(iso);
+  /* si ese día cerraste una sesión, su veredicto manda: es contra lo que TÚ te
+     habías puesto, no contra una regla genérica */
+  const _sell = (Array.isArray(S.lgCerradas) ? S.lgCerradas : []).find(c => c.fecha === iso);
+  const _ver = _sell ? (_sell.estado === 'roto' ? bi('DRAWDOWN ROTO','DRAWDOWN BROKEN')
+                      : _sell.estado === 'listo' ? bi('OBJETIVO CUMPLIDO','TARGET MET')
+                      : _sell.estado === 'demas' ? bi('TRADES DE MÁS','OVER TRADE CAP') : null) : null;
   $('#diaSub').innerHTML = `<b class="${pnl>0?'up':pnl<0?'down':''}">${fmt$(pnl,true)}</b> · ${trs.length} trade${trs.length>1?'s':''} · ${wins}W·${loss}L`
+    + (_ver ? ` · <span class="tag ${_sell.estado==='listo'?'ok':'wr'}">${_ver}</span>` : '')
     + (vios.length ? ` · <span class="tag wr">${vios.join(' · ')}</span>` : '');
   /* ── LAS CIFRAS DEL DÍA ── el drawdown es el peor bajón desde un máximo de la
      curva del día, como lo mide una fondeadora, no el peor trade suelto. Y si
@@ -15763,7 +15777,8 @@ function lgHistorial(){
      captura y su nota. Antes la fila era un renglón muerto. (André, 31-ago) */
   host.querySelectorAll('[data-dia]').forEach(el => {
     const abre = () => { const d = el.dataset.dia;
-      if((tradesByDay()[d] || []).length) abrirDia(d);
+      const hay = ((tradesByDay()[d] || []).length) || misTrades().some(t => t.date === d);
+      if(hay) abrirDia(d, { todas:true });
       else toast(bi('Ese día no tiene trades registrados.','That day has no logged trades.')); };
     el.onclick = abre;
     el.onkeydown = e => { if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); abre(); } };
