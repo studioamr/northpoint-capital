@@ -10980,35 +10980,28 @@ function bmPintaRetrato(k, vivo){
   const cv = document.getElementById('bmNinjaCv'); if(!cv) return;
   cancelAnimationFrame(window._bmNjRAF||0);
   const cx = cv.getContext('2d'), NW = cv.width, NH = cv.height;
+  /* el bloqueado es silueta —traje, banda y bufanda apagados— PERO SU ESPADA
+     conserva su color: es justo lo que vas a ganarle, y en gris no se
+     distinguía de las otras ocho. */
   const nj = vivo ? { traje:'#141820', banda:k.belt, buf:k.belt }
-                  : { traje:'#0a0c11', banda:'#1a1f28', buf:'#1a1f28', antifaz:false };
+                  : { traje:'#0d1017', banda:'#242a35', buf:'#242a35', antifaz:false };
   const pinta = (t) => {
     if(!cv.isConnected) return;
     cx.clearRect(0,0,NW,NH);
     const g = cx.createRadialGradient(NW/2, NH*0.52, 8, NW/2, NH*0.52, NW*0.52);
     g.addColorStop(0, k.belt + (vivo ? '38' : '18')); g.addColorStop(1,'rgba(0,0,0,0)');
     cx.fillStyle = g; cx.fillRect(0,0,NW,NH);
-    /* LA KATANA, cruzada detrás y meciéndose */
-    cx.save();
-    cx.translate(NW/2, NH*0.5 + Math.sin(t/900)*5);
-    cx.rotate(-0.62);
-    cx.globalAlpha = vivo ? 0.95 : 0.7;
-    cx.shadowColor = k.belt; cx.shadowBlur = vivo ? 22 : 9;
-    const L = NW*0.42;
-    cx.strokeStyle = k.belt; cx.lineWidth = 7; cx.lineCap='round';
-    cx.beginPath(); cx.moveTo(-L, 0); cx.lineTo(L*0.62, 0); cx.stroke();
-    cx.shadowBlur = 0;
-    cx.strokeStyle = 'rgba(255,255,255,.85)'; cx.lineWidth = 2.2;
-    cx.beginPath(); cx.moveTo(-L, -1.6); cx.lineTo(L*0.62, -1.6); cx.stroke();
-    cx.fillStyle = '#c9ced6'; cx.fillRect(L*0.60, -8, 5, 16);
-    cx.strokeStyle = '#2a2f39'; cx.lineWidth = 8;
-    cx.beginPath(); cx.moveTo(L*0.66, 0); cx.lineTo(L*0.95, 0); cx.stroke();
-    cx.restore();
-    /* el ninja, delante */
+    /* EL NINJA, y nada más: su antifaz, su banda, su bufanda ondeando y SU
+       ESPADA —del color de su katana, que zenNinja ya dibuja en su mano—.
+       Se quitó la katana flotante que iba cruzada detrás: sobraba, y la
+       espada de verdad es la que él trae. */
     cx.fillStyle = 'rgba(0,0,0,.34)';
-    cx.beginPath(); cx.ellipse(NW/2, NH-26, 50, 12, 0,0,7); cx.fill();
-    try{ zenNinja(cx, NW/2, NH-26, 2.5, t*0.5, 0,
-                  vivo ? k.belt : '#2a2f39', nj, false, vivo ? 'corte' : false); }catch(e){}
+    cx.beginPath(); cx.ellipse(NW/2, NH-24, 54, 13, 0,0,7); cx.fill();
+    /* respira quieto y corta cada tantos segundos, para que la estampa
+       tenga vida sin marearse */
+    if(!vivo) cx.globalAlpha = 0.9;
+    try{ zenNinja(cx, NW/2, NH-24, 3.0, t*0.6, 0, k.belt, nj, false, 'corte'); }catch(e){}
+    cx.globalAlpha = 1;
     window._bmNjRAF = requestAnimationFrame(pinta);
   };
   pinta(performance.now());
