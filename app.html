@@ -23140,16 +23140,13 @@ if verPanel and barstate.islast
         bool esEval = timenow >= evalIni and timenow < evalFin
         int dC = math.max(1, f_diasHabiles(esEval ? evalIni : buffIni, timenow))
         int metaC = esEval ? 53000 : 52500
-        int balC = 50000 + (dC - 1) * riesgoDia
-        int faltaC = math.max(0, metaC - balC)
-        if faltaC <= 0
-            camino := "trade " + str.tostring(dC) + " · ya estás en " + f_fmtK(metaC)
-        else
-            int trMin = int(math.ceil(faltaC / float(riesgoDia * 2)))
-            int trMax = int(math.ceil(faltaC / float(riesgoDia)))
-            camino := "vas en el trade " + str.tostring(dC) + " · faltan " + (trMin == trMax ? str.tostring(trMin) : str.tostring(trMin) + " a " + str.tostring(trMax)) + " para " + f_fmtK(metaC)
+        // el total se cuenta SIEMPRE con el peor caso —todos a 1:1—, que
+        // es el número de trades que de verdad hay que aguantar; si salen
+        // 1:2 llegas antes, y eso nunca decepciona
+        int totalTr = int(math.ceil((metaC - 50000) / float(riesgoDia)))
+        camino := str.tostring(math.min(dC, totalTr)) + "/" + str.tostring(totalTr)
     else if timenow >= payIni and timenow < payFin
-        camino := "un trade al día · cada uno es un cobro"
+        camino := "cobro diario"
     else
         camino := "aún no arranca"
 
@@ -23164,7 +23161,7 @@ if verPanel and barstate.islast
         table.cell(panel, 0, 3, "Fase", text_color = color.gray, text_size = tamTxt)
         table.cell(panel, 1, 3, fase, text_color = cFase == color.gray ? chart.fg_color : cFase, text_size = tamTxt, tooltip = tipFase)
         table.cell(panel, 0, 4, "Camino", text_color = color.gray, text_size = tamTxt)
-        table.cell(panel, 1, 4, camino, text_color = chart.fg_color, text_size = tamTxt, tooltip = "En qué trade vas y cuántos te faltan para la meta de la fase, contando un trade al día. El rango sale de cerrarlos en 1:2 (los menos) o en 1:1 (los más). Se calcula suponiendo que cada día cerraste con el mínimo, así que si te va mejor vas más adelante de lo que dice.")
+        table.cell(panel, 1, 4, camino, text_color = chart.fg_color, text_size = tamTxt, tooltip = "En qué trade vas del total que pide la fase. El total se cuenta con el peor caso —todos cerrados en 1:1—, que son los que de verdad hay que aguantar: EVAL 6 trades para los $3,000 y BUFFER 5 para los $2,500 con riesgo de $500. Si alguno sale 1:2 llegas antes.")
         table.cell(panel, 0, 5, "F1 EVAL", text_color = pAcento, text_size = tamTxt)
         table.cell(panel, 1, 5, txtEval, text_color = cE, bgcolor = bgE, text_size = tamTxt, tooltip = "Pasar la evaluación. El día bueno son +$" + str.tostring(riesgoDia) + " y el tope +$" + str.tostring(riesgoDia * 2) + "; si sale mal se va −$" + str.tostring(riesgoDia) + ". Los últimos días son colchón por si uno se tuerce.")
         table.cell(panel, 0, 6, "F2 BUFFER", text_color = pBaja, text_size = tamTxt)
