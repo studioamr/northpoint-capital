@@ -1558,30 +1558,33 @@ button.st-chip:hover{border-color:rgba(255,255,255,.45)}
 .bat-wbar-track i{display:block;height:100%;border-radius:6px;background:linear-gradient(90deg,var(--up),#8ad0ff);transition:width .6s}
 .bat-wbar-lbl{font-family:var(--mono);font-size:11px;color:var(--faint);margin-top:8px;text-align:center}
 /* objetivo del plan + decisiones de crecimiento */
-/* ── EL BALANCE Y EL CAMINO AL PAYOUT ── */
+/* ── EL BALANCE Y EL CAMINO ── */
+.lg-sel-top{margin-bottom:12px}
 .lg-balance{margin-bottom:12px;padding:14px 18px 12px}
-.lgb-fila{display:flex;align-items:center;gap:18px}
+.lgb-fila{display:flex;align-items:center;gap:20px}
 .lgb-bal{font-size:24px;font-weight:700;letter-spacing:-.02em;line-height:1;white-space:nowrap}
-.lgb-prog{flex:1;min-width:140px}
-.lgb-track{position:relative;display:block;height:6px;border-radius:3px;background:var(--line-soft);overflow:visible}
+.lgb-prog{flex:1;min-width:180px}
+.lgb-cabeza{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px}
+.lgb-cabeza em{font-family:var(--mono);font-size:10px;font-style:normal;color:var(--dim);letter-spacing:.1em}
+.lgb-cabeza em:first-child{font-size:12px;font-weight:700;color:var(--txt)}
+.lgb-cabeza .lgb-pagos{color:var(--faint)}
+.lgb-track{position:relative;display:block;height:6px;border-radius:3px;background:var(--line-soft)}
 .lgb-fill{position:absolute;left:0;top:0;height:100%;border-radius:3px;
   background:linear-gradient(90deg,var(--up),#8ad0ff);transition:width .6s}
 .lgb-tick{position:absolute;top:-3px;width:2px;height:12px;background:var(--line);
   transform:translateX(-1px);border-radius:1px}
-.lgb-tick.on{background:rgba(255,255,255,.5)}
+.lgb-tick.on{background:rgba(255,255,255,.55)}
 .lgb-hitos{position:relative;display:block;height:13px;margin-top:7px}
-.lgb-hitos em{position:absolute;top:0;font-family:var(--mono);font-size:8.5px;font-style:normal;
-  letter-spacing:.14em;text-transform:uppercase;color:var(--faint);white-space:nowrap;transform:translateX(-50%)}
-.lgb-hitos em:first-child{transform:none}
-.lgb-hitos em:last-child{transform:translateX(-100%)}
+.lgb-hitos em{position:absolute;top:0;font-family:var(--mono);font-size:8px;font-style:normal;
+  letter-spacing:.12em;text-transform:uppercase;color:var(--faint);white-space:nowrap;transform:translateX(-50%)}
+.lgb-hitos em.ini{transform:none}
+.lgb-hitos em.fin{transform:translateX(-100%)}
 .lgb-hitos em.on{color:var(--up)}
-.lgb-pct{font-family:var(--mono);font-size:20px;font-weight:700;color:var(--dim);white-space:nowrap}
-.lgb-pct.ok{color:var(--up)}
-@media(max-width:520px){
-  .lgb-fila{flex-wrap:wrap;gap:10px 14px}
+@media(max-width:560px){
+  .lgb-fila{flex-wrap:wrap;gap:12px}
   .lgb-bal{font-size:21px}
-  .lgb-prog{flex-basis:100%;order:3}
-  .lgb-pct{font-size:17px;margin-left:auto}
+  .lgb-prog{flex-basis:100%}
+  .lgb-hitos em{font-size:7px;letter-spacing:.06em}
 }
 /* ── LOG TRADE: la cuenta dentro de la misma tarjeta del registro ── */
 .bt-sel-bar.en-tarjeta{margin:0 0 12px;padding:0 0 12px;border-bottom:1px solid var(--line-soft)}
@@ -4653,9 +4656,14 @@ stop[stop-color="#9BC0DC"]{stop-color:var(--txt)}
 
       <!-- ════ LOG TRADE (real · mismo formato que Backtesting) ════ -->
       <section class="view" id="v-log">
-        <!-- HASTA ARRIBA: cuánto trae la cuenta y qué tan cerca está de su
-             objetivo. Era lo primero que quería saber al abrir la vista y
-             había que bajar a las tarjetas para deducirlo. -->
+        <!-- LA CUENTA, HASTA ARRIBA Y UNA SOLA VEZ (André, 31-ago-2026):
+             primero eligo en qué cuenta estoy, y todo lo de abajo habla de
+             ella. Estaba repetida dentro de la tarjeta del registro. -->
+        <div class="bt-sel-bar lg-sel-top">
+          <span class="bt-sel-k" data-i18n="en.log.enCuenta">Cuenta</span>
+          <div class="bt-sel"><select id="lgCta" class="bt-cuenta-sel"></select></div>
+          <button type="button" id="lgAjustar" class="bt-mini" hidden data-i18n="en.log.ajustar">Ajustar metas</button>
+        </div>
         <div class="panel lg-balance" id="lgBalance"></div>
         <!-- LO QUE VAS A HACER HOY (André, 31-ago-2026): el mismo panel de
              requisitos que se probó en el duelo, pero con TUS reglas de
@@ -4668,11 +4676,6 @@ stop[stop-color="#9BC0DC"]{stop-color:var(--txt)}
              ellas para saber en cuál estabas apuntando. Ahora el selector es
              la primera línea de la MISMA tarjeta donde registras. -->
         <div class="bt">
-          <div class="bt-sel-bar en-tarjeta">
-            <span class="bt-sel-k" data-i18n="en.log.enCuenta">Cuenta</span>
-            <div class="bt-sel"><select id="lgCta" class="bt-cuenta-sel"></select></div>
-            <button type="button" id="lgAjustar" class="bt-mini" hidden data-i18n="en.log.ajustar">Ajustar metas</button>
-          </div>
           <div class="bt-top">
             <div>
               <span class="bt-k" id="lgTitulo" data-i18n="nav.log">Log trade</span>
@@ -14683,14 +14686,43 @@ function lgDiaResumen(fecha, ses){
   return { pnl, dd, n:mios.length, roto, deMas, listo,
            estado: roto ? 'roto' : (listo ? 'listo' : (deMas ? 'demas' : 'neutro')) };
 }
-/* ══ EL BALANCE Y EL CAMINO AL PAYOUT ══ (André, 31-ago-2026)
-   Decía "faltan $6,100 al payout" y "de $5,000" y las dos cifras confundían:
-   una es el camino entero y la otra el objetivo de la cuenta, y juntas no se
-   entendía qué se estaba midiendo. Fuera los montos: queda la BARRA con sus
-   tres hitos marcados —primera fase, colchón, payouts— y el porcentaje de
-   avance a la derecha. Eso ya lo dice todo.
-   La barra mide DESDE DONDE ESTÁ la cuenta: si ya pasó evaluación arranca de
-   la mitad, que es lo que carreraCuenta() ya sabía. */
+/* ══ EL BALANCE Y EL CAMINO ══ (André, 31-ago-2026)
+   El camino no son dos paradas sino CINCO, y cada una es una cosa distinta:
+     EVAL         · pasar la evaluación (50,000 → 53,000)
+     FUNDED       · ya eres cuenta fondeada
+     COLCHÓN      · rehacer el colchón (→ 52,500) para que un mal día no mate
+     PAYOUTS      · el primer retiro (desde 50,100)
+     MAX PAYOUTS  · el quinto, donde la cuenta se acaba
+   El último es real, no adorno: en Rapid la cuenta MUERE al 5º retiro, así que
+   ver cuántos te quedan importa tanto como ver cuánto llevas.
+   La barra se arma en tres tramos con sus propias medidas —evaluación,
+   colchón y retiros— y no con una regla de tres inventada. */
+const LG_MAX_PAYOUTS = 5;   /* Rapid: la cuenta se acaba al quinto retiro */
+function lgCamino(a){
+  let C = null;
+  const propias = mias(S.accounts||[]);
+  if(a){ try{ C = carreraCuenta(a); }catch(e){} }
+  else { propias.filter(x => !esLive(x) && !esSim(x) && cuentaEnPie(x)).forEach(x => {
+    try{ const cc = carreraCuenta(x); if(cc && (!C || cc.pct > C.pct)) C = cc; }catch(e){} }); }
+  if(!C) return null;
+  const pagos = (S.caja || []).filter(c => c.tipo === 'ingreso').length;
+  const cl = (v) => Math.max(0, Math.min(1, v));
+  /* tramo 1 · la evaluación: 0 → 30 de la barra */
+  const t1 = cl(C.avance / CAMINO_MITAD);
+  /* tramo 2 · el colchón: 30 → 70 */
+  const t2 = cl((C.avance - CAMINO_MITAD) / (CAMINO_TOTAL - CAMINO_MITAD));
+  /* tramo 3 · los retiros: 70 → 100 */
+  const t3 = cl(pagos / LG_MAX_PAYOUTS);
+  const pct = t1*30 + t2*40 + t3*30;
+  return { C, pagos, pct,
+    hitos: [
+      { en:0,   n:bi('Eval','Eval'),        hecho: true },
+      { en:30,  n:bi('Funded','Funded'),    hecho: C.avance >= CAMINO_MITAD },
+      { en:50,  n:bi('Colchón','Buffer'),   hecho: C.avance >= CAMINO_MITAD + (CAMINO_TOTAL-CAMINO_MITAD)/2 },
+      { en:70,  n:bi('Payouts','Payouts'),  hecho: pagos >= 1 },
+      { en:100, n:bi('Máx','Max'),          hecho: pagos >= LG_MAX_PAYOUTS },
+    ] };
+}
 function lgBalancePanel(){
   const host = $('#lgBalance'); if(!host) return;
   const list = lgTradesReales();
@@ -14700,30 +14732,23 @@ function lgBalancePanel(){
   const propias = mias(S.accounts||[]);
   const size = a ? (a.size || 0) : propias.reduce((x,c)=>x+(c.size||0),0);
   const bal = size + pnl;
-  let C = null;
-  if(a){ try{ C = carreraCuenta(a); }catch(e){} }
-  else { propias.filter(x => !esLive(x) && !esSim(x) && cuentaEnPie(x)).forEach(x => {
-    try{ const cc = carreraCuenta(x); if(cc && (!C || cc.pct > C.pct)) C = cc; }catch(e){} }); }
-  const pct = C ? Math.max(0, Math.min(100, C.pct)) : 0;
-  /* los tres hitos del camino, en su lugar exacto de la barra */
-  const HITOS = [
-    { en:0,   n:bi('1ª fase','Phase 1'),  hecho: pct > 0 },
-    { en:50,  n:bi('Colchón','Buffer'),   hecho: pct >= 50 },
-    { en:100, n:bi('Payouts','Payouts'),  hecho: pct >= 100 },
-  ];
+  const R = lgCamino(a);
   host.innerHTML = `
     <div class="lgb-fila">
       <b class="lgb-bal">${fmt$(bal)}</b>
-      ${C ? `<span class="lgb-prog">
+      ${R ? `<span class="lgb-prog">
+        <span class="lgb-cabeza">
+          <em>${Math.round(R.pct)}%</em>
+          <em class="lgb-pagos">${R.pagos}/${LG_MAX_PAYOUTS} ${bi('retiros','payouts')}</em>
+        </span>
         <span class="lgb-track">
-          <i class="lgb-fill" style="width:${pct}%"></i>
-          ${HITOS.filter(h=>h.en>0).map(h=>`<u class="lgb-tick ${h.hecho?'on':''}" style="left:${h.en}%"></u>`).join('')}
+          <i class="lgb-fill" style="width:${R.pct}%"></i>
+          ${R.hitos.filter(h=>h.en>0).map(h=>`<u class="lgb-tick ${h.hecho?'on':''}" style="left:${h.en}%"></u>`).join('')}
         </span>
         <span class="lgb-hitos">
-          ${HITOS.map(h=>`<em class="${h.hecho?'on':''}" style="left:${h.en}%">${esc(h.n)}</em>`).join('')}
+          ${R.hitos.map((h,ix)=>`<em class="${h.hecho?'on':''} ${ix===0?'ini':''} ${ix===R.hitos.length-1?'fin':''}" style="left:${h.en}%">${esc(h.n)}</em>`).join('')}
         </span>
-      </span>
-      <b class="lgb-pct ${pct>=100?'ok':''}">${Math.round(pct)}%</b>` : ''}
+      </span>` : ''}
     </div>`;
   host.hidden = false;
 }
