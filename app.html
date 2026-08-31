@@ -11403,7 +11403,7 @@ function bossPintaMapa(){
     const Pprev = actual === 0 ? S0 : pos[actual-1];
     /* sin jefes vencidos todavía cargas el BOKKEN, no una katana de acero */
     let _sinKat = false;
-    try{ _sinKat = Object.keys(bossVencidos()).length === 0; }catch(e){}
+    try{ _sinKat = batTraeMadera(yo); }catch(e){}
     const _njMio = _sinKat
       ? { ...batNinjaDe(yo), bokken:true, banda:'#b98d55', buf:'#8a6b45' }
       : batNinjaDe(yo);
@@ -11854,17 +11854,33 @@ function batBote(c){ return batApuesta(c) * Math.max(2, batJugadores(c).length);
 function batKatanasDe(u){
   if(!S.batKatanas) S.batKatanas={};
   if(!Array.isArray(S.batKatanas[u])) S.batKatanas[u]=[];
-  if(!S.batKatanasLimpio){ S.batKatanasLimpio = true;
+  if(S.batKatanasLimpio !== 2){ S.batKatanasLimpio = 2;
+    /* SIN JEFES VENCIDOS NO PUEDE HABER KATANAS. La primera versión de esta
+       limpieza sólo borraba ['blanca'], y a quien el juego viejo le había
+       regalado dos —blanca y amarilla— le dejaba las dos y seguía marcando
+       «2/9 ganadas». No hay forma legítima de tener una sin haberle ganado a
+       su dueño, así que si no hay victorias, no hay colección. */
     try{ if(Object.keys(bossVencidos()).length === 0)
-      Object.keys(S.batKatanas).forEach(k2=>{
-        if(Array.isArray(S.batKatanas[k2]) && S.batKatanas[k2].length===1 && S.batKatanas[k2][0]==='blanca')
-          S.batKatanas[k2] = []; });
+      Object.keys(S.batKatanas).forEach(k2=>{ S.batKatanas[k2] = []; });
     }catch(e){}
   }
   return S.batKatanas[u];
 }
 /* ¿todavía andas con la de madera? */
 function batSinKatana(u){ return batKatanasDe(u).length === 0; }
+/* ══ LA DE MADERA NO SE PIERDE ══ (André, 31-ago-2026)
+   Ganar una katana no te la pone en la mano: la deja en tu colección, recién
+   conquistada, y tú decides cuándo cambiar. Mientras no elijas una de acero a
+   propósito, sigues cargando el bokken. Antes la más alta que tuvieras se
+   equipaba sola y la de madera desaparecía en cuanto ganabas la primera. */
+function batTraeMadera(u){
+  if(batSinKatana(u)) return true;
+  const eq = (S.batEquipada || {})[u];
+  return !eq || eq === 'madera' || !batKatanasDe(u).includes(eq);
+}
+/* volver a la de madera es una decisión como cualquier otra */
+function batEquiparMadera(u){ if(!S.batEquipada) S.batEquipada={};
+  S.batEquipada[u]='madera'; batStamp(u); save(); }
 /* la katana EQUIPADA (la que define tu ecosistema y tu espada del perfil).
    Por defecto la más alta que tengas; el jugador la cambia picando otra suya. */
 function batEquipadaDe(u){
@@ -12900,8 +12916,8 @@ function batPintaMonito(){
   const c=cv.getContext('2d'); const W=cv.width, H=cv.height; c.clearRect(0,0,W,H);
   const yo=(S.session||{}).user||''; const look=lookDe(yo);
   const kw=batKatanasDe(yo), ki=KATANAS.reduce((mx,k,ix)=> kw.includes(k.id)?ix:mx,0);
-  /* sin katana de acero, el monito carga la de madera */
-  const belt = kw.length ? KATANAS[ki].belt : '#b98d55';
+  /* mientras traigas la de madera, el monito la carga */
+  const belt = batTraeMadera(yo) ? '#b98d55' : KATANAS[ki].belt;
   const feetY=H-18, esc=2.15;
   c.fillStyle='rgba(0,0,0,.35)'; c.beginPath(); c.ellipse(W/2, feetY+7, 46, 12, 0,0,7); c.fill();
   try{ monitoPlano(c, W/2, feetY, look, esc, { brazoDer:-2.35, brazoIzq:0.55, banda:'#c8443c', katana:true, katanaCol:belt }); }catch(e){}
@@ -12961,8 +12977,9 @@ function batPintaZen(){
      cambia cuando cambias de espada — ésa es la promesa, y se rompía: entrabas
      por primera vez y ya estabas en las nieves de Shiro sin habérselas ganado.
      Si estás mirando otra katana en el arsenal (_zenVista), manda esa vista. */
+  /* traes la de madera = tu mundo sigue siendo el Edén */
   let _virgen = false;
-  try{ _virgen = (window._zenVista == null) && Object.keys(bossVencidos()).length === 0; }catch(e){}
+  try{ _virgen = (window._zenVista == null) && batTraeMadera(_u); }catch(e){}
   const E = _virgen ? ZEN_JARDIN : (ZEN_ESCENAS[_iv]||ZEN_ESCENAS[2]);
   const poderHex = _virgen ? '#b98d55' : KATANAS[_iv].belt;
   /* en el Edén el ninja trae su espada de MADERA, no una katana de acero */
@@ -14187,7 +14204,7 @@ function renderBatallaInterno(){
        lobby decía SHIRO y mostraba la blanca equipada desde el primer segundo,
        como si ya se la hubieras quitado a alguien. (André, 31-ago-2026) */
     let _sinGanar = false;
-    try{ _sinGanar = _preview == null && Object.keys(bossVencidos()).length === 0; }catch(e){}
+    try{ _sinGanar = _preview == null && batTraeMadera(yo); }catch(e){}
     const _nomMundo = _sinGanar ? loc(ZEN_JARDIN.bioma) : loc(KATANAS[kEquipIdx].n);
     const _colMundo = _sinGanar ? '#c9a97e' : KATANAS[kEquipIdx].belt;
     const escenaIdx = _preview!=null ? _preview : Math.max(0, kEquipIdx);
@@ -14267,10 +14284,10 @@ function renderBatallaInterno(){
             <span class="ars-cash" style="opacity:.62">· ${fmt$(banco)} ${bi('en el banco','in the bank')}</span>
             <button type="button" class="ars-x" id="arsX" aria-label="${bi('cerrar','close')}">✕</button></div>
           <div class="ars-scroll">
-            ${(()=>{ /* SIN NINGUNA DE ACERO, arriba va el BOKKEN: es lo que
-                 traes de verdad. Antes salía Shiro «Equipada» sin haberla
-                 ganado. (André, 31-ago-2026) */
-              if(!miKat.length) return `<div class="ars-hero madera" style="--kc:#b98d55">
+            ${(()=>{ /* ARRIBA VA LO QUE TRAES DE VERDAD. Antes salía la katana
+                 más alta que tuvieras, equipada sola; ahora ganar una la deja
+                 en la colección y tú decides cuándo cambiar. (André) */
+              if(batTraeMadera(yo)) return `<div class="ars-hero madera" style="--kc:#b98d55">
                 <span class="ars-hero-kanji">木</span>
                 <div class="ars-hero-sw">${bokkenSVG()}</div>
                 <div class="ars-hero-i"><b style="border-bottom:3px solid #b98d55">${bi('Bokken','Bokken')}</b><span class="ars-tag">${bi('Equipada','Equipped')}</span></div>
@@ -14286,7 +14303,13 @@ function renderBatallaInterno(){
             ${/* LAS KATANAS NO SE COMPRAN (André): cada una es de un ninja del
                   camino y se gana venciéndolo. Sin precios ni forja: la
                   colección es el registro de a quién ya tumbaste. */
-              KATANAS.map((k,i)=>{ const owned=miKat.includes(k.id), cur=(miKat.length>0 && i===kEquipIdx && owned);
+              (batTraeMadera(yo) ? '' : `<div class="ars-card owned" style="--kc:#b98d55">
+                <span class="ars-kanji">木</span>
+                <div class="ars-sw">${bokkenSVG()}</div>
+                <b class="ars-nom" style="border-bottom:2px solid #b98d55">${bi('Bokken','Bokken')}</b>
+                <button type="button" class="ars-eq" data-madera="1">${bi('Equipar','Equip')}</button>
+              </div>`) +
+              KATANAS.map((k,i)=>{ const owned=miKat.includes(k.id), cur=(!batTraeMadera(yo) && i===kEquipIdx && owned);
               if(cur) return '';   /* la equipada ya está en grande arriba */
               const dueno = KURO_BOSSES.find(x=>x.kat===i);
               return `<div class="ars-card ${owned?'owned':'locked'}" style="--kc:${k.belt}">
@@ -14564,6 +14587,7 @@ function renderBatallaInterno(){
     $('#setX') && ($('#setX').onclick = () => { window._batSetup=false; batSel=null; renderBatalla(); });
     if(window._batSetup) batSetupBind(root, yo, ()=>{ window._batSetup=false; batSel=null; });
     root.querySelectorAll('[data-equip]').forEach(b=> b.onclick=()=>{ batEquipar(yo,+b.dataset.equip); renderBatalla(); });
+    root.querySelectorAll('[data-madera]').forEach(b=> b.onclick=()=>{ batEquiparMadera(yo); renderBatalla(); });
     window._zenDuelo=null;   /* la pelea vive DENTRO de la batalla, no en el dashboard */
     requestAnimationFrame(batPintaZen);   // el mundo del stage según tu katana más alta
     if(window._batMuerteFlash){ const f=window._batMuerteFlash; window._batMuerteFlash=null; window._batPagoFlash=null; window._batFeeFlash=null; window._batWinFlash=null;
