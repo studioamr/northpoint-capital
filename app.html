@@ -12807,8 +12807,15 @@ function batPintaZen(){
   const _u=(S.session||{}).user||'';
   window._zenNinja = batNinjaDe(_u);
   const _iv=(window._zenVista!=null && window._zenVista>=0 && window._zenVista<KATANAS.length) ? window._zenVista : batEquipadaDe(_u);
-  const E=ZEN_ESCENAS[_iv]||ZEN_ESCENAS[2];
-  const poderHex=KATANAS[_iv].belt;
+  /* EL LOBBY EMPIEZA EN EL JARDÍN (André, 31-ago-2026): mientras no le hayas
+     ganado a NADIE sigues en tu jardín, con la espada de madera. El mundo
+     cambia cuando cambias de espada — ésa es la promesa, y se rompía: entrabas
+     por primera vez y ya estabas en las nieves de Shiro sin habérselas ganado.
+     Si estás mirando otra katana en el arsenal (_zenVista), manda esa vista. */
+  let _virgen = false;
+  try{ _virgen = (window._zenVista == null) && Object.keys(bossVencidos()).length === 0; }catch(e){}
+  const E = _virgen ? ZEN_JARDIN : (ZEN_ESCENAS[_iv]||ZEN_ESCENAS[2]);
+  const poderHex = _virgen ? '#b98d55' : KATANAS[_iv].belt;
   // la escena se dibuja en coordenadas CSS (W,H); el buffer real del canvas
   // se ajusta al tamaño mostrado × devicePixelRatio para que no se vea borroso
   // al estirarse dentro de .zen-stage (que crece con el alto del viewport)
@@ -13422,7 +13429,7 @@ const ZEN_JARDIN = { bioma:['El jardín','The garden'], sinNinja:true,
   sol:{x:.84,y:.34,r:60,col:'rgba(255,250,226,.95)',halo:'rgba(255,244,192,.30)'},
   montes:[['#3f7549',1],['#5d9963',.7]],
   /* el agua del jardín: un estanque claro, con su puente y sus lotos */
-  agua:'rgba(108,168,178,.55)', puente:true, lotos:true, cascada:true,
+  agua:'rgba(108,168,178,.55)', puente:true, lotos:true,
   nubes:true, nubesCol:'rgba(255,255,255,.94)', nubesEsc:1.5,
   /* SU CASA de madera, chiquita, a la izquierda: de ahí salió */
   casita:true, casitaX:0.15, casitaS:1.05, casitaCol:'#c9a97e',
@@ -14004,8 +14011,19 @@ function renderBatallaInterno(){
     /* EL MUNDO SIGUE A LA ESPADA QUE TRAES EQUIPADA (André): te pones otra
        katana y cambia el entorno. Era el jefe que te tocaba, pero equipar una
        espada tiene que verse — es lo que uno espera al ponérsela. */
+    /* MIENTRAS NO LE HAYAS GANADO A NADIE no traes katana: traes el bokken. El
+       lobby decía SHIRO y mostraba la blanca equipada desde el primer segundo,
+       como si ya se la hubieras quitado a alguien. (André, 31-ago-2026) */
+    let _sinGanar = false;
+    try{ _sinGanar = _preview == null && Object.keys(bossVencidos()).length === 0; }catch(e){}
+    const _nomMundo = _sinGanar ? loc(ZEN_JARDIN.bioma) : loc(KATANAS[kEquipIdx].n);
+    const _colMundo = _sinGanar ? '#c9a97e' : KATANAS[kEquipIdx].belt;
     const escenaIdx = _preview!=null ? _preview : Math.max(0, kEquipIdx);
-    window._zenVista = escenaIdx;
+    /* _zenVista es "la katana que estás MIRANDO en el arsenal". Se ponía
+       siempre, también sin preview, y valía 0 — que es Shiro. Por eso el lobby
+       nunca podía saber que aún no has ganado nada: parecía que estabas
+       mirando la blanca a propósito. Sin preview se deja en null. */
+    window._zenVista = _preview != null ? escenaIdx : null;
     const _bh = KATANAS[vistaIdx].belt.replace('#','');
     const katClaro = (parseInt(_bh.slice(0,2),16)*0.299 + parseInt(_bh.slice(2,4),16)*0.587 + parseInt(_bh.slice(4,6),16)*0.114)/255 > 0.72;
     const kProxIdx = KATANAS.findIndex(k=> !miKat.includes(k.id));
@@ -14040,7 +14058,7 @@ function renderBatallaInterno(){
                  el color de esa cinta, y decir el nombre de otra (la más alta
                  que tengas) con el color de ésta no cuadraba. Además el chip
                  ya sólo enseña el filo, así que aquí es donde se lee cuál es. -->
-            <span class="stage-id"><b>${esc(batNom(yo))}</b><span style="color:${miBelt}">${loc(KATANAS[batEquipadaDe(yo)].n)}</span></span>
+            <span class="stage-id"><b>${esc(batNom(yo))}</b><span style="color:${_colMundo}">${esc(_sinGanar?bi('Bokken','Bokken'):loc(KATANAS[batEquipadaDe(yo)].n))}</span></span>
           </button>
           <div class="stage-stats">
             <div class="st-chip wins"><em>${bi('VICTORIAS','WINS')}</em><b>${mi.g||0}</b></div>
@@ -14049,7 +14067,7 @@ function renderBatallaInterno(){
                  reconoce por su filo y su color, no leyendo «Shiro». -->
             <button type="button" class="st-chip armas" id="stArsenal"
               style="--kc:${KATANAS[kEquipIdx].belt}"
-              title="${esc(loc(KATANAS[kEquipIdx].n))}"><em>${bi('EQUIPADA','EQUIPPED')}</em>
+              title="${esc(_sinGanar?'Bokken':loc(KATANAS[kEquipIdx].n))}"><em>${bi('EQUIPADA','EQUIPPED')}</em>
               <b class="st-sw"><span class="st-sw-img">${katanaSVG(KATANAS[kEquipIdx].belt, true)}</span></b></button>
             <button type="button" class="st-gear" id="batAjustes" aria-label="${bi('Ajustes','Settings')}"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="3.2"/><path d="M12 3v2.5M12 18.5V21M4.2 7l2.2 1.3M17.6 15.7l2.2 1.3M4.2 17l2.2-1.3M17.6 8.3l2.2-1.3"/></svg></button>
           </div>
@@ -14059,7 +14077,7 @@ function renderBatallaInterno(){
                entorno siguiendo al jefe que te toca, leer «SHIRO» sobre el
                bosque violeta no cuadraba. Tu katana ya está en el chip
                EQUIPADA y bajo tu retrato. -->
-          <div class="stage-nivel" style="color:${KATANAS[kEquipIdx].belt}">${loc(KATANAS[kEquipIdx].n)}</div>
+          <div class="stage-nivel" style="color:${_colMundo}">${esc(_nomMundo)}</div>
           <!-- PLAY va ARRIBA de Battle: la escalera de jefes es la puerta
                principal; el 1v1 contra un socio queda debajo. -->
           <button type="button" class="stage-btn play" id="stPlay"><b>KURO</b></button>
@@ -23416,132 +23434,179 @@ if verPanel and barstate.islast
         // la celda de NY en la fila de liquidez ocupa las columnas 3-4
         unido := true
 
-// ═══ 14 · PANEL TÉCNICO ════════════════════════════════════════
-// No es una lista de indicadores por lucirlos: es lo que TU plan
-// necesita saber antes de apretar el botón. Arriba, los números
-// traducidos a tu operativa —cuántos puntos vale tu stop de $500 con
-// tus contratos, dónde caen el 1:1 y el 1:2, cuánta gasolina le queda
-// al día—. Abajo, la estadística de TU setup medida en este mismo
-// chart: de todos los días cargados, cuántos rompieron el ORB y de
-// esos cuántos llegaron a 1:1 y a 1:2 con el stop en el ORM.
-gTec = "14 · Panel técnico"
-verTec  = input.bool(true, "Panel técnico", group = gTec, tooltip = "Tabla aparte con dos mitades: TU PLAN (stop y objetivos en puntos, gasolina del día, contexto) y TU SETUP (qué tan seguido el ORB rompe y paga, contado sobre las velas que tengas cargadas).")
-posTec  = input.string("Abajo derecha", "Posición", options = ["Abajo derecha", "Abajo centro", "Abajo izquierda", "Arriba derecha", "Arriba centro", "Arriba izquierda"], inline = "T0", group = gTec)
-tamTec  = input.string("Pequeño", "", options = ["Diminuto", "Pequeño", "Normal"], inline = "T0", group = gTec)
-contratos = input.int(2, "Contratos (minis)", minval = 1, group = gTec, tooltip = "Con esto y el riesgo del grupo 4 se calcula cuántos PUNTOS vale tu stop. Con $500, 2 minis de MNQ ($2 el punto) son 125 puntos.")
-lenRSI  = input.int(14, "RSI", minval = 2, inline = "TL1", group = gTec)
-lenADX  = input.int(14, "ADX", minval = 2, inline = "TL1", group = gTec)
-lenATR  = input.int(14, "ATR", minval = 2, inline = "TL1", group = gTec)
-lenVol  = input.int(20, "Volumen", minval = 2, inline = "TL2", group = gTec)
-diasADR = input.int(14, "Días del ADR", minval = 2, maxval = 60, inline = "TL2", group = gTec)
+// ═══ 14 · LECTURA DEL MERCADO ══════════════════════════════════
+// Lo que verías tú al abrir el chart, escrito solo: en qué sesión
+// estás y qué suele hacer, si hay estructura o está picado, si el
+// precio está caro o barato dentro del rango del día, qué liquidez
+// queda libre arriba y abajo, si acaban de barrer un extremo, si
+// rompió estructura y en qué zona está parado. Al final, la fila
+// que importa: qué buscar ahora mismo — o que no hay nada que
+// buscar, que también es una lectura.
+gLx = "14 · Lectura del mercado"
+verLx  = input.bool(true, "Panel de lectura", group = gLx, tooltip = "Traduce a palabras lo que ya está dibujado: sesión, estructura, premium/descuento, liquidez libre, barridos, rompimientos y la zona donde está parado el precio. La última fila junta todo en una sola frase.")
+posLx  = input.string("Abajo derecha", "Posición", options = ["Abajo derecha", "Abajo centro", "Abajo izquierda", "Arriba derecha", "Arriba centro", "Arriba izquierda"], inline = "L0", group = gLx)
+tamLx  = input.string("Pequeño", "", options = ["Diminuto", "Pequeño", "Normal"], inline = "L0", group = gLx)
+pivLx  = input.int(5, "Velas del swing", minval = 2, maxval = 30, group = gLx, tooltip = "Cuántas velas a cada lado necesita un pico para contar como swing. Con esos swings se decide si hubo rompimiento de estructura.")
+chopLx = input.int(30, "Velas sin romper = picado", minval = 5, maxval = 200, group = gLx, tooltip = "Si pasan tantas velas sin romper ningún swing, el mercado se declara PICADO y la lectura te dice que te esperes.")
 
-// ── cálculos, todos a nivel global (Pine lo exige) ─────────────
-float rsiV = ta.rsi(close, lenRSI)
-[diPlus, diMinus, adxV] = ta.dmi(lenADX, lenADX)
-float atrV = ta.atr(lenATR)
-float volProm = ta.sma(volume, lenVol)
-float vwapV = ta.vwap
-[dH, dL] = request.security(syminfo.tickerid, "D", [high, low], lookahead = barmerge.lookahead_on)
-float adrV = request.security(syminfo.tickerid, "D", ta.sma(high - low, diasADR)[1], lookahead = barmerge.lookahead_on)
+// ── ESTRUCTURA · swings y rompimientos ─────────────────────────
+float lxPH = ta.pivothigh(high, pivLx, pivLx)
+float lxPL = ta.pivotlow(low, pivLx, pivLx)
+var float lxSwH = na
+var float lxSwL = na
+var int   lxSesgo = 0
+var int   lxBarBOS = na
+if not na(lxPH)
+    lxSwH := lxPH
+if not na(lxPL)
+    lxSwL := lxPL
+if not na(lxSwH) and close > lxSwH
+    lxSesgo := 1
+    lxBarBOS := bar_index
+    lxSwH := na
+if not na(lxSwL) and close < lxSwL
+    lxSesgo := -1
+    lxBarBOS := bar_index
+    lxSwL := na
 
-// ── ESTADÍSTICA DE TU SETUP ────────────────────────────────────
-// Se mide lo que tú haces: al cerrar el ORB se guardan sus niveles;
-// si el precio rompe con CIERRE durante NY, se sigue el trade con el
-// stop en el ORM y se anota si llegó a 1:1 y a 1:2. Si en la misma
-// vela caben stop y objetivo, gana el stop: mejor una estadística
-// pesimista que una que promete de más.
-var int   stDias   = 0
-var int   stBreak  = 0
-var int   st1R     = 0
-var int   st2R     = 0
-var float stOrbSum = 0.0
-var float eOrh = na
-var float eOrl = na
-var float eOrm = na
-var int   eDir = 0
-var bool  eGano1 = false
-var bool  eGano2 = false
-var bool  eMuerto = false
+// ── BARRIDOS · un extremo vivo que deja de estarlo ─────────────
+// Los campos de un objeto no se pueden mirar con [1], así que el
+// estado anterior se guarda a mano.
+var bool lxAH = false
+var bool lxAL = false
+var bool lxLH = false
+var bool lxLL = false
+var bool lxNH = false
+var bool lxNL = false
+var int    lxBarSweep = na
+var string lxSweep = ""
+if lxAH and not kzA.hiVivo
+    lxBarSweep := bar_index
+    lxSweep := txtA + " H"
+if lxAL and not kzA.loVivo
+    lxBarSweep := bar_index
+    lxSweep := txtA + " L"
+if lxLH and not kzL.hiVivo
+    lxBarSweep := bar_index
+    lxSweep := txtL + " H"
+if lxLL and not kzL.loVivo
+    lxBarSweep := bar_index
+    lxSweep := txtL + " L"
+if lxNH and not kzN.hiVivo
+    lxBarSweep := bar_index
+    lxSweep := txtN + " H"
+if lxNL and not kzN.loVivo
+    lxBarSweep := bar_index
+    lxSweep := txtN + " L"
+lxAH := kzA.hiVivo
+lxAL := kzA.loVivo
+lxLH := kzL.hiVivo
+lxLL := kzL.loVivo
+lxNH := kzN.hiVivo
+lxNL := kzN.loVivo
 
-if tO[1] and not tO and orh > orl
-    eOrh := orh
-    eOrl := orl
-    eOrm := math.avg(orh, orl)
-    eDir := 0
-    eGano1 := false
-    eGano2 := false
-    eMuerto := false
-    stDias += 1
-    stOrbSum += orh - orl
+var table lxT = table.new(posLx == "Abajo centro" ? position.bottom_center : posLx == "Abajo izquierda" ? position.bottom_left : posLx == "Arriba derecha" ? position.top_right : posLx == "Arriba centro" ? position.top_center : posLx == "Arriba izquierda" ? position.top_left : position.bottom_right, 2, 9, chart.bg_color, chart.fg_color, 2, chart.fg_color, 1)
+lxTam = tamLx == "Diminuto" ? size.tiny : tamLx == "Normal" ? size.normal : size.small
 
-if not na(eOrh) and tN and not tO
-    if eDir == 0
-        if close > eOrh
-            eDir := 1
-            stBreak += 1
-        else if close < eOrl
-            eDir := -1
-            stBreak += 1
-    else if not eMuerto
-        float rPts = eDir == 1 ? eOrh - eOrm : eOrm - eOrl
-        bool pegoStop = eDir == 1 ? low <= eOrm : high >= eOrm
-        if pegoStop
-            eMuerto := true
-        else if rPts > 0
-            float t1 = eDir == 1 ? eOrh + rPts : eOrl - rPts
-            float t2 = eDir == 1 ? eOrh + rPts * 2 : eOrl - rPts * 2
-            if not eGano1 and (eDir == 1 ? high >= t1 : low <= t1)
-                eGano1 := true
-                st1R += 1
-            if eGano1 and not eGano2 and (eDir == 1 ? high >= t2 : low <= t2)
-                eGano2 := true
-                st2R += 1
-
-var table tec = table.new(posTec == "Abajo centro" ? position.bottom_center : posTec == "Abajo izquierda" ? position.bottom_left : posTec == "Arriba derecha" ? position.top_right : posTec == "Arriba centro" ? position.top_center : posTec == "Arriba izquierda" ? position.top_left : position.bottom_right, 3, 12, chart.bg_color, chart.fg_color, 2, chart.fg_color, 1)
-tamT = tamTec == "Diminuto" ? size.tiny : tamTec == "Normal" ? size.normal : size.small
-
-f_filaT(int fi, string etq, string val, string lee, color c) =>
-    table.cell(tec, 0, fi, etq, text_color = color.gray, text_size = tamT, text_halign = text.align_left)
-    table.cell(tec, 1, fi, val, text_color = chart.fg_color, text_size = tamT, text_halign = text.align_right)
-    table.cell(tec, 2, fi, lee, text_color = c, text_size = tamT, text_halign = text.align_left)
+f_lx(int fi, string etq, string txt, color c) =>
+    table.cell(lxT, 0, fi, etq, text_color = color.gray, text_size = lxTam, text_halign = text.align_left)
+    table.cell(lxT, 1, fi, txt, text_color = c, text_size = lxTam, text_halign = text.align_left)
     0
 
-if verTec and barstate.islast
-    // ── TU PLAN, en puntos ────────────────────────────────────
-    float valPto = syminfo.pointvalue * contratos
-    float stopPts = valPto > 0 ? riesgoDia / valPto : na
-    f_filaT(0, "TU PLAN", timeframe.period, str.tostring(contratos) + " minis · $" + str.tostring(riesgoDia), chart.fg_color)
-    f_filaT(1, "Stop", na(stopPts) ? "—" : str.tostring(stopPts, "#.#") + " pts", "es tu −$" + str.tostring(riesgoDia), pBaja)
-    f_filaT(2, "Objetivos", na(stopPts) ? "—" : str.tostring(stopPts, "#.#") + " / " + str.tostring(stopPts * 2, "#.#") + " pts", "1:1 · 1:2", pAlza)
+if verLx and barstate.islast and dibujable
+    // 1 · SESIÓN y su carácter
+    string lxSesN = tO ? txtO : tN ? txtN : tA ? txtA : tL ? txtL : ""
+    string lxSesC = tO ? "se forma el rango de apertura" : tN ? "expansión · el día se define aquí" : tA ? "rango · acumula y deja mechas" : tL ? "manipulación · suele barrer a Asia" : "sin sesión · el mercado descansa"
+    f_lx(0, "Sesión", (lxSesN == "" ? "—" : lxSesN + " · ") + lxSesC, lxSesN == "" ? color.gray : tN or tO ? pAlza : tL ? pSuave : colA)
 
-    // gasolina del día: si ya hizo su rango, no le pidas un 1:2
-    float rangoHoy = na(dH) or na(dL) ? na : dH - dL
-    float pctADR = na(rangoHoy) or na(adrV) or adrV == 0 ? na : rangoHoy / adrV * 100
-    string adrTxt = na(pctADR) ? "—" : pctADR >= 100 ? "ya dio su rango" : pctADR >= 80 ? "casi todo" : pctADR >= 50 ? "va a la mitad" : "le queda camino"
-    color adrCol = na(pctADR) ? color.gray : pctADR >= 100 ? pBaja : pctADR >= 80 ? pSuave : pAlza
-    f_filaT(3, "Rango hoy", na(rangoHoy) ? "—" : str.tostring(rangoHoy, "#.#") + " pts", na(pctADR) ? "—" : str.tostring(pctADR, "#") + "% del ADR · " + adrTxt, adrCol)
-    f_filaT(4, "ATR " + str.tostring(lenATR), str.tostring(atrV, "#.##") + " pts", na(stopPts) ? "—" : (stopPts >= atrV * 1.5 ? "tu stop respira" : "tu stop va apretado"), na(stopPts) ? color.gray : stopPts >= atrV * 1.5 ? pAlza : pSuave)
+    // 2 · ESTRUCTURA
+    bool lxChop = na(lxBarBOS) or (bar_index - lxBarBOS) > chopLx
+    string lxEstT = lxChop ? "PICADO · sin rompimientos, no fuerces" : lxSesgo == 1 ? "ALCISTA · rompió al alza hace " + str.tostring(bar_index - lxBarBOS) + " velas" : "BAJISTA · rompió a la baja hace " + str.tostring(bar_index - lxBarBOS) + " velas"
+    f_lx(1, "Estructura", lxEstT, lxChop ? pSuave : lxSesgo == 1 ? pAlza : pBaja)
 
-    // ── CONTEXTO ──────────────────────────────────────────────
-    string adxTxt = adxV >= 40 ? "tendencia fuerte" : adxV >= 25 ? "con tendencia" : adxV >= 20 ? "arrancando" : "rango · cuidado"
-    color adxCol = adxV >= 25 ? (diPlus > diMinus ? pAlza : pBaja) : pSuave
-    f_filaT(5, "ADX " + str.tostring(lenADX), str.tostring(adxV, "#.#"), adxTxt + (adxV >= 25 ? (diPlus > diMinus ? " ↑" : " ↓") : ""), adxCol)
-    string rsiTxt = rsiV >= 70 ? "sobrecompra" : rsiV <= 30 ? "sobreventa" : rsiV >= 55 ? "con fuerza" : rsiV <= 45 ? "con peso" : "neutro"
-    color rsiCol = rsiV >= 70 ? pBaja : rsiV <= 30 ? pAlza : rsiV >= 55 ? pAlza : rsiV <= 45 ? pBaja : color.gray
-    f_filaT(6, "RSI " + str.tostring(lenRSI), str.tostring(rsiV, "#.#"), rsiTxt, rsiCol)
-    float volRel = na(volProm) or volProm == 0 ? na : volume / volProm
-    string volTxt = na(volRel) ? "sin dato" : volRel >= 2 ? "muy alto" : volRel >= 1.3 ? "alto" : volRel <= 0.6 ? "flojo · no fuerces" : "normal"
-    f_filaT(7, "Volumen", na(volRel) ? "—" : str.tostring(volRel, "#.#") + "x", volTxt, na(volRel) ? color.gray : volRel >= 1.3 ? pAlza : volRel <= 0.6 ? pSuave : color.gray)
-    float dVwap = close - vwapV
-    f_filaT(8, "VWAP", str.tostring(vwapV, format.mintick), (dVwap >= 0 ? "+" : "") + str.tostring(dVwap, "#.#") + " pts · " + (dVwap >= 0 ? "compradores" : "vendedores"), dVwap >= 0 ? pAlza : pBaja)
+    // 3 · PREMIUM / DESCUENTO sobre el rango del día
+    float lxH = rngDh
+    float lxL = rngDl
+    float lxEq = na(lxH) or na(lxL) ? na : (lxH + lxL) / 2
+    float lxPct = na(lxH) or na(lxL) or lxH == lxL ? na : (close - lxL) / (lxH - lxL) * 100
+    string lxZonaT = na(lxPct) ? "—" : lxPct >= 70 ? "PREMIUM · caro, aquí se vende" : lxPct <= 30 ? "DESCUENTO · barato, aquí se compra" : "EQUILIBRIO · el peor lugar para entrar"
+    color lxZonaC = na(lxPct) ? color.gray : lxPct >= 70 ? pBaja : lxPct <= 30 ? pAlza : pSuave
+    f_lx(2, "Precio", (na(lxPct) ? "" : str.tostring(lxPct, "#") + "% del rango · ") + lxZonaT, lxZonaC)
 
-    // ── TU SETUP, medido aquí ─────────────────────────────────
-    f_filaT(9, "TU SETUP", str.tostring(stDias) + " días", stDias < 20 ? "pocos datos aún" : "medido en este chart", stDias < 20 ? pSuave : color.gray)
-    float pctBreak = stDias == 0 ? na : stBreak * 100.0 / stDias
-    f_filaT(10, "Rompe el ORB", na(pctBreak) ? "—" : str.tostring(pctBreak, "#") + "%", str.tostring(stBreak) + " de " + str.tostring(stDias) + " días · ORB " + (stDias == 0 ? "—" : str.tostring(stOrbSum / stDias, "#.#") + " pts"), color.gray)
-    float p1 = stBreak == 0 ? na : st1R * 100.0 / stBreak
-    float p2 = stBreak == 0 ? na : st2R * 100.0 / stBreak
-    f_filaT(11, "Paga 1:1 · 1:2", na(p1) ? "—" : str.tostring(p1, "#") + "% · " + str.tostring(p2, "#") + "%", na(p2) ? "—" : (p2 >= 50 ? "el 1:2 sale seguido" : p1 >= 50 ? "el 1:1 sí, el 1:2 no tanto" : "cuesta · sé selectivo"), na(p2) ? color.gray : p2 >= 50 ? pAlza : p1 >= 50 ? pSuave : pBaja)
+    // 4 y 5 · LIQUIDEZ libre, la más cercana de cada lado
+    string lxArr = ""
+    float lxArrD = 1e12
+    string lxAba = ""
+    float lxAbaD = 1e12
+    if useA and kzA.activa
+        if kzA.hiVivo and kzA.hiLn.get_y1() > close and kzA.hiLn.get_y1() - close < lxArrD
+            lxArrD := kzA.hiLn.get_y1() - close
+            lxArr := txtA + " H " + str.tostring(kzA.hiLn.get_y1(), format.mintick)
+        if kzA.loVivo and kzA.loLn.get_y1() < close and close - kzA.loLn.get_y1() < lxAbaD
+            lxAbaD := close - kzA.loLn.get_y1()
+            lxAba := txtA + " L " + str.tostring(kzA.loLn.get_y1(), format.mintick)
+    if useL and kzL.activa
+        if kzL.hiVivo and kzL.hiLn.get_y1() > close and kzL.hiLn.get_y1() - close < lxArrD
+            lxArrD := kzL.hiLn.get_y1() - close
+            lxArr := txtL + " H " + str.tostring(kzL.hiLn.get_y1(), format.mintick)
+        if kzL.loVivo and kzL.loLn.get_y1() < close and close - kzL.loLn.get_y1() < lxAbaD
+            lxAbaD := close - kzL.loLn.get_y1()
+            lxAba := txtL + " L " + str.tostring(kzL.loLn.get_y1(), format.mintick)
+    if useN and kzN.activa
+        if kzN.hiVivo and kzN.hiLn.get_y1() > close and kzN.hiLn.get_y1() - close < lxArrD
+            lxArrD := kzN.hiLn.get_y1() - close
+            lxArr := txtN + " H " + str.tostring(kzN.hiLn.get_y1(), format.mintick)
+        if kzN.loVivo and kzN.loLn.get_y1() < close and close - kzN.loLn.get_y1() < lxAbaD
+            lxAbaD := close - kzN.loLn.get_y1()
+            lxAba := txtN + " L " + str.tostring(kzN.loLn.get_y1(), format.mintick)
+    f_lx(3, "Imán ↑", lxArr == "" ? "nada libre arriba" : lxArr + " · a " + str.tostring(lxArrD, "#.#") + " pts", lxArr == "" ? color.gray : pAlza)
+    f_lx(4, "Imán ↓", lxAba == "" ? "nada libre abajo" : lxAba + " · a " + str.tostring(lxAbaD, "#.#") + " pts", lxAba == "" ? color.gray : pBaja)
+
+    // 6 · BARRIDO reciente
+    bool lxHayS = not na(lxBarSweep) and (bar_index - lxBarSweep) <= 20
+    f_lx(5, "Barrido", lxHayS ? "tomaron " + lxSweep + " hace " + str.tostring(bar_index - lxBarSweep) + " velas · busca la vuelta" : na(lxBarSweep) ? "nadie ha barrido hoy" : "el último fue hace rato (" + lxSweep + ")", lxHayS ? pSuave : color.gray)
+
+    // 7 · ZONA donde está parado
+    string lxZ = ""
+    if not na(orh) and not na(orl) and close <= orh and close >= orl
+        lxZ := "dentro del ORB"
+    if array.size(fS) > 0
+        for i = 0 to array.size(fS) - 1
+            if close <= array.get(fT, i) and close >= array.get(fB, i)
+                lxZ := (lxZ == "" ? "" : lxZ + " · ") + "en el FVG " + (array.get(fS, i) == 1 ? "↑" : "↓")
+    f_lx(6, "Zona", lxZ == "" ? "en el aire, sin zona" : lxZ, lxZ == "" ? color.gray : pAcento)
+
+    // 8 · ORB del día
+    string lxOrb = na(orh) or na(orl) ? "aún sin ORB" : close > orh ? "roto ↑ · +" + str.tostring(close - orh, "#.#") + " pts sobre el ORH" : close < orl ? "roto ↓ · " + str.tostring(orl - close, "#.#") + " pts bajo el ORL" : "dentro · " + str.tostring(orh - orl, "#.#") + " pts de rango"
+    f_lx(7, "ORB", lxOrb, na(orh) ? color.gray : close > orh ? pAlza : close < orl ? pBaja : pSuave)
+
+    // 9 · LA CONCLUSIÓN
+    string lxPlan = ""
+    color lxPlanC = color.gray
+    if not tN and not tO
+        lxPlan := "fuera de tu ventana · solo observa"
+    else if lxChop
+        lxPlan := "picado · espera a que rompa algo"
+        lxPlanC := pSuave
+    else if lxHayS and lxSesgo == 1 and not na(lxPct) and lxPct <= 50
+        lxPlan := "COMPRA: barrieron abajo y va al alza, en zona barata"
+        lxPlanC := pAlza
+    else if lxHayS and lxSesgo == -1 and not na(lxPct) and lxPct >= 50
+        lxPlan := "VENTA: barrieron arriba y va a la baja, en zona cara"
+        lxPlanC := pBaja
+    else if lxSesgo == 1 and not na(lxPct) and lxPct <= 30
+        lxPlan := "compras: alcista y en descuento · espera tu gatillo"
+        lxPlanC := pAlza
+    else if lxSesgo == -1 and not na(lxPct) and lxPct >= 70
+        lxPlan := "ventas: bajista y en premium · espera tu gatillo"
+        lxPlanC := pBaja
+    else if not na(lxPct) and lxPct > 30 and lxPct < 70
+        lxPlan := "en equilibrio · deja que vaya a un extremo"
+        lxPlanC := pSuave
+    else
+        lxPlan := lxSesgo == 1 ? "alcista pero caro · no persigas" : "bajista pero barato · no persigas"
+        lxPlanC := pSuave
+    f_lx(8, "QUÉ BUSCAR", lxPlan, lxPlanC)
  `;
 const ALGO_PINE_KZP_ESTRUCTURA = `// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
 // Idea de killzones con H/L derivada de "ICT Killzones & Pivots [TFO]" © tradeforopp.
