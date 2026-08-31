@@ -12348,13 +12348,20 @@ function renderBatalla(){
         batGuarda();
         toast(bi('¡Empieza el duelo!','The duel begins!'));
       }
-      if(Date.now() >= c.fin){ c.estado = 'terminado'; batGuarda(); return; }
+      /* SE TRABABA AQUÍ (André, 30-ago-2026): al vencerse el tiempo esto
+         marcaba 'terminado', guardaba y hacía `return` SIN pintar nada —
+         Kuro se quedaba en blanco. Ahora vuelve a entrar, que la rama de
+         'terminado' ya tiene su pantalla de resultado. */
+      if(Date.now() >= c.fin){ c.estado = 'terminado'; batGuarda(); renderBatalla(); return; }
     }
     /* duelos que ya venían guardados con las horas completas: se emparejan
        con su killzone en cuanto se abren, sin tener que crearlos de nuevo */
     if(c.arrancado && c.sesion){
       const tope = c.arrancado + batFinMs(c, c.arrancado);
-      if(c.fin > tope + 1000){ c.fin = tope; batGuarda(); }
+      /* solo se acorta hacia ADELANTE: si el tope ya pasó, el duelo se deja
+         terminar por su cuenta y se ve su resultado, en vez de cerrarse de
+         golpe encima del que está jugando */
+      if(tope > Date.now() && c.fin > tope + 1000){ c.fin = tope; batGuarda(); }
     }
     const restante = Math.max(0, c.fin - Date.now());
     /* MINUTOS DE LA HORA, no minutos totales: sin el módulo, 3h 59m 19s se
