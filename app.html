@@ -21864,7 +21864,6 @@ buffIni = input.time(timestamp("7 Sep 2026 00:00:00 GMT-4"), "BUFFER empieza", g
 buffFin = input.time(timestamp("19 Sep 2026 00:00:00 GMT-4"), "BUFFER termina", group = g4)
 payIni  = input.time(timestamp("21 Sep 2026 00:00:00 GMT-4"), "PAYOUTS empieza", group = g4)
 payFin  = input.time(timestamp("1 Oct 2026 00:00:00 GMT-4"), "PAYOUTS termina", group = g4)
-balHoy = input.int(0, "Con cuánto abriste hoy ($)", minval = 0, step = 500, group = g4, tooltip = "El día va de +$500 a +$1,000 SOBRE LO QUE TRAES, no sobre los $50,000 del principio. Déjalo en 0 y lo estima solo, suponiendo que cada día cerraste con el mínimo; pon tu balance real de la mañana y la meta de hoy sale exacta.")
 riesgoDia = input.int(500, "Riesgo por trade ($)", minval = 50, step = 50, group = g4, tooltip = "De aquí sale la meta del día, y sale como RANGO en vez de un número seco: un día a 1:1 ya es un día bueno (+$500 con riesgo de $500) y un 1:2 es el día redondo (+$1,000). El panel te dice entre cuánto y cuánto deberías cerrar hoy.")
 reglaEval = input.string("4 minis · 1 trade · riesgo $500", "Regla EVAL", group = g4)
 reglaBuff = input.string("2 minis · 1 trade · riesgo $500", "Regla BUFFER", group = g4)
@@ -22873,29 +22872,17 @@ if verPanel and barstate.islast
     if timenow >= evalIni and timenow < evalFin
         int dF = math.max(1, f_diasHabiles(evalIni, timenow))
         int tF = f_diasHabiles(evalIni, evalFin - 1)
-        // EL DÍA SE MIDE DESDE DONDE ABRISTE (André, 31-ago-2026): antes
-        // el tope se multiplicaba por todos los días —como si hubieras
-        // hecho el máximo siempre— y el día 2 marcaba $52K. La franja va
-        // de un riesgo al doble SOBRE LO QUE TRAES: si cierras el día 1
-        // en $50.5K, el día 2 va de $51K a $51.5K. Sin el dato real se
-        // supone que cada día cerró con el mínimo, que es lo conservador.
-        int baseHoy = balHoy > 0 ? balHoy : 50000 + (dF - 1) * riesgoDia
-        int metaMin = math.min(baseHoy + riesgoDia, 53000)
-        int metaMax = math.min(baseHoy + riesgoDia * 2, 53000)
-        fase := "EVAL · día " + str.tostring(dF) + "/" + str.tostring(tF) + (dF <= 3 ? " · hoy " + f_fmtK(metaMin) + " a " + f_fmtK(metaMax) : " · colchón · " + f_fmtK(53000))
+        fase := "EVAL · día " + str.tostring(dF) + "/" + str.tostring(tF) + (dF <= 3 ? "" : " · colchón")
         cFase := pAcento
     else if timenow >= buffIni and timenow < buffFin
         int dF = math.max(1, f_diasHabiles(buffIni, timenow))
         int tF = f_diasHabiles(buffIni, buffFin - 1)
-        int baseHoy = balHoy > 0 ? balHoy : 50000 + (dF - 1) * riesgoDia
-        int metaMin = math.min(baseHoy + riesgoDia, 52500)
-        int metaMax = math.min(baseHoy + riesgoDia * 2, 52500)
-        fase := "BUFFER · día " + str.tostring(dF) + "/" + str.tostring(tF) + (dF <= 5 ? " · hoy " + f_fmtK(metaMin) + " a " + f_fmtK(metaMax) : " · mantén " + f_fmtK(52500))
+        fase := "BUFFER · día " + str.tostring(dF) + "/" + str.tostring(tF)
         cFase := pBaja
     else if timenow >= payIni and timenow < payFin
         int dF = math.max(1, f_diasHabiles(payIni, timenow))
         int tF = f_diasHabiles(payIni, payFin - 1)
-        fase := "PAYOUTS · día " + str.tostring(dF) + "/" + str.tostring(tF) + " · cobra hoy"
+        fase := "PAYOUTS · día " + str.tostring(dF) + "/" + str.tostring(tF)
         cFase := pAlza
     else if timenow < evalIni
         fase := "EVAL empieza " + f_dias(evalIni)
@@ -22919,10 +22906,12 @@ if verPanel and barstate.islast
     string prePay  = enPay ? "▶ " : timenow >= payFin ? "✓ " : ""
     // el día: de un riesgo ganado al doble. Más de ahí no se pide, y
     // si sale mal se va un riesgo. Todo eso vive en el tooltip.
-    string pasoDia = "$" + str.tostring(riesgoDia) + " a $" + str.tostring(riesgoDia * 2) + " al día"
-    string txtEval = preEval + f_rangoF(evalIni, evalFin) + " · " + pasoDia + " → " + f_fmtK(53000) + "\\n" + reglaEval
-    string txtBuff = preBuff + f_rangoF(buffIni, buffFin) + " · " + pasoDia + " → " + f_fmtK(52500) + "\\n" + reglaBuff
-    string txtPay  = prePay + f_rangoF(payIni, payFin) + " · cobro diario\\n" + reglaPay
+    // fecha arriba, target en medio, reglas abajo. Sin flechas ni metas
+    // de fase colgando: el número que importa es el del día.
+    string pasoDia = "target $" + str.tostring(riesgoDia) + " a $" + str.tostring(riesgoDia * 2)
+    string txtEval = preEval + f_rangoF(evalIni, evalFin) + "\\n" + pasoDia + "\\n" + reglaEval
+    string txtBuff = preBuff + f_rangoF(buffIni, buffFin) + "\\n" + pasoDia + "\\n" + reglaBuff
+    string txtPay  = prePay + f_rangoF(payIni, payFin) + "\\ncobro diario\\n" + reglaPay
     // la fase en curso va en su color y resaltada; la que ya pasó, gris
     color cE = enEval ? pAcento : timenow >= evalFin ? color.gray : chart.fg_color
     color cB = enBuff ? pBaja : timenow >= buffFin ? color.gray : chart.fg_color
@@ -23011,22 +23000,22 @@ if verPanel and barstate.islast
     string sesTxt = ""
     color cSes = color.gray
     if cerrado
-        sesTxt := abNom + " abre en " + f_dur(abMin)
+        sesTxt := abNom
         cSes := abCol
     else if f_en(oIni, oFin, mdNY)
-        sesTxt := txtO + " · cierra en " + f_dur(f_faltan(oFin, mdNY))
+        sesTxt := txtO
         cSes := colN
     else if f_en(nIni0, nFin, mdNY)
-        sesTxt := txtN + " · cierra en " + f_dur(f_faltan(nFin, mdNY))
+        sesTxt := txtN
         cSes := colN
     else if f_en(mAsia, aFin, mdNY)
-        sesTxt := txtA + " · cierra en " + f_dur(f_faltan(aFin, mdNY))
+        sesTxt := txtA
         cSes := colA
     else if f_en(lIni0, lFin, mdNY)
-        sesTxt := txtL + " · cierra en " + f_dur(f_faltan(lFin, mdNY))
+        sesTxt := txtL
         cSes := colL
     else
-        sesTxt := abNom + " abre en " + f_dur(abMin)
+        sesTxt := abNom
         cSes := abCol
 
     string diaTxt = dowNY == dayofweek.monday ? "LUN" : dowNY == dayofweek.tuesday ? "MAR" : dowNY == dayofweek.wednesday ? "MIÉ" : dowNY == dayofweek.thursday ? "JUE" : dowNY == dayofweek.friday ? "VIE" : dowNY == dayofweek.saturday ? "SÁB" : "DOM"
