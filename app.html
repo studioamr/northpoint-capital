@@ -10478,45 +10478,54 @@ const KURO_BOSSES = [
     titulo:['El de hielo','The cold one'],
     lema:['No lo mueve una racha ni buena ni mala. Opera igual el lunes que el viernes.',
           'No streak moves him. Monday and Friday look the same.'],
-    reto:{ k:'mes', dur:20, t:['Gáname en UN MES','Beat me over ONE MONTH'],
-           d:['Veinte sesiones. Aquí se ve quién tiene sistema y quién tuvo suerte.',
-              'Twenty sessions. This is where system and luck part ways.'] },
+    /* DE AQUÍ EN ADELANTE, CARRERA (André): gana el primero que llegue a la
+       meta sin romper su drawdown. Los retos de un mes eran eternos; así se
+       resuelven en los días que tardes y el riesgo entra al juego. */
+    reto:{ k:'carrera', meta:2000, dd:1500,
+           t:['El primero en hacer $2,000','First to $2,000'],
+           d:['Carrera a $2,000 de profit. Si tocas −$1,500 de drawdown, pierdes.',
+              'Race to $2,000 profit. Touch −$1,500 drawdown and you lose.'] },
     st:{ wr:57, pf:2.08, trd:3, avgW:310, avgL:-150, dd:-480 } },
 
   { kat:5, nom:'MURASAKI', kanji:'紫',
     titulo:['El inquebrantable','The unbroken'],
     lema:['Su curva es una escalera. Casi no tiene días rojos.',
           'His curve is a staircase. He barely has red days.'],
-    reto:{ k:'mes', dur:20, t:['Un mes, y con más días verdes','A month, and more green days'],
-           d:['Un mes completo contra alguien que cierra en verde dos de cada tres días.',
-              'A full month against someone green two days out of three.'] },
+    reto:{ k:'carrera', meta:3000, dd:2000,
+           t:['El primero en hacer $3,000','First to $3,000'],
+           d:['Carrera a $3,000 de profit. Si tocas −$2,000 de drawdown, pierdes.',
+              'Race to $3,000 profit. Touch −$2,000 drawdown and you lose.'] },
     st:{ wr:60, pf:2.42, trd:3, avgW:340, avgL:-145, dd:-420 } },
 
   { kat:6, nom:'CHA',      kanji:'茶',
     titulo:['La montaña','The mountain'],
     lema:['Lleva tres meses haciendo exactamente lo mismo. Ahí está su ventaja.',
           'Three months doing exactly the same thing. That is his edge.'],
-    reto:{ k:'trimestre', dur:60, t:['Un TRIMESTRE completo','A full QUARTER'],
-           d:['Sesenta sesiones. Nadie sostiene esto sin un sistema escrito.',
-              'Sixty sessions. Nobody holds this without a written system.'] },
+    reto:{ k:'carrera', meta:5000, dd:2500,
+           t:['El primero en hacer $5,000','First to $5,000'],
+           d:['Carrera a $5,000. El margen es más ancho, pero él no falla.',
+              'Race to $5,000. Wider room, but he does not miss.'] },
     st:{ wr:62, pf:2.85, trd:2, avgW:360, avgL:-140, dd:-380 } },
 
   { kat:7, nom:'AKA',      kanji:'赤',
     titulo:['El cazador','The hunter'],
     lema:['Dos trades al día y los dos importan. Su profit factor es de firma.',
           'Two trades a day and both matter. His profit factor is prop-desk grade.'],
-    reto:{ k:'pf', dur:20, t:['Gáname en PROFIT FACTOR','Beat my PROFIT FACTOR'],
-           d:['Un mes, y no gana el que más haga: gana el que mejor lo haga.',
-              'A month, and most money does not win: doing it best does.'] },
+    /* EL MES, para el penúltimo (André): es la prueba de fondo, y va justo
+       antes de KURO — cuando ya pasaste todas las carreras cortas. */
+    reto:{ k:'mes', dur:20, t:['Gáname en UN MES','Beat me over ONE MONTH'],
+           d:['Veinte sesiones seguidas contra alguien que no falla. Aquí se ve quién tiene sistema.',
+              'Twenty sessions against someone who does not miss. This is where system shows.'] },
     st:{ wr:64, pf:3.20, trd:2, avgW:420, avgL:-150, dd:-340 } },
 
   { kat:8, nom:'KURO',     kanji:'黒', final:true,
     titulo:['El maestro','The master'],
     lema:['Nadie lo ha visto perder un mes. Su katana es la última que existe.',
           'No one has seen him lose a month. His katana is the last one there is.'],
-    reto:{ k:'trimestre', dur:60, t:['Vencer a KURO','Defeat KURO'],
-           d:['Un trimestre contra el mejor que hay. Si lo pasas, tus números son de profesional.',
-              'A quarter against the best there is. Clear it and your numbers are professional.'] },
+    reto:{ k:'carrera', meta:12000, dd:3000,
+           t:['El primero en hacer $12,000','First to $12,000'],
+           d:['Carrera a $12,000 sin tocar −$3,000, contra el mejor que hay.',
+              'Race to $12,000 without touching −$3,000, against the best there is.'] },
     st:{ wr:66, pf:3.80, trd:2, avgW:460, avgL:-145, dd:-300 } },
 ];
 
@@ -10548,12 +10557,17 @@ function bossPlan(i){
   }
   return out;
 }
+/* posiciones: el índice -1 es EL ARRANQUE del camino —donde empiezas—, y de
+   ahí el sendero sube a ASHURA, que es la primera parada de verdad. */
 function bossNodoPos(i, W, H){
   const n = KURO_BOSSES.length;
-  const y = H - 96 - ((H - 96 - 150) * i / (n - 1));
-  const x = W/2 + Math.sin(i*1.05 + 0.6) * (W*0.26);
+  const y0 = H - 150, yN = 190;               /* salida abajo, templo arriba */
+  const paso = (y0 - yN) / n;                 /* n saltos: salida + 9 jefes */
+  const y = y0 - paso * (i + 1);
+  const x = W/2 + Math.sin((i+1)*1.05 + 0.6) * (W*0.26);
   return { x, y };
 }
+function bossSalidaPos(W, H){ return { x: W/2 + Math.sin(0.6)*(W*0.26), y: H - 150 }; }
 /* ══ EL MAPA ══ UNA sola escena pintada, no bandas de color: un valle en
    niebla al amanecer que sube hasta el templo, con el dragón encima. Los
    ninjas esperan sobre losas de piedra a lo largo del sendero.
@@ -10561,6 +10575,30 @@ function bossNodoPos(i, W, H){
    Todo se dibuja en capas de atrás hacia adelante —cielo, sierras lejanas
    entre neblina, valle, arboledas, sendero, losas, ninjas, pétalos—, que es
    lo que hace que se lea como una ilustración y no como un diagrama. */
+/* ── UN ECOSISTEMA POR JEFE ── el mapa es un viaje por nueve mundos, y el
+   lobby te pone SIEMPRE en el del jefe que te toca: así, dónde estás en el
+   mapa y dónde estás en el lobby son el mismo lugar. */
+const BOSS_ECO = [
+  { nom:['Bosque de Asia','Forest of Asia'],   cielo:['#e8d3cb','#8fae86'], suelo:'#3f6b45',
+    arbol:[['#3f7a48','#2f5d38','#1e3f26']], flor:'#f0b6cd', prop:'torii' },
+  { nom:['Valle de niebla','Mist valley'],     cielo:['#c9d2d8','#79929c'], suelo:'#3d5a63',
+    arbol:[['#3c6b6a','#2b5150','#1c3838']], flor:'#cddbe0', prop:'niebla' },
+  { nom:['Bahía de acero','Steel bay'],        cielo:['#b9c8d6','#5d7d99'], suelo:'#2f4f66',
+    arbol:[['#33607a','#25485c','#183141']], flor:'#9fc4dc', prop:'faro' },
+  { nom:['Cañaveral','The reed sea'],          cielo:['#dfe3c4','#8aa05a'], suelo:'#4d6b31',
+    arbol:[['#6d8f3a','#53702c','#3a4f1e']], flor:'#e8e0a0', prop:'bambu' },
+  { nom:['Lago helado','The frozen lake'],     cielo:['#dbe7f2','#7f9cbb'], suelo:'#4a6a86',
+    arbol:[['#4a7590','#37596e','#25404f']], flor:'#e6f1fb', prop:'hielo' },
+  { nom:['Bosque violeta','The violet wood'],  cielo:['#d9c8e6','#7a5f96'], suelo:'#4a3566',
+    arbol:[['#6a4a92','#513670','#37244e']], flor:'#d5a8ee', prop:'farol' },
+  { nom:['Meseta de barro','The clay plateau'],cielo:['#e2d3bd','#9c7d55'], suelo:'#6b4f2e',
+    arbol:[['#7d6132','#5f4926','#42321a']], flor:'#e0c68e', prop:'roca' },
+  { nom:['Cumbre que arde','The burning peak'],cielo:['#f0cbb4','#a4503a'], suelo:'#6e2c1e',
+    arbol:[['#8a4028','#68301e','#461f14']], flor:'#ffb27a', prop:'lava' },
+  { nom:['El templo','The temple'],            cielo:['#efd9d0','#5b4470'], suelo:'#2f2440',
+    arbol:[['#4a3a63','#372c4a','#241d31']], flor:'#f3d9ff', prop:'templo' },
+];
+function bossEco(i){ return BOSS_ECO[Math.max(0,Math.min(BOSS_ECO.length-1,i|0))]; }
 function bossCanopia(c, x, y, r, tono, semilla){
   /* una copa de árbol: varios círculos encimados y una sombra abajo */
   const rr = k => ((Math.sin((k+semilla*13.7)*12.9898)*43758.5453)%1+1)%1;
@@ -10619,35 +10657,38 @@ function bossPintaMapa(){
   const pet = window._bmPet;
   /* las arboledas se siembran UNA vez: si se recalcularan por cuadro, el
      bosque hervería en cada frame en vez de estar quieto */
+  /* cada árbol toma el ecosistema del jefe MÁS CERCANO, así que la
+     vegetación cambia con el mundo en vez de ser la misma en los nueve */
   if(!window._bmArb) window._bmArb = (()=>{
     const out=[]; const enSendero = (x,y)=>pos.some(P=>Math.abs(P.x-x)<120 && Math.abs(P.y-y)<80);
-    for(let i=0;i<130;i++){
-      const x = rr(i*3)*W, y = H*0.06 + rr(i*7+1)*H*0.94;
+    for(let i=0;i<150;i++){
+      const x = rr(i*3)*W, y = H*0.04 + rr(i*7+1)*H*0.96;
       if(enSendero(x,y)) continue;
-      const sakura = rr(i*11) > 0.76;
-      out.push({ x, y, r: 26 + rr(i*5)*30, sakura, s:i });
+      let cerca = 0, dmin = 1e9;
+      pos.forEach((P,k)=>{ const d=Math.abs(P.y-y); if(d<dmin){dmin=d; cerca=k;} });
+      out.push({ x, y, r: 24 + rr(i*5)*30, flor: rr(i*11) > 0.78, eco:cerca, s:i });
     }
     return out.sort((a,b)=>a.y-b.y);
   })();
   const arb = window._bmArb;
-  const VERDES = [
-    ['#3f7a48','#2f5d38','#1e3f26'], ['#4a8a52','#376a3f','#24492b'],
-    ['#356b40','#274f30','#183820'],
-  ];
-  const ROSA = ['#f0b6cd','#e295b4','#b06a86'];
 
   const frame = (t) => {
     if(!cv.isConnected) return;
     if(cv.offsetParent === null){ window._bmRAF = requestAnimationFrame(frame); return; }
 
-    /* ── CIELO: amanecer en la cumbre, valle en penumbra abajo ── */
+    /* ── LOS NUEVE MUNDOS, uno por jefe, FUNDIDOS entre sí ──
+       El degradado va del mundo de arriba (el templo) al de abajo (el bosque
+       de Asia) pasando por todos: cada tramo pone su color de suelo donde
+       está su jefe y su color de cielo un poco antes, así que el terreno se
+       transforma de uno a otro sin líneas duras. */
     const cielo = c.createLinearGradient(0,0,0,H);
-    cielo.addColorStop(0,   '#efd9d0');
-    cielo.addColorStop(0.10,'#e6cfcd');
-    cielo.addColorStop(0.24,'#cfc3c8');
-    cielo.addColorStop(0.45,'#a9b7ab');
-    cielo.addColorStop(0.72,'#6f9169');
-    cielo.addColorStop(1,   '#3d6440');
+    for(let i = KURO_BOSSES.length - 1; i >= 0; i--){
+      const E = bossEco(i);
+      const u = 1 - ((i + 1) / (KURO_BOSSES.length));   /* 0 arriba, 1 abajo */
+      cielo.addColorStop(Math.max(0, Math.min(1, u - 0.045)), E.cielo[0]);
+      cielo.addColorStop(Math.max(0, Math.min(1, u + 0.045)), E.cielo[1]);
+    }
+    cielo.addColorStop(1, bossEco(0).suelo);
     c.fillStyle = cielo; c.fillRect(0,0,W,H);
     /* luna */
     c.fillStyle='rgba(255,252,242,.34)'; c.beginPath(); c.arc(W*0.79, H*0.052, 46,0,7); c.fill();
@@ -10674,7 +10715,7 @@ function bossPintaMapa(){
     }
 
     /* ── EL TEMPLO, coronando el valle, con su dragón enroscado ── */
-    try{ bossTemplo(c, W*0.5, H*0.145, 1.15); }catch(e){}
+    try{ bossTemplo(c, W*0.5, H*0.098, 1.15); }catch(e){}
     c.save(); c.globalAlpha=.85;
     try{ zenDragon(c, W*0.5, H*0.088, 1.5, '#5f8f7a', t); }catch(e){}
     c.restore();
@@ -10682,9 +10723,12 @@ function bossPintaMapa(){
     try{ zenPagoda(c, W*0.16, H*0.63, 0.95, '#7a4038'); }catch(e){}
 
     /* ── EL SENDERO: cinta pálida, con borde y su tramo recorrido claro ── */
+    /* EL SENDERO NACE EN LA SALIDA y sube a ASHURA, que es la primera parada */
+    const S0 = bossSalidaPos(W,H);
+    const ruta = [S0].concat(pos);
     const cinta=(w2,col)=>{ c.strokeStyle=col; c.lineWidth=w2; c.lineCap='round'; c.lineJoin='round';
-      c.beginPath(); c.moveTo(pos[0].x,pos[0].y);
-      for(let i=0;i<pos.length-1;i++){ const a=pos[i],b2=pos[i+1],my=(a.y+b2.y)/2;
+      c.beginPath(); c.moveTo(ruta[0].x,ruta[0].y);
+      for(let i=0;i<ruta.length-1;i++){ const a=ruta[i],b2=ruta[i+1],my=(a.y+b2.y)/2;
         c.quadraticCurveTo(a.x+(i%2?70:-70),my,(a.x+b2.x)/2,my);
         c.quadraticCurveTo(b2.x+(i%2?-70:70),my,b2.x,b2.y); }
       c.stroke(); };
@@ -10692,10 +10736,17 @@ function bossPintaMapa(){
     cinta(22,'rgba(238,230,208,.62)');
     c.save(); c.beginPath(); c.rect(0,pos[Math.min(actual,pos.length-1)].y-14,W,H); c.clip();
     cinta(22,'rgba(250,244,226,.96)'); c.restore();
+    /* la losa de SALIDA, con su marca */
+    c.fillStyle='rgba(40,34,26,.34)'; c.beginPath(); c.ellipse(S0.x,S0.y+19,34,11,0,0,7); c.fill();
+    c.fillStyle='rgba(238,246,252,.96)'; c.beginPath(); c.ellipse(S0.x,S0.y+14,29,10,0,0,7); c.fill();
+    c.save(); c.textAlign='center'; c.font='700 20px "IBM Plex Mono", monospace';
+    c.fillStyle='rgba(30,40,50,.6)'; c.fillText(bi('SALIDA','START'), S0.x, S0.y+20); c.restore();
 
     /* ── LA ARBOLEDA, ordenada de fondo a frente para que se encime bien ── */
     arb.forEach(a=>{
-      bossCanopia(c, a.x, a.y, a.r, a.sakura ? ROSA : VERDES[a.s % VERDES.length], a.s);
+      const E = bossEco(a.eco);
+      const tono = a.flor ? [E.flor, E.flor, 'rgba(0,0,0,.2)'] : E.arbol[0];
+      bossCanopia(c, a.x, a.y, a.r, tono, a.s);
     });
 
     /* ── LAS LOSAS Y SUS NINJAS ── */
@@ -10713,8 +10764,10 @@ function bossPintaMapa(){
       c.restore();
     });
     /* TU NINJA, un paso antes del que te toca */
-    const P = pos[Math.min(actual,pos.length-1)];
-    try{ zenNinja(c, P.x-52, P.y+13, 1.1, t*0.5, 0,
+    /* tú esperas UN PASO ANTES del jefe que te toca: en la salida si aún no
+       has vencido a nadie, o en la losa del que ya caíste */
+    const Pprev = actual === 0 ? S0 : pos[actual-1];
+    try{ zenNinja(c, Pprev.x+44, Pprev.y+13, 1.1, t*0.5, 0,
           KATANAS[batEquipadaDe(yo)].belt, batNinjaDe(yo), false, false); }catch(e){}
 
     /* ── PÉTALOS ── */
@@ -12397,8 +12450,12 @@ function renderBatallaInterno(){
     const kEquipIdx = batEquipadaDe(yo);
     const _preview = (window._batVista!=null && window._batVista>=0 && window._batVista<KATANAS.length) ? window._batVista : null;
     const vistaIdx = _preview!=null ? _preview : Math.max(0,kEquipIdx);
-    /* el ENTORNO sigue la espada EQUIPADA — equípate otra y cambia el mundo */
-    const escenaIdx = _preview!=null ? _preview : Math.max(0,kEquipIdx);
+    /* EL ENTORNO DEL LOBBY ES EL DEL JEFE QUE TE TOCA (André, 31-ago-2026):
+       dónde estás en el mapa y dónde estás en el lobby son EL MISMO LUGAR.
+       Antes seguía a la katana equipada, así que podías estar peleando en el
+       lago helado y ver el bosque de Asia de fondo. La vista previa del
+       arsenal (_batVista) sigue mandando cuando estás mirando otra katana. */
+    const escenaIdx = _preview!=null ? _preview : Math.max(0, bossActual());
     window._zenVista = escenaIdx;
     const _bh = KATANAS[vistaIdx].belt.replace('#','');
     const katClaro = (parseInt(_bh.slice(0,2),16)*0.299 + parseInt(_bh.slice(2,4),16)*0.587 + parseInt(_bh.slice(4,6),16)*0.114)/255 > 0.72;
@@ -12449,14 +12506,14 @@ function renderBatallaInterno(){
           </div>
         </div>
         <div class="stage-cta">
-          <div class="stage-nivel" style="color:${KATANAS[kEquipIdx].belt}">${loc(KATANAS[kEquipIdx].n)}</div>
+          <!-- el rótulo nombra EL MUNDO donde estás, no tu katana: con el
+               entorno siguiendo al jefe que te toca, leer «SHIRO» sobre el
+               bosque violeta no cuadraba. Tu katana ya está en el chip
+               EQUIPADA y bajo tu retrato. -->
+          <div class="stage-nivel" style="color:${KATANAS[Math.max(0,bossActual())].belt}">${loc(bossEco(bossActual()).nom)}</div>
           <!-- PLAY va ARRIBA de Battle: la escalera de jefes es la puerta
                principal; el 1v1 contra un socio queda debajo. -->
-          <button type="button" class="stage-btn play" id="stPlay">
-            <b>PLAY</b>
-            <i>${(()=>{ const b=KURO_BOSSES[bossActual()];
-              return bi('te toca ','next: ') + esc(b.nom) + ' · WR ' + b.st.wr + '% · PF ' + b.st.pf.toFixed(2); })()}</i>
-          </button>
+          <button type="button" class="stage-btn play" id="stPlay"><b>PLAY</b></button>
           <button type="button" class="btn primary stage-btn" id="batNuevo">Battle</button>
           <button type="button" class="stage-btn sec" id="stEventos">${bi('Eventos','Events')}</button>
           <button type="button" class="stage-link" id="stComo">${bi('¿Cómo se juega?','How to play')}</button>
