@@ -1762,9 +1762,22 @@ button.st-chip:hover{border-color:rgba(255,255,255,.45)}
 .lg-abrir-b{width:100%;margin-top:14px}
 /* editar y cerrar, en la misma línea: con float:right el segundo botón se
    caía a un renglón nuevo y tapaba la barra del objetivo. (André, 31-ago) */
-.lg-cerrar-ses{border:1px solid var(--line);background:transparent;color:var(--faint);
-  font-family:var(--mono);font-size:8.5px;letter-spacing:.12em;padding:2px 8px;border-radius:99px;cursor:pointer}
-.lg-cerrar-ses:hover{color:var(--txt)}
+.lg-corte{position:relative;display:flex;align-items:center;gap:10px;margin:8px -14px;
+  padding:9px 16px;background:#000;border-top:1px solid var(--line);border-bottom:1px solid var(--line);
+  font-family:var(--mono);font-size:9px;letter-spacing:.2em;color:rgba(255,255,255,.5)}
+.lg-corte b{margin-left:auto;font-size:11px;letter-spacing:.04em}
+.lg-corte b.up{color:var(--up)} .lg-corte b.down{color:var(--down)}
+/* EDITAR y CERRAR eran dos píldoras de 8.5px apretadas contra el borde: para
+   cerrar el día había que apuntar a un texto de tres milímetros. Se les da
+   tamaño de botón, y CERRAR se distingue porque es el que sella el día. */
+.lg-cerrar-ses{border:1px solid var(--line);background:var(--w03);color:var(--dim);
+  font-family:var(--mono);font-size:9.5px;font-weight:600;letter-spacing:.14em;
+  text-transform:uppercase;padding:7px 13px;border-radius:9px;cursor:pointer;
+  transition:background .15s ease,color .15s ease,border-color .15s ease}
+.lg-cerrar-ses:hover{color:var(--txt);background:var(--w07);border-color:var(--dim)}
+.lg-cerrar-ses.sella{color:var(--txt);border-color:color-mix(in srgb,var(--txt) 30%,var(--line))}
+.lg-cerrar-ses.sella:hover{background:var(--txt);color:var(--bg);border-color:var(--txt)}
+.bd-t .lg-cerrar-ses+.lg-cerrar-ses{margin-left:6px}
 /* la puerta de Kuro ocupa la pantalla: sin lobby debajo, el contenedor medía
    cero y el overlay absoluto no se veía */
 #batRoot.puerta{min-height:calc(100vh - 150px)}
@@ -2277,6 +2290,36 @@ button.st-chip:hover{border-color:rgba(255,255,255,.45)}
 .lib-b:disabled{opacity:.4;cursor:default}
 .lib-b.add{margin-left:auto;background:var(--lib-ink);color:var(--lib-bg);border-color:var(--lib-ink);font-size:12.5px}
 .lib-b.del{color:#d0503e}
+/* ── LA LIBRETA CON INFORME ──
+   El cuerpo hace scroll: el informe arriba, la hoja de escribir hasta abajo.
+   La hoja pierde el flex:1 (ya no es lo único dentro) y se le pone alto
+   mínimo, si no se aplasta a nada con la ficha encima. (31-ago-2026) */
+.lib-cuerpo{flex:1;min-height:0;overflow:auto;display:flex;flex-direction:column}
+.lib-cuerpo .lib-paper{flex:0 0 auto;min-height:320px}
+.lib-cuerpo .lib-paper textarea{height:auto;min-height:320px}
+.lib-seccion{font-family:var(--mono);font-size:9px;letter-spacing:.28em;color:var(--lib-dim);
+  padding:16px 18px 8px;border-top:1px solid var(--lib-line)}
+.lib-informe-cab{padding:20px 22px 14px}
+.lif-marca{display:block;font-family:var(--mono);font-size:8px;letter-spacing:.3em;color:var(--lib-dim)}
+.lib-informe-cab h3{margin:8px 0 0;font-size:clamp(20px,4.5vw,28px);font-weight:800;
+  letter-spacing:-.01em;color:var(--lib-ink);text-transform:uppercase}
+.lif-linea{display:flex;align-items:baseline;gap:12px;margin:9px 0 0;flex-wrap:wrap;
+  font-family:var(--mono);font-size:11px;letter-spacing:.1em;color:var(--lib-dim)}
+.lif-linea b.lo{color:var(--up)} .lif-linea b.sh{color:var(--down)}
+.lif-linea b.up{color:var(--up)} .lif-linea b.down{color:var(--down)}
+.lif-linea b:last-child{margin-left:auto;font-size:17px;letter-spacing:0}
+.lib-informe-st{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;
+  padding:14px 22px 18px;border-top:1px solid var(--lib-line);border-bottom:1px solid var(--lib-line)}
+@media(max-width:560px){.lib-informe-st{grid-template-columns:repeat(3,1fr)}}
+.lif-c em{display:block;font-family:var(--mono);font-size:8px;letter-spacing:.18em;
+  color:var(--lib-dim);font-style:normal;margin-bottom:5px}
+.lif-c b{font-family:var(--mono);font-size:14px;font-weight:700;color:var(--lib-ink)}
+.lif-c b em{display:inline;font-size:10px;letter-spacing:0;margin:0;opacity:.6}
+.lif-c b.up{color:var(--up)} .lif-c b.down{color:var(--down)}
+.lib-informe-ss{padding:16px 22px}
+.lib-informe-ss img{display:block;width:100%;border-radius:10px;border:1px solid var(--lib-line)}
+.lib-informe-sin{padding:16px 22px;font-family:var(--mono);font-size:10px;
+  letter-spacing:.14em;color:var(--lib-dim)}
 @media(max-width:560px){.lib{height:88vh}.lib-b.add{font-size:11px;padding:8px 10px}}
 .lec-split{display:flex;gap:30px;max-width:1180px;margin:0 auto;padding:0 22px;align-items:flex-start}
 .lec-split .lec-doc{flex:1;min-width:0}
@@ -10260,18 +10303,31 @@ function abreLibreta(){
    la de un trade. Antes esto era un prompt() del navegador — una cajita gris
    del sistema, sin sitio para escribir de verdad y sin nada que ver con la
    app. Aquí se escribe en la hoja, con su tapa y su marca. */
-function libretaNota(titulo, sub, valor, alGuardar){
+/* ══ LA LIBRETA SE ABRE, Y TRAE EL TRADE ══ (André, 31-ago-2026)
+   Era una hoja en blanco con la dirección y el P&L en letra chica arriba: para
+   escribir «por qué entré» tenías que acordarte del trade de memoria, o cerrar
+   la libreta, mirar la captura y volver a abrirla. Ahora la libreta se abre
+   —con su portada, como una libreta— y adentro está el trade: encabezado con
+   la fecha, las cifras del día, la captura, y HASTA ABAJO la hoja para
+   escribir. El informe primero, la nota después: así se escribe viendo. */
+function libretaNota(titulo, sub, valor, alGuardar, ficha){
   const ov = document.createElement('div'); ov.className = 'lib-ov';
   const cerrar = () => { document.removeEventListener('keydown', onKey); ov.remove(); };
   const onKey = e => { if(e.key === 'Escape') cerrar(); };
-  ov.innerHTML = `<div class="lib">
+  ov.innerHTML = `<div class="lib ${ficha ? 'lib-informe' : ''}">
+    <div class="lib-cover"><div class="lib-cover-in">
+      <b>NORTHPOINT</b><span class="lib-cover-sub">${esc(titulo || bi('NOTA','NOTE'))}</span></div></div>
     <div class="lib-top">
       <div class="lib-mark"><b>NORTHPOINT</b><span>${esc(titulo || bi('NOTA','NOTE'))}</span></div>
       ${sub ? `<span class="lib-auto">${esc(sub)}</span>` : ''}
       <button type="button" class="lib-x" aria-label="${bi('cerrar','close')}">✕</button>
     </div>
-    <div class="lib-paper"><textarea id="libNotaTa" spellcheck="false"
-      placeholder="${bi('Por qué entraste, qué viste, qué harías distinto…','Why you entered, what you saw, what you would do differently…')}">${esc(valor || '')}</textarea></div>
+    <div class="lib-cuerpo">
+      ${ficha || ''}
+      ${ficha ? `<div class="lib-seccion">${bi('NOTAS','NOTES')}</div>` : ''}
+      <div class="lib-paper"><textarea id="libNotaTa" spellcheck="false"
+        placeholder="${bi('Por qué entraste, qué viste, qué harías distinto…','Why you entered, what you saw, what you would do differently…')}">${esc(valor || '')}</textarea></div>
+    </div>
     <div class="lib-nav">
       <button type="button" class="lib-b del" id="libNotaX">${bi('Quitar la nota','Remove note')}</button>
       <button type="button" class="lib-b add" id="libNotaOk" style="margin-left:auto">${bi('Guardar','Save')}</button>
@@ -10283,7 +10339,11 @@ function libretaNota(titulo, sub, valor, alGuardar){
   ov.onclick = e => { if(e.target === ov) cerrar(); };
   document.addEventListener('keydown', onKey);
   document.body.appendChild(ov);
-  ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length);
+  /* CON INFORME NO SE ENFOCA SOLA: enfocar el textarea arrastra el scroll
+     hasta la hoja, y lo primero que verías al abrir la libreta sería el
+     renglón en blanco en vez del trade. La hoja está abajo y se pica. */
+  if(ficha){ const cu = ov.querySelector(".lib-cuerpo"); if(cu) cu.scrollTop = 0; }
+  else setTimeout(() => { try{ ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length); }catch(e){} }, 260);
 }
 /* la misma libreta pero INLINE (para leer la lección y escribir a la vez) */
 function montaLibretaInline(box){
@@ -15499,11 +15559,29 @@ function lgAnima(){ animaCurva(lgDibuja); }
 function lgLog(){
   const host = $('#lgLog'); if(!host) return;
   const list = lgTradesReales();
+  /* ══ LA BARRA NEGRA ENTRE SESIONES ══ (André, 31-ago-2026)
+     La lista es un chorro de renglones y no se ve dónde acabó un día y empezó
+     otro: tres pérdidas seguidas se leen igual repartidas en tres sesiones que
+     todas en una tarde. Cada día que CIERRAS deja su barra aquí, con la fecha
+     y cómo acabó — la misma marca que corta la curva. */
+  const corte = {};
+  lgCerradasMias().forEach(c => {
+    let k = -1;
+    for(let i = 0; i < list.length; i++) if(list[i].date <= c.fecha) k = i;
+    if(k >= 0) corte[k] = c;      /* la barra va DESPUÉS de ese trade */
+  });
   let acc = 0;
-  const filas = list.map((t)=>{ acc += (t.pnl||0); return {t, acc}; })
-    .reverse().slice(0,40).map(({t,acc})=>{
+  const filas = list.map((t,i)=>{ acc += (t.pnl||0); return {t, acc, i}; })
+    .reverse().slice(0,40).map(({t,acc,i})=>{
       const up = (t.pnl||0) >= 0;
-      return `<div class="bt-log-row">
+      /* la lista va del más nuevo al más viejo, así que la barra de un cierre
+         va ARRIBA de ese trade: todo lo que queda DEBAJO es de la sesión que
+         se cerró. Ponerla debajo la metía dentro del día que estaba cerrando. */
+      const barra = corte[i] ? `<div class="lg-corte" title="${bi('Aquí cerraste la sesión','You closed the session here')}">
+          <span>${esc(fmtFecha(corte[i].fecha))} · ${bi('SESIÓN CERRADA','SESSION CLOSED')}</span>
+          <b class="${(corte[i].pnl||0)>=0?'up':'down'}">${fmt$(corte[i].pnl,true)}</b>
+        </div>` : '';
+      return `${barra}<div class="bt-log-row">
         <span class="ix">${t.date.slice(8)}/${t.date.slice(5,7)}</span>
         <span class="dir ${t.dir==='S'?'S':'L'}">${t.dir==='S'?'SHORT':'LONG'}</span>
         <span class="pnl edita ${up?'up':'down'}" data-edita="${t.id}"
@@ -15528,12 +15606,13 @@ function lgLog(){
     ${list.length ? `<div class="bt-log-body">${filas}</div>` : `<div class="bt-log-empty">${bi('Aún no hay trades registrados.','No trades logged yet.')}</div>`}`;
   host.querySelectorAll('.lg-nota').forEach(b => b.onclick = () => {
     const t = S.trades.find(x=>x.id===b.dataset.nota); if(!t) return;
-    libretaNota(bi('NOTA DEL TRADE','TRADE NOTE'),
+    libretaNota(bi('REPORTE DEL TRADE','TRADE REPORT'),
       `${t.dir==='L'?'LONG':'SHORT'} · ${fmt$(t.pnl,true)} · ${fmtFecha(t.date)}`,
       t.nota || '',
       txt => { if(txt) t.nota = txt.slice(0, 2000); else delete t.nota;
         sellaCambio(t); save(); lgLog();
-        toast(txt ? bi('Nota guardada','Note saved') : bi('Nota quitada','Note removed')); });
+        toast(txt ? bi('Nota guardada','Note saved') : bi('Nota quitada','Note removed')); },
+      lgFichaTrade(t));
   });
   /* CORREGIR UN TRADE (André, 31-ago-2026): un dedazo en el P&L movía la curva,
      las estadísticas y el drawdown del día, y la única salida era borrarlo y
@@ -15608,6 +15687,47 @@ function imgInit(){
   };
   $('#btNomCrear').addEventListener('click', crear);
   $('#btNomIn').addEventListener('keydown', e => { if(e.key==='Enter'){ e.preventDefault(); crear(); } });
+}
+/* ══ EL INFORME QUE VA DENTRO DE LA LIBRETA ══ (André, 31-ago-2026)
+   El trade solo no dice nada: −$500 puede ser el primero de un buen día o el
+   que te sacó. Aquí van las dos cosas —el trade y el día en el que cayó— más
+   la captura, para escribir la nota viendo lo que pasó y no de memoria.
+   Se proyecta a las cuentas de la vista, igual que todo el Log. */
+function lgFichaTrade(t){
+  if(!t) return '';
+  const proyec = lgTradesReales();
+  const yo2 = proyec.find(x => x.id === t.id) || t;      /* su P&L ya proyectado */
+  const dia = proyec.filter(x => x.date === t.date);
+  const pnlDia = dia.reduce((a,x)=>a+(x.pnl||0),0);
+  const wins = dia.filter(x=>(x.pnl||0)>0).length;
+  let eq=0, pico=0, ddDia=0;
+  dia.forEach(x => { eq+=(x.pnl||0); if(eq>pico) pico=eq; const c=eq-pico; if(c<ddDia) ddDia=c; });
+  const propias = mias(S.accounts||[]);
+  const unaCta = typeof lgSel === 'string' && lgSel.startsWith('ac_');
+  const cta = unaCta ? propias.find(x=>x.id===lgSel) : null;
+  const size = cta ? (cta.size||0) : propias.reduce((a,c)=>a+(c.size||0),0);
+  const bal = size + proyec.reduce((a,x)=>a+(x.pnl||0),0);
+  const cel = (k,v,cls) => `<div class="lif-c"><em>${k}</em><b class="${cls||''}">${v}</b></div>`;
+  const pnl = yo2.pnl || 0;
+  return `<div class="lib-informe-cab">
+      <span class="lif-marca">NORTHPOINT · ${bi('REPORTE DE LA SESIÓN','SESSION REPORT')}</span>
+      <h3>${esc(fmtFecha(t.date))}</h3>
+      <p class="lif-linea">
+        <b class="${t.dir==='S'?'sh':'lo'}">${t.dir==='S'?'SHORT':'LONG'}</b>
+        <span>${esc(t.sym || (S.profile&&S.profile.instrumento) || '')}</span>
+        ${t.time ? `<span>${esc(t.time)}</span>` : ''}
+        <b class="${pnl>=0?'up':'down'}">${fmt$(pnl,true)}</b>
+      </p>
+    </div>
+    <div class="lib-informe-st">
+      ${cel(bi('DEL DÍA','DAY P&L'), fmt$(pnlDia,true), pnlDia>0?'up':pnlDia<0?'down':'')}
+      ${cel(bi('TRADES','TRADES'), dia.length)}
+      ${cel(bi('GANADOS','WON'), wins + '<em>/' + dia.length + '</em>')}
+      ${cel(bi('DRAWDOWN','DRAWDOWN'), fmt$(ddDia,true), ddDia<0?'down':'')}
+      ${cel(bi('BALANCE','BALANCE'), fmt$(bal))}
+    </div>
+    ${t.shot ? `<div class="lib-informe-ss"><img src="${t.shot}" alt="${bi('captura del trade','trade screenshot')}"></div>`
+             : `<div class="lib-informe-sin">${bi('Este trade no tiene captura.','This trade has no screenshot.')}</div>`}`;
 }
 /* ══ UN SOLO REPINTADO ══ (André, 31-ago-2026)
    Cada sitio que tocaba un trade repintaba SU propia lista de cosas, y el de
@@ -15831,7 +15951,7 @@ function lgHoy(){
       <b>00:00:00</b><em>${bi('EN SESIÓN','IN SESSION')}</em></div>
     <div class="bd-t">${bi('TU DÍA','YOUR DAY')} · <b>${fmtFecha(hoy)}</b>
       <button type="button" class="lg-cerrar-ses" onclick="lgEditaSesion()">${bi('editar','edit')}</button>
-      <button type="button" class="lg-cerrar-ses" onclick="lgCierraSesion()">${bi('cerrar','close')}</button></div>
+      <button type="button" class="lg-cerrar-ses sella" onclick="lgCierraSesion()">${bi('cerrar el día','close the day')}</button></div>
     <div class="bd-fila">
       <span class="bd-et">${bi('OBJETIVO','TARGET')}</span>
       <b class="bd-v ${pnl>=meta?'ok':''}">${fmt$(pnl,true)} <em>${bi('de','of')} ${fmt$(meta)}</em>${xN}</b>
