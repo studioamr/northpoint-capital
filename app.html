@@ -21816,9 +21816,9 @@ buffFin = input.time(timestamp("19 Sep 2026 00:00:00 GMT-4"), "BUFFER termina", 
 payIni  = input.time(timestamp("21 Sep 2026 00:00:00 GMT-4"), "PAYOUTS empieza", group = g4)
 payFin  = input.time(timestamp("1 Oct 2026 00:00:00 GMT-4"), "PAYOUTS termina", group = g4)
 riesgoDia = input.int(500, "Riesgo por trade ($)", minval = 50, step = 50, group = g4, tooltip = "De aquí sale la meta del día, y sale como RANGO en vez de un número seco: un día a 1:1 ya es un día bueno (+$500 con riesgo de $500) y un 1:2 es el día redondo (+$1,000). El panel te dice entre cuánto y cuánto deberías cerrar hoy.")
-reglaEval = input.string("4 minis · 1 trade · riesgo $500 → +$500 en 1:1 · +$1,000 en 1:2", "Regla EVAL", group = g4)
-reglaBuff = input.string("2 minis · 1 trade · riesgo $500 → +$500 en 1:1 · +$1,000 en 1:2", "Regla BUFFER", group = g4)
-reglaPay  = input.string("1 mini · 1 trade · riesgo $250 → +$250 a +$1,000", "Regla PAYOUTS", group = g4)
+reglaEval = input.string("4 minis · 1 trade · riesgo $500", "Regla EVAL", group = g4)
+reglaBuff = input.string("2 minis · 1 trade · riesgo $500", "Regla BUFFER", group = g4)
+reglaPay  = input.string("1 mini · 1 trade · riesgo $250", "Regla PAYOUTS", group = g4)
 
 // ── 5 · ORB · SMC ──────────────────────────────────────────────
 g5 = "5 · ORB · SMC"
@@ -22825,21 +22825,24 @@ if verPanel and barstate.islast
         int tF = f_diasHabiles(evalIni, evalFin - 1)
         // el día bueno no es un número seco: va de 1:1 (lo mínimo que
         // cuenta como día ganado) a 1:2 (el día redondo)
+        // los tres finales posibles del día, con el riesgo en la mano:
+        // bien = 1:1, tope = 1:2 (arriba de eso no se pide más), mal = el
+        // stop. El tope se corta en el target de la fase.
         int metaMin = math.min(50000 + dF * riesgoDia, 53000)
         int metaMax = math.min(50000 + dF * riesgoDia * 2, 53000)
-        fase := "FASE 1 · EVAL · día " + str.tostring(dF) + "/" + str.tostring(tF) + (dF <= 3 ? " · hoy cierras entre " + f_fmtK(metaMin) + " y " + f_fmtK(metaMax) : " · colchón · target " + f_fmtK(53000))
+        fase := "EVAL · día " + str.tostring(dF) + "/" + str.tostring(tF) + (dF <= 3 ? " · hoy " + f_fmtK(metaMin) + " a " + f_fmtK(metaMax) : " · colchón · " + f_fmtK(53000))
         cFase := pAcento
     else if timenow >= buffIni and timenow < buffFin
         int dF = math.max(1, f_diasHabiles(buffIni, timenow))
         int tF = f_diasHabiles(buffIni, buffFin - 1)
         int metaMin = math.min(50000 + dF * riesgoDia, 52500)
         int metaMax = math.min(50000 + dF * riesgoDia * 2, 52500)
-        fase := "FASE 2 · BUFFER · día " + str.tostring(dF) + "/" + str.tostring(tF) + (dF <= 5 ? " · hoy cierras entre " + f_fmtK(metaMin) + " y " + f_fmtK(metaMax) : " · mantén " + f_fmtK(52500))
+        fase := "BUFFER · día " + str.tostring(dF) + "/" + str.tostring(tF) + (dF <= 5 ? " · hoy " + f_fmtK(metaMin) + " a " + f_fmtK(metaMax) : " · mantén " + f_fmtK(52500))
         cFase := pBaja
     else if timenow >= payIni and timenow < payFin
         int dF = math.max(1, f_diasHabiles(payIni, timenow))
         int tF = f_diasHabiles(payIni, payFin - 1)
-        fase := "FASE 3 · PAYOUTS · día " + str.tostring(dF) + "/" + str.tostring(tF) + " · cobra HOY"
+        fase := "PAYOUTS · día " + str.tostring(dF) + "/" + str.tostring(tF) + " · cobra hoy"
         cFase := pAlza
     else if timenow < evalIni
         fase := "EVAL empieza " + f_dias(evalIni)
@@ -22861,10 +22864,11 @@ if verPanel and barstate.islast
     string preEval = enEval ? "▶ " : timenow >= evalFin ? "✓ " : ""
     string preBuff = enBuff ? "▶ " : timenow >= buffFin ? "✓ " : ""
     string prePay  = enPay ? "▶ " : timenow >= payFin ? "✓ " : ""
-    string paso11 = "+$" + str.tostring(riesgoDia) + " (1:1)"
-    string paso12 = "+$" + str.tostring(riesgoDia * 2) + " (1:2)"
-    string txtEval = preEval + f_rangoF(evalIni, evalFin) + " · " + paso11 + " a " + paso12 + " al día → " + f_fmtK(53000) + "\\n" + reglaEval
-    string txtBuff = preBuff + f_rangoF(buffIni, buffFin) + " · " + paso11 + " a " + paso12 + " al día → " + f_fmtK(52500) + "\\n" + reglaBuff
+    // el día: de un riesgo ganado al doble. Más de ahí no se pide, y
+    // si sale mal se va un riesgo. Todo eso vive en el tooltip.
+    string pasoDia = "$" + str.tostring(riesgoDia) + " a $" + str.tostring(riesgoDia * 2) + " al día"
+    string txtEval = preEval + f_rangoF(evalIni, evalFin) + " · " + pasoDia + " → " + f_fmtK(53000) + "\\n" + reglaEval
+    string txtBuff = preBuff + f_rangoF(buffIni, buffFin) + " · " + pasoDia + " → " + f_fmtK(52500) + "\\n" + reglaBuff
     string txtPay  = prePay + f_rangoF(payIni, payFin) + " · cobro diario\\n" + reglaPay
     // la fase en curso va en su color y resaltada; la que ya pasó, gris
     color cE = enEval ? pAcento : timenow >= evalFin ? color.gray : chart.fg_color
@@ -23026,9 +23030,9 @@ if verPanel and barstate.islast
         table.cell(panel, 0, 3, "Fase", text_color = color.gray, text_size = tamTxt)
         table.cell(panel, 1, 3, fase, text_color = cFase == color.gray ? chart.fg_color : cFase, text_size = tamTxt, tooltip = tipFase)
         table.cell(panel, 0, 4, "F1 EVAL", text_color = pAcento, text_size = tamTxt)
-        table.cell(panel, 1, 4, txtEval, text_color = cE, bgcolor = bgE, text_size = tamTxt, tooltip = "FASE 1 · pasar la evaluación: sube $1,000 por día hasta el target de $53K. Días 4-5 son colchón por si un día sale mal.")
+        table.cell(panel, 1, 4, txtEval, text_color = cE, bgcolor = bgE, text_size = tamTxt, tooltip = "Pasar la evaluación. El día bueno son +$" + str.tostring(riesgoDia) + " y el tope +$" + str.tostring(riesgoDia * 2) + "; si sale mal se va −$" + str.tostring(riesgoDia) + ". Los últimos días son colchón por si uno se tuerce.")
         table.cell(panel, 0, 5, "F2 BUFFER", text_color = pBaja, text_size = tamTxt)
-        table.cell(panel, 1, 5, txtBuff, text_color = cB, bgcolor = bgB, text_size = tamTxt, tooltip = "FASE 2 · construir el colchón antes de cobrar: +$500 por día hasta $52.5K y de ahí lo mantienes. Mitad de tamaño que en EVAL.")
+        table.cell(panel, 1, 5, txtBuff, text_color = cB, bgcolor = bgB, text_size = tamTxt, tooltip = "Construir el colchón antes de cobrar, con la mitad de tamaño que en EVAL: +$" + str.tostring(riesgoDia) + " el día bueno, +$" + str.tostring(riesgoDia * 2) + " de tope, −$" + str.tostring(riesgoDia) + " si sale mal.")
         table.cell(panel, 0, 6, "F3 PAYOUTS", text_color = pAlza, text_size = tamTxt)
         table.cell(panel, 1, 6, txtPay, text_color = cP, bgcolor = bgP, text_size = tamTxt, tooltip = "FASE 3 · cobrar: 1 mini, riesgo chico, retiro diario. Aquí ya no creces la cuenta, la ordeñas sin romperla.")
     table.cell(panel, 0, 7, "Protocolo", text_color = color.gray, text_size = tamTxt)
