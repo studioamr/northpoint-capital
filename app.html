@@ -1762,6 +1762,21 @@ button.st-chip:hover{border-color:rgba(255,255,255,.45)}
 /* EL RETRATO del ninja, en grande */
 .bm-retrato{display:flex;justify-content:center;margin:-6px 0 4px}
 .bm-retrato canvas{width:170px;height:170px}
+/* EL PREMIO: la katana flotando sobre su aura */
+.bm-premio{display:flex;flex-direction:column;align-items:center;gap:5px;margin:2px 0 14px}
+.bm-premio-et{font-family:var(--mono);font-size:8px;letter-spacing:.24em;color:rgba(255,255,255,.42)}
+.bm-espada{position:relative;width:100%;max-width:290px;padding:14px 0 10px;display:flex;
+  align-items:center;justify-content:center;animation:espFlota 3.6s ease-in-out infinite}
+.bm-espada::before{content:'';position:absolute;left:50%;top:50%;width:78%;height:120%;
+  transform:translate(-50%,-50%);border-radius:50%;
+  background:radial-gradient(ellipse at center, color-mix(in srgb, var(--kc) 42%, transparent), transparent 70%);
+  filter:blur(6px)}
+.bm-espada svg{position:relative;width:100%;height:38px;filter:drop-shadow(0 6px 14px rgba(0,0,0,.6))}
+.bm-espada-kanji{position:absolute;left:50%;top:-4px;transform:translateX(-50%);
+  font-size:34px;color:color-mix(in srgb, var(--kc) 30%, transparent);pointer-events:none}
+.bm-premio-nom{font-size:14px;font-weight:800;letter-spacing:.08em}
+@keyframes espFlota{0%,100%{transform:translateY(0)}50%{transform:translateY(-7px)}}
+@media (prefers-reduced-motion:reduce){ .bm-espada{animation:none} }
 .bm-nodos{position:absolute;inset:0}
 .bm-nodo{position:absolute;transform:translate(-50%,-50%);display:flex;flex-direction:column;
   align-items:center;gap:1px;min-width:56px;padding:5px 9px;border-radius:12px;cursor:pointer;
@@ -10376,12 +10391,18 @@ function batBannerHTML(c, yo){
   const otro = soyHost ? c.rival : c.host;
   const vsTxt = c.party ? batJugadores(c).length+' '+bi('jugadores','players') : bi('vs','vs')+' '+esc(batNom(otro));
   if(c.estado==='invitado'){
+    /* LA APUESTA VA EN LA INVITACIÓN (André): el otro acepta o no SABIENDO
+       cuánto se juega. Antes el reto llegaba sin decir el monto y sólo se
+       enteraba al abrir el duelo. */
+    const ap = batApuesta(c), bote = batBote(c);
+    const alcanza = batBanco(yo) >= ap;
     if(soyRival) return `<div class="bat-banner reta">
-      <div class="bat-banner-txt"><b>${esc(batNom(c.host))} ${bi('te reta','challenges you')}</b><i>${batRetoTxt(c)}</i></div>
-      <div class="bat-banner-acc"><button type="button" class="btn primary sm" id="bnAcepta">${bi('Aceptar','Accept')}</button><button type="button" class="btn sm" id="bnRechaza">${bi('Rechazar','Decline')}</button></div></div>`;
+      <div class="bat-banner-txt"><b>${esc(batNom(c.host))} ${bi('te reta por','bets you')} ${fmt$(ap)}</b>
+        <i>${batRetoTxt(c)} · ${bi('el bote','the pot')} ${fmt$(bote)}${alcanza?'':' · <b style="color:#ff8a7e">'+bi('no te alcanza','not enough')+'</b>'}</i></div>
+      <div class="bat-banner-acc"><button type="button" class="btn primary sm" id="bnAcepta" ${alcanza?'':'disabled'}>${bi('Aceptar','Accept')}</button><button type="button" class="btn sm" id="bnRechaza">${bi('Rechazar','Decline')}</button></div></div>`;
     return `<div class="bat-banner esperando">
       <div class="bat-mini-spin"></div>
-      <div class="bat-banner-txt"><b>${bi('Esperando a','Waiting for')} ${esc(batNom(c.rival))}…</b><i>${bi('Invitación enviada','Invite sent')} · ${batRetoTxt(c)}</i></div>
+      <div class="bat-banner-txt"><b>${bi('Esperando a','Waiting for')} ${esc(batNom(c.rival))}…</b><i>${bi('Apuesta','Stake')} ${fmt$(ap)} · ${batRetoTxt(c)}</i></div>
       <div class="bat-banner-acc"><button type="button" class="btn sm" id="bnCancela">${bi('Cancelar','Cancel')}</button></div></div>`;
   }
   if(c.estado==='programado'){
@@ -11039,6 +11060,16 @@ function bossPintaFicha(){
     <button type="button" class="bm-cerrar" id="bmFichaX" aria-label="${bi('cerrar','close')}">✕</button>
     <!-- EL NINJA EN GRANDE: se dibuja con su katana y sus colores -->
     <div class="bm-retrato"><canvas id="bmNinjaCv" width="260" height="260"></canvas></div>
+    <!-- LA ESPADA QUE SUELTA AL CAER: flotando, con su aura y su kanji. Es el
+         premio, y hasta ahora sólo se nombraba en letra chica. -->
+    <div class="bm-premio">
+      <span class="bm-premio-et">${bi('DESBLOQUEAS','YOU UNLOCK')}</span>
+      <div class="bm-espada" style="--kc:${k.belt}">
+        <span class="bm-espada-kanji">${k.kanji}</span>
+        ${katanaSVG(k.belt, true)}
+      </div>
+      <b class="bm-premio-nom" style="color:${k.belt}">${esc(loc(k.n))}</b>
+    </div>
     <div class="bm-f-h">
       <div class="bm-f-id">
         <b>${esc(b.nom)}</b>
