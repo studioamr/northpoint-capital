@@ -13757,14 +13757,13 @@ function renderBatallaInterno(){
               : pYo >= meta ? `<p class="bd-listo">${bi('Objetivo cumplido. Termina el reto para cobrar su katana.','Target met. End the challenge to claim his katana.')}</p>` : ''}
           </div>`;
         }
-        const lider = gano ? pYo : pRival;
+        /* MULT, VA GANANDO y DIFERENCIA fuera (André, 31-ago-2026): quién va
+           arriba y por cuánto ya lo dicen las dos fichas de abajo con su P&L
+           y su curva; repetirlo en chips sólo llenaba la pantalla. */
         const bolsa = batBote(c);
         return `<div class="bat-bote">
           <span><i>${bi('EL BOTE','THE POT')}</i><b class="up">${fmt$(bolsa)}</b></span>
           <span><i>${bi('CADA UNO PUSO','EACH PUT IN')}</i><b class="down">${fmt$(batApuesta(c))}</b></span>
-          <span><i>${bi('MULT','MULT')}</i><b>×${c.mult||1}</b></span>
-          <span><i>${bi('VA GANANDO','LEADING')}</i><b>${esc(gano?bi('tú','you'):batNom(rivalDe))}</b></span>
-          <span><i>${bi('DIFERENCIA','GAP')}</i><b>${fmt$(Math.abs(pYo-pRival))}</b></span>
         </div>`; })()}
 
       <!-- TÚ, primero -->
@@ -13816,11 +13815,25 @@ function renderBatallaInterno(){
     (()=>{ const dcv=$('#dueloCv'); cancelAnimationFrame(window._dueloRAF||0); if(!dcv) return;
       const dx=dcv.getContext('2d'); const DW=dcv.width, DH=dcv.height;
       const kRival = KATANAS[batEquipadaDe(rivalDe)];
-      const _E0 = ZEN_ESCENAS[batEquipadaDe(rivalDe)] || ZEN_ESCENAS[0];
+      /* ── DÓNDE SE PELEA (André, 31-ago-2026) ──
+         CON SEDE (formato sesión): manda la sede, en automático — citados en
+         Tokio se pelea en Tokio, en Londres en Londres, en NY en NY.
+         SIN SEDE (sprint y maratón): no hay ciudad que mandar, así que los
+         nueve ecosistemas se van TURNANDO — cada reto cae en uno distinto,
+         fijo para ese reto (sale de su id), no aleatorio por cuadro. */
+      const _conSede = !!(c.sesion && BAT_MUNDOS[c.sesion]);
+      let _escId, _E0;
+      if(_conSede){ _escId = 'sede:' + c.sesion; _E0 = BAT_MUNDOS[c.sesion]; }
+      else {
+        const sem = String(c.id || '');
+        let h = 0; for(let i2=0;i2<sem.length;i2++) h = (h*31 + sem.charCodeAt(i2)) >>> 0;
+        const ix = h % ZEN_ESCENAS.length;
+        _escId = 'turno:' + ix; _E0 = ZEN_ESCENAS[ix];
+      }
       /* sinNinja: la escena trae su propio ninja de adorno y aquí los ninjas
          son los dos que pelean */
-      const M = (window._dueloEsc && window._dueloEsc.id === kRival.id) ? window._dueloEsc.E
-        : ((window._dueloEsc = { id:kRival.id, E:{ ..._E0, sinNinja:true } }).E);
+      const M = (window._dueloEsc && window._dueloEsc.id === _escId) ? window._dueloEsc.E
+        : ((window._dueloEsc = { id:_escId, E:{ ..._E0, sinNinja:true } }).E);
       const nj={ a:{ cfg:batNinjaDe(yo), col:KATANAS[batEquipadaDe(yo)].belt },
                  b:{ cfg:batNinjaDe(rivalDe), col:KATANAS[batEquipadaDe(rivalDe)].belt } };
       /* los pétalos de la escena viven entre cuadros: se siembran una vez */
