@@ -1376,6 +1376,7 @@ var MESA = [
 (function(){
   var cv = document.getElementById('duCv'); if(!cv) return;
   var c = cv.getContext('2d'), W = 0, H = 0;
+  var golpe = null, ultimo = -1;
   var BLANCO = '#EDEFF2', AMARILLO = '#E7C24A';
   function medir(){
     var D = Math.min(2, devicePixelRatio||1);
@@ -1425,27 +1426,48 @@ var MESA = [
       c.beginPath(); c.moveTo(px2, sy+H*0.02); c.lineTo(px2 + Math.sin(now/2600+pz)*3, sy+H*0.02-ph);
       c.stroke();
     }
-    /* ── EL CRUCE ── se lanzan, chocan y vuelven */
-    var CIC = 5200, u = (now % CIC)/CIC;
-    var emb = u < 0.30 ? u/0.30 : u < 0.46 ? 1 : u < 0.62 ? 1-(u-0.46)/0.16 : 0;
-    var choque = u >= 0.28 && u < 0.44;
+    /* ── EL GOLPE ── lo dispara el trade de abajo: pega el que ganó, y si el
+       trade fue perdedor el golpe se lo lleva quien lo metió. */
+    var G = window.__kuroGolpe;
+    if(G && G.sello !== ultimo){ ultimo = G.sello; golpe = { atk:G.atk, ini:now }; }
     var s2 = Math.min(W,H)/210;
-    var xC = W*0.30 + emb*W*0.135, xD = W*0.70 - emb*W*0.135;
+    var xC = W*0.30, xD = W*0.70, emb = 0, choque = false, corte = 0, retro = 0, atk = null;
+    if(golpe){
+      var u = (now - golpe.ini)/1150;
+      if(u >= 1){ golpe = null; }
+      else {
+        atk = golpe.atk;
+        /* 0-.34 se lanza · .34-.52 corta · .52-.72 el otro encaja · .72-1 vuelven */
+        emb   = u < 0.34 ? u/0.34 : u < 0.62 ? 1 : 1 - (u-0.62)/0.38;
+        choque = u >= 0.32 && u < 0.52;
+        corte  = choque ? (u-0.32)/0.20 : 0;
+        retro  = u >= 0.44 && u < 0.80 ? Math.sin((u-0.44)/0.36*Math.PI) : 0;
+        var av = emb*W*0.135, re = retro*W*0.055;
+        if(atk === 'C'){ xC = W*0.30 + av; xD = W*0.70 + re; }
+        else           { xD = W*0.70 - av; xC = W*0.30 - re; }
+      }
+    }
     /* sombras */
     [[xC],[xD]].forEach(function(o){
       c.fillStyle = 'rgba(20,14,32,.45)';
       c.beginPath(); c.ellipse(o[0], sy+3*s2, 17*s2, 3.4*s2, 0,0,7); c.fill();
     });
-    var corte = choque ? Math.min(1,(u-0.28)/0.16) : 0;
+    /* el que encaja se ladea; el que pega va derecho */
+    var incC = (atk === 'D' ? retro*0.28 : 0), incD = (atk === 'C' ? retro*0.28 : 0);
+    c.save(); c.translate(xC, sy); c.rotate(incC); c.translate(-xC, -sy);
     ninja(c, xC, sy, s2, BLANCO, false,
       { filo:'#F2F7FF', mango:BLANCO, cuerpo:'#141821' });
+    c.restore();
     c.save(); c.translate(xD*2, 0); c.scale(-1,1);
+    c.translate(xD, sy); c.rotate(-incD); c.translate(-xD, -sy);
     ninja(c, xD, sy, s2, AMARILLO, false,
       { filo:'#F2F7FF', mango:AMARILLO, cuerpo:'#141821' });
     c.restore();
     /* el destello del cruce */
     if(choque){
-      var mx2 = (xC+xD)/2, my2 = sy - 30*s2, f = Math.sin(corte*Math.PI);
+      /* el destello nace donde ESTÁ el que encaja, no en medio */
+      var mx2 = atk === 'C' ? xD - 16*s2 : xC + 16*s2;
+      var my2 = sy - 30*s2, f = Math.sin(corte*Math.PI);
       c.save(); c.globalCompositeOperation = 'lighter';
       var fg = c.createRadialGradient(mx2,my2,1,mx2,my2,34*s2);
       fg.addColorStop(0,'rgba(255,250,230,'+(0.85*f)+')');
@@ -1475,10 +1497,20 @@ var MESA = [
       c.beginPath(); c.ellipse(0,0,3.4,2.0,0,0,7); c.fill(); c.restore();
     }
   }
-  var t = 0;
-  function tic2(){ t += 90; pinta(t); }
+  /* ── SUAVE, NO A TIRONES ── (André, 31-ago-2026)
+     Iba con setInterval a 90 ms: once cuadros por segundo, y el choque se veía
+     TRABADO. Una animación de movimiento pide requestAnimationFrame. Pero hay
+     contextos donde rAF no corre nunca y la escena se quedaría congelada, así
+     que si no llega ni un cuadro en medio segundo, cae solo a un intervalo. */
+  var t = 0, vino = false;
+  function loop6(ts){ vino = true; t = ts || 0; pinta(t); requestAnimationFrame(loop6); }
   pinta(0);
-  if(!REDUCE) setInterval(tic2, 90);
+  if(!REDUCE){
+    requestAnimationFrame(loop6);
+    setTimeout(function(){
+      if(!vino) setInterval(function(){ t += 33; pinta(t); }, 33);
+    }, 500);
+  }
   addEventListener('resize', function(){ pinta(t); }, {passive:true});
 })();
 
@@ -1583,8 +1615,12 @@ var MESA = [
      que nadie pinte.
      Y SE MIDE, NO SE OBSERVA: con IntersectionObserver solo pasaba lo mismo, así
      que la visibilidad se calcula con un rect, que cuesta nada. */
+  var zona = host.closest ? (host.closest('section') || host) : host;
   function enCuadro(){
-    var r = host.getBoundingClientRect(), h = window.innerHeight || 800;
+    /* la sección entera, no sólo el panel: la escena de la pelea está ARRIBA
+       de él, y mirándola el panel puede quedar fuera de cuadro — el reloj se
+       pararía justo cuando el visitante está mirando */
+    var r = zona.getBoundingClientRect(), h = window.innerHeight || 800;
     return r.bottom > 0 && r.top < h;
   }
   var espera = 0;
@@ -1596,6 +1632,14 @@ var MESA = [
       return;
     }
     n++; pinta(); reloj();
+    /* EL GOLPE LO MANDA EL TRADE (André, 31-ago-2026): antes los dos se
+       lanzaban cada cinco segundos por su cuenta, sin relación con lo que
+       pasaba abajo. Ahora pega el que GANÓ; si el trade fue perdedor, el golpe
+       se lo lleva quien lo metió. Una pelea que no responde a los números es
+       un adorno; ésta cuenta lo mismo que la tabla. */
+    var g = GUION[n-1];
+    if(g) window.__kuroGolpe = { atk: g.p > 0 ? g.q : (g.q === 'C' ? 'D' : 'C'),
+                                 sello: n };
   }
   pinta(); reloj();
   if(REDUCE){ n = GUION.length; pinta(); reloj(); }
