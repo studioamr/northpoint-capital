@@ -10579,38 +10579,198 @@ function bossSalidaPos(W, H){ return { x: W/2 + Math.sin(0.6)*(W*0.26), y: H - 1
    lobby te pone SIEMPRE en el del jefe que te toca: así, dónde estás en el
    mapa y dónde estás en el lobby son el mismo lugar. */
 const BOSS_ECO = [
-  { nom:['Bosque de Asia','Forest of Asia'],   cielo:['#e8d3cb','#8fae86'], suelo:'#3f6b45',
-    arbol:[['#3f7a48','#2f5d38','#1e3f26']], flor:'#f0b6cd', prop:'torii' },
-  { nom:['Valle de niebla','Mist valley'],     cielo:['#c9d2d8','#79929c'], suelo:'#3d5a63',
-    arbol:[['#3c6b6a','#2b5150','#1c3838']], flor:'#cddbe0', prop:'niebla' },
-  { nom:['Bahía de acero','Steel bay'],        cielo:['#b9c8d6','#5d7d99'], suelo:'#2f4f66',
-    arbol:[['#33607a','#25485c','#183141']], flor:'#9fc4dc', prop:'faro' },
-  { nom:['Cañaveral','The reed sea'],          cielo:['#dfe3c4','#8aa05a'], suelo:'#4d6b31',
-    arbol:[['#6d8f3a','#53702c','#3a4f1e']], flor:'#e8e0a0', prop:'bambu' },
-  { nom:['Lago helado','The frozen lake'],     cielo:['#dbe7f2','#7f9cbb'], suelo:'#4a6a86',
-    arbol:[['#4a7590','#37596e','#25404f']], flor:'#e6f1fb', prop:'hielo' },
-  { nom:['Bosque violeta','The violet wood'],  cielo:['#d9c8e6','#7a5f96'], suelo:'#4a3566',
-    arbol:[['#6a4a92','#513670','#37244e']], flor:'#d5a8ee', prop:'farol' },
-  { nom:['Meseta de barro','The clay plateau'],cielo:['#e2d3bd','#9c7d55'], suelo:'#6b4f2e',
-    arbol:[['#7d6132','#5f4926','#42321a']], flor:'#e0c68e', prop:'roca' },
-  { nom:['Cumbre que arde','The burning peak'],cielo:['#f0cbb4','#a4503a'], suelo:'#6e2c1e',
-    arbol:[['#8a4028','#68301e','#461f14']], flor:'#ffb27a', prop:'lava' },
-  { nom:['El templo','The temple'],            cielo:['#efd9d0','#5b4470'], suelo:'#2f2440',
-    arbol:[['#4a3a63','#372c4a','#241d31']], flor:'#f3d9ff', prop:'templo' },
+  { nom:['Montañas nevadas','The snow mountains'], bioma:'nieve',
+    cielo:['#dfe9f2','#b9cbdc'], suelo:'#e8eef4', tinta:'#5a6a7d' },
+  { nom:['El desierto','The desert'],              bioma:'desierto',
+    cielo:['#f2ddb6','#dfb377'], suelo:'#d9a866', tinta:'#8a5f2e' },
+  { nom:['Dunas de Marruecos','Moroccan dunes'],   bioma:'dunas',
+    cielo:['#f6d9a8','#e0a05c'], suelo:'#e6b871', tinta:'#9c6428' },
+  { nom:['El bosque','The forest'],                bioma:'bosque',
+    cielo:['#cfe0c6','#7ba36b'], suelo:'#3f6b45', tinta:'#1e3f26' },
+  { nom:['El mar','The sea'],                      bioma:'mar',
+    cielo:['#cfe4ee','#6f9fb8'], suelo:'#2f6a86', tinta:'#154a63' },
+  { nom:['Jardín de rosas','The rose garden'],     bioma:'jardin',
+    cielo:['#e0c8ea','#8a63a8'], suelo:'#5a3f78', tinta:'#33204a' },
+  { nom:['Los acantilados','The cliffs'],          bioma:'acantilado',
+    cielo:['#e6d6bf','#a8845c'], suelo:'#7a5a38', tinta:'#4a3520' },
+  { nom:['Cumbre que arde','The burning peak'],    bioma:'volcan',
+    cielo:['#f0c2a4','#a04a32'], suelo:'#6e2c1e', tinta:'#3d1710' },
+  { nom:['La ciudad negra','The black city'],      bioma:'ciudad',
+    cielo:['#2a2340','#0e0c18'], suelo:'#12101c', tinta:'#05040a' },
 ];
 function bossEco(i){ return BOSS_ECO[Math.max(0,Math.min(BOSS_ECO.length-1,i|0))]; }
-function bossCanopia(c, x, y, r, tono, semilla){
-  /* una copa de árbol: varios círculos encimados y una sombra abajo */
-  const rr = k => ((Math.sin((k+semilla*13.7)*12.9898)*43758.5453)%1+1)%1;
-  c.fillStyle = tono[2];
-  c.beginPath(); c.ellipse(x, y+r*0.42, r*0.95, r*0.34, 0,0,7); c.fill();
-  for(let i=0;i<7;i++){
-    const a = (i/7)*Math.PI*2, d = r*(0.34 + rr(i)*0.36);
-    c.fillStyle = i%3===0 ? tono[0] : tono[1];
-    c.beginPath(); c.arc(x+Math.cos(a)*d, y+Math.sin(a)*d*0.62, r*(0.4+rr(i+9)*0.26), 0,7); c.fill();
+/* ── LOS NUEVE MUNDOS, pintados uno por uno ──
+   Cada bioma recibe su franja (de y0 arriba a y1 abajo) y la llena con lo
+   suyo: montañas con nieve, dunas, mar con olas, jardín místico, acantilados,
+   la ciudad negra… Se fueron los picos de triángulos grises que había detrás
+   de todo — eran el mismo telón repetido nueve veces y se veían mal.
+   `rr` es ruido determinístico: el mismo mapa en todos los equipos. */
+function ecoMonte(c, x, base, w, h, col, nieve){
+  c.fillStyle = col;
+  c.beginPath(); c.moveTo(x-w/2, base); c.lineTo(x, base-h); c.lineTo(x+w/2, base);
+  c.closePath(); c.fill();
+  if(nieve){ const nh = h*0.34;
+    c.fillStyle = 'rgba(255,255,255,.94)';
+    c.beginPath(); c.moveTo(x, base-h);
+    c.lineTo(x + w*0.5*(nh/h), base-h+nh);
+    c.lineTo(x + w*0.22*(nh/h), base-h+nh*0.74);
+    c.lineTo(x, base-h+nh*1.05);
+    c.lineTo(x - w*0.24*(nh/h), base-h+nh*0.7);
+    c.lineTo(x - w*0.5*(nh/h), base-h+nh);
+    c.closePath(); c.fill(); }
+}
+function ecoPino(c, x, base, s, col, nieve){
+  c.fillStyle='#4a3a2a'; c.fillRect(x-2*s, base-6*s, 4*s, 6*s);
+  for(let i=0;i<3;i++){ const w=(26-i*6)*s, y=base-6*s-i*11*s;
+    c.fillStyle=col; c.beginPath(); c.moveTo(x-w/2,y); c.lineTo(x,y-18*s); c.lineTo(x+w/2,y); c.closePath(); c.fill();
+    if(nieve){ c.fillStyle='rgba(255,255,255,.85)';
+      c.beginPath(); c.moveTo(x-w/2*0.6,y-4*s); c.lineTo(x,y-18*s); c.lineTo(x+w/2*0.6,y-4*s); c.closePath(); c.fill(); } }
+}
+function ecoRoca(c, x, y, r, col){
+  c.fillStyle=col; c.beginPath();
+  c.moveTo(x-r, y); c.lineTo(x-r*0.55, y-r*0.9); c.lineTo(x+r*0.2, y-r*1.05);
+  c.lineTo(x+r*0.8, y-r*0.5); c.lineTo(x+r, y); c.closePath(); c.fill();
+  c.fillStyle='rgba(255,255,255,.13)';
+  c.beginPath(); c.moveTo(x-r*0.55,y-r*0.9); c.lineTo(x+r*0.2,y-r*1.05); c.lineTo(x, y-r*0.5); c.closePath(); c.fill();
+}
+function ecoAgua(c, x, y, w, h, col, t){
+  c.fillStyle=col; c.beginPath(); c.ellipse(x, y, w/2, h/2, 0,0,7); c.fill();
+  c.strokeStyle='rgba(255,255,255,.32)'; c.lineWidth=2;
+  for(let i=0;i<3;i++){ const yy = y - h*0.2 + i*h*0.22;
+    c.beginPath(); c.moveTo(x-w*0.28, yy);
+    c.quadraticCurveTo(x, yy + Math.sin(t/600+i)*4, x+w*0.28, yy); c.stroke(); }
+}
+function ecoCasaJp(c, x, base, s, col){
+  c.fillStyle='#5a4634'; c.fillRect(x-16*s, base-16*s, 32*s, 16*s);
+  c.fillStyle=col||'#7a3b32';
+  c.beginPath(); c.moveTo(x-25*s, base-16*s); c.lineTo(x+25*s, base-16*s);
+  c.lineTo(x+15*s, base-29*s); c.lineTo(x-15*s, base-29*s); c.closePath(); c.fill();
+  c.fillStyle='rgba(255,214,150,.8)'; c.fillRect(x-6*s, base-12*s, 12*s, 9*s);
+}
+function ecoPalma(c, x, base, s){
+  c.strokeStyle='#8a6a3c'; c.lineWidth=4*s; c.lineCap='round';
+  c.beginPath(); c.moveTo(x, base); c.quadraticCurveTo(x+5*s, base-24*s, x+2*s, base-42*s); c.stroke();
+  c.fillStyle='#4d7a3a';
+  for(let i=0;i<6;i++){ const a=-Math.PI/2 + (i-2.5)*0.5;
+    c.beginPath(); c.ellipse(x+2*s+Math.cos(a)*17*s, base-42*s+Math.sin(a)*11*s, 17*s, 5*s, a, 0, 7); c.fill(); }
+}
+function ecoCactus(c, x, base, s){
+  c.fillStyle='#3f7a48';
+  c.fillRect(x-4*s, base-30*s, 8*s, 30*s);
+  c.fillRect(x-13*s, base-22*s, 9*s, 5*s); c.fillRect(x-13*s, base-22*s, 5*s, 13*s);
+  c.fillRect(x+5*s, base-27*s, 8*s, 5*s);  c.fillRect(x+9*s, base-27*s, 4*s, 15*s);
+}
+function ecoRosal(c, x, base, s){
+  c.fillStyle='#2f5136';
+  c.beginPath(); c.arc(x, base-9*s, 12*s, 0, 7); c.fill();
+  for(let i=0;i<5;i++){ const a=(i/5)*6.28;
+    c.fillStyle = i%2 ? '#e56a9a' : '#c04a8a';
+    c.beginPath(); c.arc(x+Math.cos(a)*8*s, base-9*s+Math.sin(a)*7*s, 3.4*s, 0, 7); c.fill(); }
+}
+function ecoAve(c, x, y, s, col, t, ph){
+  const f = Math.sin(t/220 + ph)*0.55;
+  c.strokeStyle=col; c.lineWidth=2*s; c.lineCap='round';
+  c.beginPath(); c.moveTo(x-7*s, y+f*4*s); c.quadraticCurveTo(x, y-3*s, x+7*s, y+f*4*s); c.stroke();
+}
+/* pinta la franja de un bioma: y0 arriba, y1 abajo */
+function ecoPinta(c, bioma, W, y0, y1, tinta, t, rr, sem){
+  const h = y1 - y0, suelo = y1;
+  const R = k => rr(k + sem*57);
+  if(bioma === 'nieve'){
+    for(let i=0;i<7;i++){ const x = R(i)*W;
+      ecoMonte(c, x, suelo - R(i+9)*h*0.15, 150+R(i+3)*160, 120+R(i+5)*150, '#7d8fa4', true); }
+    for(let i=0;i<14;i++) ecoPino(c, R(i+30)*W, suelo - R(i+40)*h*0.7, 0.8+R(i+50)*0.5, '#37543f', true);
+    ecoAgua(c, W*0.28, suelo - h*0.18, 200, 52, 'rgba(180,214,232,.75)', t);
   }
-  c.fillStyle = tono[0];
-  c.beginPath(); c.arc(x, y-r*0.12, r*0.56, 0,7); c.fill();
+  else if(bioma === 'desierto'){
+    for(let i=0;i<5;i++){ const x=R(i)*W, y=suelo - R(i+7)*h*0.55, w=110+R(i+2)*130;
+      c.fillStyle = i%2 ? '#b07840' : '#96632f';
+      c.fillRect(x-w/2, y-52-R(i+4)*40, w, 52+R(i+4)*40);
+      c.fillStyle='rgba(255,220,160,.2)'; c.fillRect(x-w/2, y-52-R(i+4)*40, w, 9); }
+    for(let i=0;i<11;i++) ecoCactus(c, R(i+20)*W, suelo - R(i+31)*h*0.75, 0.8+R(i+41)*0.6);
+    for(let i=0;i<9;i++) ecoRoca(c, R(i+60)*W, suelo - R(i+70)*h*0.8, 12+R(i+80)*16, '#8a5f2e');
+  }
+  else if(bioma === 'dunas'){
+    for(let i=0;i<6;i++){ const y = suelo - (i/6)*h*0.9;
+      c.fillStyle = ['#e8c07c','#dbaf68','#cf9e56'][i%3];
+      c.beginPath(); c.moveTo(-20, y+90);
+      for(let x=-20;x<=W+20;x+=70) c.quadraticCurveTo(x+35, y-30-R(x+i*13)*40, x+70, y);
+      c.lineTo(W+20, y+90); c.closePath(); c.fill(); }
+    /* la kasbah: casas de adobe apiladas */
+    for(let i=0;i<5;i++){ const x=W*(0.1+i*0.19), y=suelo - h*(0.3+R(i)*0.35);
+      c.fillStyle='#c08a52'; c.fillRect(x-22, y-40, 44, 40);
+      c.fillStyle='#a86f3c'; c.fillRect(x-26, y-46, 52, 8);
+      c.fillStyle='rgba(60,30,10,.6)'; c.fillRect(x-6, y-24, 12, 24); }
+    for(let i=0;i<7;i++) ecoPalma(c, R(i+15)*W, suelo - R(i+25)*h*0.6, 0.9+R(i+35)*0.5);
+  }
+  else if(bioma === 'bosque'){
+    /* el río que baja por el bosque */
+    c.strokeStyle='rgba(120,180,210,.7)'; c.lineWidth=26; c.lineCap='round';
+    c.beginPath(); c.moveTo(W*0.12, y0);
+    c.quadraticCurveTo(W*0.28, y0+h*0.4, W*0.1, suelo); c.stroke();
+    for(let i=0;i<16;i++) ecoPino(c, R(i)*W, suelo - R(i+9)*h*0.9, 0.9+R(i+18)*0.6, i%3?'#2f5d38':'#3f7a48');
+    ecoCasaJp(c, W*0.76, suelo - h*0.36, 1.1, '#7a3b32');
+    for(let i=0;i<7;i++) ecoRoca(c, R(i+40)*W, suelo - R(i+50)*h*0.8, 10+R(i+60)*14, '#3c4a38');
+  }
+  else if(bioma === 'mar'){
+    c.fillStyle='#2f6a86'; c.fillRect(0, y0, W, h);
+    for(let i=0;i<26;i++){ const y = y0 + (i/26)*h;
+      c.strokeStyle=`rgba(255,255,255,${.10+ (i%3)*.05})`; c.lineWidth=2.4;
+      c.beginPath();
+      for(let x=0;x<=W;x+=26) c.lineTo(x, y + Math.sin(x/54 + t/900 + i)*5);
+      c.stroke(); }
+    for(let i=0;i<6;i++) ecoRoca(c, R(i)*W, y0 + R(i+8)*h, 16+R(i+16)*22, '#1b3d4e');
+    try{ zenTorii(c, W*0.72, y0 + h*0.62, 0.9); }catch(e){}
+  }
+  else if(bioma === 'jardin'){
+    for(let i=0;i<16;i++) ecoRosal(c, R(i)*W, suelo - R(i+9)*h*0.9, 0.9+R(i+18)*0.7);
+    ecoAgua(c, W*0.7, suelo - h*0.5, 190, 58, 'rgba(150,110,200,.62)', t);
+    for(let i=0;i<8;i++){ /* luciérnagas */
+      const x = R(i+30)*W, y = suelo - R(i+40)*h + Math.sin(t/700+i)*10;
+      c.fillStyle=`rgba(240,200,255,${.35+Math.sin(t/420+i)*0.3})`;
+      c.beginPath(); c.arc(x, y, 3.4, 0, 7); c.fill(); }
+    for(let i=0;i<4;i++) try{ zenFarol(c, W*(0.14+i*0.24), suelo - h*(0.2+R(i)*0.5), 1.5); }catch(e){}
+  }
+  else if(bioma === 'acantilado'){
+    for(let capa=0; capa<5; capa++){ const y = suelo - (capa/5)*h*0.95;
+      c.fillStyle = ['#7a5a38','#6a4c2e','#5a3f26','#4a3520','#3a2818'][capa];
+      c.beginPath(); c.moveTo(-20, y+70);
+      for(let x=-20;x<=W+20;x+=90){ c.lineTo(x+45, y - 20 - R(x+capa*7)*46); c.lineTo(x+90, y); }
+      c.lineTo(W+20, y+70); c.closePath(); c.fill(); }
+    /* la cascada */
+    c.fillStyle='rgba(220,240,250,.72)'; c.fillRect(W*0.66, y0+h*0.2, 22, h*0.55);
+    c.fillStyle='rgba(255,255,255,.5)';
+    c.beginPath(); c.ellipse(W*0.67, y0+h*0.75, 40, 12, 0,0,7); c.fill();
+    for(let i=0;i<8;i++) ecoRoca(c, R(i+20)*W, suelo - R(i+30)*h*0.7, 14+R(i+40)*20, '#4a3520');
+  }
+  else if(bioma === 'volcan'){
+    for(let i=0;i<5;i++) ecoMonte(c, R(i)*W, suelo - R(i+7)*h*0.2, 170+R(i+3)*150, 130+R(i+5)*140, '#5e2418', false);
+    try{ zenLava(c, W, suelo - h*0.12, t); }catch(e){}
+    for(let i=0;i<10;i++){ const x=R(i+20)*W, y=suelo - R(i+30)*h*0.9;
+      c.fillStyle=`rgba(255,${120+R(i)*90|0},60,${.3+R(i+40)*.5})`;
+      c.beginPath(); c.arc(x, y + Math.sin(t/500+i)*12, 3+R(i+50)*4, 0, 7); c.fill(); }
+    for(let i=0;i<7;i++) ecoRoca(c, R(i+60)*W, suelo - R(i+70)*h*0.8, 13+R(i+80)*18, '#3d1710');
+  }
+  else if(bioma === 'ciudad'){
+    for(let capa=0; capa<3; capa++){
+      const y = suelo - capa*h*0.16;
+      for(let i=0;i<12;i++){ const x = (i/12)*W + R(i+capa*11)*40;
+        const w = 40+R(i+capa*7)*44, hh = 70+R(i+capa*13)*180 + capa*30;
+        c.fillStyle = ['#1c1a2c','#141322','#0b0a14'][capa];
+        c.fillRect(x, y-hh, w, hh);
+        for(let k=0;k<16;k++){ if(R(i*31+k+capa*3) < 0.42) continue;
+          c.fillStyle=`rgba(255,214,140,${.3+R(k+i)*.55})`;
+          c.fillRect(x+6+(k%3)*13, y-hh+10+Math.floor(k/3)*22, 7, 10); } } }
+    for(let i=0;i<40;i++){ c.fillStyle=`rgba(255,255,255,${.2+R(i)*.6})`;
+      c.fillRect(R(i*3)*W, y0 + R(i*5)*h*0.4, 1.8, 1.8); }
+  }
+  /* fauna: unas aves cruzando, menos en la ciudad y el volcán */
+  if(bioma!=='ciudad' && bioma!=='volcan'){
+    for(let i=0;i<3;i++){
+      const x = ((t/60 + i*260 + sem*140) % (W+160)) - 80;
+      ecoAve(c, x, y0 + h*(0.18 + i*0.12), 1.1, tinta, t, i*1.7);
+    }
+  }
 }
 function bossTemplo(c, x, base, s){
   /* el templo del final: tres cuerpos con aleros, escalinata y farolillos */
@@ -10639,7 +10799,7 @@ function bossAjustaLienzo(){
   const altoCSS = Math.max(cont.clientHeight || 600, Math.round(anchoCSS * 3.1));
   const W = Math.round(anchoCSS * 2), H = Math.round(altoCSS * 2);   // 2× por nitidez
   if(cv.width !== W || cv.height !== H){ cv.width = W; cv.height = H;
-    window._bmArb = null; window._bmPet = null;   /* se resiembran al nuevo tamaño */
+    window._bmPet = null;   /* los pétalos se resiembran al nuevo tamaño */
     return true; }
   return false;
 }
@@ -10657,25 +10817,14 @@ function bossPintaMapa(){
   const pet = window._bmPet;
   /* las arboledas se siembran UNA vez: si se recalcularan por cuadro, el
      bosque hervería en cada frame en vez de estar quieto */
-  /* cada árbol toma el ecosistema del jefe MÁS CERCANO, así que la
-     vegetación cambia con el mundo en vez de ser la misma en los nueve */
-  if(!window._bmArb) window._bmArb = (()=>{
-    const out=[]; const enSendero = (x,y)=>pos.some(P=>Math.abs(P.x-x)<120 && Math.abs(P.y-y)<80);
-    for(let i=0;i<150;i++){
-      const x = rr(i*3)*W, y = H*0.04 + rr(i*7+1)*H*0.96;
-      if(enSendero(x,y)) continue;
-      let cerca = 0, dmin = 1e9;
-      pos.forEach((P,k)=>{ const d=Math.abs(P.y-y); if(d<dmin){dmin=d; cerca=k;} });
-      out.push({ x, y, r: 24 + rr(i*5)*30, flor: rr(i*11) > 0.78, eco:cerca, s:i });
-    }
-    return out.sort((a,b)=>a.y-b.y);
-  })();
-  const arb = window._bmArb;
 
   const frame = (t) => {
     if(!cv.isConnected) return;
     if(cv.offsetParent === null){ window._bmRAF = requestAnimationFrame(frame); return; }
 
+    /* ── CADA BIOMA PINTA SU FRANJA ── se llama después del cielo y antes
+       del sendero: montañas nevadas, desierto, dunas, bosque, mar, jardín,
+       acantilados, volcán y la ciudad negra, cada uno en su tramo. */
     /* ── LOS NUEVE MUNDOS, uno por jefe, FUNDIDOS entre sí ──
        El degradado va del mundo de arriba (el templo) al de abajo (el bosque
        de Asia) pasando por todos: cada tramo pone su color de suelo donde
@@ -10714,6 +10863,22 @@ function bossPintaMapa(){
       c.globalAlpha = 1;
     }
 
+    /* la franja de cada mundo, de abajo (Asia) hacia arriba (la ciudad) */
+    {
+      const S0y = bossSalidaPos(W,H).y;
+      for(let i = 0; i < KURO_BOSSES.length; i++){
+        const E = bossEco(i);
+        const yAbajo = i === 0 ? H : (pos[i].y + pos[i-1].y)/2 + 60;
+        const yArriba = (i === KURO_BOSSES.length-1) ? -20 : (pos[i+1].y + pos[i].y)/2 + 60;
+        c.save(); c.beginPath(); c.rect(0, yArriba, W, yAbajo - yArriba); c.clip();
+        const g2 = c.createLinearGradient(0, yArriba, 0, yAbajo);
+        g2.addColorStop(0, E.cielo[1]); g2.addColorStop(1, E.suelo);
+        c.fillStyle = g2; c.fillRect(0, yArriba, W, yAbajo - yArriba);
+        try{ ecoPinta(c, E.bioma, W, yArriba, yAbajo, E.tinta, t, rr, i); }catch(e){}
+        c.restore();
+      }
+    }
+
     /* ── EL TEMPLO, coronando el valle, con su dragón enroscado ── */
     try{ bossTemplo(c, W*0.5, H*0.098, 1.15); }catch(e){}
     c.save(); c.globalAlpha=.85;
@@ -10742,12 +10907,6 @@ function bossPintaMapa(){
     c.save(); c.textAlign='center'; c.font='700 20px "IBM Plex Mono", monospace';
     c.fillStyle='rgba(30,40,50,.6)'; c.fillText(bi('SALIDA','START'), S0.x, S0.y+20); c.restore();
 
-    /* ── LA ARBOLEDA, ordenada de fondo a frente para que se encime bien ── */
-    arb.forEach(a=>{
-      const E = bossEco(a.eco);
-      const tono = a.flor ? [E.flor, E.flor, 'rgba(0,0,0,.2)'] : E.arbol[0];
-      bossCanopia(c, a.x, a.y, a.r, tono, a.s);
-    });
 
     /* ── LAS LOSAS Y SUS NINJAS ── */
     KURO_BOSSES.forEach((b,i)=>{
@@ -10759,15 +10918,18 @@ function bossPintaMapa(){
       c.fillStyle = 'rgba(255,255,255,.5)';
       c.beginPath(); c.ellipse(P.x,P.y+12,20,6,0,0,7); c.fill();
       c.save(); c.globalAlpha = hecho ? .5 : (abierto ? 1 : .55);
-      const njB = { traje:'#141820', banda:k.belt, buf:k.belt };
-      try{ zenNinja(c, P.x, P.y+11, 1.0, t*0.5 + i*400, i, k.belt, njB, i%2===1, false); }catch(e){}
+      const njB = { traje:'#171c26', banda:k.belt, buf:k.belt };
+      /* EN GRANDE (André: «el ninja no se ve»): a escala 1 quedaba del tamaño
+         de una hormiga y encima tapado por su etiqueta, que ahora va arriba. */
+      try{ zenNinja(c, P.x, P.y+10, 2.0, t*0.5 + i*400, i, k.belt, njB, i%2===1,
+                    (abierto && !hecho) ? 'corte' : false); }catch(e){}
       c.restore();
     });
     /* TU NINJA, un paso antes del que te toca */
     /* tú esperas UN PASO ANTES del jefe que te toca: en la salida si aún no
        has vencido a nadie, o en la losa del que ya caíste */
     const Pprev = actual === 0 ? S0 : pos[actual-1];
-    try{ zenNinja(c, Pprev.x+44, Pprev.y+13, 1.1, t*0.5, 0,
+    try{ zenNinja(c, Pprev.x+58, Pprev.y+12, 1.9, t*0.5, 0,
           KATANAS[batEquipadaDe(yo)].belt, batNinjaDe(yo), false, false); }catch(e){}
 
     /* ── PÉTALOS ── */
@@ -10792,7 +10954,7 @@ function bossPintaNodos(){
     const P = bossNodoPos(i,W,H), k = KATANAS[b.kat];
     const hecho = bossVencido(i), abierto = hecho || i===actual;
     return `<button type="button" class="bm-nodo ${hecho?'hecho':abierto?'abierto':'cerrado'}"
-      data-boss="${i}" style="left:${P.x/W*100}%;top:${(P.y-46)/H*100}%;--kc:${k.belt}"
+      data-boss="${i}" style="left:${P.x/W*100}%;top:${(P.y-108)/H*100}%;--kc:${k.belt}"
       aria-label="${esc(b.nom)}">
       <span class="bm-k">${hecho?'✓':b.kanji}</span>
       <span class="bm-n">${esc(b.nom)}</span>
@@ -11648,7 +11810,13 @@ function zenNinja(c,x,base,s,now,ph,col,nj,flip,anda){ const kc=col||'#b53a2e';
   c.fillStyle=cfg.traje; c.fillRect(-5*s,-14*s+Math.max(0,p1),4*s,14*s-Math.max(0,p1)); c.fillRect(2*s,-14*s+Math.max(0,p2),4*s,14*s-Math.max(0,p2));
   c.fillRect(-6.5*s,-30*s,13*s,18*s);
   /* la katana: en la espalda — o cortando el aire */
-  c.strokeStyle='#c7ccd4'; c.lineWidth=1.6*s; c.beginPath();
+  /* LA HOJA lleva el color de SU katana —era gris para los nueve— con un
+     filo claro encima para que no se pierda sobre fondos oscuros */
+  c.strokeStyle=kc; c.lineWidth=2.4*s; c.lineCap='round'; c.beginPath();
+  if(corta){ const bx2=2*s, by2=-27*s, len=17*s; c.moveTo(bx2,by2); c.lineTo(bx2+Math.cos(aSl)*len, by2+Math.sin(aSl)*len); }
+  else { c.moveTo(-9*s,-38*s); c.lineTo(9*s,-16*s); }
+  c.stroke();
+  c.strokeStyle='rgba(255,255,255,.75)'; c.lineWidth=0.9*s; c.beginPath();
   if(corta){ const bx2=2*s, by2=-27*s, len=17*s; c.moveTo(bx2,by2); c.lineTo(bx2+Math.cos(aSl)*len, by2+Math.sin(aSl)*len); }
   else { c.moveTo(-9*s,-38*s); c.lineTo(9*s,-16*s); }
   c.stroke();
@@ -11658,7 +11826,21 @@ function zenNinja(c,x,base,s,now,ph,col,nj,flip,anda){ const kc=col||'#b53a2e';
   else { c.moveTo(-9*s,-38*s); c.lineTo(-12*s,-42*s); }
   c.stroke();
   c.fillStyle=cfg.traje; c.beginPath(); c.arc(0,-33*s,5.6*s,0,7); c.fill();
-  c.fillStyle=cfg.banda; c.fillRect(-5*s,-35*s,10*s,2.2*s);
+  /* EL ANTIFAZ: franja del color de su katana sobre los ojos, y los ojos
+     encima. Sin esto la cabeza era un círculo negro y a la distancia del
+     mapa el ninja no se leía como ninja. */
+  if(cfg.antifaz !== false){
+    c.fillStyle = cfg.banda;
+    c.fillRect(-5.6*s, -34.6*s, 11.2*s, 3.4*s);
+    c.fillStyle = 'rgba(255,255,255,.95)';
+    c.fillRect(-3.4*s, -34*s, 2.2*s, 1.9*s);
+    c.fillRect( 1.2*s, -34*s, 2.2*s, 1.9*s);
+  }
+  c.fillStyle=cfg.banda; c.fillRect(-5*s,-36.8*s,10*s,2.2*s);
+  /* la cinta del antifaz ondeando atrás */
+  c.strokeStyle=cfg.banda; c.lineWidth=1.6*s; c.beginPath();
+  c.moveTo(-5*s,-35.6*s);
+  c.quadraticCurveTo(-12*s-Math.sin(now/300+(ph||0))*3, -34*s, -16*s, -29*s); c.stroke();
   c.fillStyle=cfg.buf; c.beginPath(); c.moveTo(5*s,-32*s); c.quadraticCurveTo(15*s+Math.sin(now/300+(ph||0))*5,-30*s,20*s,-23*s); c.quadraticCurveTo(13*s,-28*s,5*s,-28*s); c.closePath(); c.fill();
   c.restore(); }
 /* dibuja UNA escena (para el héroe animado y para la ficha) */
@@ -12510,7 +12692,7 @@ function renderBatallaInterno(){
                entorno siguiendo al jefe que te toca, leer «SHIRO» sobre el
                bosque violeta no cuadraba. Tu katana ya está en el chip
                EQUIPADA y bajo tu retrato. -->
-          <div class="stage-nivel" style="color:${KATANAS[Math.max(0,bossActual())].belt}">${loc(bossEco(bossActual()).nom)}</div>
+          <div class="stage-nivel" style="color:${KATANAS[kEquipIdx].belt}">${loc(KATANAS[kEquipIdx].n)}</div>
           <!-- PLAY va ARRIBA de Battle: la escalera de jefes es la puerta
                principal; el 1v1 contra un socio queda debajo. -->
           <button type="button" class="stage-btn play" id="stPlay"><b>PLAY</b></button>
