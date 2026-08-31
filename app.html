@@ -22318,7 +22318,7 @@ verLbls  = input.bool(true, "Etiquetas en los H/L", group = g1)
 kzNegrita = input.bool(true, "Nombres en negritas", group = g1, tooltip = "ASIA, LNDN, ORB y NY salen en negritas. Pine no tiene negritas de verdad: se cambia cada letra por su versión gruesa de Unicode, así que se ve igual de negrita en cualquier tema y en cualquier zoom.")
 alertar  = input.bool(false, "Alertar cuando tomen un H/L", group = g1, tooltip = "Avisa cuando el precio toma el alto o el bajo de una sesión ya cerrada.")
 grosor   = input.int(1, "Grosor de líneas", minval = 1, maxval = 5, group = g1)
-verIni   = input.bool(true, "Marca al abrir cada sesión", group = g1, tooltip = "Un platito horizontal dentro de la vela donde arranca cada killzone, justo al precio de apertura, en el color de su sesión. Sale aunque las cajas y las líneas estén apagadas. Si traes los dos scripts en el mismo chart, apágalo en uno para no verlas dobles.")
+verIni   = input.bool(true, "Bolita al abrir cada sesión", group = g1, tooltip = "Una bolita en la vela donde arranca cada killzone, clavada en su precio de apertura, en el color de su sesión. Sale aunque las cajas y las líneas estén apagadas. Si traes los dos scripts en el mismo chart, apágalo en uno para no verlas dobles.")
 
 // cada fila: prendido · color · nombre · horario · caja
 inUseA  = input.bool(true, "", inline = "A", group = g1)
@@ -22685,29 +22685,22 @@ f_kz(kzL, useL, tL, cajaL)
 f_kz(kzO, useO, tO, cajaO)
 f_kz(kzN, useN, tN, cajaN)
 
-// ── MARCA AL ABRIR CADA SESIÓN ─────────────────────────────────
-// Un platito horizontal SOBRE la vela donde arranca cada killzone,
-// justo en su precio de apertura — el mismo trazo que deja una
-// operación al cerrarse, para ver en qué punto de la vela ocurrió.
-// Antes se probó con un círculo debajo de la vela y con un carácter,
-// y ninguno quedaba pegado al precio: por eso ahora es una línea de
-// verdad, de vela y media de ancho. Se guardan las últimas 40 y las
-// viejas se van borrando, para no gastar el cupo de líneas.
+// ── BOLITA AL ABRIR CADA SESIÓN ────────────────────────────────
+// Una bolita SOBRE la vela donde arranca cada killzone, clavada en
+// su PRECIO DE APERTURA. La primera versión la colgaba debajo de la
+// vela (location.belowbar) y por eso solo marcaba la vela, sin decir
+// a qué precio abrió; con location.absolute queda en el precio, que
+// es el dato que sirve. Va en el color de su sesión y no depende de
+// que la killzone se pinte, así que también sale con las cajas
+// apagadas. display.pane para no llenar de ceros la barra de título.
 color colIniA = palPers ? inColA : pBaja
 color colIniL = palPers ? inColL : pAcento
 color colIniO = palPers ? inColO : pNeutro
 color colIniN = palPers ? inColN : pAlza
-var array<line> iniLn = array.new<line>()
-f_marcaIni(bool cond, color c) =>
-    if cond
-        array.push(iniLn, line.new(bar_index - 1, open, bar_index + 1, open, xloc = xloc.bar_index, color = c, width = 2))
-        if array.size(iniLn) > 40
-            line.delete(array.shift(iniLn))
-    0
-f_marcaIni(verIni and dibujable and useA and tA and not tA[1], colIniA)
-f_marcaIni(verIni and dibujable and useL and tL and not tL[1], colIniL)
-f_marcaIni(verIni and dibujable and useO and tO and not tO[1], colIniO)
-f_marcaIni(verIni and dibujable and useN and tN and not tN[1], colIniN)
+plotshape(verIni and dibujable and useA and tA and not tA[1] ? open : na, "Abre ASIA", shape.circle, location.absolute, colIniA, size = size.tiny, editable = false, display = display.pane)
+plotshape(verIni and dibujable and useL and tL and not tL[1] ? open : na, "Abre LONDRES", shape.circle, location.absolute, colIniL, size = size.tiny, editable = false, display = display.pane)
+plotshape(verIni and dibujable and useO and tO and not tO[1] ? open : na, "Abre ORB", shape.circle, location.absolute, colIniO, size = size.tiny, editable = false, display = display.pane)
+plotshape(verIni and dibujable and useN and tN and not tN[1] ? open : na, "Abre NY", shape.circle, location.absolute, colIniN, size = size.tiny, editable = false, display = display.pane)
 
 
 // ── fin del día: al cerrar NY, la liquidez que no se tomó EXPIRA
@@ -23806,7 +23799,7 @@ dibujarKZ = input.bool(false, "Dibujar las killzones aquí", group = g1, tooltip
 kzNegrita = input.bool(true, "Nombres en negritas", group = g1, tooltip = "ASIA, LNDN, ORB y NY salen en negritas. Pine no tiene negritas de verdad: se cambia cada letra por su versión gruesa de Unicode, así que se ve igual de negrita en cualquier tema y en cualquier zoom.")
 alertar  = input.bool(false, "Alertar cuando tomen un H/L", group = g1, tooltip = "Avisa cuando el precio toma el alto o el bajo de una sesión ya cerrada.")
 grosor   = input.int(1, "Grosor de líneas", minval = 1, maxval = 5, group = g1)
-verIni   = input.bool(true, "Marca al abrir cada sesión", group = g1, tooltip = "Un platito horizontal dentro de la vela donde arranca cada killzone, justo al precio de apertura, en el color de su sesión. Sale aunque las cajas y las líneas estén apagadas. Si traes los dos scripts en el mismo chart, apágalo en uno para no verlas dobles.")
+verIni   = input.bool(true, "Bolita al abrir cada sesión", group = g1, tooltip = "Una bolita en la vela donde arranca cada killzone, clavada en su precio de apertura, en el color de su sesión. Sale aunque las cajas y las líneas estén apagadas. Si traes los dos scripts en el mismo chart, apágalo en uno para no verlas dobles.")
 
 // cada fila: prendido · color · nombre · horario · caja
 inUseA  = input.bool(true, "", inline = "A", group = g1)
@@ -24160,29 +24153,22 @@ f_kz(kzL, useL, tL, cajaL)
 f_kz(kzO, useO, tO, cajaO)
 f_kz(kzN, useN, tN, cajaN)
 
-// ── MARCA AL ABRIR CADA SESIÓN ─────────────────────────────────
-// Un platito horizontal SOBRE la vela donde arranca cada killzone,
-// justo en su precio de apertura — el mismo trazo que deja una
-// operación al cerrarse, para ver en qué punto de la vela ocurrió.
-// Antes se probó con un círculo debajo de la vela y con un carácter,
-// y ninguno quedaba pegado al precio: por eso ahora es una línea de
-// verdad, de vela y media de ancho. Se guardan las últimas 40 y las
-// viejas se van borrando, para no gastar el cupo de líneas.
+// ── BOLITA AL ABRIR CADA SESIÓN ────────────────────────────────
+// Una bolita SOBRE la vela donde arranca cada killzone, clavada en
+// su PRECIO DE APERTURA. La primera versión la colgaba debajo de la
+// vela (location.belowbar) y por eso solo marcaba la vela, sin decir
+// a qué precio abrió; con location.absolute queda en el precio, que
+// es el dato que sirve. Va en el color de su sesión y no depende de
+// que la killzone se pinte, así que también sale con las cajas
+// apagadas. display.pane para no llenar de ceros la barra de título.
 color colIniA = palPers ? inColA : pBaja
 color colIniL = palPers ? inColL : pAcento
 color colIniO = palPers ? inColO : pNeutro
 color colIniN = palPers ? inColN : pAlza
-var array<line> iniLn = array.new<line>()
-f_marcaIni(bool cond, color c) =>
-    if cond
-        array.push(iniLn, line.new(bar_index - 1, open, bar_index + 1, open, xloc = xloc.bar_index, color = c, width = 2))
-        if array.size(iniLn) > 40
-            line.delete(array.shift(iniLn))
-    0
-f_marcaIni(verIni and dibujable and useA and tA and not tA[1], colIniA)
-f_marcaIni(verIni and dibujable and useL and tL and not tL[1], colIniL)
-f_marcaIni(verIni and dibujable and useO and tO and not tO[1], colIniO)
-f_marcaIni(verIni and dibujable and useN and tN and not tN[1], colIniN)
+plotshape(verIni and dibujable and useA and tA and not tA[1] ? open : na, "Abre ASIA", shape.circle, location.absolute, colIniA, size = size.tiny, editable = false, display = display.pane)
+plotshape(verIni and dibujable and useL and tL and not tL[1] ? open : na, "Abre LONDRES", shape.circle, location.absolute, colIniL, size = size.tiny, editable = false, display = display.pane)
+plotshape(verIni and dibujable and useO and tO and not tO[1] ? open : na, "Abre ORB", shape.circle, location.absolute, colIniO, size = size.tiny, editable = false, display = display.pane)
+plotshape(verIni and dibujable and useN and tN and not tN[1] ? open : na, "Abre NY", shape.circle, location.absolute, colIniN, size = size.tiny, editable = false, display = display.pane)
 
 
 // ── fin del día: al cerrar NY, la liquidez que no se tomó EXPIRA
