@@ -766,6 +766,31 @@ function katana(c, W, H, col){
     bh.addColorStop(0,'rgba(80,116,172,0)'); bh.addColorStop(1,'rgba(80,116,172,.42)');
     c.fillStyle = bh; c.fillRect(0, mar - H*0.14, W, H*0.20);
 
+    /* ══ EL MAR DE NUBES VA DETRÁS ══ (André, 31-ago-2026)
+       Estaba pintado DESPUÉS de la montaña, y sus tres bandas cruzan la
+       pantalla de borde a borde: le pasaban una capa de luz por encima a media
+       ladera y la roca acababa MÁS CLARA que el cielo. Una masa delante de un
+       cielo iluminado es más oscura, nunca más clara — por eso se leía como
+       vidrio. Ahora el pico sale DEL mar de nubes, y sólo unas pocas cruzan
+       por delante, que es lo que hacen las nubes de verdad. */
+    /* ── EL MAR DE NUBES a media ladera ── */
+    for(var b=0;b<3;b++){
+      var yy = mar + b*H*0.05, al = 0.15 - b*0.04;
+      var fg = c.createLinearGradient(0, yy - H*0.07, 0, yy + H*0.09);
+      fg.addColorStop(0,'rgba(178,202,240,0)');
+      fg.addColorStop(.55,'rgba(178,202,240,'+al+')');
+      fg.addColorStop(1,'rgba(140,172,220,0)');
+      c.fillStyle = fg; c.fillRect(0, yy - H*0.07, W, H*0.16);
+    }
+    for(var n2=0;n2<15;n2++){
+      var d2 = ((now/(64000 + rnd(n2*3.3)*54000)) + rnd(n2*7.7)) % 1.4 - 0.2;
+      nube(d2*W*1.3 - W*0.15 + mx*(10+rnd(n2)*16),
+           mar + (rnd(n2*5.5)-0.35)*H*0.075,
+           W*(0.17 + rnd(n2*2.2)*0.28), H*(0.013 + rnd(n2*9.1)*0.017),
+           0.14 + rnd(n2*4.4)*0.20);
+    }
+
+
     /* ── LA MONTAÑA ── */
     function flanco(dir, sem){
       var pts = [[cx, sy]], n = 10;
@@ -779,8 +804,10 @@ function katana(c, W, H, col){
     var izq = flanco(-1, 11), der = flanco(1, 23);
     /* la roca tiene CUERPO: se oscurece hacia el pie, como una masa con peso,
        y así se despega del cielo en vez de fundirse con él */
+    /* MÁS OSCURA QUE EL CIELO EN TODO SU ALTO: es lo único que hace que una
+       silueta se lea como masa y no como cristal */
     var roca = c.createLinearGradient(0, sy, 0, H);
-    roca.addColorStop(0,'#22395C'); roca.addColorStop(.45,'#16263F'); roca.addColorStop(1,'#0A1526');
+    roca.addColorStop(0,'#152744'); roca.addColorStop(.42,'#0C1A2E'); roca.addColorStop(1,'#050A14');
     masa(izq, roca); masa(der, roca);
     /* el filo de la silueta contra el cielo: una línea finísima de luz de luna
        que dice dónde acaba la montaña y empieza el aire */
@@ -796,8 +823,8 @@ function katana(c, W, H, col){
     c.save();
     c.beginPath(); suave(der); c.lineTo(W*2,H+200); c.lineTo(-W,H+200); c.closePath(); c.clip();
     var cara = c.createLinearGradient(cx - W*0.10, 0, cx + W*0.62, 0);
-    cara.addColorStop(0,'rgba(126,164,220,0)'); cara.addColorStop(.22,'rgba(126,164,220,.30)');
-    cara.addColorStop(.70,'rgba(74,110,172,.12)'); cara.addColorStop(1,'rgba(44,70,118,0)');
+    cara.addColorStop(0,'rgba(126,164,220,0)'); cara.addColorStop(.22,'rgba(126,164,220,.19)');
+    cara.addColorStop(.70,'rgba(74,110,172,.07)'); cara.addColorStop(1,'rgba(44,70,118,0)');
     c.fillStyle = cara; c.fillRect(0,0,W,H);
     c.restore();
     /* aristas que bajan de la cumbre: es lo que le da volumen */
@@ -897,23 +924,14 @@ function katana(c, W, H, col){
     c.lineTo(W*2, sy - H*0.12); c.closePath(); c.fill();
     c.restore();
 
-    /* ── EL MAR DE NUBES a media ladera ── */
-    for(var b=0;b<3;b++){
-      var yy = mar + b*H*0.05, al = 0.15 - b*0.04;
-      var fg = c.createLinearGradient(0, yy - H*0.07, 0, yy + H*0.09);
-      fg.addColorStop(0,'rgba(178,202,240,0)');
-      fg.addColorStop(.55,'rgba(178,202,240,'+al+')');
-      fg.addColorStop(1,'rgba(140,172,220,0)');
-      c.fillStyle = fg; c.fillRect(0, yy - H*0.07, W, H*0.16);
+    /* las que sí pasan por delante del pico: pocas y tenues */
+    for(var nf=0;nf<4;nf++){
+      var df = ((now/(72000 + rnd(nf*6.1)*40000)) + rnd(nf*2.3)) % 1.4 - 0.2;
+      nube(df*W*1.3 - W*0.15 + mx*22,
+           mar + (rnd(nf*4.9)-0.30)*H*0.055,
+           W*(0.20 + rnd(nf*8.3)*0.22), H*(0.011 + rnd(nf*3.1)*0.012),
+           0.10 + rnd(nf*5.7)*0.10);
     }
-    for(var n2=0;n2<15;n2++){
-      var d2 = ((now/(64000 + rnd(n2*3.3)*54000)) + rnd(n2*7.7)) % 1.4 - 0.2;
-      nube(d2*W*1.3 - W*0.15 + mx*(10+rnd(n2)*16),
-           mar + (rnd(n2*5.5)-0.35)*H*0.075,
-           W*(0.17 + rnd(n2*2.2)*0.28), H*(0.013 + rnd(n2*9.1)*0.017),
-           0.14 + rnd(n2*4.4)*0.20);
-    }
-
     /* ── LA FALDA: bosque, sendero y torii ── */
     var fy = H*0.815 + p*H*0.05;
     var fpt = [[-60, fy + H*0.05]];
@@ -951,7 +969,7 @@ function katana(c, W, H, col){
     pagoda(W*0.845, fy - H*0.012, Math.min(W,H)/430, '#0A1424');
     /* bruma entre el bosque y el mar de nubes */
     var br = c.createLinearGradient(0, mar + H*0.02, 0, fy + H*0.02);
-    br.addColorStop(0,'rgba(120,152,206,.17)'); br.addColorStop(1,'rgba(12,22,42,0)');
+    br.addColorStop(0,'rgba(120,152,206,.10)'); br.addColorStop(1,'rgba(12,22,42,0)');
     c.fillStyle = br; c.fillRect(0, mar + H*0.02, W, fy - mar);
 
     /* ══ LA CUMBRE: KURO ══
