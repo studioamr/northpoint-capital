@@ -3,17 +3,926 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>NORTHPOINT Terminal</title>
-<!-- (André, 31-ago-2026) El Terminal se cuenta completo DENTRO de la landing
-     de la academia, no en página aparte. Esto queda como puente para que las
-     ligas que ya se compartieron no truenen. -->
-<link rel="canonical" href="https://northpointcapital.io/index.html#terminal">
-<meta http-equiv="refresh" content="0; url=index.html#terminal">
-<meta name="robots" content="noindex">
-<script>location.replace('index.html#terminal');</script>
-<style>html{background:#080808;color:#A6A6A6;font-family:ui-monospace,monospace}
-body{display:grid;place-items:center;min-height:100vh;margin:0;font-size:12px;letter-spacing:.14em}
-a{color:#F4F4F4}</style>
+<title>NORTHPOINT Terminal — tu mesa en una pantalla</title>
+<meta name="description" content="El NorthPoint Terminal: journal que se llena con una captura, tus cuentas de fondeo con el drawdown al aire, los dos indicadores del método en Pine Script, la academia completa y Kuro. Trece pantallas para operar futuros como firma.">
+<meta property="og:title" content="NORTHPOINT Terminal — tu mesa en una pantalla">
+<meta property="og:description" content="Trece pantallas para operar futuros como firma. Journal, cuentas de fondeo, indicadores, academia y duelos.">
+<meta property="og:image" content="og.png">
+<meta property="og:type" content="website">
+<link rel="icon" href="favicon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   NORTHPOINT TERMINAL — landing de venta
+   Mismo sistema visual del sitio: Dark Glass institucional, con
+   el brillo .ix y el tema claro/oscuro compartidos con index.html
+   ============================================================ */
+/* ── base heredada de index.html: variables, tipografía y fondo ── */
+:root{
+  --bg:#080808;
+  --bg-2:#0E0E0E;
+  --glass:rgba(255,255,255,.05);
+  --glass-2:rgba(255,255,255,.09);
+  --line:rgba(255,255,255,.13);
+  --line-soft:rgba(255,255,255,.06);
+  --txt:#F4F4F4;
+  --dim:#A6A6A6;
+  --faint:#7C7C7C;
+  --accent:#FFFFFF;
+  --accent-deep:#B8B8B8;
+  --up:#D9D9D9;
+  --down:#8F8F8F;
+  --warn:#CFCFCF;
+  --sheen:rgba(255,255,255,.38);
+  --edge:rgba(255,255,255,.22);
+  --glow1:rgba(255,255,255,.055);
+  --glow2:rgba(255,255,255,.03);
+  --nav-glass:rgba(8,8,8,.62);
+  --nav-glass-2:rgba(8,8,8,.85);
+  --sans:'Inter',-apple-system,system-ui,sans-serif;
+  --mono:'IBM Plex Mono',ui-monospace,monospace;
+}
+[data-theme="light"]{
+  --bg:#F5F5F3;
+  --bg-2:#EBEBE9;
+  --glass:rgba(0,0,0,.035);
+  --glass-2:rgba(0,0,0,.065);
+  --line:rgba(0,0,0,.16);
+  --line-soft:rgba(0,0,0,.08);
+  --txt:#0C0C0C;
+  --dim:#585858;
+  --faint:#8C8C8C;
+  --accent:#000000;
+  --accent-deep:#404040;
+  --up:#2E2E2E;
+  --down:#8F8F8F;
+  --warn:#4A4A4A;
+  --sheen:rgba(255,255,255,.9);
+  --edge:rgba(255,255,255,.65);
+  --glow1:rgba(0,0,0,.045);
+  --glow2:rgba(0,0,0,.025);
+  --nav-glass:rgba(245,245,243,.66);
+  --nav-glass-2:rgba(245,245,243,.9);
+}
+html{background:var(--bg)}
+body,.nav,.deck,.card,.nav.scrolled{transition:background .35s ease,color .35s ease,border-color .35s ease}
+
+*{margin:0;padding:0;box-sizing:border-box}
+
+html{
+  scroll-behavior:smooth;
+  scroll-padding-top:84px;
+}
+
+body{
+  background:var(--bg);
+  color:var(--txt);
+  font-family:var(--sans);
+  font-size:15px;
+  line-height:1.65;
+  -webkit-font-smoothing:antialiased;
+  overflow-x:hidden;
+}
+
+/* Fondo profesional (fórmula Montfort/21 Capital: negro roto + un azul frío como tinta):
+   glows que respiran muy lento + arcos de horizonte del motivo de marca */
+body::before{
+  content:"";
+  position:fixed;
+  inset:0;
+  z-index:-1;
+  background:
+    radial-gradient(1100px 700px at 78% -12%, var(--glow1), transparent 62%),
+    radial-gradient(900px 620px at 18% 112%, var(--glow2), transparent 60%),
+    linear-gradient(180deg, var(--bg) 0%, var(--bg) 55%, var(--bg-2) 100%);
+  pointer-events:none;
+  animation:bgbreath 26s ease-in-out infinite alternate;
+}
+@keyframes bgbreath{from{opacity:.85}to{opacity:1}}
+.bg-arcs{
+  position:fixed;left:50%;bottom:-6vh;transform:translateX(-50%);
+  width:max(1500px,140vw);height:52vh;z-index:-1;
+  color:var(--accent);opacity:.045;pointer-events:none;
+}
+@media (prefers-reduced-motion:reduce){
+  body::before{animation:none}
+}
+
+/* Ruido fino */
+body::after{
+  content:"";
+  position:fixed;
+  inset:0;
+  z-index:2000;
+  opacity:.025;
+  pointer-events:none;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+::selection{background:var(--glass-2);color:var(--txt)}
+
+a{color:inherit;text-decoration:none}
+a:focus-visible,button:focus-visible{outline:1px solid var(--accent-deep);outline-offset:3px}
+
+
+/* ══════════════════════════════════════════════════════════════
+   TERMINAL · la página de venta
+   ══════════════════════════════════════════════════════════════ */
+.wrap{width:min(1180px,92vw);margin:0 auto}
+.mono{font-family:var(--mono);letter-spacing:.14em;text-transform:uppercase;font-size:11px;color:var(--faint)}
+section{padding:clamp(64px,9vw,120px) 0;position:relative}
+.eyebrow{font-family:var(--mono);font-size:10.5px;letter-spacing:.24em;text-transform:uppercase;color:var(--faint);margin-bottom:18px}
+h1,h2,h3{font-weight:500;letter-spacing:-.02em;line-height:1.1}
+h2{font-size:clamp(28px,4.4vw,52px);margin-bottom:18px}
+h3{font-size:clamp(19px,2.2vw,26px);margin-bottom:10px}
+.lead{font-size:clamp(15px,1.5vw,18px);line-height:1.7;color:var(--dim);max-width:62ch}
+.dim{color:var(--dim)} .faint{color:var(--faint)}
+hr.rule{border:0;border-top:1px solid var(--line-soft);margin:0}
+
+/* ── nav ── */
+.nav{position:fixed;top:0;left:0;right:0;z-index:110;height:64px;display:flex;align-items:center;
+  justify-content:space-between;padding:0 clamp(16px,3vw,32px);
+  background:transparent;border-bottom:1px solid transparent;transition:background .3s,border-color .3s}
+.nav.scrolled{background:var(--nav-glass);backdrop-filter:blur(22px) saturate(140%);
+  -webkit-backdrop-filter:blur(22px) saturate(140%);border-bottom-color:var(--line-soft)}
+.nav b{font-family:var(--mono);font-size:13px;letter-spacing:.28em;font-weight:500}
+.nav nav{display:flex;gap:22px;align-items:center}
+.nav nav a{font-family:var(--mono);font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--dim)}
+.nav nav a:hover{color:var(--txt)}
+@media(max-width:820px){.nav nav a:not(.nav-cta){display:none}}
+.nav-cta{border:1px solid var(--line);padding:9px 16px;color:var(--txt)!important}
+.nav-cta:hover{background:var(--glass-2)}
+
+/* ── brillo (el mismo del sitio) ── */
+.ix{position:relative;overflow:hidden}
+.ix::after{content:'';position:absolute;top:0;left:-70%;width:50%;height:100%;
+  background:linear-gradient(105deg,transparent,var(--sheen),transparent);
+  transform:skewX(-18deg);transition:left .9s cubic-bezier(.16,1,.3,1);pointer-events:none}
+.ix:hover::after{left:140%}
+.shine{background:linear-gradient(110deg,var(--txt) 40%,var(--sheen) 50%,var(--txt) 60%);
+  background-size:240% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;
+  animation:sh 7s ease-in-out infinite}
+@keyframes sh{0%{background-position:120% 0}24%{background-position:-30% 0}100%{background-position:-30% 0}}
+
+/* ── hero ── */
+.hero{min-height:92vh;display:flex;align-items:center;padding-top:100px}
+.hero h1{font-size:clamp(44px,9vw,116px);line-height:.95;margin:14px 0 22px}
+.hero .lead{font-size:clamp(16px,1.8vw,21px);max-width:54ch}
+.hero-cta{display:flex;flex-wrap:wrap;gap:12px;margin-top:34px;align-items:center}
+.btn{display:inline-flex;align-items:center;gap:10px;font-family:var(--mono);font-size:11.5px;
+  letter-spacing:.16em;text-transform:uppercase;padding:15px 28px;border:1px solid var(--line);
+  color:var(--txt);transition:background .2s,border-color .2s,transform .2s}
+.btn:hover{background:var(--glass-2);border-color:var(--accent-deep);transform:translateY(-1px)}
+.btn.pri{background:var(--txt);color:var(--bg);border-color:var(--txt)}
+.btn.pri:hover{opacity:.88;background:var(--txt)}
+.btn[aria-disabled="true"]{opacity:.45;cursor:not-allowed;transform:none}
+.hero-shot{margin-top:52px;border:1px solid var(--line);background:var(--bg-2);
+  box-shadow:0 40px 120px -40px rgba(0,0,0,.6);position:relative;overflow:hidden}
+.hero-shot img{display:block;width:100%;height:auto}
+.hero-badges{display:flex;flex-wrap:wrap;gap:10px 26px;margin-top:26px}
+.hero-badges span{font-family:var(--mono);font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--faint)}
+
+/* ── tiras de números ── */
+.cifras{display:grid;grid-template-columns:repeat(2,1fr);gap:1px;background:var(--line-soft);border:1px solid var(--line-soft)}
+@media(min-width:760px){.cifras{grid-template-columns:repeat(4,1fr)}}
+.cifras>div{background:var(--bg);padding:26px 20px}
+.cifras b{display:block;font-family:var(--mono);font-size:clamp(26px,3.4vw,38px);font-weight:400;letter-spacing:-.02em}
+.cifras span{display:block;margin-top:6px;font-family:var(--mono);font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--faint)}
+
+/* ── rejilla de pantallas ── */
+.pantallas{display:grid;gap:1px;background:var(--line-soft);border:1px solid var(--line-soft);margin-top:36px}
+@media(min-width:700px){.pantallas{grid-template-columns:repeat(2,1fr)}}
+@media(min-width:1040px){.pantallas{grid-template-columns:repeat(3,1fr)}}
+.pantallas>div{background:var(--bg);padding:24px 22px;position:relative}
+.pantallas i{font-family:var(--mono);font-style:normal;font-size:10px;letter-spacing:.2em;color:var(--faint)}
+.pantallas b{display:block;margin:9px 0 7px;font-size:16px;font-weight:500;letter-spacing:-.01em}
+.pantallas p{font-size:13px;line-height:1.65;color:var(--dim)}
+
+/* ── bloques con captura ── */
+.feat{display:grid;gap:34px;align-items:center;padding:clamp(46px,7vw,84px) 0;border-top:1px solid var(--line-soft)}
+@media(min-width:940px){.feat{grid-template-columns:1fr 1.18fr;gap:56px}.feat.rev>figure{order:-1}}
+.feat figure{margin:0;border:1px solid var(--line);background:var(--bg-2);overflow:hidden;
+  box-shadow:0 30px 90px -46px rgba(0,0,0,.7)}
+.feat figure img{display:block;width:100%;height:auto}
+.feat ul{list-style:none;margin:18px 0 0;display:grid;gap:9px}
+.feat li{position:relative;padding-left:17px;font-size:13.5px;line-height:1.65;color:var(--dim)}
+.feat li::before{content:'';position:absolute;left:0;top:9px;width:6px;height:1px;background:var(--faint)}
+.feat .eyebrow{margin-bottom:12px}
+
+/* ── precios ── */
+.planes{display:grid;gap:16px;margin-top:40px}
+@media(min-width:880px){.planes{grid-template-columns:repeat(3,1fr)}}
+.plan{border:1px solid var(--line);padding:30px 26px 26px;display:flex;flex-direction:column;background:var(--glass)}
+.plan.destacado{border-color:var(--accent-deep);background:var(--glass-2);position:relative}
+.plan .tag{position:absolute;top:-1px;right:-1px;font-family:var(--mono);font-size:9.5px;letter-spacing:.18em;
+  text-transform:uppercase;padding:7px 12px;background:var(--txt);color:var(--bg)}
+.plan h3{font-size:15px;font-family:var(--mono);letter-spacing:.16em;text-transform:uppercase;color:var(--dim);margin-bottom:16px}
+.plan .precio{font-family:var(--mono);font-size:clamp(30px,4vw,42px);letter-spacing:-.02em;line-height:1}
+.plan .precio i{display:block;font-style:normal;font-family:var(--mono);font-size:10.5px;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--faint);margin-top:9px}
+.plan ul{list-style:none;margin:22px 0 26px;display:grid;gap:8px;flex:1}
+.plan li{position:relative;padding-left:17px;font-size:13px;line-height:1.6;color:var(--dim)}
+.plan li::before{content:'·';position:absolute;left:5px;color:var(--faint);font-weight:700}
+.plan li.no{color:var(--faint)}.plan li.no::before{content:'—';font-size:9px;left:2px}
+.plan .btn{width:100%;justify-content:center}
+.oferta{border:1px solid var(--line);border-left:2px solid var(--txt);padding:22px 24px;margin-top:26px;
+  display:flex;flex-wrap:wrap;gap:14px 26px;align-items:center;justify-content:space-between;background:var(--glass)}
+.oferta b{font-family:var(--mono);font-size:11px;letter-spacing:.18em;text-transform:uppercase}
+.oferta p{font-size:13px;color:var(--dim);max-width:58ch;margin-top:4px}
+
+/* ── incluye / no es / faq ── */
+.dosCol{display:grid;gap:34px;margin-top:34px}
+@media(min-width:880px){.dosCol{grid-template-columns:1fr 1fr;gap:56px}}
+.lista{list-style:none;display:grid;gap:11px}
+.lista li{position:relative;padding-left:19px;font-size:14px;line-height:1.65;color:var(--dim)}
+.lista li::before{content:'';position:absolute;left:0;top:10px;width:8px;height:1px;background:var(--faint)}
+details{border-top:1px solid var(--line-soft);padding:18px 0}
+details summary{cursor:pointer;list-style:none;font-size:15px;display:flex;justify-content:space-between;gap:20px;align-items:baseline}
+details summary::-webkit-details-marker{display:none}
+details summary::after{content:'+';font-family:var(--mono);color:var(--faint)}
+details[open] summary::after{content:'–'}
+details p{margin-top:12px;font-size:13.5px;line-height:1.7;color:var(--dim);max-width:66ch}
+
+/* ══════════════════════════════════════════════════════════════
+ LA PROBADITA · el Terminal, dibujado en HTML
+ (André, 31-ago-2026) Las capturas se veían borrosas al escalarlas.
+ Estos son los MISMOS paneles reconstruidos en HTML y CSS: se ven
+ nítidos en cualquier pantalla, pesan lo que pesa el texto y
+ respetan claro/oscuro. Los números son de una cuenta de demo.
+ Verde y rojo viven SOLO aquí dentro, porque así se ve el producto
+ de verdad; el resto de la página sigue en blanco y negro.
+ ══════════════════════════════════════════════════════════════ */
+.feat figure .np-demo,.hero-shot .np-demo{border:0;box-shadow:none}
+.np-demo{--u:#57C79B;--d:#DE6A5F;--w:#D9A441;
+border:1px solid var(--line);background:var(--bg-2);
+font-family:var(--mono);position:relative;overflow:hidden;
+box-shadow:0 30px 90px -50px rgba(0,0,0,.75)}
+html[data-theme="light"] .np-demo{--u:#1B7A50;--d:#B5473A;--w:#8A6D22}
+.np-demo *{font-family:inherit}
+.np-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+padding:11px 14px;border-bottom:1px solid var(--line-soft);font-size:10px;
+letter-spacing:.08em;color:var(--faint)}
+.np-bar b{color:var(--txt);font-weight:400}
+.np-chip{border:1px solid var(--line);padding:3px 8px;border-radius:3px;font-size:9px;letter-spacing:.12em}
+.np-chip.w{border-color:var(--w);color:var(--w)}
+.np-sp{margin-left:auto;display:flex;gap:7px;flex-wrap:wrap}
+.np-alerta{display:flex;gap:9px;align-items:baseline;padding:11px 14px;font-size:10.5px;
+line-height:1.55;color:var(--dim);border-bottom:1px solid var(--line-soft);
+background:color-mix(in srgb, var(--d) 9%, transparent)}
+.np-alerta b{color:var(--d);font-weight:400}
+.np-cuerpo{padding:16px 14px}
+.np-bal{display:flex;flex-wrap:wrap;align-items:flex-end;gap:14px 30px;
+border:1px solid var(--line-soft);padding:16px 16px 15px}
+.np-bal-k{font-size:9px;letter-spacing:.2em;color:var(--faint);display:block;margin-bottom:6px}
+.np-bal-n{font-size:clamp(26px,4.2vw,40px);line-height:1;letter-spacing:-.02em;color:var(--u)}
+.np-bal-r{margin-left:auto;display:flex;gap:22px 32px;flex-wrap:wrap}
+.np-bal-r div{text-align:right}
+.np-bal-r i{font-style:normal;font-size:8.5px;letter-spacing:.16em;color:var(--faint);display:block;margin-bottom:5px}
+.np-bal-r s{text-decoration:none;font-size:13px;color:var(--txt)}
+.np-bal-r s.up{color:var(--u)}
+.np-tit{font-size:9px;letter-spacing:.2em;color:var(--faint);margin:20px 0 10px}
+.np-kpis{display:grid;gap:9px;grid-template-columns:repeat(2,1fr)}
+@media(min-width:760px){.np-kpis{grid-template-columns:repeat(4,1fr)}}
+.np-kpi{border:1px solid var(--line-soft);padding:13px 13px 12px}
+.np-kpi i{font-style:normal;display:block;font-size:8.5px;letter-spacing:.16em;color:var(--faint);margin-bottom:9px}
+.np-kpi b{display:block;font-size:21px;font-weight:400;letter-spacing:-.02em;line-height:1}
+.np-kpi b.up{color:var(--u)} .np-kpi b sup{font-size:11px;vertical-align:super}
+.np-kpi span{display:block;margin-top:7px;font-size:9px;letter-spacing:.1em;color:var(--faint)}
+.np-mini{display:flex;height:2px;margin-top:9px;gap:1px}
+.np-mini u{text-decoration:none;background:var(--u)} .np-mini s{text-decoration:none;background:var(--d)}
+/* filas de cuentas */
+.np-fila{display:grid;gap:8px 20px;grid-template-columns:1fr;padding:14px 14px;
+border:1px solid var(--line-soft);margin-bottom:8px}
+@media(min-width:700px){.np-fila{grid-template-columns:1.3fr 1fr 1fr 1fr;align-items:center}}
+.np-fila b{font-size:13px;color:var(--txt);font-weight:400;letter-spacing:.02em}
+.np-fila b small{display:block;font-size:8.5px;letter-spacing:.16em;color:var(--faint);margin-top:5px}
+.np-fila i{font-style:normal;font-size:8.5px;letter-spacing:.16em;color:var(--faint);display:block;margin-bottom:5px}
+.np-fila s{text-decoration:none;font-size:14px;color:var(--txt)}
+.np-fila s.up{color:var(--u)}
+.np-fila em{font-style:normal;font-size:9.5px;color:var(--faint);display:block;margin-top:4px}
+/* historial */
+.np-tabla{width:100%;border-collapse:collapse;font-size:10.5px}
+.np-tabla th{text-align:left;font-weight:400;font-size:8.5px;letter-spacing:.16em;color:var(--faint);
+padding:0 10px 9px 0;border-bottom:1px solid var(--line-soft)}
+.np-tabla td{padding:9px 10px 9px 0;border-bottom:1px solid var(--line-soft);color:var(--dim);white-space:nowrap}
+.np-tabla tr.dia td{background:var(--glass);color:var(--txt);font-size:9.5px;letter-spacing:.12em}
+.np-tabla td.n{text-align:right;color:var(--txt)}
+.np-tabla td.n.up{color:var(--u)} .np-tabla td.n.dn{color:var(--d)}
+.np-t{display:inline-block;border:1px solid var(--line);padding:2px 7px;border-radius:3px;
+font-size:8.5px;letter-spacing:.1em;color:var(--faint)}
+.np-t.l{border-color:var(--u);color:var(--u)} .np-t.s{border-color:var(--d);color:var(--d)}
+.np-t.x{border-color:var(--d);color:var(--d)}
+@media(max-width:640px){.np-tabla .op{display:none}}
+/* camino + curva */
+.np-camino{display:flex;align-items:center;gap:14px;flex-wrap:wrap;padding:14px;
+border-bottom:1px solid var(--line-soft)}
+.np-camino .n{font-size:19px;color:var(--txt)}
+.np-riel{flex:1;min-width:200px}
+.np-riel .p{height:5px;border:1px solid var(--line);border-radius:3px;overflow:hidden;position:relative}
+.np-riel .p i{position:absolute;left:0;top:0;bottom:0;width:70%;background:var(--txt);opacity:.7}
+.np-riel .e{display:flex;justify-content:space-between;margin-top:7px;font-size:8px;letter-spacing:.14em;color:var(--faint)}
+.np-curva{padding:6px 14px 14px}
+.np-curva svg{display:block;width:100%;height:auto}
+.np-curva .ln{fill:none;stroke:var(--u);stroke-width:1.6;stroke-linejoin:round}
+.np-curva .ar{fill:var(--u);opacity:.11}
+.np-curva .gd{stroke:var(--line-soft);stroke-width:1}
+.np-curva .pt{fill:var(--u);stroke:var(--bg-2);stroke-width:2}
+/* el panel del chart */
+.np-chart{border-collapse:collapse;width:100%;font-size:10px;line-height:1.45}
+.np-chart td{border:1px solid var(--line-soft);padding:5px 8px;color:var(--dim);vertical-align:middle}
+.np-chart td.k{width:88px;color:var(--faint);font-size:8.5px;letter-spacing:.12em;white-space:nowrap}
+.np-chart td.c{text-align:center;color:var(--txt)}
+.np-chart td.n{text-align:right;white-space:nowrap}
+.np-chart .up{color:var(--u)} .np-chart .dn{color:var(--d)}
+.np-chart tr.on td{background:var(--glass)}
+.np-chart small{display:block;color:var(--faint);font-size:8.5px;margin-top:2px}
+.np-pie{padding:10px 14px;border-top:1px solid var(--line-soft);font-size:8.5px;
+letter-spacing:.14em;color:var(--faint)}
+
+/* ── pie ── */
+footer{border-top:1px solid var(--line-soft);padding:44px 0 80px}
+footer .fl{display:flex;flex-wrap:wrap;gap:14px 28px;justify-content:space-between;align-items:baseline}
+footer a{color:var(--dim)}footer a:hover{color:var(--txt)}
+.legal{margin-top:26px;font-size:11.5px;line-height:1.7;color:var(--faint);max-width:78ch}
+
+</style>
 </head>
-<body><p>NORTHPOINT · <a href="index.html#terminal">EL TERMINAL →</a></p></body>
+<body>
+<svg class="bg-arcs" viewBox="0 0 1200 400" fill="none" aria-hidden="true">
+  <path d="M-100 400 Q600 40 1300 400" stroke="currentColor" stroke-width="1"/>
+  <path d="M-100 400 Q600 150 1300 400" stroke="currentColor" stroke-width="1"/>
+  <path d="M-100 400 Q600 260 1300 400" stroke="currentColor" stroke-width="1"/>
+</svg>
+
+<header class="nav">
+  <b>NORTHPOINT</b>
+  <nav>
+    <a href="#pantallas">Qué trae</a>
+    <a href="#kuro">Kuro</a>
+    <a href="#academia">Academia</a>
+    <a href="#precios">Precios</a>
+    <a class="nav-cta" href="app.html">Abrir el Terminal →</a>
+  </nav>
+</header>
+
+<!-- ══ HERO ══ -->
+<section class="hero">
+  <div class="wrap">
+    <p class="eyebrow">NorthPoint Terminal · v1</p>
+    <h1><span class="shine">TU MESA<br>EN UNA<br>PANTALLA.</span></h1>
+    <p class="lead">Trece pantallas para operar futuros como firma: el journal que se llena solo, tus cuentas de fondeo con su drawdown al aire, los indicadores del método, la academia completa y un rival que no duerme.</p>
+    <div class="hero-cta">
+      <a class="btn pri ix" href="#precios">Ver precios</a>
+      <a class="btn ix" href="app.html">Entrar al Terminal →</a>
+    </div>
+    <div class="hero-badges">
+      <span>13 pantallas</span><span>35 lecciones</span><span>2 indicadores Pine</span><span>Español / English</span><span>Oscuro / claro</span>
+    </div>
+    <figure class="hero-shot ix" style="padding:0;border-color:var(--line)">
+      <div class="np-demo">
+        <div class="np-bar">
+          <span class="np-chip">All accounts ▾</span>
+          <b>3 DE 3</b> · <b>$150,000</b>
+          <span class="np-chip w">FASES MIXTAS</span>
+          <span class="np-sp"><span class="np-chip">Import CSV</span><span class="np-chip">Detalle</span><span class="np-chip">Gestionar</span></span>
+        </div>
+        <div class="np-alerta"><b>⚠ 3 violaciones hoy:</b> Sin setup · Overtrading · Revenge. Medido contra tu plan de sesión de ese día.</div>
+        <div class="np-cuerpo">
+          <div class="np-bal">
+            <div>
+              <span class="np-bal-k">BALANCE</span>
+              <span class="np-bal-n">$170,490</span>
+            </div>
+            <div class="np-bal-r">
+              <div><i>PNL</i><s class="up">+$20,490</s></div>
+              <div><i>CAPITAL</i><s>$150,000</s></div>
+              <div><i>CUENTAS</i><s>3</s></div>
+            </div>
+          </div>
+          <p class="np-tit">WIN RATE Y RATIOS DE LA MESA</p>
+          <div class="np-kpis">
+            <div class="np-kpi"><i>WIN RATE · POR TRADE</i><b>65%</b><span>13W · 7L</span>
+              <div class="np-mini"><u style="flex:65"></u><s style="flex:35"></s></div></div>
+            <div class="np-kpi"><i>DÍAS GANADOS</i><b>100%</b><span>10W · 0L</span>
+              <div class="np-mini"><u style="flex:100"></u></div></div>
+            <div class="np-kpi"><i>GANA / PIERDE</i><b>2.68<sup>R</sup></b><span>+$1,973 · −$737</span>
+              <div class="np-mini"><u style="flex:73"></u><s style="flex:27"></s></div></div>
+            <div class="np-kpi"><i>LARGOS VS CORTOS</i><b class="up">+$20,490</b><span>L +$25,650 · S −$5,160</span>
+              <div class="np-mini"><u style="flex:83"></u><s style="flex:17"></s></div></div>
+          </div>
+        </div>
+        <div class="np-pie">AGOSTO 2026 · OBJETIVO DIARIO $1,750 · 20 TRADES</div>
+      </div>
+    </figure>
+  </div>
+</section>
+
+<!-- ══ CIFRAS ══ -->
+<section style="padding-top:0">
+  <div class="wrap">
+    <div class="cifras">
+      <div><b>13</b><span>pantallas</span></div>
+      <div><b>35</b><span>lecciones · 249 min</span></div>
+      <div><b>⌘V</b><span>y el trade queda</span></div>
+      <div><b>0</b><span>hojas de cálculo</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- ══ EL PROBLEMA ══ -->
+<section>
+  <div class="wrap">
+    <p class="eyebrow">01 · Por qué existe</p>
+    <h2>Operar es la parte fácil.<br>Lo demás es lo que te tumba.</h2>
+    <div class="dosCol">
+      <div>
+        <p class="lead">Cierras la operación y empieza la tarea: capturarla en una hoja, acordarte de con qué cuenta fue, calcular cuánto te queda de drawdown, revisar si rompiste tu propia regla. Casi nadie lo hace todos los días. Y el que no lo hace, no sabe por qué pierde.</p>
+      </div>
+      <div>
+        <ul class="lista">
+          <li>Tres cuentas de fondeo y ningún lugar que te diga, hoy, cuánto le queda a cada una antes de morir.</li>
+          <li>El journal que empiezas el lunes y abandonas el jueves.</li>
+          <li>Reglas escritas en una libreta que nadie revisa a las 9:41 de la mañana.</li>
+          <li>Un año operando y cero idea de si tu problema es el setup, el tamaño o la hora.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══ PEGAR Y YA ══ -->
+<section style="padding-top:0">
+  <div class="wrap">
+    <div class="feat">
+      <div>
+        <p class="eyebrow">02 · Registro</p>
+        <h3>Pegas la captura. Ya quedó.</h3>
+        <p class="dim" style="font-size:14px;line-height:1.7">Terminas el trade, copias la captura de TradingView y la pegas en cualquier pantalla del Terminal con <b style="font-family:var(--mono)">⌘V</b>. La lee una IA y saca el instrumento, el lado, el resultado y la hora. Tú confirmas. Se acabó llenar cajas.</p>
+        <ul>
+          <li>La captura queda guardada con el trade: entras meses después y ves el chart exacto.</li>
+          <li>¿Prefieres el archivo? Importas el CSV de Tradovate y entra el mes completo.</li>
+          <li>¿Sin llave de IA? Escribes el P&amp;L a mano y la curva se mueve igual. La IA ahorra tiempo, no es el candado.</li>
+          <li>La llave es TUYA y vive en tu equipo. Nosotros no vemos tus trades.</li>
+        </ul>
+      </div>
+      <figure class="ix"><div class="np-demo">
+        <div class="np-camino">
+          <span class="n">$170,490</span>
+          <div class="np-riel">
+            <div class="p"><i></i></div>
+            <div class="e"><span>EVAL</span><span>FONDEADA</span><span>COLCHÓN</span><span>PAYOUTS</span><span>MÁX</span></div>
+          </div>
+          <span style="font-size:9px;letter-spacing:.14em;color:var(--faint)">70% · 0/5 PAYOUTS</span>
+        </div>
+        <div class="np-bar">
+          <b>TODAS LAS CUENTAS</b>
+          <span class="np-sp">
+            <span class="np-chip"><b>20</b> TRADES</span>
+            <span class="np-chip"><b>65%</b> WIN RATE</span>
+            <span class="np-chip"><b>4.97</b> PF</span>
+            <span class="np-chip"><b>13</b>/7 W·L</span>
+          </span>
+        </div>
+        <div class="np-curva">
+          <svg viewBox="0 0 640 190" role="img" aria-label="Curva de capital de la cuenta de demostración">
+            <line class="gd" x1="0" y1="170" x2="640" y2="170"/>
+            <line class="gd" x1="0" y1="128" x2="640" y2="128"/>
+            <line class="gd" x1="0" y1="86"  x2="640" y2="86"/>
+            <line class="gd" x1="0" y1="44"  x2="640" y2="44"/>
+            <path class="ar" d="M8 158 L40 146 L72 152 L104 128 L136 136 L168 112 L200 118 L232 96 L264 104 L296 78 L328 84 L360 62 L392 70 L424 50 L456 56 L488 38 L520 44 L552 28 L584 34 L616 22 L616 178 L8 178 Z"/>
+            <path class="ln" d="M8 158 L40 146 L72 152 L104 128 L136 136 L168 112 L200 118 L232 96 L264 104 L296 78 L328 84 L360 62 L392 70 L424 50 L456 56 L488 38 L520 44 L552 28 L584 34 L616 22"/>
+            <circle class="pt" cx="616" cy="22" r="4.5"/>
+            <text x="8" y="186" fill="currentColor" opacity=".38" font-size="9" letter-spacing="1">0</text>
+            <text x="640" y="186" fill="currentColor" opacity=".38" font-size="9" letter-spacing="1" text-anchor="end">20 TRADES</text>
+            <text x="616" y="14" fill="currentColor" opacity=".7" font-size="10" text-anchor="end">+$21,420</text>
+          </svg>
+        </div>
+        <div class="np-bar" style="border-top:1px solid var(--line-soft);border-bottom:0">
+          <span class="np-chip l" style="border-color:var(--u);color:var(--u)">LONG</span>
+          <span class="np-chip">SHORT</span>
+          <span class="np-chip" style="flex:1;min-width:120px;text-align:left;color:var(--faint)">P&amp;L $ (+/−)</span>
+          <span class="np-chip" style="background:var(--txt);color:var(--bg);border-color:var(--txt)">+ AGREGAR</span>
+          <span class="np-chip">DESHACER</span>
+        </div>
+        <div class="np-pie">CADA TRADE ATERRIZA EN TU HISTORIAL REAL Y EN LA MESA</div>
+      </div></figure>
+    </div>
+  </div>
+</section>
+
+<!-- ══ LAS 13 PANTALLAS ══ -->
+<section id="pantallas">
+  <div class="wrap">
+    <p class="eyebrow">03 · Qué trae</p>
+    <h2>Trece pantallas.<br>Ninguna de relleno.</h2>
+    <p class="lead">Todo lo que un operador de futuros toca en un día, y lo que toca una vez al mes. En el mismo lugar, con los mismos datos.</p>
+    <div class="pantallas">
+      <div class="ix"><i>01</i><b>The Desk</b><p>La mesa completa: quién opera, con cuánto capital, cuántas cuentas en examen y cuántas fondeadas. El retrato de la firma en un vistazo.</p></div>
+      <div class="ix"><i>02</i><b>Journal</b><p>Balance, P&amp;L, capital y cuentas arriba. Debajo: win rate por trade, días ganados, ganancia media contra pérdida media en R, y largos contra cortos. Calendario del mes con tu objetivo diario.</p></div>
+      <div class="ix"><i>03</i><b>Log trade</b><p>La curva de capital viva y el registro del día. Un botón para largo, otro para corto, el P&amp;L y listo. Con deshacer, por si le picaste mal.</p></div>
+      <div class="ix"><i>04</i><b>Trade history</b><p>Cada operación con su fecha, hora, símbolo, lado, resultado, el setup que usaste y las marcas de disciplina: sin setup, overtrading, revenge. Profit factor arriba.</p></div>
+      <div class="ix"><i>05</i><b>The plan</b><p>Tus cuentas una por una: balance, cuánto le queda al drawdown y en qué etapa va. Debajo, la escalera de nueve fases, de cinco mil a la meta grande.</p></div>
+      <div class="ix"><i>06</i><b>Payout management</b><p>El camino a tu primer cobro: la evaluación, el colchón y el tramo de pago, con la cuenta más adelantada al frente. Registras el payout y la barra avanza.</p></div>
+      <div class="ix"><i>07</i><b>Algorithm</b><p>Los dos indicadores del método en Pine Script v6, para copiar y pegar. Con cada pieza explicada: killzones, rango de apertura, huecos de precio, estructura, Fibonacci, la orden y el canal de regresión.</p></div>
+      <div class="ix"><i>08</i><b>Academy</b><p>Cuatro programas, doce módulos, treinta y cinco lecciones. De qué es un contrato de futuros hasta cómo se cobra un payout. Con tu avance guardado.</p></div>
+      <div class="ix"><i>09</i><b>Notebook</b><p>Tu cuaderno: notas por lección, tus objetivos, tu promesa y tu firma. Lo que escribes ahí no lo ve nadie más.</p></div>
+      <div class="ix"><i>10</i><b>Kuro</b><p>Duelos 1v1 con tiempo y apuesta, ranking por dan y una campaña de nueve katanas. Compites por P&amp;L, no por presumir.</p></div>
+      <div class="ix"><i>11</i><b>Backtesting</b><p>Cuentas de práctica separadas de las de verdad. Pruebas una idea, la mides, y tus estadísticas reales no se ensucian.</p></div>
+      <div class="ix"><i>12</i><b>Portfolio</b><p>La otra velocidad del dinero: la tesis a 2040 en IA, semiconductores, infraestructura digital y blockchain, con tus posiciones y su reparto por clase.</p></div>
+      <div class="ix"><i>13</i><b>Cash flow</b><p>Lo que entra y lo que sale de verdad. Los payouts que cobraste, lo que aportaste y lo que retiraste. El patrimonio, no solo la cuenta.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- ══ TU MESA ══ -->
+<section style="padding-top:0">
+  <div class="wrap">
+    <div class="feat rev">
+      <div>
+        <p class="eyebrow">04 · Las cuentas</p>
+        <h3>Cuánto le queda a cada cuenta.<br>Hoy, sin sacar la calculadora.</h3>
+        <p class="dim" style="font-size:14px;line-height:1.7">Das de alta una cuenta con tres datos: nombre, balance y etapa. A partir de ahí el Terminal te dice, todos los días, cuánto le falta para pasar y cuánto le queda antes de romperse.</p>
+        <ul>
+          <li>Todas las cuentas corren el mismo camino: el examen arranca en cero, la fondeada arranca a la mitad, el payout está al final.</li>
+          <li>Si te acercas al drawdown, la pantalla te lo grita antes de que lo rompas, no después.</li>
+          <li>Marca las violaciones del día contra tu propio plan: sin setup, overtrading, revenge.</li>
+          <li>La escalera de patrimonio, de la primera cuenta hasta la meta que te pusiste.</li>
+        </ul>
+      </div>
+      <figure class="ix"><div class="np-demo">
+        <div class="np-bar"><b>TU MESA</b> · 3 cuentas <span class="np-sp"><b>$170,490 total</b></span></div>
+        <div class="np-cuerpo">
+          <div class="np-fila">
+            <b>APEX 13<small>APEX · COBRANDO</small></b>
+            <div><i>BALANCE</i><s class="up">$56,830</s><em>+$6,830</em></div>
+            <div><i>LE QUEDA</i><s>$6,730</s><em>al drawdown</em></div>
+            <div><i>ESTADO</i><s>YA COBRA</s><em>—</em></div>
+          </div>
+          <div class="np-fila">
+            <b>APEX 22<small>APEX · COLCHÓN</small></b>
+            <div><i>BALANCE</i><s class="up">$56,830</s><em>+$6,830</em></div>
+            <div><i>LE QUEDA</i><s>$6,730</s><em>al drawdown</em></div>
+            <div><i>LE FALTA</i><s>$0</s><em>para pasar</em></div>
+          </div>
+          <div class="np-fila" style="margin-bottom:0">
+            <b>EVAL 3<small>APEX · EVALUACIÓN</small></b>
+            <div><i>BALANCE</i><s class="up">$56,830</s><em>+$6,830</em></div>
+            <div><i>LE QUEDA</i><s>$6,730</s><em>al drawdown</em></div>
+            <div><i>LE FALTA</i><s>$0</s><em>para pasar</em></div>
+          </div>
+        </div>
+        <div class="np-pie">SALE DE LAS CUENTAS QUE TÚ REGISTRASTE · SI NO CUADRA, MANDA TU TABLERO</div>
+      </div></figure>
+    </div>
+
+    <div class="feat">
+      <div>
+        <p class="eyebrow">05 · El historial</p>
+        <h3>No es una lista de trades.<br>Es la prueba de cómo operas.</h3>
+        <p class="dim" style="font-size:14px;line-height:1.7">Cada operación guarda su setup y sus marcas de disciplina. Al final del mes no ves solo cuánto ganaste: ves cuántas veces te saltaste tu propia regla, y qué te costó cada vez.</p>
+        <ul>
+          <li>Profit factor, win rate y ganancia media contra pérdida media, calculados solos.</li>
+          <li>Filtras por cuenta o ves todas juntas.</li>
+          <li>Cada trade abre su reporte, con su captura.</li>
+          <li>El cierre del mes sale en PDF.</li>
+        </ul>
+      </div>
+      <figure class="ix"><div class="np-demo">
+        <div class="np-bar"><b>HISTORIAL</b><span class="np-sp">20 TRADES · PROFIT FACTOR 4.97 · <b style="color:var(--u)">+$20,490</b></span></div>
+        <div class="np-cuerpo" style="padding-top:6px;overflow-x:auto">
+          <table class="np-tabla">
+            <thead><tr><th>FECHA</th><th>HORA</th><th>SÍMBOLO</th><th>LADO</th><th class="op">SETUP</th><th class="op">DISCIPLINA</th><th style="text-align:right">P&amp;L</th></tr></thead>
+            <tbody>
+              <tr class="dia"><td colspan="6">31 AGO 2026 · 2 TRADES</td><td class="n up">+$630</td></tr>
+              <tr><td>31/08</td><td>10:42</td><td>MNQ</td><td><span class="np-t s">SHORT</span></td><td class="op"><span class="np-t">INCOMPLETO</span></td><td class="op"><span class="np-t x">SIN SETUP</span></td><td class="n dn">−$930</td></tr>
+              <tr><td>31/08</td><td>9:30</td><td>MNQ</td><td><span class="np-t l">LONG</span></td><td class="op"><span class="np-t">INCOMPLETO</span></td><td class="op"><span class="np-t x">OVERTRADING</span> <span class="np-t x">REVENGE</span></td><td class="n up">+$1,560</td></tr>
+              <tr class="dia"><td colspan="6">28 AGO 2026 · 2 TRADES</td><td class="n up">+$1,650</td></tr>
+              <tr><td>28/08</td><td>10:42</td><td>MNQ</td><td><span class="np-t l">LONG</span></td><td class="op"><span class="np-t">A+</span></td><td class="op"><span class="np-t">LIMPIO</span></td><td class="n up">+$2,070</td></tr>
+              <tr><td>28/08</td><td>9:30</td><td>MNQ</td><td><span class="np-t s">SHORT</span></td><td class="op"><span class="np-t">A+</span></td><td class="op"><span class="np-t x">SIN SETUP</span></td><td class="n dn">−$420</td></tr>
+              <tr class="dia"><td colspan="6">27 AGO 2026 · 2 TRADES</td><td class="n up">+$3,840</td></tr>
+              <tr><td>27/08</td><td>10:42</td><td>MNQ</td><td><span class="np-t l">LONG</span></td><td class="op"><span class="np-t">A+</span></td><td class="op"><span class="np-t">LIMPIO</span></td><td class="n up">+$1,680</td></tr>
+              <tr><td>27/08</td><td>9:30</td><td>MNQ</td><td><span class="np-t l">LONG</span></td><td class="op"><span class="np-t">A+</span></td><td class="op"><span class="np-t">LIMPIO</span></td><td class="n up">+$2,160</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="np-pie">CADA RENGLÓN ABRE SU REPORTE, CON SU CAPTURA</div>
+      </div></figure>
+    </div>
+  </div>
+</section>
+
+<!-- ══ KURO ══ -->
+<section id="kuro" style="padding-top:0">
+  <div class="wrap">
+    <div class="feat rev">
+      <div>
+        <p class="eyebrow">06 · Kuro</p>
+        <h3>Un rival que no duerme.</h3>
+        <p class="dim" style="font-size:14px;line-height:1.7">Mil años en la cima y nadie lo ha bajado. Kuro es la parte del Terminal que convierte la disciplina en algo que se puede ganar. Retas a alguien de la mesa —o a él—, se pone tiempo y monto, y gana el que hace más profit. Sin señales, sin copiar: cada quien con su cuenta.</p>
+        <ul>
+          <li>Duelos de 30 minutos, una hora, hora y media, dos o cuatro horas.</li>
+          <li>Diez grados de dan, del primero al décimo, con ranking por elo.</li>
+          <li>Montos de mil a cincuenta mil, para que el duelo se parezca a tu tamaño real.</li>
+          <li>Historial de duelos y tabla de la mesa, para que quede constancia.</li>
+        </ul>
+      </div>
+      <figure class="ix"><div class="np-demo">
+        <div class="np-bar"><b>DUELO EN CURSO</b> · TOKIO <span class="np-sp"><span class="np-chip w">☂ LLUVIA</span><span class="np-chip">1 h 30</span><span class="np-chip">$25,000</span></span></div>
+        <div class="np-cuerpo">
+          <div class="np-fila" style="grid-template-columns:1fr auto 1fr;align-items:center;text-align:center">
+            <div><b style="font-size:15px">ANDRÉ<small>7º DAN · 七 · 1,612 ELO</small></b><s class="up" style="font-size:22px;display:block;margin-top:10px">+$1,840</s></div>
+            <div style="font-size:11px;letter-spacing:.2em;color:var(--faint)">VS<em style="display:block;margin-top:8px;color:var(--txt);font-size:14px">42:07</em></div>
+            <div><b style="font-size:15px">KURO<small>10º DAN · 十 · 2,050 ELO</small></b><s style="font-size:22px;display:block;margin-top:10px">+$1,210</s></div>
+          </div>
+          <div class="np-fila" style="margin-bottom:0;grid-template-columns:1fr;gap:9px">
+            <i>DUELOS RECIENTES</i>
+            <div style="display:flex;justify-content:space-between;font-size:10.5px;color:var(--dim)"><span>vs GERARDO · 1 h · $10,000</span><span class="up" style="color:var(--u)">GANADO +$2,310</span></div>
+            <div style="display:flex;justify-content:space-between;font-size:10.5px;color:var(--dim)"><span>vs KURO · 2 h · $25,000</span><span style="color:var(--d)">PERDIDO −$640</span></div>
+            <div style="display:flex;justify-content:space-between;font-size:10.5px;color:var(--dim)"><span>vs PABLO · 30 min · $5,000</span><span class="up" style="color:var(--u)">GANADO +$880</span></div>
+          </div>
+        </div>
+        <div class="np-pie">GANA EL MAYOR PROFIT · CADA QUIEN CON SU CUENTA</div>
+        </div></figure>
+    </div>
+
+    <div class="feat">
+      <div>
+        <p class="eyebrow">07 · La campaña</p>
+        <h3>Nueve katanas.<br>Ocho se ganan; la novena se le quita a él.</h3>
+        <p class="dim" style="font-size:14px;line-height:1.7">Hace mil años nueve maestros forjaron nueve espadas y encerraron en cada una una lección que no se enseña hablando. La campaña es el camino de subida: cada tramo pide una cosa distinta —paciencia, ojo para la liquidez, ruptura del rango, gestión del riesgo— y ninguna se regala.</p>
+        <ul>
+          <li>La primera es blanca porque todavía no tiene historia: se gana apareciendo, no sabiendo.</li>
+          <li>El clima cambia el mapa: despejado, nublado, bruma, lluvia, aguacero, tormenta.</li>
+          <li>Es la academia disfrazada de juego, con el mismo material de las lecciones.</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="feat rev">
+      <div>
+        <p class="eyebrow">08 · Backtesting</p>
+        <h3>Prueba la idea sin ensuciar tu historial.</h3>
+        <p class="dim" style="font-size:14px;line-height:1.7">Cuentas de práctica aparte de las de verdad. Corres una idea cien veces, ves qué curva deja, y tus estadísticas reales ni se enteran. Cuando la idea aguanta, se pasa a la mesa.</p>
+        <ul>
+          <li>Cada cuenta de backtest con su propia curva y sus propios números.</li>
+          <li>Se borra completa cuando quieras, sin tocar nada real.</li>
+          <li>Mismo motor de estadísticas que el journal, para que se comparen manzanas con manzanas.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══ ALGORITMO + ACADEMIA ══ -->
+<section id="academia" style="padding-top:0">
+  <div class="wrap">
+    <hr class="rule">
+    <div class="dosCol" style="margin-top:56px">
+      <div>
+        <p class="eyebrow">09 · Algorithm</p>
+        <h3>Los dos indicadores del método.<br>Copiar, pegar, listo.</h3>
+        <p class="dim" style="font-size:14px;line-height:1.7;margin-top:12px">Pine Script v6, el mismo código que corre la mesa, sin recortes. Y debajo de cada uno, qué hace cada pieza explicado sin dar nada por sabido.</p>
+        <div style="margin:20px 0 4px"><div class="np-demo">
+        <table class="np-chart">
+          <tr><td class="k">SESIÓN</td><td class="c" colspan="4">ASIA abre en 1h 54m</td></tr>
+          <tr><td class="k">RUTINA</td><td class="c" colspan="4">4/4 DÍA TERMINADO<small>NY cerró. Nos vemos mañana.</small></td></tr>
+          <tr><td class="k">FASE</td><td class="c" colspan="4">EVAL · día 1/5 · trades 1/6</td></tr>
+          <tr class="on"><td class="k">F1 EVAL</td><td class="c" colspan="4">▶ 31 ago – 4 sep<small>1:1 a 1:2 · target $500 a $1,000</small><small>2 minis · 1 trade · riesgo $500</small></td></tr>
+          <tr><td class="k">F2 COLCHÓN</td><td class="c" colspan="4">7 sep – 18 sep<small>1:1 a 1:2 · target $500 a $1,000</small><small>2 minis · 1 trade · riesgo $500</small></td></tr>
+          <tr><td class="k">F3 PAYOUTS</td><td class="c" colspan="4">21 sep – 30 sep<small>1:1 a 1:2 · cobro diario</small><small>1 mini · 1 trade · riesgo $250</small></td></tr>
+          <tr><td class="k">PROTOCOLO</td><td class="c" colspan="4">1 posición al día · protege la cuenta</td></tr>
+          <tr><td class="k">⏰ AGENDA</td><td class="c" colspan="4">en 14h 36m · 06:55 · En 5 min: PREMARKET, revisa las noticias</td></tr>
+          <tr><td class="k">ASIA</td><td class="n">29290.00</td><td class="c up">↑</td><td class="n">29461.25</td><td class="n up">+171.25 pts</td></tr>
+          <tr><td class="k">LNDN</td><td class="n">29461.25</td><td class="c dn">↓</td><td class="n">29389.75</td><td class="n dn">−71.50 pts</td></tr>
+          <tr><td class="k">NY</td><td class="n">29438.25</td><td class="c up">↑</td><td class="n">29506.25</td><td class="n up">+68.00 pts</td></tr>
+          <tr><td class="k">ORB</td><td class="n">ORH 29517.00</td><td class="c up">↑</td><td class="n">29521.50</td><td class="n up">+4.50 pts</td></tr>
+          <tr class="on"><td class="k">TOTAL</td><td class="n">29290.00</td><td class="c up">↑</td><td class="n">29506.25</td><td class="n up">+216.25 pts</td></tr>
+        </table>
+        <div class="np-pie">NP A+ · MICRO E-MINI NASDAQ-100 · 5 MINUTOS</div>
+      </div></div>
+        <ul class="lista" style="margin-top:20px">
+          <li><b style="color:var(--txt)">NP A+</b> — las cuatro sesiones con su liquidez viva, el rango de apertura de Nueva York con su ruptura y sus objetivos, los huecos de precio y cuándo se invierten, las medias, y el panel del día con la rutina y las fases del contrato.</li>
+          <li><b style="color:var(--txt)">NP ESTRUCTURA</b> — el tramo con su alto y su bajo, el Order Block, el mejor hueco del rango, el área más tocada, el Fibonacci, la orden completa con entrada, stop y objetivo, y el canal de regresión en su propia temporalidad.</li>
+          <li>Se copian con un botón y se pegan en el Pine Editor de TradingView.</li>
+        </ul>
+      </div>
+      <div>
+        <p class="eyebrow">10 · Academy</p>
+        <h3>De qué es un contrato<br>hasta cómo se cobra un payout.</h3>
+        <p class="dim" style="font-size:14px;line-height:1.7;margin-top:12px">Cuatro programas, doce módulos, treinta y cinco lecciones, cuatro horas y nueve minutos de material. Dentro del mismo Terminal, con tu avance guardado y tu cuaderno al lado.</p>
+        <div class="cifras" style="margin-top:22px;grid-template-columns:repeat(2,1fr)">
+          <div><b>Fundamentos</b><span>3 módulos · 9 lecciones</span></div>
+          <div><b>El método</b><span>4 módulos · 11 lecciones</span></div>
+          <div><b>Riesgo y disciplina</b><span>3 módulos · 9 lecciones</span></div>
+          <div><b>Fondeo y payouts</b><span>2 módulos · 6 lecciones</span></div>
+        </div>
+        <ul class="lista" style="margin-top:20px">
+          <li>ORB, EMAs 14/50, estructura, order blocks, huecos y liquidez: el método completo, no un resumen.</li>
+          <li>Riesgo por trade, psicología, rutina y journaling.</li>
+          <li>Las tres fases del contrato y el camino de cero a payout.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══ PRECIOS ══ -->
+<section id="precios">
+  <div class="wrap">
+    <p class="eyebrow">11 · Precios</p>
+    <h2>Un solo producto.<br>Tres formas de pagarlo.</h2>
+    <p class="lead">No hay plan recortado. Las trece pantallas, la academia completa, los dos indicadores y Kuro entran en los tres. Lo único que cambia es cada cuánto pagas.</p>
+
+    <div class="planes">
+      <div class="plan ix">
+        <h3>Mensual</h3>
+        <div class="precio">$1,490<i>MXN / mes · se cancela cuando quieras</i></div>
+        <ul>
+          <li>Las 13 pantallas completas</li>
+          <li>Academia: 4 programas, 35 lecciones</li>
+          <li>NP A+ y NP ESTRUCTURA</li>
+          <li>Kuro: duelos y campaña</li>
+          <li>Actualizaciones mientras estés dentro</li>
+        </ul>
+        <a class="btn" href="#" data-pago="stripeMensual"><span>Empezar mensual</span></a>
+      </div>
+
+      <div class="plan destacado ix">
+        <span class="tag">El que conviene</span>
+        <h3>Anual</h3>
+        <div class="precio">$11,900<i>MXN al año · sale en $992 al mes</i></div>
+        <ul>
+          <li>Todo lo del mensual</li>
+          <li>Ahorras $5,980 contra pagar mes a mes</li>
+          <li>Precio congelado los 12 meses</li>
+          <li>Todo lo que salga este año, incluido</li>
+          <li>Un solo cargo, un solo recordatorio</li>
+        </ul>
+        <a class="btn pri" href="#" data-pago="stripeAnual"><span>Tomar el anual</span></a>
+      </div>
+
+      <div class="plan ix">
+        <h3>De por vida</h3>
+        <div class="precio">$17,000<i>MXN una sola vez · sin renovación</i></div>
+        <ul>
+          <li>Todo, para siempre</li>
+          <li>Lo que se agregue después también</li>
+          <li>Contra el anual se paga solo en menos de año y medio</li>
+          <li>Nunca vuelves a ver un cobro</li>
+          <li class="no">No aplica reembolso después de 14 días</li>
+        </ul>
+        <a class="btn" href="#" data-pago="stripeVida"><span>Comprarlo de por vida</span></a>
+      </div>
+    </div>
+
+    <div class="oferta">
+      <div>
+        <b>Fundadores · los primeros 50</b>
+        <p>Quien entre en este primer grupo se queda con el precio de hoy mientras siga suscrito, aunque el Terminal suba de precio después. No es una cuenta regresiva falsa: son cincuenta lugares y cuando se acaben, se acaban.</p>
+      </div>
+      <a class="btn ix" href="#precios">Tomar un lugar</a>
+    </div>
+
+    <p class="legal" style="margin-top:26px">Precios en pesos mexicanos, IVA incluido. El Terminal es software: no es asesoría de inversión, no es un servicio de señales y no administra tu dinero. Las cuentas de fondeo se contratan con la firma que tú elijas, aparte.</p>
+  </div>
+</section>
+
+<!-- ══ QUÉ NO ES + FAQ ══ -->
+<section style="padding-top:0">
+  <div class="wrap">
+    <hr class="rule">
+    <div class="dosCol" style="margin-top:56px">
+      <div>
+        <p class="eyebrow">12 · Antes de pagar</p>
+        <h3>Lo que NO es</h3>
+        <ul class="lista" style="margin-top:20px">
+          <li>No es asesoría de inversión ni recomendación de comprar o vender nada.</li>
+          <li>No es un servicio de señales. Nunca te vamos a decir qué operar.</li>
+          <li>No administramos tu dinero: nunca tocamos tus fondos.</li>
+          <li>No garantiza que ganes, ni que pases una evaluación de fondeo.</li>
+          <li>No opera por ti. Tú aprietas el botón, siempre.</li>
+          <li>No es rápido. Si buscas eso, esto no es para ti.</li>
+        </ul>
+      </div>
+      <div>
+        <p class="eyebrow">13 · Preguntas</p>
+        <h3 style="margin-bottom:18px">Lo que casi todos preguntan</h3>
+        <details><summary>¿Necesito una cuenta fondeada para usarlo?</summary><p>No. Puedes registrar una cuenta de demo o de práctica y el Terminal funciona igual. La mayoría entra antes de tener la primera cuenta, hace la academia y usa el backtesting mientras junta para la evaluación.</p></details>
+        <details><summary>¿Funciona con mi bróker?</summary><p>El registro es por captura o por CSV, así que sirve con cualquiera. La importación directa de archivo está hecha para el formato de Tradovate; con los demás, pegas la captura y la IA la lee, o escribes el resultado a mano.</p></details>
+        <details><summary>¿Quién ve mis trades?</summary><p>Nadie. Tus datos viven en tu equipo y en tu cuenta. Si usas la lectura de capturas, va con TU llave de IA, directo desde tu navegador. Nosotros no tenemos ojos en tu journal.</p></details>
+        <details><summary>¿Y si no tengo llave de IA?</summary><p>Nada se rompe. Escribes el P&amp;L y la curva, las estadísticas y el calendario se mueven igual. La lectura de capturas ahorra tiempo, no es el candado.</p></details>
+        <details><summary>¿Los indicadores son para siempre?</summary><p>El código se copia y se pega en tu TradingView, es tuyo desde que lo pegas. Lo que se actualiza es la versión que publicamos: mientras estés dentro, siempre tienes la última.</p></details>
+        <details><summary>¿En qué idioma está?</summary><p>Español e inglés, con un interruptor. Y en oscuro o en claro, según cómo veas mejor a las siete de la mañana.</p></details>
+        <details><summary>¿Puedo cancelar?</summary><p>El mensual, cuando quieras, desde tu recibo. El anual corre los doce meses. Los primeros 14 días hay reembolso completo en cualquiera de los tres, sin explicaciones.</p></details>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══ CIERRE ══ -->
+<section style="padding-top:0">
+  <div class="wrap" style="text-align:center;border-top:1px solid var(--line-soft);padding-top:clamp(56px,8vw,96px)">
+    <h2 style="max-width:20ch;margin:0 auto 18px"><span class="shine">Ábrelo y míralo.</span></h2>
+    <p class="lead" style="margin:0 auto 32px">El Terminal está en línea ahora mismo. Entra, dale una vuelta a las trece pantallas y decide después.</p>
+    <div class="hero-cta" style="justify-content:center">
+      <a class="btn pri ix" href="app.html">Abrir el Terminal →</a>
+      <a class="btn ix" href="#precios">Ver precios</a>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <div class="fl">
+      <b class="mono" style="color:var(--txt)">NORTHPOINT</b>
+      <div style="display:flex;gap:22px;flex-wrap:wrap" class="mono">
+        <a href="index.html">Inicio</a>
+        <a href="app.html">Terminal</a>
+        <a href="kuro.html">Kuro</a>
+        <a href="family-office.html">Family Office</a>
+      </div>
+    </div>
+    <p class="legal">Operar futuros implica riesgo de pérdida y no es adecuado para todo el mundo. El desempeño pasado no garantiza resultados futuros. NorthPoint no es asesor de inversiones registrado, no administra fondos de terceros y no ofrece recomendaciones personalizadas. Los paneles de esta página son el Terminal real, redibujados en HTML para que se vean nítidos en cualquier pantalla; los números que aparecen en ellos son de una cuenta de demostración.</p>
+  </div>
+</footer>
+
+<div class="deck">
+  <span class="deck-sec">NORTHPOINT <em>// TERMINAL</em></span>
+  <div style="display:flex;gap:10px;align-items:center">
+    <button class="theme-btn deck-cta" id="themeBtn" aria-label="Cambiar tema">◐ CLARO</button>
+    <a class="deck-cta" href="#precios">Ver precios →</a>
+  </div>
+</div>
+
+
+<script>
+(function(){
+  /* ── LOS BOTONES DE PAGO ──
+     Las ligas viven aquí, en una sola constante. Mientras estén vacías el
+     botón NO finge que funciona: se desactiva y lo dice. Un checkout que
+     no cobra y no avisa es la peor primera impresión posible. */
+  var PAGO = {
+    stripeMensual: '',   /* Stripe · suscripción mensual $1,490 */
+    stripeAnual:   '',   /* Stripe · pago único $11,900 */
+    stripeVida:    ''    /* Stripe · pago único $17,000 */
+  };
+  document.querySelectorAll('[data-pago]').forEach(function(a){
+    var url = PAGO[a.getAttribute('data-pago')];
+    if (url) { a.href = url; a.setAttribute('rel','noopener'); return; }
+    a.setAttribute('aria-disabled','true');
+    a.setAttribute('title','El cobro abre en unos días');
+    var s = a.querySelector('span');
+    if (s) s.textContent = 'ABRE EN UNOS DÍAS';
+    a.addEventListener('click', function(e){ e.preventDefault(); });
+  });
+
+  /* ── tema claro / oscuro, compartido con el resto del sitio ── */
+  function applyTheme(t){
+    if (t === 'light') document.documentElement.setAttribute('data-theme','light');
+    else document.documentElement.removeAttribute('data-theme');
+    var tb = document.getElementById('themeBtn');
+    if (tb) tb.textContent = t === 'light' ? '◐ OSCURO' : '◐ CLARO';
+    try { localStorage.setItem('np_theme', t); } catch(e){}
+  }
+  var saved = 'light';
+  try { saved = localStorage.getItem('np_theme') || 'light'; } catch(e){}
+  applyTheme(saved);
+  document.addEventListener('DOMContentLoaded', function(){
+    applyTheme(saved);
+    var tb = document.getElementById('themeBtn');
+    if (tb) tb.addEventListener('click', function(){
+      applyTheme(document.documentElement.getAttribute('data-theme') === 'light' ? 'dark' : 'light');
+    });
+  });
+
+  /* ── la barra de arriba se vuelve vidrio al bajar ── */
+  var nav = document.querySelector('.nav');
+  var setNav = function(){ if(nav) nav.classList.toggle('scrolled', window.scrollY > 24); };
+  window.addEventListener('scroll', setNav, { passive:true });
+  setNav();
+
+  /* ── una sola pregunta abierta a la vez ── */
+  document.addEventListener('DOMContentLoaded', function(){
+    var ds = document.querySelectorAll('details');
+    ds.forEach(function(d){
+      d.addEventListener('toggle', function(){
+        if (!d.open) return;
+        ds.forEach(function(o){ if (o !== d) o.open = false; });
+      });
+    });
+  });
+
+  /* ── si una captura no carga, la figura no se queda como hueco roto ── */
+  document.addEventListener('DOMContentLoaded', function(){
+    document.querySelectorAll('figure img').forEach(function(img){
+      var fail = function(){ var f = img.closest('figure'); if (f) f.style.display = 'none'; };
+      img.addEventListener('error', fail);
+      if (img.complete && img.naturalWidth === 0) fail();
+    });
+  });
+})();
+</script>
+</body>
 </html>
