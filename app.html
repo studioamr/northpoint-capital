@@ -1776,6 +1776,33 @@ button.st-chip:hover{border-color:rgba(255,255,255,.45)}
 .lg-cerrar-ses{border:1px solid var(--line);background:transparent;color:var(--faint);
   font-family:var(--mono);font-size:8.5px;letter-spacing:.12em;padding:2px 8px;border-radius:99px;cursor:pointer}
 .lg-cerrar-ses:hover{color:var(--txt)}
+/* ── LA CABECERA DE LA PELEA: contra quién ── */
+.bat-cabeza{position:relative;border:1px solid var(--line);border-radius:14px;
+  background:var(--w02);padding:16px 18px;margin-bottom:12px;overflow:hidden}
+.bat-cabeza.jefe{padding-left:22px}
+.bat-cabeza.jefe::before{content:'';position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--kc)}
+.bat-cabeza.jefe::after{content:'';position:absolute;right:-60px;top:-60px;width:200px;height:200px;
+  border-radius:50%;background:var(--kc);opacity:.07;pointer-events:none}
+.bc-kanji{position:absolute;right:18px;top:6px;font-size:64px;line-height:1;font-weight:700;
+  color:var(--kc);opacity:.16;pointer-events:none}
+.bc-txt{position:relative}
+.bc-k{display:block;font-family:var(--mono);font-size:8.5px;letter-spacing:.2em;color:var(--faint);margin-bottom:6px}
+.bc-nom{display:block;font-size:32px;font-weight:800;line-height:1;letter-spacing:.02em;color:var(--kc)}
+.bc-sub{display:block;font-size:13px;color:var(--dim);margin-top:6px}
+.bc-pide{position:relative;margin:12px 0 0;font-size:13px;line-height:1.55;color:var(--txt);
+  max-width:62ch;border-top:1px solid var(--line-soft);padding-top:11px}
+/* el 1v1: los dos nombres, cada uno de su color */
+.bat-cabeza.duelo{display:flex;align-items:center;justify-content:center;gap:20px}
+.bc-lado{text-align:right;flex:1}
+.bc-lado.der{text-align:left}
+.bc-lado b{display:block;font-size:22px;font-weight:800;line-height:1.1;color:var(--kc)}
+.bc-lado i{display:block;font-family:var(--mono);font-size:9px;font-style:normal;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);margin-top:5px}
+.bc-vs{font-family:var(--mono);font-size:11px;letter-spacing:.24em;color:var(--faint)}
+@media(max-width:560px){
+  .bc-nom{font-size:26px} .bc-kanji{font-size:48px}
+  .bc-lado b{font-size:18px}
+}
 .bat-duelo-req.roto{border-color:color-mix(in srgb, var(--down) 55%, var(--line))}
 .bd-t{font-family:var(--mono);font-size:9px;letter-spacing:.2em;color:var(--faint);margin-bottom:12px;
   display:flex;align-items:center;gap:6px;flex-wrap:wrap}
@@ -14054,6 +14081,36 @@ function renderBatallaInterno(){
            que se quiere ver al entrar—, luego el reloj y lo que se juega, tu
            ficha para registrar, el VS grande y al final la de él. Sin cajas
            alrededor: las tarjetas ya son cajas y encajarlas otra vez apretaba. -->
+      <!-- ══ CONTRA QUIÉN PELEAS ══ (André, 31-ago-2026)
+           El panel no decía nada: el nombre del jefe iba en 9 px dentro de una
+           etiqueta gris —«WHAT HE ASKS · SHIRO»— y arriba flotaba un «VS»
+           suelto que no venía de ningún lado. Se entraba a una pelea sin saber
+           contra qué. Ahora el rival se presenta: su nombre en grande, en el
+           color de su katana, con su kanji, lo que representa y lo que pide.
+           En un 1v1 la cabecera es la misma pero con los dos nombres. -->
+      ${(()=>{
+        if(c.boss != null){
+          const b4 = KURO_BOSSES[c.boss]; if(!b4) return '';
+          const k4 = KATANAS[b4.kat] || {};
+          return `<div class="bat-cabeza jefe" style="--kc:${k4.belt||'#9aa3b2'}">
+            <span class="bc-kanji">${esc(b4.kanji||'')}</span>
+            <div class="bc-txt">
+              <span class="bc-k">${bi('RETO','CHALLENGE')} ${c.boss+1} ${bi('de','of')} ${KURO_BOSSES.length}</span>
+              <b class="bc-nom">${esc(b4.nom)}</b>
+              <span class="bc-sub">${esc(loc(b4.titulo))}</span>
+            </div>
+            <p class="bc-pide">${esc(loc(b4.pide))}</p>
+          </div>`;
+        }
+        const kY = KATANAS[batEquipadaDe(yo)] || {}, kR = KATANAS[batEquipadaDe(rivalDe)] || {};
+        return `<div class="bat-cabeza duelo">
+          <span class="bc-lado" style="--kc:${kY.belt||'#9aa3b2'}">
+            <b>${esc(batNom(yo))}</b><i>${bi('tú','you')}</i></span>
+          <span class="bc-vs">VS</span>
+          <span class="bc-lado der" style="--kc:${kR.belt||'#9aa3b2'}">
+            <b>${esc(batNom(rivalDe))}</b><i>${esc(loc(kR.n||['','']))}</i></span>
+        </div>`; })()}
+
       <div class="bat-duelo">
         <canvas id="dueloCv" width="1200" height="560"></canvas>
       </div>
@@ -14075,8 +14132,10 @@ function renderBatallaInterno(){
             <span class="bat-reloj-lbl">${bi('para empezar','until it starts')}</span>
           </div>`;
         }
+        /* el «VS» suelto encima del reloj no venía de ningún lado: ahora dice
+           dónde se pelea, que es lo que falta saber a esa altura. */
         return `<div class="bat-reloj-wrap">
-          <span class="bat-vs-mini">VS</span>
+          <span class="bat-vs-mini">${esc(loc(E3.ses.nom).toUpperCase())} · ${esc(batDurTxt(c.duracion))}</span>
           <div class="bat-reloj-grande mono">${reloj}</div>
           <span class="bat-reloj-lbl">${bi('tiempo restante','time left')}</span>
         </div>`; })()}
@@ -14100,7 +14159,7 @@ function renderBatallaInterno(){
           const roto = tope && Math.abs(ddMax) >= tope;
           const barra = (v, cls) => `<span class="bd-b"><i class="${cls}" style="width:${v}%"></i></span>`;
           return `<div class="bat-duelo-req ${roto?'roto':''}">
-            <div class="bd-t">${bi('LO QUE TE PIDE','WHAT HE ASKS')} · <b>${esc(b2.nom)}</b></div>
+            <div class="bd-t">${bi('LO QUE TE PIDE PARA GANAR SU KATANA','WHAT HE ASKS FOR HIS KATANA')}</div>
             <div class="bd-fila">
               <span class="bd-et">${bi('OBJETIVO','TARGET')}</span>
               <b class="bd-v ${pYo>=meta?'ok':''}">${fmt$(pYo,true)} <em>${bi('de','of')} ${fmt$(meta)}</em></b>
