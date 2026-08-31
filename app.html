@@ -1788,7 +1788,7 @@ button.st-chip:hover{border-color:rgba(255,255,255,.45)}
 .bm-st i{font-style:normal;font-family:var(--mono);font-size:7.5px;letter-spacing:.14em;color:rgba(255,255,255,.45)}
 .bm-st b{font-size:15px;font-weight:800;color:#fff}
 .bm-st b.up{color:#6fe39a} .bm-st b.down{color:#ff8a7e}
-.bm-reto-l{font-size:14.5px;font-weight:700;color:#fff;margin:0 0 12px}
+.bm-pide{font-size:14.5px;font-weight:600;line-height:1.55;color:#fff;margin:0 0 4px}
 /* LAS REGLAS del reto, en el lenguaje de una cuenta fondeada */
 .bm-reglas{display:grid;gap:1px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.12);
   border-radius:12px;overflow:hidden}
@@ -10464,128 +10464,98 @@ const KATANAS=[
    El bot no inventa su resultado: opera durante el reto con SUS estadísticas
    —gana unas, falla otras— y verás su curva subir junto a la tuya. */
 const KURO_BOSSES = [
-  /* ══ LA ESCALERA ES EL CAMINO DE FONDEO ══ (André, 31-ago-2026)
-     Cada jefe simula un tramo real de una cuenta fondeada, con SUS REGLAS:
-     objetivo, drawdown máximo, tope de trades y riesgo por trade. Se empieza
-     con un objetivo chico y el mismo margen, se pasa la evaluación, se arma
-     el colchón con menos riesgo, se cobra el primer payout, se recorre el
-     camino entero de $6,100 y se termina cobrando cinco pagos máximos.
-     De eso se trata: entrenar para ganarle a la fondeadora, no a un dragón. */
+  /* ══ LO QUE TE PIDE CADA NINJA ══ (André, 31-ago-2026)
+     No son estadísticas de un rival: cada uno te PIDE ALGO CONCRETO, con sus
+     reglas —cuánto profit, en cuántas sesiones, con cuántos trades y cuánto
+     riesgo—, y lo que pide va subiendo. Empieza en $1,000 en una sesión con
+     dos trades, y termina en cinco pagos máximos, uno por sesión.
+     Es el camino de una cuenta fondeada, convertido en escalera. */
   { kat:0, nom:'ASHURA',   kanji:'白', ses:'asia',
     titulo:['El primer objetivo','The first target'],
-    lema:['Mil dólares sin perder mil. Así de simple, y así de difícil el primer día.',
-          'A thousand dollars without losing a thousand. That simple, and that hard on day one.'],
-    reto:{ k:'sesion', t:['$1,000 en la sesión de ASIA','$1,000 in the ASIA session'] },
-    reglas:{ etapas:[{t:['Objetivo','Target'], m:1000}], dias:1, sesiones:1, tp:1000, dd:1000, trades:2, riesgo:500, ventana:['1 sesión','1 session'] },
-    st:{ wr:43, pf:1.10, trd:6, avgW:180, avgL:-140, dd:-900 } },
+    pide:['Hazme $1,000 de profit en UNA sesión — Asia, Londres o Nueva York, la que quieras.',
+          'Make me $1,000 profit in ONE session — Asia, London or New York, your pick.'],
+    reglas:{ tp:1000, dd:1000, trades:2, riesgo:500, sesiones:1,
+             ventana:['1 sesión','1 session'], libre:true } },
 
   { kat:1, nom:'ALBION',   kanji:'黄', ses:'londres',
     titulo:['El doble','The double'],
-    lema:['El mismo margen, el doble de objetivo. Aquí ya no alcanza con un trade con suerte.',
-          'Same room, double the target. One lucky trade no longer covers it.'],
-    reto:{ k:'sesion', t:['$2,000 en la sesión de LONDRES','$2,000 in the LONDON session'] },
-    reglas:{ etapas:[{t:['Objetivo','Target'], m:2000}], dias:2, sesiones:2, tp:2000, dd:1000, trades:2, riesgo:500, ventana:['1–2 sesiones','1–2 sessions'] },
-    st:{ wr:47, pf:1.32, trd:4, avgW:220, avgL:-150, dd:-780 } },
+    pide:['Los mismos dos trades, el doble de objetivo: $2,000 en una sesión.',
+          'Same two trades, double the target: $2,000 in one session.'],
+    reglas:{ tp:2000, dd:1000, trades:2, riesgo:500, sesiones:1,
+             ventana:['1 sesión','1 session'], libre:true } },
 
   { kat:2, nom:'LIBERTY',  kanji:'橙', ses:'ny',
-    titulo:['El objetivo de examen','The eval target'],
-    lema:['Tres mil con mil de margen: exactamente lo que pide una evaluación.',
-          'Three thousand with a thousand of room: exactly what an eval asks for.'],
-    reto:{ k:'sesion', t:['$3,000 en la sesión de NUEVA YORK','$3,000 in the NEW YORK session'] },
-    reglas:{ etapas:[{t:['Objetivo de examen','Eval target'], m:3000}], dias:3, sesiones:3, tp:3000, dd:1000, trades:2, riesgo:500, ventana:['1–3 sesiones','1–3 sessions'] },
-    st:{ wr:51, pf:1.55, trd:3, avgW:260, avgL:-160, dd:-640 } },
+    titulo:['Pasar la cuenta','Pass the account'],
+    pide:['Pásame una cuenta: $3,000 de profit, y en UNA sola sesión.',
+          'Pass me an account: $3,000 profit, in a SINGLE session.'],
+    reglas:{ tp:3000, dd:2000, trades:2, riesgo:500, sesiones:1,
+             ventana:['1 sesión','1 session'], libre:true,
+             nota:['Es el objetivo exacto de una evaluación de $50K, pero de un tirón.',
+                   'The exact target of a $50K evaluation, but in one go.'] } },
 
   { kat:3, nom:'MIDORI',   kanji:'緑',
-    titulo:['Pasar la cuenta','Pass the account'],
-    lema:['La evaluación de verdad: $3,000 de objetivo con $2,000 de drawdown. Es tu F1.',
-          'The real evaluation: $3,000 target with $2,000 drawdown. This is your F1.'],
-    reto:{ k:'eval', t:['Pasa la evaluación','Pass the evaluation'] },
-    reglas:{ etapas:[{t:['Examen','Eval'], m:3000}], dias:5, sesiones:5, tp:3000, dd:2000, trades:2, riesgo:500, ventana:['hasta 5 sesiones','up to 5 sessions'],
-             nota:['Simula la fase 1: pasas la cuenta y se desbloquea el colchón.',
-                   'Simulates phase 1: you pass the account and the buffer unlocks.'] },
-    st:{ wr:54, pf:1.82, trd:3, avgW:290, avgL:-155, dd:-540 } },
+    titulo:['La cuenta y el colchón','The account and the buffer'],
+    pide:['Pasa la cuenta y arma el colchón: $3,000 y luego $2,100 más, en 5 sesiones.',
+          'Pass the account and build the buffer: $3,000 then $2,100 more, within 5 sessions.'],
+    reglas:{ tp:5100, dd:2000, trades:2, riesgo:500, sesiones:5,
+             ventana:['5 sesiones','5 sessions'],
+             etapas:[{t:['Examen','Eval'], m:3000},{t:['Colchón','Buffer'], m:2100}] } },
 
   { kat:4, nom:'AO',       kanji:'青',
-    titulo:['Examen y colchón','Eval and buffer'],
-    lema:['Pasas la cuenta y encima armas el colchón, con la mitad del riesgo. Nadie arma un colchón apostando.',
-          'Pass the account and build the buffer on top, at half the risk. Nobody builds a buffer gambling.'],
-    reto:{ k:'buffer', t:['Pasa el examen y arma el colchón','Pass the eval and build the buffer'] },
-    reglas:{ etapas:[{t:['Examen','Eval'], m:3000},{t:['Colchón','Buffer'], m:2100}], dias:12, sesiones:10, tp:2100, dd:1000, trades:1, riesgo:250, ventana:['hasta 10 sesiones','up to 10 sessions'],
-             nota:['Simula la fase 2: menos riesgo por trade y UN solo trade al día.',
-                   'Simulates phase 2: less risk per trade and ONE trade a day.'] },
-    st:{ wr:57, pf:2.08, trd:2, avgW:310, avgL:-150, dd:-480 } },
+    titulo:['El primer pago','The first payout'],
+    pide:['El camino entero hasta cobrar: $3,000, $2,100 de colchón y $1,000 de pago, en 5 sesiones.',
+          'The whole road to getting paid: $3,000, $2,100 buffer and a $1,000 payout, within 5 sessions.'],
+    reglas:{ tp:6100, dd:2000, trades:2, riesgo:500, sesiones:5,
+             ventana:['5 sesiones','5 sessions'],
+             etapas:[{t:['Examen','Eval'], m:3000},{t:['Colchón','Buffer'], m:2100},{t:['Pago','Payout'], m:1000}],
+             nota:['$6,100 es la cuenta completa: de examen a payout, sin reiniciar.',
+                   '$6,100 is the full account: eval to payout, no resets.'] } },
 
   { kat:5, nom:'MURASAKI', kanji:'紫',
-    titulo:['El primer pago','The first payout'],
-    lema:['Mil dólares limpios sobre el colchón. Es el primer dinero que sale de verdad.',
-          'A clean thousand on top of the buffer. The first money that actually leaves.'],
-    reto:{ k:'payout', t:['Cobra tu primer payout de $1,000','Collect your first $1,000 payout'] },
-    reglas:{ etapas:[{t:['Examen','Eval'], m:3000},{t:['Colchón','Buffer'], m:2100},{t:['Payout','Payout'], m:1000}], dias:18, sesiones:3, tp:1000, dd:1000, trades:2, riesgo:250, ventana:['1–3 sesiones','1–3 sessions'],
-             nota:['Simula el pago máximo de una cuenta ya con colchón.',
-                   'Simulates the max payout of an account that already has its buffer.'] },
-    st:{ wr:60, pf:2.42, trd:2, avgW:340, avgL:-145, dd:-420 } },
+    titulo:['Con menos riesgo','At half the risk'],
+    pide:['Repite el camino de $6,100, pero con la mitad del riesgo y UN trade por sesión.',
+          'Run the $6,100 road again, at half the risk and ONE trade per session.'],
+    reglas:{ tp:6100, dd:1500, trades:1, riesgo:250, sesiones:8,
+             ventana:['8 sesiones','8 sessions'],
+             etapas:[{t:['Examen','Eval'], m:3000},{t:['Colchón','Buffer'], m:2100},{t:['Pago','Payout'], m:1000}],
+             nota:['Un trade al día. Si fallas ese, el día se acabó.',
+                   'One trade a day. Miss it and the day is over.'] } },
 
   { kat:6, nom:'CHA',      kanji:'茶',
-    titulo:['El camino completo','The whole road'],
-    lema:['$6,100 de punta a punta sin romper $2,000. Es la cuenta entera, de examen a pago.',
-          '$6,100 end to end without breaking $2,000. The whole account, eval to payout.'],
-    reto:{ k:'camino', t:['Haz los $6,100 completos','Make the full $6,100'] },
-    reglas:{ etapas:[{t:['Examen','Eval'], m:3000},{t:['Colchón','Buffer'], m:2100},{t:['Payout','Payout'], m:1000}], dias:20, sesiones:20, tp:6100, dd:2000, trades:2, riesgo:500, ventana:['hasta 20 sesiones','up to 20 sessions'],
-             nota:['Examen + colchón + pago, seguidos. El camino que corre cada cuenta.',
-                   'Eval + buffer + payout, back to back. The road every account runs.'] },
-    st:{ wr:62, pf:2.85, trd:2, avgW:360, avgL:-140, dd:-380 } },
+    titulo:['Dos pagos','Two payouts'],
+    pide:['Cobra dos veces seguidas: dos ciclos completos sin romper el drawdown en ninguno.',
+          'Get paid twice in a row: two full cycles without breaking drawdown on either.'],
+    reglas:{ tp:12200, dd:1500, trades:2, riesgo:250, sesiones:12, pagos:2,
+             ventana:['12 sesiones','12 sessions'],
+             etapas:[{t:['Ciclo 1','Cycle 1'], m:6100},{t:['Ciclo 2','Cycle 2'], m:6100}],
+             nota:['Uno se puede tener de suerte. Dos ya no.',
+                   'One can be luck. Two is not.'] } },
 
   { kat:7, nom:'AKA',      kanji:'赤',
-    titulo:['Cinco pagos','Five payouts'],
-    lema:['Uno se puede tener de suerte. Cinco seguidos son un sistema.',
-          'One can be luck. Five in a row is a system.'],
-    reto:{ k:'pagos', pagos:5, t:['Cobra 5 payouts seguidos','Collect 5 payouts in a row'] },
-    reglas:{ etapas:[{t:['Examen','Eval'], m:3000},{t:['Colchón','Buffer'], m:2100},{t:['5 pagos','5 payouts'], m:5000}], dias:35, sesiones:5, tp:1000, dd:2000, trades:2, riesgo:250, pagos:5, ventana:['5 pagos','5 payouts'],
-             nota:['Cinco pagos de $1,000 sin romper el drawdown en ninguno.',
-                   'Five $1,000 payouts without breaking drawdown on any of them.'] },
-    st:{ wr:64, pf:3.20, trd:2, avgW:420, avgL:-150, dd:-340 } },
+    titulo:['Tres pagos, a tiempo','Three payouts, on time'],
+    pide:['Tres pagos, y cada ciclo en 5 sesiones o menos. Ya no basta con llegar: hay que llegar rápido.',
+          'Three payouts, each cycle in 5 sessions or fewer. Arriving is not enough: arrive fast.'],
+    reglas:{ tp:18300, dd:1500, trades:2, riesgo:250, sesiones:15, pagos:3, porCiclo:5,
+             ventana:['15 sesiones','15 sessions'],
+             etapas:[{t:['Ciclo 1','Cycle 1'], m:6100},{t:['Ciclo 2','Cycle 2'], m:6100},{t:['Ciclo 3','Cycle 3'], m:6100}],
+             nota:['Cada ciclo tiene su reloj: 5 sesiones para cobrarlo.',
+                   'Each cycle has its clock: 5 sessions to collect it.'] } },
 
   { kat:8, nom:'KURO',     kanji:'黒', final:true,
     titulo:['El maestro','The master'],
-    lema:['Cinco pagos máximos, cada uno en UNA sesión y con dos trades. Nadie lo hace por suerte.',
-          'Five max payouts, each in ONE session with two trades. Nobody does that on luck.'],
-    reto:{ k:'pagos', pagos:5, t:['5 pagos máximos, uno por sesión','5 max payouts, one per session'] },
-    reglas:{ etapas:[{t:['Examen','Eval'], m:3000},{t:['Colchón','Buffer'], m:2100},{t:['Primer pago','First payout'], m:1000},{t:['Consistencia','Consistency'], m:2000},{t:['5 pagos máximos','5 max payouts'], m:5000}], dias:45, sesiones:5, tp:1000, dd:1000, trades:2, riesgo:250, pagos:5, unaSesion:true,
+    pide:['Cinco pagos máximos, uno por sesión, con dos trades como máximo cada uno.',
+          'Five max payouts, one per session, two trades max on each.'],
+    reglas:{ tp:5000, dd:1000, trades:2, riesgo:250, sesiones:5, pagos:5, unaSesion:true,
              ventana:['5 sesiones','5 sessions'],
-             nota:['Cada pago se cobra EN UNA SOLA SESIÓN, con dos trades como máximo. La consistencia llevada al final.',
-                   'Each payout is taken IN A SINGLE SESSION, two trades max. Consistency taken to the end.'] },
-    st:{ wr:66, pf:3.80, trd:2, avgW:460, avgL:-145, dd:-300 } },
+             etapas:[{t:['Pago 1','Payout 1'], m:1000},{t:['Pago 2','Payout 2'], m:1000},
+                     {t:['Pago 3','Payout 3'], m:1000},{t:['Pago 4','Payout 4'], m:1000},
+                     {t:['Pago 5','Payout 5'], m:1000}],
+             nota:['Un pago máximo por sesión, cinco sesiones seguidas. Esto ya no es hacer dinero: es hacerlo IGUAL cinco veces.',
+                   'One max payout per session, five sessions running. This is no longer making money: it is making it THE SAME five times.'] } },
 ];
 
 
-/* la expectancy sale de sus propios números, no se escribe a mano: si algún
-   día se ajusta un win rate, esto lo sigue solo */
-function bossExpectancy(st){
-  return (st.wr/100)*st.avgW + (1-st.wr/100)*st.avgL;
-}
-/* Lo que el bot hace en TODO el reto, con SUS estadísticas: n trades, de los
-   cuales wr% ganan. Determinístico a partir del índice del jefe y el número
-   de trade, para que los dos equipos vean la misma pelea al sincronizar. */
-function bossPlan(i){
-  const b = KURO_BOSSES[i]; if(!b) return [];
-  const sesiones = Math.max(1, (b.reglas && b.reglas.sesiones) || 1);
-  const n = Math.max(2, Math.round(b.st.trd * sesiones));
-  const rr = k => ((Math.sin((k+1+i*97)*12.9898)*43758.5453)%1+1)%1;
-  const out = [];
-  let ganados = 0;
-  const meta = Math.round(n * b.st.wr / 100);
-  for(let k=0;k<n;k++){
-    /* se reparten los ganadores para que el win rate SALGA EXACTO al final,
-       en vez de aproximarse: un jefe que dice 60% tiene que hacer 60% */
-    const faltan = n - k, porGanar = meta - ganados;
-    const gana = porGanar > 0 && (porGanar >= faltan || rr(k) < porGanar/faltan);
-    if(gana) ganados++;
-    const v = 0.7 + rr(k+50)*0.6;
-    out.push({ dir: rr(k+9) > .5 ? 'L' : 'S',
-               pnl: Math.round((gana ? b.st.avgW : b.st.avgL) * v) });
-  }
-  return out;
-}
+
 /* posiciones: el índice -1 es EL ARRANQUE del camino —donde empiezas—, y de
    ahí el sendero sube a ASHURA, que es la primera parada de verdad. */
 function bossNodoPos(i, W, H){
@@ -10982,16 +10952,13 @@ function bossPintaNodos(){
   });
 }
 /* LA FICHA: un panel que sube sobre el mapa cuando picas a un ninja. Trae
-   SU IMAGEN en grande, SUS NÚMEROS y el botón de retarlo. Nada más — cuántos
-   trades hará no se anuncia: con sus estadísticas basta para saber a quién te
-   enfrentas, y de eso trata el juego. */
+   SU IMAGEN en grande, LO QUE TE PIDE, sus reglas, las etapas y el botón. */
 function bossPintaFicha(){
   const host = document.getElementById('bossFicha'); if(!host) return;
   if(window._bossSel == null){ host.innerHTML=''; host.classList.remove('on'); return; }
   const i = window._bossSel, b = KURO_BOSSES[i]; if(!b) return;
   const k = KATANAS[b.kat];
   const hecho = bossVencido(i), esMio = i === bossActual();
-  const exp = bossExpectancy(b.st);
   const dato = (et, v, cls) => `<div class="bm-st"><i>${et}</i><b class="${cls||''}">${v}</b></div>`;
   /* CUÁNDO SE LE PUEDE PELEAR: los de sesión sólo en la suya, así que se
      listan sus próximas aperturas de verdad, no una promesa vaga. */
@@ -11021,19 +10988,13 @@ function bossPintaFicha(){
         : `<span class="bm-f-et">🔒</span>`}
     </div>
 
-    <div class="bm-sec">${bi('SUS NÚMEROS','HIS NUMBERS')}</div>
-    <div class="bm-sts">
-      ${dato('WIN RATE', b.st.wr+'%')}
-      ${dato('PROFIT FACTOR', b.st.pf.toFixed(2))}
-      ${dato('EXPECTANCY', fmt$(Math.round(exp)), exp>=0?'up':'down')}
-      ${dato(bi('TRADES / DÍA','TRADES / DAY'), b.st.trd)}
-      ${dato(bi('GANADA MEDIA','AVG WIN'), fmt$(b.st.avgW), 'up')}
-      ${dato(bi('PERDIDA MEDIA','AVG LOSS'), fmt$(b.st.avgL), 'down')}
-      ${dato(bi('DRAWDOWN MÁX','MAX DRAWDOWN'), fmt$(b.st.dd), 'down')}
-    </div>
+    <!-- LO QUE TE PIDE: la tarjeta ya no enseña estadísticas de un rival
+         —no servían para nada— sino la TAREA CONCRETA que hay que cumplirle,
+         y debajo las reglas con las que cuenta. -->
+    <div class="bm-sec">${bi('LO QUE TE PIDE','WHAT HE ASKS')}</div>
+    <p class="bm-pide">${esc(loc(b.pide))}</p>
 
-    <div class="bm-sec">${bi('EL RETO','THE CHALLENGE')}</div>
-    <p class="bm-reto-l">${esc(loc(b.reto.t))}</p>
+    <div class="bm-sec">${bi('SUS REGLAS','HIS RULES')}</div>
     <!-- LAS REGLAS, como las de una cuenta fondeada: objetivo, drawdown
          máximo, tope de trades y riesgo por trade. Es lo que de verdad hay
          que cumplir para vencerlo, y es el mismo lenguaje de la fondeadora. -->
@@ -11122,22 +11083,6 @@ const BOSS_UID = i => 'boss:'+i;
 function bossDeUid(uid){ const m=/^boss:(\d+)$/.exec(String(uid||'')); return m? KURO_BOSSES[+m[1]] : null; }
 function bossIdxDeUid(uid){ const m=/^boss:(\d+)$/.exec(String(uid||'')); return m? +m[1] : -1; }
 
-/* ── EL RETO ── el bot va soltando su plan a lo largo del duelo: no aparece
-   con su resultado hecho, se ve operar. Igual que en un 1v1. */
-function bossLatido(c){
-  const i = bossIdxDeUid(c.rival); if(i < 0 || !c.arrancado) return;
-  const plan = bossPlan(i), uid = c.rival;
-  c.trades[uid] = c.trades[uid] || [];
-  const dur = (c.fin - c.arrancado) || 1;
-  const paso = dur / (plan.length + 1);
-  const debidos = Math.min(plan.length, Math.floor((Date.now() - c.arrancado) / paso));
-  if(c.trades[uid].length >= debidos) return;
-  while(c.trades[uid].length < debidos){
-    const k = c.trades[uid].length;
-    c.trades[uid].push({ ...plan[k], ts: c.arrancado + paso*(k+1) });
-  }
-  c.upd = Date.now();
-}
 /* Lanza el reto contra el jefe i y te manda a registrar trades. */
 window.bossReta = function(i){
   if(i !== bossActual()){ toast(bi('Primero vence al que te toca.','Beat the one in front of you first.')); return; }
@@ -12702,7 +12647,10 @@ function renderBatallaInterno(){
        Antes seguía a la katana equipada, así que podías estar peleando en el
        lago helado y ver el bosque de Asia de fondo. La vista previa del
        arsenal (_batVista) sigue mandando cuando estás mirando otra katana. */
-    const escenaIdx = _preview!=null ? _preview : Math.max(0, bossActual());
+    /* EL MUNDO SIGUE A LA ESPADA QUE TRAES EQUIPADA (André): te pones otra
+       katana y cambia el entorno. Era el jefe que te tocaba, pero equipar una
+       espada tiene que verse — es lo que uno espera al ponérsela. */
+    const escenaIdx = _preview!=null ? _preview : Math.max(0, kEquipIdx);
     window._zenVista = escenaIdx;
     const _bh = KATANAS[vistaIdx].belt.replace('#','');
     const katClaro = (parseInt(_bh.slice(0,2),16)*0.299 + parseInt(_bh.slice(2,4),16)*0.587 + parseInt(_bh.slice(4,6),16)*0.114)/255 > 0.72;
@@ -13350,7 +13298,6 @@ function renderBatallaInterno(){
          marcaba 'terminado', guardaba y hacía `return` SIN pintar nada —
          Kuro se quedaba en blanco. Ahora vuelve a entrar, que la rama de
          'terminado' ya tiene su pantalla de resultado. */
-      if(c.boss != null) bossLatido(c);   /* el jefe opera con sus estadísticas */
       if(Date.now() >= c.fin){ c.estado = 'terminado'; batGuarda(); renderBatalla(); return; }
     }
     /* duelos que ya venían guardados con las horas completas: se emparejan
