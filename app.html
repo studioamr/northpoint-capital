@@ -11579,6 +11579,26 @@ function batSetupBind(scope, yo, alCerrar){
    volver al lobby, y desde fuera era imposible saber qué falló. Ahora el
    render va envuelto: si truena, se ve el error (para poder mandarlo) y un
    botón que limpia el duelo y devuelve el lobby. */
+function batSOScard(titulo, detalle){
+  const root = $('#batRoot'); if(!root) return;
+  const c = S.challenge;
+  const ficha = c ? [
+    'estado: ' + c.estado, 'sede: ' + (c.sesion||'—'), 'duración: ' + (c.duracion||'—'),
+    'arrancado: ' + (c.arrancado ? new Date(c.arrancado).toLocaleString() : '—'),
+    'fin: ' + (c.fin ? new Date(c.fin).toLocaleString() : '—'),
+    'host: ' + (c.host||'—') + ' · rival: ' + (c.rival||'—')
+  ].join(' · ') : 'sin duelo guardado';
+  root.innerHTML = `
+    <div class="bat-hero"><div class="bat-vs-ico">⚠</div>
+      <h2>${esc(titulo)}</h2>
+      <p>${bi('Tu cuenta y tu historial están a salvo. Dale a reiniciar y vuelves al lobby.','Your account and history are safe. Hit reset and you are back in the lobby.')}</p>
+      <p style="font-family:var(--mono);font-size:11px;opacity:.7;word-break:break-word">${esc(detalle)}<br>${esc(ficha)}</p></div>
+    <div class="bat-actions">
+      <button type="button" class="btn primary bat-crear" id="batSOS">${bi('Reiniciar Kuro','Reset Kuro')}</button>
+    </div>`;
+  const b = $('#batSOS');
+  if(b) b.onclick = ()=>{ S.challenge = null; batPantalla = 'home'; batMin = false; save(); renderBatalla(); };
+}
 function renderBatalla(){
   try{ renderBatallaInterno(); }
   catch(e){
@@ -11595,7 +11615,19 @@ function renderBatalla(){
     const b = $('#batSOS');
     if(b) b.onclick = ()=>{ S.challenge = null; batPantalla = 'home'; batMin = false; save(); renderBatalla(); };
     try{ console.error('[Kuro] render falló:', e); }catch(_){}
+    return;
   }
+  /* NI EN BLANCO NI SIN SALIDA (André, 30-ago-2026): puede terminar sin
+     reventar y aun así no pintar nada — un camino que se sale antes de
+     escribir la pantalla. Si el contenedor quedó vacío, se dice qué duelo
+     hay guardado y se ofrece el botón para volver al lobby. */
+  try{
+    const root = $('#batRoot');
+    if(root && root.innerHTML.trim().length < 40){
+      batSOScard(bi('Kuro se quedó sin pintar','Kuro drew nothing'),
+                 bi('El render terminó sin escribir la pantalla.','The render finished without drawing.'));
+    }
+  }catch(_){}
 }
 function renderBatallaInterno(){
   const root = $('#batRoot'); if(!root) return;
