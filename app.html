@@ -1803,6 +1803,10 @@ button.st-chip:hover{border-color:rgba(255,255,255,.45)}
 .bm-ses i{font-style:normal;font-family:var(--mono);font-size:8px;letter-spacing:.12em;
   text-transform:uppercase;color:rgba(255,255,255,.5)}
 .bm-ses b{font-family:var(--mono);font-size:13px;color:#fff}
+.bm-ses.viva{border-color:rgba(87,199,155,.55);background:rgba(87,199,155,.12)}
+.bm-ses.viva i{color:#6fe39a}
+.bm-ses u{text-decoration:none;font-family:var(--mono);font-size:9px;letter-spacing:.08em;
+  color:rgba(255,255,255,.55)}
 .bm-challenge{width:100%;margin-top:18px;padding:16px;border-radius:14px;cursor:pointer;
   border:none;background:var(--kc);color:#0b0e14;font:900 15px/1 inherit;letter-spacing:.1em}
 .bm-challenge.oscura{color:#fff;border:1px solid rgba(255,255,255,.5)}
@@ -10940,14 +10944,39 @@ function bossPintaFicha(){
   /* CUÁNDO SE LE PUEDE PELEAR: los de sesión sólo en la suya, así que se
      listan sus próximas aperturas de verdad, no una promesa vaga. */
   const cuando = (()=>{
-    if(!b.ses) return '';
-    const ses = batSesion(b.ses);
-    const prox = batProxAperturas(ses.hora, 3, b.ses).map(d=>{
-      const t = batDiaTxt(d.getTime());
-      return `<span class="bm-ses"><i>${esc(t.dia)}</i><b>${esc(t.hora)}</b></span>`;
-    }).join('');
-    return `<div class="bm-sec">${bi('PRÓXIMAS SESIONES PARA PELEARLE','NEXT SESSIONS TO FIGHT HIM')}</div>
-      <div class="bm-sess">${prox}</div>`;
+    const R0 = b.reglas || {};
+    /* SI ACEPTA CUALQUIER SESIÓN se listan LAS TRES —Asia, Londres y Nueva
+       York— en orden de reloj, no sólo la suya: ASHURA enseñaba tres
+       aperturas de Asia cuando su regla dice «la que quieras», y la de
+       Londres de las 2 AM no aparecía por ningún lado. */
+    const cuales = R0.libre ? BAT_SESIONES.map(x=>x.id) : (b.ses ? [b.ses] : []);
+    if(!cuales.length) return '';
+    const t0 = ahora(), mNY = minutosEn(TZ_MERCADO, t0), wd = diaSemanaEn(TZ_MERCADO, t0);
+    const filas = [];
+    cuales.forEach(id=>{
+      const S2 = batSesion(id);
+      const ini = S2.hora*60 + (S2.min||0), fin = ini + S2.dur;
+      /* la ventana puede cruzar la medianoche (Asia abre 20:00 y dura 6 h) */
+      const dentro = (fin <= 1440) ? (mNY >= ini && mNY < fin) : (mNY >= ini || mNY < fin-1440);
+      const habil = (wd>=1 && wd<=5) || (wd===0 && id==='asia');
+      if(dentro && habil){
+        const quedan = (fin <= 1440) ? fin - mNY : (mNY >= ini ? fin - mNY : fin - 1440 - mNY);
+        filas.push({ ts:0, viva:true, nom:loc(S2.nom),
+                     cuando: bi('cierra en ','closes in ') + batMinTxt(Math.max(0,quedan)) });
+      } else {
+        const d = batProxAperturas(S2.hora, 1, id)[0];
+        const dt = batDiaTxt(d.getTime());
+        /* la hora EN NY además de la tuya: las sesiones se piensan en hora de
+           mercado —«Londres a las 2 AM»— y la local sola confunde */
+        const hNY = String(S2.hora).padStart(2,'0') + ':' + String(S2.min||0).padStart(2,'0');
+        filas.push({ ts:d.getTime(), viva:false, nom:loc(S2.nom),
+                     cuando: dt.dia + ' · ' + dt.hora, ny: hNY + ' NY' });
+      }
+    });
+    filas.sort((a,b2)=> a.ts - b2.ts);
+    return `<div class="bm-sec">${bi('CUÁNDO PELEARLE','WHEN TO FIGHT HIM')}</div>
+      <div class="bm-sess">${filas.map(f=>
+        `<span class="bm-ses ${f.viva?'viva':''}"><i>${f.viva?'● '+bi('AHORA','LIVE'):esc(f.nom)}</i><b>${esc(f.viva?f.nom:f.cuando)}</b><u>${esc(f.viva?f.cuando:f.ny)}</u></span>`).join('')}</div>`;
   })();
   host.classList.add('on');
   host.innerHTML = `<div class="bm-ficha" style="--kc:${k.belt}">
@@ -10989,16 +11018,6 @@ function bossPintaFicha(){
       return `<div class="bm-sec">${bi('EN ESTE ORDEN','IN THIS ORDER')}</div>
         <ol class="bm-el">${et.map((x,k)=>
           `<li><b>${k+1}</b><span>${esc(loc(x.t))}</span><em>${fmt$(x.m)}</em></li>`).join('')}</ol>`; })()}
-
-    <!-- CUÁNTO TE VA A TOMAR: sesiones y la fecha si empiezas hoy. -->
-    ${(()=>{ const d = (b.reglas && b.reglas.sesiones) || 0; if(!d) return '';
-      const hoy = ahora(); let f = new Date(hoy), habiles = 0;
-      while(habiles < d){ f = new Date(f.getTime() + 86400000);
-        const wd = f.getDay(); if(wd !== 0 && wd !== 6) habiles++; }
-      return `<div class="bm-sec">${bi('SI EMPIEZAS HOY','IF YOU START TODAY')}</div>
-        <div class="bm-reglas"><div class="bm-rg">
-          <i>${bi('TERMINAS','YOU FINISH')}</i><b>${esc(batDiaTxt(f.getTime()).dia)}</b>
-        </div></div>`; })()}
 
     ${cuando}
 
