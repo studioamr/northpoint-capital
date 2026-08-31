@@ -164,16 +164,59 @@ hr.linea{border:none;border-top:1px solid var(--hair);margin:0}
 .duelo-in{position:relative;z-index:1;text-align:center;padding:60px 24px}
 .duelo-in h2{text-shadow:0 4px 30px rgba(4,6,12,1),0 2px 8px rgba(4,6,12,.9)}
 .duelo-in .eyebrow{color:rgba(237,239,242,.68)}
+/* ── LA CINTA INFINITA ──
+   Dos filas en sentidos contrarios: el ojo no encuentra principio ni final.
+   La pista mide el doble y la animación se detiene a la mitad, así que el
+   bucle no tiene costura. Se para al pasar el cursor — si algo te interesó,
+   tienes que poder leerlo. (André, 31-ago-2026) */
+.mesa-tit{text-align:center;padding-bottom:clamp(40px,7vh,80px)}
+.mesa-tit .p{max-width:52ch}
+.cinta{overflow:hidden;padding:8px 0;-webkit-mask-image:linear-gradient(90deg,transparent,#000 7%,#000 93%,transparent);
+  mask-image:linear-gradient(90deg,transparent,#000 7%,#000 93%,transparent)}
+.cinta+.cinta{margin-top:16px}
+.cinta-pista{display:flex;gap:16px;width:max-content;
+  animation:desfile 78s linear infinite}
+.cinta[data-dir="-1"] .cinta-pista{animation-direction:reverse;animation-duration:96s}
+.cinta:hover .cinta-pista{animation-play-state:paused}
+@keyframes desfile{from{transform:translate3d(0,0,0)}to{transform:translate3d(-50%,0,0)}}
+.ct{flex:0 0 auto;width:min(380px,74vw);border:1px solid var(--hair);border-radius:14px;
+  background:linear-gradient(180deg,rgba(237,239,242,.03),transparent);padding:14px;
+  transition:border-color .3s,transform .3s}
+.ct:hover{border-color:rgba(237,239,242,.30);transform:translateY(-4px)}
+.ct-img{display:block;border-radius:9px;overflow:hidden;border:1px solid var(--hair);
+  aspect-ratio:16/10;background:#07090F}
+.ct-img img{display:block;width:100%;height:100%;object-fit:cover;object-position:top center}
+.ct-t{display:block;margin:14px 0 7px;font-family:var(--mono);font-size:11px;font-weight:600;
+  letter-spacing:.24em;color:var(--tinta)}
+.ct-p{display:block;font-size:13px;font-weight:300;line-height:1.6;color:rgba(237,239,242,.62)}
+@media(prefers-reduced-motion:reduce){
+  .cinta{overflow-x:auto}
+  .cinta-pista{animation:none}
+}
 /* ── LOS MODOS ── */
 .modos{display:grid;grid-template-columns:repeat(2,1fr);gap:1px;background:var(--hair);
   border:1px solid var(--hair);border-radius:14px;overflow:hidden}
 @media(max-width:760px){.modos{grid-template-columns:1fr}}
-.modo{background:var(--void);padding:26px 24px;transition:background .3s}
-.modo:hover{background:rgba(237,239,242,.03)}
+.modo{position:relative;background:var(--void);padding:26px 24px;overflow:hidden;
+  transition:background .35s cubic-bezier(.2,.7,.2,1)}
+.modo:hover{background:rgba(237,239,242,.045)}
+/* la línea que barre el borde de arriba al pasar el cursor */
+.mo-linea{position:absolute;top:0;left:0;height:1px;width:100%;
+  background:linear-gradient(90deg,transparent,var(--tinta),transparent);
+  transform:translateX(-102%);transition:transform .7s cubic-bezier(.2,.7,.2,1)}
+.modo:hover .mo-linea{transform:translateX(102%)}
 .mo-n{display:block;font-family:var(--mono);font-size:9px;letter-spacing:.24em;
-  color:var(--tenue);margin-bottom:12px}
+  color:var(--tenue);margin-bottom:12px;transition:color .3s,letter-spacing .35s}
+.modo:hover .mo-n{color:var(--tinta);letter-spacing:.4em}
 .mo-t{display:block;font-family:var(--mono);font-size:14px;font-weight:600;
-  letter-spacing:.24em;color:var(--tinta);margin-bottom:12px}
+  letter-spacing:.24em;color:var(--tinta);margin-bottom:12px;
+  transition:transform .35s cubic-bezier(.2,.7,.2,1)}
+.modo:hover .mo-t{transform:translateX(6px)}
+@media(prefers-reduced-motion:reduce){
+  .mo-linea{display:none}
+  .modo:hover .mo-n{letter-spacing:.24em}
+  .modo:hover .mo-t{transform:none}
+}
 .mo-p{display:block;font-size:14.5px;font-weight:300;line-height:1.66;
   color:rgba(237,239,242,.7);max-width:44ch}
 /* ── PARTE II · las pantallas ── */
@@ -362,8 +405,20 @@ hr.linea{border:none;border-top:1px solid var(--hair);margin:0}
 
   <!-- 07 · TORNEOS, EVENTOS Y RETOS -->
   <section>
-    <div class="modos rev" id="modos"></div>
+    <p class="eyebrow rev">SIETE MANERAS DE MEDIRTE</p>
+    <div class="modos" id="modos"></div>
   </section>
+
+  <!-- 08 · LA MESA · cinta infinita con las pantallas de verdad -->
+  <hr class="linea">
+  <section class="mesa-tit">
+    <p class="eyebrow rev">III &middot; LA MESA</p>
+    <h2 class="rev">Kuro es el juego.<span class="baja-t">Detr&aacute;s hay una mesa de trabajo.</span></h2>
+    <p class="p rev" style="margin-left:auto;margin-right:auto">Backtest, registro, bit&aacute;cora y n&uacute;meros.
+      Lo que se entrena en la monta&ntilde;a se mide aqu&iacute;.</p>
+  </section>
+  <div class="cinta" data-dir="1"><div class="cinta-pista" id="cintaA"></div></div>
+  <div class="cinta" data-dir="-1"><div class="cinta-pista" id="cintaB"></div></div>
 
   <!-- 08 · CIERRE -->
   <section class="cierre">
@@ -1007,6 +1062,46 @@ function katana(c, W, H, col){
   });
 })();
 
+/* ══════════════ LA CINTA ══════════════
+   Una lista de nombres no enseña una herramienta. Estas son las pantallas de
+   VERDAD de la terminal, capturadas del programa corriendo, desfilando sin fin
+   en dos filas que van en sentidos contrarios — así el ojo no encuentra el
+   principio ni el final y se queda mirando.
+   La pista se duplica para que el bucle no tenga costura, y se detiene al
+   pasar el cursor: si algo te interesó, tienes que poder leerlo. */
+var MESA = [
+  ['BACKTESTING','kuro-c-backtest.jpg','Prueba la idea sin tocar tu cuenta. La curva, el win rate y el profit factor salen solos.'],
+  ['LOG TRADE','kuro-c-log.jpg','Cantas dirección y P&L. Tu curva del día, tu peor caída desde el pico y cuántas veces entraste, en vivo.'],
+  ['JOURNAL','kuro-c-journal.jpg','El día completo: cada trade con su captura y su nota, para revisarlo cuando ya no duele.'],
+  ['TRADES','kuro-c-trades.jpg','Todo tu historial en una lista, por cuenta y por día.'],
+  ['EL PLAN','kuro-c-plan.jpg','Cada cuenta con su balance, cuánto te queda al drawdown y cuánto te falta al objetivo.'],
+  ['EL MAPA','kuro-c-mapa.jpg','Los nueve mundos, los ocho maestros y dónde vas.'],
+  ['EL DUELO','kuro-c-duelo.jpg','La misma killzone, el mismo reloj, dos curvas.']
+];
+(function(){
+  var A = document.getElementById('cintaA'), B = document.getElementById('cintaB');
+  if(!A || !B) return;
+  function tarjeta(m, copia){
+    var d = document.createElement('article'); d.className = 'ct';
+    /* la copia del bucle sí puede esperar; la primera pasada no, porque con
+       lazy la tarjeta entra en cuadro ya moviéndose y la imagen aparece tarde */
+    d.innerHTML = '<span class="ct-img"><img src="' + m[1] + '" alt="' + m[0] + '"' +
+      (copia ? ' loading="lazy"' : '') + '></span>' +
+      '<span class="ct-t">' + m[0] + '</span>' +
+      '<span class="ct-p">' + m[2] + '</span>';
+    if(copia) d.setAttribute('aria-hidden','true');
+    return d;
+  }
+  function llena(host, orden){
+    /* dos pasadas: el bucle se cierra sin costura porque la pista mide el
+       doble y la animación se detiene justo a la mitad */
+    for(var v=0; v<2; v++)
+      orden.forEach(function(i){ host.appendChild(tarjeta(MESA[i], v > 0)); });
+  }
+  llena(A, [0,1,2,3,4,5,6]);
+  llena(B, [4,6,1,5,3,0,2]);
+})();
+
 /* ══════════════ LOS MODOS ══════════════
    La lista de campos del formulario («a quién», «formato», «killzone»…) contaba
    cómo se llena una pantalla, no qué se puede hacer. Esto dice lo segundo. */
@@ -1022,10 +1117,12 @@ function katana(c, W, H, col){
     ['TORNEO',   'Uno a la semana. Viernes, ocho horas, dieciséis lugares. Entrada $5,000, bolsa $25,000. Uno se la lleva.']
   ];
   MODOS.forEach(function(m, i){
-    var d = document.createElement('div'); d.className = 'modo';
+    var d = document.createElement('div'); d.className = 'modo rev';
+    d.style.transitionDelay = (i*80) + 'ms';
     d.innerHTML = '<span class="mo-n">' + String(i+1).padStart(2,'0') + '</span>' +
       '<span class="mo-t">' + m[0] + '</span>' +
-      '<span class="mo-p">' + m[1] + '</span>';
+      '<span class="mo-p">' + m[1] + '</span>' +
+      '<i class="mo-linea"></i>';
     host.appendChild(d);
   });
 })();
