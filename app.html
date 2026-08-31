@@ -22969,6 +22969,8 @@ indicator("NP A+", "NP A+", overlay = true, max_lines_count = 500, max_boxes_cou
 // cada cosa desde aquí, sin ir a buscarla grupo por grupo. Lo que
 // apagues no pierde sus ajustes, solo deja de dibujarse.
 gV = "1 · Qué ver"
+inVerKZ     = input.bool(true, "Killzones · ASIA · LONDRES · NY", group = gV, tooltip = "El apagador de TODAS las killzones de un golpe: sus cajas, sus líneas de alto y bajo y sus nombres. Apagado, el chart se queda sin una sola marca de sesión y lo demás sigue igual. Cuál de las cuatro se dibuja y de qué color se sigue eligiendo abajo, en su grupo — esto solo las prende o las apaga todas.")
+inVerEMA    = input.bool(true, "Medias móviles", group = gV, tooltip = "El apagador de las dos medias. Cuáles son, de qué largo y de qué tipo se elige en su grupo; esto solo las prende o las apaga.")
 inVerORB    = input.bool(true, "ORB · la caja del OR y TODO lo suyo", group = gV, tooltip = "El interruptor de todo el ORB de un golpe: la caja del OR (9:30-9:45), el ORH, el ORL, el ORM, los objetivos numerados, las señales ▲▼, la MA de sesión, los FVG que nacen dentro del ORB y la killzone ORB con su H/L. Apagado, el chart queda sin una sola marca del ORB y lo demás —ASIA, LONDRES, NY, la estructura y el panel— sigue igual. Los ajustes de cada pieza no se pierden: al volver a prenderlo, todo regresa como lo tenías.")
 orbInf      = input.bool(true, "ORB de corrido, hasta el NY del día siguiente", group = gV, tooltip = "El ORB no se corta NUNCA hasta que abra el NY del día siguiente. Dos cosas al mismo tiempo: el ORH, el ORL y el ORM siguen creciendo vela por vela después del cierre de NY, y el ORB H / ORB L de la killzone YA NO se congela cuando le toman el nivel — sigue de largo igual. Toda la tarde, toda la noche y la mañana siguiente el ORB se ve entero; a las 9:30 del día que sigue se borra solo y nace el nuevo. Prendido también manda sobre \\"Quitar todo el ORB cuando abre ASIA\\" del grupo 6: ya no se quita en la madrugada. Apagado, todo vuelve a como estaba.")
 verPanel    = input.bool(true, "Panel de la rutina", group = gV, tooltip = "La tabla de la esquina: sesión en curso, etapa del día, fase del contrato, agenda, liquidez viva y los tickers de cada sesión.")
@@ -23180,11 +23182,11 @@ bool palPers = paleta == "Personalizado"
 // este script es SOLO el mercado del día; cada pieza se prende o se
 // apaga con su propio toggle
 bool ramaA = true
-useA = inUseA
-useL = inUseL
+useA = inVerKZ and inUseA
+useL = inVerKZ and inUseL
 verORB = ramaA and inVerORB
-useO = verORB and inUseO
-useN = inUseN
+useO = verORB and inVerKZ and inUseO
+useN = inVerKZ and inUseN
 verFVG = inVerFVG
 verFvgORB = verORB and inVerFvgORB
 
@@ -24009,8 +24011,8 @@ ma2s = ta.sma(srcE, lenE2)
 ma2w = ta.wma(srcE, lenE2)
 ma1 = tipE1 == "SMA" ? ma1s : tipE1 == "WMA" ? ma1w : ma1e
 ma2 = tipE2 == "SMA" ? ma2s : tipE2 == "WMA" ? ma2w : ma2e
-plot(useE1 ? ma1 : na, "MA rápida", colE1, groE1)
-plot(useE2 ? ma2 : na, "MA lenta", colE2, groE2)
+plot(useE1 and inVerEMA ? ma1 : na, "MA rápida", colE1, groE1)
+plot(useE2 and inVerEMA ? ma2 : na, "MA lenta", colE2, groE2)
 
 // ═══ PUNTOS POR SESIÓN ═════════════════════════════════════════
 // net = último cierre - open de la sesión. Cada llamada guarda su
@@ -24698,6 +24700,8 @@ indicator("NP ESTRUCTURA", "NP ESTRUCTURA", overlay = true, max_lines_count = 50
 // cada cosa desde aquí, sin ir a buscarla grupo por grupo. Lo que
 // apagues no pierde sus ajustes, solo deja de dibujarse.
 gV = "1 · Qué ver"
+inVerKZ     = input.bool(true, "Killzones · ASIA · LONDRES · NY", group = gV, tooltip = "El apagador de TODAS las killzones de un golpe: sus cajas, sus líneas de alto y bajo y sus nombres. Apagado, el chart se queda sin una sola marca de sesión y lo demás sigue igual. Cuál de las cuatro se dibuja y de qué color se sigue eligiendo abajo, en su grupo — esto solo las prende o las apaga todas.")
+inVerEsc    = input.bool(true, "La orden · la caja de la entrada", group = gV, tooltip = "La caja que flota a la derecha: riesgo arriba, premio abajo y la línea de la entrada partiéndolas, igual que la herramienta Short/Long Position. Apagada, el chart se queda con el rango, el AOI, el Order Block y el Fibonacci.")
 inVerCanal  = input.bool(true, "Canal de regresión", group = gV, tooltip = "La recta que mejor le queda al precio de las últimas velas, con sus bandas. Se mide en su propia temporalidad —5m, 15m o 1h, la que elijas en el grupo 11— sin importar en cuál estés parado. No toca nada de la estructura: es una capa aparte para leer la inclinación y saber si el precio va estirado hacia un borde o cómodo por el centro.")
 inVerORB    = input.bool(true, "ORB · la killzone del OR (9:30-9:45)", group = gV, tooltip = "Aquí el ORB solo se calcula, no se pinta —de dibujarlo se encarga el script del día—, así que esto apaga su H/L por si prendes \\"Dibujar las killzones aquí\\" en el grupo 1.")
 inVerTit    = input.bool(true, "Título LONGS / SHORTS del rango", group = gV, tooltip = "El letrero grande que dice de qué lado se busca el trade, sacado de la dirección del rango: si el impulso fue BAJISTA dice SHORTS y se pone ARRIBA del HIGH; si fue ALCISTA dice LONGS y se pone ABAJO del LOW. Va en la misma letra gruesa de los demás nombres.")
@@ -24877,7 +24881,6 @@ colchonSL = input.float(15, "Colchón del stop (% de la zona)", minval = 0, maxv
 // hueco además cae en el área del 0.705 al 0.79. ESCALERA
 // COMPLETA vuelve a pintar una caja por nivel para compararlas.
 g10 = "10 · Escalera de entradas"
-inVerEsc = input.bool(true, "Mostrar la caja de la entrada", group = g10, tooltip = "La caja que flota a la derecha: riesgo arriba, premio abajo y la línea de la entrada partiéndolas, igual que la herramienta Short/Long Position. Apagada, el chart se queda con el rango, el AOI, el Order Block y el Fibonacci.")
 escModo = input.string("0.5", "La orden entra en", options = ["0.5", "0.62", "0.705", "0.79", "Automático (la mejor)", "Escalera completa"], group = g10, tooltip = "De fábrica UNA sola orden en el 0.5, el equilibrio del tramo. Bájala al 0.62, al 0.705 o al 0.79 si prefieres esperar el retroceso profundo — el stop no se mueve (sigue en el extremo), así que mientras más profundo entras, más corto el riesgo y más grande el RR. AUTOMÁTICO va al FVG: toma el mejor hueco del rango y planta la orden en su 50% — la mitad del FVG, no el nivel del Fibonacci. Si además cae dentro del ÁREA que pongas abajo (0.705–0.79 de fábrica) le pone ★, porque ahí es donde de verdad quieres estar; si queda fuera, entra igual (o no, según la línea de abajo: Si el FVG queda fuera del área). Y si no hay ningún hueco vivo, ahí sí cuenta la confluencia nivel por nivel. Si ningún hueco llega al área, cae al conteo de confluencia nivel por nivel (FVG encima, Order Block, AOI, qué tan profundo va, si el precio ya lo pasó y el RR) y dibuja SOLO el que más junta. ESCALERA COMPLETA dibuja una caja por nivel para compararlas de un vistazo.")
 escDesde = input.float(0.5, "De este nivel", minval = 0, maxval = 1, step = 0.005, group = g10, inline = "E1", tooltip = "Solo cuenta con AUTOMÁTICO y con ESCALERA COMPLETA: es el tramo de niveles entre los que busca. Solo entran los que estén escritos arriba en \\"Niveles\\" del grupo 9: de fábrica son el 0.5, el 0.62, el 0.705 y el 0.79 — cuatro. Con un nivel fijo puesto arriba, estas dos líneas no hacen nada.")
 escHasta = input.float(0.79, "hasta este", minval = 0, maxval = 1, step = 0.005, group = g10, inline = "E1")
@@ -24950,10 +24953,10 @@ bool ramaB = true
 // al final, a la derecha
 bool lblIni  = rgLblDonde != "A la derecha, al final"
 bool lblFlot = rgLblDonde == "Flotando donde arranca"
-useA = true
-useL = true
-useO = inVerORB
-useN = true
+useA = inVerKZ
+useL = inVerKZ
+useO = inVerKZ and inVerORB
+useN = inVerKZ
 // los FVG del día y los del ORB viven en el otro script
 verFVG = false
 verFvgORB = false
