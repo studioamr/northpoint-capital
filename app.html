@@ -20693,15 +20693,25 @@ tDia = not na(time("", sesDia, tz))
 [netN, rngNh, rngNl, opN] = f_move(tNY)
 [netD, rngDh, rngDl, opD] = f_move(tDia)
 
-// NY es la única sesión cuyo valor congelado puede ser de AYER
-// (entre la medianoche NY y las 9:30); nyHoy distingue ese caso
-int diaNY = dayofmonth(time, tz)
-bool nuevoDiaNY = diaNY != nz(diaNY[1], diaNY)
+// ── ¿EL NÚMERO ES DE HOY? (André, 30-ago-2026) ────────────────
+// f_move deja congelado el último neto de cada sesión, así que el
+// panel enseñaba el de LONDRES del viernes —"+63.25 pts"— un domingo
+// en el que Londres ni siquiera ha abierto. Cada sesión lleva ahora
+// su bandera, y las tres se reinician cuando ABRE ASIA, que es donde
+// empieza el día de trading (igual que el ORB y la liquidez). Sin
+// bandera, la fila dice que espera la apertura en vez de inventar un
+// número viejo.
+var bool aHoy  = false
+var bool lHoy  = false
 var bool nyHoy = false
+if tA and not tA[1]
+    aHoy  := true
+    lHoy  := false
+    nyHoy := false
+if tL and not tL[1]
+    lHoy := true
 if tNY and not tNY[1]
     nyHoy := true
-if nuevoDiaNY and not tNY
-    nyHoy := false
 
 // ═══ PANEL PLAN ════════════════════════════════════════════════
 // 1 = viva (sin tomar), 0 = tomada, -1 = sin datos
@@ -20969,14 +20979,16 @@ if verPanel and barstate.islast
     // ticker por sesión: abrió y cerró en neutro, la FLECHA ↑/↓ según si
     // subió o bajó, y los puntos netos con el mismo color (sin %)
     bool hayN = (tNY or nyHoy) and not na(netN)
-    string tkA1 = not dibujable ? tfAviso : f_tkAbre(opA, netA)
-    string flA  = not dibujable ? "" : f_tkFlecha(netA)
-    string tkA1c = not dibujable ? "" : f_tkCierra(opA, netA)
-    string tkA2 = not dibujable ? "" : f_tkPts(netA, tA)
-    string tkL1 = not dibujable ? tfAviso : f_tkAbre(opL, netL)
-    string flL  = not dibujable ? "" : f_tkFlecha(netL)
-    string tkL1c = not dibujable ? "" : f_tkCierra(opL, netL)
-    string tkL2 = not dibujable ? "" : f_tkPts(netL, tL)
+    bool hayA = (tA or aHoy) and not na(netA)
+    bool hayL = (tL or lHoy) and not na(netL)
+    string tkA1 = not dibujable ? tfAviso : hayA ? f_tkAbre(opA, netA) : "espera la apertura"
+    string flA  = not dibujable or not hayA ? "" : f_tkFlecha(netA)
+    string tkA1c = not dibujable or not hayA ? "" : f_tkCierra(opA, netA)
+    string tkA2 = not dibujable or not hayA ? "" : f_tkPts(netA, tA)
+    string tkL1 = not dibujable ? tfAviso : hayL ? f_tkAbre(opL, netL) : "espera la apertura"
+    string flL  = not dibujable or not hayL ? "" : f_tkFlecha(netL)
+    string tkL1c = not dibujable or not hayL ? "" : f_tkCierra(opL, netL)
+    string tkL2 = not dibujable or not hayL ? "" : f_tkPts(netL, tL)
     string tkN1 = not dibujable ? tfAviso : hayN ? f_tkAbre(opN, netN) : "espera la apertura"
     string flN  = not dibujable or not hayN ? "" : f_tkFlecha(netN)
     string tkN1c = not dibujable or not hayN ? "" : f_tkCierra(opN, netN)
@@ -20987,11 +20999,11 @@ if verPanel and barstate.islast
     string tkD2 = not dibujable ? "" : f_tkPts(netD, tDia)
     color cNetD = not dibujable ? color.gray : f_colPts(netD)
     string tipD = dibujable ? f_tipRango(opD, netD, rngDh, rngDl) : ""
-    color cNetA = not dibujable ? color.gray : f_colPts(netA)
-    color cNetL = not dibujable ? color.gray : f_colPts(netL)
+    color cNetA = dibujable and hayA ? f_colPts(netA) : color.gray
+    color cNetL = dibujable and hayL ? f_colPts(netL) : color.gray
     color cNetN = dibujable and (tNY or (nyHoy and not na(netN))) ? f_colPts(netN) : color.gray
-    string tipA = dibujable ? f_tipRango(opA, netA, rngAh, rngAl) : ""
-    string tipL = dibujable ? f_tipRango(opL, netL, rngLh, rngLl) : ""
+    string tipA = dibujable and hayA ? f_tipRango(opA, netA, rngAh, rngAl) : ""
+    string tipL = dibujable and hayL ? f_tipRango(opL, netL, rngLh, rngLl) : ""
     string tipN = dibujable and (tNY or (nyHoy and not na(netN))) ? f_tipRango(opN, netN, rngNh, rngNl) : ""
 
     // ── sesión en curso; si no hay ninguna, cuál ABRE y en cuánto
@@ -21161,7 +21173,7 @@ if verPanel and barstate.islast
         // la celda de NY en la fila de liquidez ocupa las columnas 3-4
         table.merge_cells(panel, 3, 9, 4, 9)
         unido := true
-`;
+ `;
 const ALGO_PINE_KZP_ESTRUCTURA = `// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
 // Idea de killzones con H/L derivada de "ICT Killzones & Pivots [TFO]" © tradeforopp.
 // La sección ORB TARGETS deriva de "Opening Range with Breakouts & Targets [LuxAlgo]"
