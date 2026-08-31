@@ -1589,6 +1589,15 @@ button.st-chip:hover{border-color:rgba(255,255,255,.45)}
 /* ── LOG TRADE: la cuenta dentro de la misma tarjeta del registro ── */
 .bt-sel-bar.en-tarjeta{margin:0 0 12px;padding:0 0 12px;border-bottom:1px solid var(--line-soft)}
 .lg-abrir .lg-cancel{margin-left:10px}
+/* ── EL CRONÓMETRO DE LA SESIÓN ──
+   Grande a propósito: es lo primero que se ve al entrar al Log. (31-ago-2026) */
+.lg-crono{display:flex;align-items:baseline;gap:12px;margin:-2px 0 14px;
+  padding-bottom:12px;border-bottom:1px solid var(--line-soft)}
+.lg-crono b{font:600 clamp(30px,6vw,46px)/1 var(--mono);letter-spacing:.02em;
+  color:var(--txt);font-variant-numeric:tabular-nums}
+.lg-crono em{font:600 9px/1 var(--mono);letter-spacing:.24em;color:var(--faint);font-style:normal}
+.bat-duelo-req.roto .lg-crono b{color:var(--down)}
+@media(max-width:520px){.lg-crono{flex-direction:column;gap:5px;align-items:flex-start}}
 .bat-meta{border:1px solid var(--line);border-radius:14px;background:var(--w02);padding:14px 16px;margin-bottom:12px}
 .bat-meta-top{display:flex;justify-content:space-between;align-items:baseline;font-family:var(--mono);font-size:12px;color:var(--dim);margin-bottom:8px}
 .bat-meta-top b{color:var(--txt);font-size:15px}
@@ -9757,6 +9766,33 @@ function pintaCurva(cv, empty, pnls, prog, vacioMsg, opts){
     }
   }
 
+  /* ══ EL CORTE ENTRE SESIONES ══ (André, 31-ago-2026)
+     Sin sesión abierta la curva es un solo hilo continuo de semanas: dos días
+     buenos y uno malo se leen igual que una racha, y no se ve dónde acabó una
+     sesión y empezó otra. Cada vez que CIERRAS el día queda un marco negro en
+     ese punto de la curva. La línea sigue —el equity no se reinicia— pero el
+     ojo ya sabe dónde termina cada sesión. */
+  if(Array.isArray(opts.cortes) && opts.cortes.length){
+    opts.cortes.forEach(i => {
+      if(!(i > 0) || i >= pts.length) return;
+      const x = X(i), y0 = TOP-10, y1 = BOT+10;
+      ctx.save();
+      /* la franja negra: sobre fondo oscuro el negro sólido SÍ se ve, porque el
+         panel no es negro puro. Se pinta encima de la curva a propósito — es un
+         corte, tiene que interrumpir la línea. */
+      ctx.fillStyle = '#000';
+      ctx.fillRect(x-3, y0, 6, y1-y0);
+      /* y sus dos filos, para que el corte tenga borde en los dos temas */
+      ctx.strokeStyle = claro ? 'rgba(0,0,0,.55)' : 'rgba(255,255,255,.28)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(x-3.5, y0); ctx.lineTo(x-3.5, y1);
+      ctx.moveTo(x+3.5, y0); ctx.lineTo(x+3.5, y1);
+      ctx.stroke();
+      ctx.restore();
+    });
+  }
+
   /* marcas de PICO y VALLE (solo si la curva ya se dibujó hasta allí) */
   ctx.font = mono; ctx.textBaseline = 'alphabetic';
   if(iPico>0 && iPico<=whole && pico>0){
@@ -15442,6 +15478,18 @@ function lgDibuja(prog){
     const a = S.accounts.find(x=>x.id===lgSel);
     if(a){ const m = metasDe(a); opts = { target: m.target, dd: m.dd, hitos: true }; }
   }
+  /* sin sesión abierta la curva son semanas seguidas: se marca dónde cerraste
+     cada día para que se vea dónde acaba una sesión y empieza la otra */
+  if(!ses){
+    const cierres = lgCerradasMias().map(c => c.fecha).sort();
+    const cortes = [];
+    cierres.forEach(f => {
+      let k = 0;
+      for(let i = 0; i < lista.length; i++) if(lista[i].date <= f) k = i + 1;
+      if(k > 0 && k < lista.length && cortes[cortes.length-1] !== k) cortes.push(k);
+    });
+    if(cortes.length) opts.cortes = cortes;
+  }
   pintaCurva($('#lgCanvas'), $('#lgEmpty'), lista.map(t=>t.pnl||0), prog,
     ses ? bi('Sesión abierta · registra tu primer trade.','Session open · log your first trade.')
         : bi('Registra tu primer trade: dirección, P&L y Enter.','Log your first trade: direction, P&L and Enter.'),
@@ -15764,6 +15812,12 @@ function lgHoy(){
   const deMas = maxT && mios.length > maxT;
   const barra = (v, cls) => `<span class="bd-b"><i class="${cls}" style="width:${v}%"></i></span>`;
   host.innerHTML = `<div class="bat-duelo-req ${roto?'roto':''}" style="margin:0">
+    <!-- EL CRONÓMETRO (André, 31-ago-2026): la sesión empieza cuando le picas
+         a INICIAR y no cuando abre el mercado. Verlo correr es la diferencia
+         entre «llevo dos trades» y «llevo dos trades en cuatro horas»: el
+         tiempo sentado es el dato que nadie apunta y el que más caro sale. -->
+    <div class="lg-crono" id="lgCrono" data-ini="${+ses.ini || 0}">
+      <b>00:00:00</b><em>${bi('EN SESIÓN','IN SESSION')}</em></div>
     <div class="bd-t">${bi('TU DÍA','YOUR DAY')} · <b>${fmtFecha(hoy)}</b>
       <button type="button" class="lg-cerrar-ses" onclick="lgEditaSesion()">${bi('editar','edit')}</button>
       <button type="button" class="lg-cerrar-ses" onclick="lgCierraSesion()">${bi('cerrar','close')}</button></div>
@@ -15786,6 +15840,25 @@ function lgHoy(){
       : deMas ? `<p class="bd-roto">${bi('Pasaste tu tope de trades del día.','You went over your daily trade cap.')}</p>`
       : pnl>=meta ? `<p class="bd-listo">${bi('Objetivo del día cumplido. Lo de más ya es jugar con dinero que era tuyo.','Daily target met. Anything more is playing with money that was yours.')}</p>` : ''}
   </div>`;
+  lgCronoCorre();
+}
+/* el reloj de la sesión: un solo intervalo vivo, se apaga solo cuando el panel
+   deja de existir (cierras el día, te vas de la vista, recargas) */
+let lgCronoT = null;
+function lgCronoCorre(){
+  if(lgCronoT){ clearInterval(lgCronoT); lgCronoT = null; }
+  const pinta = () => {
+    const el = $('#lgCrono');
+    if(!el){ if(lgCronoT){ clearInterval(lgCronoT); lgCronoT = null; } return; }
+    const ini = +el.dataset.ini || 0;
+    if(!ini){ el.querySelector('b').textContent = '00:00:00'; return; }
+    let sg = Math.max(0, Math.floor((Date.now() - ini)/1000));
+    const h = Math.floor(sg/3600), m = Math.floor(sg%3600/60), g = sg%60;
+    const dd2 = n => String(n).padStart(2,'0');
+    el.querySelector('b').textContent = dd2(h)+':'+dd2(m)+':'+dd2(g);
+  };
+  pinta();
+  if($('#lgCrono')) lgCronoT = setInterval(pinta, 1000);
 }
 /* ══ EL REGISTRO DE LAS SESIONES PASADAS ══ (André, 31-ago-2026)
    Los días abiertos se guardaban por fecha y ahí morían: sólo se veía el de
