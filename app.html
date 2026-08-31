@@ -23434,22 +23434,33 @@ if verPanel and barstate.islast
         // la celda de NY en la fila de liquidez ocupa las columnas 3-4
         unido := true
 
-// ═══ 14 · LECTURA DEL MERCADO ══════════════════════════════════
-// Lo que verías tú al abrir el chart, escrito solo: en qué sesión
-// estás y qué suele hacer, si hay estructura o está picado, si el
-// precio está caro o barato dentro del rango del día, qué liquidez
-// queda libre arriba y abajo, si acaban de barrer un extremo, si
-// rompió estructura y en qué zona está parado. Al final, la fila
-// que importa: qué buscar ahora mismo — o que no hay nada que
-// buscar, que también es una lectura.
-gLx = "14 · Lectura del mercado"
-verLx  = input.bool(true, "Panel de lectura", group = gLx, tooltip = "Traduce a palabras lo que ya está dibujado: sesión, estructura, premium/descuento, liquidez libre, barridos, rompimientos y la zona donde está parado el precio. La última fila junta todo en una sola frase.")
-posLx  = input.string("Abajo derecha", "Posición", options = ["Abajo derecha", "Abajo centro", "Abajo izquierda", "Arriba derecha", "Arriba centro", "Arriba izquierda"], inline = "L0", group = gLx)
-tamLx  = input.string("Pequeño", "", options = ["Diminuto", "Pequeño", "Normal"], inline = "L0", group = gLx)
-pivLx  = input.int(5, "Velas del swing", minval = 2, maxval = 30, group = gLx, tooltip = "Cuántas velas a cada lado necesita un pico para contar como swing. Con esos swings se decide si hubo rompimiento de estructura.")
-chopLx = input.int(30, "Velas sin romper = picado", minval = 5, maxval = 200, group = gLx, tooltip = "Si pasan tantas velas sin romper ningún swing, el mercado se declara PICADO y la lectura te dice que te esperes.")
+// ═══ 14 · LA CAZA ══════════════════════════════════════════════
+// TUS DOS FORMAS DE ENTRAR, vigiladas a la vez y avisadas solas.
+//
+//  A · CAZAR LIQUIDEZ — en NY se va por los altos y bajos que ASIA
+//      y LONDRES dejaron sin tocar. Te subes ANTES de que los tome,
+//      a los puntos que digas (25 por default), en la dirección del
+//      viaje. Dos reglas: nada antes de que cierre el ORB (9:45), y
+//      si el nivel lo tomaron antes de esa hora, ese ya no se caza.
+//
+//  B · NIVELES CLAVE — entrar CUANDO el precio llega a una zona que
+//      ya está dibujada: el ORH, el ORL, la mitad del OR o un FVG.
+//      Aquí no te adelantas: esperas a que lo toque.
+//
+// El panel vigila las dos y la fila AHORA dice cuál está lista. Las
+// alertas saltan solas al entrar en zona; para que suenen en el
+// teléfono, crea UNA alerta con "Any alert() function call".
+gLx = "14 · La caza"
+verLx   = input.bool(true, "Panel de la caza", group = gLx, tooltip = "Vigila tus dos entradas: la liquidez de ASIA y LONDRES que sigue viva (te avisa a los puntos que pongas antes del nivel) y los niveles clave ya dibujados (te avisa cuando el precio los toca).")
+posLx   = input.string("Abajo derecha", "Posición", options = ["Abajo derecha", "Abajo centro", "Abajo izquierda", "Arriba derecha", "Arriba centro", "Arriba izquierda"], inline = "L0", group = gLx)
+tamLx   = input.string("Pequeño", "", options = ["Diminuto", "Pequeño", "Normal"], inline = "L0", group = gLx)
+ptsCaza = input.float(25, "A · puntos antes del nivel", minval = 1, step = 5, group = gLx, tooltip = "A cuántos puntos del imán te subes. Con 25, si el LNDN H está en 29,538.75 tu entrada es 29,513.75 y el nivel queda de objetivo.")
+tolNiv  = input.float(3, "B · qué tan cerca es tocar (pts)", minval = 0.25, step = 0.25, group = gLx, tooltip = "Para el ORH, el ORL y el ORM, que son líneas: a cuántos puntos se considera que el precio ya las tocó. Los FVG no lo necesitan, ahí basta con entrar en la caja.")
+avisar  = input.bool(true, "Avisarme al entrar en zona", group = gLx, tooltip = "Manda una alerta cuando el precio entra a una zona de entrada, de cualquiera de las dos formas. Necesita UNA alerta de TradingView con condición Any alert() function call.")
+pivLx   = input.int(5, "Velas del swing", minval = 2, maxval = 30, group = gLx)
+chopLx  = input.int(30, "Velas sin romper = picado", minval = 5, maxval = 200, group = gLx)
 
-// ── ESTRUCTURA · swings y rompimientos ─────────────────────────
+// ── estructura y barridos, para leer el contexto ───────────────
 float lxPH = ta.pivothigh(high, pivLx, pivLx)
 float lxPL = ta.pivotlow(low, pivLx, pivLx)
 var float lxSwH = na
@@ -23469,15 +23480,11 @@ if not na(lxSwL) and close < lxSwL
     lxBarBOS := bar_index
     lxSwL := na
 
-// ── BARRIDOS · un extremo vivo que deja de estarlo ─────────────
-// Los campos de un objeto no se pueden mirar con [1], así que el
-// estado anterior se guarda a mano.
+// los campos de un objeto no admiten [1]: el estado anterior a mano
 var bool lxAH = false
 var bool lxAL = false
 var bool lxLH = false
 var bool lxLL = false
-var bool lxNH = false
-var bool lxNL = false
 var int    lxBarSweep = na
 var string lxSweep = ""
 if lxAH and not kzA.hiVivo
@@ -23492,18 +23499,74 @@ if lxLH and not kzL.hiVivo
 if lxLL and not kzL.loVivo
     lxBarSweep := bar_index
     lxSweep := txtL + " L"
-if lxNH and not kzN.hiVivo
-    lxBarSweep := bar_index
-    lxSweep := txtN + " H"
-if lxNL and not kzN.loVivo
-    lxBarSweep := bar_index
-    lxSweep := txtN + " L"
 lxAH := kzA.hiVivo
 lxAL := kzA.loVivo
 lxLH := kzL.hiVivo
 lxLL := kzL.loVivo
-lxNH := kzN.hiVivo
-lxNL := kzN.loVivo
+
+// ── A · LAS PRESAS ─────────────────────────────────────────────
+// Solo ASIA y LONDRES, y solo lo que sigue vivo: en cuanto un nivel
+// se toma deja de estar vivo y sale solo de la lista, que es justo
+// tu regla de "si la toma antes, ni modo".
+float lxObjH = na
+string lxObjHn = ""
+float lxObjL = na
+string lxObjLn = ""
+if useA and kzA.activa
+    if kzA.hiVivo and kzA.hiLn.get_y1() > close and (na(lxObjH) or kzA.hiLn.get_y1() < lxObjH)
+        lxObjH := kzA.hiLn.get_y1()
+        lxObjHn := txtA + " H"
+    if kzA.loVivo and kzA.loLn.get_y1() < close and (na(lxObjL) or kzA.loLn.get_y1() > lxObjL)
+        lxObjL := kzA.loLn.get_y1()
+        lxObjLn := txtA + " L"
+if useL and kzL.activa
+    if kzL.hiVivo and kzL.hiLn.get_y1() > close and (na(lxObjH) or kzL.hiLn.get_y1() < lxObjH)
+        lxObjH := kzL.hiLn.get_y1()
+        lxObjHn := txtL + " H"
+    if kzL.loVivo and kzL.loLn.get_y1() < close and (na(lxObjL) or kzL.loLn.get_y1() > lxObjL)
+        lxObjL := kzL.loLn.get_y1()
+        lxObjLn := txtL + " L"
+
+float lxEntH = na(lxObjH) ? na : lxObjH - ptsCaza
+float lxEntL = na(lxObjL) ? na : lxObjL + ptsCaza
+bool lxZonaH = not na(lxObjH) and close >= lxEntH and close < lxObjH
+bool lxZonaL = not na(lxObjL) and close <= lxEntL and close > lxObjL
+
+// la ventana: NY y con el ORB ya cerrado
+bool lxVentana = tN and not tO and not na(orh) and orh > orl
+
+// ── B · NIVELES CLAVE ──────────────────────────────────────────
+// Los que ya están dibujados: los tres del OR y los FVG del TF del
+// grupo 5. En las líneas se usa la tolerancia; en los FVG basta con
+// estar dentro de la caja.
+string lxNivN = ""
+float lxNivP = na
+if not na(orh) and math.abs(close - orh) <= tolNiv
+    lxNivN := "ORH"
+    lxNivP := orh
+if not na(orl) and math.abs(close - orl) <= tolNiv
+    lxNivN := "ORL"
+    lxNivP := orl
+if not na(orh) and not na(orl)
+    float lxOrm = math.avg(orh, orl)
+    if math.abs(close - lxOrm) <= tolNiv
+        lxNivN := "ORM · mitad del OR"
+        lxNivP := lxOrm
+if array.size(fS) > 0
+    for lxI = 0 to array.size(fS) - 1
+        if close <= array.get(fT, lxI) and close >= array.get(fB, lxI)
+            lxNivN := "FVG " + (array.get(fS, lxI) == 1 ? "↑" : "↓") + " · " + tfFVG
+            lxNivP := math.avg(array.get(fT, lxI), array.get(fB, lxI))
+bool lxEnNivel = lxNivN != ""
+
+// ── LOS AVISOS ─────────────────────────────────────────────────
+// Solo al ENTRAR a la zona, no en cada vela que siga dentro.
+if avisar and lxVentana and lxZonaH and not lxZonaH[1]
+    alert("NP A+ · CAZA ↑ — entrada en " + str.tostring(lxEntH, format.mintick) + " para ir por " + lxObjHn + " (" + str.tostring(lxObjH, format.mintick) + "), " + str.tostring(lxObjH - close, "#.#") + " pts de recorrido.", alert.freq_once_per_bar)
+if avisar and lxVentana and lxZonaL and not lxZonaL[1]
+    alert("NP A+ · CAZA ↓ — entrada en " + str.tostring(lxEntL, format.mintick) + " para ir por " + lxObjLn + " (" + str.tostring(lxObjL, format.mintick) + "), " + str.tostring(close - lxObjL, "#.#") + " pts de recorrido.", alert.freq_once_per_bar)
+if avisar and lxVentana and lxEnNivel and not lxEnNivel[1]
+    alert("NP A+ · NIVEL — el precio llegó a " + lxNivN + " (" + str.tostring(lxNivP, format.mintick) + "). Es tu zona de entrada por niveles.", alert.freq_once_per_bar)
 
 var table lxT = table.new(posLx == "Abajo centro" ? position.bottom_center : posLx == "Abajo izquierda" ? position.bottom_left : posLx == "Arriba derecha" ? position.top_right : posLx == "Arriba centro" ? position.top_center : posLx == "Arriba izquierda" ? position.top_left : position.bottom_right, 2, 9, chart.bg_color, chart.fg_color, 2, chart.fg_color, 1)
 lxTam = tamLx == "Diminuto" ? size.tiny : tamLx == "Normal" ? size.normal : size.small
@@ -23514,99 +23577,42 @@ f_lx(int fi, string etq, string txt, color c) =>
     0
 
 if verLx and barstate.islast and dibujable
-    // 1 · SESIÓN y su carácter
-    string lxSesN = tO ? txtO : tN ? txtN : tA ? txtA : tL ? txtL : ""
-    string lxSesC = tO ? "se forma el rango de apertura" : tN ? "expansión · el día se define aquí" : tA ? "rango · acumula y deja mechas" : tL ? "manipulación · suele barrer a Asia" : "sin sesión · el mercado descansa"
-    f_lx(0, "Sesión", (lxSesN == "" ? "—" : lxSesN + " · ") + lxSesC, lxSesN == "" ? color.gray : tN or tO ? pAlza : tL ? pSuave : colA)
+    f_lx(0, "Caza ↑", na(lxObjH) ? "no queda nada vivo arriba" : lxObjHn + " " + str.tostring(lxObjH, format.mintick) + " · entras en " + str.tostring(lxEntH, format.mintick) + (lxZonaH ? "  ◄ AQUÍ" : " · a " + str.tostring(math.abs(close - lxEntH), "#.#") + " pts"), na(lxObjH) ? color.gray : lxZonaH ? pAlza : chart.fg_color)
+    f_lx(1, "Caza ↓", na(lxObjL) ? "no queda nada vivo abajo" : lxObjLn + " " + str.tostring(lxObjL, format.mintick) + " · entras en " + str.tostring(lxEntL, format.mintick) + (lxZonaL ? "  ◄ AQUÍ" : " · a " + str.tostring(math.abs(close - lxEntL), "#.#") + " pts"), na(lxObjL) ? color.gray : lxZonaL ? pBaja : chart.fg_color)
+    f_lx(2, "Nivel clave", lxEnNivel ? "EN " + lxNivN + "  ◄ AQUÍ" : "el precio no está en ninguno", lxEnNivel ? pAcento : color.gray)
+    f_lx(3, "Ventana", tO ? "se está formando el ORB · aún no" : not tN ? "fuera de NY · no se caza" : na(orh) ? "sin ORB todavía" : "abierta · ya puedes", lxVentana ? pAlza : pSuave)
 
-    // 2 · ESTRUCTURA
     bool lxChop = na(lxBarBOS) or (bar_index - lxBarBOS) > chopLx
-    string lxEstT = lxChop ? "PICADO · sin rompimientos, no fuerces" : lxSesgo == 1 ? "ALCISTA · rompió al alza hace " + str.tostring(bar_index - lxBarBOS) + " velas" : "BAJISTA · rompió a la baja hace " + str.tostring(bar_index - lxBarBOS) + " velas"
-    f_lx(1, "Estructura", lxEstT, lxChop ? pSuave : lxSesgo == 1 ? pAlza : pBaja)
-
-    // 3 · PREMIUM / DESCUENTO sobre el rango del día
-    float lxH = rngDh
-    float lxL = rngDl
-    float lxEq = na(lxH) or na(lxL) ? na : (lxH + lxL) / 2
-    float lxPct = na(lxH) or na(lxL) or lxH == lxL ? na : (close - lxL) / (lxH - lxL) * 100
-    string lxZonaT = na(lxPct) ? "—" : lxPct >= 70 ? "PREMIUM · caro, aquí se vende" : lxPct <= 30 ? "DESCUENTO · barato, aquí se compra" : "EQUILIBRIO · el peor lugar para entrar"
-    color lxZonaC = na(lxPct) ? color.gray : lxPct >= 70 ? pBaja : lxPct <= 30 ? pAlza : pSuave
-    f_lx(2, "Precio", (na(lxPct) ? "" : str.tostring(lxPct, "#") + "% del rango · ") + lxZonaT, lxZonaC)
-
-    // 4 y 5 · LIQUIDEZ libre, la más cercana de cada lado
-    string lxArr = ""
-    float lxArrD = 1e12
-    string lxAba = ""
-    float lxAbaD = 1e12
-    if useA and kzA.activa
-        if kzA.hiVivo and kzA.hiLn.get_y1() > close and kzA.hiLn.get_y1() - close < lxArrD
-            lxArrD := kzA.hiLn.get_y1() - close
-            lxArr := txtA + " H " + str.tostring(kzA.hiLn.get_y1(), format.mintick)
-        if kzA.loVivo and kzA.loLn.get_y1() < close and close - kzA.loLn.get_y1() < lxAbaD
-            lxAbaD := close - kzA.loLn.get_y1()
-            lxAba := txtA + " L " + str.tostring(kzA.loLn.get_y1(), format.mintick)
-    if useL and kzL.activa
-        if kzL.hiVivo and kzL.hiLn.get_y1() > close and kzL.hiLn.get_y1() - close < lxArrD
-            lxArrD := kzL.hiLn.get_y1() - close
-            lxArr := txtL + " H " + str.tostring(kzL.hiLn.get_y1(), format.mintick)
-        if kzL.loVivo and kzL.loLn.get_y1() < close and close - kzL.loLn.get_y1() < lxAbaD
-            lxAbaD := close - kzL.loLn.get_y1()
-            lxAba := txtL + " L " + str.tostring(kzL.loLn.get_y1(), format.mintick)
-    if useN and kzN.activa
-        if kzN.hiVivo and kzN.hiLn.get_y1() > close and kzN.hiLn.get_y1() - close < lxArrD
-            lxArrD := kzN.hiLn.get_y1() - close
-            lxArr := txtN + " H " + str.tostring(kzN.hiLn.get_y1(), format.mintick)
-        if kzN.loVivo and kzN.loLn.get_y1() < close and close - kzN.loLn.get_y1() < lxAbaD
-            lxAbaD := close - kzN.loLn.get_y1()
-            lxAba := txtN + " L " + str.tostring(kzN.loLn.get_y1(), format.mintick)
-    f_lx(3, "Imán ↑", lxArr == "" ? "nada libre arriba" : lxArr + " · a " + str.tostring(lxArrD, "#.#") + " pts", lxArr == "" ? color.gray : pAlza)
-    f_lx(4, "Imán ↓", lxAba == "" ? "nada libre abajo" : lxAba + " · a " + str.tostring(lxAbaD, "#.#") + " pts", lxAba == "" ? color.gray : pBaja)
-
-    // 6 · BARRIDO reciente
+    f_lx(4, "Estructura", lxChop ? "PICADO · sin rompimientos" : lxSesgo == 1 ? "ALCISTA · rompió al alza hace " + str.tostring(bar_index - lxBarBOS) + " velas" : "BAJISTA · rompió a la baja hace " + str.tostring(bar_index - lxBarBOS) + " velas", lxChop ? pSuave : lxSesgo == 1 ? pAlza : pBaja)
+    float lxPct = na(rngDh) or na(rngDl) or rngDh == rngDl ? na : (close - rngDl) / (rngDh - rngDl) * 100
+    f_lx(5, "Precio", na(lxPct) ? "—" : str.tostring(lxPct, "#") + "% del rango · " + (lxPct >= 70 ? "PREMIUM · caro" : lxPct <= 30 ? "DESCUENTO · barato" : "EQUILIBRIO"), na(lxPct) ? color.gray : lxPct >= 70 ? pBaja : lxPct <= 30 ? pAlza : pSuave)
     bool lxHayS = not na(lxBarSweep) and (bar_index - lxBarSweep) <= 20
-    f_lx(5, "Barrido", lxHayS ? "tomaron " + lxSweep + " hace " + str.tostring(bar_index - lxBarSweep) + " velas · busca la vuelta" : na(lxBarSweep) ? "nadie ha barrido hoy" : "el último fue hace rato (" + lxSweep + ")", lxHayS ? pSuave : color.gray)
+    f_lx(6, "Barrido", lxHayS ? "tomaron " + lxSweep + " hace " + str.tostring(bar_index - lxBarSweep) + " velas" : na(lxBarSweep) ? "nadie ha barrido hoy" : "el último fue hace rato (" + lxSweep + ")", lxHayS ? pSuave : color.gray)
+    f_lx(7, "ORB", na(orh) or na(orl) ? "aún sin ORB" : close > orh ? "roto ↑ · +" + str.tostring(close - orh, "#.#") + " pts" : close < orl ? "roto ↓ · " + str.tostring(orl - close, "#.#") + " pts" : "dentro · " + str.tostring(orh - orl, "#.#") + " pts de rango", na(orh) ? color.gray : close > orh ? pAlza : close < orl ? pBaja : pSuave)
 
-    // 7 · ZONA donde está parado
-    string lxZ = ""
-    if not na(orh) and not na(orl) and close <= orh and close >= orl
-        lxZ := "dentro del ORB"
-    if array.size(fS) > 0
-        for i = 0 to array.size(fS) - 1
-            if close <= array.get(fT, i) and close >= array.get(fB, i)
-                lxZ := (lxZ == "" ? "" : lxZ + " · ") + "en el FVG " + (array.get(fS, i) == 1 ? "↑" : "↓")
-    f_lx(6, "Zona", lxZ == "" ? "en el aire, sin zona" : lxZ, lxZ == "" ? color.gray : pAcento)
-
-    // 8 · ORB del día
-    string lxOrb = na(orh) or na(orl) ? "aún sin ORB" : close > orh ? "roto ↑ · +" + str.tostring(close - orh, "#.#") + " pts sobre el ORH" : close < orl ? "roto ↓ · " + str.tostring(orl - close, "#.#") + " pts bajo el ORL" : "dentro · " + str.tostring(orh - orl, "#.#") + " pts de rango"
-    f_lx(7, "ORB", lxOrb, na(orh) ? color.gray : close > orh ? pAlza : close < orl ? pBaja : pSuave)
-
-    // 9 · LA CONCLUSIÓN
+    // ── LA ORDEN DEL DÍA · las dos formas, en una frase ────────
     string lxPlan = ""
     color lxPlanC = color.gray
-    if not tN and not tO
-        lxPlan := "fuera de tu ventana · solo observa"
-    else if lxChop
-        lxPlan := "picado · espera a que rompa algo"
+    if not lxVentana
+        lxPlan := tO ? "espera a que cierre el ORB (9:45)" : not tN ? "fuera de tu ventana · solo observa" : "espera el ORB"
         lxPlanC := pSuave
-    else if lxHayS and lxSesgo == 1 and not na(lxPct) and lxPct <= 50
-        lxPlan := "COMPRA: barrieron abajo y va al alza, en zona barata"
+    else if lxZonaH
+        lxPlan := "LARGO · vas por " + lxObjHn + ", " + str.tostring(lxObjH - close, "#.#") + " pts" + (lxEnNivel ? " · y estás en " + lxNivN : "")
         lxPlanC := pAlza
-    else if lxHayS and lxSesgo == -1 and not na(lxPct) and lxPct >= 50
-        lxPlan := "VENTA: barrieron arriba y va a la baja, en zona cara"
+    else if lxZonaL
+        lxPlan := "CORTO · vas por " + lxObjLn + ", " + str.tostring(close - lxObjL, "#.#") + " pts" + (lxEnNivel ? " · y estás en " + lxNivN : "")
         lxPlanC := pBaja
-    else if lxSesgo == 1 and not na(lxPct) and lxPct <= 30
-        lxPlan := "compras: alcista y en descuento · espera tu gatillo"
-        lxPlanC := pAlza
-    else if lxSesgo == -1 and not na(lxPct) and lxPct >= 70
-        lxPlan := "ventas: bajista y en premium · espera tu gatillo"
-        lxPlanC := pBaja
-    else if not na(lxPct) and lxPct > 30 and lxPct < 70
-        lxPlan := "en equilibrio · deja que vaya a un extremo"
-        lxPlanC := pSuave
+    else if lxEnNivel
+        lxPlan := "en " + lxNivN + " · entrada por nivel, espera tu confirmación"
+        lxPlanC := pAcento
+    else if na(lxObjH) and na(lxObjL)
+        lxPlan := "ya barrieron ASIA y LONDRES · hoy no hay presa"
+        lxPlanC := color.gray
     else
-        lxPlan := lxSesgo == 1 ? "alcista pero caro · no persigas" : "bajista pero barato · no persigas"
-        lxPlanC := pSuave
-    f_lx(8, "QUÉ BUSCAR", lxPlan, lxPlanC)
+        bool lxCercaH = not na(lxEntH) and (na(lxEntL) or math.abs(close - lxEntH) <= math.abs(close - lxEntL))
+        lxPlan := lxCercaH ? "espera a " + str.tostring(lxEntH, format.mintick) + " para ir por " + lxObjHn : "espera a " + str.tostring(lxEntL, format.mintick) + " para ir por " + lxObjLn
+        lxPlanC := chart.fg_color
+    f_lx(8, "AHORA", lxPlan, lxPlanC)
  `;
 const ALGO_PINE_KZP_ESTRUCTURA = `// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
 // Idea de killzones con H/L derivada de "ICT Killzones & Pivots [TFO]" © tradeforopp.
