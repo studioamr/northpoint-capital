@@ -21832,20 +21832,17 @@ tzPlan   = input.string("America/Mexico_City", "Zona horaria de tu rutina", grou
 h1 = input.string("07:00", "Premarket", inline = "T1", group = g3)
 h2 = input.string("07:30", "Opening NY", inline = "T1", group = g3)
 h3 = input.string("07:45", "ORB + Entry", inline = "T2", group = g3)
-h4 = input.string("09:00", "Cierre", inline = "T2", group = g3)
-h5 = input.string("14:00", "Fin del día", inline = "T3", group = g3, tooltip = "14:00 Morelia = 16:00 NY (cierre del mercado). La etapa CIERRE dura de la hora Cierre hasta aquí; después el panel dice que el día terminó.")
+h4 = input.string("14:00", "Cierra NY", inline = "T2", group = g3, tooltip = "El final de tu ventana: 14:00 de Morelia = 16:00 NY, el cierre del mercado. Tu día es PREMARKET 07:00 → OPENING 07:30 (9:30 NY, se forma el ORB) → 07:45 se abre TU VENTANA (9:45 NY) y tradeas hasta aquí.")
 eFt = input.string("FUERA DEL GRÁFICO", "0", inline = "R0", group = g3)
 eFc = input.string("Aún no es hora. Ni abras el gráfico.", "", inline = "R0", group = g3)
 e1t = input.string("PREMARKET", "1", inline = "R1", group = g3)
 e1c = input.string("Marca niveles y observa. CERO entradas.", "", inline = "R1", group = g3)
 e2t = input.string("OPENING NY", "2", inline = "R2", group = g3)
 e2c = input.string("Se está formando el ORB. Todavía NO.", "", inline = "R2", group = g3)
-e3t = input.string("ORB + ENTRY", "3", inline = "R3", group = g3)
-e3c = input.string("Tu única ventana. Espera TU setup. 1 trade.", "", inline = "R3", group = g3)
-e4t = input.string("CIERRE", "4", inline = "R4", group = g3)
-e4c = input.string("Se acabó por hoy. Cierra la plataforma.", "", inline = "R4", group = g3)
-e5t = input.string("DÍA TERMINADO", "5", inline = "R5", group = g3)
-e5c = input.string("NY cerró. Nos vemos mañana.", "", inline = "R5", group = g3)
+e3t = input.string("TU VENTANA", "3", inline = "R3", group = g3)
+e3c = input.string("Ya puedes tradear. Espera TU setup. 1 trade.", "", inline = "R3", group = g3)
+e4t = input.string("DÍA TERMINADO", "4", inline = "R4", group = g3)
+e4c = input.string("NY cerró. Nos vemos mañana.", "", inline = "R4", group = g3)
 eWt = input.string("FIN DE SEMANA", "S", inline = "RS", group = g3)
 eWc = input.string("No hay mercado. Descansa.", "", inline = "RS", group = g3)
 sesDia = input.session("2000-1600", "Sesión TOTAL (overall)", group = g3, tooltip = "Para la fila TOTAL del panel: de la apertura de ASIA al cierre de NY (hora NY).")
@@ -21909,7 +21906,7 @@ maTog = input.bool(false, "", inline = "MA6", group = g6)
 // Para que lleguen a tu teléfono crea UNA alerta de TradingView
 // con condición "Any alert() function call".
 g7 = "7 · Alertas de horario"
-agendaTxt = input.text_area("06:30 Despierta · revisa las noticias del día\\n06:55 En 5 min: PREMARKET\\n07:25 En 5 min: OPENING NY · solo observa\\n07:40 En 5 min se abre TU ventana\\n08:45 15 min para el cierre de tu ventana\\n09:00 CIERRE · sin trade también es un buen día\\n13:55 En 5 min cierra NY", "Una por línea: HH:MM y el texto", group = g7, tooltip = "Escribe las que quieras, una por renglón, empezando con la hora en formato HH:MM. Borra un renglón para quitar esa alerta. Para que SUENEN en el teléfono crea UNA alerta de TradingView con condición Any alert() function call.")
+agendaTxt = input.text_area("06:30 Despierta · revisa las noticias del día\\n06:55 En 5 min: PREMARKET\\n07:25 En 5 min: OPENING NY · solo observa\\n07:40 En 5 min se abre TU ventana\\n13:30 30 min para el cierre · cuida lo del día\\n13:55 En 5 min cierra NY", "Una por línea: HH:MM y el texto", group = g7, tooltip = "Escribe las que quieras, una por renglón, empezando con la hora en formato HH:MM. Borra un renglón para quitar esa alerta. Para que SUENEN en el teléfono crea UNA alerta de TradingView con condición Any alert() function call.")
 
 // ═══ PALETA: de 5 papeles salen TODOS los colores ══════════════
 // pAlza  → NY, FVG alcista, objetivos alcistas, señal ▲, cifras en verde
@@ -22817,8 +22814,7 @@ if verPanel and barstate.islast
     int mPre  = f_mins(h1, 420)
     int mOpen = f_mins(h2, 450)
     int mOrb  = f_mins(h3, 465)
-    int mFin  = f_mins(h4, 540)
-    int mDia  = f_mins(h5, 840)
+    int mFin  = f_mins(h4, 840)
     int dowNow = dayofweek(timenow, tzPlan)
     bool finde = dowNow == dayofweek.saturday or dowNow == dayofweek.sunday
 
@@ -22837,29 +22833,25 @@ if verPanel and barstate.islast
         consejo := eFc
         cEtapa := color.gray
     else if mdNow < mOpen
-        etapa := "1/5 " + e1t + " · " + h1 + "–" + h2
-        etapaTit := "1/5 " + e1t
+        etapa := "1/4 " + e1t + " · " + h1 + "–" + h2
+        etapaTit := "1/4 " + e1t
         consejo := e1c
         cEtapa := pSuave
     else if mdNow < mOrb
-        etapa := "2/5 " + e2t + " · " + h2 + "–" + h3
-        etapaTit := "2/5 " + e2t
+        etapa := "2/4 " + e2t + " · " + h2 + "–" + h3
+        etapaTit := "2/4 " + e2t
         consejo := e2c
         cEtapa := pAcento
     else if mdNow < mFin
-        etapa := "3/5 " + e3t + " · quedan " + f_dur(mFin - mdNow)
-        etapaTit := "3/5 " + e3t
+        // de 9:45 a 16:00 NY: la ventana ya no se corta a media mañana
+        etapa := "3/4 " + e3t + " · quedan " + f_dur(mFin - mdNow)
+        etapaTit := "3/4 " + e3t
         consejo := e3c
         cEtapa := pAlza
-    else if mdNow < mDia
-        etapa := "4/5 " + e4t + " · hasta " + h5
-        etapaTit := "4/5 " + e4t
-        consejo := e4c
-        cEtapa := pBaja
     else
-        etapa := "5/5 " + e5t
-        etapaTit := "5/5 " + e5t
-        consejo := e5c
+        etapa := "4/4 " + e4t
+        etapaTit := "4/4 " + e4t
+        consejo := e4c
         cEtapa := color.gray
 
     // ── fase del contrato de 30 días + escalera diaria del plan:
@@ -23067,7 +23059,7 @@ if verPanel and barstate.islast
     table.cell(panel, 0, 1, "Sesión", text_color = color.gray, text_size = tamTxt)
     table.cell(panel, 1, 1, sesTxt, text_color = cSes, text_size = tamTxt, tooltip = "Sesión en curso y cuánto le queda; si no hay ninguna, cuál abre y en cuánto (hora NY).")
     table.cell(panel, 0, 2, "Rutina", text_color = color.gray, text_size = tamTxt)
-    table.cell(panel, 1, 2, etapa + "\\n" + consejo, text_color = cEtapa == color.gray ? chart.fg_color : cEtapa, bgcolor = color.new(cEtapa, 88), text_size = tamTxt, tooltip = "Itinerario (" + tzPlan + "): " + h1 + " premarket · " + h2 + " opening NY · " + h3 + " ORB + entry · " + h4 + " cierre · " + h5 + " fin del día. Horas y textos editables en config (grupo 3).")
+    table.cell(panel, 1, 2, etapa + "\\n" + consejo, text_color = cEtapa == color.gray ? chart.fg_color : cEtapa, bgcolor = color.new(cEtapa, 88), text_size = tamTxt, tooltip = "Tu día (" + tzPlan + "): " + h1 + " premarket · " + h2 + " opening NY, se forma el ORB · " + h3 + " se abre tu ventana · " + h4 + " cierra NY. Horas y textos editables en config (grupo 3).")
     if verContrato
         string tipFase = "Lock in 30 días. La meta del día viene en RANGO: el primer número es cerrar con un 1:1 —que ya es día ganado— y el segundo con un 1:2, el día redondo. Los dos salen del riesgo por trade del grupo 4. Abajo van las 3 fases con sus fechas, su escalera y su regla de tamaño (▶ = en la que vas · ✓ = ya pasó). Si pasas la eval antes, adelanta BUFFER empieza en config. Fechas y reglas editables (grupo 4)."
         table.cell(panel, 0, 3, "Fase", text_color = color.gray, text_size = tamTxt)
