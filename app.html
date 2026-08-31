@@ -15557,9 +15557,32 @@ window.lgAbreSesion = function(){
 let lgEditando = false;
 window.lgEditaSesion = function(){ lgEditando = true; lgHoy(); };
 window.lgCancelaEdita = function(){ lgEditando = false; lgHoy(); };
+/* ══ CERRAR GUARDA, NO TIRA ══ (André, 31-ago-2026)
+   «Cerrar» borraba la sesión del día: el día que acababas de operar se perdía
+   y no llegaba nunca al registro. Y el registro sólo veía días ANTERIORES, así
+   que el de hoy no aparecía ni cerrándolo.
+   Ahora cerrar SELLA: se guarda con el resultado que tuvo en ese momento —P&L,
+   drawdown, cuántos trades y si cumpliste o rompiste— y pasa al historial de
+   inmediato. Se guarda el resultado calculado, no una consulta viva, porque si
+   abres otra sesión el mismo día los trades ya no distinguirían una de otra. */
 window.lgCierraSesion = function(){
-  if(!confirm(bi('¿Cerrar la sesión del día? Podrás abrir otra.','Close the day session? You can open another.'))) return;
-  delete lgSesiones()[todayISO()]; lgEditando = false; save(); lgHoy();
+  const ses = lgSesionHoy(); if(!ses) return;
+  if(!confirm(bi('¿Cerrar el día? Se guarda en tu registro con el resultado de ahorita, y puedes abrir otra sesión.',
+                 'Close the day? It is saved to your log with the result so far, and you can open another session.'))) return;
+  const hoy = todayISO();
+  const r = lgDiaResumen(hoy, ses);
+  if(!Array.isArray(S.lgCerradas)) S.lgCerradas = [];
+  S.lgCerradas.unshift({
+    id: 'ls_' + Math.random().toString(36).slice(2,9),
+    fecha: hoy, tp: ses.tp, dd: ses.dd, maxT: ses.trades || 0,
+    ini: ses.ini || null, fin: Date.now(),
+    pnl: r.pnl, ddReal: r.dd, n: r.n, estado: r.estado,
+  });
+  if(S.lgCerradas.length > 120) S.lgCerradas.length = 120;
+  delete lgSesiones()[hoy]; lgEditando = false;
+  save(); lgHoy(); lgHistorial();
+  toast(bi('Día cerrado · ' + fmt$(r.pnl, true) + ' · guardado en tu registro',
+           'Day closed · ' + fmt$(r.pnl, true) + ' · saved to your log'));
 };
 /* ── EL PANEL DE HOY ── objetivo, límite y trades, con tu avance vivo. El
    drawdown es el peor bajón desde un máximo de la curva de hoy, que es como
@@ -15709,14 +15732,23 @@ function lgBalancePanel(){
 function lgHistorial(){
   const host = $('#lgHist'); if(!host) return;
   const hoy = todayISO();
-  const dias = Object.keys(lgSesiones()).filter(f => f !== hoy).sort().reverse().slice(0, 30);
-  if(!dias.length){
+  /* las SELLADAS mandan: traen el resultado con el que se cerraron. Las de días
+     anteriores que quedaron abiertas se calculan al vuelo, para no perder lo
+     que ya había antes de que cerrar sellara. */
+  const selladas = (Array.isArray(S.lgCerradas) ? S.lgCerradas : []).map(c => ({
+    f: c.fecha, sellada: true, ses: { tp:c.tp, dd:c.dd, trades:c.maxT },
+    r: { pnl:c.pnl, dd:c.ddReal, n:c.n, estado:c.estado,
+         roto:c.estado==='roto', listo:c.estado==='listo', deMas:c.estado==='demas' },
+  }));
+  const abiertas = Object.keys(lgSesiones()).filter(f => f !== hoy).sort().reverse()
+    .map(f => ({ f, sellada:false, ses: lgSesiones()[f], r: lgDiaResumen(f, lgSesiones()[f]) }));
+  const R = selladas.concat(abiertas).slice(0, 30);
+  if(!R.length){
     host.innerHTML = `<div class="bd-t">${bi('SESIONES PASADAS','PAST SESSIONS')}</div>
-      <p class="lg-abrir-p">${bi('Todavía no cierras ningún día. El primero que abras aparece aquí mañana.',
-        'You have not finished a day yet. The first one you open shows up here tomorrow.')}</p>`;
+      <p class="lg-abrir-p">${bi('Todavía no cierras ningún día. Cierra el de hoy y aparece aquí.',
+        'You have not closed a day yet. Close today and it shows up here.')}</p>`;
     host.hidden = false; return;
   }
-  const R = dias.map(f => ({ f, ses: lgSesiones()[f], r: lgDiaResumen(f, lgSesiones()[f]) }));
   const cumplidos = R.filter(x => x.r.listo).length;
   const rotos     = R.filter(x => x.r.roto).length;
   const suma      = R.reduce((a,x) => a + x.r.pnl, 0);
@@ -15728,9 +15760,9 @@ function lgHistorial(){
       <span><i>${bi('SUMA','TOTAL')}</i><b class="${suma>=0?'ok':'mal'}">${fmt$(suma,true)}</b></span>
     </div>
     <div class="lg-hist-tabla">
-      ${R.map(({f, ses, r}) => `
+      ${R.map(({f, ses, r, sellada}) => `
         <div class="lg-hist-fila ${r.estado}">
-          <span class="lgh-f">${esc(fmtFecha(f))}</span>
+          <span class="lgh-f">${esc(fmtFecha(f))}${f === hoy ? ' <em style="font-style:normal;opacity:.6">'+bi('hoy','today')+'</em>' : ''}</span>
           <b class="lgh-p ${r.pnl>=0?'up':'down'}">${fmt$(r.pnl,true)}</b>
           <span class="lgh-n">${bi('objetivo','target')} ${fmt$(ses.tp)}</span>
           <span class="lgh-n ${r.roto?'mal':''}">dd ${fmt$(r.dd,true)} <em>${bi('de','of')} −${fmt$(ses.dd)}</em></span>
