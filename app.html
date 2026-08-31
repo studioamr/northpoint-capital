@@ -23768,7 +23768,6 @@ indicator("NP ESTRUCTURA", "NP ESTRUCTURA", overlay = true, max_lines_count = 50
 // cada cosa desde aquí, sin ir a buscarla grupo por grupo. Lo que
 // apagues no pierde sus ajustes, solo deja de dibujarse.
 gV = "1 · Qué ver"
-verHHLL     = input.bool(true, "Pintar HH · HL · LH · LL en el rango", group = gV, tooltip = "Cada línea del rango se pinta según lo que está pasando: si el alto es más alto que el swing anterior sale HH en verde, si el bajo es más alto sale HL —el higher low que sostiene la subida—, y al revés LH y LL en rojo. Apagado, las dos líneas van del color del rango.")
 inVerTit    = input.bool(true, "Título LONGS / SHORTS del rango", group = gV, tooltip = "El letrero grande que dice de qué lado se busca el trade, sacado de la dirección del rango: si el impulso fue BAJISTA dice SHORTS y se pone ARRIBA del HIGH; si fue ALCISTA dice LONGS y se pone ABAJO del LOW. Va en la misma letra gruesa de los demás nombres.")
 inVerRango  = input.bool(true, "Rango · HIGH y LOW", group = gV, tooltip = "El tramo donde anda el precio: su techo y su piso. Es la base de todo lo demás — el Fibonacci, el FVG del rango y la posición se miden sobre él, así que apagarlo solo esconde las dos líneas.")
 inVerFvgRg  = input.bool(true, "El mejor FVG del rango", group = gV, tooltip = "UN SOLO hueco: el de más confluencia dentro del rango y en la dirección del trade. Es el mismo del que sale la entrada.")
@@ -24480,10 +24479,6 @@ if barstate.islast
         // las pivAOI velas de cada lado
         pvV = array.new_float()
         pvI = array.new_int()
-        // el tipo de cada swing (1 alto, -1 bajo): sin esto no se puede
-        // saber si el extremo de ahora es más alto o más bajo que el
-        // anterior de SU MISMA clase
-        pvT = array.new_int()
         // solo la ventana reciente: si mira demasiado atrás, el HIGH
         // y el LOW se van a niveles viejos y salen de la pantalla
         int desdeV = math.max(pivAOI, n - rgVelas)
@@ -24500,11 +24495,9 @@ if barstate.islast
             if esAlto
                 array.push(pvV, hi)
                 array.push(pvI, i)
-                array.push(pvT, 1)
             if esBajo
                 array.push(pvV, lo)
                 array.push(pvI, i)
-                array.push(pvT, -1)
 
         // ── rango del tramo: alto y bajo de los últimos swings
         float rgH = na
@@ -24553,27 +24546,6 @@ if barstate.islast
                     rgL := low
                     rgLI := n - 1
 
-            // ── HH · HL · LH · LL ─────────────────────────────
-            // El extremo de ahora contra el swing anterior de su misma
-            // clase: si el alto es más alto, HH; si el bajo es más
-            // alto, HL. Con eso cada línea se pinta del color de lo
-            // que está pasando y no del color del rango a secas.
-            float altoAnt = na
-            float bajoAnt = na
-            for i = 0 to m - 1
-                if array.get(pvT, i) == 1 and array.get(pvI, i) < rgHI
-                    altoAnt := array.get(pvV, i)
-                if array.get(pvT, i) == -1 and array.get(pvI, i) < rgLI
-                    bajoAnt := array.get(pvV, i)
-            bool esHH = not na(altoAnt) and rgH > altoAnt
-            bool esLH = not na(altoAnt) and rgH < altoAnt
-            bool esHL = not na(bajoAnt) and rgL > bajoAnt
-            bool esLL = not na(bajoAnt) and rgL < bajoAnt
-            color colRgH = not verHHLL ? colRg : esHH ? pAlza : esLH ? pBaja : colRg
-            color colRgL = not verHHLL ? colRg : esHL ? pAlza : esLL ? pBaja : colRg
-            string sufH = not verHHLL ? "" : esHH ? " · HH" : esLH ? " · LH" : ""
-            string sufL = not verHHLL ? "" : esHL ? " · HL" : esLL ? " · LL" : ""
-
             int tFin = array.get(kT, n - 1) + paso
             // ── rango: cada línea NACE en la mecha que la formó y de
             // ahí va a la derecha, al infinito
@@ -24581,13 +24553,13 @@ if barstate.islast
                 int tH = array.get(kT, rgHI)
                 int tL = array.get(kT, rgLI)
                 string estilo = rgEstilo == "Sólida" ? line.style_solid : rgEstilo == "Rayada" ? line.style_dashed : line.style_dotted
-                rgHLn := line.new(tH, rgH, tFin, rgH, xloc = xloc.bar_time, color = color.new(colRgH, 25), width = rgGrosor, style = estilo, extend = rgInf ? extend.right : extend.none)
-                rgLLn := line.new(tL, rgL, tFin, rgL, xloc = xloc.bar_time, color = color.new(colRgL, 25), width = rgGrosor, style = estilo, extend = rgInf ? extend.right : extend.none)
+                rgHLn := line.new(tH, rgH, tFin, rgH, xloc = xloc.bar_time, color = color.new(colRg, 25), width = rgGrosor, style = estilo, extend = rgInf ? extend.right : extend.none)
+                rgLLn := line.new(tL, rgL, tFin, rgL, xloc = xloc.bar_time, color = color.new(colRg, 25), width = rgGrosor, style = estilo, extend = rgInf ? extend.right : extend.none)
                 // pegados al final de su línea, en negritas y con un
                 // respiro mayor que el de las killzones para que no se
                 // encimen con ellas
-                rgHLb := label.new(tFin + pasoBar * 9, rgH, kzNegrita ? f_negrita("HIGH · " + tfEstSel + sufH) : "HIGH · " + tfEstSel + sufH, xloc = xloc.bar_time, style = label.style_label_left, color = #ffffff00, textcolor = color.new(colRgH, 15), size = size.tiny, tooltip = "Alto del rango · " + tfEstSel + " · " + str.tostring(rgH, format.mintick))
-                rgLLb := label.new(tFin + pasoBar * 9, rgL, kzNegrita ? f_negrita("LOW · " + tfEstSel + sufL) : "LOW · " + tfEstSel + sufL, xloc = xloc.bar_time, style = label.style_label_left, color = #ffffff00, textcolor = color.new(colRgL, 15), size = size.tiny, tooltip = "Bajo del rango · " + tfEstSel + " · " + str.tostring(rgL, format.mintick))
+                rgHLb := label.new(tFin + pasoBar * 9, rgH, kzNegrita ? f_negrita("HIGH · " + tfEstSel) : "HIGH · " + tfEstSel, xloc = xloc.bar_time, style = label.style_label_left, color = #ffffff00, textcolor = color.new(colRg, 15), size = size.tiny, tooltip = "Alto del rango · " + tfEstSel + " · " + str.tostring(rgH, format.mintick))
+                rgLLb := label.new(tFin + pasoBar * 9, rgL, kzNegrita ? f_negrita("LOW · " + tfEstSel) : "LOW · " + tfEstSel, xloc = xloc.bar_time, style = label.style_label_left, color = #ffffff00, textcolor = color.new(colRg, 15), size = size.tiny, tooltip = "Bajo del rango · " + tfEstSel + " · " + str.tostring(rgL, format.mintick))
 
                 // ── DE QUÉ LADO SE BUSCA ──────────────────────────
                 // La dirección ya la sabe el rango: si el LOW es el
