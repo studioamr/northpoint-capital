@@ -1762,11 +1762,35 @@ button.st-chip:hover{border-color:rgba(255,255,255,.45)}
 .lg-abrir-b{width:100%;margin-top:14px}
 /* editar y cerrar, en la misma línea: con float:right el segundo botón se
    caía a un renglón nuevo y tapaba la barra del objetivo. (André, 31-ago) */
-.lg-corte{position:relative;display:flex;align-items:center;gap:10px;margin:8px -14px;
-  padding:9px 16px;background:#000;border-top:1px solid var(--line);border-bottom:1px solid var(--line);
-  font-family:var(--mono);font-size:9px;letter-spacing:.2em;color:rgba(255,255,255,.5)}
-.lg-corte b{margin-left:auto;font-size:11px;letter-spacing:.04em}
-.lg-corte b.up{color:var(--up)} .lg-corte b.down{color:var(--down)}
+/* ── EL CORTE DE UNA SESIÓN ──
+   Negro sólido y con sus cifras: es la línea contra la que comparas una
+   sentada con la siguiente. (André, 31-ago-2026) */
+.lg-corte{position:relative;display:flex;align-items:center;gap:16px;flex-wrap:wrap;
+  margin:8px -14px;padding:11px 16px;background:#000;
+  border-top:1px solid var(--line);border-bottom:1px solid var(--line);
+  font-family:var(--mono)}
+.lg-corte::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;
+  background:rgba(255,255,255,.22)}
+.lg-corte.roto::before{background:var(--down)}
+.lg-corte.listo::before{background:var(--up)}
+.lgc-t{display:flex;flex-direction:column;gap:3px;min-width:96px}
+.lgc-t b{font-size:11px;font-weight:700;letter-spacing:.2em;color:#fff}
+.lgc-t em{font-size:8.5px;font-style:normal;letter-spacing:.14em;color:rgba(255,255,255,.42)}
+.lgc-c{display:flex;flex-direction:column;gap:3px}
+.lgc-c em{font-size:8px;font-style:normal;letter-spacing:.18em;color:rgba(255,255,255,.38)}
+.lgc-c b{font-size:12px;font-weight:700;color:rgba(255,255,255,.9)}
+.lgc-c b.up{color:var(--up)} .lgc-c b.down{color:var(--down)}
+.lgc-e{margin-left:auto;font-size:8.5px;letter-spacing:.2em;color:rgba(255,255,255,.4)}
+.lg-corte.roto .lgc-e{color:var(--down)}
+.lg-corte.listo .lgc-e{color:var(--up)}
+@media(max-width:640px){.lg-corte{gap:12px}.lgc-e{margin-left:0}}
+/* la raya del DÍA, sólo cuando ese día tuvo más de una sesión */
+.lg-corte-dia{display:flex;align-items:baseline;gap:10px;margin:16px -14px 0;
+  padding:9px 16px 7px;background:#000;border-top:2px solid var(--txt);
+  font-family:var(--mono)}
+.lg-corte-dia span{font-size:12px;font-weight:800;letter-spacing:.14em;color:#fff}
+.lg-corte-dia em{font-size:8.5px;font-style:normal;letter-spacing:.16em;color:rgba(255,255,255,.45)}
+.lg-corte-dia+.lg-corte{margin-top:0;border-top:none}
 /* EDITAR y CERRAR eran dos píldoras de 8.5px apretadas contra el borde: para
    cerrar el día había que apuntar a un texto de tres milímetros. Se les da
    tamaño de botón, y CERRAR se distingue porque es el que sella el día. */
@@ -15539,14 +15563,20 @@ function lgDibuja(prog){
   /* sin sesión abierta la curva son semanas seguidas: se marca dónde cerraste
      cada día para que se vea dónde acaba una sesión y empieza la otra */
   if(!ses){
-    const cierres = lgCerradasMias().map(c => c.fecha).sort();
+    /* por SESIÓN, no por día: con dos sesiones el mismo día el corte por fecha
+       ponía una sola raya al final de las dos y no se veía dónde acabó la
+       primera */
     const cortes = [];
-    cierres.forEach(f => {
-      let k = 0;
-      for(let i = 0; i < lista.length; i++) if(lista[i].date <= f) k = i + 1;
-      if(k > 0 && k < lista.length && cortes[cortes.length-1] !== k) cortes.push(k);
+    lgCerradasMias().forEach(c => {
+      let k = -1;
+      for(let i = 0; i < lista.length; i++){
+        const suyo = c.ses ? (lista[i].ses === c.ses) : (lista[i].date <= c.fecha && !lista[i].ses);
+        if(suyo) k = i;
+      }
+      if(k >= 0) k++;   /* el corte va después de su último trade */
+      if(k > 0 && k < lista.length && cortes.indexOf(k) < 0) cortes.push(k);
     });
-    if(cortes.length) opts.cortes = cortes;
+    if(cortes.length) opts.cortes = cortes.sort((a,b)=>a-b);
   }
   pintaCurva($('#lgCanvas'), $('#lgEmpty'), lista.map(t=>t.pnl||0), prog,
     ses ? bi('Sesión abierta · registra tu primer trade.','Session open · log your first trade.')
@@ -15558,16 +15588,54 @@ function lgLog(){
   const host = $('#lgLog'); if(!host) return;
   const list = lgTradesReales();
   /* ══ LA BARRA NEGRA ENTRE SESIONES ══ (André, 31-ago-2026)
-     La lista es un chorro de renglones y no se ve dónde acabó un día y empezó
-     otro: tres pérdidas seguidas se leen igual repartidas en tres sesiones que
-     todas en una tarde. Cada día que CIERRAS deja su barra aquí, con la fecha
-     y cómo acabó — la misma marca que corta la curva. */
-  const corte = {};
-  lgCerradasMias().forEach(c => {
-    let k = -1;
-    for(let i = 0; i < list.length; i++) if(list[i].date <= c.fecha) k = i;
-    if(k >= 0) corte[k] = c;      /* la barra va DESPUÉS de ese trade */
+     La lista es un chorro de renglones y no se ve dónde acabó una sesión y
+     empezó otra: tres pérdidas seguidas se leen igual repartidas en tres
+     sesiones que todas en una sentada. Cada sesión que CIERRAS deja su barra
+     con el MERCADO en el que la abriste (NY, ASIA, LONDON) y sus cifras —P&L,
+     trades, win rate, drawdown—, que es lo que quieres comparar entre una y
+     otra. Y si un día tuvo VARIAS sesiones, encima va la raya del día: sin
+     ella dos barras seguidas parecen dos días y no dos sentadas del mismo. */
+  const corte = {}, porDia = {};
+  const cerr = lgCerradasMias();
+  cerr.forEach(c => { porDia[c.fecha] = (porDia[c.fecha] || 0) + 1; });
+  cerr.forEach(c => {
+    let k = -1, n = 0;
+    for(let i = 0; i < list.length; i++){
+      const suyo = c.ses ? (list[i].ses === c.ses) : (list[i].date <= c.fecha && !list[i].ses);
+      if(suyo){ k = i; n++; }
+    }
+    if(k >= 0) corte[k] = c;      /* la barra va ARRIBA de ese trade en la lista */
   });
+  /* la raya del día va sobre la PRIMERA sesión de un día que tuvo más de una
+     (la primera en orden de lectura = la última del día) */
+  const diaVisto = {};
+  Object.keys(corte).map(Number).sort((a,b)=>b-a).forEach(k => {
+    const f = corte[k].fecha;
+    if(porDia[f] > 1 && !diaVisto[f]){ diaVisto[f] = k; }
+  });
+  const lgBarra = (c, k) => {
+    const suyos = list.filter(t => c.ses ? t.ses === c.ses : (t.date === c.fecha && !t.ses));
+    const w = suyos.filter(t => (t.pnl||0) > 0).length;
+    let eq=0, pico=0, dd=0;
+    suyos.forEach(t => { eq+=(t.pnl||0); if(eq>pico) pico=eq; const q=eq-pico; if(q<dd) dd=q; });
+    const pnl = (c.pnl != null) ? c.pnl : eq;
+    const n = (c.n != null) ? c.n : suyos.length;
+    const cel = (kk,v,cls) => `<span class="lgc-c"><em>${kk}</em><b class="${cls||''}">${v}</b></span>`;
+    const dia = diaVisto[c.fecha] === k
+      ? `<div class="lg-corte-dia"><span>${esc(fmtFecha(c.fecha))}</span>
+           <em>${porDia[c.fecha]} ${bi('sesiones ese día','sessions that day')}</em></div>` : '';
+    return `${dia}<div class="lg-corte ${c.estado||''}" title="${bi('Aquí cerraste la sesión','You closed the session here')}">
+      <span class="lgc-t"><b>${esc(c.mkt || bi('SESIÓN','SESSION'))}</b>
+        <em>${esc(fmtFecha(c.fecha))}</em></span>
+      ${cel(bi('P&L','P&L'), fmt$(pnl,true), pnl>0?'up':pnl<0?'down':'')}
+      ${cel(bi('TRADES','TRADES'), n)}
+      ${cel(bi('WIN RATE','WIN RATE'), n ? Math.round(w/n*100)+'%' : '—')}
+      ${cel(bi('DRAWDOWN','DRAWDOWN'), fmt$((c.ddReal != null ? c.ddReal : dd), true), 'down')}
+      <span class="lgc-e">${c.estado==='roto' ? bi('ROTO','BROKEN')
+        : c.estado==='listo' ? bi('CUMPLIDO','MET')
+        : c.estado==='demas' ? bi('DE MÁS','OVER') : bi('CERRADA','CLOSED')}</span>
+    </div>`;
+  };
   let acc = 0;
   const filas = list.map((t,i)=>{ acc += (t.pnl||0); return {t, acc, i}; })
     .reverse().slice(0,40).map(({t,acc,i})=>{
@@ -15575,10 +15643,7 @@ function lgLog(){
       /* la lista va del más nuevo al más viejo, así que la barra de un cierre
          va ARRIBA de ese trade: todo lo que queda DEBAJO es de la sesión que
          se cerró. Ponerla debajo la metía dentro del día que estaba cerrando. */
-      const barra = corte[i] ? `<div class="lg-corte" title="${bi('Aquí cerraste la sesión','You closed the session here')}">
-          <span>${esc(fmtFecha(corte[i].fecha))} · ${bi('SESIÓN CERRADA','SESSION CLOSED')}</span>
-          <b class="${(corte[i].pnl||0)>=0?'up':'down'}">${fmt$(corte[i].pnl,true)}</b>
-        </div>` : '';
+      const barra = corte[i] ? lgBarra(corte[i], i) : '';
       return `${barra}<div class="bt-log-row">
         <span class="ix">${t.date.slice(8)}/${t.date.slice(5,7)}</span>
         <span class="dir ${t.dir==='S'?'S':'L'}">${t.dir==='S'?'SHORT':'LONG'}</span>
@@ -15686,6 +15751,14 @@ function imgInit(){
   $('#btNomCrear').addEventListener('click', crear);
   $('#btNomIn').addEventListener('keydown', e => { if(e.key==='Enter'){ e.preventDefault(); crear(); } });
 }
+/* los trades que caen dentro de UNA sesión. Con id se pregunta por el id; los
+   viejos no lo traen, así que ahí se cae al día completo — que es exactamente
+   lo que medían antes, sin romper nada de lo ya cerrado. */
+function lgTradesDe(ses, fecha, lista){
+  const L = lista || lgTradesReales();
+  if(ses && ses.id) return L.filter(t => t.ses === ses.id);
+  return L.filter(t => t.date === fecha && !t.ses);
+}
 /* ══ EL INFORME QUE VA DENTRO DE LA LIBRETA ══ (André, 31-ago-2026)
    El trade solo no dice nada: −$500 puede ser el primero de un buen día o el
    que te sacó. Aquí van las dos cosas —el trade y el día en el que cayó— más
@@ -15753,6 +15826,9 @@ function lgAgrega(){
     dir: lgDir==='S'?'S':'L', qty: 1, entry: null, exit: null,
     pnl, setupOk: true, notas: '', shot: null,
     accts, seq: ++S.seqTrade, por: (S.session && S.session.user) || null,
+    /* a qué sesión pertenece: sin esto, dos sesiones del mismo día se miden
+       con los mismos trades y las dos dicen lo mismo */
+    ses: (lgSesionHoy() || {}).id || null,
   }));
   save();
   $('#lgPnl').value = '';
@@ -15854,7 +15930,17 @@ window.lgAbreSesion = function(){
   const antes = lgSesionHoy();
   /* editar NO reinicia el día: se conserva la hora de apertura */
   lgSesiones();   /* inicializa el contenedor */
+  /* ══ VARIAS SESIONES EN UN DÍA ══ (André, 31-ago-2026)
+     Una sesión era «el día» y punto: si operabas Asia en la madrugada y NY en
+     la mañana, los dos bloques caían en la misma bolsa y sus cifras se sumaban
+     como si hubieran sido una sola sentada. No lo son —son dos decisiones de
+     entrar, con su objetivo y su drawdown cada una—. Ahora la sesión lleva ID
+     y el MERCADO en el que la abriste, y cada trade que registras queda
+     etiquetado a la que estaba abierta. Editar no cambia el id: sigue siendo
+     la misma sesión con otros números. */
   S.lgSesion[lgClave(todayISO())] = { tp, dd, trades: tr || 0,
+    id:  (antes && antes.id)  || ('ss_' + Math.random().toString(36).slice(2,9)),
+    mkt: (antes && antes.mkt) || sesionMundial(ahora()).replace(' SESSION','').replace('MARKET CLOSED','OFF'),
     ini: (antes && antes.ini) || Date.now() };
   lgGuardaPreset({ tp, dd, trades: tr || 0 });
   lgEditando = false;
@@ -15887,6 +15973,7 @@ window.lgCierraSesion = function(){
   S.lgCerradas.unshift({
     id: 'ls_' + Math.random().toString(36).slice(2,9),
     fecha: hoy, por: socioEnSesion() || DUENO_ORIGEN,
+    ses: ses.id || null, mkt: ses.mkt || null,
     /* se sella el límite EFECTIVO (ya por el número de cuentas): si mañana
        cierras una cuenta, la fila de ayer sigue midiendo contra lo de ayer */
     tp: r.tp, dd: r.tope, maxT: ses.trades || 0, mult: r.mult,
@@ -15926,7 +16013,7 @@ function lgHoy(){
     </div>`;
     return;
   }
-  const mios = lgTradesReales().filter(t => t.date === hoy);
+  const mios = lgTradesDe(ses, hoy);
   const pnl = mios.reduce((a,t)=>a+(t.pnl||0),0);
   let eq = 0, pico = 0, dd = 0;
   mios.forEach(t => { eq += (t.pnl||0); if(eq>pico) pico=eq; const c2=eq-pico; if(c2<dd) dd=c2; });
@@ -15946,7 +16033,7 @@ function lgHoy(){
          entre «llevo dos trades» y «llevo dos trades en cuatro horas»: el
          tiempo sentado es el dato que nadie apunta y el que más caro sale. -->
     <div class="lg-crono" id="lgCrono" data-ini="${+ses.ini || 0}">
-      <b>00:00:00</b><em>${bi('EN SESIÓN','IN SESSION')}</em></div>
+      <b>00:00:00</b><em>${esc(ses.mkt || sesionMundial(ahora()).split(' ')[0])} · ${bi('EN SESIÓN','IN SESSION')}</em></div>
     <div class="bd-t">${bi('TU DÍA','YOUR DAY')} · <b>${fmtFecha(hoy)}</b>
       <button type="button" class="lg-cerrar-ses" onclick="lgEditaSesion()">${bi('editar','edit')}</button>
       <button type="button" class="lg-cerrar-ses sella" onclick="lgCierraSesion()">${bi('cerrar el día','close the day')}</button></div>
@@ -15997,7 +16084,7 @@ function lgCronoCorre(){
    El drawdown de cada día es el peor bajón desde un máximo de esa curva, que
    es como lo mide una fondeadora — no el peor trade suelto. */
 function lgDiaResumen(fecha, ses){
-  const mios = lgTradesReales().filter(t => t.date === fecha);
+  const mios = lgTradesDe(ses, fecha);
   const pnl = mios.reduce((a,t)=>a+(t.pnl||0),0);
   let eq=0, pico=0, dd=0;
   mios.forEach(t => { eq += (t.pnl||0); if(eq>pico) pico=eq; const c2=eq-pico; if(c2<dd) dd=c2; });
