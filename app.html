@@ -1790,8 +1790,13 @@ button.st-chip:hover{border-color:rgba(255,255,255,.45)}
 .peli-ov{position:fixed;inset:0;z-index:220;background:#05070d;display:flex;flex-direction:column;
   align-items:center;justify-content:center;gap:0;overflow:hidden;padding:0}
 .peli-cuadro{position:relative;width:100%;flex:0 0 auto;background:#05070d}
-.peli-cuadro canvas{display:block;width:100%;height:auto;aspect-ratio:16/9;max-height:58vh;
-  margin:0 auto;object-fit:cover}
+/* EL CUADRO SE LIMITA POR EL ANCHO, NO POR EL ALTO (André, 31-ago-2026):
+   con max-height la caja dejaba de ser 16:9 —ancha y bajita— y object-fit:cover
+   recortaba arriba y abajo. ESO era el zoom que no se iba. Capando el ancho, la
+   caja SIEMPRE es 16:9 y no hay nada que recortar. */
+.peli-cuadro{display:flex;justify-content:center}
+.peli-cuadro canvas{display:block;width:100%;height:auto;aspect-ratio:16/9;
+  max-width:min(100%, calc(56vh * 16 / 9));margin:0 auto;object-fit:fill}
 .peli-in{position:relative;z-index:2;width:100%;max-width:720px;margin:0 auto;
   padding:22px 30px 34px;text-align:left;flex:0 0 auto}
 .peli-kanji{position:absolute;right:30px;top:-58px;font-size:64px;line-height:1;
@@ -7293,7 +7298,12 @@ function show(view){
      la película o de vuelta a la app. */
   if(view === 'batalla' && window._batPortadaVista !== true){
     window._batPortada = true; window._batPortadaVista = true; }
-  if(view !== 'batalla') window._batPortadaVista = false;
+  if(view !== 'batalla'){ window._batPortadaVista = false;
+    /* la película cuelga del body: si te sales de Kuro por el menú hay que
+       bajarla a mano, o se queda tapando la app entera */
+    window._batPeli = null; window._batPortada = false;
+    try{ cancelAnimationFrame(window._peliRAF||0); }catch(e){}
+    const _h = document.getElementById('peliHost'); if(_h) _h.remove(); }
   $$('.view').forEach(v=>v.classList.remove('on'));
   $('#v-'+view).classList.add('on');
   $$('.rail a.item').forEach(a=>a.classList.toggle('on', a.dataset.view===view));
@@ -13348,10 +13358,20 @@ function batPuerta(){
   const A = KURO_PELI[window._batPeli];
   if(!A){ window._batPeli=null; root.classList.remove('puerta'); return false; }
   const ult = window._batPeli >= KURO_PELI.length - 1;
+  /* ── LA PELÍCULA CUELGA DEL BODY (André, 31-ago-2026) ──
+     Vivía dentro de #batRoot, que está en la columna de contenido; esa columna
+     crea su propio contexto de apilado, así que un z-index de 220 ahí adentro
+     no puede pasar por encima del menú lateral, que es su hermano. Por eso el
+     menú se seguía montando encima aunque el número fuera enorme. Colgada del
+     body no hay contexto que la encierre. */
+  root.innerHTML = '';
+  let host = document.getElementById('peliHost');
+  if(!host){ host = document.createElement('div'); host.id='peliHost'; document.body.appendChild(host); }
   const salir = () => { cancelAnimationFrame(window._peliRAF||0); window._batPeli=null;
+    const h = document.getElementById('peliHost'); if(h) h.remove();
     if(!((S.batNinja||{})[yo])) window._batOnb='como';
     renderBatalla(); };
-  root.innerHTML = `<div class="ars-ov peli-ov">
+  host.innerHTML = `<div class="ars-ov peli-ov">
     <div class="peli-cuadro"><canvas id="peliCv" width="1200" height="675"></canvas></div>
     <div class="peli-in">
       <span class="peli-kanji">${esc(A.kanji)}</span>
@@ -13417,6 +13437,8 @@ function renderBatalla(){
   try{ batLimpiaZombi(); }catch(_){}
   try{ if(batPuerta()) return; }catch(e){ window._batPortada=false; window._batPeli=null; }
   const _rt = $('#batRoot'); if(_rt) _rt.classList.remove('puerta');
+  /* fuera de la película no debe quedar su lienzo colgado del body */
+  if(window._batPeli == null){ const h=document.getElementById('peliHost'); if(h) h.remove(); }
   try{ renderBatallaInterno(); }
   catch(e){
     const root = $('#batRoot'); if(!root) return;
