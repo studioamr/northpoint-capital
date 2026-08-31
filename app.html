@@ -11945,7 +11945,9 @@ function zenBigBen(c, W, base, now, H){
   c.fillStyle=LUZ+(0.5+0.4*Math.sin(now/420)).toFixed(2)+')';
   c.beginPath(); c.arc(bx, cy-154*K, 4*K, 0, 7); c.fill();
   /* ── EL PUENTE sobre el Támesis, con sus faroles ── */
-  const py2=base+22*K;
+  /* la calzada A RAS DE SUELO: los ninjas se plantan en base, y con el puente
+     22 px más abajo parecía que peleaban flotando sobre el río. */
+  const py2=base+1;
   c.fillStyle='#0e1621'; c.fillRect(0, py2, W, 16*K);
   for(let i=0;i<7;i++){ const ax=(i+0.5)*(W/7), r=W/17;
     c.beginPath(); c.moveTo(ax-r, py2+16*K);
@@ -11957,8 +11959,9 @@ function zenBigBen(c, W, base, now, H){
     c.fillStyle='rgba(255,196,120,.95)'; c.beginPath(); c.arc(lx, py2-27*K, 4.4*K, 0, 7); c.fill();
     c.fillStyle='rgba(255,196,120,.16)'; c.beginPath(); c.arc(lx, py2-27*K, 15*K, 0, 7); c.fill(); }
   /* el reflejo del reloj temblando en el agua, antes del puente */
-  c.save(); c.globalAlpha=0.20; c.fillStyle='rgba(255,228,166,1)';
-  for(let i=0;i<4;i++) c.fillRect(bx-16*K+Math.sin(now/600+i)*5, base+3*K+i*5*K, 32*K, 2.6*K);
+  /* el resplandor del reloj cayendo sobre la calzada */
+  c.save(); c.globalAlpha=0.13; c.fillStyle='rgba(255,228,166,1)';
+  for(let i=0;i<5;i++) c.fillRect(bx-(26+i*8)*K/2+Math.sin(now/600+i)*4, base-12*K+i*4*K, (26+i*8)*K, 2.4*K);
   c.restore();
 }
 /* ══ NUEVA YORK DE VERDAD ══ Manhattan de noche: tres capas de rascacielos
@@ -12352,18 +12355,16 @@ function zenDibujaEscena(c, W, H, E, now, pet, poderHex, njCfg){
   if(E.playa){ c.fillStyle='rgba(228,206,150,.9)'; c.beginPath(); c.moveTo(0,H); c.lineTo(W,H); c.lineTo(W,base+H*0.14); c.quadraticCurveTo(W*0.5,base+H*0.04,0,base+H*0.16); c.closePath(); c.fill(); }
   c.fillStyle=E.agua; c.fillRect(0,base,W, (E.playa? H*0.16 : H-base));
   for(let i=0;i<7;i++){ const y=base+8+i*13; if(E.playa && y>base+H*0.16) break; c.strokeStyle='rgba(255,255,255,.06)'; c.lineWidth=2; c.beginPath(); c.moveTo(0,y); for(let x=0;x<=W;x+=36) c.lineTo(x,y+Math.sin((x+now*0.05)/58+i)*3); c.stroke(); }
-  /* el reflejo del astro: era un rectángulo de bordes duros —una caja gris
-     flotando en el agua— en cuanto la escena no traía nada que lo tapara.
-     Ahora es una columna que se desvanece. (André, 31-ago-2026) */
-  if(disc){ const rg=c.createLinearGradient(W*disc.x-70,0,W*disc.x+70,0);
-    rg.addColorStop(0, disc.col.replace(/[\d.]+\)$/,'0)'));
-    rg.addColorStop(.5, disc.col.replace(/[\d.]+\)$/,'.16)'));
-    rg.addColorStop(1, disc.col.replace(/[\d.]+\)$/,'0)'));
-    const rv=c.createLinearGradient(0,base,0,H);
-    rv.addColorStop(0,'rgba(0,0,0,1)'); rv.addColorStop(1,'rgba(0,0,0,0)');
-    c.save(); c.fillStyle=rg; c.fillRect(W*disc.x-70,base,140,H-base);
-    c.globalCompositeOperation='destination-out'; c.fillStyle=rv;
-    c.fillRect(W*disc.x-70,base,140,H-base); c.restore(); }
+  /* EL REFLEJO DEL ASTRO (André, 31-ago-2026): primero fue un rectángulo de
+     bordes duros —una caja gris flotando en el río—; el arreglo con
+     destination-out fue peor: BORRABA la escena y dejaba un hueco blanco.
+     Ahora son franjas de agua, cada vez más tenues y más anchas, que es como
+     se refleja la luna de verdad. Sin composición, sin agujeros. */
+  if(disc){ const n=9;
+    for(let i=0;i<n;i++){
+      const y=base+4+i*((H-base)/n), an=52+i*9+Math.sin(now/700+i)*7;
+      c.fillStyle=disc.col.replace(/[\d.]+\)$/, (0.13*(1-i/n)).toFixed(3)+')');
+      c.fillRect(W*disc.x-an/2 + Math.sin(now/900+i*1.7)*6, y, an, 4); } }
   /* ── elementos legendarios de foreground (sobre el agua/tierra) ── */
   if(E.cascada) zenCascada(c, W*0.2, base-H*0.24, base, 12);
   if(E.torii) zenTorii(c, W*0.5, base+H*0.15, 1.25);
