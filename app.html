@@ -24565,7 +24565,8 @@ verToques = input.bool(true, "Marcar los tests del AOI", group = g8, tooltip = "
 obCuerpo  = input.bool(false, "Order Block solo con el cuerpo", group = g8, tooltip = "Prendido usa solo el cuerpo (apertura a cierre), una caja más chica y limpia. Apagado usa la vela completa, mecha a mecha.")
 rgInf     = input.bool(true, "Líneas del rango infinitas", group = g8, tooltip = "Prendido, el HIGH y el LOW se van hasta el infinito por la derecha. Siempre arrancan EN la mecha que los formó — nunca antes de ella — así que la línea nace en el pico y de ahí sigue.")
 rgEstilo  = input.string("Sólida", "Estilo de las líneas H/L", options = ["Punteada", "Rayada", "Sólida"], group = g8, tooltip = "RAYADA por default a propósito: las killzones del otro script pintan líneas SÓLIDAS, así que con el rayado sabes de un vistazo cuál línea es el rango y cuál es liquidez de sesión.")
-rgGrosor  = input.int(1, "Grosor de las líneas H/L", minval = 1, maxval = 4, group = g8)
+rgGrosor  = input.int(3, "Grosor de las líneas H/L", minval = 1, maxval = 4, group = g8)
+rgAmbos   = input.bool(true, "Que crucen TODO el chart (también hacia atrás)", group = g8, tooltip = "Prendido, el HIGH y el LOW del rango se van al infinito por los dos lados: nacen en la mecha que los formó y de ahí cruzan la pantalla completa, hacia adelante y hacia atrás. Apagado, solo siguen hacia la derecha. Necesita que \\"Líneas del rango infinitas\\" esté prendido.")
 col8Prop  = input.bool(false, "Usar MIS colores en el grupo 8", group = g8, tooltip = "Prendido, los colores de abajo mandan aunque tengas puesta una paleta — así el rango y el AOI siempre saltan a la vista. Apagado, se pintan con los colores de la paleta del grupo 0.")
 inColAOI  = input.color(#1c4f82, "AOI", inline = "C8", group = g8)
 inColRg   = input.color(#0a2342, "Rango H/L", inline = "C8", group = g8)
@@ -24601,6 +24602,26 @@ inColTP  = input.color(#2e6da4, "Premio", inline = "C9b", group = g9, tooltip = 
 col9Prop = input.bool(false, "Usar MIS colores en el grupo 9", group = g9, tooltip = "Prendido, los cuatro colores de arriba mandan aunque tengas puesta una paleta. Apagado, el Fib y la posición se pintan con la paleta del grupo 0 — así juegas con los azules sin tocar nada más.")
 objetivo = input.string("Rompimiento", "Objetivo de la posición", options = ["TP1 · 1:1", "TP2 · 1:2", "Rompimiento", "Liquidez más cercana"], group = g9, tooltip = "Con esto se calcula la posición. Cuatro formas de poner el premio: 1:1 y 1:2 salen del riesgo; ROMPIMIENTO es hasta dónde llegó el impulso que salió de la zona; LIQUIDEZ MÁS CERCANA es el primer H o L de killzone que siga sin tomarse más allá del rompimiento. El stop no depende de esto: siempre cuelga del otro lado del Order Block, con su colchón. Los otros tres objetivos siguen calculados y los ves en el tooltip de la etiqueta del RR.")
 colchonSL = input.float(15, "Colchón del stop (% de la zona)", minval = 0, maxval = 60, step = 5, group = g9, tooltip = "Qué tanto pasa el stop del extremo de la zona de entrada, en porcentaje de la altura de esa zona.")
+
+// ── 10 · ESCALERA DE ENTRADAS ──────────────────────────────────
+// (André, 31-ago-2026) No UNA posición, sino UNA POR NIVEL: la
+// primera caja entra en el 0.5, la siguiente en el nivel que sigue, y
+// así hasta el 0.79. Todas cuelgan del MISMO stop —el extremo que
+// originó el tramo— así que mientras más profundo el nivel, más corto
+// el riesgo y más grande el RR. Se acomodan una junto a otra a la
+// derecha de la última vela, igual que la herramienta Short/Long
+// Position de TradingView. Adentro de cada una va su número, el nivel,
+// su confluencia y el RR; la ★ cae sola en la que junta más.
+g10 = "10 · Escalera de entradas"
+inVerEsc = input.bool(true, "Mostrar las cajas (una por nivel)", group = g10, tooltip = "Apagado, a la derecha solo queda la ficha del plan del grupo 9. Prendido, sale la escalera completa: una posición por cada nivel del Fibonacci que caiga entre los dos de abajo, con el mismo stop y el mismo objetivo, para que compares de un vistazo cuánto RR te da entrar más arriba o más abajo.")
+escDesde = input.float(0.5, "De este nivel", minval = 0, maxval = 1, step = 0.005, group = g10, inline = "E1", tooltip = "El tramo de niveles que se convierte en cajas. Solo entran los que estén escritos arriba en \\"Niveles\\" del grupo 9: de fábrica son el 0.5, el 0.62, el 0.705 y el 0.79 — cuatro cajas.")
+escHasta = input.float(0.79, "hasta este", minval = 0, maxval = 1, step = 0.005, group = g10, inline = "E1")
+escTP = input.string("Al break (el extremo)", "El TP de cada caja", options = ["1:1", "1:2", "Al break (el extremo)", "Más allá del break"], group = g10, tooltip = "Dónde termina el premio de TODAS las cajas. 1:1 y 1:2 salen del riesgo de cada nivel, así que cada caja tiene su propio objetivo. AL BREAK es el extremo del tramo, el mismo para todas — el objetivo natural de la estructura. MÁS ALLÁ DEL BREAK lo pasa de largo, tanto como digas en la línea de abajo, que es donde vive la liquidez del otro lado.")
+escMas = input.float(27, "Qué tanto pasa del break (% del rango)", minval = 0, maxval = 300, step = 1, group = g10, tooltip = "Solo cuenta con el objetivo MÁS ALLÁ DEL BREAK. 27% es la extensión que queda justo después del extremo; 100% sería un tramo entero más.")
+escColchon = input.float(0, "Colchón del stop (% del rango)", minval = 0, maxval = 50, step = 2.5, group = g10, tooltip = "Qué tanto pasa el stop del extremo que originó el tramo. En 0 el stop queda EXACTO en el HIGH (o el LOW) del rango, que es como lo traes tú.")
+escAncho = input.int(14, "Ancho de cada caja (velas)", minval = 3, maxval = 100, group = g10, inline = "E2")
+escSep = input.int(2, "Separación", minval = 0, maxval = 20, group = g10, inline = "E2")
+escVerProb = input.bool(true, "Escribir adentro el número, el nivel y la probabilidad", group = g10, tooltip = "El texto que va dentro de la caja del premio: 1/4, el nivel, si le pega un FVG, el porcentaje de confluencia y el RR. El porcentaje NO es un win rate probado: es cuánta confluencia junta ese nivel (FVG, Order Block, AOI, qué tan profundo es, si el precio ya lo pasó y el RR que deja). Sirve para comparar los cuatro entre ellos, no para prometerte nada.")
 
 // ═══ PALETA: de 5 papeles salen TODOS los colores ══════════════
 // pAlza  → NY, FVG alcista, objetivos alcistas, señal ▲, cifras en verde
@@ -24698,6 +24719,7 @@ verAOI = inVerAOI
 verOB = inVerOB
 verFib = inVerFib
 verPlan = inVerPos
+verEsc = inVerEsc
 // las killzones NO se dibujan aquí: se calculan calladas para que la
 // posición pueda apuntar a la liquidez que sigue sin tomarse
 verLblsKZ = verLbls and dibujarKZ
@@ -25138,6 +25160,9 @@ var array<box>   planBx = array.new<box>()
 var array<box>   fvgRgBx = array.new<box>()
 var array<label> fvgRgLb = array.new<label>()
 var label planAviso = na
+// cuántas velas ocupa la escalera: la ficha del plan del grupo 9 se
+// recorre eso a la derecha para no encimarse con ella
+var int escCorr = 0
 
 
 if barstate.islast
@@ -25316,8 +25341,8 @@ if barstate.islast
                 int tH = array.get(kT, rgHI)
                 int tL = array.get(kT, rgLI)
                 string estilo = rgEstilo == "Sólida" ? line.style_solid : rgEstilo == "Rayada" ? line.style_dashed : line.style_dotted
-                rgHLn := line.new(tH, rgH, tFin, rgH, xloc = xloc.bar_time, color = color.new(colRg, 25), width = rgGrosor, style = estilo, extend = rgInf ? extend.right : extend.none)
-                rgLLn := line.new(tL, rgL, tFin, rgL, xloc = xloc.bar_time, color = color.new(colRg, 25), width = rgGrosor, style = estilo, extend = rgInf ? extend.right : extend.none)
+                rgHLn := line.new(tH, rgH, tFin, rgH, xloc = xloc.bar_time, color = color.new(colRg, 25), width = rgGrosor, style = estilo, extend = rgInf ? (rgAmbos ? extend.both : extend.right) : extend.none)
+                rgLLn := line.new(tL, rgL, tFin, rgL, xloc = xloc.bar_time, color = color.new(colRg, 25), width = rgGrosor, style = estilo, extend = rgInf ? (rgAmbos ? extend.both : extend.right) : extend.none)
                 // pegados al final de su línea, en negritas y con un
                 // respiro mayor que el de las killzones para que no se
                 // encimen con ellas
@@ -25551,7 +25576,7 @@ if barstate.islast
 
             // ── Fibonacci / Gann sobre el MISMO rango ──────────────
             // El 0 va donde TERMINÓ el impulso y el 1 donde arrancó.
-            if (verFib or verPlan) and alto > 0
+            if (verFib or verPlan or verEsc) and alto > 0
                 planPorque := "no hay de dónde sacar la entrada: cambia \\"La entrada sale de\\" en el grupo 9"
                 if verFib and array.size(str.split(nivelesTxt, ",")) > 0
                     niveles = str.split(nivelesTxt, ",")
@@ -25561,6 +25586,91 @@ if barstate.islast
                             float py = pFin + (pIni - pFin) * r
                             array.push(fibLn, line.new(tFib, py, tFin, py, xloc = xloc.bar_time, color = color.new(colFib, 35), width = fibGrosor))
                             array.push(fibLb, label.new(tFin + paso, py, str.tostring(r), xloc = xloc.bar_time, style = label.style_label_left, color = #ffffff00, textcolor = color.new(colFib, 10), size = size.tiny, tooltip = "Nivel " + str.tostring(r) + " · " + str.tostring(py, format.mintick)))
+
+                // ── ESCALERA DE ENTRADAS ──────────────────────────
+                // (André, 31-ago-2026) Una caja por nivel, del 0.5 al
+                // 0.79, pegadas una junto a otra a la derecha igual que
+                // la herramienta Short Position. Todas cuelgan del mismo
+                // stop —el extremo que originó el tramo— y van al mismo
+                // objetivo, así que la escalera dice de un golpe cuánto
+                // RR ganas por esperar el retroceso más profundo.
+                escCorr := 0
+                if verEsc and alto > 0
+                    array<float> eR = array.new<float>()
+                    escNiv = str.split(nivelesTxt, ",")
+                    float esLo = math.min(escDesde, escHasta)
+                    float esHi = math.max(escDesde, escHasta)
+                    for i = 0 to array.size(escNiv) - 1
+                        float r = nz(str.tonumber(str.replace_all(array.get(escNiv, i), " ", "")), -1)
+                        if r >= esLo and r <= esHi
+                            array.push(eR, r)
+                    array.sort(eR, order.ascending)
+                    int nEsc = array.size(eR)
+                    if nEsc > 0
+                        // la escalera va contra el impulso: tramo bajista
+                        // se vende el retroceso, tramo alcista se compra
+                        bool  escLong = not bajista
+                        int   escDir  = escLong ? 1 : -1
+                        float escSL   = pIni + (pIni - pFin) * escColchon / 100
+                        array<float> eEnt = array.new<float>()
+                        array<float> eTp  = array.new<float>()
+                        array<float> eRr  = array.new<float>()
+                        array<float> ePr  = array.new<float>()
+                        array<bool>  eFvg = array.new<bool>()
+                        array<bool>  eOb  = array.new<bool>()
+                        array<bool>  eAoi = array.new<bool>()
+                        int   mejorI = 0
+                        float mejorP = -1
+                        for i = 0 to nEsc - 1
+                            float r   = array.get(eR, i)
+                            float ent = pFin + (pIni - pFin) * r
+                            float rk  = math.max(math.abs(escSL - ent), syminfo.mintick)
+                            float tp  = escTP == "1:1" ? ent + escDir * rk : escTP == "1:2" ? ent + escDir * rk * 2 : escTP == "Al break (el extremo)" ? pFin : pFin + escDir * alto * escMas / 100
+                            float rrx = math.abs(tp - ent) / rk
+                            // la confluencia: no es un win rate probado,
+                            // es cuánto se junta en ese nivel. El combo
+                            // que más pesa es el retroceso profundo CON
+                            // un FVG encima — el que usa él
+                            bool hayF   = not na(frT) and ent <= frT and ent >= frB
+                            bool hayOB  = obIdx >= 0 and ent <= obT and ent >= obB
+                            bool hayAOI = not na(aoiT) and ent <= aoiT and ent >= aoiB
+                            bool pasado = escLong ? close < ent : close > ent
+                            float sc = 38
+                            sc += hayF ? 18 : 0
+                            sc += hayOB ? 16 : 0
+                            sc += hayAOI ? 8 : 0
+                            sc += r >= 0.7 ? 8 : r >= 0.6 ? 4 : 0
+                            sc += pasado ? -12 : 0
+                            sc += rrx >= 3 ? 12 : rrx >= 2 ? 8 : rrx >= 1 ? 3 : -10
+                            sc := math.min(92, math.max(8, sc))
+                            array.push(eEnt, ent)
+                            array.push(eTp, tp)
+                            array.push(eRr, rrx)
+                            array.push(ePr, sc)
+                            array.push(eFvg, hayF)
+                            array.push(eOb, hayOB)
+                            array.push(eAoi, hayAOI)
+                            if sc > mejorP
+                                mejorP := sc
+                                mejorI := i
+                        for i = 0 to nEsc - 1
+                            float r   = array.get(eR, i)
+                            float ent = array.get(eEnt, i)
+                            float tp  = array.get(eTp, i)
+                            float rrx = array.get(eRr, i)
+                            float sc  = array.get(ePr, i)
+                            bool  esMejor = i == mejorI
+                            // topadas a 460 velas: TradingView no deja
+                            // dibujar más allá de 500 hacia el futuro
+                            int bx1 = math.min(bar_index + posHueco + i * (escAncho + escSep), bar_index + 460)
+                            int bx2 = math.min(bx1 + escAncho, bar_index + 490)
+                            string num = str.tostring(i + 1) + "/" + str.tostring(nEsc)
+                            string txt = (esMejor ? "★ " : "") + num + "\\n" + str.tostring(r) + (array.get(eFvg, i) ? " + FVG" : "") + "\\n" + str.tostring(sc, "#") + "%\\n1:" + str.tostring(rrx, "#.#")
+                            array.push(planBx, box.new(bx1, math.max(escSL, ent), bx2, math.min(escSL, ent), border_color = esMejor ? color.new(colEnt, 40) : #ffffff00, border_width = esMejor ? 1 : 0, bgcolor = color.new(colSL, 82)))
+                            array.push(planBx, box.new(bx1, math.max(tp, ent), bx2, math.min(tp, ent), border_color = esMejor ? color.new(colEnt, 40) : #ffffff00, border_width = esMejor ? 1 : 0, bgcolor = color.new(colTP, esMejor ? 82 : 88), text = escVerProb ? txt : "", text_size = size.tiny, text_color = color.new(colEnt, esMejor ? 0 : 30), text_halign = text.align_center, text_valign = text.align_center))
+                            array.push(planLn, line.new(bx1, ent, bx2, ent, color = color.new(chart.fg_color, 30), width = 1))
+                            array.push(planLb, label.new(int((bx1 + bx2) / 2), ent, "", style = label.style_label_center, color = #ffffff00, textcolor = #ffffff00, size = size.tiny, tooltip = (escLong ? "LONG " : "SHORT ") + num + " · nivel " + str.tostring(r) + (esMejor ? "  ★ el mejor combo" : "") + "\\nEntrada " + str.tostring(ent, format.mintick) + "  ·  SL " + str.tostring(escSL, format.mintick) + "  ·  TP " + str.tostring(tp, format.mintick) + "\\nRiesgo " + str.tostring(math.abs(escSL - ent), "#.##") + " pts  ·  premio " + str.tostring(math.abs(tp - ent), "#.##") + " pts  ·  1:" + str.tostring(rrx, "#.#") + "\\n\\nConfluencia " + str.tostring(sc, "#") + "% · FVG " + (array.get(eFvg, i) ? "sí" : "no") + " · Order Block " + (array.get(eOb, i) ? "sí" : "no") + " · AOI " + (array.get(eAoi, i) ? "sí" : "no") + "\\nNo es un win rate probado: es cuánta confluencia junta el nivel."))
+                        escCorr := nEsc * (escAncho + escSep) + escSep
 
                 // ── PLAN: entrada, stop y cuatro objetivos ─────────
                 // La entrada sale del Order Block (o del nivel del
@@ -25677,8 +25787,8 @@ if barstate.islast
                         // velas del chart (posHueco / posAncho), no en
                         // velas del TF de estructura: así conserva el
                         // mismo tamaño en cualquier temporalidad.
-                        int x1 = bar_index + posHueco
-                        int x2 = x1 + posAncho
+                        int x1 = math.min(bar_index + posHueco + escCorr, bar_index + 460)
+                        int x2 = math.min(x1 + posAncho, bar_index + 495)
                         array.push(planBx, box.new(x1, entrada, x2, sl, border_color = #ffffff00, bgcolor = color.new(colSL, 82)))
                         array.push(planBx, box.new(x1, tp, x2, entrada, border_color = #ffffff00, bgcolor = color.new(colTP, 88)))
                         array.push(planLn, line.new(x1, entrada, x2, entrada, color = color.new(chart.fg_color, 30), width = 1))
@@ -25691,7 +25801,7 @@ if barstate.islast
     // el chart vacío, se dice en pantalla POR QUÉ
     if verPlan and not planOk
         planAviso := label.new(bar_index, close, "PLAN sin dibujar\\n" + planPorque, style = label.style_label_right, color = color.new(chart.bg_color, 15), textcolor = colEnt, size = size.small, tooltip = "El plan de trade está prendido, pero no hay con qué dibujarlo todavía · " + planPorque)
- `;
+`;
 const ALGO_SCRIPTS = [
   { id:'kzp-dia', archivo:'NP A+.pine', nombre:['NP A+','NP A+'], codigo: ALGO_PINE_KZP_DIA },
   { id:'kzp-estructura', archivo:'NP ESTRUCTURA.pine', nombre:['NP ESTRUCTURA','NP ESTRUCTURA'], codigo: ALGO_PINE_KZP_ESTRUCTURA },
