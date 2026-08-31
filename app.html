@@ -12375,6 +12375,43 @@ function zenDragon(c,x,y,s,col,now){ c.strokeStyle=col; c.lineWidth=6*s; c.lineJ
 function zenPasto(c,W,H,base,now,col){ c.fillStyle=col||'rgba(8,6,5,.9)'; const n=Math.floor(W/8);
   for(let i=0;i<n;i++){ const x=(i/n)*W+(i%5)*2.5, h=H*0.12+((i*53)%(H*0.2)), sw=Math.sin(now/750+i*0.7)*7;
     c.beginPath(); c.moveTo(x,H); c.quadraticCurveTo(x+sw*0.4,H-h*0.6,x+sw,H-h); c.quadraticCurveTo(x+sw*0.4+2.4,H-h*0.6,x+2.6,H); c.closePath(); c.fill(); } }
+/* PASTO CORTO (André, 31-ago-2026): zenPasto dibuja briznas larguísimas —hasta
+   un tercio del cuadro— que en el jardín tapaban todo y parecían cañaveral.
+   Éste es césped: matas bajitas, apretadas, que sólo cubren el borde. */
+function zenPastoCorto(c,W,H,base,now,col){
+  const rr=i=>((Math.sin(i*77.3)*3187.7)%1+1)%1;
+  const y0 = base;
+  c.fillStyle = col || 'rgba(30,74,38,.95)';
+  c.fillRect(0, y0, W, H-y0);
+  const n = Math.floor(W/3.2);
+  for(let i=0;i<n;i++){
+    const x = (i/n)*W + rr(i)*2.4;
+    const h = 3 + rr(i+7)*7;
+    const sw = Math.sin(now/900 + i*0.5)*1.2;
+    c.beginPath(); c.moveTo(x, y0+2);
+    c.quadraticCurveTo(x+sw*0.5, y0-h*0.6, x+sw, y0-h);
+    c.quadraticCurveTo(x+sw*0.5+1.3, y0-h*0.6, x+1.5, y0+2);
+    c.closePath(); c.fill();
+  }
+}
+/* FLORECITAS: muchas, chiquitas y de cinco pétalos, sembradas por todo el
+   césped. zenFlores hace manchas grandes; esto es un prado japonés. */
+function zenFlorecitas(c,W,H,base,col,dens){
+  const rr=i=>((Math.sin(i*53.9)*2731.3)%1+1)%1;
+  const n = Math.round((W/6) * (dens||1));
+  for(let i=0;i<n;i++){
+    const x = rr(i)*W;
+    const y = base + rr(i+31)*(H-base)*0.92;
+    const r = 1.4 + rr(i+9)*1.6;
+    c.save(); c.translate(x,y);
+    c.fillStyle = col;
+    for(let k=0;k<5;k++){ const a=k*Math.PI*2/5 + rr(i)*3;
+      c.beginPath(); c.ellipse(Math.cos(a)*r, Math.sin(a)*r, r*0.72, r*0.52, a, 0, 7); c.fill(); }
+    c.fillStyle = 'rgba(255,244,190,.95)';
+    c.beginPath(); c.arc(0,0,r*0.42,0,7); c.fill();
+    c.restore();
+  }
+}
 function zenFlores(c,W,H,base,col,dens){ const rr=i=>((Math.sin(i*91.7)*4373.1)%1+1)%1;
   const n=Math.floor(W/6*(dens||1));
   for(let i=0;i<n;i++){ const x=rr(i)*W, y=base+H*(0.03+rr(i+3)*0.26), s=1.6+rr(i+7)*2.6;
@@ -12582,16 +12619,18 @@ function zenNinja(c,x,base,s,now,ph,col,nj,flip,anda){ const kc=col||'#b53a2e';
   /* aura, sólo en el mango */
   c.save(); c.strokeStyle = kc; c.globalAlpha = 0.22; c.lineWidth = 5.5*s;
   c.beginPath(); c.moveTo(_px,_py); c.lineTo(_mx,_my); c.stroke(); c.restore();
-  /* la hoja */
-  c.strokeStyle = '#8d95a3'; c.lineWidth = 2.6*s;
+  /* la hoja. Con cfg.bokken es de MADERA: sin filo y sin guarda, que es la
+     espada con la que empiezas antes de ganarle a nadie. (André, 31-ago-2026) */
+  const _bok = !!cfg.bokken;
+  c.strokeStyle = _bok ? '#b98d55' : '#8d95a3'; c.lineWidth = (_bok?3.0:2.6)*s;
   c.beginPath(); c.moveTo(_mx,_my); c.lineTo(_hx,_hy); c.stroke();
-  c.strokeStyle = 'rgba(226,232,240,.55)'; c.lineWidth = 0.8*s;
+  c.strokeStyle = _bok ? 'rgba(255,232,196,.35)' : 'rgba(226,232,240,.55)'; c.lineWidth = 0.8*s;
   c.beginPath(); c.moveTo(_mx,_my-0.8*s); c.lineTo(_hx,_hy-0.8*s); c.stroke();
   /* el mango */
   c.strokeStyle = _claro; c.lineWidth = 2.6*s;
   c.beginPath(); c.moveTo(_px,_py); c.lineTo(_mx,_my); c.stroke();
-  /* la guarda, cruzada entre mango y hoja */
-  (()=>{ const ang = Math.atan2(_hy-_my, _hx-_mx), n = ang + Math.PI/2;
+  /* la guarda, cruzada entre mango y hoja. Un bokken no tiene. */
+  if(!_bok) (()=>{ const ang = Math.atan2(_hy-_my, _hx-_mx), n = ang + Math.PI/2;
     c.strokeStyle = '#c9ced6'; c.lineWidth = 1.2*s;
     c.beginPath();
     c.moveTo(_mx + Math.cos(n)*2.2*s, _my + Math.sin(n)*2.2*s);
@@ -12701,10 +12740,13 @@ function zenDibujaEscena(c, W, H, E, now, pet, poderHex, njCfg){
       c.fillRect(W*disc.x-an/2 + Math.sin(now/900+i*1.7)*6, y, an, 4); } }
   /* ── elementos legendarios de foreground (sobre el agua/tierra) ── */
   if(E.cascada) zenCascada(c, W*0.2, base-H*0.24, base, 12);
-  if(E.torii) zenTorii(c, W*0.5, base+H*0.15, 1.25);
+  if(E.torii) zenTorii(c, W*(E.toriiX!=null?E.toriiX:0.5), base+H*(E.toriiY!=null?E.toriiY:0.15), E.toriiS||1.25);
   if(E.puente) zenPuenteRojo(c, W*0.5, base+H*0.02, 100, 1.2);
   if(E.lotos){ for(let i=0;i<7;i++) zenLoto(c, W*(0.12+i*0.12), base+H*(0.07+(i%2)*0.07), 1.2); }
   if(E.faroles){ for(let i=0;i<6;i++) zenFarol(c, W*(0.16+i*0.13), base+H*(0.04+(i%3)*0.05), 1.2); }
+  /* faroles PLANTADOS en el suelo, no flotando en el agua: en un jardín el
+     césped tapa todo lo que va por debajo de la línea de tierra */
+  if(E.farolesTierra){ [0.30,0.62,0.88].forEach((fx,i)=> zenFarol(c, W*fx, base-2, 0.85+i*0.06)); }
   /* LAS DOS CIUDADES van aquí, DESPUÉS del agua: el río se comía el puente de
      Westminster y el asfalto de Nueva York cuando se pintaban antes. */
   if(E.bigben) zenBigBen(c, W, base, now, H);
@@ -12724,6 +12766,8 @@ function zenDibujaEscena(c, W, H, E, now, pet, poderHex, njCfg){
   if(E.sakuraTree) zenSakuraTree(c, W*0.2, base+H*0.05, 1.25);
   if(E.flores) zenFlores(c,W,H,base,E.floresCol||'rgba(230,150,200,.9)',E.floresDens||1);
   if(E.pasto) zenPasto(c,W,H,base,now,E.pastoCol);
+  if(E.pastoCorto) zenPastoCorto(c,W,H,base,now,E.pastoCol);
+  if(E.florecitas) zenFlorecitas(c,W,H,base,E.florecitasCol||'rgba(246,158,200,.96)',E.florecitasDens||1);
   if(E.tormenta) zenTormenta(c,W,H,now,rr);
   /* ── LA LUZ DE LA HORA ── un velo sobre TODO lo pintado: es lo que hace
      que a mediodía se vea mediodía y no una noche con el cielo azul. Va antes
@@ -12816,6 +12860,9 @@ function batPintaZen(){
   try{ _virgen = (window._zenVista == null) && Object.keys(bossVencidos()).length === 0; }catch(e){}
   const E = _virgen ? ZEN_JARDIN : (ZEN_ESCENAS[_iv]||ZEN_ESCENAS[2]);
   const poderHex = _virgen ? '#b98d55' : KATANAS[_iv].belt;
+  /* en el Edén el ninja trae su espada de MADERA, no una katana de acero */
+  if(_virgen) window._zenNinja = { ...(window._zenNinja||{}), bokken:true,
+    banda:'#b98d55', buf:'#8a6b45' };
   // la escena se dibuja en coordenadas CSS (W,H); el buffer real del canvas
   // se ajusta al tamaño mostrado × devicePixelRatio para que no se vea borroso
   // al estirarse dentro de .zen-stage (que crece con el alto del viewport)
@@ -13423,19 +13470,24 @@ function bokkenSVG(){
    katanas de acero; ésta no tiene dueño ni jefe — es de donde sales.
    Va claro y bonito a propósito: los nueve mundos que siguen son de noche, de
    nieve o de lava, y el contraste hace que se sienta que empezaste abajo. */
-const ZEN_JARDIN = { bioma:['El jardín','The garden'], sinNinja:true,
+const ZEN_JARDIN = { bioma:['Edén','Eden'],
   etapa:['EL PRINCIPIO','THE BEGINNING'],
   cielo:['#3f93cf','#71b7e2','#aed7ee','#e4f2fa'],
-  sol:{x:.84,y:.34,r:60,col:'rgba(255,250,226,.95)',halo:'rgba(255,244,192,.30)'},
+  sol:{x:.84,y:.30,r:58,col:'rgba(255,250,226,.95)',halo:'rgba(255,244,192,.30)'},
   montes:[['#3f7549',1],['#5d9963',.7]],
-  /* el agua del jardín: un estanque claro, con su puente y sus lotos */
-  agua:'rgba(108,168,178,.55)', puente:true, lotos:true,
+  /* el agua del edén: un estanque claro con su puente rojo y sus lotos */
+  /* SIN estanque: el césped se pinta encima de todo lo que va bajo la línea
+     de tierra, así que el agua, el puente y los lotos no se veían nunca. */
+  agua:'rgba(70,120,72,.55)',
   nubes:true, nubesCol:'rgba(255,255,255,.94)', nubesEsc:1.5,
-  /* SU CASA de madera, chiquita, a la izquierda: de ahí salió */
-  casita:true, casitaX:0.15, casitaS:1.05, casitaCol:'#c9a97e',
-  sakuraGigante:true, arbolGigante:true, arbolCol:'#2b6a38',
-  flores:true, floresCol:'rgba(244,150,196,.96)',
-  pasto:true, pastoCol:'rgba(34,80,42,.85)',
+  /* SU CASA de madera, chiquita, a la izquierda: de ahí salió.
+     Y el detalle japonés: un torii al fondo y faroles de piedra plantados. */
+  casita:true, casitaX:0.13, casitaS:1.0, casitaCol:'#c9a97e',
+  torii:true, toriiX:0.80, toriiY:-0.02, toriiS:0.9, farolesTierra:true,
+  /* SIN árboles en medio: tapaban el cuadro y no dejaban ver al ninja.
+     CÉSPED CORTO en vez de las briznas largas, y muchas florecitas rosas. */
+  pastoCorto:true, pastoCol:'rgba(38,92,48,.95)',
+  florecitas:true, florecitasCol:'rgba(248,160,202,.96)', florecitasDens:1.6,
   part:'sakura', partCol:'rgba(255,202,216,.96)' };
 
 /* ══ EL RÓTULO DEL MUNDO ══ el nombre de la etapa, escrito en el cielo:
@@ -13506,7 +13558,7 @@ function batAlta(){
     cv.width = Math.round(w*dpr); cv.height = Math.round(h*dpr); return { w, h }; };
   let M = medir();
   const g = cv.getContext('2d');
-  const nj = { traje:'#0f1218', banda:'#b98d55', buf:'#8a6b45' };   /* el de madera */
+  const nj = { traje:'#0f1218', banda:'#b98d55', buf:'#8a6b45', bokken:true };
   const pet = Array.from({length:40},()=>({ x:Math.random(), y:Math.random(),
     s:3+Math.random()*4, sp:0.5+Math.random()*1.2, dr:Math.random()*6.3, sw:0.5+Math.random() }));
   /* EL JARDÍN SIEMPRE DESPEJADO Y DE DÍA (André, 31-ago-2026): batEscenaViva
@@ -13515,7 +13567,7 @@ function batAlta(){
      cielo abierto — el contraste con los nueve mundos de noche es lo que hace
      sentir que empezaste abajo. Se le pasa un mediodía fijo. */
   const mediodia = (()=>{ const d = new Date(); d.setHours(12,30,0,0); return d.getTime(); })();
-  const E = batEscenaViva({ ...ZEN_JARDIN }, { sesion:null, id:'jardin' }, mediodia);
+  const E = batEscenaViva({ ...ZEN_JARDIN, sinNinja:true }, { sesion:null, id:'jardin' }, mediodia);
   E.lluvia = false; E.rayos = false; E.nubes = true;
   E.nubesCol = 'rgba(255,255,255,.94)';
   E.cielo = ZEN_JARDIN.cielo.slice();
@@ -23716,6 +23768,7 @@ indicator("NP ESTRUCTURA", "NP ESTRUCTURA", overlay = true, max_lines_count = 50
 // cada cosa desde aquí, sin ir a buscarla grupo por grupo. Lo que
 // apagues no pierde sus ajustes, solo deja de dibujarse.
 gV = "1 · Qué ver"
+verHHLL     = input.bool(true, "Pintar HH · HL · LH · LL en el rango", group = gV, tooltip = "Cada línea del rango se pinta según lo que está pasando: si el alto es más alto que el swing anterior sale HH en verde, si el bajo es más alto sale HL —el higher low que sostiene la subida—, y al revés LH y LL en rojo. Apagado, las dos líneas van del color del rango.")
 inVerTit    = input.bool(true, "Título LONGS / SHORTS del rango", group = gV, tooltip = "El letrero grande que dice de qué lado se busca el trade, sacado de la dirección del rango: si el impulso fue BAJISTA dice SHORTS y se pone ARRIBA del HIGH; si fue ALCISTA dice LONGS y se pone ABAJO del LOW. Va en la misma letra gruesa de los demás nombres.")
 inVerRango  = input.bool(true, "Rango · HIGH y LOW", group = gV, tooltip = "El tramo donde anda el precio: su techo y su piso. Es la base de todo lo demás — el Fibonacci, el FVG del rango y la posición se miden sobre él, así que apagarlo solo esconde las dos líneas.")
 inVerFvgRg  = input.bool(true, "El mejor FVG del rango", group = gV, tooltip = "UN SOLO hueco: el de más confluencia dentro del rango y en la dirección del trade. Es el mismo del que sale la entrada.")
@@ -24427,6 +24480,10 @@ if barstate.islast
         // las pivAOI velas de cada lado
         pvV = array.new_float()
         pvI = array.new_int()
+        // el tipo de cada swing (1 alto, -1 bajo): sin esto no se puede
+        // saber si el extremo de ahora es más alto o más bajo que el
+        // anterior de SU MISMA clase
+        pvT = array.new_int()
         // solo la ventana reciente: si mira demasiado atrás, el HIGH
         // y el LOW se van a niveles viejos y salen de la pantalla
         int desdeV = math.max(pivAOI, n - rgVelas)
@@ -24443,9 +24500,11 @@ if barstate.islast
             if esAlto
                 array.push(pvV, hi)
                 array.push(pvI, i)
+                array.push(pvT, 1)
             if esBajo
                 array.push(pvV, lo)
                 array.push(pvI, i)
+                array.push(pvT, -1)
 
         // ── rango del tramo: alto y bajo de los últimos swings
         float rgH = na
@@ -24494,6 +24553,27 @@ if barstate.islast
                     rgL := low
                     rgLI := n - 1
 
+            // ── HH · HL · LH · LL ─────────────────────────────
+            // El extremo de ahora contra el swing anterior de su misma
+            // clase: si el alto es más alto, HH; si el bajo es más
+            // alto, HL. Con eso cada línea se pinta del color de lo
+            // que está pasando y no del color del rango a secas.
+            float altoAnt = na
+            float bajoAnt = na
+            for i = 0 to m - 1
+                if array.get(pvT, i) == 1 and array.get(pvI, i) < rgHI
+                    altoAnt := array.get(pvV, i)
+                if array.get(pvT, i) == -1 and array.get(pvI, i) < rgLI
+                    bajoAnt := array.get(pvV, i)
+            bool esHH = not na(altoAnt) and rgH > altoAnt
+            bool esLH = not na(altoAnt) and rgH < altoAnt
+            bool esHL = not na(bajoAnt) and rgL > bajoAnt
+            bool esLL = not na(bajoAnt) and rgL < bajoAnt
+            color colRgH = not verHHLL ? colRg : esHH ? pAlza : esLH ? pBaja : colRg
+            color colRgL = not verHHLL ? colRg : esHL ? pAlza : esLL ? pBaja : colRg
+            string sufH = not verHHLL ? "" : esHH ? " · HH" : esLH ? " · LH" : ""
+            string sufL = not verHHLL ? "" : esHL ? " · HL" : esLL ? " · LL" : ""
+
             int tFin = array.get(kT, n - 1) + paso
             // ── rango: cada línea NACE en la mecha que la formó y de
             // ahí va a la derecha, al infinito
@@ -24501,13 +24581,13 @@ if barstate.islast
                 int tH = array.get(kT, rgHI)
                 int tL = array.get(kT, rgLI)
                 string estilo = rgEstilo == "Sólida" ? line.style_solid : rgEstilo == "Rayada" ? line.style_dashed : line.style_dotted
-                rgHLn := line.new(tH, rgH, tFin, rgH, xloc = xloc.bar_time, color = color.new(colRg, 25), width = rgGrosor, style = estilo, extend = rgInf ? extend.right : extend.none)
-                rgLLn := line.new(tL, rgL, tFin, rgL, xloc = xloc.bar_time, color = color.new(colRg, 25), width = rgGrosor, style = estilo, extend = rgInf ? extend.right : extend.none)
+                rgHLn := line.new(tH, rgH, tFin, rgH, xloc = xloc.bar_time, color = color.new(colRgH, 25), width = rgGrosor, style = estilo, extend = rgInf ? extend.right : extend.none)
+                rgLLn := line.new(tL, rgL, tFin, rgL, xloc = xloc.bar_time, color = color.new(colRgL, 25), width = rgGrosor, style = estilo, extend = rgInf ? extend.right : extend.none)
                 // pegados al final de su línea, en negritas y con un
                 // respiro mayor que el de las killzones para que no se
                 // encimen con ellas
-                rgHLb := label.new(tFin + pasoBar * 9, rgH, kzNegrita ? f_negrita("HIGH · " + tfEstSel) : "HIGH · " + tfEstSel, xloc = xloc.bar_time, style = label.style_label_left, color = #ffffff00, textcolor = color.new(colRg, 15), size = size.tiny, tooltip = "Alto del rango · " + tfEstSel + " · " + str.tostring(rgH, format.mintick))
-                rgLLb := label.new(tFin + pasoBar * 9, rgL, kzNegrita ? f_negrita("LOW · " + tfEstSel) : "LOW · " + tfEstSel, xloc = xloc.bar_time, style = label.style_label_left, color = #ffffff00, textcolor = color.new(colRg, 15), size = size.tiny, tooltip = "Bajo del rango · " + tfEstSel + " · " + str.tostring(rgL, format.mintick))
+                rgHLb := label.new(tFin + pasoBar * 9, rgH, kzNegrita ? f_negrita("HIGH · " + tfEstSel + sufH) : "HIGH · " + tfEstSel + sufH, xloc = xloc.bar_time, style = label.style_label_left, color = #ffffff00, textcolor = color.new(colRgH, 15), size = size.tiny, tooltip = "Alto del rango · " + tfEstSel + " · " + str.tostring(rgH, format.mintick))
+                rgLLb := label.new(tFin + pasoBar * 9, rgL, kzNegrita ? f_negrita("LOW · " + tfEstSel + sufL) : "LOW · " + tfEstSel + sufL, xloc = xloc.bar_time, style = label.style_label_left, color = #ffffff00, textcolor = color.new(colRgL, 15), size = size.tiny, tooltip = "Bajo del rango · " + tfEstSel + " · " + str.tostring(rgL, format.mintick))
 
                 // ── DE QUÉ LADO SE BUSCA ──────────────────────────
                 // La dirección ya la sabe el rango: si el LOW es el
