@@ -541,31 +541,61 @@ function katana(c, W, H, col){
   /* UNA CASA: tejado a dos aguas, cuerpo oscuro y su ventana encendida.
      La ventana es el punto: una lucecita cálida a lo lejos es lo que le pone
      ESCALA a la montaña — sin ella no sabes si mide cien metros o cuatro mil. */
-  function casa(x, base, s, luz){
+  function casa(x, base, s, luz, tipo){
     c.fillStyle = 'rgba(4,8,18,.45)';
-    c.beginPath(); c.ellipse(x, base + 0.8*s, 7*s, 1.6*s, 0, 0, 7); c.fill();
+    c.beginPath(); c.ellipse(x, base + 0.8*s, 7.4*s, 1.7*s, 0, 0, 7); c.fill();
     c.fillStyle = '#131E31';
     c.fillRect(x - 4.6*s, base - 6*s, 9.2*s, 6*s);
     c.fillStyle = '#0B1322';
-    c.beginPath(); c.moveTo(x - 6.4*s, base - 5.6*s); c.lineTo(x, base - 11*s);
-    c.lineTo(x + 6.4*s, base - 5.6*s); c.closePath(); c.fill();
+    if(tipo > 0.62){
+      /* tejado japonés: los aleros se curvan hacia arriba */
+      c.beginPath(); c.moveTo(x - 7.4*s, base - 5.4*s);
+      c.quadraticCurveTo(x, base - 12.4*s, x + 7.4*s, base - 5.4*s);
+      c.lineTo(x + 5.6*s, base - 6.6*s); c.lineTo(x - 5.6*s, base - 6.6*s);
+      c.closePath(); c.fill();
+    } else {
+      c.beginPath(); c.moveTo(x - 6.4*s, base - 5.6*s); c.lineTo(x, base - 11*s);
+      c.lineTo(x + 6.4*s, base - 5.6*s); c.closePath(); c.fill();
+    }
     if(luz){
-      var h = c.createRadialGradient(x, base - 3.4*s, 0.4*s, x, base - 3.4*s, 9*s);
-      h.addColorStop(0,'rgba(255,196,108,.42)'); h.addColorStop(1,'rgba(255,180,90,0)');
-      c.fillStyle = h; c.beginPath(); c.arc(x, base - 3.4*s, 9*s, 0, 7); c.fill();
-      c.fillStyle = '#FFC46C'; c.fillRect(x - 1.5*s, base - 4.4*s, 3*s, 2.6*s);
+      var h = c.createRadialGradient(x, base - 3.4*s, 0.4*s, x, base - 3.4*s, 10*s);
+      h.addColorStop(0,'rgba(255,196,108,.44)'); h.addColorStop(1,'rgba(255,180,90,0)');
+      c.fillStyle = h; c.beginPath(); c.arc(x, base - 3.4*s, 10*s, 0, 7); c.fill();
+      /* la ventana partida en cuatro: a lo lejos es un punto, de cerca una casa */
+      c.fillStyle = '#FFC46C';
+      c.fillRect(x - 2.0*s, base - 4.6*s, 1.6*s, 1.5*s);
+      c.fillRect(x + 0.4*s, base - 4.6*s, 1.6*s, 1.5*s);
+      c.fillRect(x - 2.0*s, base - 2.8*s, 1.6*s, 1.3*s);
+      c.fillRect(x + 0.4*s, base - 2.8*s, 1.6*s, 1.3*s);
+      if(tipo > 0.5){ c.fillStyle = 'rgba(255,180,96,.75)';
+        c.fillRect(x + 3.0*s, base - 3.4*s, 1.2*s, 3.4*s); }   /* la puerta */
     }
   }
   /* UN PUEBLO: unas casas juntas y el resplandor tibio que las delata desde
      lejos, cuando ya no se distingue una de otra. */
-  function pueblo(x, base, s, n, sem){
-    var g = c.createRadialGradient(x, base - 4*s, 1, x, base - 4*s, 34*s);
-    g.addColorStop(0,'rgba(255,186,104,.20)'); g.addColorStop(1,'rgba(255,170,80,0)');
-    c.fillStyle = g; c.beginPath(); c.arc(x, base - 4*s, 34*s, 0, 7); c.fill();
+  function pueblo(x, base, s, n, sem, now){
+    var g = c.createRadialGradient(x, base - 5*s, 1, x, base - 5*s, 42*s);
+    g.addColorStop(0,'rgba(255,186,104,.22)'); g.addColorStop(.5,'rgba(255,176,92,.07)');
+    g.addColorStop(1,'rgba(255,170,80,0)');
+    c.fillStyle = g; c.beginPath(); c.arc(x, base - 5*s, 42*s, 0, 7); c.fill();
+    /* las casas se ordenan por profundidad: las de atrás primero y más chicas */
+    var casas = [];
     for(var i=0;i<n;i++){
-      var d = (rnd(sem*3.1+i)-0.5)*26*s;
-      casa(x + d, base + (rnd(sem*7.7+i)-0.5)*2.6*s,
-           s*(0.72 + rnd(sem*5.3+i)*0.55), rnd(sem*9.9+i) > 0.22);
+      var prof = rnd(sem*7.7+i);
+      casas.push({ x: x + (rnd(sem*3.1+i)-0.5)*34*s,
+                   y: base + (prof-0.5)*5.2*s,
+                   s: s*(0.62 + prof*0.72),
+                   luz: rnd(sem*9.9+i) > 0.20,
+                   tipo: rnd(sem*4.1+i) });
+    }
+    casas.sort(function(a,b){ return a.y - b.y; });
+    /* la pagoda del pueblo, detrás de todo */
+    if(n >= 7) pagoda(x + (rnd(sem)-0.5)*22*s, base - 2*s, s*0.9, '#0B1322');
+    casas.forEach(function(k){ casa(k.x, k.y, k.s, k.luz, k.tipo); });
+    /* dos chimeneas humeando: es lo que lo vuelve un pueblo vivo */
+    if(now != null && n >= 6){
+      humo(casas[0].x + 2*s, casas[0].y - 9*s, s*0.9, now, sem);
+      humo(casas[casas.length-1].x - 2*s, casas[casas.length-1].y - 10*s, s*0.8, now, sem+7);
     }
   }
   /* un farol de piedra del sendero */
@@ -579,6 +609,33 @@ function katana(c, W, H, col){
     g.addColorStop(0,'rgba(255,196,108,.36)'); g.addColorStop(1,'rgba(255,180,90,0)');
     c.fillStyle = g; c.beginPath(); c.arc(x, base - 8.8*s, 11*s, 0, 7); c.fill();
     c.fillStyle = '#FFCE84'; c.fillRect(x - 1.1*s, base - 9.8*s, 2.2*s, 2.4*s);
+  }
+  /* UNA PAGODA en la cresta de un pueblo: tres aleros y su aguja */
+  function pagoda(x, base, s, col){
+    c.fillStyle = col;
+    var piso = function(cy, w, h){
+      c.fillRect(x - w*0.34, cy - h, w*0.68, h);
+      c.beginPath(); c.moveTo(x - w, cy - h + 1);
+      c.quadraticCurveTo(x, cy - h - h*0.85, x + w, cy - h + 1);
+      c.lineTo(x + w*0.66, cy - h - 1); c.lineTo(x - w*0.66, cy - h - 1);
+      c.closePath(); c.fill();
+    };
+    piso(base, 9*s, 5*s); piso(base - 5.6*s, 7*s, 4.6*s); piso(base - 10.6*s, 5*s, 4.2*s);
+    c.fillRect(x - 0.5*s, base - 18*s, 1*s, 3.6*s);
+  }
+  /* EL HUMO de una chimenea: lo que hace que un pueblo se vea habitado y no
+     dibujado. Sube, se ensancha y se apaga. */
+  function humo(x, base, s, now, sem){
+    for(var i=0;i<5;i++){
+      var u = ((now/(9000 + rnd(sem+i)*5000)) + i/5) % 1;
+      var a = 0.16 * (1-u) * (1-u);
+      if(a < 0.006) continue;
+      c.fillStyle = 'rgba(196,210,236,'+a+')';
+      c.beginPath();
+      c.ellipse(x + Math.sin(u*4 + sem)*4.6*s, base - u*30*s,
+                (1.6 + u*4.2)*s, (1.2 + u*3.0)*s, 0, 0, 7);
+      c.fill();
+    }
   }
   /* el torii del sendero */
   function torii(x, base, s){
@@ -650,9 +707,10 @@ function katana(c, W, H, col){
     /* LOS PUEBLOS DEL VALLE: apenas unas lucecitas debajo de las nubes.
        Son lo que te dice cuánto has subido. */
     var epue = Math.min(W,H)/900;
-    pueblo(W*0.135, mar + H*0.052, epue*1.0, 7, 21);
-    pueblo(W*0.685, mar + H*0.044, epue*0.85, 6, 44);
-    pueblo(W*0.895, mar + H*0.058, epue*1.1, 8, 63);
+    pueblo(W*0.115, mar + H*0.052, epue*1.05, 9, 21, now);
+    pueblo(W*0.395, mar + H*0.060, epue*0.80, 6, 82, now);
+    pueblo(W*0.685, mar + H*0.044, epue*0.90, 7, 44, now);
+    pueblo(W*0.895, mar + H*0.058, epue*1.15, 10, 63, now);
     var bh = c.createLinearGradient(0, mar - H*0.14, 0, mar + H*0.06);
     bh.addColorStop(0,'rgba(80,116,172,0)'); bh.addColorStop(1,'rgba(80,116,172,.42)');
     c.fillStyle = bh; c.fillRect(0, mar - H*0.14, W, H*0.20);
@@ -707,6 +765,62 @@ function katana(c, W, H, col){
       c.closePath(); c.fill();
     }
     c.restore();
+    /* ══ LA TEXTURA DE LA LADERA ══
+       Dos intentos fallidos antes de éste: los canales de nieve eran cuñas
+       anchas y RECTAS —se leían como haces de luz, no como nieve— y la roca
+       eran rombos sueltos flotando encima. Lo que hace que una ladera parezca
+       roca es que todo siga LA MISMA caída: cada veta nace arriba, se abre
+       hacia afuera al bajar y se afila. Aquí todo se traza sobre esa línea. */
+    c.save();
+    c.beginPath(); suave(izq); c.lineTo(-W,H+200); c.lineTo(W*2,H+200); c.closePath(); c.clip();
+    c.beginPath(); suave(der); c.lineTo(W*2,H+200); c.lineTo(-W,H+200); c.closePath(); c.clip();
+    /* la línea de caída de la ladera, para que todo la siga */
+    function caida(t0, lado, sesgo){
+      return { x: cx + lado*(Math.pow(t0,0.93)*W*0.78*sesgo),
+               y: sy + Math.pow(t0,1.10)*(pie-sy) };
+    }
+    /* costillas de roca: nacen finas arriba y se abren al bajar */
+    for(var rk=0; rk<16; rk++){
+      var ld = rk % 2 ? 1 : -1;
+      var ses = 0.10 + rnd(rk*7.7)*0.80;
+      var t0 = 0.05 + rnd(rk*4.4)*0.34;
+      var t1 = t0 + 0.10 + rnd(rk*2.7)*0.26;
+      var a = caida(t0, ld, ses), b2 = caida(t1, ld, ses*1.06);
+      var an = W*(0.004 + rnd(rk*9.9)*0.012);
+      var gr2 = c.createLinearGradient(a.x, a.y, b2.x, b2.y);
+      var op = 0.16 + rnd(rk*3.3)*0.24;
+      gr2.addColorStop(0,'rgba(9,18,36,0)');
+      gr2.addColorStop(.35,'rgba(9,18,36,'+op+')');
+      gr2.addColorStop(1,'rgba(9,18,36,0)');
+      c.fillStyle = gr2;
+      c.beginPath(); c.moveTo(a.x, a.y);
+      c.quadraticCurveTo((a.x+b2.x)/2 + ld*an*2, (a.y+b2.y)/2, b2.x, b2.y);
+      c.lineTo(b2.x + an*2.4, b2.y + an*0.6);
+      c.quadraticCurveTo((a.x+b2.x)/2 + ld*an*2 + an*1.4, (a.y+b2.y)/2, a.x + an*0.5, a.y);
+      c.closePath(); c.fill();
+    }
+    /* canales de nieve: MUCHOS y FINOS, sólo en el tercio alto, siguiendo la
+       misma caída. Así se leen como nieve metida en las hondonadas. */
+    for(var g2=0; g2<22; g2++){
+      var ld2 = g2 % 2 ? 1 : -1;
+      var ses2 = 0.06 + rnd(g2*5.5)*0.52;
+      /* NACEN DEBAJO DE LA CUMBRE, no en ella: naciendo todos en el vértice
+         convergían como los rayos de un sol y la montaña parecía un destello. */
+      var ta = 0.13 + rnd(g2*2.2)*0.19;
+      var tb = ta + 0.04 + rnd(g2*8.1)*0.13;
+      var a2 = caida(ta, ld2, ses2), b3 = caida(tb, ld2, ses2*1.04);
+      var an2 = W*(0.002 + rnd(g2*3.7)*0.006);
+      var gg2 = c.createLinearGradient(a2.x, a2.y, b3.x, b3.y);
+      gg2.addColorStop(0,'rgba(240,248,255,'+(0.10 + rnd(g2)*0.13)+')');
+      gg2.addColorStop(1,'rgba(216,232,252,0)');
+      c.fillStyle = gg2;
+      c.beginPath(); c.moveTo(a2.x - an2, a2.y);
+      c.quadraticCurveTo((a2.x+b3.x)/2, (a2.y+b3.y)/2, b3.x, b3.y);
+      c.lineTo(b3.x + an2*2.2, b3.y);
+      c.quadraticCurveTo((a2.x+b3.x)/2 + an2*1.6, (a2.y+b3.y)/2, a2.x + an2, a2.y);
+      c.closePath(); c.fill();
+    }
+    c.restore();
     /* el campo de nieve de la cumbre */
     c.save();
     c.beginPath(); suave(izq.slice(0,6).slice().reverse().concat(der.slice(1,6)));
@@ -757,11 +871,12 @@ function katana(c, W, H, col){
     torii(W*0.243, fy + H*0.010, Math.min(W,H)/230);
     /* EL PUEBLO DE LA FALDA: el último antes de que empiece la subida */
     var ep = Math.min(W,H)/300;
-    pueblo(W*0.155, fy + H*0.052, ep*0.60, 9, 12);
-    pueblo(W*0.735, fy + H*0.070, ep*0.72, 11, 33);
-    pueblo(W*0.885, fy + H*0.040, ep*0.50, 6, 55);
-    farol(W*0.215, fy + H*0.028, ep*0.42);
-    farol(W*0.268, fy + H*0.058, ep*0.42);
+    pueblo(W*0.150, fy + H*0.054, ep*0.62, 12, 12, now);
+    pueblo(W*0.735, fy + H*0.072, ep*0.74, 14, 33, now);
+    pueblo(W*0.905, fy + H*0.040, ep*0.52, 8,  55, now);
+    pueblo(W*0.480, fy + H*0.092, ep*0.56, 7,  71, now);
+    [0.205,0.252,0.300,0.352].forEach(function(u,i){
+      farol(W*u, fy + H*(0.026 + i*0.016), ep*0.42); });
     /* los pinos, más chicos y pálidos hacia el fondo */
     for(var t2=0;t2<46;t2++){
       var px = rnd(t2*1.7)*W*1.06 - W*0.03 + mx*10;
@@ -771,6 +886,23 @@ function katana(c, W, H, col){
       pino(px, py, ps, prof > 0.55 ? '#0A1220' : '#101E33',
            prof > 0.35 ? 'rgba(226,238,255,.55)' : null);
     }
+    /* LA RUTA DE ASCENSO: farolitos encendidos trepando hacia el mar de nubes.
+       Es la escala de la montaña dicha con puntos de luz, no con una cifra. */
+    for(var fa=0; fa<9; fa++){
+      var t3 = fa/9;
+      var fx2 = W*0.31 + Math.sin(t3*5.4 + 1.1)*W*0.055 + t3*W*0.10;
+      var fy2 = fy - t3*(fy - (mar + H*0.03));
+      var e3 = Math.min(W,H)/300 * (0.40 - t3*0.22);
+      if(e3 <= 0.02) continue;
+      var gl = c.createRadialGradient(fx2, fy2, 0.2, fx2, fy2, 22*e3);
+      gl.addColorStop(0,'rgba(255,198,112,'+(0.34 - t3*0.16)+')');
+      gl.addColorStop(1,'rgba(255,180,90,0)');
+      c.fillStyle = gl; c.beginPath(); c.arc(fx2, fy2, 22*e3, 0, 7); c.fill();
+      c.fillStyle = 'rgba(255,206,132,'+(0.9 - t3*0.35)+')';
+      c.beginPath(); c.arc(fx2, fy2, Math.max(0.7, 1.5*e3), 0, 7); c.fill();
+    }
+    /* una pagoda lejana en la cresta de la derecha */
+    pagoda(W*0.845, fy - H*0.012, Math.min(W,H)/430, '#0A1424');
     /* bruma entre el bosque y el mar de nubes */
     var br = c.createLinearGradient(0, mar + H*0.02, 0, fy + H*0.02);
     br.addColorStop(0,'rgba(120,152,206,.30)'); br.addColorStop(1,'rgba(12,22,42,0)');
