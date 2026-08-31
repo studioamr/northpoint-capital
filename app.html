@@ -13401,11 +13401,56 @@ function bokkenSVG(){
     <circle cx="186" cy="20.5" r="3" fill="#5b3f20"/>
   </svg>`;
 }
+/* ══════════ EL JARDÍN ══════════ (André, 31-ago-2026)
+   El primer mundo, el de la espada de madera: cielo despejado, nubes pasando y
+   flores. Vive aparte de ZEN_ESCENAS porque esas nueve son de las nueve
+   katanas de acero; ésta no tiene dueño ni jefe — es de donde sales.
+   Va claro y bonito a propósito: los nueve mundos que siguen son de noche, de
+   nieve o de lava, y el contraste hace que se sienta que empezaste abajo. */
+const ZEN_JARDIN = { bioma:['El jardín','The garden'], sinNinja:true,
+  etapa:['EL PRINCIPIO','THE BEGINNING'],
+  cielo:['#3f93cf','#71b7e2','#aed7ee','#e4f2fa'],
+  sol:{x:.76,y:.22,r:66,col:'rgba(255,250,226,.95)',halo:'rgba(255,244,192,.30)'},
+  montes:[['#3f7549',1],['#5d9963',.7]], agua:'rgba(96,152,112,.45)',
+  nubes:true, nubesCol:'rgba(255,255,255,.94)', nubesEsc:1.5,
+  arbolGigante:true, arbolCol:'#2b6a38',
+  flores:true, floresCol:'rgba(238,152,198,.95)',
+  pasto:true, pastoCol:'rgba(34,80,42,.85)',
+  part:'sakura', partCol:'rgba(255,202,216,.95)' };
+
+/* ══ EL RÓTULO DEL MUNDO ══ el nombre de la etapa, escrito en el cielo:
+   letras finas muy espaciadas y un filete a cada lado. No es una etiqueta de
+   interfaz — es parte del cuadro, como el título de un capítulo. */
+function zenRotuloCielo(c, W, H, titulo, sub, alfa){
+  if(!titulo) return;
+  const a = alfa == null ? 1 : alfa;
+  c.save(); c.textAlign = 'center'; c.globalAlpha = a;
+  const tam = Math.round(Math.max(13, Math.min(30, H*0.048)));
+  c.font = '600 ' + tam + 'px "IBM Plex Mono", monospace';
+  c.letterSpacing = Math.round(tam*0.42) + 'px';
+  const y = H*0.155;
+  c.fillStyle = 'rgba(255,255,255,.92)';
+  c.shadowColor = 'rgba(10,20,35,.35)'; c.shadowBlur = 14;
+  c.fillText(titulo, W/2, y);
+  c.shadowBlur = 0;
+  const an = c.measureText(titulo).width;
+  c.strokeStyle = 'rgba(255,255,255,.42)'; c.lineWidth = 1;
+  [-1,1].forEach(sg => { const x0 = W/2 + sg*(an/2 + W*0.035);
+    c.beginPath(); c.moveTo(x0, y - tam*0.32); c.lineTo(x0 + sg*W*0.075, y - tam*0.32); c.stroke(); });
+  if(sub){ c.letterSpacing = '4px';
+    c.font = '500 ' + Math.round(Math.max(8, tam*0.42)) + 'px "IBM Plex Mono", monospace';
+    c.fillStyle = 'rgba(255,255,255,.55)';
+    c.fillText(sub, W/2, y + tam*1.15); }
+  c.letterSpacing = '0px';
+  c.restore();
+}
+
 /* ══════════ EL ALTA ══════════ (André, 31-ago-2026)
-   Lo que pasa al registrarte, en tres tiempos: te dan la feria de la cuenta,
-   te dan tu espada —de madera, la única que se regala— y te dicen a dónde vas.
-   Antes esto era un toast de dos segundos: entrabas con $50,000 y una katana
-   blanca sin que nadie te dijera para qué. */
+   Cómo empieza todo, en cuatro tiempos y sin cortes: la PARED del coleccionista
+   con sus nueve huecos vacíos, la feria que te dan con la cuenta, la espada de
+   MADERA —la única que se regala—, y la salida al BOSQUE, que es el primer
+   mundo. De ahí se sube: las nieves de Shiro vienen después, cuando le ganes.
+   Antes esto era un toast de dos segundos. */
 function batAlta(){
   if(!window._batAlta) return false;
   const root = $('#batRoot'); if(!root) return false;
@@ -13414,46 +13459,161 @@ function batAlta(){
   root.innerHTML = '';
   let host = document.getElementById('peliHost');
   if(!host){ host = document.createElement('div'); host.id='peliHost'; document.body.appendChild(host); }
-  const kNegra = KATANAS[KATANAS.length-1] || {};
   host.innerHTML = `<div class="alta-ov">
-    <div class="alta-hoja">
-      <div class="alta-paso p1">
-        <span class="alta-k">${bi('TU CUENTA','YOUR ACCOUNT')}</span>
-        <b class="alta-cifra" id="altaCifra">$0</b>
-        <p>${bi('Tu kit de bienvenida. Una sola vez en la vida.','Your welcome kit. Once in a lifetime.')}</p>
-      </div>
-      <div class="alta-paso p2">
-        <span class="alta-k">${bi('TU ESPADA','YOUR SWORD')}</span>
-        <span class="alta-arma">${bokkenSVG()}</span>
-        <b class="alta-nom">${bi('Bokken · de madera','Bokken · wooden')}</b>
-        <p>${bi('Es la única que se regala. Las nueve de acero se ganan, una por una.','It is the only one given. The nine steel ones are earned, one by one.')}</p>
-      </div>
-      <div class="alta-paso p3">
-        <span class="alta-k">${bi('TU OBJETIVO','YOUR GOAL')}</span>
-        <b class="alta-kuro">KURO</b>
-        <span class="alta-arma negra">${katanaSVG(kNegra.belt||'#23272E', true)}</span>
-        <p>${bi('Llegar hasta la novena. Con esta espada de madera en la mano, y ocho maestros entre tú y ella.','Reach the ninth. With this wooden sword in hand, and eight masters between you and it.')}</p>
-        <button type="button" class="btn primary alta-ir" id="altaIr">${bi('Empezar','Begin')} →</button>
-      </div>
+    <div class="alta-cuadro"><canvas id="altaCv"></canvas></div>
+    <div class="alta-pie">
+      <span class="alta-k" id="altaK"></span>
+      <b class="alta-t" id="altaT"></b>
+      <p class="alta-p" id="altaP"></p>
+      <button type="button" class="btn primary alta-ir" id="altaIr" hidden>${bi('Entrar al bosque','Enter the forest')} →</button>
     </div>
+    <button type="button" class="peli-saltar" id="altaX">${bi('saltar','skip')} ›</button>
   </div>`;
-  /* la feria sube contando: se siente que te la están dando */
-  (()=>{ const el = $('#altaCifra'); if(!el) return;
-    const T0 = performance.now(), DUR = 1500, DESDE = 500;
-    const sube = (now) => { if(!el.isConnected) return;
-      const u = Math.max(0, Math.min(1, (now - T0 - DESDE)/DUR));
-      const e = 1 - Math.pow(1-u, 3);
-      el.textContent = fmt$(Math.round(BAT_BIENVENIDA*e/100)*100);
-      if(u < 1) window._peliRAF = requestAnimationFrame(sube);
-      else el.textContent = fmt$(BAT_BIENVENIDA); };
-    window._peliRAF = requestAnimationFrame(sube); })();
-  $('#altaIr').onclick = () => {
+  const cv = $('#altaCv');
+  const dpr = Math.min(2, window.devicePixelRatio || 1);
+  const medir = () => { const w = cv.clientWidth || 900; const h = Math.round(w*9/16);
+    cv.width = Math.round(w*dpr); cv.height = Math.round(h*dpr); return { w, h }; };
+  let M = medir();
+  const g = cv.getContext('2d');
+  const nj = { traje:'#0f1218', banda:'#b98d55', buf:'#8a6b45' };   /* el de madera */
+  const pet = Array.from({length:40},()=>({ x:Math.random(), y:Math.random(),
+    s:3+Math.random()*4, sp:0.5+Math.random()*1.2, dr:Math.random()*6.3, sw:0.5+Math.random() }));
+  const E = batEscenaViva({ ...ZEN_JARDIN }, { sesion:null, id:'jardin' });
+  E.lluvia = false; E.rayos = false;
+  const BEATS = [
+    { d:5.0, k:['SU PARED','HIS WALL'], t:['Nueve huecos','Nine gaps'],
+      p:['El coleccionista los quiso todos. Consiguió ocho. En su pared quedó un hueco, y nunca lo llenó.',
+         'The collector wanted them all. He got eight. One gap stayed on his wall, and he never filled it.'] },
+    { d:4.5, k:['TU CUENTA','YOUR ACCOUNT'], t:['$50,000',''],
+      p:['Tu kit de bienvenida. Una sola vez en la vida.',
+         'Your welcome kit. Once in a lifetime.'] },
+    { d:5.0, k:['TU ESPADA','YOUR SWORD'], t:['Bokken · de madera','Bokken · wooden'],
+      p:['Es la única que se regala. Las nueve de acero se ganan, una por una.',
+         'It is the only one given. The nine steel ones are earned, one by one.'] },
+    { d:6.5, k:['EL PRIMER MUNDO','THE FIRST WORLD'], t:['El bosque','The forest'],
+      p:['Sales de la casa con la espada de madera en la mano. Aquí empieza. Las nieves vienen después, cuando le ganes a Shiro — y al final, Kuro.',
+         'You leave the house with the wooden sword in hand. It starts here. The snows come later, when you beat Shiro — and at the end, Kuro.'] },
+  ];
+  const TOTAL = BEATS.reduce((a,b)=>a+b.d,0);
+  const t0 = performance.now();
+  let cual = -1;
+  const eio = u => u<0.5 ? 2*u*u : 1-Math.pow(-2*u+2,2)/2;
+  const salir = () => {
     cancelAnimationFrame(window._peliRAF||0);
+    removeEventListener('resize', alRedim);
     window._batAlta = false;
-    const h = document.getElementById('peliHost'); if(h) h.remove();
-    toast(bi('Bienvenido al dojo, ','Welcome to the dojo, ') + batNom(yo) + '.');
+    const h2 = document.getElementById('peliHost'); if(h2) h2.remove();
+    toast(bi('Bienvenido al bosque, ','Welcome to the forest, ') + batNom(yo) + '.');
     renderBatalla();
   };
+  const alRedim = () => { M = medir(); };
+  addEventListener('resize', alRedim);
+  $('#altaX').onclick = salir;
+  $('#altaIr').onclick = salir;
+  /* ── LA PARED del coleccionista: nueve soportes, todos vacíos ── */
+  const pintaPared = (w, h, u, abre) => {
+    g.fillStyle = '#0a0c11'; g.fillRect(0,0,w,h);
+    /* la luz de una lámpara, arriba a la izquierda */
+    const lg2 = g.createRadialGradient(w*0.22, h*0.10, 6, w*0.22, h*0.10, h*0.95);
+    lg2.addColorStop(0,'rgba(255,214,150,.16)'); lg2.addColorStop(1,'rgba(255,214,150,0)');
+    g.fillStyle = lg2; g.fillRect(0,0,w,h);
+    /* el zócalo y el piso */
+    g.fillStyle = '#0d1017'; g.fillRect(0, h*0.80, w, h*0.20);
+    g.strokeStyle = 'rgba(255,255,255,.06)'; g.lineWidth = 1;
+    g.beginPath(); g.moveTo(0, h*0.80); g.lineTo(w, h*0.80); g.stroke();
+    /* NUEVE SOPORTES vacíos, en 3×3 */
+    for(let f=0; f<3; f++) for(let c2=0; c2<3; c2++){
+      const cx = w*(0.20 + c2*0.16), cy = h*(0.22 + f*0.17), an = w*0.105;
+      g.strokeStyle = 'rgba(255,255,255,.10)'; g.lineWidth = 1.4;
+      g.beginPath(); g.moveTo(cx-an/2, cy); g.lineTo(cx+an/2, cy); g.stroke();
+      [-1,1].forEach(sg => { g.beginPath();
+        g.moveTo(cx + sg*an*0.36, cy); g.lineTo(cx + sg*an*0.36, cy - h*0.026); g.stroke(); });
+      /* el hueco de la novena, marcado */
+      if(f===2 && c2===2){ g.save(); g.setLineDash([3,4]);
+        g.strokeStyle = 'rgba(255,255,255,.20)'; g.lineWidth = 1;
+        g.strokeRect(cx-an/2, cy-h*0.045, an, h*0.052); g.restore(); }
+    }
+    /* LA PUERTA a la derecha, que se va abriendo */
+    const px2 = w*0.80, pw = w*0.15, py2 = h*0.30, ph = h*0.50;
+    g.fillStyle = '#070910'; g.fillRect(px2, py2, pw, ph);
+    const ab = eio(Math.max(0, Math.min(1, abre)));
+    if(ab > 0){
+      const luz = g.createLinearGradient(px2, 0, px2 + pw*ab, 0);
+      luz.addColorStop(0,'rgba(214,236,190,'+(0.85*ab).toFixed(3)+')');
+      luz.addColorStop(1,'rgba(150,200,140,'+(0.15*ab).toFixed(3)+')');
+      g.fillStyle = luz; g.fillRect(px2, py2, pw*ab, ph);
+      const der = g.createRadialGradient(px2, h*0.55, 4, px2, h*0.55, w*0.5);
+      der.addColorStop(0,'rgba(190,225,170,'+(0.22*ab).toFixed(3)+')');
+      der.addColorStop(1,'rgba(190,225,170,0)');
+      g.fillStyle = der; g.fillRect(0,0,w,h);
+    }
+    g.strokeStyle = 'rgba(255,255,255,.12)'; g.lineWidth = 2;
+    g.strokeRect(px2, py2, pw, ph);
+    /* EL COLECCIONISTA: mira la pared y luego camina a la puerta */
+    const cam = Math.max(0, Math.min(1, (u-0.55)/0.45));
+    const nx = w*(0.46 + eio(cam)*0.33);
+    const esc2 = Math.max(1.0, Math.min(2.4, h/210));
+    try{ zenNinja(g, nx, h*0.80, esc2, performance.now(), 0, '#b98d55', nj, false,
+                  cam>0 && cam<1 ? 'corriendo' : 'guardia'); }catch(e){}
+  };
+  const pinta = (now) => {
+    if(!cv.isConnected) return;
+    const seg = (now - t0)/1000;
+    const w = M.w, h = M.h;
+    let ix = 0, base = 0;
+    while(ix < BEATS.length-1 && seg >= base + BEATS[ix].d){ base += BEATS[ix].d; ix++; }
+    const B = BEATS[ix], local = seg - base, u = Math.min(1, local/B.d);
+    if(ix !== cual){
+      cual = ix;
+      $('#altaK').textContent = loc(B.k);
+      $('#altaT').textContent = loc(B.t);
+      $('#altaP').textContent = loc(B.p);
+      const pie = $('#altaP').parentElement;
+      if(pie){ pie.style.opacity = '0'; requestAnimationFrame(()=>{ pie.style.opacity = '1'; }); }
+      if(ix === 3) $('#altaIr').hidden = false;
+    }
+    g.setTransform(dpr,0,0,dpr,0,0); g.globalAlpha = 1;
+    if(ix < 3){
+      /* los tres primeros pasan en la casa; la puerta se abre en el tercero */
+      pintaPared(w, h, ix===2 ? u : (ix===0 ? u*0.5 : 0.5+u*0.3), ix===2 ? u : 0);
+      if(ix === 1){
+        /* la feria, contada sobre la escena */
+        g.save(); g.textAlign='center';
+        g.font='800 ' + Math.round(Math.max(26, h*0.15)) + 'px system-ui, sans-serif';
+        g.fillStyle='#fff'; g.globalAlpha = Math.min(1, u*3);
+        const e = 1-Math.pow(1-Math.min(1,u*1.6),3);
+        g.fillText(fmt$(Math.round(BAT_BIENVENIDA*e/100)*100), w/2, h*0.52);
+        g.restore();
+      }
+      if(ix === 2){
+        /* la espada de madera, girando hasta quedar horizontal en su mano */
+        g.save(); g.translate(w*0.5, h*0.46);
+        g.rotate((1-eio(Math.min(1,u*1.4)))*-1.1);
+        const L = w*0.24;
+        g.strokeStyle='#b98d55'; g.lineWidth=Math.max(4, h*0.018); g.lineCap='round';
+        g.beginPath(); g.moveTo(-L*0.62, 4); g.lineTo(L*0.34, -3); g.stroke();
+        g.strokeStyle='#6b4a26'; g.lineWidth=Math.max(5, h*0.022);
+        g.beginPath(); g.moveTo(L*0.34, -3); g.lineTo(L*0.62, -6); g.stroke();
+        g.restore();
+      }
+    } else {
+      /* EL BOSQUE: sale de la casa y empieza el camino */
+      const pt = pet.map(p2 => ({ ...p2, x:p2.x*w, y:p2.y*h }));
+      try{ zenDibujaEscena(g, w, h, E, now, pt, '#b98d55'); }
+      catch(e){ g.fillStyle='#0d1a12'; g.fillRect(0,0,w,h); }
+      pet.forEach((p2,i2) => { p2.x = pt[i2].x/w; p2.y = pt[i2].y/h; });
+      const esc2 = Math.max(1.0, Math.min(2.6, h/200));
+      const nx = w*(0.14 + Math.min(1, u*1.25)*0.40);
+      try{ zenNinja(g, nx, h*0.72, esc2, now, 0, '#b98d55', nj, false,
+                    u < 0.8 ? 'corriendo' : 'guardia'); }catch(e){}
+      /* el fundido desde la puerta: entra el bosque */
+      if(u < 0.22){ g.fillStyle='rgba(214,236,190,'+(1-u/0.22).toFixed(3)+')'; g.fillRect(0,0,w,h); }
+    }
+    if(seg < 0.8){ g.fillStyle='rgba(4,6,11,'+(1-seg/0.8).toFixed(3)+')'; g.fillRect(0,0,w,h); }
+    if(seg >= TOTAL){ $('#altaIr').hidden = false; }
+    window._peliRAF = requestAnimationFrame(pinta);
+  };
+  window._peliRAF = requestAnimationFrame(pinta);
   return true;
 }
 /* ══════════ LOS NUEVE ══════════ (André, 31-ago-2026)
@@ -23144,7 +23304,7 @@ if verPanel and barstate.islast
         // es el número de trades que de verdad hay que aguantar; si salen
         // 1:2 llegas antes, y eso nunca decepciona
         int totalTr = int(math.ceil((metaC - 50000) / float(riesgoDia)))
-        camino := str.tostring(math.min(dC, totalTr)) + "/" + str.tostring(totalTr) + " trades"
+        camino := str.tostring(math.min(dC, totalTr)) + "/" + str.tostring(totalTr) + " trades · " + (esEval ? "EVAL" : "BUFFER")
     else if timenow >= payIni and timenow < payFin
         camino := "cobro diario"
     else
