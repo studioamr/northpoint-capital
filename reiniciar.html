@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>NORTHPOINT · Reiniciar cuenta</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+  :root{--void:#050506;--tinta:#EDEFF2;--tenue:rgba(237,239,242,.5);--hair:rgba(237,239,242,.12);
+    --mono:'IBM Plex Mono',ui-monospace,monospace;--rojo:#ff7a6b;--verde:#57c79b}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--void);color:var(--tinta);
+    font-family:'Inter',system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+  .w{max-width:720px;margin:0 auto;padding:44px 22px 90px}
+  .et{font-family:var(--mono);font-size:10px;letter-spacing:.3em;text-transform:uppercase;color:var(--tenue)}
+  h1{margin:14px 0 0;font-size:34px;font-weight:800;letter-spacing:-.02em}
+  p{line-height:1.65;color:var(--tenue);font-size:14.5px}
+  .aviso{margin:26px 0;padding:16px 18px;border:1px solid rgba(255,122,107,.35);
+    border-radius:14px;background:rgba(255,122,107,.06)}
+  .aviso b{color:var(--rojo);font-family:var(--mono);font-size:10px;letter-spacing:.2em}
+  .aviso p{margin:8px 0 0;color:var(--tinta)}
+  ul{margin:10px 0 0;padding-left:18px;color:var(--tenue);font-size:14px;line-height:1.8}
+  li b{color:var(--tinta);font-weight:600}
+  table{width:100%;border-collapse:collapse;margin-top:14px;font-family:var(--mono);font-size:12px}
+  th{text-align:left;font-size:9px;letter-spacing:.16em;color:var(--tenue);font-weight:500;
+    text-transform:uppercase;padding:0 10px 8px 0}
+  td{padding:9px 10px 9px 0;border-top:1px solid var(--hair)}
+  td.r{text-align:right}
+  .btn{display:block;width:100%;margin-top:14px;padding:16px;border-radius:14px;
+    border:1px solid var(--hair);background:transparent;color:var(--tinta);
+    font-family:var(--mono);font-size:12px;letter-spacing:.16em;text-transform:uppercase;cursor:pointer}
+  .btn:hover{border-color:rgba(237,239,242,.4)}
+  .btn.rojo{border-color:rgba(255,122,107,.5);color:#ffb3a8}
+  .btn.rojo:hover{background:rgba(255,122,107,.1)}
+  .btn:disabled{opacity:.35;cursor:default}
+  .log{margin-top:22px;font-family:var(--mono);font-size:12px;line-height:1.9;white-space:pre-wrap}
+  .log .ok{color:var(--verde)} .log .no{color:var(--rojo)}
+  code{font-family:var(--mono);font-size:12px;color:var(--tinta)}
+</style>
+</head>
+<body>
+<div class="w">
+  <span class="et">Northpoint · herramienta</span>
+  <h1>Reiniciar la cuenta</h1>
+  <p>Deja el terminal como recién instalado, pero con tus cinco cuentas ya dadas de alta
+     y Kuro desde cero, para volver a ver la apertura.</p>
+
+  <div class="aviso">
+    <b>ESTO BORRA DE VERDAD</b>
+    <p>Se van tus <b>trades</b>, tu <b>caja</b> (los payouts ya cobrados), tu <b>journal</b>,
+       tus posiciones y todo el avance de Kuro. No se puede deshacer desde la app.
+       Por eso el primer botón <b>baja un respaldo</b> antes de tocar nada — descárgalo
+       y guárdalo, es tu única marcha atrás.</p>
+  </div>
+
+  <span class="et">Lo que queda dado de alta</span>
+  <table>
+    <thead><tr><th>Cuenta</th><th>Firma</th><th>Fase</th><th class="r">Balance</th></tr></thead>
+    <tbody id="tabla"></tbody>
+  </table>
+
+  <button class="btn" id="bkp">1 · Descargar respaldo</button>
+  <button class="btn rojo" id="go" disabled>2 · Borrar y dejarla nueva</button>
+  <button class="btn" id="ir" style="display:none">Abrir el terminal →</button>
+
+  <div class="log" id="log"></div>
+</div>
+
+<script>
+/* ══ REINICIO ══ (André, 31-ago-2026)
+   Las cinco cuentas están copiadas de su Cockpit tal como se muestran ahí:
+   los tres PA de Apex ya fondeados y los dos de FundedNext en evaluación, cada
+   uno con SU balance real, que en los evals está por debajo de los $50,000.
+   Los tamaños se dejan en 50,000 porque es lo que dice el balance de las
+   fondeadas; si alguno es de otro tamaño, se corrige en Ajustes → Cuentas. */
+const CUENTAS = [
+  { alias:'PAAPEX3654310000013',      firma:'Apex',        fase:'payout', size:50000, bal:50000.00,   lider:true },
+  { alias:'PAAPEX3654310000014',      firma:'Apex',        fase:'payout', size:50000, bal:50000.00 },
+  { alias:'PAAPEX3654310000015',      firma:'Apex',        fase:'payout', size:50000, bal:50000.00 },
+  { alias:'FNFTCHANDREMACOUZET42086', firma:'FundedNext',  fase:'eval',   size:50000, bal:48870.50 },
+  { alias:'FNFTCHANDREMACOUZET34430', firma:'FundedNext',  fase:'eval',   size:50000, bal:48960.40 },
+];
+const $ = s => document.querySelector(s);
+const money = n => '$' + n.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2});
+$('#tabla').innerHTML = CUENTAS.map(c=>`<tr>
+  <td>${c.alias}${c.lider?' <span style="color:#e9cf46">·</span>':''}</td>
+  <td>${c.firma}</td>
+  <td>${c.fase==='eval'?'evaluación':'fondeada'}</td>
+  <td class="r">${money(c.bal)}</td></tr>`).join('');
+
+const log = (t, cls) => { const d=document.createElement('div');
+  if(cls) d.className=cls; d.textContent=t; $('#log').appendChild(d); };
+/* LA CLAVE SE BUSCA POR CONTENIDO, NO POR NOMBRE (André, 31-ago-2026): el
+   estado real se llama 'northpoint_terminal_v3' y un filtro por prefijo 'np_'
+   no lo encontraba — habría agarrado 'np_theme' y borrado el tema en vez de la
+   cuenta. Se busca el objeto que de verdad parece el estado: el que trae
+   session y accounts. */
+const claveEstado = () => {
+  let mejor = null, may = -1;
+  for(let i = 0; i < localStorage.length; i++){
+    const k = localStorage.key(i); const v = localStorage.getItem(k) || '';
+    if(v.length < 40 || v[0] !== '{') continue;
+    let o; try{ o = JSON.parse(v); }catch(e){ continue; }
+    if(!o || typeof o !== 'object') continue;
+    const parece = ('accounts' in o) || ('session' in o && 'trades' in o);
+    if(parece && v.length > may){ may = v.length; mejor = k; }
+  }
+  return mejor;
+};
+
+$('#bkp').onclick = () => {
+  const k = claveEstado();
+  if(!k){ log('No encuentro el estado en este navegador. ¿Abriste antes la app aquí?', 'no'); return; }
+  const dump = {};
+  Object.keys(localStorage).forEach(x=>{ dump[x] = localStorage.getItem(x); });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([JSON.stringify(dump,null,1)], {type:'application/json'}));
+  a.download = 'northpoint-respaldo-' + new Date().toISOString().slice(0,19).replace(/[:T]/g,'-') + '.json';
+  a.click();
+  log('Respaldo descargado (' + Object.keys(dump).length + ' llaves, clave del estado: ' + k + ').', 'ok');
+  log('Guárdalo antes de seguir. Ya puedes borrar.');
+  $('#go').disabled = false;
+};
+
+$('#go').onclick = () => {
+  if(!confirm('Se borran trades, caja, journal y todo el avance de Kuro. ¿Ya guardaste el respaldo?')) return;
+  const k = claveEstado();
+  if(!k){ log('No encuentro el estado.', 'no'); return; }
+  let S;
+  try{ S = JSON.parse(localStorage.getItem(k)); }catch(e){ log('El estado no se pudo leer: '+e.message,'no'); return; }
+  if(!S || typeof S !== 'object'){ log('El estado no es un objeto.','no'); return; }
+  const yo = (S.session && S.session.user) || 'andre.np';
+  const hoy = new Date().toISOString().slice(0,10);
+  const uid = () => Math.random().toString(36).slice(2,10);
+
+  /* ── lo que se borra ── */
+  S.trades = []; S.caja = []; S.journal = []; S.posiciones = []; S.notas = [];
+  S.seqTrade = 0; S.lgSesion = {}; S.lgPreset = null;
+  /* ── KURO desde cero: sin ninja, sin kit, sin katanas, sin jefes ── */
+  S.bossWin = {}; S.batKatanas = {}; S.batEquipada = {}; S.batNinja = {};
+  S.batKit = {}; S.batStack = {}; S.batPico = {}; S.batStats = {}; S.batGanado = {};
+  S.batHistorial = []; S.batTorneosInsc = {}; S.batTorneosPagado = {}; S.batChFin = {};
+  S.challenge = null; S.bienvenida = {}; S.batKatanasLimpio = 2;
+  /* ── las cinco cuentas, ya dadas de alta ── */
+  S.accounts = CUENTAS.map((c,i)=>({
+    id:'ac_'+uid(), alias:c.alias, orden:i+1, desde:hoy,
+    estado:'activa', owner:yo, tipo:'prop',
+    size:c.size, start:c.bal, fase:c.fase, firma:c.firma,
+    upd: Date.now(),
+  }));
+  try{ localStorage.setItem(k, JSON.stringify(S)); }catch(e){ log('No se pudo guardar: '+e.message,'no'); return; }
+  log('Listo. ' + S.accounts.length + ' cuentas dadas de alta, Kuro desde cero.', 'ok');
+  log('Trades, caja y journal en cero. La nube se sincroniza al abrir el terminal.');
+  log('Al entrar a Kuro verás la apertura completa: la pared, la feria y el Edén.');
+  $('#go').disabled = true;
+  $('#ir').style.display = 'block';
+};
+$('#ir').onclick = () => location.href = 'app.html';
+</script>
+</body>
+</html>
