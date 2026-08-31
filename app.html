@@ -13743,99 +13743,337 @@ function batLimpiaZombi(){
 /* la cubierta de Kuro: la montaña, la estrella y la nieve. Estaba dentro
    del binder del lobby, así que la portada sólo se podía pintar desde ahí.
    Como función se pinta desde donde haga falta. (André, 31-ago-2026) */
+/* ══ LA PORTADA DE KURO ══ (André, 31-ago-2026)
+   La misma montaña de la landing, adaptada a vertical: la escena que un
+   visitante ve en northpointcapital.io/kuro es la que se encuentra al entrar,
+   y no dos dibujos distintos del mismo sitio. Seis cordilleras que se pierden
+   en la bruma, el mar de nubes del que sale el pico, pueblos encendidos en el
+   valle, la nevada delante y Kuro arriba con su aura y sus ojos.
+   REGLA HEREDADA DE LA LANDING: sobre la roca no se pinta NADA que aclare —
+   nubes, bruma y nieve suelta van DETRÁS. Encima sólo lo que oscurece. Sin eso
+   la montaña se lee como vidrio. */
 function batPintaPortada(){
   const ocv=$('#onbCv'); cancelAnimationFrame(window._onbRAF||0);
-  if(ocv){ const ox=ocv.getContext('2d'); const OW=900, OH=1280;
-    const rr2=(i,a)=>((Math.sin((i+(a||0))*12.9898)*43758.5453)%1+1)%1;
-    const stars=[]; for(let i=0;i<130;i++) stars.push({x:rr2(i,1)*OW, y:rr2(i,2)*OH*0.58, s:0.7+rr2(i,3)*1.9, f:rr2(i,4)*6.3});
-    const copos=[]; for(let i=0;i<150;i++) copos.push({x:rr2(i,7)*OW, y:rr2(i,8)*OH, s:0.9+rr2(i,9)*2.4, v:60+rr2(i,10)*130, f:rr2(i,11)*6.3});
-    const rachas=[]; for(let i=0;i<22;i++) rachas.push({y:OH*0.3+rr2(i,13)*OH*0.6, l:70+rr2(i,14)*160, v:420+rr2(i,15)*420, o:rr2(i,16)*OW});
-    const aves2=[]; for(let i=0;i<3;i++) aves2.push({cx:OW*(0.3+i*0.2), cy:OH*(0.3+rr2(i,18)*0.08), r:26+rr2(i,19)*30, f:rr2(i,20)*6.3, v:(i%2?1:-1)*(0.00025+rr2(i,21)*0.0002)});
-    const AP={x:OW*0.5, y:OH*0.335};   /* la cima */
-    let last=0;
-    const pintaO=(t)=>{ if(!ocv.isConnected) return; if(ocv.offsetParent===null){ window._onbRAF=requestAnimationFrame(pintaO); return; }
-      const dt=Math.min(0.05,(t-last)/1000)||0.016; last=t;
-      /* cielo profundo */
-      const g=ox.createLinearGradient(0,0,0,OH);
-      g.addColorStop(0,'#02040c'); g.addColorStop(0.45,'#081020'); g.addColorStop(0.8,'#0e1830'); g.addColorStop(1,'#15223f');
-      ox.fillStyle=g; ox.fillRect(0,0,OW,OH);
-      stars.forEach(s3=>{ ox.fillStyle=`rgba(255,255,255,${0.22+0.55*Math.abs(Math.sin(t/900+s3.f))})`; ox.fillRect(s3.x,s3.y,s3.s,s3.s); });
-      /* LA ESTRELLA: flota alto, pulsa, y su luz baja hasta la cima */
-      const ex2=OW*0.5, ey=OH*0.135 + Math.sin(t/1900)*12, pul=1+0.09*Math.sin(t/620);
-      ox.save();
-      const cone=ox.createLinearGradient(0,ey,0,AP.y);
-      cone.addColorStop(0,'rgba(190,255,220,.10)'); cone.addColorStop(1,'rgba(190,255,220,0)');
-      ox.fillStyle=cone; ox.beginPath(); ox.moveTo(ex2-14,ey); ox.lineTo(ex2+14,ey); ox.lineTo(ex2+92,AP.y); ox.lineTo(ex2-92,AP.y); ox.closePath(); ox.fill();
-      ox.fillStyle='rgba(140,255,180,.08)'; ox.beginPath(); ox.arc(ex2,ey,100*pul,0,7); ox.fill();
-      ox.fillStyle='rgba(180,255,210,.15)'; ox.beginPath(); ox.arc(ex2,ey,50*pul,0,7); ox.fill();
-      ox.strokeStyle='rgba(224,255,238,.92)'; ox.lineWidth=2.6;
-      ox.beginPath(); ox.moveTo(ex2-38*pul,ey); ox.lineTo(ex2+38*pul,ey); ox.moveTo(ex2,ey-38*pul); ox.lineTo(ex2,ey+38*pul); ox.stroke();
-      ox.lineWidth=1.1; ox.beginPath(); ox.moveTo(ex2-17*pul,ey-17*pul); ox.lineTo(ex2+17*pul,ey+17*pul); ox.moveTo(ex2+17*pul,ey-17*pul); ox.lineTo(ex2-17*pul,ey+17*pul); ox.stroke();
-      ox.fillStyle='#ecfff4'; ox.beginPath(); ox.arc(ex2,ey,7.5*pul,0,7); ox.fill();
-      ox.restore();
-      /* aves circulando lejos, bajo la estrella */
-      aves2.forEach(av=>{ const an=t*av.v+av.f, bx2=av.cx+Math.cos(an)*av.r*2.2, by2=av.cy+Math.sin(an)*av.r*0.5;
-        const w2=Math.sin(t/160+av.f)*3;
-        ox.strokeStyle='rgba(200,210,225,.5)'; ox.lineWidth=1.6; ox.beginPath();
-        ox.moveTo(bx2-6,by2+w2); ox.quadraticCurveTo(bx2,by2-3,bx2,by2); ox.quadraticCurveTo(bx2,by2-3,bx2+6,by2+w2); ox.stroke(); });
-      /* cordilleras lejanas (2 capas) con nieve en las puntas */
-      const ridge=(pts,col,nievePts)=>{ ox.fillStyle=col; ox.beginPath(); ox.moveTo(pts[0][0],pts[0][1]);
-        pts.forEach(p2=>ox.lineTo(p2[0],p2[1])); ox.lineTo(OW,OH); ox.lineTo(0,OH); ox.closePath(); ox.fill();
-        (nievePts||[]).forEach(i2=>{ const p2=pts[i2]; ox.fillStyle='rgba(226,233,246,.5)'; ox.beginPath();
-          ox.moveTo(p2[0],p2[1]); ox.lineTo(p2[0]+26,p2[1]+34); ox.lineTo(p2[0]+8,p2[1]+28); ox.lineTo(p2[0],p2[1]+38); ox.lineTo(p2[0]-9,p2[1]+26); ox.lineTo(p2[0]-26,p2[1]+34); ox.closePath(); ox.fill(); }); };
-      ridge([[0,OH*0.66],[OW*0.1,OH*0.56],[OW*0.2,OH*0.63],[OW*0.32,OH*0.52],[OW*0.44,OH*0.64],[OW*0.62,OH*0.55],[OW*0.78,OH*0.66],[OW*0.9,OH*0.58],[OW,OH*0.68]],'#070b16',[1,3,5,7]);
-      ridge([[0,OH*0.76],[OW*0.16,OH*0.64],[OW*0.34,OH*0.75],[OW*0.7,OH*0.62],[OW*0.88,OH*0.76],[OW,OH*0.7]],'#0a0f1e',[1,3]);
-      /* ══ LA MONTAÑA: dos caras (luz de luna / sombra), roca y nieve ══ */
-      const L=OW*0.10, R=OW*0.90;
-      /* cara iluminada */
-      ox.fillStyle='#151d34'; ox.beginPath(); ox.moveTo(L,OH); ox.lineTo(AP.x,AP.y); ox.lineTo(AP.x,OH); ox.closePath(); ox.fill();
-      /* cara en sombra */
-      ox.fillStyle='#090d19'; ox.beginPath(); ox.moveTo(AP.x,AP.y); ox.lineTo(R,OH); ox.lineTo(AP.x,OH); ox.closePath(); ox.fill();
-      /* vetas de ROCA en la cara iluminada */
-      ox.fillStyle='rgba(6,9,17,.55)';
-      [[0.30,0.62,0.05],[0.38,0.52,0.045],[0.335,0.78,0.07],[0.43,0.70,0.05],[0.46,0.46,0.028]].forEach(v2=>{
-        const vx=OW*v2[0], vy=OH*v2[1], vw=OW*v2[2];
-        ox.beginPath(); ox.moveTo(vx,vy); ox.lineTo(vx+vw,vy+OH*0.05); ox.lineTo(vx+vw*0.7,vy+OH*0.16); ox.lineTo(vx-vw*0.35,vy+OH*0.1); ox.closePath(); ox.fill(); });
-      /* riscos que asoman en la cara oscura */
-      ox.fillStyle='rgba(22,30,52,.5)';
-      [[0.56,0.55],[0.62,0.68],[0.58,0.82]].forEach(v2=>{ const vx=OW*v2[0], vy=OH*v2[1];
-        ox.beginPath(); ox.moveTo(vx,vy); ox.lineTo(vx+OW*0.05,vy+OH*0.035); ox.lineTo(vx+OW*0.02,vy+OH*0.08); ox.lineTo(vx-OW*0.015,vy+OH*0.05); ox.closePath(); ox.fill(); });
-      /* CASQUETE de nieve con borde irregular + cornisa */
-      ox.fillStyle='rgba(232,238,250,.94)'; ox.beginPath(); ox.moveTo(AP.x,AP.y);
-      ox.lineTo(AP.x+OW*0.052,AP.y+OH*0.075); ox.lineTo(AP.x+OW*0.032,AP.y+OH*0.062); ox.lineTo(AP.x+OW*0.022,AP.y+OH*0.095);
-      ox.lineTo(AP.x+OW*0.002,AP.y+OH*0.07); ox.lineTo(AP.x-OW*0.018,AP.y+OH*0.1); ox.lineTo(AP.x-OW*0.034,AP.y+OH*0.066);
-      ox.lineTo(AP.x-OW*0.052,AP.y+OH*0.082); ox.closePath(); ox.fill();
-      /* la cara en sombra del casquete */
-      ox.fillStyle='rgba(174,187,210,.85)'; ox.beginPath(); ox.moveTo(AP.x,AP.y);
-      ox.lineTo(AP.x+OW*0.052,AP.y+OH*0.075); ox.lineTo(AP.x+OW*0.028,AP.y+OH*0.058); ox.lineTo(AP.x+OW*0.006,AP.y+OH*0.02); ox.closePath(); ox.fill();
-      /* manchones de nieve pegados a la pendiente */
-      ox.fillStyle='rgba(226,233,246,.13)';
-      [[0.43,0.55,0.032],[0.385,0.67,0.042],[0.545,0.63,0.03],[0.46,0.8,0.052],[0.41,0.9,0.06]].forEach(v2=>{
-        ox.beginPath(); ox.ellipse(OW*v2[0],OH*v2[1],OW*v2[2],OH*0.006,(v2[0]<0.5?-0.62:0.62),0,7); ox.fill(); });
-      /* niebla que cruza lenta */
-      const fog=(fy,vel,al)=>{ const fx=((t*vel)%(OW*1.6))-OW*0.3;
-        const fg=ox.createRadialGradient(fx,fy,10,fx,fy,OW*0.3);
-        fg.addColorStop(0,`rgba(190,205,230,${al})`); fg.addColorStop(1,'rgba(190,205,230,0)');
-        ox.fillStyle=fg; ox.beginPath(); ox.ellipse(fx,fy,OW*0.3,OH*0.03,0,0,7); ox.fill(); };
-      fog(OH*0.6,0.015,0.05); fog(OH*0.78,-0.011,0.06); fog(OH*0.48,0.008,0.035);
-      /* FAUNA: el leopardo de las nieves cruza la ladera baja */
-      zenLeopardo(ox, OW, OH*0.9, t);
-      /* EL NINJA · el protagonista, contemplando la estrella desde la cima */
-      const halo=ox.createRadialGradient(AP.x,AP.y-46,4,AP.x,AP.y-46,110);
-      halo.addColorStop(0,'rgba(190,255,220,.12)'); halo.addColorStop(1,'rgba(190,255,220,0)');
-      ox.fillStyle=halo; ox.beginPath(); ox.arc(AP.x,AP.y-46,110,0,7); ox.fill();
-      zenNinja(ox, AP.x, AP.y+4, 2.1, t, 0, '#9aa3b2', {traje:'#0a0d14', banda:'#d6dce8', buf:'#b53a2e'});
-      /* TORMENTA: nieve con viento + ráfagas */
-      const viento=Math.sin(t/2600)*90+40;
-      copos.forEach(p2=>{ p2.y+=p2.v*dt; p2.x+=(viento+Math.sin(t/500+p2.f)*30)*dt;
-        if(p2.y>OH){ p2.y=-8; p2.x=rr2(p2.f*99,3)*OW; } if(p2.x>OW+10) p2.x=-10; if(p2.x<-10) p2.x=OW+10;
-        ox.fillStyle=`rgba(255,255,255,${0.35+0.45*Math.abs(Math.sin(p2.f+t/700))})`; ox.beginPath(); ox.arc(p2.x,p2.y,p2.s,0,7); ox.fill(); });
-      const gust=Math.max(0,Math.sin(t/3300));
-      if(gust>0.25){ ox.strokeStyle=`rgba(255,255,255,${0.1*gust})`; ox.lineWidth=1.6;
-        rachas.forEach(rp=>{ const rx=((t*rp.v*0.001*OW*0.12)+rp.o)%(OW+rp.l)-rp.l;
-          ox.beginPath(); ox.moveTo(rx,rp.y); ox.lineTo(rx+rp.l,rp.y-rp.l*0.12); ox.stroke(); }); }
-      window._onbRAF=requestAnimationFrame(pintaO); };
-    window._onbRAF=requestAnimationFrame(pintaO); }
+  if(!ocv) return;
+  const c=ocv.getContext('2d');
+  /* SE DIBUJA AL TAMAÑO DE SU CAJA, no a 900×1280 fijos: el lienzo va con
+     object-fit:cover, así que en una caja ancha se recortaba el valle entero —
+     los pueblos y el bosque quedaban fuera de cuadro. Midiendo, la escena se
+     compone para el hueco que tenga. */
+  let W=0, H=0;
+  const mide=()=>{
+    const D=Math.min(2, window.devicePixelRatio||1);
+    const aw=ocv.offsetWidth||900, ah=ocv.offsetHeight||1280;
+    if(aw<2||ah<2) return false;
+    W=aw; H=ah;
+    if(ocv.width!==Math.round(aw*D)){ ocv.width=Math.round(aw*D); ocv.height=Math.round(ah*D); }
+    c.setTransform(D,0,0,D,0,0); return true;
+  };
+  const rr=(i)=>((Math.sin(i*12.9898)*43758.5453)%1+1)%1;
+  const REDU = (()=>{ try{ return matchMedia('(prefers-reduced-motion: reduce)').matches; }catch(e){ return false; } })();
+
+  /* curva que pasa por TODOS los puntos: con quadraticCurveTo cada punto es un
+     control y la cumbre terminaba debajo de donde está parado Kuro */
+  function suave(pts){
+    c.moveTo(pts[0][0], pts[0][1]);
+    for(let i=0;i<pts.length-1;i++){
+      const p0=pts[i-1]||pts[i], p1=pts[i], p2=pts[i+1], p3=pts[i+2]||p2;
+      c.bezierCurveTo(p1[0]+(p2[0]-p0[0])/6, p1[1]+(p2[1]-p0[1])/6,
+                      p2[0]-(p3[0]-p1[0])/6, p2[1]-(p3[1]-p1[1])/6, p2[0], p2[1]);
+    }
+  }
+  function masa(pts, col){
+    c.fillStyle=col; c.beginPath(); suave(pts);
+    c.lineTo(W*2,H+200); c.lineTo(-W,H+200); c.closePath(); c.fill();
+  }
+  function sierra(sem, yB, alto, ancho, roca, nieve){
+    const pts=[[-80,yB]], cum=[]; let x=-80, i=0;
+    while(x<W+80){
+      const w=ancho*(0.55+rr(sem*7.3+i)*1.2), h=alto*(0.30+rr(sem*2.9+i)*1.05);
+      cum.push([x+w*0.5, yB-h, h]); pts.push([x+w*0.5, yB-h]); pts.push([x+w, yB-alto*0.05]);
+      x+=w; i++;
+    }
+    masa(pts, roca);
+    if(!nieve) return;
+    cum.forEach(q=>{ if(q[2]<alto*0.5) return;
+      const a=q[2]*0.32, d=q[2]*0.30;
+      c.fillStyle=nieve; c.beginPath();
+      c.moveTo(q[0]-a,q[1]+d); c.lineTo(q[0],q[1]); c.lineTo(q[0]+a,q[1]+d);
+      c.lineTo(q[0]+a*0.34,q[1]+d*0.60); c.lineTo(q[0],q[1]+d*0.92);
+      c.lineTo(q[0]-a*0.42,q[1]+d*0.56); c.closePath(); c.fill(); });
+  }
+  function pino(x, base, s, col, nv){
+    c.fillStyle='#0A0F1C'; c.fillRect(x-1.1*s, base-5*s, 2.2*s, 5*s);
+    c.fillStyle=col;
+    const piso=(cy,w,h)=>{ c.beginPath(); c.moveTo(x,cy-h); c.lineTo(x+w,cy); c.lineTo(x-w,cy); c.closePath(); c.fill(); };
+    piso(base-4*s,7.5*s,11*s); piso(base-11*s,6*s,10*s); piso(base-17*s,4.4*s,9*s);
+    if(nv){ c.fillStyle=nv; c.beginPath(); c.moveTo(x,base-26*s);
+      c.lineTo(x+2.6*s,base-20*s); c.lineTo(x-2.6*s,base-20*s); c.closePath(); c.fill(); }
+  }
+  function casa(x, base, s, luz, tipo){
+    c.fillStyle='rgba(4,8,18,.45)'; c.beginPath(); c.ellipse(x, base+0.8*s, 7.4*s, 1.7*s, 0,0,7); c.fill();
+    c.fillStyle='#131E31'; c.fillRect(x-4.6*s, base-6*s, 9.2*s, 6*s);
+    c.fillStyle='#0B1322';
+    if(tipo>0.62){ c.beginPath(); c.moveTo(x-7.4*s, base-5.4*s);
+      c.quadraticCurveTo(x, base-12.4*s, x+7.4*s, base-5.4*s);
+      c.lineTo(x+5.6*s, base-6.6*s); c.lineTo(x-5.6*s, base-6.6*s); c.closePath(); c.fill(); }
+    else { c.beginPath(); c.moveTo(x-6.4*s, base-5.6*s); c.lineTo(x, base-11*s);
+      c.lineTo(x+6.4*s, base-5.6*s); c.closePath(); c.fill(); }
+    if(luz){
+      const h=c.createRadialGradient(x, base-3.4*s, 0.4*s, x, base-3.4*s, 10*s);
+      h.addColorStop(0,'rgba(255,196,108,.44)'); h.addColorStop(1,'rgba(255,180,90,0)');
+      c.fillStyle=h; c.beginPath(); c.arc(x, base-3.4*s, 10*s, 0, 7); c.fill();
+      c.fillStyle='#FFC46C';
+      c.fillRect(x-2.0*s, base-4.6*s, 1.6*s, 1.5*s); c.fillRect(x+0.4*s, base-4.6*s, 1.6*s, 1.5*s);
+      c.fillRect(x-2.0*s, base-2.8*s, 1.6*s, 1.3*s); c.fillRect(x+0.4*s, base-2.8*s, 1.6*s, 1.3*s);
+    }
+  }
+  function humo(x, base, s, now, sem){
+    for(let i=0;i<5;i++){
+      const u=((now/(9000+rr(sem+i)*5000))+i/5)%1, a=0.16*(1-u)*(1-u);
+      if(a<0.006) continue;
+      c.fillStyle='rgba(196,210,236,'+a+')'; c.beginPath();
+      c.ellipse(x+Math.sin(u*4+sem)*4.6*s, base-u*30*s, (1.6+u*4.2)*s, (1.2+u*3.0)*s, 0,0,7); c.fill();
+    }
+  }
+  function pueblo(x, base, s, n, sem, now){
+    const g=c.createRadialGradient(x, base-5*s, 1, x, base-5*s, 42*s);
+    g.addColorStop(0,'rgba(255,186,104,.22)'); g.addColorStop(.5,'rgba(255,176,92,.07)');
+    g.addColorStop(1,'rgba(255,170,80,0)');
+    c.fillStyle=g; c.beginPath(); c.arc(x, base-5*s, 42*s, 0, 7); c.fill();
+    const casas=[];
+    for(let i=0;i<n;i++){ const prof=rr(sem*7.7+i);
+      casas.push({ x:x+(rr(sem*3.1+i)-0.5)*34*s, y:base+(prof-0.5)*5.2*s,
+                   s:s*(0.62+prof*0.72), luz:rr(sem*9.9+i)>0.20, tipo:rr(sem*4.1+i) }); }
+    casas.sort((a,b)=>a.y-b.y);
+    casas.forEach(k=>casa(k.x,k.y,k.s,k.luz,k.tipo));
+    if(now!=null && n>=6){
+      humo(casas[0].x+2*s, casas[0].y-9*s, s*0.9, now, sem);
+      humo(casas[casas.length-1].x-2*s, casas[casas.length-1].y-10*s, s*0.8, now, sem+7);
+    }
+  }
+  function nube(x,y,w,h,a){
+    c.fillStyle='rgba(196,214,244,'+a+')'; c.beginPath();
+    for(let i=0;i<7;i++){ const t=i/6, lx=x-w/2+t*w, lh=h*(0.4+Math.sin(t*Math.PI)*0.9);
+      c.ellipse(lx, y-lh*0.16, w*0.19, lh, 0,0,7); }
+    c.fill();
+    c.fillStyle='rgba(46,72,118,'+(a*0.55)+')';
+    c.beginPath(); c.ellipse(x, y+h*0.36, w*0.48, h*0.32, 0,0,7); c.fill();
+  }
+  /* Kuro: de negro, la katana envainada a la espalda, y los ojos encendidos */
+  function kuro(x, base, s){
+    c.save(); c.translate(x, base); c.lineCap='round';
+    c.strokeStyle='#2B3444'; c.lineWidth=2.6*s;
+    c.beginPath(); c.moveTo(-7*s,-16*s); c.lineTo(11*s,-44*s); c.stroke();
+    c.strokeStyle='#05070C'; c.lineWidth=3.6*s;
+    c.beginPath(); c.moveTo(-13*s,-7*s); c.lineTo(-7.5*s,-15*s); c.stroke();
+    c.fillStyle='#05070C';
+    c.fillRect(-8*s,-34*s,16*s,22*s);
+    c.fillRect(-7*s,-13*s,5.5*s,13*s); c.fillRect(1.5*s,-13*s,5.5*s,13*s);
+    c.fillRect(-6.5*s,-46*s,13*s,12*s);
+    c.fillRect(-7.5*s,-43*s,15*s,3.8*s);
+    c.beginPath(); c.moveTo(-7.5*s,-42*s); c.lineTo(-22*s,-36*s); c.lineTo(-7.5*s,-38*s); c.closePath(); c.fill();
+    /* los ojos: en una figura toda negra son lo único que dice que hay alguien */
+    c.save(); c.globalCompositeOperation='lighter';
+    [-2.5,2.5].forEach(dx=>{
+      const g2=c.createRadialGradient(dx*s,-37.7*s,0.2*s,dx*s,-37.7*s,7*s);
+      g2.addColorStop(0,'rgba(226,252,255,.95)'); g2.addColorStop(.35,'rgba(190,240,255,.22)');
+      g2.addColorStop(1,'rgba(150,210,255,0)');
+      c.fillStyle=g2; c.beginPath(); c.arc(dx*s,-37.7*s,7*s,0,7); c.fill(); });
+    c.restore();
+    c.fillStyle='#F2FEFF';
+    c.fillRect(-4*s,-38.5*s,3*s,1.6*s); c.fillRect(1*s,-38.5*s,3*s,1.6*s);
+    c.restore();
+  }
+
+  const pintaO=(now)=>{
+    if(!ocv.isConnected) return;
+    if(ocv.offsetParent===null || !mide()){ window._onbRAF=requestAnimationFrame(pintaO); return; }
+    /* ── el cielo ── */
+    const g=c.createLinearGradient(0,0,0,H);
+    g.addColorStop(0,'#070F28'); g.addColorStop(.30,'#122048');
+    g.addColorStop(.58,'#223C70'); g.addColorStop(.80,'#3A5E96'); g.addColorStop(1,'#547CB4');
+    c.fillStyle=g; c.fillRect(0,0,W,H);
+    for(let st=0;st<190;st++){
+      const tw=0.35+0.65*Math.abs(Math.sin(now/1500+st));
+      c.fillStyle='rgba(255,255,255,'+(0.10+rr(st*5.1)*0.6*tw)+')';
+      c.fillRect(rr(st*1.3)*W, rr(st*2.7)*H*0.50, 1.4, 1.4);
+    }
+    /* la luna */
+    const lx=W*0.76, ly=H*0.115, lr=Math.min(W,H)*0.052;
+    const lg=c.createRadialGradient(lx,ly,lr*0.4,lx,ly,lr*7);
+    lg.addColorStop(0,'rgba(226,238,255,.30)'); lg.addColorStop(1,'rgba(226,238,255,0)');
+    c.fillStyle=lg; c.beginPath(); c.arc(lx,ly,lr*7,0,7); c.fill();
+    c.fillStyle='#F0F6FF'; c.beginPath(); c.arc(lx,ly,lr,0,7); c.fill();
+    c.fillStyle='rgba(190,208,238,.55)';
+    c.beginPath(); c.arc(lx-lr*0.3,ly-lr*0.22,lr*0.20,0,7); c.fill();
+    c.beginPath(); c.arc(lx+lr*0.28,ly+lr*0.18,lr*0.14,0,7); c.fill();
+    /* la estrella fugaz: una cada catorce segundos */
+    (()=>{ const ci=14000, k=Math.floor(now/ci), u=(now%ci)/ci; if(u>0.16) return;
+      const v=u/0.16, x0=W*(0.10+rr(k*3.7)*0.55), y0=H*(0.03+rr(k*8.1)*0.14);
+      const lg2=W*(0.20+rr(k*5.5)*0.20), ca=Math.PI*0.22+rr(k*2.2)*0.16;
+      const x1=x0+Math.cos(ca)*lg2*v, y1=y0+Math.sin(ca)*lg2*v, fade=Math.sin(v*Math.PI);
+      const gf=c.createLinearGradient(x1-Math.cos(ca)*lg2*0.34, y1-Math.sin(ca)*lg2*0.34, x1, y1);
+      gf.addColorStop(0,'rgba(226,240,255,0)'); gf.addColorStop(1,'rgba(238,248,255,'+(0.85*fade)+')');
+      c.strokeStyle=gf; c.lineWidth=2; c.lineCap='round';
+      c.beginPath(); c.moveTo(x1-Math.cos(ca)*lg2*0.34, y1-Math.sin(ca)*lg2*0.34); c.lineTo(x1,y1); c.stroke();
+      const gh=c.createRadialGradient(x1,y1,0,x1,y1,10);
+      gh.addColorStop(0,'rgba(255,255,255,'+(0.9*fade)+')'); gh.addColorStop(1,'rgba(255,255,255,0)');
+      c.fillStyle=gh; c.beginPath(); c.arc(x1,y1,10,0,7); c.fill(); })();
+    /* nubes altas */
+    for(let na=0;na<5;na++){
+      const da=((now/(110000+rr(na*2.2)*70000))+rr(na*6.1))%1.4-0.2;
+      nube(da*W*1.35-W*0.18, H*(0.07+rr(na*3.3)*0.12), W*(0.16+rr(na*5.5)*0.18), H*0.008,
+           0.10+rr(na*7.7)*0.09);
+    }
+    /* la cumbre y el mar de nubes se acomodan al formato: en vertical la
+       montaña sube más; en horizontal se abre, como en la landing */
+    const vert = H/W > 1.15;
+    const sy = H*(vert ? 0.300 : 0.185), cx = W*0.5,
+          pie = H*(vert ? 1.60 : 1.40), mar = H*(vert ? 0.660 : 0.590);
+    /* ── seis cordilleras al fondo ── */
+    sierra(11, mar+H*0.085, H*0.170, W*0.52, 'rgba(122,152,198,.20)', 'rgba(222,236,254,.16)');
+    sierra(5,  mar+H*0.072, H*0.145, W*0.44, 'rgba(108,140,190,.25)', 'rgba(218,232,252,.20)');
+    sierra(2,  mar+H*0.058, H*0.120, W*0.36, 'rgba(92,124,176,.33)',  'rgba(214,230,252,.26)');
+    sierra(9,  mar+H*0.044, H*0.098, W*0.30, 'rgba(82,114,166,.42)',  'rgba(210,228,250,.30)');
+    sierra(3,  mar+H*0.033, H*0.080, W*0.24, 'rgba(70,102,154,.54)',  'rgba(204,222,250,.34)');
+    sierra(7,  mar+H*0.022, H*0.060, W*0.17, 'rgba(50,78,126,.74)',   'rgba(196,216,246,.42)');
+    const bh=c.createLinearGradient(0, mar-H*0.10, 0, mar+H*0.045);
+    bh.addColorStop(0,'rgba(80,116,172,0)'); bh.addColorStop(1,'rgba(80,116,172,.42)');
+    c.fillStyle=bh; c.fillRect(0, mar-H*0.10, W, H*0.145);
+    /* los pueblos del valle: la escala dicha con lucecitas */
+    const ep2=Math.min(W,H)/900;
+    pueblo(W*0.115, mar+H*0.038, ep2*1.05, 9, 21, now);
+    pueblo(W*0.395, mar+H*0.044, ep2*0.80, 6, 82, now);
+    pueblo(W*0.715, mar+H*0.032, ep2*0.90, 7, 44, now);
+    /* ── el mar de nubes, DETRÁS del pico ── */
+    for(let b=0;b<3;b++){
+      const yy=mar+b*H*0.036, al=0.15-b*0.04;
+      const fg=c.createLinearGradient(0, yy-H*0.05, 0, yy+H*0.065);
+      fg.addColorStop(0,'rgba(178,202,240,0)'); fg.addColorStop(.55,'rgba(178,202,240,'+al+')');
+      fg.addColorStop(1,'rgba(140,172,220,0)');
+      c.fillStyle=fg; c.fillRect(0, yy-H*0.05, W, H*0.115);
+    }
+    for(let n2=0;n2<14;n2++){
+      const d2=((now/(64000+rr(n2*3.3)*54000))+rr(n2*7.7))%1.4-0.2;
+      nube(d2*W*1.3-W*0.15, mar+(rr(n2*5.5)-0.35)*H*0.055,
+           W*(0.17+rr(n2*2.2)*0.28), H*(0.009+rr(n2*9.1)*0.012), 0.14+rr(n2*4.4)*0.20);
+    }
+    /* ── LA MONTAÑA ── */
+    const flanco=(dir,sem)=>{ const pts=[[cx,sy]];
+      for(let i=1;i<=10;i++){ const t=i/10;
+        pts.push([cx+dir*(Math.pow(t,0.93)*W*0.78+(rr(sem*3.7+i)-0.5)*W*0.05),
+                  sy+Math.pow(t,1.10)*(pie-sy)]); }
+      return pts; };
+    const izq=flanco(-1,11), der=flanco(1,23);
+    const roca=c.createLinearGradient(0, sy, 0, H);
+    roca.addColorStop(0,'#152744'); roca.addColorStop(.42,'#0C1A2E'); roca.addColorStop(1,'#050A14');
+    masa(izq, roca); masa(der, roca);
+    c.save(); c.strokeStyle='rgba(150,182,232,.20)'; c.lineWidth=1.4;
+    c.beginPath(); suave(izq); c.stroke();
+    c.beginPath(); suave(der); c.stroke(); c.restore();
+    /* la cara que da a la luna */
+    c.save(); c.beginPath(); suave(der); c.lineTo(W*2,H+200); c.lineTo(-W,H+200); c.closePath(); c.clip();
+    const cara=c.createLinearGradient(cx-W*0.10, 0, cx+W*0.62, 0);
+    cara.addColorStop(0,'rgba(126,164,220,0)'); cara.addColorStop(.22,'rgba(126,164,220,.19)');
+    cara.addColorStop(.70,'rgba(74,110,172,.07)'); cara.addColorStop(1,'rgba(44,70,118,0)');
+    c.fillStyle=cara; c.fillRect(0,0,W,H); c.restore();
+    /* costillas de roca sobre la línea de caída: OSCURECEN, que es lo que hace bulto */
+    c.save();
+    c.beginPath(); suave(izq); c.lineTo(-W,H+200); c.lineTo(W*2,H+200); c.closePath(); c.clip();
+    c.beginPath(); suave(der); c.lineTo(W*2,H+200); c.lineTo(-W,H+200); c.closePath(); c.clip();
+    const caida=(t0,lado,ses)=>({ x:cx+lado*(Math.pow(t0,0.93)*W*0.78*ses),
+                                  y:sy+Math.pow(t0,1.10)*(pie-sy) });
+    for(let rk=0;rk<16;rk++){
+      const ld=rk%2?1:-1, ses=0.10+rr(rk*7.7)*0.80;
+      const t0=0.05+rr(rk*4.4)*0.34, t1=t0+0.10+rr(rk*2.7)*0.26;
+      const a=caida(t0,ld,ses), b2=caida(t1,ld,ses*1.06), an=W*(0.004+rr(rk*9.9)*0.012);
+      const gr2=c.createLinearGradient(a.x,a.y,b2.x,b2.y), op=0.16+rr(rk*3.3)*0.24;
+      gr2.addColorStop(0,'rgba(9,18,36,0)'); gr2.addColorStop(.35,'rgba(9,18,36,'+op+')');
+      gr2.addColorStop(1,'rgba(9,18,36,0)');
+      c.fillStyle=gr2; c.beginPath(); c.moveTo(a.x,a.y);
+      c.quadraticCurveTo((a.x+b2.x)/2+ld*an*2,(a.y+b2.y)/2,b2.x,b2.y);
+      c.lineTo(b2.x+an*2.4, b2.y+an*0.6);
+      c.quadraticCurveTo((a.x+b2.x)/2+ld*an*2+an*1.4,(a.y+b2.y)/2,a.x+an*0.5,a.y);
+      c.closePath(); c.fill();
+    }
+    c.restore();
+    /* el casquete de nieve */
+    c.save();
+    c.beginPath(); suave(izq.slice(0,6).slice().reverse().concat(der.slice(1,6)));
+    c.lineTo(der[5][0], der[5][1]+H*0.03); c.closePath(); c.clip();
+    const lim=sy+(pie-sy)*0.155;
+    const nv=c.createLinearGradient(0, sy, 0, lim);
+    nv.addColorStop(0,'#F2F8FF'); nv.addColorStop(.55,'rgba(222,235,255,.9)');
+    nv.addColorStop(1,'rgba(200,220,250,0)');
+    c.fillStyle=nv; c.beginPath(); c.moveTo(-W, sy-H*0.10);
+    for(let q=-W;q<=W*2;q+=W*0.045) c.lineTo(q, lim-Math.sin(q/(W*0.085))*H*0.014-rr(q)*H*0.007);
+    c.lineTo(W*2, sy-H*0.10); c.closePath(); c.fill();
+    c.restore();
+    /* ── la falda: bosque y pueblo ── */
+    const fy=H*0.880;
+    const fpt=[[-60, fy+H*0.04]];
+    for(let f=0;f<=10;f++) fpt.push([-60+f*(W+120)/10, fy-Math.sin(f*0.75+1.2)*H*0.022-rr(f*4.4)*H*0.012]);
+    masa(fpt, '#0B1626');
+    const ep=Math.min(W,H)/300;
+    pueblo(W*0.180, fy+H*0.036, ep*0.52, 10, 12, now);
+    pueblo(W*0.760, fy+H*0.046, ep*0.58, 12, 33, now);
+    for(let t2=0;t2<42;t2++){
+      const px=rr(t2*1.7)*W*1.06-W*0.03, prof=rr(t2*8.8);
+      const py=fy+H*(0.008+prof*0.090)-Math.sin((px/W)*7.5+1.2)*H*0.022;
+      pino(px, py, Math.min(W,H)/560*(0.55+prof*1.25),
+           prof>0.55?'#0A1220':'#101E33', prof>0.35?'rgba(226,238,255,.55)':null);
+    }
+    /* ── la cumbre: el aura y él ── */
+    const esc=Math.min(W,H)/300, ay=sy+4*esc, R=Math.min(26*esc, sy*0.5);
+    c.save(); c.globalCompositeOperation='lighter';
+    const halo=c.createRadialGradient(cx, ay, 2, cx, ay, R*3.1);
+    halo.addColorStop(0,'rgba(168,226,206,.26)'); halo.addColorStop(.22,'rgba(136,200,190,.13)');
+    halo.addColorStop(.58,'rgba(104,164,168,.045)'); halo.addColorStop(1,'rgba(88,146,150,0)');
+    c.fillStyle=halo; c.beginPath(); c.arc(cx, ay, R*3.1, 0, 7); c.fill();
+    c.translate(cx, ay); c.rotate(REDU?0:now/24000);
+    for(let ry=0;ry<16;ry++){
+      c.rotate(Math.PI*2/16);
+      const lgo=(30+rr(ry*9.1)*46)*esc;
+      const gry=c.createLinearGradient(0,0,0,-lgo);
+      gry.addColorStop(0,'rgba(176,232,212,.085)'); gry.addColorStop(.45,'rgba(176,232,212,.022)');
+      gry.addColorStop(1,'rgba(176,232,212,0)');
+      c.fillStyle=gry; c.beginPath();
+      c.moveTo(-1.4*esc,0); c.lineTo(1.4*esc,0); c.lineTo(0,-lgo); c.closePath(); c.fill();
+    }
+    c.restore();
+    const tinta=c.createRadialGradient(cx, ay, 1, cx, ay, R);
+    tinta.addColorStop(0,'rgba(4,7,14,.68)'); tinta.addColorStop(.45,'rgba(6,10,20,.34)');
+    tinta.addColorStop(1,'rgba(8,14,28,0)');
+    c.fillStyle=tinta; c.beginPath(); c.arc(cx, ay, R, 0, 7); c.fill();
+    const esc2=c.createLinearGradient(0, ay, 0, ay+R*2.2);
+    esc2.addColorStop(0,'rgba(5,9,18,.26)'); esc2.addColorStop(1,'rgba(8,14,28,0)');
+    c.fillStyle=esc2; c.beginPath();
+    c.moveTo(cx-R*0.52, ay); c.lineTo(cx+R*0.52, ay);
+    c.lineTo(cx+R*1.05, ay+R*2.2); c.lineTo(cx-R*1.05, ay+R*2.2); c.closePath(); c.fill();
+    kuro(cx, sy+2*esc, esc*0.46);
+    /* ── la nevada, DELANTE de todo: partículas, nunca una capa de color ── */
+    const viento=Math.sin(now/5200)*0.45+0.85;
+    for(let nv2=0;nv2<210;nv2++){
+      const prof=rr(nv2*3.3), vel=0.16+prof*0.62;
+      const yy2=((rr(nv2*1.7)*H*1.3+now*vel*0.09)%(H*1.3))-H*0.15;
+      const xx2=((rr(nv2*5.5)*W*1.3+now*vel*viento*0.052+Math.sin(now/1400+nv2)*22*prof)%(W*1.3))-W*0.15;
+      c.fillStyle='rgba(236,244,255,'+(0.16+prof*0.62)+')';
+      c.beginPath(); c.arc(xx2, yy2, 0.5+prof*2.0, 0, 7); c.fill();
+    }
+    for(let rg=0;rg<12;rg++){
+      const u3=((now/(2600+rr(rg*4.4)*2400))+rr(rg*8.8))%1;
+      c.save(); c.globalAlpha=0.16*Math.sin(u3*Math.PI); c.fillStyle='#EFF5FF';
+      c.beginPath(); c.ellipse(u3*W*1.3-W*0.15, rr(rg*2.2)*H, 9+rr(rg)*13, 2.2, -0.22, 0, 7);
+      c.fill(); c.restore();
+    }
+    /* viñeta */
+    const vg=c.createRadialGradient(W/2,H*0.46,H*0.30,W/2,H*0.46,H*0.95);
+    vg.addColorStop(0,'rgba(5,10,24,0)'); vg.addColorStop(1,'rgba(5,10,24,.62)');
+    c.fillStyle=vg; c.fillRect(0,0,W,H);
+    window._onbRAF=requestAnimationFrame(pintaO);
+  };
+  window._onbRAF=requestAnimationFrame(pintaO);
 }
 function batPuerta(){
   const root = $('#batRoot'); if(!root) return false;
