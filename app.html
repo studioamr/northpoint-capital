@@ -23677,7 +23677,7 @@ if avisar and lxVentana and lxZonaL and not lxZonaL[1]
 if avisar and lxVentana and lxEnNivel and not lxEnNivel[1]
     alert("NP A+ · NIVEL — el precio llegó a " + lxNivN + " (" + str.tostring(lxNivP, format.mintick) + ").", alert.freq_once_per_bar)
 
-var table lxT = table.new(posLx == "Abajo centro" ? position.bottom_center : posLx == "Abajo izquierda" ? position.bottom_left : posLx == "Arriba derecha" ? position.top_right : posLx == "Arriba centro" ? position.top_center : posLx == "Arriba izquierda" ? position.top_left : position.bottom_right, 2, 10, chart.bg_color, chart.fg_color, 2, chart.fg_color, 1)
+var table lxT = table.new(posLx == "Abajo centro" ? position.bottom_center : posLx == "Abajo izquierda" ? position.bottom_left : posLx == "Arriba derecha" ? position.top_right : posLx == "Arriba centro" ? position.top_center : posLx == "Arriba izquierda" ? position.top_left : position.bottom_right, 2, 11, chart.bg_color, chart.fg_color, 2, chart.fg_color, 1)
 lxTam = tamLx == "Diminuto" ? size.tiny : tamLx == "Normal" ? size.normal : size.small
 
 f_lx(int fi, string etq, string txt, color c) =>
@@ -23723,7 +23723,68 @@ if verLx and barstate.islast and dibujable
     f_lx(7, "Nivel clave", lxEnNivel ? "EN " + lxNivN + "  ◄ AQUÍ" : "el precio no está en ninguno", lxEnNivel ? pAcento : color.gray)
     f_lx(8, "Ventana", tO ? "se está formando el ORB · aún no" : not tN ? "fuera de NY · no se caza" : na(orh) ? "sin ORB todavía" : "abierta · ya puedes", lxVentana ? pAlza : pSuave)
 
-    // ── 5 · QUÉ HACER ─────────────────────────────────────────
+
+    // ── 5 · HACIA DÓNDE ROMPE ─────────────────────────────────
+    // Seis lecturas votan. No es una probabilidad medida —eso sería
+    // inventar un número—: es cuántas de las cosas que tú miras
+    // apuntan al mismo lado. Cuando van 5 o 6 juntas el camino está
+    // claro; cuando van 3 y 3, no hay trade y ya.
+    int votoUp = 0
+    int votoDn = 0
+    string porque = ""
+    // 1 · a quién barrieron: se roba abajo para irse arriba
+    if lxSweep != "" and (bar_index - nz(lxBarSweep, 0)) <= 60
+        if str.endswith(lxSweep, "L")
+            votoUp += 1
+            porque := porque + "barrieron abajo · "
+        else
+            votoDn += 1
+            porque := porque + "barrieron arriba · "
+    // 2 · la noche
+    if onLTom and not onHTom
+        votoUp += 1
+        porque := porque + "se llevaron el ONL · "
+    if onHTom and not onLTom
+        votoDn += 1
+        porque := porque + "se llevaron el ONH · "
+    // 3 · estructura
+    if not lxChop and lxSesgo == 1
+        votoUp += 1
+        porque := porque + "estructura alcista · "
+    if not lxChop and lxSesgo == -1
+        votoDn += 1
+        porque := porque + "estructura bajista · "
+    // 4 · caro o barato
+    if not na(lxPct) and lxPct <= 30
+        votoUp += 1
+        porque := porque + "está barato · "
+    if not na(lxPct) and lxPct >= 70
+        votoDn += 1
+        porque := porque + "está caro · "
+    // 5 · de qué lado de la mitad del OR
+    if not na(orh) and not na(orl)
+        if close > math.avg(orh, orl)
+            votoUp += 1
+            porque := porque + "arriba del ORM · "
+        else
+            votoDn += 1
+            porque := porque + "abajo del ORM · "
+    // 6 · qué imán está más cerca
+    if not na(lxObjH) or not na(lxObjL)
+        float dUp = na(lxObjH) ? 1e12 : lxObjH - close
+        float dDn = na(lxObjL) ? 1e12 : close - lxObjL
+        if dUp < dDn
+            votoUp += 1
+            porque := porque + "el imán de arriba está más cerca"
+        else
+            votoDn += 1
+            porque := porque + "el imán de abajo está más cerca"
+    int votoTot = votoUp + votoDn
+    string ladoTxt = votoTot == 0 ? "sin lecturas todavía" : votoUp == votoDn ? "EMPATE · " + str.tostring(votoUp) + " y " + str.tostring(votoDn) + " · no hay trade" : (votoUp > votoDn ? "ARRIBA · " : "ABAJO · ") + str.tostring(math.max(votoUp, votoDn)) + " de " + str.tostring(votoTot) + " · " + porque
+    color ladoCol = votoTot == 0 ? color.gray : votoUp == votoDn ? pSuave : votoUp > votoDn ? pAlza : pBaja
+    f_lx(9, "Rompe hacia", ladoTxt, ladoCol)
+
+    // ── 6 · QUÉ HACER ─────────────────────────────────────────
     string lxPlan = ""
     color lxPlanC = color.gray
     if tA
@@ -23751,7 +23812,7 @@ if verLx and barstate.islast and dibujable
         bool lxCercaH = not na(lxEntH) and (na(lxEntL) or math.abs(close - lxEntH) <= math.abs(close - lxEntL))
         lxPlan := lxCercaH ? "espera a " + str.tostring(lxEntH, format.mintick) + " para ir por " + lxObjHn : "espera a " + str.tostring(lxEntL, format.mintick) + " para ir por " + lxObjLn
         lxPlanC := chart.fg_color
-    f_lx(9, "QUÉ HACER", lxPlan, lxPlanC)
+    f_lx(10, "QUÉ HACER", lxPlan, lxPlanC)
  `;
 const ALGO_PINE_KZP_ESTRUCTURA = `// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
 // Idea de killzones con H/L derivada de "ICT Killzones & Pivots [TFO]" © tradeforopp.
