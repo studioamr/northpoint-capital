@@ -24619,6 +24619,8 @@ escHasta = input.float(0.79, "hasta este", minval = 0, maxval = 1, step = 0.005,
 escTP = input.string("Al break (el extremo)", "El TP de cada caja", options = ["1:1", "1:2", "Al break (el extremo)", "Más allá del break"], group = g10, tooltip = "Dónde termina el premio de TODAS las cajas. 1:1 y 1:2 salen del riesgo de cada nivel, así que cada caja tiene su propio objetivo. AL BREAK es el extremo del tramo, el mismo para todas — el objetivo natural de la estructura. MÁS ALLÁ DEL BREAK lo pasa de largo, tanto como digas en la línea de abajo, que es donde vive la liquidez del otro lado.")
 escMas = input.float(27, "Qué tanto pasa del break (% del rango)", minval = 0, maxval = 300, step = 1, group = g10, tooltip = "Solo cuenta con el objetivo MÁS ALLÁ DEL BREAK. 27% es la extensión que queda justo después del extremo; 100% sería un tramo entero más.")
 escColchon = input.float(0, "Colchón del stop (% del rango)", minval = 0, maxval = 50, step = 2.5, group = g10, tooltip = "Qué tanto pasa el stop del extremo que originó el tramo. En 0 el stop queda EXACTO en el HIGH (o el LOW) del rango, que es como lo traes tú.")
+escMedida = input.string("Proporcional al rango", "Cómo se miden las cajas", options = ["Proporcional al rango", "En velas fijas"], group = g10, tooltip = "PROPORCIONAL AL RANGO: cada caja mide un porcentaje del ancho de la propia estructura. Es la que aguanta el zoom — como la estructura y las cajas se miden con la misma vara, se estiran y se encogen juntas, y la escalera nunca se te despega del rango por mover el chart. EN VELAS FIJAS: siempre el mismo número de velas, pase lo que pase con el zoom.")
+escAnchoPct = input.int(8, "Ancho de cada caja (% del rango)", minval = 2, maxval = 40, group = g10, tooltip = "Solo con la medida proporcional. 8% quiere decir que cada caja mide la doceava parte del tramo; las cuatro juntas ocupan cerca de un tercio de lo que mide la estructura.")
 escAncho = input.int(10, "Ancho de cada caja (velas)", minval = 3, maxval = 100, group = g10, inline = "E2")
 escHueco = input.int(14, "Hueco antes de la primera caja (velas)", minval = 0, maxval = 200, group = g10, tooltip = "Qué tan lejos de la última vela arranca la escalera. El script se lo sube solo lo necesario para librar las etiquetas del rango y del Fibonacci, que cuelgan del final de la estructura — este número es el mínimo. Súbelo si trabajas muy alejado con el zoom, porque las etiquetas miden lo mismo en pixeles aunque las velas se hagan flaquitas.")
 escSep = input.int(2, "Separación", minval = 0, maxval = 20, group = g10, inline = "E2")
@@ -25620,6 +25622,17 @@ if barstate.islast
                         // deja ese hueco, las cajas les caen justo encima
                         int   trasEst = int((tFin - time) / math.max(nz(pasoBar, 1), 1)) + 12
                         int   escIni  = math.max(escHueco, trasEst)
+                        // ── QUE NO SE DESPEGUE CON EL ZOOM ────────
+                        // (André, 31-ago-2026) Medidas en velas fijas,
+                        // la escalera se despegaba del rango cada vez
+                        // que movía el chart: la estructura se estira
+                        // con el zoom y las cajas no. Ahora se miden
+                        // con la MISMA vara que el tramo —un % de su
+                        // ancho— así que se estiran juntas.
+                        int   barrasRg  = math.max(8, int((tFin - array.get(kT, math.min(rgHI, rgLI))) / math.max(nz(pasoBar, 1), 1)))
+                        bool  propor    = escMedida == "Proporcional al rango"
+                        int   anchoCaja = propor ? math.max(3, int(barrasRg * escAnchoPct / 100)) : escAncho
+                        int   sepCaja   = propor ? math.max(1, int(anchoCaja * 0.15)) : escSep
                         bool  escLong = not bajista
                         int   escDir  = escLong ? 1 : -1
                         float escSL   = pIni + (pIni - pFin) * escColchon / 100
@@ -25673,8 +25686,8 @@ if barstate.islast
                             bool  esMejor = i == mejorI
                             // topadas a 460 velas: TradingView no deja
                             // dibujar más allá de 500 hacia el futuro
-                            int bx1 = math.min(bar_index + escIni + i * (escAncho + escSep), bar_index + 460)
-                            int bx2 = math.min(bx1 + escAncho, bar_index + 490)
+                            int bx1 = math.min(bar_index + escIni + i * (anchoCaja + sepCaja), bar_index + 460)
+                            int bx2 = math.min(bx1 + anchoCaja, bar_index + 490)
                             string num = str.tostring(i + 1) + "/" + str.tostring(nEsc)
                             string txt = (esMejor ? "★ " : "") + num + "\\n" + str.tostring(r) + (array.get(eFvg, i) ? " + FVG" : "") + "\\n" + str.tostring(sc, "#") + "%\\n1:" + str.tostring(rrx, "#.#")
                             // rojo el riesgo, verde el premio, y el texto
@@ -25688,7 +25701,7 @@ if barstate.islast
                             array.push(planBx, box.new(bx1, math.max(tp, ent), bx2, math.min(tp, ent), border_color = cBd, border_width = 1, bgcolor = cPr, text = escVerProb ? txt : "", text_size = esMejor ? size.small : size.tiny, text_color = color.new(chart.fg_color, esMejor ? 0 : 25), text_halign = text.align_center, text_valign = escLong ? text.align_bottom : text.align_top))
                             array.push(planLn, line.new(bx1, ent, bx2, ent, color = color.new(chart.fg_color, 15), width = esMejor ? 2 : 1))
                             array.push(planLb, label.new(int((bx1 + bx2) / 2), ent, "", style = label.style_label_center, color = #ffffff00, textcolor = #ffffff00, size = size.tiny, tooltip = (escLong ? "LONG " : "SHORT ") + num + " · nivel " + str.tostring(r) + (esMejor ? "  ★ el mejor combo" : "") + "\\nEntrada " + str.tostring(ent, format.mintick) + "  ·  SL " + str.tostring(escSL, format.mintick) + "  ·  TP " + str.tostring(tp, format.mintick) + "\\nRiesgo " + str.tostring(math.abs(escSL - ent), "#.##") + " pts  ·  premio " + str.tostring(math.abs(tp - ent), "#.##") + " pts  ·  1:" + str.tostring(rrx, "#.#") + "\\n\\nConfluencia " + str.tostring(sc, "#") + "% · FVG " + (array.get(eFvg, i) ? "sí" : "no") + " · Order Block " + (array.get(eOb, i) ? "sí" : "no") + " · AOI " + (array.get(eAoi, i) ? "sí" : "no") + "\\nNo es un win rate probado: es cuánta confluencia junta el nivel."))
-                        escCorr := escIni - posHueco + nEsc * (escAncho + escSep) + escSep
+                        escCorr := escIni - posHueco + nEsc * (anchoCaja + sepCaja) + sepCaja
 
                 // ── PLAN: entrada, stop y cuatro objetivos ─────────
                 // La entrada sale del Order Block (o del nivel del
