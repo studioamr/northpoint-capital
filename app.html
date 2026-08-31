@@ -1779,16 +1779,8 @@ button.st-chip:hover{border-color:rgba(255,255,255,.45)}
 .bm-f-et{font-family:var(--mono);font-size:9px;letter-spacing:.14em;color:rgba(255,255,255,.62);
   border:1px solid rgba(255,255,255,.18);border-radius:99px;padding:3px 9px}
 .bm-f-et.ok{color:#0b0e14;background:var(--kc);border-color:transparent;font-weight:700}
-.bm-f-lema{font-size:12.5px;line-height:1.6;color:rgba(255,255,255,.72);margin:12px 0 0}
 .bm-sec{font-family:var(--mono);font-size:8.5px;letter-spacing:.2em;color:rgba(255,255,255,.42);
   margin:18px 0 9px;padding-bottom:6px;border-bottom:1px solid rgba(255,255,255,.09)}
-.bm-sts{display:grid;grid-template-columns:repeat(auto-fit,minmax(96px,1fr));gap:8px}
-.bm-st{display:flex;flex-direction:column;gap:3px;padding:9px 10px;border-radius:10px;
-  background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.08)}
-.bm-st i{font-style:normal;font-family:var(--mono);font-size:7.5px;letter-spacing:.14em;color:rgba(255,255,255,.45)}
-.bm-st b{font-size:15px;font-weight:800;color:#fff}
-.bm-st b.up{color:#6fe39a} .bm-st b.down{color:#ff8a7e}
-.bm-pide{font-size:14.5px;font-weight:600;line-height:1.55;color:#fff;margin:0 0 4px}
 /* LAS REGLAS del reto, en el lenguaje de una cuenta fondeada */
 .bm-reglas{display:grid;gap:1px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.12);
   border-radius:12px;overflow:hidden}
@@ -1797,27 +1789,14 @@ button.st-chip:hover{border-color:rgba(255,255,255,.45)}
 .bm-rg i{font-style:normal;font-family:var(--mono);font-size:8.5px;letter-spacing:.14em;color:rgba(255,255,255,.5)}
 .bm-rg b{font-size:13.5px;font-weight:800;color:#fff}
 .bm-rg b.up{color:#6fe39a} .bm-rg b.down{color:#ff8a7e}
-.bm-nota{font-size:11.5px;line-height:1.6;color:rgba(255,255,255,.55);margin:9px 0 0}
 /* LAS ETAPAS y su barra */
-.bm-etapas{border:1px solid rgba(255,255,255,.12);border-radius:12px;padding:12px 13px;
-  background:rgba(255,255,255,.035)}
-.bm-eb{display:flex;gap:2px;height:9px;border-radius:5px;overflow:hidden;margin-bottom:11px}
-.bm-eb i{display:block;background:var(--kc)}
 .bm-el{list-style:none;margin:0;padding:0;display:grid;gap:7px}
 .bm-el li{display:flex;align-items:center;gap:10px}
 .bm-el b{flex:0 0 auto;width:19px;height:19px;border-radius:50%;display:flex;align-items:center;
   justify-content:center;font-family:var(--mono);font-size:9.5px;color:#0b0e14;background:var(--kc)}
 .bm-el span{flex:1;font-size:12.5px;color:rgba(255,255,255,.8)}
 .bm-el em{font-style:normal;font-family:var(--mono);font-size:12px;color:#fff}
-.bm-etot{font-family:var(--mono);font-size:10px;letter-spacing:.1em;color:rgba(255,255,255,.5);
-  margin:11px 0 0;padding-top:9px;border-top:1px solid rgba(255,255,255,.09)}
-.bm-etot b{color:#fff;font-size:12.5px}
 /* EL CALENDARIO */
-.bm-cal{display:flex;gap:8px;flex-wrap:wrap}
-.bm-cal span{flex:1 1 92px;display:flex;flex-direction:column;gap:3px;padding:9px 11px;border-radius:10px;
-  background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.1)}
-.bm-cal i{font-style:normal;font-family:var(--mono);font-size:7.5px;letter-spacing:.14em;color:rgba(255,255,255,.45)}
-.bm-cal b{font-size:14px;font-weight:800;color:#fff}
 .bm-sess{display:flex;gap:8px;flex-wrap:wrap}
 .bm-ses{flex:1 1 84px;display:flex;flex-direction:column;gap:2px;padding:8px 10px;border-radius:9px;
   background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1)}
@@ -10821,55 +10800,53 @@ function bossPintaMapa(){
     if(!cv.isConnected) return;
     if(cv.offsetParent === null){ window._bmRAF = requestAnimationFrame(frame); return; }
 
-    /* ── EL TERRENO, EN 2D Y SIN COSTURAS ──
-       Antes cada bioma se recortaba con un rect: eso dejaba una LÍNEA RECTA
-       entre uno y otro y el mapa parecía franjas apiladas. Ahora cada mundo
-       se pinta como una MANCHA de borde ondulado que se mete en el de arriba
-       y en el de abajo, y sus bordes se desvanecen con un degradado que
-       termina en transparente. Vecinos que se traslapan y se funden: ni una
-       sola línea horizontal en todo el mapa. */
-    c.fillStyle = bossEco(0).suelo; c.fillRect(0,0,W,H);
+    /* ── EL MAPA SON LAS ESCENAS DE LOS ECOSISTEMAS ──
+       (André, 31-ago-2026) Las nueve escenas del lobby —el templo rojo, el
+       sakura, la gran ola, el Fuji, el dragón celestial…— son exactamente el
+       estilo que le gusta. Así que el mapa deja de ser un dibujo aparte: cada
+       mundo del camino ES su escena, pintada de verdad con zenDibujaEscena y
+       recortada a su tramo. Un viaje por los nueve cuadros, con el sendero
+       encima.
+
+       Cada tramo se recorta con un borde ONDULADO y su vecino se le mete
+       encima, así que no queda ni una línea recta entre escena y escena. */
+    if(!window._bmPets) window._bmPets = KURO_BOSSES.map((_,i)=>
+      Array.from({length:14},(_,k)=>({ x:rr(k+i*31)*W, y:rr(k+i*17+5)*H, s:4+rr(k+i*7)*5,
+        sp:.35+rr(k+i*11)*.9, dr:rr(k+i*13)*6.3, sw:.5+rr(k+i*19)*.7 })));
     for(let i = 0; i < KURO_BOSSES.length; i++){
-      const E = bossEco(i);
+      /* sinNinja: cada escena dibuja su propio ninja de adorno en x=26%, y en
+         el mapa eso son DOS ninjas por tramo — el del adorno y el jefe sobre
+         su losa. Se apaga con una copia de la escena. */
+      const E0 = ZEN_ESCENAS[KURO_BOSSES[i].kat] || ZEN_ESCENAS[0];
+      const E = window._bmEsc && window._bmEsc[i] ? window._bmEsc[i]
+              : ((window._bmEsc = window._bmEsc || [])[i] = { ...E0, sinNinja:true });
       const centro = pos[i].y;
-      const prev = i > 0 ? pos[i-1].y : H + 200;
-      const sig  = i < KURO_BOSSES.length-1 ? pos[i+1].y : -200;
-      /* la mancha se estira MÁS ALLÁ de sus vecinos, para traslaparlos */
-      const yAbajo  = centro + (prev - centro) * 0.78;
-      const yArriba = centro + (sig  - centro) * 0.78;
-      const alto = yAbajo - yArriba;
+      const prev = i > 0 ? pos[i-1].y : H + 240;
+      const sig  = i < KURO_BOSSES.length-1 ? pos[i+1].y : -240;
+      /* el tramo se estira hacia sus vecinos para traslaparlos */
+      const yAbajo  = centro + (prev - centro) * 0.72;
+      const yArriba = centro + (sig  - centro) * 0.72;
+      const alto = Math.max(60, yAbajo - yArriba);
       c.save();
-      /* borde ondulado arriba y abajo — nada de rectas */
       c.beginPath();
-      c.moveTo(-40, yAbajo);
-      for(let x = -40; x <= W+40; x += 46)
-        c.lineTo(x, yArriba + Math.sin(x/150 + i*2.1) * 34 + Math.sin(x/61 + i) * 13);
-      c.lineTo(W+40, yAbajo + 60);
-      for(let x = W+40; x >= -40; x -= 46)
-        c.lineTo(x, yAbajo + Math.sin(x/135 + i*1.7 + 2) * 30 + Math.sin(x/74 + i) * 11);
+      c.moveTo(-40, yAbajo + 80);
+      for(let x = -40; x <= W+40; x += 44)
+        c.lineTo(x, yArriba + Math.sin(x/155 + i*2.3) * 30 + Math.sin(x/63 + i) * 11);
+      c.lineTo(W+40, yAbajo + 80);
       c.closePath(); c.clip();
-      /* el relleno se desvanece en los extremos: ahí es donde se funde con
-         el vecino, y por eso no se ve dónde acaba uno y empieza el otro */
-      const g2 = c.createLinearGradient(0, yArriba, 0, yAbajo);
-      const suelo = E.suelo, cielo = E.cielo[1];
-      g2.addColorStop(0.00, 'rgba(0,0,0,0)');
-      g2.addColorStop(0.16, cielo);
-      g2.addColorStop(0.55, suelo);
-      g2.addColorStop(0.86, suelo);
-      g2.addColorStop(1.00, 'rgba(0,0,0,0)');
-      c.fillStyle = g2; c.fillRect(-40, yArriba - 60, W+80, alto + 160);
-      /* y sus cosas, recortadas a la mancha */
-      try{ ecoPinta(c, E.bioma, W, yArriba, yAbajo, E.tinta, t, rr, i); }catch(e){}
+      c.translate(0, yArriba);
+      try{ zenDibujaEscena(c, W, alto, E, t + i*1700, window._bmPets[i],
+                           KATANAS[KURO_BOSSES[i].kat].belt); }catch(e){}
       c.restore();
     }
-    /* una bruma suave sobre cada unión, para rematar el fundido */
+    /* una bruma sobre cada unión, para que el corte entre escenas desaparezca */
     for(let i = 1; i < KURO_BOSSES.length; i++){
       const y = (pos[i].y + pos[i-1].y) / 2;
-      const g3 = c.createLinearGradient(0, y-70, 0, y+70);
+      const g3 = c.createLinearGradient(0, y-90, 0, y+90);
       g3.addColorStop(0,'rgba(255,255,255,0)');
-      g3.addColorStop(.5,'rgba(255,255,255,.10)');
+      g3.addColorStop(.5,'rgba(255,255,255,.13)');
       g3.addColorStop(1,'rgba(255,255,255,0)');
-      c.fillStyle = g3; c.fillRect(0, y-70, W, 140);
+      c.fillStyle = g3; c.fillRect(0, y-90, W, 180);
     }
 
     /* ── EL SENDERO: cinta pálida, con borde y su tramo recorrido claro ── */
@@ -10988,58 +10965,41 @@ function bossPintaFicha(){
         : `<span class="bm-f-et">🔒</span>`}
     </div>
 
-    <!-- LO QUE TE PIDE: la tarjeta ya no enseña estadísticas de un rival
-         —no servían para nada— sino la TAREA CONCRETA que hay que cumplirle,
-         y debajo las reglas con las que cuenta. -->
-    <div class="bm-sec">${bi('LO QUE TE PIDE','WHAT HE ASKS')}</div>
-    <p class="bm-pide">${esc(loc(b.pide))}</p>
+    <!-- SÓLO LA LISTA (André): nada de párrafos. Lo que hay que cumplir,
+         renglón por renglón, con su número a la derecha. Se lee de un
+         vistazo y no hay que leer nada dos veces. -->
+    ${(()=>{ const R2 = b.reglas || {};
+      const req = [];
+      req.push([bi('PROFIT','PROFIT'), fmt$(R2.tp), 'up']);
+      req.push([bi('DRAWDOWN MÁX','MAX DRAWDOWN'), '−'+fmt$(R2.dd), 'down']);
+      req.push([bi('TRADES MÁX','MAX TRADES'), R2.trades + bi(' por sesión',' per session')]);
+      req.push([bi('RIESGO POR TRADE','RISK PER TRADE'), fmt$(R2.riesgo)]);
+      req.push([bi('SESIONES','SESSIONS'), R2.sesiones]);
+      if(R2.libre) req.push([bi('SESIÓN','SESSION'), bi('la que quieras','any you want')]);
+      else if(b.ses) req.push([bi('SESIÓN','SESSION'), esc(loc(batSesion(b.ses).nom))]);
+      if(R2.pagos) req.push([bi('PAGOS','PAYOUTS'), R2.pagos + (R2.unaSesion ? bi(' · 1 por sesión',' · 1 per session') : '')]);
+      if(R2.porCiclo) req.push([bi('POR CICLO','PER CYCLE'), R2.porCiclo + bi(' sesiones máx',' sessions max')]);
+      return `<div class="bm-sec">${bi('PARA VENCERLO','TO BEAT HIM')}</div>
+        <div class="bm-reglas">${req.map(r =>
+          `<div class="bm-rg"><i>${r[0]}</i><b class="${r[2]||''}">${r[1]}</b></div>`).join('')}</div>`;
+    })()}
 
-    <div class="bm-sec">${bi('SUS REGLAS','HIS RULES')}</div>
-    <!-- LAS REGLAS, como las de una cuenta fondeada: objetivo, drawdown
-         máximo, tope de trades y riesgo por trade. Es lo que de verdad hay
-         que cumplir para vencerlo, y es el mismo lenguaje de la fondeadora. -->
-    ${(()=>{ const R2 = b.reglas || {}; const fila = (et, v, cls) =>
-        `<div class="bm-rg"><i>${et}</i><b class="${cls||''}">${v}</b></div>`;
-      return `<div class="bm-reglas">
-        ${fila(bi('OBJETIVO','TARGET'), fmt$(R2.tp), 'up')}
-        ${fila(bi('DRAWDOWN MÁX','MAX DRAWDOWN'), '−'+fmt$(R2.dd), 'down')}
-        ${fila(bi('TRADES MÁX','MAX TRADES'), R2.trades + bi(' / sesión',' / session'))}
-        ${fila(bi('RIESGO / TRADE','RISK / TRADE'), fmt$(R2.riesgo))}
-        ${R2.pagos ? fila(bi('PAGOS','PAYOUTS'), R2.pagos + (R2.unaSesion ? bi(' · 1 por sesión',' · 1 per session') : '')) : ''}
-        ${fila(bi('VENTANA','WINDOW'), esc(loc(R2.ventana||['—','—'])))}
-      </div>
-      ${R2.nota ? `<p class="bm-nota">${esc(loc(R2.nota))}</p>` : ''}`; })()}
-
-    <!-- LAS ETAPAS: lo que hay que ir consiguiendo, en orden y encadenado.
-         El primer pago no se cobra de la nada — antes hay que pasar el examen
-         y armar el colchón; y KURO es el camino entero. La barra reparte cada
-         tramo según su peso en dinero, para que se vea cuál es el largo. -->
+    <!-- LAS ETAPAS, cuando son varias: en orden y con su monto. -->
     ${(()=>{ const et = (b.reglas && b.reglas.etapas) || []; if(et.length < 2) return '';
-      const tot = et.reduce((a,x)=>a+x.m,0);
-      return `<div class="bm-sec">${bi('LAS ETAPAS','THE STAGES')}</div>
-        <div class="bm-etapas">
-          <div class="bm-eb">${et.map((x,k)=>
-            `<i style="flex:${x.m};opacity:${0.42 + k*(0.58/Math.max(1,et.length-1))}"></i>`).join('')}</div>
-          <ol class="bm-el">${et.map((x,k)=>
-            `<li><b>${k+1}</b><span>${esc(loc(x.t))}</span><em>${fmt$(x.m)}</em></li>`).join('')}</ol>
-          <p class="bm-etot">${bi('En total','In total')} <b>${fmt$(tot)}</b></p>
-        </div>`; })()}
+      return `<div class="bm-sec">${bi('EN ESTE ORDEN','IN THIS ORDER')}</div>
+        <ol class="bm-el">${et.map((x,k)=>
+          `<li><b>${k+1}</b><span>${esc(loc(x.t))}</span><em>${fmt$(x.m)}</em></li>`).join('')}</ol>`; })()}
 
-    <!-- EL CALENDARIO: cuántos días hábiles pide, y en qué fecha caería si
-         empezaras hoy. Un reto de 45 sesiones no es lo mismo que uno de 1, y
-         eso hay que verlo ANTES de aceptarlo. -->
-    ${(()=>{ const d = (b.reglas && b.reglas.dias) || 0; if(!d) return '';
-      /* días HÁBILES: se saltan sábados y domingos, como el mercado */
+    <!-- CUÁNTO TE VA A TOMAR: sesiones y la fecha si empiezas hoy. -->
+    ${(()=>{ const d = (b.reglas && b.reglas.sesiones) || 0; if(!d) return '';
       const hoy = ahora(); let f = new Date(hoy), habiles = 0;
       while(habiles < d){ f = new Date(f.getTime() + 86400000);
         const wd = f.getDay(); if(wd !== 0 && wd !== 6) habiles++; }
-      const fin = batDiaTxt(f.getTime());
-      return `<div class="bm-sec">${bi('CUÁNTO TE VA A TOMAR','HOW LONG IT TAKES')}</div>
-        <div class="bm-cal">
-          <span><i>${bi('SESIONES','SESSIONS')}</i><b>${d}</b></span>
-          <span><i>${bi('DÍAS HÁBILES','TRADING DAYS')}</i><b>${d}</b></span>
-          <span><i>${bi('SI EMPIEZAS HOY','IF YOU START TODAY')}</i><b>${esc(fin.dia)}</b></span>
-        </div>`; })()}
+      return `<div class="bm-sec">${bi('SI EMPIEZAS HOY','IF YOU START TODAY')}</div>
+        <div class="bm-reglas"><div class="bm-rg">
+          <i>${bi('TERMINAS','YOU FINISH')}</i><b>${esc(batDiaTxt(f.getTime()).dia)}</b>
+        </div></div>`; })()}
+
     ${cuando}
 
     ${hecho ? `<p class="bm-ganado">${bi('Ya lo venciste. Su katana es tuya.','You beat him. His katana is yours.')}</p>`
