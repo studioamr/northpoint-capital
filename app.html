@@ -23005,19 +23005,19 @@ if verPanel and barstate.islast
                     if m < alPrimM
                         alPrimM := m
                         alPrim := ev
-    // el próximo: si hoy ya no queda ninguno (o es fin de semana), el
-    // primero del siguiente día hábil
-    string lProx = ""
-    if not finde and alFalta != 99999
-        lProx := "en " + f_dur(alFalta) + " · " + alProx
-    else if alPrim == ""
-        lProx := "no tienes alertas prendidas"
-    else
-        string cuando = finde ? (dowNow == dayofweek.saturday ? "el lunes" : "mañana") : (dowNow == dayofweek.friday ? "el lunes" : "mañana")
-        lProx := cuando + " · " + alPrim
-    string lUlt = finde ? "—" : alUlt == "" ? "hoy todavía ninguno" : (alPaso == 0 ? "justo ahora · " : "hace " + f_dur(alPaso) + " · ") + alUlt
-    string alTxt = not finde and alFalta <= 5 ? "⚡ en " + f_dur(alFalta) + " · " + alProx : "ahora · " + etapaTit + "\\nya pasó · " + lUlt + "\\nsigue · " + lProx
-    color alCol = not finde and alFalta <= 5 ? pSuave : chart.fg_color
+    // ── SOLO LA QUE SIGUE (André, 31-ago-2026) ────────────────
+    // La fila traía tres renglones —dónde vas, qué acaba de pasar y
+    // qué sigue— y era demasiado para una línea del panel. Ahora dice
+    // UNA cosa: cuánto falta para la próxima y cuál es. Si la de hoy
+    // ya pasó, cuenta hasta la primera del próximo día hábil, así que
+    // el número nunca desaparece ni miente.
+    int alSigue = alFalta
+    if finde or alFalta == 99999
+        int saltos = dowNow == dayofweek.friday ? 2 : dowNow == dayofweek.saturday ? 1 : 0
+        alSigue := alPrimM == 99999 ? 99999 : (1440 - mdNow) + alPrimM + saltos * 1440
+    string alQue = (finde or alFalta == 99999) ? alPrim : alProx
+    string alTxt = alQue == "" ? "no tienes alertas prendidas" : "en " + f_dur(alSigue) + " · " + alQue
+    color alCol = alSigue <= 5 ? pSuave : chart.fg_color
 
     table.cell(panel, 0, 0, "NP A+", text_color = chart.fg_color, text_size = tamTxt)
     table.cell(panel, 1, 0, reloj, text_color = color.gray, text_size = tamTxt)
@@ -23039,7 +23039,7 @@ if verPanel and barstate.islast
     table.cell(panel, 1, 7, reglaFija, text_color = pSuave, text_size = tamTxt)
     if hayAlertas
         table.cell(panel, 0, 8, "⏰ Agenda", text_color = color.gray, text_size = tamTxt)
-        table.cell(panel, 1, 8, alTxt, text_color = alCol, bgcolor = color.new(pSuave, not finde and alFalta <= 5 ? 85 : 100), text_size = tamTxt, tooltip = "Dónde vas en el día, qué evento acaba de pasar y cuál sigue. Cuando falten 5 minutos o menos para el siguiente, la fila se pone naranja y muestra SOLO esa alerta. Los eventos son tus alertas de horario (config, grupo 7): hasta 7, cada una con su hora y su texto. Para que SUENEN en el teléfono crea UNA alerta de TradingView con condición Any alert() function call.")
+        table.cell(panel, 1, 8, alTxt, text_color = alCol, bgcolor = color.new(pSuave, alSigue <= 5 ? 85 : 100), text_size = tamTxt, tooltip = "Cuánto falta para tu próxima alerta y cuál es. Si la última de hoy ya pasó, cuenta hasta la primera del siguiente día hábil. Cuando falten 5 minutos o menos la fila se pone naranja. Los eventos son tus alertas de horario (config, grupo 7): hasta 7, cada una con su hora y su texto. Para que SUENEN en el teléfono crea UNA alerta de TradingView con condición Any alert() function call.")
     string tipLiq = "Liquidez viva con su precio: H y L de cada sesión que el precio aún no toca. Lo tomado desaparece; si una sesión no tiene nada, dice cuándo abre. Al cierre de NY lo de ASIA y LNDN expira; los H/L de NY sobreviven la noche (≈ PDH/PDL). En fin de semana las tres celdas solo dicen cuándo abre cada sesión."
     table.cell(panel, 0, 9, "Liquidez", text_color = color.gray, text_size = tamTxt)
     if not dibujable
