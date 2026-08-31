@@ -10190,19 +10190,22 @@ const BAT_MUNDOS = {
     sakuraGigante:true, torii:true, pagodaFlot:true, templo:'#5a1e2a', fuji:true, fujiCol:'#3a1c34',
     pasto:true, pastoCol:'rgba(26,10,18,.9)', frase:'東京',
     part:'sakura', partCol:'rgba(255,193,208,.96)' },
-  londres: { bioma:['Londres','London'], ico:'🎩', sinNinja:true,
-    cielo:['#1b2430','#33414f','#5d6c78','#93a1aa'],
-    luna:{x:.24,y:.24,r:52,col:'rgba(226,234,240,.86)',halo:'rgba(200,214,228,.2)'},
-    montes:[['#151c25',1],['#222d3a',.7]], agua:'rgba(58,72,86,.66)',
-    torre:true, templo:'#39424f', nubes:true, nubesCol:'rgba(190,202,212,.6)',
-    lluvia:true, faroles:true, casas:true, pasto:true, pastoCol:'rgba(18,24,30,.9)', frase:'LONDON',
-    part:'nieve', partCol:'rgba(214,228,240,.6)' },
-  ny: { bioma:['Nueva York','New York'], ico:'🗽', sinNinja:true,
-    cielo:['#0d1526','#1d3050','#3f5c86','#7c93b4'],
-    luna:{x:.78,y:.2,r:44,col:'rgba(255,250,232,.9)',halo:'rgba(255,244,206,.18)'},
-    montes:[['#0b1120',1]], agua:'rgba(30,48,78,.7)',
-    torre:true, templo:'#0e1a2e', faro:true, casas:true, nubes:true, nubesCol:'rgba(150,170,200,.32)',
-    pasto:true, pastoCol:'rgba(10,16,28,.9)', frase:'NEW YORK',
+  /* LONDRES: el Támesis de noche. Sin pagodas, sin casas japonesas, sin
+     pasto — eso era un jardín zen con lluvia, no Londres. */
+  londres: { bioma:['Londres','London'], sinNinja:true,
+    cielo:['#070c14','#101b2a','#1f3247','#3c5570'],
+    luna:{x:.20,y:.20,r:46,col:'rgba(226,234,240,.82)',halo:'rgba(190,208,226,.16)'},
+    montes:[], agua:'rgba(16,26,40,.92)',
+    bigben:true, nubes:true, nubesCol:'rgba(120,140,164,.42)',
+    lluvia:true, hazeCol:'rgba(150,170,196,.20)',
+    part:'nieve', partCol:'rgba(200,218,236,.34)' },
+  /* NUEVA YORK: Manhattan de noche, apretado, con el Empire y el Chrysler. */
+  ny: { bioma:['Nueva York','New York'], sinNinja:true,
+    cielo:['#05080f','#0c1424','#1b2C46','#39527a'],
+    luna:{x:.80,y:.16,r:38,col:'rgba(255,250,232,.86)',halo:'rgba(255,244,206,.14)'},
+    montes:[], agua:'rgba(8,12,20,.95)',
+    manhattan:true, nubes:true, nubesCol:'rgba(90,110,140,.22)',
+    hazeCol:'rgba(120,150,190,.14)',
     part:'estrella', partCol:'rgba(255,255,255,.9)' },
 };
 function batMundo(c){ return BAT_MUNDOS[(c&&c.sesion)||'asia'] || BAT_MUNDOS.asia; }
@@ -11873,6 +11876,157 @@ function zenLoto(c,x,y,s){ c.fillStyle='rgba(232,152,200,.92)'; for(let i=0;i<5;
 function zenTorreAlta(c,x,by,s,col){ const h=160*s; for(let i=0;i<5;i++){ const w=(34-i*5)*s, cy=by-i*(h/5); c.fillStyle=col; c.fillRect(x-w/2,cy-h/5,w,h/5);
   c.fillStyle='#5a1e1a'; c.beginPath(); c.moveTo(x-w*0.8,cy-h/5+2); c.quadraticCurveTo(x,cy-h/5-9*s,x+w*0.8,cy-h/5+2); c.lineTo(x+w*0.5,cy-h/5); c.lineTo(x-w*0.5,cy-h/5); c.closePath(); c.fill();
   c.fillStyle='rgba(255,200,120,.7)'; c.fillRect(x-2*s,cy-h/5+4*s,4*s,6*s); } c.fillStyle='#e7c24a'; c.fillRect(x-1.5*s,by-h-8*s,3*s,10*s); }
+/* ══ LONDRES DE VERDAD (André, 31-ago-2026) ══ La escena traía pagodas, casas
+   japonesas y una torre zen: pintaba lluvia, sí, pero no era Londres. Esto es
+   el Támesis de noche — el Palacio de Westminster con su fila de pináculos, el
+   Big Ben con sus cuatro esferas encendidas, el puente, y la ciudad detrás. */
+function zenBigBen(c, W, base, now, H){
+  /* Todo se mide contra `base` (la línea del agua), no en píxeles fijos: así
+     el Big Ben llena el cuadro igual en el duelo de 1200×560 que en una
+     tarjeta chica, en vez de salirse por arriba. */
+  const rr=i=>((Math.sin(i*12.9898)*43758.5453)%1+1)%1;
+  const K = base/403;                       /* 403 = el duelo, la medida madre */
+  const PIE='#0b111b', FRENTE='#131b27', LUZ='rgba(255,206,128,';
+  /* ── LA CIUDAD AL FONDO ── apretada y baja, para que los hitos manden */
+  for(let i=0;i<30;i++){
+    const x=(i/30)*W-12, w=24+rr(i)*46, h=(46+rr(i+7)*104)*K;
+    c.fillStyle=PIE; c.fillRect(x, base-h, w, h);
+    for(let k=0;k<14;k++){ if(rr(i*29+k)<0.62) continue;
+      c.fillStyle=LUZ+(0.14+rr(k+i)*0.26).toFixed(2)+')';
+      c.fillRect(x+5+(k%3)*9*K, base-h+10*K+Math.floor(k/3)*18*K, 4*K, 6*K); } }
+  /* ── EL PALACIO DE WESTMINSTER ── cuerpo largo, crestería y ventana ojival */
+  const px=W*0.26, pw=W*0.50, ph=118*K, py=base-ph;
+  c.fillStyle=FRENTE; c.fillRect(px, py, pw, ph);
+  for(let i=0;i<18;i++){ const tx=px+9*K+(pw-18*K)*(i/17);
+    c.fillRect(tx-3*K, py-16*K, 6*K, 16*K);
+    c.beginPath(); c.moveTo(tx-5*K,py-16*K); c.lineTo(tx+5*K,py-16*K); c.lineTo(tx,py-29*K); c.closePath(); c.fill(); }
+  for(let f=0; f<2; f++) for(let i=0;i<20;i++){
+    const wx=px+14*K+(pw-28*K)*(i/19), wy=py+30*K+f*42*K;
+    c.fillStyle=LUZ+(0.40+0.20*Math.sin(now/900+i+f)).toFixed(2)+')';
+    c.fillRect(wx-4*K, wy, 8*K, 18*K);
+    c.beginPath(); c.arc(wx, wy, 4*K, Math.PI, 0); c.fill(); }
+  /* ── LA TORRE VICTORIA ── el contrapeso del otro extremo */
+  const vx=px+34*K, vw=44*K, vh=base*0.42;
+  c.fillStyle=FRENTE; c.fillRect(vx-vw/2, base-vh, vw, vh);
+  c.beginPath(); c.moveTo(vx-vw/2-5*K, base-vh); c.lineTo(vx+vw/2+5*K, base-vh); c.lineTo(vx, base-vh-40*K); c.closePath(); c.fill();
+  for(let i=0;i<5;i++){ c.fillStyle=LUZ+'.26)';
+    c.fillRect(vx-12*K, base-vh+22*K+i*30*K, 7*K, 15*K);
+    c.fillRect(vx+5*K,  base-vh+22*K+i*30*K, 7*K, 15*K); }
+  /* ══ EL BIG BEN ══ el que hace que la escena se reconozca de un vistazo */
+  /* la altura del FUSTE, no la de la torre: encima van todavía el cuerpo del
+     reloj y la aguja. Con base*0.86 la esfera se salía del lienzo por arriba
+     y de la torre sólo se veía el palo. (André, 31-ago-2026) */
+  const bx=px+pw-52*K, bw=52*K, alto=base*0.50;
+  c.fillStyle=FRENTE; c.fillRect(bx-bw/2, base-alto, bw, alto);
+  c.fillStyle='rgba(255,255,255,.055)';
+  for(let i=1;i<7;i++) c.fillRect(bx-bw/2, base-alto+i*(alto/8), bw, 3*K);
+  for(let i=0;i<8;i++){ c.fillStyle=LUZ+'.16)'; c.fillRect(bx-6*K, base-alto+34*K+i*32*K, 12*K, 17*K); }
+  /* el cuerpo del reloj */
+  const cy=base-alto-4*K, cw=bw+20*K;
+  c.fillStyle=FRENTE; c.fillRect(bx-cw/2, cy-78*K, cw, 84*K);
+  /* LA ESFERA */
+  const R=27*K, ey=cy-40*K;
+  c.fillStyle='rgba(255,240,196,.22)'; c.beginPath(); c.arc(bx,ey,R*2.1,0,7); c.fill();
+  c.fillStyle='rgba(255,228,166,.97)'; c.beginPath(); c.arc(bx,ey,R,0,7); c.fill();
+  c.strokeStyle='#0b111a'; c.lineWidth=3.4*K; c.beginPath(); c.arc(bx,ey,R,0,7); c.stroke();
+  c.strokeStyle='rgba(20,26,36,.72)'; c.lineWidth=1.7*K;
+  for(let i=0;i<12;i++){ const a=i*Math.PI/6;
+    c.beginPath(); c.moveTo(bx+Math.sin(a)*R*0.78, ey-Math.cos(a)*R*0.78);
+    c.lineTo(bx+Math.sin(a)*R*0.94, ey-Math.cos(a)*R*0.94); c.stroke(); }
+  /* las manecillas, andando de verdad */
+  const seg=(now/1000)%3600, aM=(seg/3600)*Math.PI*2, aH=(seg/43200)*Math.PI*2;
+  c.strokeStyle='#0b111a'; c.lineCap='round';
+  c.lineWidth=4.2*K; c.beginPath(); c.moveTo(bx,ey); c.lineTo(bx+Math.sin(aH)*R*0.5, ey-Math.cos(aH)*R*0.5); c.stroke();
+  c.lineWidth=2.8*K; c.beginPath(); c.moveTo(bx,ey); c.lineTo(bx+Math.sin(aM)*R*0.82, ey-Math.cos(aM)*R*0.82); c.stroke();
+  /* la linterna y la aguja */
+  c.fillStyle=FRENTE;
+  c.fillRect(bx-cw/2-4*K, cy-88*K, cw+8*K, 11*K);
+  c.beginPath(); c.moveTo(bx-22*K, cy-88*K); c.lineTo(bx+22*K, cy-88*K); c.lineTo(bx, cy-150*K); c.closePath(); c.fill();
+  c.fillStyle=LUZ+(0.5+0.4*Math.sin(now/420)).toFixed(2)+')';
+  c.beginPath(); c.arc(bx, cy-154*K, 4*K, 0, 7); c.fill();
+  /* ── EL PUENTE sobre el Támesis, con sus faroles ── */
+  const py2=base+22*K;
+  c.fillStyle='#0e1621'; c.fillRect(0, py2, W, 16*K);
+  for(let i=0;i<7;i++){ const ax=(i+0.5)*(W/7), r=W/17;
+    c.beginPath(); c.moveTo(ax-r, py2+16*K);
+    c.quadraticCurveTo(ax, py2-2*K, ax+r, py2+16*K);
+    c.lineTo(ax+r, py2+16*K+26*K); c.lineTo(ax-r, py2+16*K+26*K); c.closePath(); c.fill(); }
+  c.fillStyle='#0e1621'; c.fillRect(0, py2+34*K, W, H-(py2+34*K));
+  for(let i=0;i<8;i++){ const lx=i*(W/7);
+    c.fillStyle='#080d16'; c.fillRect(lx-2*K, py2-24*K, 4*K, 24*K);
+    c.fillStyle='rgba(255,196,120,.95)'; c.beginPath(); c.arc(lx, py2-27*K, 4.4*K, 0, 7); c.fill();
+    c.fillStyle='rgba(255,196,120,.16)'; c.beginPath(); c.arc(lx, py2-27*K, 15*K, 0, 7); c.fill(); }
+  /* el reflejo del reloj temblando en el agua, antes del puente */
+  c.save(); c.globalAlpha=0.20; c.fillStyle='rgba(255,228,166,1)';
+  for(let i=0;i<4;i++) c.fillRect(bx-16*K+Math.sin(now/600+i)*5, base+3*K+i*5*K, 32*K, 2.6*K);
+  c.restore();
+}
+/* ══ NUEVA YORK DE VERDAD ══ Manhattan de noche: tres capas de rascacielos
+   apretados, el Empire State con su corona iluminada y el Chrysler con su
+   aguja de arcos. Nada de pagodas ni faros. */
+function zenManhattan(c, W, base, now, H){
+  const rr=i=>((Math.sin(i*12.9898)*43758.5453)%1+1)%1;
+  const K = base/403;
+  /* ── TRES CAPAS DE RASCACIELOS ── de la más lejana y baja a la más cercana */
+  const CAPAS=[['#0a1120',0.6,38,0.62],['#0e1728',0.82,30,0.86],['#141f33',1,24,1.12]];
+  CAPAS.forEach(([col,alpha,ancho,alto],ci)=>{
+    const n=Math.ceil(W/ancho)+2;
+    for(let i=0;i<n;i++){
+      const x=i*ancho-12, w=ancho-3-rr(i+ci*13)*6;
+      const h=(56+rr(i+ci*31)*190)*alto*K;
+      c.globalAlpha=alpha; c.fillStyle=col; c.fillRect(x, base-h, w, h);
+      /* el tinaco de madera de las azoteas, que es puro Nueva York */
+      if(ci===2 && rr(i+77)>0.76){ c.fillRect(x+w*0.28, base-h-11*K, 9*K, 11*K);
+        c.fillRect(x+w*0.28-2*K, base-h-15*K, 13*K, 4*K); }
+      for(let k=0;k<30;k++){ if(rr(i*37+k+ci*7)<0.5) continue;
+        const wx=x+3+(k%3)*(w/3.3), wy=base-h+8*K+Math.floor(k/3)*15*K;
+        if(wy>base-9*K) break;
+        c.fillStyle=`rgba(255,226,168,${(0.20+rr(k+i)*0.58).toFixed(2)})`;
+        c.fillRect(wx, wy, Math.max(2.6, w/6), 6*K); } } });
+  c.globalAlpha=1;
+  /* ══ EL EMPIRE STATE ══ escalonado, con su corona encendida */
+  const ex=W*0.40, EW=62*K, EH=base*0.92;
+  const cuerpo=(x,y,w,h)=>{ c.fillStyle='#1b2942'; c.fillRect(x-w/2, y-h, w, h);
+    c.fillStyle='rgba(0,0,0,.24)'; c.fillRect(x+w*0.20, y-h, w*0.30, h); };
+  cuerpo(ex, base,          EW+52*K, EH*0.30);
+  cuerpo(ex, base-EH*0.30,  EW+24*K, EH*0.34);
+  cuerpo(ex, base-EH*0.64,  EW,      EH*0.26);
+  cuerpo(ex, base-EH*0.90,  EW*0.60, EH*0.06);
+  cuerpo(ex, base-EH*0.96,  EW*0.36, EH*0.05);
+  c.fillStyle='rgba(255,226,168,.5)';
+  for(let f=0; f<26; f++) for(let k=0;k<5;k++){
+    const wy=base-14*K-f*15*K; if(wy < base-EH*0.86) break;
+    const an = wy>base-EH*0.30 ? EW+52*K : (wy>base-EH*0.64 ? EW+24*K : EW);
+    if(rr(f*11+k)<0.34) continue;
+    c.fillRect(ex-an/2+6*K+k*(an-12*K)/5, wy, 4*K, 8*K); }
+  /* la corona iluminada y su mástil con la luz roja */
+  c.fillStyle='rgba(120,190,255,.55)';
+  c.fillRect(ex-EW*0.30, base-EH*0.90-3*K, EW*0.60, 4*K);
+  c.fillRect(ex-EW*0.18, base-EH*0.96-3*K, EW*0.36, 4*K);
+  c.fillStyle='#1b2942'; c.fillRect(ex-3*K, base-EH-8*K, 6*K, EH*0.04+8*K);
+  c.fillStyle=`rgba(255,90,80,${(0.45+0.5*Math.sin(now/500)).toFixed(2)})`;
+  c.beginPath(); c.arc(ex, base-EH-11*K, 4.5*K, 0, 7); c.fill();
+  /* ══ EL CHRYSLER ══ su aguja de arcos, a la derecha */
+  const cx2=W*0.68, CW=44*K, CH=base*0.76;
+  c.fillStyle='#16203a'; c.fillRect(cx2-CW/2, base-CH*0.70, CW, CH*0.70);
+  c.fillStyle='rgba(255,226,168,.42)';
+  for(let f=0; f<15; f++) for(let k=0;k<3;k++){ if(rr(f*7+k+3)<0.4) continue;
+    c.fillRect(cx2-CW/2+7*K+k*11*K, base-16*K-f*17*K, 4*K, 7*K); }
+  for(let i=0;i<5;i++){ const r=(CW/2)*(1-i*0.17), y=base-CH*0.70-i*20*K;
+    c.strokeStyle=`rgba(190,214,240,${(0.78-i*0.11).toFixed(2)})`; c.lineWidth=3*K;
+    c.beginPath(); c.arc(cx2, y, r, Math.PI, 0); c.stroke();
+    c.strokeStyle='rgba(255,226,168,.5)'; c.lineWidth=1.4*K;
+    for(let k=-2;k<=2;k++){ c.beginPath(); c.moveTo(cx2+k*(r/3), y);
+      c.lineTo(cx2+k*(r/3)*0.7, y-r*0.72); c.stroke(); } }
+  c.fillStyle='#c9d6e6'; c.fillRect(cx2-2*K, base-CH-10*K, 4*K, CH*0.08+12*K);
+  /* ── LA CALLE ── asfalto, banqueta y los faroles */
+  c.fillStyle='#080c14'; c.fillRect(0, base, W, H-base);
+  c.fillStyle='rgba(255,255,255,.07)'; c.fillRect(0, base, W, 4*K);
+  for(let i=0;i<10;i++){ const lx=(i+0.5)*(W/10);
+    c.fillStyle='#0b111a'; c.fillRect(lx-2*K, base+5*K, 4*K, 34*K);
+    c.fillStyle='rgba(255,214,150,.95)'; c.beginPath(); c.arc(lx, base+4*K, 4.4*K, 0, 7); c.fill();
+    c.fillStyle='rgba(255,214,150,.13)'; c.beginPath(); c.arc(lx, base+4*K, 19*K, 0, 7); c.fill(); }
+}
 function zenBambu(c,W,H,base){ for(let i=0;i<18;i++){ const x=((i*61)%W)+ (i%3)*6, h=H*0.42+((i*47)%110); c.strokeStyle=`rgba(${30+(i%3)*10},${80+(i%4)*12},${40},.9)`; c.lineWidth=4; c.beginPath(); c.moveTo(x,H); c.lineTo(x,H-h); c.stroke();
   for(let sy=H-16;sy>H-h;sy-=20){ c.strokeStyle='rgba(15,55,28,.9)'; c.lineWidth=1.4; c.beginPath(); c.moveTo(x-4,sy); c.lineTo(x+4,sy); c.stroke(); } } }
 function zenDojo(c,x,by,s,col){ c.fillStyle='#2b3038'; c.fillRect(x-4*s,by-6*s,8*s,6*s);
@@ -12198,13 +12352,28 @@ function zenDibujaEscena(c, W, H, E, now, pet, poderHex, njCfg){
   if(E.playa){ c.fillStyle='rgba(228,206,150,.9)'; c.beginPath(); c.moveTo(0,H); c.lineTo(W,H); c.lineTo(W,base+H*0.14); c.quadraticCurveTo(W*0.5,base+H*0.04,0,base+H*0.16); c.closePath(); c.fill(); }
   c.fillStyle=E.agua; c.fillRect(0,base,W, (E.playa? H*0.16 : H-base));
   for(let i=0;i<7;i++){ const y=base+8+i*13; if(E.playa && y>base+H*0.16) break; c.strokeStyle='rgba(255,255,255,.06)'; c.lineWidth=2; c.beginPath(); c.moveTo(0,y); for(let x=0;x<=W;x+=36) c.lineTo(x,y+Math.sin((x+now*0.05)/58+i)*3); c.stroke(); }
-  if(disc){ c.fillStyle=disc.col.replace(/[\d.]+\)$/,'.14)'); c.fillRect(W*disc.x-60,base,120,H-base); }
+  /* el reflejo del astro: era un rectángulo de bordes duros —una caja gris
+     flotando en el agua— en cuanto la escena no traía nada que lo tapara.
+     Ahora es una columna que se desvanece. (André, 31-ago-2026) */
+  if(disc){ const rg=c.createLinearGradient(W*disc.x-70,0,W*disc.x+70,0);
+    rg.addColorStop(0, disc.col.replace(/[\d.]+\)$/,'0)'));
+    rg.addColorStop(.5, disc.col.replace(/[\d.]+\)$/,'.16)'));
+    rg.addColorStop(1, disc.col.replace(/[\d.]+\)$/,'0)'));
+    const rv=c.createLinearGradient(0,base,0,H);
+    rv.addColorStop(0,'rgba(0,0,0,1)'); rv.addColorStop(1,'rgba(0,0,0,0)');
+    c.save(); c.fillStyle=rg; c.fillRect(W*disc.x-70,base,140,H-base);
+    c.globalCompositeOperation='destination-out'; c.fillStyle=rv;
+    c.fillRect(W*disc.x-70,base,140,H-base); c.restore(); }
   /* ── elementos legendarios de foreground (sobre el agua/tierra) ── */
   if(E.cascada) zenCascada(c, W*0.2, base-H*0.24, base, 12);
   if(E.torii) zenTorii(c, W*0.5, base+H*0.15, 1.25);
   if(E.puente) zenPuenteRojo(c, W*0.5, base+H*0.02, 100, 1.2);
   if(E.lotos){ for(let i=0;i<7;i++) zenLoto(c, W*(0.12+i*0.12), base+H*(0.07+(i%2)*0.07), 1.2); }
   if(E.faroles){ for(let i=0;i<6;i++) zenFarol(c, W*(0.16+i*0.13), base+H*(0.04+(i%3)*0.05), 1.2); }
+  /* LAS DOS CIUDADES van aquí, DESPUÉS del agua: el río se comía el puente de
+     Westminster y el asfalto de Nueva York cuando se pintaban antes. */
+  if(E.bigben) zenBigBen(c, W, base, now, H);
+  if(E.manhattan) zenManhattan(c, W, base, now, H);
   if(E.bambuMontes) zenBambuMontes(c, W, H, base);
   if(E.bambu) zenBambu(c, W, H, base);
   if(E.part!=='estrella' && pet){ pet.forEach(p=>{ p.y+=p.sp; p.x+=Math.sin((now/820)+p.dr)*p.sw; if(p.y>H){ p.y=-12; p.x=Math.random()*W; }
@@ -13672,10 +13841,14 @@ function renderBatallaInterno(){
              gris de 11px. Ahora dice la ciudad, si su killzone está viva y
              cuánto falta para que abra (André, 30-ago-2026). -->
         ${(()=>{ const M=batMundo(c), E2=batSesionEstado(c);
+          /* LONDON · LONDON (André, 31-ago-2026): la sesión y la ciudad son la
+             misma palabra en Londres y en Nueva York, así que el título la
+             decía dos veces. Sólo se juntan cuando de verdad son distintas
+             (Asia · Tokio). El emoji tampoco lo quiso. */
+          const _ses = loc(E2.ses.nom).toUpperCase(), _ciu = loc(M.bioma).toUpperCase();
           return `<span class="bat-sede">
             <span class="bat-sede-l1">
-              <b class="bat-sede-ico">${M.ico}</b>
-              <b class="bat-sede-nom">${esc(loc(E2.ses.nom).toUpperCase())} · ${esc(loc(M.bioma).toUpperCase())}</b>
+              <b class="bat-sede-nom">${esc(_ses === _ciu ? _ciu : _ses + ' · ' + _ciu)}</b>
             </span>
             <span class="bat-sede-l2">
               <span class="bat-sede-ses ${E2.viva?'viva':''}">${E2.viva
