@@ -1783,14 +1783,19 @@ button.st-chip:hover{border-color:rgba(255,255,255,.45)}
 /* LA PELÍCULA VA POR ENCIMA DE TODO (André, 31-ago-2026): con z-index 80 el
    menú lateral (z 50, pero pintado después) se le montaba encima y el texto
    quedaba cortado detrás de los links. Una película se ve a pantalla completa
-   o no se ve. */
+   o no se ve.
+   Y LA ESCENA VA EN BANDA 16:9, no rellenando la ventana: estirada a una
+   ventana alta y angosta los montes se volvían paredes y todo se veía
+   zoomeado. En banda, la estampa es la misma que se ve en el duelo. */
 .peli-ov{position:fixed;inset:0;z-index:220;background:#05070d;display:flex;flex-direction:column;
-  align-items:center;justify-content:flex-end;overflow:hidden;padding:0}
-.peli-ov canvas{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+  align-items:center;justify-content:center;gap:0;overflow:hidden;padding:0}
+.peli-cuadro{position:relative;width:100%;flex:0 0 auto;background:#05070d}
+.peli-cuadro canvas{display:block;width:100%;height:auto;aspect-ratio:16/9;max-height:58vh;
+  margin:0 auto;object-fit:cover}
 .peli-in{position:relative;z-index:2;width:100%;max-width:720px;margin:0 auto;
-  padding:0 30px 40px;text-align:left}
-.peli-kanji{position:absolute;right:26px;bottom:calc(100% + 8px);font-size:78px;line-height:1;
-  font-weight:700;color:rgba(255,255,255,.10);pointer-events:none}
+  padding:22px 30px 34px;text-align:left;flex:0 0 auto}
+.peli-kanji{position:absolute;right:30px;top:-58px;font-size:64px;line-height:1;
+  font-weight:700;color:rgba(255,255,255,.13);pointer-events:none}
 .peli-acto{display:block;font-family:var(--mono);font-size:9px;letter-spacing:.28em;
   color:rgba(255,255,255,.42);margin-bottom:10px}
 .peli-t{display:block;font-size:30px;font-weight:800;line-height:1.1;color:#fff;letter-spacing:-.01em}
@@ -9575,6 +9580,12 @@ function pintaCurva(cv, empty, pnls, prog, vacioMsg, opts){
   const cTxt  = claro ? 'rgba(0,0,0,.5)'  : 'rgba(255,255,255,.42)';
   const cTxtT = claro ? 'rgba(0,0,0,.75)' : 'rgba(255,255,255,.7)';
   const cOro  = '#D9A441';
+  /* cRojo NUNCA EXISTIÓ (André, 31-ago-2026): la línea del drawdown y el hito
+     de 'breach' lo usaban, así que en cuanto elegías una cuenta con drawdown
+     la gráfica reventaba a media función —ReferenceError— y se quedaba a
+     medio pintar, sin marca de objetivo ni punto final. Se veía como 'a veces
+     la gráfica sale incompleta'. */
+  const cRojo = cssVar('--down') || (claro?'#E5484D':'#FF453A');
   /* la curva sigue la PALETA elegida (Clásica/Océano/Oro/Sakura), no un
      verde/rojo fijo — lee las mismas --up/--down que ya pinta toda la UI */
   const col_up = cssVar('--up') || (claro?'#1F9D57':'#30D158'), col_dn = cssVar('--down') || (claro?'#E5484D':'#FF453A');
@@ -13341,7 +13352,7 @@ function batPuerta(){
     if(!((S.batNinja||{})[yo])) window._batOnb='como';
     renderBatalla(); };
   root.innerHTML = `<div class="ars-ov peli-ov">
-    <canvas id="peliCv" width="1200" height="700"></canvas>
+    <div class="peli-cuadro"><canvas id="peliCv" width="1200" height="675"></canvas></div>
     <div class="peli-in">
       <span class="peli-kanji">${esc(A.kanji)}</span>
       <button type="button" class="peli-saltar" id="peliSaltar">${bi('saltar','skip')}</button>
@@ -13369,10 +13380,18 @@ function batPintaPeli(A){
      agrandaba al ninja hasta la mitad del cuadro. Pintando a la forma real del
      hueco no hay recorte. */
   const dpr = Math.min(2, window.devicePixelRatio || 1);
+  /* el alto sale del ancho: el lienzo es 16:9 por CSS, y medir clientHeight
+     justo después de escribir el HTML devolvía el alto de antes de aplicarlo */
   const cw = Math.max(320, pcv.clientWidth || window.innerWidth);
-  const ch = Math.max(320, pcv.clientHeight || window.innerHeight);
+  const ch = Math.round(cw * 9 / 16);
   pcv.width = Math.round(cw*dpr); pcv.height = Math.round(ch*dpr);
-  const px = pcv.getContext('2d'), PW = pcv.width, PH = pcv.height;
+  const px = pcv.getContext('2d');
+  /* SE DIBUJA EN PÍXELES CSS (André, 31-ago-2026): con el lienzo a 2× el alto
+     medía 3672 y la escala del ninja —que sale del alto— pegaba siempre en su
+     tope; de ahí que siguiera saliendo gigante. Con esta transformación todo
+     lo que se dibuja usa las medidas de la pantalla, no las del dispositivo. */
+  px.setTransform(dpr, 0, 0, dpr, 0, 0);
+  const PW = cw, PH = ch;
   const E0 = ZEN_ESCENAS[A.esc] || ZEN_ESCENAS[0];
   const E = batEscenaViva({ ...E0, sinNinja:true }, { sesion:null, id:'peli'+A.kanji });
   const kk = KATANAS[A.kat] || {};
@@ -13383,12 +13402,14 @@ function batPintaPeli(A){
   const pinta = (t) => { if(!pcv.isConnected) return;
     try{ zenDibujaEscena(px, PW, PH, E, t, pet, col); }
     catch(e){ px.fillStyle='#0b0f18'; px.fillRect(0,0,PW,PH); }
-    /* el ninja, a escala del cuadro: en una ventana alta 3.2 lo volvía un gigante */
-    const esc = Math.max(1.5, Math.min(3.4, PH/230));
+    /* el ninja, a escala del cuadro y sin pasarse: se mide contra el LADO CORTO,
+       porque en una ventana alta y angosta el alto no dice qué tan grande cabe */
+    const esc = Math.max(1.2, Math.min(3.0, PH/210));
     try{ zenNinja(px, PW*0.5, PH*0.72, esc, t, 0, col, nj, false, 'guardia'); }catch(e){}
-    const vg = px.createLinearGradient(0, PH*0.30, 0, PH);
-    vg.addColorStop(0,'rgba(6,8,14,0)'); vg.addColorStop(0.55,'rgba(6,8,14,.72)'); vg.addColorStop(1,'rgba(6,8,14,.95)');
-    px.fillStyle = vg; px.fillRect(0, PH*0.30, PW, PH*0.70);
+    /* el degradado de abajo cose el cuadro con el fondo negro del texto */
+    const vg = px.createLinearGradient(0, PH*0.62, 0, PH);
+    vg.addColorStop(0,'rgba(5,7,13,0)'); vg.addColorStop(1,'rgba(5,7,13,.96)');
+    px.fillStyle = vg; px.fillRect(0, PH*0.62, PW, PH*0.38);
     window._peliRAF = requestAnimationFrame(pinta); };
   window._peliRAF = requestAnimationFrame(pinta);
 }
@@ -25355,15 +25376,35 @@ setInterval(() => cargaMercado().then(m => {
   if(m && $('#v-posiciones').classList.contains('on')) renderPosiciones();
 }), 300000);
 
-/* portón de acceso: SIEMPRE se entra desde el login, sin sesión pegada y con
-   el campo del usuario EN BLANCO. Antes dejaba escrito el último que entró
-   («andre.np»), que era cómodo para André pero desconcertaba a cualquier otro
-   que abriera el terminal — y de paso le decía a quien fuera quién había
-   estado aquí. */
-if(cloudOn()){ cloudTok = null; try{ localStorage.removeItem('np_tok'); }catch(e){} }
-S.session = { user: null };
-lockUI();
-try{ localStorage.removeItem('np_last_user'); }catch(e){}
+/* ══ EL PORTÓN ══ (André, 31-ago-2026)
+   Antes se BORRABA el token en cada arranque: cada refresh te devolvía al
+   login, y en una jornada de trading eso son diez logins al día.
+   Ahora la sesión aguanta el refresh — pero sólo si de verdad está viva: se
+   pide un token nuevo a la nube y sólo si contesta que sí se entra derecho.
+   Si el refresh falla (token vencido, revocado, sin internet) se cae al login
+   como siempre. Eso evita el limbo «SIN SESIÓN» que motivó borrarlo: nunca
+   queda una sesión a medias sin token, porque el token se comprueba ANTES.
+   El campo del usuario sigue abriendo en blanco cuando sí toca login. */
+(async () => {
+  const guardado = (S.session && S.session.user) || null;
+  const puedo = cloudOn() && cloudTok && cloudTok.refresh_token && guardado && USERS[guardado];
+  let entro = false;
+  if(puedo){
+    try{ entro = await cloudRefresh(); }catch(e){ entro = false; }
+  }
+  if(entro){
+    unlockUI();
+    try{ renderAll(); }catch(e){}
+    try{ cloudPaint(); cloudPull(); }catch(e){}
+    try{ S.presencia = S.presencia || {}; S.presencia[guardado] = Date.now();
+      save(); marcaPresencia(); }catch(e){}
+    return;
+  }
+  if(cloudOn()){ cloudTok = null; try{ localStorage.removeItem('np_tok'); }catch(e){} }
+  S.session = { user: null };
+  lockUI();
+  try{ localStorage.removeItem('np_last_user'); }catch(e){}
+})();
 
 /* QA hook */
 window.__np = { state: () => S, score: computeScore };
