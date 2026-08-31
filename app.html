@@ -22995,7 +22995,11 @@ basAcento = input.color(#1c4f82, "Acento · LONDRES, AOI", group = g0b)
 basNeutro = input.color(#7b93ad, "Neutro · ORB, niveles del OR, Fib", group = g0b)
 basSuave  = input.color(#4a90d9, "Suave · la entrada, la MA de sesión", group = g0b, tooltip = "Los cinco papeles. Todo lo que el script pinta sale de aquí: cambia estos cinco y cambia el chart entero sin tocar nada más. Solo mandan con el diseño en PERSONALIZADO.")
 tamLblSel = input.string("Chico", "Tamaño de las etiquetas", options = ["Diminuto", "Chico", "Normal"], group = g0b, tooltip = "El tamaño de TODOS los nombres que cuelgan a la derecha: ASIA, LNDN, ORB, NY, HIGH, LOW y los números del Fibonacci.")
+zonaHalSel = input.string("Izquierda", "Título de cada zona · a lo ancho", options = ["Izquierda", "Centro", "Derecha"], group = g0b, tooltip = "Dónde se escribe el nombre DENTRO de su propio recuadro: el FVG, el Order Block, el AOI y los huecos del ORB. Izquierda es lo de siempre; centro y derecha ayudan cuando la zona arranca fuera de la pantalla.")
+zonaValSel = input.string("En medio", "Título de cada zona · a lo alto", options = ["Arriba", "En medio", "Abajo"], group = g0b)
 tamTitSel = input.string("Grande", "Tamaño del título LONGS / SHORTS", options = ["Normal", "Grande", "Enorme"], group = g0b)
+zHal = zonaHalSel == "Centro" ? text.align_center : zonaHalSel == "Derecha" ? text.align_right : text.align_left
+zVal = zonaValSel == "Arriba" ? text.align_top : zonaValSel == "Abajo" ? text.align_bottom : text.align_center
 tamLbl = tamLblSel == "Diminuto" ? size.tiny : tamLblSel == "Normal" ? size.normal : size.small
 tamTit = tamTitSel == "Normal" ? size.normal : tamTitSel == "Enorme" ? size.huge : size.large
 
@@ -23009,6 +23013,7 @@ kzNegrita = input.bool(true, "Nombres en negritas", group = g1, tooltip = "ASIA,
 alertar  = input.bool(false, "Alertar cuando tomen un H/L", group = g1, tooltip = "Avisa cuando el precio toma el alto o el bajo de una sesión ya cerrada.")
 grosor   = input.int(1, "Grosor de líneas", minval = 1, maxval = 5, group = g1)
 sepLbl   = input.int(3, "Separación de las etiquetas (velas)", minval = 0, maxval = 20, group = g1, tooltip = "Cada nombre vive en su propio carril a la derecha para que NUNCA se encimen, aunque dos niveles caigan en el mismo precio (pasa seguido: el alto de NY suele ser el mismo ORH). Este número es lo que se separa un carril del siguiente: ASIA, LNDN, ORB, NY, el ORH/ORL del ORB y el HIGH/LOW del rango, en ese orden de izquierda a derecha. Súbelo si trabajas con mucho zoom out y aun así se te juntan.")
+datosDonde = input.string("En el panel", "Los datos de cada sesión", options = ["En su caja del chart", "En el panel", "En los dos"], group = g1, tooltip = "Dónde se leen el abrió → cerró y los puntos de ASIA, LONDRES, NY y el ORB. EN SU CAJA DEL CHART: cada sesión los escribe en SU tramo, justo encima de su máximo y a la mitad de su horario, con el detalle en el tooltip; el panel se queda solo con la rutina, el contrato y el TOTAL. EN EL PANEL: como siempre, en sus filas. EN LOS DOS: por si quieres tenerlos a la mano en las dos partes.")
 verIni   = input.bool(true, "Bolita al abrir cada sesión", group = g1, tooltip = "Un círculo diminuto en la vela donde arranca cada killzone, clavado en su precio de apertura y del color de esa sesión. Cuando dos abren en la misma vela —el ORB y NY arrancan los dos a las 9:30— se pinta UNA sola, la primera de esta lista: ORB, NY, Londres, Asia. Sale aunque las cajas de killzone estén apagadas. Si traes los dos scripts en el mismo chart, apágala en uno para no verlas dobles.")
 
 // cada fila: prendido · color · nombre · horario · caja
@@ -23021,7 +23026,7 @@ cajaA = input.bool(true, "caja", inline = "A", group = g1)
 inUseL  = input.bool(true, "", inline = "L", group = g1)
 inColL  = input.color(#42a5f5, "", inline = "L", group = g1)
 txtL  = input.string("LNDN", "", inline = "L", group = g1)
-sesL  = input.session("0200-0830", "", inline = "L", group = g1)
+sesL  = input.session("0200-0900", "", inline = "L", group = g1)
 cajaL = input.bool(true, "caja", inline = "L", group = g1)
 
 inUseO  = input.bool(true, "", inline = "O", group = g1)
@@ -23217,6 +23222,8 @@ type kzona
     string nombre
     color col
     int off
+    int t0 = na
+    int t1 = na
     box bx = na
     line hiLn = na
     line loLn = na
@@ -23232,6 +23239,13 @@ var kzA = kzona.new(txtA, colA, 0)
 var kzL = kzona.new(txtL, colL, 1)
 var kzO = kzona.new(txtO, colO, 2)
 var kzN = kzona.new(txtN, colN, 3)
+// los datos de cada sesión escritos en su propio tramo del chart
+bool datosChart = datosDonde != "En el panel"
+bool datosPanel = datosDonde != "En su caja del chart"
+var label dcA = na
+var label dcL = na
+var label dcN = na
+var label dcO = na
 pasoBar = time - time[1]
 
 tA = not na(time("", sesA, tz))
@@ -23270,7 +23284,10 @@ f_kz(kzona k, bool use, bool t, bool caja) =>
             k.hiVivo := true
             k.loVivo := true
             k.activa := true
+            k.t0 := time
+            k.t1 := time
         if t and t[1] and k.activa
+            k.t1 := time
             // dentro de la sesión: el extremo se expande con el precio
             if high > k.hiLn.get_y1()
                 k.hiLn.set_xy1(time, high)
@@ -23458,7 +23475,7 @@ if barstate.islast
                     float dt = array.get(fT, best)
                     float db = array.get(fB, best)
                     int   dx = array.get(fX, best)
-                    array.push(fvBx, box.new(dx, dt, time, db, xloc = xloc.bar_time, extend = extend.right, border_color = #ffffff00, bgcolor = color.new(col, transZona), text = "FVG " + flecha + " · " + tfFVG, text_size = size.tiny, text_color = color.new(col, 10), text_halign = text.align_left, text_valign = text.align_center))
+                    array.push(fvBx, box.new(dx, dt, time, db, xloc = xloc.bar_time, extend = extend.right, border_color = #ffffff00, bgcolor = color.new(col, transZona), text = "FVG " + flecha + " · " + tfFVG, text_size = size.tiny, text_color = color.new(col, 10), text_halign = zHal, text_valign = zVal))
                     // el título va al centro de su recuadro, sin precios:
                     // los números viven en el tooltip
                     array.push(fvLb, label.new(dx + (time - dx) / 2, (dt + db) / 2, "", xloc = xloc.bar_time, style = label.style_label_center, color = #ffffff00, textcolor = #ffffff00, size = size.tiny, tooltip = "FVG " + flecha + " · " + tfFVG + " · " + str.tostring(db, format.mintick) + "–" + str.tostring(dt, format.mintick)))
@@ -23540,7 +23557,7 @@ if barstate.islast
             // color, sin bordes y sin pasarse al vacío
             int xFin = inv ? array.get(gFin, i) : time
             string nom = (inv ? "iFVG " : "FVG ") + (sg == 1 ? "↑" : "↓")
-            array.push(gBx, box.new(x, t, xFin, b, xloc = xloc.bar_time, border_color = #ffffff00, bgcolor = color.new(inv ? cInv : c, transZona), text = txtFvgORB ? nom : "", text_size = size.tiny, text_color = color.new(inv ? cInv : c, 10), text_halign = text.align_left, text_valign = text.align_center))
+            array.push(gBx, box.new(x, t, xFin, b, xloc = xloc.bar_time, border_color = #ffffff00, bgcolor = color.new(inv ? cInv : c, transZona), text = txtFvgORB ? nom : "", text_size = size.tiny, text_color = color.new(inv ? cInv : c, 10), text_halign = zHal, text_valign = zVal))
             // el título NO va encima de las velas ni dentro de la
             // caja — ahí siempre queda tapado. Va afuera, en el
             // margen de la derecha, a la altura de su zona. Y si dos
@@ -24259,7 +24276,7 @@ if verPanel and barstate.islast
 
     // ── sesión en curso; si no hay ninguna, cuál ABRE y en cuánto
     int aFin = f_mins(str.substring(sesA, 5, 9), 120)
-    int lFin = f_mins(str.substring(sesL, 5, 9), 510)
+    int lFin = f_mins(str.substring(sesL, 5, 9), 540)
     int nFin = f_mins(str.substring(sesN, 5, 9), 960)
     int oIni = f_mins(str.substring(sesO, 0, 4), 570)
     int oFin = f_mins(str.substring(sesO, 5, 9), 585)
@@ -24353,26 +24370,13 @@ if verPanel and barstate.islast
     if hayAlertas
         table.cell(panel, 0, 8, "⏰ Agenda", text_color = color.gray, text_size = tamTxt)
         table.cell(panel, 1, 8, alTxt, text_color = alCol, bgcolor = color.new(pSuave, alSigue <= 5 ? 85 : 100), text_size = tamTxt, tooltip = "Cuánto falta para tu próxima alerta y cuál es. Si la última de hoy ya pasó, cuenta hasta la primera del siguiente día hábil. Cuando falten 5 minutos o menos la fila se pone naranja. Los eventos son tus alertas de horario (config, grupo 7): hasta 7, cada una con su hora y su texto. Para que SUENEN en el teléfono crea UNA alerta de TradingView con condición Any alert() function call.")
-    table.cell(panel, 0, 9, txtA, text_color = colA, text_size = tamTxt)
-    table.cell(panel, 1, 9, tkA1, text_color = not dibujable ? color.gray : chart.fg_color, text_size = tamTxt, tooltip = tipA)
-    table.cell(panel, 2, 9, flA, text_color = cNetA, text_size = tamTxt, tooltip = tipA)
-    table.cell(panel, 3, 9, tkA1c, text_color = chart.fg_color, text_size = tamTxt, tooltip = tipA)
-    table.cell(panel, 4, 9, tkA2, text_color = cNetA, text_size = tamTxt, tooltip = tipA)
-    table.cell(panel, 0, 10, txtL, text_color = colL, text_size = tamTxt)
-    table.cell(panel, 1, 10, tkL1, text_color = not dibujable ? color.gray : chart.fg_color, text_size = tamTxt, tooltip = tipL)
-    table.cell(panel, 2, 10, flL, text_color = cNetL, text_size = tamTxt, tooltip = tipL)
-    table.cell(panel, 3, 10, tkL1c, text_color = chart.fg_color, text_size = tamTxt, tooltip = tipL)
-    table.cell(panel, 4, 10, tkL2, text_color = cNetL, text_size = tamTxt, tooltip = tipL)
-    table.cell(panel, 0, 11, txtN, text_color = colN, text_size = tamTxt)
-    table.cell(panel, 1, 11, tkN1, text_color = not dibujable ? color.gray : chart.fg_color, text_size = tamTxt, tooltip = tipN)
-    table.cell(panel, 2, 11, flN, text_color = cNetN, text_size = tamTxt, tooltip = tipN)
-    table.cell(panel, 3, 11, tkN1c, text_color = chart.fg_color, text_size = tamTxt, tooltip = tipN)
-    table.cell(panel, 4, 11, tkN2, text_color = cNetN, text_size = tamTxt, tooltip = tipN)
     // el ORB cuenta DESDE EL BREAK: el nivel que rompió, hacia dónde
-    // y cuántos puntos lleva desde ahí. Antes de romper no hay número
-    // el contador arranca en 0 en el nivel roto y solo sube: si el
-    // precio se regresa adentro del ORB marca 0, nunca en negativo
-    float brPts = brLado == 0 ? na : math.max(0, (close - brNiv) * brLado)
+    // y cuántos puntos lleva desde ahí.
+    // (André, 31-ago-2026) Ya NO se topa en 0: si el precio se devolvió
+    // dentro del rango el número se va en NEGATIVO, que es la verdad —
+    // el break está perdiendo. Antes marcaba 0 y parecía que no pasaba
+    // nada.
+    float brPts = brLado == 0 ? na : (close - brNiv) * brLado
     // (André, 31-ago-2026) SIN BREAK LA FILA YA NO SE QUEDA MUDA:
     // mientras el ORB sigue entero dice cuántos puntos le faltan al
     // precio para romper cada lado —el dato que de verdad sirve
@@ -24381,25 +24385,73 @@ if verPanel and barstate.islast
     float faltaH = na(pOrh) ? na : pOrh - close
     float faltaL = na(pOrl) ? na : close - pOrl
     bool  orbEspera = brLado == 0 and pVivo and pRoto == 0 and not na(pOrh)
-    string tkO1 = not dibujable ? "" : brLado != 0 ? (brLado == 1 ? "ORH " : "ORL ") + str.tostring(brNiv, format.mintick) : orbEspera ? "entero · sin romper" : ""
+    // (André, 31-ago-2026) Mientras el ORB sigue entero los números van
+    // en NEGATIVO: es lo que le FALTA al precio para romper, no lo que
+    // lleva. Y la medición cambia de lado sola al cruzar el 50%: arriba
+    // del ORM se mide contra el ORH, abajo contra el ORL. Cuando por fin
+    // rompe, los puntos se vuelven positivos y cuentan desde el nivel.
+    bool  mideArriba = pCond == 1
+    float negH = na(pOrh) ? na : close - pOrh
+    float negL = na(pOrl) ? na : pOrl - close
+    string tkO1 = not dibujable ? "" : brLado != 0 ? (brLado == 1 ? "ORH " : "ORL ") + str.tostring(brNiv, format.mintick) : orbEspera ? "entero · mide al " + (mideArriba ? "ORH" : "ORL") : ""
     string flO  = not dibujable ? "" : brLado != 0 ? (brLado == 1 ? "↑" : "↓") : (orbEspera and not na(pronPct)) ? (pronAlza ? "▲" : "▼") : ""
     string tkO1c = not dibujable ? "" : brLado != 0 ? str.tostring(close, format.mintick) : (orbEspera and not na(pronPct)) ? str.tostring(pronPct, "#") + "%" : ""
-    string tkO2 = not dibujable ? "" : brLado != 0 ? f_fmtPts(brPts) : orbEspera ? str.tostring(math.max(faltaH, 0), "#.#") + " / " + str.tostring(math.max(faltaL, 0), "#.#") : ""
+    string tkO2 = not dibujable ? "" : brLado != 0 ? f_fmtPts(brPts) : orbEspera ? (mideArriba ? str.tostring(negH, "#.##") + " / " + str.tostring(negL, "#.##") : str.tostring(negL, "#.##") + " / " + str.tostring(negH, "#.##")) : ""
     // el color lo manda la DIRECCIÓN del break, no el avance: rompió
-    // arriba, verde; rompió abajo, rojo. Que marque 0 ya dice solo
-    // que el precio se devolvió adentro
-    color cNetO = not dibujable ? color.gray : brLado != 0 ? (brLado == 1 ? cAlza : cBaja) : (orbEspera and not na(pronPct)) ? (pronAlza ? cAlza : cBaja) : color.gray
-    string tipO = brLado != 0 ? "Rompió el " + (brLado == 1 ? "ORH" : "ORL") + " en " + str.tostring(brNiv, format.mintick) + " · lleva " + f_fmtPts(brPts) + " · lo más lejos que llegó: " + str.tostring(brMax, "#.##") + " pts · el ORB midió " + str.tostring(orh - orl, "#.##") + " pts" : orbEspera ? "El ORB sigue ENTERO. Le faltan " + str.tostring(math.max(faltaH, 0), "#.##") + " pts al ORH (" + str.tostring(pOrh, format.mintick) + ") y " + str.tostring(math.max(faltaL, 0), "#.##") + " pts al ORL (" + str.tostring(pOrl, format.mintick) + "); el ORM está en " + str.tostring(pOrm, format.mintick) + "." + (na(pronPct) ? "\\n\\nTodavía no hay ORB suficientes cargados en este chart para decir hacia dónde suele romper (" + str.tostring(pronTot) + " guardados)." : "\\n\\nCon el precio " + (pCond == 1 ? "arriba" : "abajo") + " del ORM, en " + str.tostring(pronN) + (pronCond ? " sesiones de este chart con esa misma condición" : " sesiones (la condición no juntó muestra, van todas)") + " el primer rompimiento fue " + (pronAlza ? "el ORH" : "el ORL") + " el " + str.tostring(pronPct, "#") + "% de las veces.\\n\\nNO es un win rate probado ni una señal: es el conteo de lo que ha pasado en las velas cargadas.") : ""
-    table.cell(panel, 0, 12, not dibujable or (brLado == 0 and not orbEspera) ? "" : txtO, text_color = colO, text_size = tamTxt)
-    table.cell(panel, 1, 12, tkO1, text_color = not dibujable ? color.gray : brLado != 0 ? cNetO : color.gray, text_size = tamTxt, tooltip = tipO)
-    table.cell(panel, 2, 12, flO, text_color = cNetO, text_size = tamTxt, tooltip = tipO)
-    table.cell(panel, 3, 12, tkO1c, text_color = chart.fg_color, text_size = tamTxt, tooltip = tipO)
-    table.cell(panel, 4, 12, tkO2, text_color = cNetO, text_size = tamTxt, tooltip = tipO)
-    table.cell(panel, 0, 13, "TOTAL", text_color = chart.fg_color, text_size = tamTxt)
-    table.cell(panel, 1, 13, tkD1, text_color = not dibujable ? color.gray : chart.fg_color, text_size = tamTxt, tooltip = tipD)
-    table.cell(panel, 2, 13, flD, text_color = cNetD, text_size = tamTxt, tooltip = tipD)
-    table.cell(panel, 3, 13, tkD1c, text_color = chart.fg_color, text_size = tamTxt, tooltip = tipD)
-    table.cell(panel, 4, 13, tkD2, text_color = cNetD, text_size = tamTxt, tooltip = tipD)
+    // arriba, verde; rompió abajo, rojo. Si el número se fue en
+    // negativo el break se está devolviendo, y ahí se pinta gris para
+    // que no siga gritando el lado que ya falló
+    color cNetO = not dibujable ? color.gray : brLado != 0 ? (brPts < 0 ? color.gray : brLado == 1 ? cAlza : cBaja) : (orbEspera and not na(pronPct)) ? (pronAlza ? cAlza : cBaja) : color.gray
+    string tipO = brLado != 0 ? "Rompió el " + (brLado == 1 ? "ORH" : "ORL") + " en " + str.tostring(brNiv, format.mintick) + " · lleva " + f_fmtPts(brPts) + " · lo más lejos que llegó: " + str.tostring(brMax, "#.##") + " pts · el ORB midió " + str.tostring(orh - orl, "#.##") + " pts" : orbEspera ? "El ORB sigue ENTERO, así que los dos números van en NEGATIVO: es lo que le FALTA al precio para romper cada lado.\\n· ORH " + str.tostring(pOrh, format.mintick) + " → " + str.tostring(negH, "#.##") + " pts\\n· ORL " + str.tostring(pOrl, format.mintick) + " → " + str.tostring(negL, "#.##") + " pts\\n\\nSe mide primero el lado donde anda el precio, y eso cambia SOLO al cruzar el 50%: ahora está " + (mideArriba ? "ARRIBA" : "ABAJO") + " del ORM (" + str.tostring(pOrm, format.mintick) + "), así que manda el " + (mideArriba ? "ORH" : "ORL") + ". En cuanto rompa, los puntos se vuelven positivos y cuentan desde el nivel roto." + (na(pronPct) ? "\\n\\nTodavía no hay ORB suficientes cargados en este chart para decir hacia dónde suele romper (" + str.tostring(pronTot) + " guardados)." : "\\n\\nCon el precio " + (pCond == 1 ? "arriba" : "abajo") + " del ORM, en " + str.tostring(pronN) + (pronCond ? " sesiones de este chart con esa misma condición" : " sesiones (la condición no juntó muestra, van todas)") + " el primer rompimiento fue " + (pronAlza ? "el ORH" : "el ORL") + " el " + str.tostring(pronPct, "#") + "% de las veces.\\n\\nNO es un win rate probado ni una señal: es el conteo de lo que ha pasado en las velas cargadas.") : ""
+    // ── LOS DATOS DE CADA SESIÓN, EN SU PROPIA CAJA ───────────────
+    // (André, 31-ago-2026) En vez de irlos a buscar al panel, cada
+    // sesión los escribe en SU tramo del chart: el nombre y sus puntos
+    // encima de su máximo, a la mitad de su horario, y el detalle
+    // completo (abrió, cerró, rango) en el tooltip. Con eso el panel
+    // se queda solo con lo que no vive en el gráfico.
+    label.delete(dcA)
+    label.delete(dcL)
+    label.delete(dcN)
+    label.delete(dcO)
+    if datosChart and dibujable
+        if useA and kzA.activa and not na(kzA.t0) and tkA2 != ""
+            dcA := label.new(int(math.avg(kzA.t0, kzA.t1)), kzA.hiLn.get_y1(), (kzNegrita ? f_negrita(txtA) : txtA) + "\\n" + tkA2, xloc = xloc.bar_time, style = label.style_label_down, color = #ffffff00, textcolor = cNetA, size = tamLbl, tooltip = tipA)
+        if useL and kzL.activa and not na(kzL.t0) and tkL2 != ""
+            dcL := label.new(int(math.avg(kzL.t0, kzL.t1)), kzL.hiLn.get_y1(), (kzNegrita ? f_negrita(txtL) : txtL) + "\\n" + tkL2, xloc = xloc.bar_time, style = label.style_label_down, color = #ffffff00, textcolor = cNetL, size = tamLbl, tooltip = tipL)
+        if useN and kzN.activa and not na(kzN.t0) and tkN2 != ""
+            dcN := label.new(int(math.avg(kzN.t0, kzN.t1)), kzN.hiLn.get_y1(), (kzNegrita ? f_negrita(txtN) : txtN) + "\\n" + tkN2, xloc = xloc.bar_time, style = label.style_label_down, color = #ffffff00, textcolor = cNetN, size = tamLbl, tooltip = tipN)
+        // el ORB NO escribe en el chart: ya tiene su caja, su ORH/ORL y
+        // sus señales, y la etiqueta encima solo estorbaba
+    // (André, 31-ago-2026) Estas filas SOLO se pintan si pediste los
+    // datos en el panel. Con los datos en el chart la tabla se queda
+    // en lo que no vive en el gráfico —rutina, contrato, agenda— y el
+    // TOTAL del día se va con ellas.
+    if datosPanel
+        table.cell(panel, 0, 9, txtA, text_color = colA, text_size = tamTxt)
+        table.cell(panel, 1, 9, tkA1, text_color = not dibujable ? color.gray : chart.fg_color, text_size = tamTxt, tooltip = tipA)
+        table.cell(panel, 2, 9, flA, text_color = cNetA, text_size = tamTxt, tooltip = tipA)
+        table.cell(panel, 3, 9, tkA1c, text_color = chart.fg_color, text_size = tamTxt, tooltip = tipA)
+        table.cell(panel, 4, 9, tkA2, text_color = cNetA, text_size = tamTxt, tooltip = tipA)
+        table.cell(panel, 0, 10, txtL, text_color = colL, text_size = tamTxt)
+        table.cell(panel, 1, 10, tkL1, text_color = not dibujable ? color.gray : chart.fg_color, text_size = tamTxt, tooltip = tipL)
+        table.cell(panel, 2, 10, flL, text_color = cNetL, text_size = tamTxt, tooltip = tipL)
+        table.cell(panel, 3, 10, tkL1c, text_color = chart.fg_color, text_size = tamTxt, tooltip = tipL)
+        table.cell(panel, 4, 10, tkL2, text_color = cNetL, text_size = tamTxt, tooltip = tipL)
+        table.cell(panel, 0, 11, txtN, text_color = colN, text_size = tamTxt)
+        table.cell(panel, 1, 11, tkN1, text_color = not dibujable ? color.gray : chart.fg_color, text_size = tamTxt, tooltip = tipN)
+        table.cell(panel, 2, 11, flN, text_color = cNetN, text_size = tamTxt, tooltip = tipN)
+        table.cell(panel, 3, 11, tkN1c, text_color = chart.fg_color, text_size = tamTxt, tooltip = tipN)
+        table.cell(panel, 4, 11, tkN2, text_color = cNetN, text_size = tamTxt, tooltip = tipN)
+        table.cell(panel, 0, 12, not dibujable or (brLado == 0 and not orbEspera) ? "" : txtO, text_color = colO, text_size = tamTxt)
+        table.cell(panel, 1, 12, tkO1, text_color = not dibujable ? color.gray : brLado != 0 ? cNetO : color.gray, text_size = tamTxt, tooltip = tipO)
+        table.cell(panel, 2, 12, flO, text_color = cNetO, text_size = tamTxt, tooltip = tipO)
+        table.cell(panel, 3, 12, tkO1c, text_color = chart.fg_color, text_size = tamTxt, tooltip = tipO)
+        table.cell(panel, 4, 12, tkO2, text_color = cNetO, text_size = tamTxt, tooltip = tipO)
+        table.cell(panel, 0, 13, "TOTAL", text_color = chart.fg_color, text_size = tamTxt)
+        table.cell(panel, 1, 13, tkD1, text_color = not dibujable ? color.gray : chart.fg_color, text_size = tamTxt, tooltip = tipD)
+        table.cell(panel, 2, 13, flD, text_color = cNetD, text_size = tamTxt, tooltip = tipD)
+        table.cell(panel, 3, 13, tkD1c, text_color = chart.fg_color, text_size = tamTxt, tooltip = tipD)
+        table.cell(panel, 4, 13, tkD2, text_color = cNetD, text_size = tamTxt, tooltip = tipD)
     // filas de texto largo → columnas 1-4 fusionadas; en las filas de
     // sesión cada pieza tiene su celda: abrió · → · cerró · puntos
     // (se hace UNA sola vez)
@@ -24581,8 +24633,14 @@ basAcento = input.color(#1c4f82, "Acento · LONDRES, AOI", group = g0b)
 basNeutro = input.color(#7b93ad, "Neutro · ORB, niveles del OR, Fib", group = g0b)
 basSuave  = input.color(#4a90d9, "Suave · la entrada, la MA de sesión", group = g0b, tooltip = "Los cinco papeles. Todo lo que el script pinta sale de aquí: cambia estos cinco y cambia el chart entero sin tocar nada más. Solo mandan con el diseño en PERSONALIZADO.")
 tamLblSel = input.string("Chico", "Tamaño de las etiquetas", options = ["Diminuto", "Chico", "Normal"], group = g0b, tooltip = "El tamaño de TODOS los nombres que cuelgan a la derecha: ASIA, LNDN, ORB, NY, HIGH, LOW y los números del Fibonacci.")
+tamRgSel = input.string("Chico", "Tamaño del HIGH / LOW del rango", options = ["Diminuto", "Chico", "Normal", "Grande"], group = g0b, tooltip = "El HIGH y el LOW de la estructura tienen su PROPIO tamaño, aparte del de las killzones: son las dos líneas que mandan, así que suelen querer leerse más grandes. Los números del Fibonacci van siempre en diminuto, esos no se tocan.")
+zonaHalSel = input.string("Izquierda", "Título de cada zona · a lo ancho", options = ["Izquierda", "Centro", "Derecha"], group = g0b, tooltip = "Dónde se escribe el nombre DENTRO de su propio recuadro: el FVG, el Order Block, el AOI y los huecos del ORB. Izquierda es lo de siempre; centro y derecha ayudan cuando la zona arranca fuera de la pantalla.")
+zonaValSel = input.string("En medio", "Título de cada zona · a lo alto", options = ["Arriba", "En medio", "Abajo"], group = g0b)
 tamTitSel = input.string("Grande", "Tamaño del título LONGS / SHORTS", options = ["Normal", "Grande", "Enorme"], group = g0b)
 tamLbl = tamLblSel == "Diminuto" ? size.tiny : tamLblSel == "Normal" ? size.normal : size.small
+zHal = zonaHalSel == "Centro" ? text.align_center : zonaHalSel == "Derecha" ? text.align_right : text.align_left
+zVal = zonaValSel == "Arriba" ? text.align_top : zonaValSel == "Abajo" ? text.align_bottom : text.align_center
+tamRg = tamRgSel == "Diminuto" ? size.tiny : tamRgSel == "Chico" ? size.small : tamRgSel == "Grande" ? size.large : size.normal
 tamTit = tamTitSel == "Normal" ? size.normal : tamTitSel == "Enorme" ? size.huge : size.large
 
 
@@ -24608,7 +24666,7 @@ cajaA = input.bool(false, "caja", inline = "A", group = g1)
 inUseL  = input.bool(true, "", inline = "L", group = g1)
 inColL  = input.color(#42a5f5, "", inline = "L", group = g1)
 txtL  = input.string("LNDN", "", inline = "L", group = g1)
-sesL  = input.session("0200-0830", "", inline = "L", group = g1)
+sesL  = input.session("0200-0900", "", inline = "L", group = g1)
 cajaL = input.bool(false, "caja", inline = "L", group = g1)
 
 inUseO  = input.bool(true, "", inline = "O", group = g1)
@@ -24659,6 +24717,9 @@ rgInf     = input.bool(true, "Líneas del rango infinitas", group = g8, tooltip 
 rgEstilo  = input.string("Sólida", "Estilo de las líneas H/L", options = ["Punteada", "Rayada", "Sólida"], group = g8, tooltip = "RAYADA por default a propósito: las killzones del otro script pintan líneas SÓLIDAS, así que con el rayado sabes de un vistazo cuál línea es el rango y cuál es liquidez de sesión.")
 rgGrosor  = input.int(3, "Grosor de las líneas H/L", minval = 1, maxval = 4, group = g8)
 rgLblDonde = input.string("A la izquierda del arranque", "Dónde va el HIGH / LOW", options = ["Flotando donde arranca", "A la izquierda del arranque", "A la derecha, al final"], group = g8, tooltip = "Tres formas. FLOTANDO: el nombre se escribe donde NACE la línea, el HIGH por encima y el LOW por debajo, centrados en esa vela. A LA IZQUIERDA DEL ARRANQUE: también en la mecha que formó el extremo, pero el texto va antes de ella, a la misma altura de la línea. A LA DERECHA: como estaban al principio, colgados al final de la línea en su carril del margen derecho. Las tres evitan que se encimen con el ORH y las killzones; elige la que menos te tape el chart.")
+titDonde = input.string("Al centro", "Título LONGS / SHORTS · a lo ancho", options = ["Al inicio del rango", "Al centro", "Al final", "Afuera, a la derecha"], group = g8, tooltip = "El letrero grande que dice de qué lado se busca el trade. AL INICIO (de fábrica) lo pone donde arranca el tramo; AL CENTRO se encimaba con los datos de NY, que se escriben a la mitad del horario de la sesión; AFUERA lo saca del todo, más allá de la última vela, junto a las etiquetas del margen.")
+titLado = input.string("Fuera del rango", "Título LONGS / SHORTS · a lo alto", options = ["Fuera del rango", "Dentro del rango", "En el equilibrio (50%)"], group = g8, tooltip = "FUERA: arriba del HIGH cuando toca vender y abajo del LOW cuando toca comprar, que es lo natural. DENTRO: el mismo lado pero por dentro del tramo, si arriba no te cabe. EN EL EQUILIBRIO: en el 50% del rango, en medio de todo.")
+titSep = input.float(6, "Qué tan lejos del rango va el título (%)", minval = 0, maxval = 40, step = 1, group = g8, tooltip = "Qué tanto se separa el título del HIGH (o del LOW), en porcentaje de lo que mide el tramo. Súbelo si se te encima con algo.")
 rgAmbos   = input.bool(false, "Que crucen TODO el chart (también hacia atrás)", group = g8, tooltip = "APAGADO de fábrica: el HIGH y el LOW nacen en la mecha que los formó y de ahí se van al infinito SOLO hacia la derecha, que es a donde sirve la liquidez. Préndelo si además los quieres cruzando hacia atrás, tapando la historia. Necesita que \\"Líneas del rango infinitas\\" esté prendido.")
 inColAOI  = input.color(#1c4f82, "AOI", inline = "C8", group = g8)
 inColRg   = input.color(#0a2342, "Rango H/L", inline = "C8", group = g8)
@@ -25074,7 +25135,7 @@ if barstate.islast
                     float dt = array.get(fT, best)
                     float db = array.get(fB, best)
                     int   dx = array.get(fX, best)
-                    array.push(fvBx, box.new(dx, dt, time, db, xloc = xloc.bar_time, extend = extend.right, border_color = #ffffff00, bgcolor = color.new(col, transZona), text = "FVG " + flecha + " · " + tfFVG, text_size = size.tiny, text_color = color.new(col, 10), text_halign = text.align_left, text_valign = text.align_center))
+                    array.push(fvBx, box.new(dx, dt, time, db, xloc = xloc.bar_time, extend = extend.right, border_color = #ffffff00, bgcolor = color.new(col, transZona), text = "FVG " + flecha + " · " + tfFVG, text_size = size.tiny, text_color = color.new(col, 10), text_halign = zHal, text_valign = zVal))
                     // el título va al centro de su recuadro, sin precios:
                     // los números viven en el tooltip
                     array.push(fvLb, label.new(dx + (time - dx) / 2, (dt + db) / 2, "", xloc = xloc.bar_time, style = label.style_label_center, color = #ffffff00, textcolor = #ffffff00, size = size.tiny, tooltip = "FVG " + flecha + " · " + tfFVG + " · " + str.tostring(db, format.mintick) + "–" + str.tostring(dt, format.mintick)))
@@ -25156,7 +25217,7 @@ if barstate.islast
             // color, sin bordes y sin pasarse al vacío
             int xFin = inv ? array.get(gFin, i) : time
             string nom = (inv ? "iFVG " : "FVG ") + (sg == 1 ? "↑" : "↓")
-            array.push(gBx, box.new(x, t, xFin, b, xloc = xloc.bar_time, border_color = #ffffff00, bgcolor = color.new(inv ? cInv : c, transZona), text = txtFvgORB ? nom : "", text_size = size.tiny, text_color = color.new(inv ? cInv : c, 10), text_halign = text.align_left, text_valign = text.align_center))
+            array.push(gBx, box.new(x, t, xFin, b, xloc = xloc.bar_time, border_color = #ffffff00, bgcolor = color.new(inv ? cInv : c, transZona), text = txtFvgORB ? nom : "", text_size = size.tiny, text_color = color.new(inv ? cInv : c, 10), text_halign = zHal, text_valign = zVal))
             // el título NO va encima de las velas ni dentro de la
             // caja — ahí siempre queda tapado. Va afuera, en el
             // margen de la derecha, a la altura de su zona. Y si dos
@@ -25417,8 +25478,8 @@ if barstate.islast
                 int    xLbL = lblIni ? tRgL : tFin + pasoBar * sepLbl * 6
                 string stLbH = lblFlot ? label.style_label_down : lblIni ? label.style_label_right : label.style_label_left
                 string stLbL = lblFlot ? label.style_label_up : lblIni ? label.style_label_right : label.style_label_left
-                rgHLb := label.new(xLbH, rgH, kzNegrita ? f_negrita("HIGH · " + tfEstSel) : "HIGH · " + tfEstSel, xloc = xloc.bar_time, style = stLbH, color = #ffffff00, textcolor = color.new(colRg, 15), size = tamLbl, tooltip = "Alto del rango · " + tfEstSel + " · " + str.tostring(rgH, format.mintick))
-                rgLLb := label.new(xLbL, rgL, kzNegrita ? f_negrita("LOW · " + tfEstSel) : "LOW · " + tfEstSel, xloc = xloc.bar_time, style = stLbL, color = #ffffff00, textcolor = color.new(colRg, 15), size = tamLbl, tooltip = "Bajo del rango · " + tfEstSel + " · " + str.tostring(rgL, format.mintick))
+                rgHLb := label.new(xLbH, rgH, kzNegrita ? f_negrita("HIGH · " + tfEstSel) : "HIGH · " + tfEstSel, xloc = xloc.bar_time, style = stLbH, color = #ffffff00, textcolor = color.new(colRg, 15), size = tamRg, tooltip = "Alto del rango · " + tfEstSel + " · " + str.tostring(rgH, format.mintick))
+                rgLLb := label.new(xLbL, rgL, kzNegrita ? f_negrita("LOW · " + tfEstSel) : "LOW · " + tfEstSel, xloc = xloc.bar_time, style = stLbL, color = #ffffff00, textcolor = color.new(colRg, 15), size = tamRg, tooltip = "Bajo del rango · " + tfEstSel + " · " + str.tostring(rgL, format.mintick))
 
                 // ── DE QUÉ LADO SE BUSCA ──────────────────────────
                 // La dirección ya la sabe el rango: si el LOW es el
@@ -25432,8 +25493,22 @@ if barstate.islast
                     bool bajaTit = rgLI > rgHI
                     float altoTit = rgH - rgL
                     string titTxt = bajaTit ? "SHORTS" : "LONGS"
-                    float titY = bajaTit ? rgH + altoTit * 0.06 : rgL - altoTit * 0.06
-                    int   titX = math.min(tRgH, tRgL) + (tFin - math.min(tRgH, tRgL)) / 2
+                    // (André, 31-ago-2026) NY escribe sus datos a la mitad
+                    // de su horario y ahí se encimaba con este letrero. Ahora
+                    // el título arranca en el INICIO del tramo y con más aire
+                    // por arriba (o por abajo); las dos cosas se mueven en el
+                    // grupo 8.
+                    // dónde cae el letrero: a lo ancho, en el arranque del
+                    // tramo, al centro, al final o ya afuera a la derecha; y
+                    // a lo alto, fuera del rango (lo normal), metido dentro
+                    // o en el mero equilibrio
+                    float titY = bajaTit ? rgH + altoTit * titSep / 100 : rgL - altoTit * titSep / 100
+                    if titLado == "Dentro del rango"
+                        titY := bajaTit ? rgH - altoTit * titSep / 100 : rgL + altoTit * titSep / 100
+                    else if titLado == "En el equilibrio (50%)"
+                        titY := (rgH + rgL) / 2
+                    int   titIni = math.min(tRgH, tRgL)
+                    int   titX = titDonde == "Al centro" ? titIni + (tFin - titIni) / 2 : titDonde == "Al final" ? tFin : titDonde == "Afuera, a la derecha" ? tFin + pasoBar * sepLbl * 10 : titIni
                     rgTitLb := label.new(titX, titY, kzNegrita ? f_negrita(titTxt) : titTxt, xloc = xloc.bar_time, style = label.style_label_center, color = #ffffff00, textcolor = bajaTit ? pBaja : pAlza, size = tamTit, tooltip = bajaTit ? "El rango se formó con un impulso BAJISTA: el plan es buscar VENTAS en el retroceso." : "El rango se formó con un impulso ALCISTA: el plan es buscar COMPRAS en el retroceso.")
 
             // el tramo interno: punteado y en el color de acento, para
@@ -25517,7 +25592,7 @@ if barstate.islast
                 // el AOI va MÁS LLENO que las demás zonas: es la que
                 // tiene que resaltar. Y su nombre va escrito DENTRO de
                 // la caja, no en una etiqueta suelta que pueda chocar
-                array.push(aoiBxs, box.new(tAoi, aoiT, tFin, aoiB, xloc = xloc.bar_time, border_color = aoiGrosor > 0 ? colAOI : #ffffff00, border_width = aoiGrosor, border_style = aoiEst, bgcolor = color.new(colAOI, math.max(60, transZona - 18)), extend = rgInf ? extend.right : extend.none, text = "AOI · " + tfEstSel, text_size = size.tiny, text_color = color.new(colAOI, 10), text_halign = text.align_left, text_valign = text.align_center))
+                array.push(aoiBxs, box.new(tAoi, aoiT, tFin, aoiB, xloc = xloc.bar_time, border_color = aoiGrosor > 0 ? colAOI : #ffffff00, border_width = aoiGrosor, border_style = aoiEst, bgcolor = color.new(colAOI, math.max(60, transZona - 18)), extend = rgInf ? extend.right : extend.none, text = "AOI · " + tfEstSel, text_size = size.tiny, text_color = color.new(colAOI, 10), text_halign = zHal, text_valign = zVal))
                 array.push(aoiLbs, label.new(tAoi + (tFin - tAoi) / 2, (aoiT + aoiB) / 2, "", xloc = xloc.bar_time, style = label.style_label_center, color = #ffffff00, textcolor = #ffffff00, size = size.tiny, tooltip = "La franja más tocada · " + tfEstSel + " · " + str.tostring(aoiB, format.mintick) + "–" + str.tostring(aoiT, format.mintick) + " · " + str.tostring(aoiN) + " toques · grosor " + str.tostring(aoiT - aoiB, "#.##") + " pts"))
                 // cada entrada a la franja viniendo de fuera
                 if verToques
@@ -25613,7 +25688,7 @@ if barstate.islast
                     color obCol = obLong ? colObUp : colObDn
                     int obIni = array.get(kT, obIdx)
                     int obFin = array.get(kT, n - 1) + paso
-                    obBx := box.new(obIni, obT, obFin, obB, xloc = xloc.bar_time, border_color = #ffffff00, bgcolor = color.new(obCol, transZona), extend = extend.right, text = "OB " + (obLong ? "↑" : "↓") + " · " + tfEstSel, text_size = size.tiny, text_color = color.new(obCol, 10), text_halign = text.align_left, text_valign = text.align_center)
+                    obBx := box.new(obIni, obT, obFin, obB, xloc = xloc.bar_time, border_color = #ffffff00, bgcolor = color.new(obCol, transZona), extend = extend.right, text = "OB " + (obLong ? "↑" : "↓") + " · " + tfEstSel, text_size = size.tiny, text_color = color.new(obCol, 10), text_halign = zHal, text_valign = zVal)
                     obLb := label.new(obIni + (obFin - obIni) / 2, (obT + obB) / 2, "", xloc = xloc.bar_time, style = label.style_label_center, color = #ffffff00, textcolor = #ffffff00, size = size.tiny, tooltip = "Order Block " + tfEstSel + " · la última vela " + (bajista ? "alcista pegada al HIGH: zona de oferta" : "bajista pegada al LOW: zona de demanda") + " · " + str.tostring(obB, format.mintick) + "–" + str.tostring(obT, format.mintick))
 
             // ── EL MEJOR FVG DEL RANGO ───────────────────────
@@ -25652,7 +25727,7 @@ if barstate.islast
                 bool tapadoPorOB = fvgFueraOB and obIdx >= 0 and frT <= obT and frB >= obB
                 if verFvgRg and not na(frT) and not tapadoPorOB
                     color cz = dirTrade ? colFrUp : colFrDn
-                    array.push(fvgRgBx, box.new(frX, frT, tFin, frB, xloc = xloc.bar_time, border_color = #ffffff00, bgcolor = color.new(cz, transZona), text = "FVG " + (dirTrade ? "↑" : "↓") + " · " + tfFVG, text_size = size.tiny, text_color = color.new(cz, 10), text_halign = text.align_left, text_valign = text.align_center))
+                    array.push(fvgRgBx, box.new(frX, frT, tFin, frB, xloc = xloc.bar_time, border_color = #ffffff00, bgcolor = color.new(cz, transZona), text = "FVG " + (dirTrade ? "↑" : "↓") + " · " + tfFVG, text_size = size.tiny, text_color = color.new(cz, 10), text_halign = zHal, text_valign = zVal))
                     array.push(fvgRgLb, label.new(frX + (tFin - frX) / 2, (frT + frB) / 2, "", xloc = xloc.bar_time, style = label.style_label_center, color = #ffffff00, textcolor = #ffffff00, size = size.tiny, tooltip = "El mejor FVG del rango · " + tfFVG + " · " + str.tostring(frB, format.mintick) + "–" + str.tostring(frT, format.mintick) + " · confluencia " + str.tostring(mejorF, "#.#")))
 
             // ── Fibonacci / Gann sobre el MISMO rango ──────────────
@@ -25666,7 +25741,7 @@ if barstate.islast
                         if r >= 0
                             float py = pFin + (pIni - pFin) * r
                             array.push(fibLn, line.new(tFib, py, tFin, py, xloc = xloc.bar_time, color = color.new(colFib, 35), width = fibGrosor))
-                            array.push(fibLb, label.new(tFin + paso, py, str.tostring(r), xloc = xloc.bar_time, style = label.style_label_left, color = #ffffff00, textcolor = color.new(colFib, 10), size = tamLbl, tooltip = "Nivel " + str.tostring(r) + " · " + str.tostring(py, format.mintick)))
+                            array.push(fibLb, label.new(tFin + paso, py, str.tostring(r), xloc = xloc.bar_time, style = label.style_label_left, color = #ffffff00, textcolor = color.new(colFib, 10), size = size.tiny, tooltip = "Nivel " + str.tostring(r) + " · " + str.tostring(py, format.mintick)))
 
                 // ── ESCALERA DE ENTRADAS ──────────────────────────
                 // (André, 31-ago-2026) LA ORDEN: una sola caja, igual que
