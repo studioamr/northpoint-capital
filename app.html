@@ -25338,24 +25338,16 @@ if barstate.islast
             // ── rango: cada línea NACE en la mecha que la formó y de
             // ahí va a la derecha, al infinito
             if verRango
-                int tH = array.get(kT, rgHI)
-                int tL = array.get(kT, rgLI)
+                int tRgH = array.get(kT, rgHI)
+                int tRgL = array.get(kT, rgLI)
                 string estilo = rgEstilo == "Sólida" ? line.style_solid : rgEstilo == "Rayada" ? line.style_dashed : line.style_dotted
-                rgHLn := line.new(tH, rgH, tFin, rgH, xloc = xloc.bar_time, color = color.new(colRg, 25), width = rgGrosor, style = estilo, extend = rgInf ? (rgAmbos ? extend.both : extend.right) : extend.none)
-                rgLLn := line.new(tL, rgL, tFin, rgL, xloc = xloc.bar_time, color = color.new(colRg, 25), width = rgGrosor, style = estilo, extend = rgInf ? (rgAmbos ? extend.both : extend.right) : extend.none)
+                rgHLn := line.new(tRgH, rgH, tFin, rgH, xloc = xloc.bar_time, color = color.new(colRg, 25), width = rgGrosor, style = estilo, extend = rgInf ? (rgAmbos ? extend.both : extend.right) : extend.none)
+                rgLLn := line.new(tRgL, rgL, tFin, rgL, xloc = xloc.bar_time, color = color.new(colRg, 25), width = rgGrosor, style = estilo, extend = rgInf ? (rgAmbos ? extend.both : extend.right) : extend.none)
                 // pegados al final de su línea, en negritas y con un
                 // respiro mayor que el de las killzones para que no se
                 // encimen con ellas
                 rgHLb := label.new(tFin + pasoBar * 9, rgH, kzNegrita ? f_negrita("HIGH · " + tfEstSel) : "HIGH · " + tfEstSel, xloc = xloc.bar_time, style = label.style_label_left, color = #ffffff00, textcolor = color.new(colRg, 15), size = size.tiny, tooltip = "Alto del rango · " + tfEstSel + " · " + str.tostring(rgH, format.mintick))
                 rgLLb := label.new(tFin + pasoBar * 9, rgL, kzNegrita ? f_negrita("LOW · " + tfEstSel) : "LOW · " + tfEstSel, xloc = xloc.bar_time, style = label.style_label_left, color = #ffffff00, textcolor = color.new(colRg, 15), size = size.tiny, tooltip = "Bajo del rango · " + tfEstSel + " · " + str.tostring(rgL, format.mintick))
-
-            // el tramo interno: punteado y en el color de acento, para
-            // que se distinga del rango de fondo de un vistazo
-            if verInt and not na(inH) and not na(inL) and inH > inL
-                inHLn := line.new(array.get(kT, inHI), inH, tFin, inH, xloc = xloc.bar_time, color = color.new(colAOI, 20), width = 1, style = line.style_dotted, extend = rgInf ? extend.right : extend.none)
-                inLLn := line.new(array.get(kT, inLI), inL, tFin, inL, xloc = xloc.bar_time, color = color.new(colAOI, 20), width = 1, style = line.style_dotted, extend = rgInf ? extend.right : extend.none)
-                inHLb := label.new(tFin + pasoBar * 5, inH, kzNegrita ? f_negrita("interna H") : "interna H", xloc = xloc.bar_time, style = label.style_label_left, color = #ffffff00, textcolor = color.new(colAOI, 10), size = size.tiny, tooltip = "Alto del tramo interno · " + str.tostring(inH, format.mintick))
-                inLLb := label.new(tFin + pasoBar * 5, inL, kzNegrita ? f_negrita("interna L") : "interna L", xloc = xloc.bar_time, style = label.style_label_left, color = #ffffff00, textcolor = color.new(colAOI, 10), size = size.tiny, tooltip = "Bajo del tramo interno · " + str.tostring(inL, format.mintick) + " · el tramo mide " + str.tostring(inH - inL, "#.#") + " pts")
 
                 // ── DE QUÉ LADO SE BUSCA ──────────────────────────
                 // La dirección ya la sabe el rango: si el LOW es el
@@ -25370,8 +25362,17 @@ if barstate.islast
                     float altoTit = rgH - rgL
                     string titTxt = bajaTit ? "SHORTS" : "LONGS"
                     float titY = bajaTit ? rgH + altoTit * 0.06 : rgL - altoTit * 0.06
-                    int   titX = math.min(tH, tL) + (tFin - math.min(tH, tL)) / 2
+                    int   titX = math.min(tRgH, tRgL) + (tFin - math.min(tRgH, tRgL)) / 2
                     rgTitLb := label.new(titX, titY, kzNegrita ? f_negrita(titTxt) : titTxt, xloc = xloc.bar_time, style = label.style_label_center, color = #ffffff00, textcolor = bajaTit ? pBaja : pAlza, size = size.large, tooltip = bajaTit ? "El rango se formó con un impulso BAJISTA: el plan es buscar VENTAS en el retroceso." : "El rango se formó con un impulso ALCISTA: el plan es buscar COMPRAS en el retroceso.")
+
+            // el tramo interno: punteado y en el color de acento, para
+            // que se distinga del rango de fondo de un vistazo
+            if verInt and not na(inH) and not na(inL) and inH > inL
+                inHLn := line.new(array.get(kT, inHI), inH, tFin, inH, xloc = xloc.bar_time, color = color.new(colAOI, 20), width = 1, style = line.style_dotted, extend = rgInf ? extend.right : extend.none)
+                inLLn := line.new(array.get(kT, inLI), inL, tFin, inL, xloc = xloc.bar_time, color = color.new(colAOI, 20), width = 1, style = line.style_dotted, extend = rgInf ? extend.right : extend.none)
+                inHLb := label.new(tFin + pasoBar * 5, inH, kzNegrita ? f_negrita("interna H") : "interna H", xloc = xloc.bar_time, style = label.style_label_left, color = #ffffff00, textcolor = color.new(colAOI, 10), size = size.tiny, tooltip = "Alto del tramo interno · " + str.tostring(inH, format.mintick))
+                inLLb := label.new(tFin + pasoBar * 5, inL, kzNegrita ? f_negrita("interna L") : "interna L", xloc = xloc.bar_time, style = label.style_label_left, color = #ffffff00, textcolor = color.new(colAOI, 10), size = size.tiny, tooltip = "Bajo del tramo interno · " + str.tostring(inL, format.mintick) + " · el tramo mide " + str.tostring(inH - inL, "#.#") + " pts")
+
 
             // ── AOI POR TOQUES · EL MÁS APRETADO ─────────────
             // La franja por la que el precio ha pasado más veces,
