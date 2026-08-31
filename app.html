@@ -11904,6 +11904,24 @@ function batKatanasDe(u){
 }
 /* ¿todavía andas con la de madera? */
 function batSinKatana(u){ return batKatanasDe(u).length === 0; }
+/* ══ TODOS DESDE CERO ══ (André, 31-ago-2026)
+   El historial traía duelos de una versión anterior del juego —empates contra
+   SHIRO, duelos contra Pablo con pagos que ya no se calculan igual— y encima
+   no cuadraban con las estadísticas: el perfil decía 0 victorias y 0 derrotas
+   con ocho duelos listados debajo. Un marcador que se contradice a sí mismo no
+   sirve para nada, así que se borra para todos y se arranca parejo.
+   El banco no se pone en cero: se pone en el kit de bienvenida, que es donde
+   empieza un ninja. Corre UNA sola vez por equipo. */
+function batReset0(){
+  if(S.batReset0 === 1) return;
+  S.batReset0 = 1;
+  S.batHistorial = [];
+  S.batStats = {}; S.batStack = {}; S.batPico = {}; S.batGanado = {};
+  S.batChFin = {}; S.batTorneosInsc = {}; S.batTorneosPagado = {};
+  S.bossWin = {}; S.batKatanas = {}; S.batEquipada = {};
+  if(S.challenge) S.challenge = null;
+  try{ save(); }catch(e){}
+}
 /* ══ LA DE MADERA NO SE PIERDE ══ (André, 31-ago-2026)
    Ganar una katana no te la pone en la mano: la deja en tu colección, recién
    conquistada, y tú decides cuándo cambiar. Mientras no elijas una de acero a
@@ -13998,6 +14016,7 @@ function batPresentacion(){
   addEventListener('resize', repinta);
 }
 function renderBatalla(){
+  try{ batReset0(); }catch(_){}
   try{ batLimpiaZombi(); }catch(_){}
   /* VER LA APERTURA SIN BORRAR TU MONITO (André, 31-ago-2026): la ceremonia se
      disparaba sólo al canjear el kit, y para eso había que quedarse sin ninja.
@@ -14474,13 +14493,21 @@ function renderBatallaInterno(){
           <div class="evt-body">
             <div class="perf-card">
               <canvas id="perfCv" width="1280" height="960"></canvas>
-              <div class="perf-card-in"><b>${esc(batNom(u))}</b><span style="color:${kEq.belt}">${loc(kEq.n)} · ${loc(ZEN_ESCENAS[batEquipadaDe(u)].bioma)}</span></div>
+              <!-- LA ESPADA QUE TRAE, no la más alta que tenga: el perfil decía
+                   «Shiro» con la colección en 0/9. (André, 31-ago-2026) -->
+              ${(()=>{ const mad = batTraeMadera(u);
+                const col = mad ? '#b98d55' : kEq.belt;
+                const nom = mad ? bi('Bokken','Bokken') : loc(kEq.n);
+                const mun = mad ? loc(ZEN_JARDIN.bioma) : loc(ZEN_ESCENAS[batEquipadaDe(u)].bioma);
+                return `<div class="perf-card-in"><b>${esc(batNom(u))}</b><span style="color:${col}">${esc(nom)} · ${esc(mun)}</span></div>`; })()}
             </div>
             <div class="perf-head">
               <span class="perf-ava">${caraSocio(u,74)}</span>
               <div class="perf-idb">
                 <b>${esc(batNom(u))}</b>
-                <span class="perf-sw" style="--kc:${kEq.belt}">${katanaSVG(kEq.belt,true)}<i style="color:${kEq.belt}">${loc(kEq.n)}</i></span>
+                ${(()=>{ const mad = batTraeMadera(u);
+                  const col = mad ? '#b98d55' : kEq.belt;
+                  return `<span class="perf-sw" style="--kc:${col}">${mad?bokkenSVG():katanaSVG(kEq.belt,true)}<i style="color:${col}">${mad?bi('Bokken','Bokken'):loc(kEq.n)}</i></span>`; })()}
               </div>
               ${esYo?`<button type="button" class="ars-eq perf-edit" data-njedit>${bi('Editar mi ninja','Edit my ninja')}</button>`:''}
             </div>
