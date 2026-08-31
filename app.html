@@ -11308,11 +11308,17 @@ function bossPintaMapa(){
       const yArriba = centro + (sig  - centro) * 0.72;
       const alto = Math.max(60, yAbajo - yArriba);
       c.save();
+      /* LOS DOS BORDES ONDULADOS (André, 31-ago-2026): el de abajo era una
+         línea RECTA. Mientras el tramo no llenaba sus últimos píxeles no se
+         notaba —se veía el cielo del de abajo—, pero al llenarlos el corte
+         quedó como una regla horizontal atravesando montes y pasto. Con los
+         dos bordes ondulados, y en fases distintas, no queda una sola recta. */
       c.beginPath();
-      c.moveTo(-40, yAbajo + 80);
-      for(let x = -40; x <= W+40; x += 44)
-        c.lineTo(x, yArriba + Math.sin(x/155 + i*2.3) * 30 + Math.sin(x/63 + i) * 11);
-      c.lineTo(W+40, yAbajo + 80);
+      const ondaAr = x => yArriba + Math.sin(x/155 + i*2.3)*30 + Math.sin(x/63 + i)*11;
+      const ondaAb = x => yAbajo + 74 + Math.sin(x/168 + i*1.7 + 2.1)*26 + Math.sin(x/71 + i*0.6)*9;
+      c.moveTo(-40, ondaAb(-40));
+      for(let x = -40; x <= W+40; x += 44) c.lineTo(x, ondaAr(x));
+      for(let x = W+40; x >= -40; x -= 44) c.lineTo(x, ondaAb(x));
       c.closePath(); c.clip();
       c.translate(0, yArriba);
       /* LA ESCENA SE PINTA MÁS ALTA QUE SU RECORTE (André, 31-ago-2026):
