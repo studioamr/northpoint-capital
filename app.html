@@ -1758,7 +1758,7 @@ button.st-chip:hover{border-color:rgba(255,255,255,.45)}
   border:1px solid rgba(255,255,255,.2);background:rgba(0,0,0,.4);color:#fff;cursor:pointer;font-size:13px}
 /* EL RETRATO del ninja, en grande */
 .bm-retrato{display:flex;justify-content:center;margin:-6px 0 4px}
-.bm-retrato canvas{width:170px;height:170px}
+.bm-retrato canvas{width:190px;height:190px}
 /* EL PREMIO: la katana flotando sobre su aura */
 .bm-nodos{position:absolute;inset:0}
 .bm-nodo{position:absolute;transform:translate(-50%,-50%);display:flex;flex-direction:column;
@@ -10999,13 +10999,16 @@ function bmPintaRetrato(k, vivo){
        Se quitó la katana flotante que iba cruzada detrás: sobraba, y la
        espada de verdad es la que él trae. */
     cx.fillStyle = 'rgba(0,0,0,.34)';
-    cx.beginPath(); cx.ellipse(NW/2, NH-30, 40, 11, 0,0,7); cx.fill();
+    cx.beginPath(); cx.ellipse(NW/2, NH-34, NW*0.22, NH*0.045, 0,0,7); cx.fill();
     /* respira quieto y corta cada tantos segundos, para que la estampa
        tenga vida sin marearse */
     if(!vivo) cx.globalAlpha = 0.9;
-    /* MISMA ESCALA QUE EN EL MAPA (2.0): a 3.0 el monito salía estirado y la
-       hoja del grosor de un brazo. Los del mapa ya están bien — son éstos. */
-    try{ zenNinja(cx, NW/2, NH-30, 2.0, t*0.5, 0, k.belt, nj, false, 'corte'); }catch(e){}
+    /* DE PIE, COMO SE VE NORMAL. Con 'corte' el retrato lo pillaba a media
+       estocada —la hoja cruzándole el cuerpo y el cuerpo hecho un bulto— y
+       en la tarjeta no se entendía qué se estaba mirando. En reposo respira,
+       la bufanda ondea y la katana descansa a su espalda: así se lee.
+       Misma escala que en el mapa (2.0), donde ya se veían bien. */
+    try{ zenNinja(cx, NW/2, NH-34, NH/62, t*0.5, 0, k.belt, nj, false, false); }catch(e){}
     cx.globalAlpha = 1;
     window._bmNjRAF = requestAnimationFrame(pinta);
   };
@@ -11029,7 +11032,7 @@ function bossPintaFicha(){
     host.classList.add('on');
     host.innerHTML = `<div class="bm-ficha bloqueada" style="--kc:${k.belt}">
       <button type="button" class="bm-cerrar" id="bmFichaX" aria-label="${bi('cerrar','close')}">✕</button>
-      <div class="bm-retrato"><canvas id="bmNinjaCv" width="260" height="260"></canvas></div>
+      <div class="bm-retrato"><canvas id="bmNinjaCv" width="380" height="380"></canvas></div>
       <b class="bm-bloq-nom">${esc(b.nom)}</b>
       <span class="bm-bloq-kat" style="color:${k.belt}">${esc(loc(k.n))}</span>
       <p class="bm-bloq-2">🔒 ${bi('Vence primero a','First beat')} <b>${esc(KURO_BOSSES[bossActual()].nom)}</b></p>
@@ -11083,16 +11086,17 @@ function bossPintaFicha(){
   host.innerHTML = `<div class="bm-ficha" style="--kc:${k.belt}">
     <button type="button" class="bm-cerrar" id="bmFichaX" aria-label="${bi('cerrar','close')}">✕</button>
     <!-- EL NINJA EN GRANDE: se dibuja con su katana y sus colores -->
-    <div class="bm-retrato"><canvas id="bmNinjaCv" width="260" height="260"></canvas></div>
+    <div class="bm-retrato"><canvas id="bmNinjaCv" width="380" height="380"></canvas></div>
     <div class="bm-f-h">
       <div class="bm-f-id">
         <b>${esc(b.nom)}</b>
         <span>${esc(loc(b.titulo))}</span>
       </div>
       <span class="bm-f-kat" style="color:${k.belt}">${esc(loc(k.n))}</span>
-      ${hecho?`<span class="bm-f-et ok">${bi('VENCIDO','BEATEN')}</span>`
-        : esMio?`<span class="bm-f-et">${bi('TE TOCA','YOUR TURN')}</span>`
-        : `<span class="bm-f-et">🔒</span>`}
+      ${/* «TE TOCA» sobraba: si estás viendo esta ficha completa es porque te
+           toca — el botón de retar de abajo ya lo dice. Sólo se marca lo que
+           no es obvio: que ya lo venciste. */
+        hecho ? `<span class="bm-f-et ok">${bi('VENCIDO','BEATEN')}</span>` : ''}
     </div>
 
     <!-- EL TRATO ── la tablita de renglones no decía nada. Un reto de trading
