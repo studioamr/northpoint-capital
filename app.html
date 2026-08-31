@@ -1558,22 +1558,20 @@ button.st-chip:hover{border-color:rgba(255,255,255,.45)}
 .bat-wbar-track i{display:block;height:100%;border-radius:6px;background:linear-gradient(90deg,var(--up),#8ad0ff);transition:width .6s}
 .bat-wbar-lbl{font-family:var(--mono);font-size:11px;color:var(--faint);margin-top:8px;text-align:center}
 /* objetivo del plan + decisiones de crecimiento */
-/* ── EL BALANCE Y EL PROGRESO, hasta arriba de Log trade ── */
-.lg-balance{margin-bottom:12px;padding:16px 18px}
-.lgb-top{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap}
-.lgb-k{display:block;font-family:var(--mono);font-size:9px;letter-spacing:.2em;color:var(--faint);margin-bottom:6px}
-.lgb-bal{display:block;font-size:30px;font-weight:700;letter-spacing:-.02em;line-height:1}
-.lgb-der{text-align:right}
-.lgb-pct{display:block;font-size:30px;font-weight:700;line-height:1;color:var(--dim)}
-.lgb-pct.ok{color:var(--up)}
-.lgb-sub{display:block;font-family:var(--mono);font-size:11px;color:var(--dim);margin-top:6px}
-.lgb-sub .up{color:var(--up)} .lgb-sub .down{color:var(--down)}
-.lgb-b{margin-top:12px}
-.lgb-pies{display:flex;gap:18px;flex-wrap:wrap;margin-top:10px;
-  font-family:var(--mono);font-size:10.5px;color:var(--faint)}
-.lgb-pies b{color:var(--txt)}
-.lgb-pies b.mal{color:var(--down)}
-@media(max-width:520px){ .lgb-bal,.lgb-pct{font-size:24px} }
+/* ── EL BALANCE, en una línea ── */
+.lg-balance{margin-bottom:12px;padding:14px 18px}
+.lgb-fila{display:flex;align-items:center;gap:16px}
+.lgb-bal{font-size:26px;font-weight:700;letter-spacing:-.02em;line-height:1;white-space:nowrap}
+.lgb-rend{font-family:var(--mono);font-size:13px;font-weight:700;white-space:nowrap}
+.lgb-rend.up{color:var(--up)} .lgb-rend.down{color:var(--down)}
+.lgb-prog{flex:1;min-width:120px;display:flex;flex-direction:column;gap:5px}
+.lgb-prog em{font-family:var(--mono);font-size:10px;font-style:normal;color:var(--faint);text-align:right}
+@media(max-width:520px){
+  .lgb-fila{flex-wrap:wrap;gap:10px}
+  .lgb-bal{font-size:22px}
+  .lgb-prog{flex-basis:100%}
+  .lgb-prog em{text-align:left}
+}
 /* ── LOG TRADE: la cuenta dentro de la misma tarjeta del registro ── */
 .bt-sel-bar.en-tarjeta{margin:0 0 12px;padding:0 0 12px;border-bottom:1px solid var(--line-soft)}
 .lg-abrir .lg-cancel{margin-left:10px}
@@ -14674,49 +14672,38 @@ function lgDiaResumen(fecha, ses){
   return { pnl, dd, n:mios.length, roto, deMas, listo,
            estado: roto ? 'roto' : (listo ? 'listo' : (deMas ? 'demas' : 'neutro')) };
 }
-/* ══ EL BALANCE Y EL PROGRESO AL OBJETIVO ══ (André, 31-ago-2026)
-   Lo primero que quieres saber al abrir Log trade es cuánto trae la cuenta y
-   qué tan cerca está de su objetivo — y eso había que deducirlo bajando a las
-   tarjetas. Aquí va arriba de todo.
-   El balance es el tamaño de la cuenta MÁS lo que llevas acumulado, que es lo
-   que dice el broker; el progreso se mide contra el PICO de la curva, no
-   contra el P&L de ahorita, porque una fondeadora te da el objetivo cuando lo
-   TOCAS, aunque después devuelvas algo. */
+/* ══ EL BALANCE ══ (André, 31-ago-2026)
+   Una sola línea: cuánto traes, cuánto rindes y qué tan cerca estás del
+   PAYOUT — no del objetivo de la cuenta. El objetivo es un tramo; el payout es
+   el final del camino, y la barra mide desde DONDE ESTÁ la cuenta: si ya pasó
+   la evaluación arranca de la mitad, que es lo que carreraCuenta() ya sabe.
+   En "todas" manda la cuenta más adelantada, igual que en Payout. */
 function lgBalancePanel(){
   const host = $('#lgBalance'); if(!host) return;
   const list = lgTradesReales();
   const pnl = list.reduce((a,t)=>a+(t.pnl||0),0);
-  let eq = 0, pico = 0;
-  list.forEach(t => { eq += (t.pnl||0); if(eq > pico) pico = eq; });
   const unaCta = typeof lgSel === 'string' && lgSel.startsWith('ac_');
   const a = unaCta ? (S.accounts||[]).find(x=>x.id===lgSel) : null;
-  const M = a ? metasDe(a) : {};
-  const size = a ? (a.size || 0) : mias(S.accounts||[]).reduce((x,c)=>x+(c.size||0),0);
+  const propias = mias(S.accounts||[]);
+  const size = a ? (a.size || 0) : propias.reduce((x,c)=>x+(c.size||0),0);
   const bal = size + pnl;
-  const target = M.target || null, ddMax = M.dd || null;
-  const pct = target ? Math.max(0, Math.min(100, pico/target*100)) : 0;
-  const llego = target && pico >= target;
-  /* el drawdown de la cuenta: el peor bajón desde un máximo de TODA la curva */
-  let e2 = 0, p2 = 0, peor = 0;
-  list.forEach(t => { e2 += (t.pnl||0); if(e2>p2) p2=e2; const c2=e2-p2; if(c2<peor) peor=c2; });
+  const rend = size ? (pnl/size*100) : 0;
+  /* el camino al payout */
+  let C = null;
+  if(a){ try{ C = carreraCuenta(a); }catch(e){} }
+  else { propias.filter(x => !esLive(x) && !esSim(x) && cuentaEnPie(x)).forEach(x => {
+    try{ const cc = carreraCuenta(x); if(cc && (!C || cc.pct > C.pct)) C = cc; }catch(e){} }); }
+  const pct = C ? Math.max(0, Math.min(100, C.pct)) : 0;
+  const falta = C ? Math.max(0, C.total - C.avance) : 0;
   host.innerHTML = `
-    <div class="lgb-top">
-      <div class="lgb-izq">
-        <span class="lgb-k">${a ? esc(a.alias) : bi('TODAS LAS CUENTAS','ALL ACCOUNTS')}</span>
-        <b class="lgb-bal">${fmt$(bal)}</b>
-        <span class="lgb-sub">${size?fmt$(size)+' + ':''}<b class="${pnl>=0?'up':'down'}">${fmt$(pnl,true)}</b></span>
-      </div>
-      ${target ? `<div class="lgb-der">
-        <span class="lgb-k">${bi('AL OBJETIVO','TO TARGET')}</span>
-        <b class="lgb-pct ${llego?'ok':''}">${llego ? '✓ '+bi('LLEGÓ','HIT') : Math.round(pct)+'%'}</b>
-        <span class="lgb-sub">${fmt$(pico,true)} ${bi('de','of')} ${fmt$(target)}</span>
-      </div>` : ''}
-    </div>
-    ${target ? `<span class="bd-b lgb-b"><i class="up" style="width:${pct}%"></i></span>` : ''}
-    <div class="lgb-pies">
-      ${target ? `<span>${bi('faltan','left')} <b>${fmt$(Math.max(0, target - pico))}</b></span>` : ''}
-      ${ddMax ? `<span>${bi('drawdown','drawdown')} <b class="${Math.abs(peor)>=ddMax?'mal':''}">${fmt$(peor,true)}</b> ${bi('de','of')} −${fmt$(ddMax)}</span>` : ''}
-      <span>${list.length} ${bi('trades','trades')}</span>
+    <div class="lgb-fila">
+      <b class="lgb-bal">${fmt$(bal)}</b>
+      <span class="lgb-rend ${rend>=0?'up':'down'}">${rend>=0?'+':''}${rend.toFixed(1)}%</span>
+      ${C ? `<span class="lgb-prog">
+        <span class="bd-b"><i class="up" style="width:${pct}%"></i></span>
+        <em>${C.pasoPago ? '✓ '+bi('payout','payout')
+             : Math.round(pct)+'% · '+bi('faltan','left')+' '+fmt$(falta)+' '+bi('al payout','to payout')}</em>
+      </span>` : ''}
     </div>`;
   host.hidden = false;
 }
