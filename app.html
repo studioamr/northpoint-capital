@@ -13420,11 +13420,21 @@ function zenRotuloCielo(c, W, H, titulo, sub, alfa){
   const a = alfa == null ? 1 : alfa;
   c.save(); c.textAlign = 'center'; c.globalAlpha = a;
   const tam = Math.round(Math.max(13, Math.min(30, H*0.048)));
+  /* UN VELO DETRÁS (André, 31-ago-2026): en un cielo despejado las nubes son
+     blancas y el rótulo blanco desaparecía dentro de ellas. Esta banda apenas
+     se nota en un cielo oscuro y salva el texto en uno claro. */
+  (()=>{ const vy = H*0.155 - tam*1.5, vh = tam*3.0;
+    const vg2 = c.createLinearGradient(0, vy, 0, vy+vh);
+    vg2.addColorStop(0,'rgba(10,18,30,0)');
+    vg2.addColorStop(.5,'rgba(10,18,30,.30)');
+    vg2.addColorStop(1,'rgba(10,18,30,0)');
+    c.fillStyle = vg2; c.fillRect(0, vy, W, vh); })();
   c.font = '600 ' + tam + 'px "IBM Plex Mono", monospace';
   c.letterSpacing = Math.round(tam*0.42) + 'px';
   const y = H*0.155;
-  c.fillStyle = 'rgba(255,255,255,.92)';
-  c.shadowColor = 'rgba(10,20,35,.35)'; c.shadowBlur = 14;
+  c.fillStyle = 'rgba(255,255,255,.96)';
+  c.shadowColor = 'rgba(8,16,28,.75)'; c.shadowBlur = 18;
+  c.fillText(titulo, W/2, y);
   c.fillText(titulo, W/2, y);
   c.shadowBlur = 0;
   const an = c.measureText(titulo).width;
@@ -13433,8 +13443,9 @@ function zenRotuloCielo(c, W, H, titulo, sub, alfa){
     c.beginPath(); c.moveTo(x0, y - tam*0.32); c.lineTo(x0 + sg*W*0.075, y - tam*0.32); c.stroke(); });
   if(sub){ c.letterSpacing = '4px';
     c.font = '500 ' + Math.round(Math.max(8, tam*0.42)) + 'px "IBM Plex Mono", monospace';
-    c.fillStyle = 'rgba(255,255,255,.55)';
-    c.fillText(sub, W/2, y + tam*1.15); }
+    c.fillStyle = 'rgba(255,255,255,.72)';
+    c.shadowColor = 'rgba(8,16,28,.7)'; c.shadowBlur = 10;
+    c.fillText(sub, W/2, y + tam*1.15); c.shadowBlur = 0; }
   c.letterSpacing = '0px';
   c.restore();
 }
@@ -13472,8 +13483,19 @@ function batAlta(){
   const nj = { traje:'#0f1218', banda:'#b98d55', buf:'#8a6b45' };   /* el de madera */
   const pet = Array.from({length:40},()=>({ x:Math.random(), y:Math.random(),
     s:3+Math.random()*4, sp:0.5+Math.random()*1.2, dr:Math.random()*6.3, sw:0.5+Math.random() }));
-  const E = batEscenaViva({ ...ZEN_JARDIN }, { sesion:null, id:'jardin' });
-  E.lluvia = false; E.rayos = false;
+  /* EL JARDÍN SIEMPRE DESPEJADO Y DE DÍA (André, 31-ago-2026): batEscenaViva
+     le mete TU hora y TU clima, así que a las 2 de la mañana la apertura salía
+     de noche y gris. Aquí no: es la primera imagen del juego y tiene que ser
+     cielo abierto — el contraste con los nueve mundos de noche es lo que hace
+     sentir que empezaste abajo. Se le pasa un mediodía fijo. */
+  const mediodia = (()=>{ const d = new Date(); d.setHours(12,30,0,0); return d.getTime(); })();
+  const E = batEscenaViva({ ...ZEN_JARDIN }, { sesion:null, id:'jardin' }, mediodia);
+  E.lluvia = false; E.rayos = false; E.nubes = true;
+  E.nubesCol = 'rgba(255,255,255,.94)';
+  E.cielo = ZEN_JARDIN.cielo.slice();
+  E.tinte = { col:'#fff8e2', a:0.10, momento:'mediodía' };
+  E.sol = { x:.84, y:.34, r:60, col:'rgba(255,250,226,.95)', halo:'rgba(255,244,192,.30)' };
+  delete E.luna;
   const BEATS = [
     { d:5.0, k:['SU PARED','HIS WALL'], t:['Nueve huecos','Nine gaps'],
       p:['El coleccionista los quiso todos. Consiguió ocho. En su pared quedó un hueco, y nunca lo llenó.',
