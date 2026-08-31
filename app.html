@@ -1558,19 +1558,30 @@ button.st-chip:hover{border-color:rgba(255,255,255,.45)}
 .bat-wbar-track i{display:block;height:100%;border-radius:6px;background:linear-gradient(90deg,var(--up),#8ad0ff);transition:width .6s}
 .bat-wbar-lbl{font-family:var(--mono);font-size:11px;color:var(--faint);margin-top:8px;text-align:center}
 /* objetivo del plan + decisiones de crecimiento */
-/* ── EL BALANCE, en una línea ── */
-.lg-balance{margin-bottom:12px;padding:14px 18px}
-.lgb-fila{display:flex;align-items:center;gap:16px}
-.lgb-bal{font-size:26px;font-weight:700;letter-spacing:-.02em;line-height:1;white-space:nowrap}
-.lgb-rend{font-family:var(--mono);font-size:13px;font-weight:700;white-space:nowrap}
-.lgb-rend.up{color:var(--up)} .lgb-rend.down{color:var(--down)}
-.lgb-prog{flex:1;min-width:120px;display:flex;flex-direction:column;gap:5px}
-.lgb-prog em{font-family:var(--mono);font-size:10px;font-style:normal;color:var(--faint);text-align:right}
+/* ── EL BALANCE Y EL CAMINO AL PAYOUT ── */
+.lg-balance{margin-bottom:12px;padding:14px 18px 12px}
+.lgb-fila{display:flex;align-items:center;gap:18px}
+.lgb-bal{font-size:24px;font-weight:700;letter-spacing:-.02em;line-height:1;white-space:nowrap}
+.lgb-prog{flex:1;min-width:140px}
+.lgb-track{position:relative;display:block;height:6px;border-radius:3px;background:var(--line-soft);overflow:visible}
+.lgb-fill{position:absolute;left:0;top:0;height:100%;border-radius:3px;
+  background:linear-gradient(90deg,var(--up),#8ad0ff);transition:width .6s}
+.lgb-tick{position:absolute;top:-3px;width:2px;height:12px;background:var(--line);
+  transform:translateX(-1px);border-radius:1px}
+.lgb-tick.on{background:rgba(255,255,255,.5)}
+.lgb-hitos{position:relative;display:block;height:13px;margin-top:7px}
+.lgb-hitos em{position:absolute;top:0;font-family:var(--mono);font-size:8.5px;font-style:normal;
+  letter-spacing:.14em;text-transform:uppercase;color:var(--faint);white-space:nowrap;transform:translateX(-50%)}
+.lgb-hitos em:first-child{transform:none}
+.lgb-hitos em:last-child{transform:translateX(-100%)}
+.lgb-hitos em.on{color:var(--up)}
+.lgb-pct{font-family:var(--mono);font-size:20px;font-weight:700;color:var(--dim);white-space:nowrap}
+.lgb-pct.ok{color:var(--up)}
 @media(max-width:520px){
-  .lgb-fila{flex-wrap:wrap;gap:10px}
-  .lgb-bal{font-size:22px}
-  .lgb-prog{flex-basis:100%}
-  .lgb-prog em{text-align:left}
+  .lgb-fila{flex-wrap:wrap;gap:10px 14px}
+  .lgb-bal{font-size:21px}
+  .lgb-prog{flex-basis:100%;order:3}
+  .lgb-pct{font-size:17px;margin-left:auto}
 }
 /* ── LOG TRADE: la cuenta dentro de la misma tarjeta del registro ── */
 .bt-sel-bar.en-tarjeta{margin:0 0 12px;padding:0 0 12px;border-bottom:1px solid var(--line-soft)}
@@ -14672,12 +14683,14 @@ function lgDiaResumen(fecha, ses){
   return { pnl, dd, n:mios.length, roto, deMas, listo,
            estado: roto ? 'roto' : (listo ? 'listo' : (deMas ? 'demas' : 'neutro')) };
 }
-/* ══ EL BALANCE ══ (André, 31-ago-2026)
-   Una sola línea: cuánto traes, cuánto rindes y qué tan cerca estás del
-   PAYOUT — no del objetivo de la cuenta. El objetivo es un tramo; el payout es
-   el final del camino, y la barra mide desde DONDE ESTÁ la cuenta: si ya pasó
-   la evaluación arranca de la mitad, que es lo que carreraCuenta() ya sabe.
-   En "todas" manda la cuenta más adelantada, igual que en Payout. */
+/* ══ EL BALANCE Y EL CAMINO AL PAYOUT ══ (André, 31-ago-2026)
+   Decía "faltan $6,100 al payout" y "de $5,000" y las dos cifras confundían:
+   una es el camino entero y la otra el objetivo de la cuenta, y juntas no se
+   entendía qué se estaba midiendo. Fuera los montos: queda la BARRA con sus
+   tres hitos marcados —primera fase, colchón, payouts— y el porcentaje de
+   avance a la derecha. Eso ya lo dice todo.
+   La barra mide DESDE DONDE ESTÁ la cuenta: si ya pasó evaluación arranca de
+   la mitad, que es lo que carreraCuenta() ya sabía. */
 function lgBalancePanel(){
   const host = $('#lgBalance'); if(!host) return;
   const list = lgTradesReales();
@@ -14687,23 +14700,30 @@ function lgBalancePanel(){
   const propias = mias(S.accounts||[]);
   const size = a ? (a.size || 0) : propias.reduce((x,c)=>x+(c.size||0),0);
   const bal = size + pnl;
-  const rend = size ? (pnl/size*100) : 0;
-  /* el camino al payout */
   let C = null;
   if(a){ try{ C = carreraCuenta(a); }catch(e){} }
   else { propias.filter(x => !esLive(x) && !esSim(x) && cuentaEnPie(x)).forEach(x => {
     try{ const cc = carreraCuenta(x); if(cc && (!C || cc.pct > C.pct)) C = cc; }catch(e){} }); }
   const pct = C ? Math.max(0, Math.min(100, C.pct)) : 0;
-  const falta = C ? Math.max(0, C.total - C.avance) : 0;
+  /* los tres hitos del camino, en su lugar exacto de la barra */
+  const HITOS = [
+    { en:0,   n:bi('1ª fase','Phase 1'),  hecho: pct > 0 },
+    { en:50,  n:bi('Colchón','Buffer'),   hecho: pct >= 50 },
+    { en:100, n:bi('Payouts','Payouts'),  hecho: pct >= 100 },
+  ];
   host.innerHTML = `
     <div class="lgb-fila">
       <b class="lgb-bal">${fmt$(bal)}</b>
-      <span class="lgb-rend ${rend>=0?'up':'down'}">${rend>=0?'+':''}${rend.toFixed(1)}%</span>
       ${C ? `<span class="lgb-prog">
-        <span class="bd-b"><i class="up" style="width:${pct}%"></i></span>
-        <em>${C.pasoPago ? '✓ '+bi('payout','payout')
-             : Math.round(pct)+'% · '+bi('faltan','left')+' '+fmt$(falta)+' '+bi('al payout','to payout')}</em>
-      </span>` : ''}
+        <span class="lgb-track">
+          <i class="lgb-fill" style="width:${pct}%"></i>
+          ${HITOS.filter(h=>h.en>0).map(h=>`<u class="lgb-tick ${h.hecho?'on':''}" style="left:${h.en}%"></u>`).join('')}
+        </span>
+        <span class="lgb-hitos">
+          ${HITOS.map(h=>`<em class="${h.hecho?'on':''}" style="left:${h.en}%">${esc(h.n)}</em>`).join('')}
+        </span>
+      </span>
+      <b class="lgb-pct ${pct>=100?'ok':''}">${Math.round(pct)}%</b>` : ''}
     </div>`;
   host.hidden = false;
 }
