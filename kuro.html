@@ -490,6 +490,19 @@ function ninja(c, x, base, s, col, aura, op){
   c.fillStyle = casco; c.fillRect(-6.5*s, -46*s, 13*s, 12*s);
   c.fillStyle = col; c.fillRect(-7.5*s, -43*s, 15*s, 4*s);
   c.beginPath(); c.moveTo(-7.5*s,-42*s); c.lineTo(-19*s,-36*s); c.lineTo(-7.5*s,-38*s); c.closePath(); c.fill();
+  /* LOS OJOS (André, 31-ago-2026): eran dos rayitas del mismo gris que el
+     traje. En una silueta negra, los ojos son lo ÚNICO que puede decir que
+     adentro hay alguien — así que arden: su halo primero, el trazo encima. */
+  if(op.mirada){
+    c.save(); c.globalCompositeOperation = 'lighter';
+    [-2.5, 2.5].forEach(function(dx){
+      var g2 = c.createRadialGradient(dx*s, -37.7*s, 0.2*s, dx*s, -37.7*s, 7*s);
+      g2.addColorStop(0, op.mirada); g2.addColorStop(.35,'rgba(190,240,255,.22)');
+      g2.addColorStop(1,'rgba(150,210,255,0)');
+      c.fillStyle = g2; c.beginPath(); c.arc(dx*s, -37.7*s, 7*s, 0, 7); c.fill();
+    });
+    c.restore();
+  }
   c.fillStyle = ojos;
   c.fillRect(-4*s, -38.5*s, 3*s, 1.6*s); c.fillRect(1*s, -38.5*s, 3*s, 1.6*s);
   c.restore();
@@ -984,6 +997,29 @@ function katana(c, W, H, col){
     var esc = Math.min(W,H)/300 * (1 + p*0.55);
     var ay = sy + 4*esc;
     var R  = Math.min(26*esc, sy*0.5);
+    /* EL AURA: un resplandor frío que se cuela entre la nevada, para que la
+       cumbre no sea sólo una silueta chiquita en el cielo. Va con 'lighter'
+       para que la nieve que le cruza por delante se encienda al pasar. */
+    c.save(); c.globalCompositeOperation = 'lighter';
+    var halo = c.createRadialGradient(cx, ay, 2, cx, ay, R*3.1);
+    halo.addColorStop(0,  'rgba(168,226,206,'+(0.26 + p*0.12)+')');
+    halo.addColorStop(.22,'rgba(136,200,190,'+(0.13 + p*0.06)+')');
+    halo.addColorStop(.58,'rgba(104,164,168,.045)');
+    halo.addColorStop(1,  'rgba(88,146,150,0)');
+    c.fillStyle = halo; c.beginPath(); c.arc(cx, ay, R*3.1, 0, 7); c.fill();
+    /* y unos rayos larguísimos, girando tan despacio que casi no se ven mover */
+    c.translate(cx, ay); c.rotate(REDUCE?0:now/24000);
+    for(var ry=0; ry<16; ry++){
+      c.rotate(Math.PI*2/16);
+      var lgo = (30 + rnd(ry*9.1)*46) * esc * (1 + p*0.5);
+      var gry = c.createLinearGradient(0,0,0,-lgo);
+      gry.addColorStop(0,'rgba(176,232,212,'+(0.085+p*0.04)+')');
+      gry.addColorStop(.45,'rgba(176,232,212,.022)');
+      gry.addColorStop(1,'rgba(176,232,212,0)');
+      c.fillStyle = gry; c.beginPath();
+      c.moveTo(-1.4*esc,0); c.lineTo(1.4*esc,0); c.lineTo(0,-lgo); c.closePath(); c.fill();
+    }
+    c.restore();
     var tinta = c.createRadialGradient(cx, ay, 1, cx, ay, R);
     tinta.addColorStop(0,  'rgba(4,7,14,'+(0.62 + p*0.10)+')');
     tinta.addColorStop(.45,'rgba(6,10,20,'+(0.30 + p*0.06)+')');
@@ -1014,7 +1050,8 @@ function katana(c, W, H, col){
                    filo:'#54637A', mango:'#54637A', ojos:'rgba(0,0,0,0)' });
     ninja(c, cx, sy + 2*esc, esc*0.46, '#0A0D14', false,
           { espalda:true, cuerpo:'#05070C', casco:'#05070C',
-            filo:'#2B3444', mango:'#05070C', ojos:'rgba(214,228,255,.92)' });
+            filo:'#2B3444', mango:'#05070C',
+            ojos:'#F2FEFF', mirada:'rgba(226,252,255,.95)' });
 
     /* ══ LA TORMENTA DE NIEVE ══
        Va DELANTE de todo, y a propósito son partículas y no una capa de color:
