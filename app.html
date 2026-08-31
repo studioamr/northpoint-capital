@@ -1752,10 +1752,6 @@ button.st-chip:hover{border-color:rgba(255,255,255,.45)}
 .bm-nodo.cerrado{border-color:rgba(255,255,255,.2);opacity:.55}
 .bm-k{font-size:14px;line-height:1}
 .bm-n{font-family:var(--mono);font-size:7.5px;letter-spacing:.12em;opacity:.9}
-.bm-region{position:absolute;transform:translate(-50%,-50%);white-space:nowrap;pointer-events:none;
-  padding:5px 12px;border-radius:99px;background:rgba(8,11,18,.74);backdrop-filter:blur(5px);
-  border:1px solid rgba(255,255,255,.16);color:#fff;font-size:11.5px;font-weight:600;
-  box-shadow:0 4px 14px rgba(0,0,0,.4)}
 /* la ficha */
 .bm-ficha{margin-top:14px;border:1px solid color-mix(in srgb, var(--kc) 45%, rgba(255,255,255,.12));
   border-radius:16px;padding:16px 18px;background:rgba(255,255,255,.04)}
@@ -1795,6 +1791,8 @@ button.st-chip:hover{border-color:rgba(255,255,255,.45)}
   border:none;background:var(--kc);color:#0b0e14;font:900 15px/1 inherit;letter-spacing:.1em}
 .bm-challenge:hover{filter:brightness(1.1)}
 .bm-ganado{font-family:var(--mono);font-size:10px;letter-spacing:.1em;color:rgba(255,255,255,.55);margin:18px 0 0}
+.bm-pica{margin:16px 0 0;padding:18px;border:1px dashed rgba(255,255,255,.22);border-radius:14px;
+  text-align:center;font-size:12.5px;line-height:1.6;color:rgba(255,255,255,.62)}
 /* PLAY: el botón grande, encima de Battle */
 .stage-btn.play{display:flex;flex-direction:column;align-items:center;gap:3px;
   background:linear-gradient(180deg,#2b2136,#171021);border:1px solid rgba(180,140,220,.45);
@@ -10539,21 +10537,46 @@ function bossPlan(i){
   }
   return out;
 }
-/* ══ EL MAPA ══ el sendero sube del bosque al templo. Cada nodo es un NINJA
-   con la katana de su nivel — el color del nodo, de su cinta y de su ninja
-   salen todos de esa katana, así que la escalera se lee de un vistazo. */
-const BOSS_REGIONES = {
-  bambu:  { nom:['Bosque de Asia','Forest of Asia'],   c1:'#1a3524', c2:'#2f5a3a' },
-  niebla: { nom:['Valle de niebla','Mist valley'],     c1:'#20303c', c2:'#3c5666' },
-  neon:   { nom:['Ciudad alta','The high city'],       c1:'#131f38', c2:'#2b4470' },
-  volcan: { nom:['Cumbre que arde','The burning peak'],c1:'#301410', c2:'#5e2418' },
-  templo: { nom:['El templo','The temple'],            c1:'#241a30', c2:'#463358' },
-};
 function bossNodoPos(i, W, H){
   const n = KURO_BOSSES.length;
   const y = H - 96 - ((H - 96 - 150) * i / (n - 1));
   const x = W/2 + Math.sin(i*1.05 + 0.6) * (W*0.26);
   return { x, y };
+}
+/* ══ EL MAPA ══ UNA sola escena pintada, no bandas de color: un valle en
+   niebla al amanecer que sube hasta el templo, con el dragón encima. Los
+   ninjas esperan sobre losas de piedra a lo largo del sendero.
+
+   Todo se dibuja en capas de atrás hacia adelante —cielo, sierras lejanas
+   entre neblina, valle, arboledas, sendero, losas, ninjas, pétalos—, que es
+   lo que hace que se lea como una ilustración y no como un diagrama. */
+function bossCanopia(c, x, y, r, tono, semilla){
+  /* una copa de árbol: varios círculos encimados y una sombra abajo */
+  const rr = k => ((Math.sin((k+semilla*13.7)*12.9898)*43758.5453)%1+1)%1;
+  c.fillStyle = tono[2];
+  c.beginPath(); c.ellipse(x, y+r*0.42, r*0.95, r*0.34, 0,0,7); c.fill();
+  for(let i=0;i<7;i++){
+    const a = (i/7)*Math.PI*2, d = r*(0.34 + rr(i)*0.36);
+    c.fillStyle = i%3===0 ? tono[0] : tono[1];
+    c.beginPath(); c.arc(x+Math.cos(a)*d, y+Math.sin(a)*d*0.62, r*(0.4+rr(i+9)*0.26), 0,7); c.fill();
+  }
+  c.fillStyle = tono[0];
+  c.beginPath(); c.arc(x, y-r*0.12, r*0.56, 0,7); c.fill();
+}
+function bossTemplo(c, x, base, s){
+  /* el templo del final: tres cuerpos con aleros, escalinata y farolillos */
+  for(let i=0;i<3;i++){
+    const w = (150 - i*34)*s, h = 34*s, y = base - i*(h+10*s);
+    c.fillStyle = '#6b3a3a';
+    c.beginPath(); c.moveTo(x-w/2-16*s, y); c.lineTo(x+w/2+16*s, y);
+    c.lineTo(x+w/2-6*s, y-13*s); c.lineTo(x-w/2+6*s, y-13*s); c.closePath(); c.fill();
+    c.fillStyle = '#8a5a4a';
+    c.fillRect(x-w/2+10*s, y-h, w-20*s, h-13*s);
+    c.fillStyle = 'rgba(255,214,150,.75)';
+    for(let k=-1;k<=1;k++) c.fillRect(x+k*22*s-5*s, y-h+7*s, 10*s, 13*s);
+  }
+  c.fillStyle='rgba(228,214,196,.85)';
+  for(let e=0;e<6;e++) c.fillRect(x-30*s+e*2*s, base+e*7*s, 60*s-e*4*s, 5*s);
 }
 function bossPintaMapa(){
   const cv = document.getElementById('bossMapaCv'); if(!cv) return;
@@ -10562,103 +10585,124 @@ function bossPintaMapa(){
   const yo = batYo(), actual = bossActual();
   const pos = KURO_BOSSES.map((_,i)=>bossNodoPos(i,W,H));
   const rr = i => ((Math.sin(i*12.9898)*43758.5453)%1+1)%1;
-  if(!window._bmPet) window._bmPet = Array.from({length:64},(_,i)=>({
-    x:rr(i)*W, y:rr(i+40)*H, s:3+rr(i+80)*4, sp:.35+rr(i+120)*.85,
-    dr:rr(i+160)*6.3, sw:.4+rr(i+200)*.8 }));
+  if(!window._bmPet) window._bmPet = Array.from({length:80},(_,i)=>({
+    x:rr(i)*W, y:rr(i+40)*H, s:3+rr(i+80)*4.5, sp:.3+rr(i+120)*.8,
+    dr:rr(i+160)*6.3, sw:.5+rr(i+200)*.9 }));
   const pet = window._bmPet;
-  const bandas = [];
-  KURO_BOSSES.forEach((b,i)=>{ if(i===0 || b.region!==KURO_BOSSES[i-1].region) bandas.push({r:b.region,i}); });
+  /* las arboledas se siembran UNA vez: si se recalcularan por cuadro, el
+     bosque hervería en cada frame en vez de estar quieto */
+  if(!window._bmArb) window._bmArb = (()=>{
+    const out=[]; const enSendero = (x,y)=>pos.some(P=>Math.abs(P.x-x)<120 && Math.abs(P.y-y)<80);
+    for(let i=0;i<130;i++){
+      const x = rr(i*3)*W, y = H*0.06 + rr(i*7+1)*H*0.94;
+      if(enSendero(x,y)) continue;
+      const sakura = rr(i*11) > 0.76;
+      out.push({ x, y, r: 26 + rr(i*5)*30, sakura, s:i });
+    }
+    return out.sort((a,b)=>a.y-b.y);
+  })();
+  const arb = window._bmArb;
+  const VERDES = [
+    ['#3f7a48','#2f5d38','#1e3f26'], ['#4a8a52','#376a3f','#24492b'],
+    ['#356b40','#274f30','#183820'],
+  ];
+  const ROSA = ['#f0b6cd','#e295b4','#b06a86'];
 
   const frame = (t) => {
     if(!cv.isConnected) return;
     if(cv.offsetParent === null){ window._bmRAF = requestAnimationFrame(frame); return; }
-    c.clearRect(0,0,W,H);
-    bandas.forEach((b,bi)=>{
-      const yIni = bi===0 ? H : (pos[b.i].y + pos[b.i-1].y)/2 + 40;
-      const sig = bandas[bi+1];
-      const yFin = sig ? (pos[sig.i].y + pos[sig.i-1].y)/2 + 40 : -10;
-      const R = BOSS_REGIONES[b.r], alto = yIni - yFin;
-      const g = c.createLinearGradient(0,yFin,0,yIni);
-      g.addColorStop(0,R.c2); g.addColorStop(1,R.c1);
-      c.save(); c.beginPath(); c.rect(0,yFin,W,alto); c.clip();
-      c.fillStyle=g; c.fillRect(0,yFin,W,alto);
-      if(bi === bandas.length-1){
-        const mx=W*0.76, my=yFin+alto*0.13;
-        c.fillStyle='rgba(255,250,232,.13)'; c.beginPath(); c.arc(mx,my,54,0,7); c.fill();
-        c.fillStyle='rgba(255,250,232,.9)'; c.beginPath(); c.arc(mx,my,27,0,7); c.fill();
+
+    /* ── CIELO: amanecer en la cumbre, valle en penumbra abajo ── */
+    const cielo = c.createLinearGradient(0,0,0,H);
+    cielo.addColorStop(0,   '#efd9d0');
+    cielo.addColorStop(0.10,'#e6cfcd');
+    cielo.addColorStop(0.24,'#cfc3c8');
+    cielo.addColorStop(0.45,'#a9b7ab');
+    cielo.addColorStop(0.72,'#6f9169');
+    cielo.addColorStop(1,   '#3d6440');
+    c.fillStyle = cielo; c.fillRect(0,0,W,H);
+    /* luna */
+    c.fillStyle='rgba(255,252,242,.34)'; c.beginPath(); c.arc(W*0.79, H*0.052, 46,0,7); c.fill();
+    c.fillStyle='rgba(255,252,242,.92)'; c.beginPath(); c.arc(W*0.79, H*0.052, 26,0,7); c.fill();
+
+    /* ── SIERRAS LEJANAS, cada capa más pálida y más envuelta en niebla ── */
+    for(let capa=0; capa<5; capa++){
+      const base = H*(0.10 + capa*0.052);
+      c.globalAlpha = 0.30 + capa*0.11;
+      c.fillStyle = ['#8f9aa4','#7d8b93','#6b7d80','#5b7168','#4b6553'][capa];
+      c.beginPath(); c.moveTo(-30, base+220);
+      for(let x=-30; x<=W+30; x+=44){
+        const h = 40 + rr(x*0.7 + capa*31)*120 + capa*10;
+        c.lineTo(x+22, base-h); c.lineTo(x+44, base-h*0.28);
       }
-      for(let capa=0; capa<3; capa++){
-        const base = yFin + alto*(0.3 + capa*0.2);
-        c.globalAlpha = 0.9 - capa*0.18;
-        c.fillStyle = capa===0 ? R.c2 : (capa===1 ? R.c1 : 'rgba(0,0,0,.3)');
-        c.beginPath(); c.moveTo(-20, base+140);
-        for(let x=-20; x<=W+20; x+=50){
-          const h = 36 + rr(x+capa*57+bi*31)*84 + capa*12;
-          c.lineTo(x+25, base-h); c.lineTo(x+50, base);
-        }
-        c.lineTo(W+20, base+140); c.closePath(); c.fill(); c.globalAlpha=1;
-        const nx = ((t/95) + capa*250 + bi*130) % (W+420) - 210;
-        c.fillStyle='rgba(255,255,255,.06)';
-        c.beginPath(); c.ellipse(nx, base-6, 180, 18, 0,0,7); c.fill();
-      }
-      /* la vegetación de cada mundo, a los lados del sendero */
-      [0.07,0.17,0.84,0.93].forEach((u,ti)=>{
-        const x=u*W, yb=yIni-34-rr(ti+bi*11)*alto*0.45;
-        try{
-          if(b.r==='bambu'){ zenSakuraTree(c,x,yb,0.8+rr(ti)*0.3); }
-          else if(b.r==='niebla'){ c.fillStyle='rgba(18,26,34,.9)'; c.fillRect(x-4,yb-52,8,52);
-            c.beginPath(); c.arc(x,yb-60,20,0,7); c.fill(); }
-          else if(b.r==='neon'){ c.fillStyle='rgba(9,15,28,.94)'; c.fillRect(x-15,yb-112,30,112);
-            for(let w=0;w<10;w++){ c.fillStyle=`rgba(255,220,140,${.22+rr(w+ti)*.5})`;
-              c.fillRect(x-9+(w%2)*10, yb-104+Math.floor(w/2)*19, 7, 8); } }
-          else if(b.r==='volcan'){ c.fillStyle='rgba(28,10,8,.9)';
-            c.beginPath(); c.moveTo(x-28,yb); c.lineTo(x,yb-64); c.lineTo(x+28,yb); c.fill(); }
-        }catch(e){}
-      });
-      if(b.r==='templo'){ try{ zenPagoda(c, W*0.5, yFin+alto*0.66, 1.45, '#3a2440'); }catch(e){} }
-      if(b.r==='bambu'){ try{ zenTorii(c, W*0.5, yIni-30, 0.85); }catch(e){} }
-      c.restore();
-    });
-    /* EL SENDERO */
+      c.lineTo(W+30, base+220); c.closePath(); c.fill();
+      /* la neblina que separa las capas, deslizándose */
+      c.globalAlpha = 0.5;
+      const nx = ((t/110) + capa*230) % (W+520) - 260;
+      c.fillStyle = 'rgba(238,236,232,.5)';
+      c.beginPath(); c.ellipse(nx, base+6, 230, 24, 0,0,7); c.fill();
+      c.beginPath(); c.ellipse(W-nx*0.7, base+22, 190, 18, 0,0,7); c.fill();
+      c.globalAlpha = 1;
+    }
+
+    /* ── EL TEMPLO, coronando el valle, con su dragón enroscado ── */
+    try{ bossTemplo(c, W*0.5, H*0.145, 1.15); }catch(e){}
+    c.save(); c.globalAlpha=.85;
+    try{ zenDragon(c, W*0.5, H*0.088, 1.5, '#5f8f7a', t); }catch(e){}
+    c.restore();
+    /* la pagoda chica de la ladera, como en el valle real */
+    try{ zenPagoda(c, W*0.16, H*0.63, 0.95, '#7a4038'); }catch(e){}
+
+    /* ── EL SENDERO: cinta pálida, con borde y su tramo recorrido claro ── */
     const cinta=(w2,col)=>{ c.strokeStyle=col; c.lineWidth=w2; c.lineCap='round'; c.lineJoin='round';
       c.beginPath(); c.moveTo(pos[0].x,pos[0].y);
       for(let i=0;i<pos.length-1;i++){ const a=pos[i],b2=pos[i+1],my=(a.y+b2.y)/2;
-        c.quadraticCurveTo(a.x+(i%2?66:-66),my,(a.x+b2.x)/2,my);
-        c.quadraticCurveTo(b2.x+(i%2?-66:66),my,b2.x,b2.y); }
+        c.quadraticCurveTo(a.x+(i%2?70:-70),my,(a.x+b2.x)/2,my);
+        c.quadraticCurveTo(b2.x+(i%2?-70:70),my,b2.x,b2.y); }
       c.stroke(); };
-    cinta(20,'rgba(0,0,0,.28)'); cinta(14,'rgba(244,240,228,.45)');
-    c.save(); c.beginPath(); c.rect(0,pos[Math.min(actual,pos.length-1)].y-10,W,H); c.clip();
-    cinta(14,'rgba(255,250,235,.94)'); c.restore();
-    /* LAS PLATAFORMAS + EL NINJA DE CADA JEFE, con su katana */
+    cinta(30,'rgba(60,50,40,.22)');
+    cinta(22,'rgba(238,230,208,.62)');
+    c.save(); c.beginPath(); c.rect(0,pos[Math.min(actual,pos.length-1)].y-14,W,H); c.clip();
+    cinta(22,'rgba(250,244,226,.96)'); c.restore();
+
+    /* ── LA ARBOLEDA, ordenada de fondo a frente para que se encime bien ── */
+    arb.forEach(a=>{
+      bossCanopia(c, a.x, a.y, a.r, a.sakura ? ROSA : VERDES[a.s % VERDES.length], a.s);
+    });
+
+    /* ── LAS LOSAS Y SUS NINJAS ── */
     KURO_BOSSES.forEach((b,i)=>{
       const P = pos[i], k = KATANAS[b.kat];
       const hecho = bossVencido(i), abierto = hecho || i===actual;
-      c.fillStyle='rgba(0,0,0,.32)'; c.beginPath(); c.ellipse(P.x,P.y+17,30,9,0,0,7); c.fill();
-      c.fillStyle = abierto ? 'rgba(226,236,244,.94)' : 'rgba(140,150,164,.55)';
-      c.beginPath(); c.ellipse(P.x,P.y+13,26,8,0,0,7); c.fill();
-      c.save(); c.globalAlpha = hecho ? .45 : (abierto ? 1 : .5);
-      /* su ninja lleva SU color: traje y bufanda salen de su katana */
-      const njB = { traje:'#12161d', banda:k.belt, buf:k.belt };
-      try{ zenNinja(c, P.x, P.y+10, 1.05, t*0.5 + i*400, i, k.belt, njB, i%2===1, false); }catch(e){}
+      c.fillStyle='rgba(40,34,26,.34)'; c.beginPath(); c.ellipse(P.x,P.y+19,32,10,0,0,7); c.fill();
+      c.fillStyle = abierto ? 'rgba(226,238,246,.96)' : 'rgba(170,178,186,.7)';
+      c.beginPath(); c.ellipse(P.x,P.y+14,27,9,0,0,7); c.fill();
+      c.fillStyle = 'rgba(255,255,255,.5)';
+      c.beginPath(); c.ellipse(P.x,P.y+12,20,6,0,0,7); c.fill();
+      c.save(); c.globalAlpha = hecho ? .5 : (abierto ? 1 : .55);
+      const njB = { traje:'#141820', banda:k.belt, buf:k.belt };
+      try{ zenNinja(c, P.x, P.y+11, 1.0, t*0.5 + i*400, i, k.belt, njB, i%2===1, false); }catch(e){}
       c.restore();
     });
-    /* TU NINJA, un paso antes del jefe que te toca */
+    /* TU NINJA, un paso antes del que te toca */
     const P = pos[Math.min(actual,pos.length-1)];
-    try{ zenNinja(c, P.x-46, P.y+12, 1.15, t*0.5, 0,
+    try{ zenNinja(c, P.x-52, P.y+13, 1.1, t*0.5, 0,
           KATANAS[batEquipadaDe(yo)].belt, batNinjaDe(yo), false, false); }catch(e){}
+
+    /* ── PÉTALOS ── */
     pet.forEach(pp=>{ pp.y+=pp.sp; pp.x+=Math.sin(t/820+pp.dr)*pp.sw;
       if(pp.y>H){ pp.y=-12; pp.x=Math.random()*W; }
-      c.save(); c.globalAlpha=.8; c.fillStyle='rgba(255,193,208,.95)';
+      c.save(); c.globalAlpha=.85; c.fillStyle='rgba(246,190,208,.95)';
       c.translate(pp.x,pp.y); c.rotate(t/720+pp.dr);
       c.beginPath(); c.ellipse(0,0,pp.s,pp.s*.58,0,0,7); c.fill(); c.restore(); });
+
     window._bmRAF = requestAnimationFrame(frame);
   };
   frame(performance.now());
   window._bmRAF = requestAnimationFrame(frame);
 }
 
-/* Los nodos: botones de HTML encima del lienzo, para que se naveguen con
-   teclado y no haya que traducir clics a coordenadas. */
+/* Los nodos: botones de HTML sobre el lienzo, navegables con teclado. */
 function bossPintaNodos(){
   const cont = document.getElementById('bossNodos'), cv = document.getElementById('bossMapaCv');
   if(!cont || !cv) return;
@@ -10667,26 +10711,31 @@ function bossPintaNodos(){
     const P = bossNodoPos(i,W,H), k = KATANAS[b.kat];
     const hecho = bossVencido(i), abierto = hecho || i===actual;
     return `<button type="button" class="bm-nodo ${hecho?'hecho':abierto?'abierto':'cerrado'}"
-      data-boss="${i}" style="left:${P.x/W*100}%;top:${P.y/H*100}%;--kc:${k.belt}"
+      data-boss="${i}" style="left:${P.x/W*100}%;top:${(P.y-46)/H*100}%;--kc:${k.belt}"
       aria-label="${esc(b.nom)}">
       <span class="bm-k">${hecho?'✓':b.kanji}</span>
       <span class="bm-n">${esc(b.nom)}</span>
-    </button>` + ((i===0 || b.region!==KURO_BOSSES[i-1].region)
-      ? `<span class="bm-region" style="left:${P.x/W*100}%;top:${(P.y+66)/H*100}%">${esc(loc(BOSS_REGIONES[b.region].nom))}</span>` : '');
+    </button>`;
   }).join('');
   cont.querySelectorAll('[data-boss]').forEach(bt => bt.onclick = () => {
     window._bossSel = +bt.dataset.boss; bossPintaFicha();
     cont.querySelectorAll('[data-boss]').forEach(x=>x.classList.toggle('sel', x===bt));
-    document.getElementById('bossFicha')?.scrollIntoView({block:'nearest'});
+    document.getElementById('bossFicha')?.scrollIntoView({block:'nearest', behavior:'smooth'});
   });
 }
-/* LA FICHA: quién es, su mundo, SUS ESTADÍSTICAS, qué ocupas para vencerlo
-   y —hasta abajo, después de leer todo— el botón de retarlo. */
+/* LA FICHA: sólo cuando picas a un ninja. Trae quién es, SUS ESTADÍSTICAS,
+   qué ocupas para vencerlo y —hasta abajo, después de leerlo todo— el reto. */
 function bossPintaFicha(){
   const host = document.getElementById('bossFicha'); if(!host) return;
-  const i = (window._bossSel != null) ? window._bossSel : bossActual();
-  const b = KURO_BOSSES[i]; if(!b) return;
-  const k = KATANAS[b.kat], R = BOSS_REGIONES[b.region];
+  /* SÓLO AL PICARLO (André): entrar al mapa ya no abre una ficha sola. */
+  if(window._bossSel == null){
+    host.innerHTML = `<p class="bm-pica">${bi(
+      'Pica un ninja del sendero para ver sus números y qué ocupas para vencerlo.',
+      'Tap a ninja on the path to see his numbers and what it takes to beat him.')}</p>`;
+    return;
+  }
+  const i = window._bossSel, b = KURO_BOSSES[i]; if(!b) return;
+  const k = KATANAS[b.kat];
   const hecho = bossVencido(i), esMio = i === bossActual();
   const exp = bossExpectancy(b.st);
   const dato = (et, v, cls) => `<div class="bm-st"><i>${et}</i><b class="${cls||''}">${v}</b></div>`;
@@ -10695,7 +10744,7 @@ function bossPintaFicha(){
       <span class="bm-f-av">${b.kanji}</span>
       <div class="bm-f-id">
         <b>${esc(b.nom)}</b>
-        <span>${esc(loc(b.titulo))} · ${esc(loc(R.nom))}</span>
+        <span>${esc(loc(b.titulo))}</span>
       </div>
       <span class="bm-f-kat" style="color:${k.belt}">${esc(loc(k.n))}</span>
       ${hecho?`<span class="bm-f-et ok">${bi('VENCIDO','BEATEN')}</span>`
@@ -10706,9 +10755,9 @@ function bossPintaFicha(){
 
     <div class="bm-sec">${bi('SUS NÚMEROS DE CARRERA','HIS CAREER NUMBERS')}</div>
     <div class="bm-sts">
-      ${dato(bi('WIN RATE','WIN RATE'), b.st.wr+'%')}
-      ${dato(bi('PROFIT FACTOR','PROFIT FACTOR'), b.st.pf.toFixed(2))}
-      ${dato(bi('EXPECTANCY','EXPECTANCY'), fmt$(Math.round(exp)), exp>=0?'up':'down')}
+      ${dato('WIN RATE', b.st.wr+'%')}
+      ${dato('PROFIT FACTOR', b.st.pf.toFixed(2))}
+      ${dato('EXPECTANCY', fmt$(Math.round(exp)), exp>=0?'up':'down')}
       ${dato(bi('TRADES / DÍA','TRADES / DAY'), b.st.trd)}
       ${dato(bi('GANADA MEDIA','AVG WIN'), fmt$(b.st.avgW), 'up')}
       ${dato(bi('PERDIDA MEDIA','AVG LOSS'), fmt$(b.st.avgL), 'down')}
@@ -10719,9 +10768,8 @@ function bossPintaFicha(){
     <div class="bm-reto">
       <b>${esc(loc(b.reto.t))}</b>
       <p>${esc(loc(b.reto.d))}</p>
-      ${(()=>{ /* LO QUE DE VERDAD VA A HACER en este reto — con 3 trades no se
-           puede cumplir un 51% y la ficha no debe prometer lo que no dará. El
-           win rate de arriba es su carrera; esto es la pelea que te espera. */
+      ${(()=>{ /* LO QUE DE VERDAD HARÁ en este reto: con 3 trades no se puede
+           cumplir un 51%, y la ficha no debe prometer lo que no dará. */
         const pl = bossPlan(i), g = pl.filter(t=>t.pnl>0).length;
         const tot = pl.reduce((a,t)=>a+t.pnl,0);
         return `<p class="bm-reto-d">${bi('Formato','Format')}: ${b.reto.k==='sesion'
