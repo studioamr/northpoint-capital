@@ -10986,8 +10986,10 @@ function bmPintaRetrato(k, vivo){
   /* TODOS DE NEGRO, y lo que los distingue es SU COLOR: la cinta, el
      antifaz, la bufanda y la hoja. Kiiro es un ninja negro de cinta amarilla
      con espada amarilla, y con eso se sabe cuál es. */
-  const nj = vivo ? { traje:'#0f1218', banda:k.belt, buf:k.belt }
-                  : { traje:'#0b0e13', banda:'#232936', buf:'#232936', antifaz:false };
+  /* el bloqueado se ve más apagado por el globalAlpha, pero SU CINTA Y SU
+     BUFANDA siguen siendo de su color: pintarlas grises lo dejaba idéntico a
+     los otros ocho y no se sabía cuál era. */
+  const nj = { traje:'#0f1218', banda:k.belt, buf:k.belt };
   const pinta = (t) => {
     if(!cv.isConnected) return;
     cx.clearRect(0,0,NW,NH);
@@ -11233,19 +11235,9 @@ function katanaBonoTxt(idx){ const b=katanaBono(idx); return { loot:'+'+Math.rou
 function katanaSVG(hex, flat, oculta){
   const dark = hex==='#23272E';
   /* bloqueada: silueta VISIBLE (se ve la espada y se intuye su color), sin detalles */
-  /* LA HOJA LLEVA EL COLOR DE SU KATANA (André): antes las nueve eran de la
-     misma plata y sólo cambiaba el mango — en la colección se veían idénticas.
-     Se mezcla con blanco para que siga leyéndose como acero y no como
-     plástico, y el filo va un tono más oscuro. */
-  const mezcla = (hex2, p2) => { const h2 = hex2.replace('#','');
-    const r2 = parseInt(h2.slice(0,2),16), g2 = parseInt(h2.slice(2,4),16), b2 = parseInt(h2.slice(4,6),16);
-    const m2 = v => Math.round(v + (255 - v) * p2);
-    return '#' + [m2(r2),m2(g2),m2(b2)].map(v=>v.toString(16).padStart(2,'0')).join(''); };
-  const oscuro = (hex2, p2) => { const h2 = hex2.replace('#','');
-    const m2 = v => Math.round(v * p2);
-    return '#' + [0,2,4].map(i2=>m2(parseInt(h2.slice(i2,i2+2),16)).toString(16).padStart(2,'0')).join(''); };
-  const blade = oculta ? '#4a515c' : (dark ? '#59606c' : mezcla(hex, 0.62));
-  const edge  = oculta ? '#2b313b' : (dark ? '#2a2f37' : oscuro(hex, 0.55));
+  /* LA HOJA ES ACERO EN TODAS: sólo el mango lleva el color de su katana
+     (André). Se probó teñir la hoja y ninguna parecía una espada. */
+  const blade = oculta?'#4a515c': (dark?'#3a4048':'#d7dee7'), edge = oculta?'#2b313b':(dark?'#20242b':'#aeb8c4');
   const mango = hex, tsuba = oculta?'#2a3039':'#2b3038', filo = oculta?'0':'0.5';
   const mangoOp = oculta?' fill-opacity="0.55"':'';
   const gid='ks'+(katanaSVG._n=(katanaSVG._n||0)+1);
@@ -11934,22 +11926,22 @@ function zenNinja(c,x,base,s,now,ph,col,nj,flip,anda){ const kc=col||'#b53a2e';
   c.fillStyle=cfg.traje; c.fillRect(-5*s,-14*s+Math.max(0,p1),4*s,14*s-Math.max(0,p1)); c.fillRect(2*s,-14*s+Math.max(0,p2),4*s,14*s-Math.max(0,p2));
   c.fillRect(-6.5*s,-30*s,13*s,18*s);
   /* la katana: en la espalda — o cortando el aire */
-  /* LA KATANA: una hoja limpia del color de su cinta, con su filo claro
-     encima. Se intentó dibujarla curva con tsuba y mango trenzado y a este
-     tamaño salía tosca y cortada: EL NINJA ES EL PERSONAJE y la espada su
-     accesorio — con que se distinga de qué color es, basta. */
+  /* LA HOJA ES ACERO, EL MANGO ES DE SU COLOR (André). Estaba al revés: la
+     hoja pintada del color de la cinta, y así ninguna parecía una katana.
+     Como en el arsenal — filo de acero, empuñadura de color. */
   c.lineCap = 'round';
-  c.strokeStyle = kc; c.lineWidth = 2.4*s; c.beginPath();
+  c.strokeStyle = '#d7dee7'; c.lineWidth = 1.8*s; c.beginPath();
   if(corta){ const bx2=2*s, by2=-27*s, len=17*s; c.moveTo(bx2,by2); c.lineTo(bx2+Math.cos(aSl)*len, by2+Math.sin(aSl)*len); }
   else { c.moveTo(-9*s,-38*s); c.lineTo(9*s,-16*s); }
   c.stroke();
-  c.strokeStyle = 'rgba(255,255,255,.8)'; c.lineWidth = 0.9*s; c.beginPath();
+  c.strokeStyle = 'rgba(255,255,255,.9)'; c.lineWidth = 0.7*s; c.beginPath();
   if(corta){ const bx2=2*s, by2=-27*s, len=17*s; c.moveTo(bx2,by2); c.lineTo(bx2+Math.cos(aSl)*len, by2+Math.sin(aSl)*len); }
   else { c.moveTo(-9*s,-38*s); c.lineTo(9*s,-16*s); }
   c.stroke();
-  c.strokeStyle=kc; c.lineWidth=2.6*s; c.beginPath();
-  if(corta){ c.moveTo(2*s,-27*s); c.lineTo(2*s-Math.cos(aSl)*4*s, -27*s-Math.sin(aSl)*4*s); }
-  else { c.moveTo(-9*s,-38*s); c.lineTo(-12*s,-42*s); }
+  /* EL MANGO, del color de su katana */
+  c.strokeStyle=kc; c.lineWidth=3.2*s; c.lineCap='round'; c.beginPath();
+  if(corta){ c.moveTo(2*s,-27*s); c.lineTo(2*s-Math.cos(aSl)*5*s, -27*s-Math.sin(aSl)*5*s); }
+  else { c.moveTo(-9*s,-38*s); c.lineTo(-13.5*s,-43.5*s); }
   c.stroke();
   c.fillStyle=cfg.traje; c.beginPath(); c.arc(0,-33*s,5.6*s,0,7); c.fill();
   /* EL ANTIFAZ: franja del color de su katana sobre los ojos, y los ojos
