@@ -10209,6 +10209,118 @@ const BAT_MUNDOS = {
     part:'estrella', partCol:'rgba(255,255,255,.9)' },
 };
 function batMundo(c){ return BAT_MUNDOS[(c&&c.sesion)||'asia'] || BAT_MUNDOS.asia; }
+/* ══ EL CLIMA Y LA HORA (André, 31-ago-2026) ══
+   Las escenas tenían un cielo fijo: siempre atardecer en Tokio, siempre noche
+   en Londres, pelearas a la hora que pelearas. Ahora el cielo es TU día —la
+   hora de tu reloj— y encima cae un clima sorteado.
+   El sorteo NO es Math.random(): sale de la fecha + el bloque de 40 min + la
+   sede, así que dentro de un cuadro no parpadea, dura un rato, y a los dos
+   socios les toca la MISMA lluvia. Si fuera azar puro cada quien vería un
+   clima distinto en el mismo duelo. */
+const BAT_CLIMAS = [
+  { id:'despejado', peso:34, n:['Despejado','Clear'],    ico:'✦' },
+  { id:'nubes',     peso:24, n:['Nublado','Cloudy'],     ico:'☁' },
+  { id:'bruma',     peso:12, n:['Bruma','Haze'],         ico:'≈' },
+  { id:'lluvia',    peso:18, n:['Lluvia','Rain'],        ico:'☂' },
+  { id:'chubasco',  peso:8,  n:['Aguacero','Downpour'],  ico:'☔' },
+  { id:'tormenta',  peso:4,  n:['Tormenta','Storm'],     ico:'⚡' },
+];
+function batClima(c, now){
+  const t = now || Date.now();
+  const dia = Math.floor(t / 86400000);
+  const bloque = Math.floor((t % 86400000) / (40*60000));   /* cambia cada 40 min */
+  const sede = String((c && c.sesion) || (c && c.id) || 'x');
+  let h = dia*7919 + bloque*104729;
+  for(let i=0;i<sede.length;i++) h = (h*31 + sede.charCodeAt(i)) >>> 0;
+  const total = BAT_CLIMAS.reduce((a,k)=>a+k.peso,0);
+  let r = h % total;
+  for(const k of BAT_CLIMAS){ if(r < k.peso) return k; r -= k.peso; }
+  return BAT_CLIMAS[0];
+}
+/* mezcla de colores que SIEMPRE devuelve hex: lerpHex escupe 'rgb(...)' pero
+   sólo sabe leer '#rrggbb', así que encadenar dos mezclas le metía NaN. */
+function mezHex(a, b, u){
+  const hx = x => { if(String(x)[0] === '#') return String(x);
+    const m = String(x).match(/(\d+)\D+(\d+)\D+(\d+)/);
+    return m ? '#'+[m[1],m[2],m[3]].map(v=>(+v).toString(16).padStart(2,'0')).join('') : '#000000'; };
+  const p = x => { const h = hx(x); return [1,3,5].map(i=>parseInt(h.slice(i,i+2),16)); };
+  const [r1,g1,b1] = p(a), [r2,g2,b2] = p(b);
+  return '#' + [r1+(r2-r1)*u, g1+(g2-g1)*u, b1+(b2-b1)*u]
+    .map(v=>Math.round(v).toString(16).padStart(2,'0')).join('');
+}
+/* la escena, vestida con tu hora y con el clima que toque */
+function batEscenaViva(E, c, now){
+  const t = now || Date.now();
+  /* TU día: la zona horaria del propio navegador, no una fija */
+  let tz = 'America/Mexico_City';
+  try{ tz = Intl.DateTimeFormat().resolvedOptions().timeZone || tz; }catch(_){}
+  const d = new Date(t);
+  const min = (typeof minutosEn === 'function') ? minutosEn(tz, d)
+                                                : d.getHours()*60 + d.getMinutes();
+  /* ── EL CIELO DE TU HORA, mezclado con el del mundo ── el mundo no se pierde:
+     Tokio sigue siendo rojizo, pero de madrugada se apaga y al mediodía abre. */
+  let i0 = 0;
+  for(let i=0;i<MOMENTOS_CIELO.length-1;i++) if(min >= MOMENTOS_CIELO[i].m) i0 = i;
+  const A = MOMENTOS_CIELO[i0], B = MOMENTOS_CIELO[i0+1] || A;
+  const u = B.m > A.m ? Math.max(0, Math.min(1, (min - A.m)/(B.m - A.m))) : 0;
+  const momento = u < 0.5 ? A.k : B.k;
+  const noche = momento === 'noche';
+  /* cuánto pesa TU hora contra la paleta del mundo. Con 0.58 el mundo seguía
+     mandando y a mediodía Tokio se veía anocheciendo; con 0.74 se lee la hora
+     y el mundo conserva su tinte. */
+  const MEZCLA = 0.74;
+  const cielo = (E.cielo||[]).map((col, k) =>
+    mezHex(col, mezHex(A.cielo[Math.min(k,3)], B.cielo[Math.min(k,3)], u), MEZCLA));
+  /* ── EL ASTRO ── de día el sol, de noche la luna, y recorriendo el cielo */
+  const SALE = 370, SEPONE = 1150, esDia = min >= SALE && min <= SEPONE;
+  const pu = esDia ? (min-SALE)/(SEPONE-SALE)
+    : ((min > SEPONE ? min-SEPONE : min+1440-SEPONE)/(1440-(SEPONE-SALE)));
+  const ax = 0.14 + pu*0.72, ay = 0.42 - Math.sin(pu*Math.PI)*0.28;
+  const V = { ...E, cielo };
+  delete V.sol; delete V.luna;
+  /* LA LUZ SOBRE TODO (André, 31-ago-2026): mezclar sólo el cielo no bastaba
+     —a mediodía los montes, el pasto y el agua seguían con su noche pintada y
+     la escena entera leía como anochecer—. Este tinte va encima de TODO al
+     final: cálido de día, ámbar al amanecer y al atardecer, azul apagado de
+     noche. Es lo que hace que se sienta la hora. */
+  const TINTES = {
+    'noche':     ['#060a16', 0.46],
+    'alba':      ['#3b3a6a', 0.30],
+    'amanecer':  ['#ff9a52', 0.20],
+    'mañana':    ['#e6f1ff', 0.16],
+    'mediodía':  ['#fff8e2', 0.22],
+    'tarde':     ['#ffeec8', 0.17],
+    'atardecer': ['#ff7a44', 0.20],
+    'anochecer': ['#2a2a52', 0.34],
+  };
+  const TN = TINTES[momento] || TINTES['mediodía'];
+  V.tinte = { col:TN[0], a:TN[1], momento };
+  if(esDia){ const alt = Math.sin(pu*Math.PI);
+    /* alto y chico al mediodía; grande y rojo cuando raspa el horizonte */
+    const col  = alt>0.55 ? 'rgba(255,250,232,.96)' : (alt>0.25 ? 'rgba(255,202,124,.95)' : 'rgba(244,110,66,.94)');
+    const halo = alt>0.55 ? 'rgba(255,246,206,.30)' : 'rgba(255,150,90,.28)';
+    V.sol = { x:ax, y:ay, r:Math.round(52 + (1-alt)*62), col, halo }; }
+  else V.luna = { x:ax, y:ay, r:(E.luna&&E.luna.r) || 46, col:'rgba(238,244,252,.9)', halo:'rgba(190,208,232,.18)' };
+  /* ── EL CLIMA ── */
+  const K = batClima(c, t);
+  V.clima = K;
+  V.lluvia = false; V.rayos = false; V.tormenta = false;
+  if(K.id === 'nubes'){ V.nubes = true; V.nubesCol = V.nubesCol || 'rgba(180,196,214,.5)'; }
+  if(K.id === 'bruma'){ V.hazeCol = 'rgba(200,214,232,.42)'; V.nubes = true; V.nubesCol = 'rgba(190,204,220,.30)'; }
+  if(K.id === 'lluvia'){ V.lluvia = true; V.nubes = true; V.nubesCol = 'rgba(140,158,180,.55)'; V.hazeCol = 'rgba(160,180,204,.24)'; }
+  if(K.id === 'chubasco'){ V.lluvia = true; V.nubes = true; V.nubesCol = 'rgba(110,126,148,.7)'; V.hazeCol = 'rgba(150,170,196,.34)';
+    V.cielo = V.cielo.map(col => mezHex(col, '#2a3240', 0.34)); }
+  if(K.id === 'tormenta'){ V.lluvia = true; V.rayos = true; V.nubes = true; V.nubesCol = 'rgba(96,110,132,.78)';
+    V.hazeCol = 'rgba(150,170,196,.30)'; V.cielo = V.cielo.map(col => mezHex(col, '#1c2230', 0.46)); }
+  /* un cielo cargado también apaga el suelo */
+  if(K.id === 'lluvia')   V.tinte = { col:'#37455c', a:Math.min(0.5, V.tinte.a + 0.14), momento:V.tinte.momento };
+  if(K.id === 'chubasco') V.tinte = { col:'#2c384c', a:Math.min(0.56, V.tinte.a + 0.22), momento:V.tinte.momento };
+  if(K.id === 'tormenta') V.tinte = { col:'#222c3e', a:Math.min(0.6, V.tinte.a + 0.28), momento:V.tinte.momento };
+  if(K.id === 'bruma')    V.tinte = { col:'#b9c8dc', a:Math.min(0.4, V.tinte.a + 0.10), momento:V.tinte.momento };
+  /* de noche todo se apaga un punto más */
+  if(noche) V.cielo = V.cielo.map(col => mezHex(col, '#080b14', 0.30));
+  return V;
+}
 /* ── EL ESTADO DE LA SESIÓN DEL DUELO ── cuándo abre su killzone, cuánto
    falta y si ya está viva. Todo en hora de NY, que es la del mercado. */
 function batSesionEstado(c, now){
@@ -12351,7 +12463,14 @@ function zenDibujaEscena(c, W, H, E, now, pet, poderHex, njCfg){
      de adorno salía como un tercero suelto a la izquierda. */
   if(!E.sinNinja) zenNinja(c, W*0.26, base, 1.2, now*0.55, 0, poderHex, njCfg||window._zenNinja);
   if(E.lava) zenLava(c, W, base, now);
-  if(E.rayos && Math.floor(now/1600)%3===0) zenRayo(c, W*(0.36+0.2*((Math.floor(now/1600))%2)), 16, base-70);
+  /* EL RAYO: antes sólo dibujaba el trazo. Un relámpago sin fogonazo no se
+     lee como tormenta, así que ahora la escena entera se blanquea un instante
+     y se apaga en ~180 ms. (André, 31-ago-2026) */
+  if(E.rayos && Math.floor(now/1600)%3===0){
+    zenRayo(c, W*(0.36+0.2*((Math.floor(now/1600))%2)), 16, base-70);
+    const dentro = now % 1600;
+    if(dentro < 200){ c.save(); c.globalAlpha = 0.5*(1 - dentro/200);
+      c.fillStyle='#eef4ff'; c.fillRect(0,0,W,H); c.restore(); } }
   if(E.playa){ c.fillStyle='rgba(228,206,150,.9)'; c.beginPath(); c.moveTo(0,H); c.lineTo(W,H); c.lineTo(W,base+H*0.14); c.quadraticCurveTo(W*0.5,base+H*0.04,0,base+H*0.16); c.closePath(); c.fill(); }
   c.fillStyle=E.agua; c.fillRect(0,base,W, (E.playa? H*0.16 : H-base));
   for(let i=0;i<7;i++){ const y=base+8+i*13; if(E.playa && y>base+H*0.16) break; c.strokeStyle='rgba(255,255,255,.06)'; c.lineWidth=2; c.beginPath(); c.moveTo(0,y); for(let x=0;x<=W;x+=36) c.lineTo(x,y+Math.sin((x+now*0.05)/58+i)*3); c.stroke(); }
@@ -12391,6 +12510,12 @@ function zenDibujaEscena(c, W, H, E, now, pet, poderHex, njCfg){
   if(E.flores) zenFlores(c,W,H,base,E.floresCol||'rgba(230,150,200,.9)',E.floresDens||1);
   if(E.pasto) zenPasto(c,W,H,base,now,E.pastoCol);
   if(E.tormenta) zenTormenta(c,W,H,now,rr);
+  /* ── LA LUZ DE LA HORA ── un velo sobre TODO lo pintado: es lo que hace
+     que a mediodía se vea mediodía y no una noche con el cielo azul. Va antes
+     de la frase para no apagar el texto. */
+  if(E.tinte && E.tinte.a > 0){
+    c.save(); c.globalAlpha = E.tinte.a; c.fillStyle = E.tinte.col;
+    c.fillRect(0,0,W,H); c.restore(); }
   if(E.frase) zenFrase(c, W*0.055, H*0.14, E.frase, E.fraseCol||'rgba(255,255,255,.5)');
   zenPoder(c,W,H,now,poderHex);   /* el poder de la katana energiza el fondo */
 }
@@ -13855,7 +13980,7 @@ function renderBatallaInterno(){
               <span class="bat-sede-ses ${E2.viva?'viva':''}">${E2.viva
                 ? '● ' + bi('KILLZONE ABIERTA · cierra en ','KILLZONE OPEN · closes in ') + batMinTxt(E2.min)
                 : bi('abre en ','opens in ') + batMinTxt(E2.min) + ' · ' + batSesAbreTxt(E2.ses) + ' NY'}</span>
-              <span class="bat-sede-dur">${esc(batDurTxt(c.duracion))}${(c.arrancado && c.fin && c.fin < c.arrancado + batDuracionMs(c.duracion, c.arrancado) - 60000) ? ' · ' + bi('hasta el cierre','until close') : ''}</span>
+              <span class="bat-sede-dur">${esc(batDurTxt(c.duracion))}${(c.arrancado && c.fin && c.fin < c.arrancado + batDuracionMs(c.duracion, c.arrancado) - 60000) ? ' · ' + bi('hasta el cierre','until close') : ''} · ${(()=>{ const K=batClima(c); return K.ico + ' ' + esc(loc(K.n)); })()}</span>
             </span>
           </span>`; })()}
         <button type="button" class="btn sm bat-end" id="batEndBtn">⏹ ${bi('Terminar','End')}</button>
@@ -14005,9 +14130,15 @@ function renderBatallaInterno(){
         _escId = 'turno:' + ix; _E0 = ZEN_ESCENAS[ix];
       }
       /* sinNinja: la escena trae su propio ninja de adorno y aquí los ninjas
-         son los dos que pelean */
-      const M = (window._dueloEsc && window._dueloEsc.id === _escId) ? window._dueloEsc.E
-        : ((window._dueloEsc = { id:_escId, E:{ ..._E0, sinNinja:true } }).E);
+         son los dos que pelean.
+         La caché lleva el MINUTO en la llave: el cielo sigue tu hora y el
+         clima cambia cada 40 min, así que una escena cacheada para siempre
+         se quedaba con el amanecer de cuando abriste la pantalla. */
+      const _minuto = Math.floor(Date.now()/60000);
+      const _cacheId = _escId + '@' + _minuto;
+      const M = (window._dueloEsc && window._dueloEsc.id === _cacheId) ? window._dueloEsc.E
+        : ((window._dueloEsc = { id:_cacheId,
+             E: batEscenaViva({ ..._E0, sinNinja:true }, c) }).E);
       const nj={ a:{ cfg:batNinjaDe(yo), col:KATANAS[batEquipadaDe(yo)].belt },
                  b:{ cfg:batNinjaDe(rivalDe), col:KATANAS[batEquipadaDe(rivalDe)].belt } };
       /* los pétalos de la escena viven entre cuadros: se siembran una vez */
