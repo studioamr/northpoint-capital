@@ -1804,6 +1804,10 @@ button.st-chip:hover{border-color:rgba(255,255,255,.45)}
 .c30-prot{margin-top:10px;padding:9px 12px;border:1px solid rgba(233,180,70,.24);
   border-radius:10px;background:rgba(233,180,70,.06)}
 .c30-prot span{font-size:11.5px;letter-spacing:.02em;color:#e9b446}
+.lg-vaciar{margin-left:auto;border:1px solid var(--line);background:transparent;color:var(--faint);
+  font-family:var(--mono);font-size:9px;letter-spacing:.14em;text-transform:uppercase;
+  padding:4px 10px;border-radius:99px;cursor:pointer}
+.lg-vaciar:hover{color:var(--down);border-color:color-mix(in srgb, var(--down) 45%, var(--line))}
 /* ── TU PANEL · las cuentas reales al frente del plan ── */
 .tp-filas{display:flex;flex-direction:column;gap:8px;margin-top:4px}
 .tp-fila{display:grid;grid-template-columns:1.6fr repeat(3,1fr);gap:14px;align-items:center;
@@ -15413,8 +15417,25 @@ function lgLog(){
       </div>`;
     }).join('');
   host.innerHTML = `
-    <div class="bt-log-h"><b>${tr('en.log.t')}</b><span class="micro">${list.length} ${list.length===1?'trade':'trades'}</span></div>
+    <!-- VACIAR, donde está el log (André, 31-ago-2026): borrar diez trades de
+         uno en uno son diez confirmaciones. Va aquí y no en una herramienta
+         aparte porque es donde los estás viendo. Dice cuántos se lleva y pide
+         que lo escribas: no es un botón que se pica sin querer. -->
+    <div class="bt-log-h"><b>${tr('en.log.t')}</b><span class="micro">${list.length} ${list.length===1?'trade':'trades'}</span>
+      ${list.length ? `<button type="button" class="lg-vaciar" id="lgVaciar">${bi('vaciar','clear')}</button>` : ''}</div>
     ${list.length ? `<div class="bt-log-body">${filas}</div>` : `<div class="bt-log-empty">${bi('Aún no hay trades registrados.','No trades logged yet.')}</div>`}`;
+  const vac = $('#lgVaciar');
+  if(vac) vac.onclick = () => {
+    const n = S.trades.length;
+    const r = prompt(bi(
+      'Esto borra los ' + n + ' trades de tu historial real. No se puede deshacer.\n\nEscribe BORRAR para confirmar:',
+      'This deletes all ' + n + ' trades from your real history. It cannot be undone.\n\nType BORRAR to confirm:'));
+    if((r||'').trim().toUpperCase() !== 'BORRAR') return;
+    S.trades = []; S.seqTrade = 0; save();
+    lgBalancePanel(); lgStats(); lgDibuja(1); lgLog(); lgHoy(); lgHistorial(); updateBadges();
+    toast(bi('Se borraron ' + n + ' trades. Registra el que sí llevas.',
+             n + ' trades deleted. Log the one you actually have.'));
+  };
   host.querySelectorAll('.del').forEach(b => b.onclick = () => {
     if(!confirm(bi('¿Borrar este trade real?','Delete this real trade?'))) return;
     const i = S.trades.findIndex(x=>x.id===b.dataset.id);
