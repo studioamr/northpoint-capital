@@ -1595,6 +1595,27 @@ button.st-chip:hover{border-color:rgba(255,255,255,.45)}
    en medio de nada. Ahora es una LISTA: el panel pone el marco, las filas se
    separan con una línea, y el color del resultado vive en una barra al costado
    en vez de teñir todo el contorno. (André, 31-ago-2026) */
+/* ── LAS CIFRAS DEBAJO DE LA GRÁFICA ──
+   Miden lo que la gráfica esté mostrando: el día que picaste, la sesión
+   abierta o la cuenta entera. Las mismas casillas siempre, para que comparar
+   dos días sea picar dos filas y no abrir dos vistas. (André, 31-ago-2026) */
+.lg-verbar{margin:10px 0 4px;border-top:1px solid var(--line);padding-top:10px}
+.lg-verbar.viendo{border-top-color:var(--accent)}
+.lgv-t{display:flex;align-items:center;gap:10px;font:600 10px/1 var(--mono);
+  letter-spacing:.14em;color:var(--dim);margin-bottom:9px}
+.lg-verbar.viendo .lgv-t{color:var(--accent)}
+.lgv-x{margin-left:auto;background:none;border:1px solid var(--line);border-radius:6px;
+  color:var(--dim);font:600 9px/1 var(--mono);letter-spacing:.12em;padding:5px 8px;cursor:pointer}
+.lgv-x:hover{color:var(--txt);border-color:var(--dim)}
+.lgv-g{display:grid;grid-template-columns:repeat(6,1fr);gap:8px}
+@media(max-width:720px){.lgv-g{grid-template-columns:repeat(3,1fr)}}
+.lgv-c em{display:block;font:600 9px/1 var(--mono);letter-spacing:.12em;color:var(--dim);
+  font-style:normal;margin-bottom:5px}
+.lgv-c b{font:600 15px/1.1 var(--mono);color:var(--txt)}
+.lgv-c b em{display:inline;font-size:10px;letter-spacing:.06em;color:var(--dim);margin:0}
+.lgv-c b.up{color:var(--up)} .lgv-c b.down{color:var(--down)}
+.lg-x{font-style:normal;font-size:10px;letter-spacing:.1em;color:var(--dim);opacity:.85}
+.lg-hist-fila.viendo{outline:1px solid var(--accent);outline-offset:-1px}
 .lg-hist{margin-top:12px;padding:16px 18px}
 .lg-hist-tabla{display:flex;flex-direction:column}
 .lg-hist-fila{position:relative;display:grid;
@@ -4857,6 +4878,8 @@ stop[stop-color="#9BC0DC"]{stop-color:var(--txt)}
             <canvas id="lgCanvas"></canvas>
             <div id="lgEmpty" class="bt-empty"></div>
           </div>
+          <!-- LAS CIFRAS DE LO QUE MUESTRA LA GRÁFICA, siempre debajo de ella -->
+          <div class="lg-verbar" id="lgVerBar" hidden></div>
           <div class="bt-controls">
             <div class="bt-dir" id="lgDir">
               <button type="button" data-dir="L" class="on">LONG</button>
@@ -9420,7 +9443,7 @@ function abrirDia(iso, opts){
   $('#diaTitle').textContent = fmtFecha(iso);
   /* si ese día cerraste una sesión, su veredicto manda: es contra lo que TÚ te
      habías puesto, no contra una regla genérica */
-  const _sell = (Array.isArray(S.lgCerradas) ? S.lgCerradas : []).find(c => c.fecha === iso);
+  const _sell = lgCerradasMias().find(c => c.fecha === iso);
   const _ver = _sell ? (_sell.estado === 'roto' ? bi('DRAWDOWN ROTO','DRAWDOWN BROKEN')
                       : _sell.estado === 'listo' ? bi('OBJETIVO CUMPLIDO','TARGET MET')
                       : _sell.estado === 'demas' ? bi('TRADES DE MÁS','OVER TRADE CAP') : null) : null;
@@ -9436,7 +9459,7 @@ function abrirDia(iso, opts){
     const wr = trs.length ? Math.round(wins/trs.length*100) : 0;
     const mejor = trs.reduce((m,t)=>Math.max(m, t.pnl||0), 0);
     const peor  = trs.reduce((m,t)=>Math.min(m, t.pnl||0), 0);
-    const sell = (Array.isArray(S.lgCerradas)?S.lgCerradas:[]).find(c=>c.fecha===iso);
+    const sell = lgCerradasMias().find(c => c.fecha === iso);   /* la del socio en sesión, no la de otro */
     const ses  = sell || (lgSesiones()[iso] || null);
     const meta = ses ? (sell ? sell.tp : ses.tp) : null;
     const tope = ses ? (sell ? sell.dd : ses.dd) : null;
@@ -15367,6 +15390,8 @@ function renderBatallaInterno(){
    Mismo formato que Backtesting, pero los trades caen en el historial REAL
    (S.trades) y en la mesa. La curva es tu equity real, en orden cronológico. */
 let lgDir = 'L', lgLigado = false, lgSel = '__all';
+/* el día que estás mirando en la gráfica, o null = la cuenta completa */
+let lgVerDia = null;
 function lgCtasProp(){ return ordenar(mias(S.accounts).filter(a => esViva(a) && !esLive(a) && !esSim(a) && cuentaEnPie(a))); }
 /* trades reales, filtrados por la cuenta seleccionada arriba.
    OJO: un trade puede estar etiquetado a VARIAS cuentas a la vez (así lo crea
@@ -15418,8 +15443,79 @@ function analizaMetas(list, target, dd){
     if(dd && iBreach<0 && (pico-acc)>=dd) iBreach=i; });
   return { pico, ddPeor, iBreach, iObj, total:acc };
 }
+/* ══ QUÉ ESTÁ MOSTRANDO LA GRÁFICA ══ (André, 31-ago-2026)
+   La curva, el número grande, las tarjetas y la barra de abajo sacaban su
+   lista por su cuenta, y bastaba tocar una para que dijeran cosas distintas.
+   Se pregunta UNA vez y las cuatro leen lo mismo. Orden: el día que picaste
+   manda, luego la sesión abierta, luego la cuenta entera. */
+function lgAmbito(){
+  const todos = lgTradesReales();
+  if(lgVerDia){
+    const r = lgVerDia.r || {};
+    return { lista: todos.filter(t => t.date === lgVerDia.fecha),
+             tp: r.tp || 0, dd: r.tope || 0, maxT: (lgVerDia.ses && lgVerDia.ses.trades) || 0,
+             fecha: lgVerDia.fecha, tipo: 'dia',
+             et: bi('VIENDO','VIEWING') + ' · ' + fmtFecha(lgVerDia.fecha) };
+  }
+  const ses = lgSesionHoy();
+  if(ses){
+    const hoy = todayISO(), m = lgMult(hoy);
+    return { lista: todos.filter(t => t.date === hoy),
+             tp: (ses.tp||0)*m, dd: (ses.dd||0)*m, maxT: ses.trades||0,
+             fecha: hoy, tipo: 'sesion',
+             et: bi('SESIÓN DE HOY','TODAY\'S SESSION') + ' · ' + fmtFecha(hoy) };
+  }
+  let tp = 0, dd = 0;
+  if(typeof lgSel === 'string' && lgSel.startsWith('ac_')){
+    const a = S.accounts.find(x => x.id === lgSel);
+    if(a){ const m = metasDe(a); tp = m.target || 0; dd = m.dd || 0; }
+  }
+  const cta = (S.accounts||[]).find(x => x.id === lgSel);
+  return { lista: todos, tp, dd, maxT: 0, fecha: null, tipo: 'todo',
+           et: bi('TODO','EVERYTHING') + ' · ' + (cta ? cta.alias
+             : lgSel === SIN_CUENTA ? bi('sin cuenta','no account') : bi('todas las cuentas','all accounts')) };
+}
+/* ── LAS CIFRAS, SIEMPRE DEBAJO DE LA GRÁFICA ──
+   Con las mismas casillas mida lo que mida: lo único que cambia es de dónde
+   sale la lista. Así comparar dos días es picar dos filas, no abrir dos vistas. */
+function lgVerBarra(){
+  const host = $('#lgVerBar'); if(!host) return;
+  const A = lgAmbito(), L = A.lista;
+  const pnl = L.reduce((a,t)=>a+(t.pnl||0),0);
+  const wins = L.filter(t=>(t.pnl||0)>0).length;
+  let eq=0, pico=0, ddReal=0;
+  L.forEach(t => { eq+=(t.pnl||0); if(eq>pico) pico=eq; const c=eq-pico; if(c<ddReal) ddReal=c; });
+  const roto = A.dd && Math.abs(ddReal) >= A.dd;
+  const deMas = A.maxT && L.length > A.maxT;
+  const cel = (k,v,cls) => `<div class="lgv-c"><em>${k}</em><b class="${cls||''}">${v}</b></div>`;
+  host.hidden = false;
+  host.className = 'lg-verbar' + (A.tipo === 'dia' ? ' viendo' : '');
+  host.innerHTML = `
+    <div class="lgv-t">${esc(A.et)}
+      ${A.tipo === 'dia' ? `<button type="button" class="lgv-x" id="lgVerX">${bi('ver todo','see all')} ✕</button>` : ''}</div>
+    <div class="lgv-g">
+      ${cel(bi('P&L','P&L'), fmt$(pnl,true), pnl>0?'up':pnl<0?'down':'')}
+      ${cel(bi('TRADES','TRADES'), L.length + (A.maxT ? `<em>/${A.maxT}</em>` : ''), deMas?'down':'')}
+      ${cel(bi('GANADOS','WON'), wins + `<em>/${L.length}</em>`)}
+      ${cel(bi('WINRATE','WIN RATE'), L.length ? Math.round(wins/L.length*100)+'%' : '—')}
+      ${cel(bi('DRAWDOWN','DRAWDOWN'), fmt$(ddReal,true) + (A.dd ? ` <em>${bi('de','of')} −${fmt$(A.dd)}</em>` : ''), roto?'down':'')}
+      ${cel(bi('OBJETIVO','TARGET'), A.tp ? (pnl>=A.tp ? `<span class="up">✓</span> ${fmt$(A.tp)}` : fmt$(pnl,true)+` <em>${bi('de','of')} ${fmt$(A.tp)}</em>`) : '—', (A.tp&&pnl>=A.tp)?'up':'')}
+    </div>`;
+  const x = $('#lgVerX');
+  if(x) x.onclick = () => { lgVerDia = null; lgStats(); lgDibuja(1); lgHistorial(); };
+}
 function lgStats(){
-  const list = lgTradesReales(), st = computeStats(list);
+  const A = lgAmbito(), list = A.lista, st = computeStats(list);
+  lgVerBarra();
+  /* el rótulo de arriba decía «TODAS LAS CUENTAS» con la curva de un solo día:
+     el número grande y la etiqueta hablaban de cosas distintas */
+  const tit = $('#lgTitulo');
+  if(tit){
+    const cta = (S.accounts||[]).find(x => x.id === lgSel);
+    tit.textContent = A.tipo === 'dia' ? bi('VIENDO','VIEWING') + ' · ' + fmtFecha(A.fecha)
+      : cta ? cta.alias
+      : lgSel === SIN_CUENTA ? bi('Sin cuenta','No account') : bi('Todas las cuentas','All accounts');
+  }
   const wins = list.filter(t=>(t.pnl||0)>0).length, losses = list.filter(t=>(t.pnl||0)<0).length;
   const eq = $('#lgEqNum'); if(eq){ eq.textContent = fmt$(st.pnl,true); eq.className = 'bt-eq ' + (st.pnl>0?'up':st.pnl<0?'down':''); }
   const tarjetas = [
@@ -15428,11 +15524,10 @@ function lgStats(){
     ['PF', st.pf===Infinity?'∞':(isNaN(st.pf)?'—':st.pf.toFixed(2))],
     ['W / L', `<span class="up">${wins}</span> / <span class="down">${losses}</span>`],
   ];
-  /* SÓLO con una cuenta individual (no en "Todas"): cercanía al objetivo y estado del drawdown */
-  if(typeof lgSel==='string' && lgSel.startsWith('ac_')){
-    const a = S.accounts.find(x=>x.id===lgSel);
-    const m = a ? metasDe(a) : {};
-    const target = m.target || null, dd = m.dd || null;
+  /* contra el objetivo de lo que se está mirando (día picado, sesión o cuenta) */
+  {
+    const A = lgAmbito();
+    const target = A.tp || null, dd = A.dd || null;
     if(target || dd){
       const m = analizaMetas(list, target, dd);
       if(target){
@@ -15468,23 +15563,15 @@ function metasDe(a){
    HOY contra el objetivo y el drawdown que TÚ te pusiste.
    Sin sesión abierta vuelve a ser la curva completa de la cuenta. */
 function lgDibuja(prog){
-  let opts = {};
-  const ses = (typeof lgSesionHoy === 'function') ? lgSesionHoy() : null;
-  let lista = lgTradesReales();
-  if(ses){
-    /* por DÍA, no por la hora en que abriste: si capturaste un trade y luego
-       abriste la sesión, filtrar por ts lo dejaba fuera de la curva pero dentro
-       del panel del día — dos cifras distintas para el mismo día. */
-    const hoy = todayISO();
-    lista = lista.filter(t => t.date === hoy);
-    opts = { target: ses.tp || 0, dd: ses.dd || 0, hitos: true };
-  } else if(typeof lgSel === 'string' && lgSel.startsWith('ac_')){
-    const a = S.accounts.find(x=>x.id===lgSel);
-    if(a){ const m = metasDe(a); opts = { target: m.target, dd: m.dd, hitos: true }; }
-  }
-  pintaCurva($('#lgCanvas'), $('#lgEmpty'), lista.map(t=>t.pnl||0), prog,
-    ses ? bi('Sesión abierta · registra tu primer trade.','Session open · log your first trade.')
-        : bi('Registra tu primer trade: dirección, P&L y Enter.','Log your first trade: direction, P&L and Enter.'),
+  /* por DÍA, no por la hora en que abriste: si capturaste un trade y luego
+     abriste la sesión, filtrar por ts lo dejaba fuera de la curva pero dentro
+     del panel del día — dos cifras distintas para el mismo día. */
+  const A = lgAmbito();
+  const opts = (A.tp || A.dd) ? { target: A.tp || 0, dd: A.dd || 0, hitos: true } : {};
+  pintaCurva($('#lgCanvas'), $('#lgEmpty'), A.lista.map(t=>t.pnl||0), prog,
+    A.tipo === 'dia'  ? bi('Ese día no tiene trades registrados.','That day has no logged trades.')
+    : A.tipo === 'sesion' ? bi('Sesión abierta · registra tu primer trade.','Session open · log your first trade.')
+    : bi('Registra tu primer trade: dirección, P&L y Enter.','Log your first trade: direction, P&L and Enter.'),
     opts);
 }
 function lgAnima(){ animaCurva(lgDibuja); }
@@ -15629,8 +15716,65 @@ function lgAgrega(){
    se mide la sesión. Escribirlos ANTES de operar es medio oficio; heredarlos
    de una tabla no compromete a nada.
    Se guardan por fecha, así que abrir el día es un acto, no una casilla. */
-function lgSesiones(){ if(!S.lgSesion || typeof S.lgSesion !== 'object') S.lgSesion = {}; return S.lgSesion; }
+/* ══ CADA QUIEN SU DÍA ══ (André, 31-ago-2026)
+   La sesión vivía en S.lgSesion con la FECHA como única llave, y ese objeto se
+   sincroniza entre socios: el día que André abría con su objetivo y su
+   drawdown le salía IGUAL a Gerardo —con el P&L de André y su «ROTO»—. Un
+   límite de pérdida ajeno anunciado como propio es peor que no tener ninguno:
+   te dice que el día se acabó cuando ni has entrado.
+   Se usa la misma llave que ya lleva el resto de la mesa (claveSesion): la
+   fecha pelada es de André —así están las que ya existen, no hay que mover
+   ningún historial— y las de los demás llevan @quién. */
+function lgClave(iso){
+  const uid = socioEnSesion();
+  return !uid || uid === DUENO_ORIGEN ? iso : iso + '@' + uid;
+}
+function lgSesiones(){
+  if(!S.lgSesion || typeof S.lgSesion !== 'object') S.lgSesion = {};
+  const uid = socioEnSesion(), out = {};
+  Object.keys(S.lgSesion).forEach(k => {
+    const corte = k.indexOf('@');
+    const iso   = corte < 0 ? k : k.slice(0, corte);
+    const dueno = corte < 0 ? DUENO_ORIGEN : k.slice(corte + 1);
+    if(!uid || dueno === uid) out[iso] = S.lgSesion[k];
+  });
+  return out;   /* copia: para ESCRIBIR va S.lgSesion[lgClave(fecha)] */
+}
 function lgSesionHoy(){ return lgSesiones()[todayISO()] || null; }
+/* las selladas también son de quien las cerró; las viejas sin dueño, de André */
+function lgCerradasMias(){
+  if(!Array.isArray(S.lgCerradas)) S.lgCerradas = [];
+  const uid = socioEnSesion();
+  return uid ? S.lgCerradas.filter(c => (c.por || DUENO_ORIGEN) === uid) : S.lgCerradas;
+}
+/* la plantilla del formulario también es personal */
+function lgPresetMio(){
+  const uid = socioEnSesion();
+  if(!uid || uid === DUENO_ORIGEN)
+    return (S.lgPreset && typeof S.lgPreset === 'object') ? S.lgPreset : null;
+  return (S.lgPresets && S.lgPresets[uid]) || null;
+}
+function lgGuardaPreset(pr){
+  const uid = socioEnSesion();
+  if(!uid || uid === DUENO_ORIGEN){ S.lgPreset = pr; return; }
+  if(!S.lgPresets || typeof S.lgPresets !== 'object') S.lgPresets = {};
+  S.lgPresets[uid] = pr;
+}
+/* ══ EL LÍMITE TAMBIÉN SE MULTIPLICA ══ (André, 31-ago-2026)
+   El P&L de la vista es el de TODAS las cuentas —un trade etiquetado a 3
+   cuentas suma 3 veces—, pero el objetivo y el drawdown se comparaban contra
+   lo que escribiste para UNA. Salía «−$3,000 de −$500»: un drawdown roto seis
+   veces que en realidad iba a la mitad de su límite, y el día se cerraba solo.
+   Lo que escribes es POR CUENTA; aquí se lleva a la vista que estás mirando. */
+function lgMult(fecha){
+  if(typeof lgSel === 'string' && lgSel !== '__all') return 1;
+  const ids = new Set(lgCtasProp().map(a => a.id));
+  if(!ids.size) return 1;
+  let n = 0;
+  misTrades().forEach(t => { if(!fecha || t.date === fecha){
+    const k = nSel(t, ids); if(k > n) n = k; } });
+  return n > 0 ? n : ids.size;
+}
 /* los valores con los que abre el formulario: los de la fase de tu cuenta,
    para no empezar de cero — pero se pueden cambiar todos */
 function lgSugerido(){
@@ -15642,7 +15786,7 @@ function lgSugerido(){
      y 'riesgo por trade' y no cuadraban entre sí —$250 de riesgo contra $450
      de límite no dice nada, y la ficha mostraba las dos como si midieran cosas
      distintas—. Se queda el DRAWDOWN, que es lo que te saca de una cuenta. */
-  const P = (S.lgPreset && typeof S.lgPreset === 'object') ? S.lgPreset : null;
+  const P = lgPresetMio();
   if(P && P.tp > 0) return { tp:P.tp, dd:P.dd, trades:P.trades };
   const cta = (lgSel && lgSel !== '__all') ? (S.accounts||[]).find(x=>x.id===lgSel)
             : mias(S.accounts||[]).find(x=>x.estado==='activa');
@@ -15659,11 +15803,12 @@ window.lgAbreSesion = function(){
   if(!(dd > 0)){ toast(bi('Ponle un drawdown.','Set a drawdown.')); return; }
   const antes = lgSesionHoy();
   /* editar NO reinicia el día: se conserva la hora de apertura */
-  lgSesiones()[todayISO()] = { tp, dd, trades: tr || 0,
+  lgSesiones();   /* inicializa el contenedor */
+  S.lgSesion[lgClave(todayISO())] = { tp, dd, trades: tr || 0,
     ini: (antes && antes.ini) || Date.now() };
-  S.lgPreset = { tp, dd, trades: tr || 0 };
-  lgEditando = false;
-  save(); lgHoy(); lgStats(); lgDibuja(1); lgLog();
+  lgGuardaPreset({ tp, dd, trades: tr || 0 });
+  lgEditando = false; lgVerDia = null;   /* la sesión nueva se adueña de la gráfica */
+  save(); lgHoy(); lgStats(); lgDibuja(1); lgLog(); lgHistorial();
   toast(antes ? bi('Números actualizados · objetivo '+fmt$(tp),'Numbers updated · target '+fmt$(tp))
               : bi('Sesión abierta · objetivo '+fmt$(tp),'Session open · target '+fmt$(tp)));
 };
@@ -15691,12 +15836,15 @@ window.lgCierraSesion = function(){
   if(!Array.isArray(S.lgCerradas)) S.lgCerradas = [];
   S.lgCerradas.unshift({
     id: 'ls_' + Math.random().toString(36).slice(2,9),
-    fecha: hoy, tp: ses.tp, dd: ses.dd, maxT: ses.trades || 0,
+    fecha: hoy, por: socioEnSesion() || DUENO_ORIGEN,
+    /* se sella el límite EFECTIVO (ya por el número de cuentas): si mañana
+       cierras una cuenta, la fila de ayer sigue midiendo contra lo de ayer */
+    tp: r.tp, dd: r.tope, maxT: ses.trades || 0, mult: r.mult,
     ini: ses.ini || null, fin: Date.now(),
     pnl: r.pnl, ddReal: r.dd, n: r.n, estado: r.estado,
   });
   if(S.lgCerradas.length > 120) S.lgCerradas.length = 120;
-  delete lgSesiones()[hoy]; lgEditando = false;
+  delete S.lgSesion[lgClave(hoy)]; lgEditando = false; lgVerDia = null;
   save(); lgHoy(); lgHistorial(); lgStats(); lgDibuja(1); lgLog();
   toast(bi('Día cerrado · ' + fmt$(r.pnl, true) + ' · guardado en tu registro',
            'Day closed · ' + fmt$(r.pnl, true) + ' · saved to your log'));
@@ -15732,7 +15880,11 @@ function lgHoy(){
   const pnl = mios.reduce((a,t)=>a+(t.pnl||0),0);
   let eq = 0, pico = 0, dd = 0;
   mios.forEach(t => { eq += (t.pnl||0); if(eq>pico) pico=eq; const c2=eq-pico; if(c2<dd) dd=c2; });
-  const meta = ses.tp, tope = ses.dd, maxT = ses.trades;
+  const mult = lgMult(hoy);
+  const meta = ses.tp * mult, tope = ses.dd * mult, maxT = ses.trades;
+  /* «×3 cuentas» explícito: si el número que ves no es el que escribiste,
+     tiene que decir por qué */
+  const xN = mult > 1 ? ` <em class="lg-x">×${mult} ${bi('cuentas','accounts')}</em>` : '';
   const pct = meta ? Math.max(0, Math.min(100, pnl/meta*100)) : 0;
   const ddPct = tope ? Math.max(0, Math.min(100, Math.abs(dd)/tope*100)) : 0;
   const roto = tope && Math.abs(dd) >= tope;
@@ -15744,12 +15896,12 @@ function lgHoy(){
       <button type="button" class="lg-cerrar-ses" onclick="lgCierraSesion()">${bi('cerrar','close')}</button></div>
     <div class="bd-fila">
       <span class="bd-et">${bi('OBJETIVO','TARGET')}</span>
-      <b class="bd-v ${pnl>=meta?'ok':''}">${fmt$(pnl,true)} <em>${bi('de','of')} ${fmt$(meta)}</em></b>
+      <b class="bd-v ${pnl>=meta?'ok':''}">${fmt$(pnl,true)} <em>${bi('de','of')} ${fmt$(meta)}</em>${xN}</b>
       ${barra(pct,'up')}
     </div>
     <div class="bd-fila">
       <span class="bd-et">${bi('DRAWDOWN','DRAWDOWN')}</span>
-      <b class="bd-v ${roto?'mal':''}">${fmt$(dd,true)} <em>${bi('de','of')} −${fmt$(tope)}</em></b>
+      <b class="bd-v ${roto?'mal':''}">${fmt$(dd,true)} <em>${bi('de','of')} −${fmt$(tope)}</em>${xN}</b>
       ${barra(ddPct,'down')}
     </div>
     <div class="bd-chips">
@@ -15774,10 +15926,14 @@ function lgDiaResumen(fecha, ses){
   const pnl = mios.reduce((a,t)=>a+(t.pnl||0),0);
   let eq=0, pico=0, dd=0;
   mios.forEach(t => { eq += (t.pnl||0); if(eq>pico) pico=eq; const c2=eq-pico; if(c2<dd) dd=c2; });
-  const roto  = ses.dd && Math.abs(dd) >= ses.dd;
+  /* una sesión SELLADA ya trae sus límites efectivos (ses.mult): no se vuelven
+     a multiplicar. Una abierta se lleva a la vista de hoy. */
+  const mult = ses.mult ? 1 : lgMult(fecha);
+  const tp = (ses.tp || 0) * mult, tope = (ses.dd || 0) * mult;
+  const roto  = tope && Math.abs(dd) >= tope;
   const deMas = ses.trades && mios.length > ses.trades;
-  const listo = ses.tp && pnl >= ses.tp;
-  return { pnl, dd, n:mios.length, roto, deMas, listo,
+  const listo = tp && pnl >= tp;
+  return { pnl, dd, n:mios.length, roto, deMas, listo, tp, tope, mult: ses.mult || mult,
            estado: roto ? 'roto' : (listo ? 'listo' : (deMas ? 'demas' : 'neutro')) };
 }
 /* ══ EL BALANCE Y EL CAMINO ══ (André, 31-ago-2026)
@@ -15852,9 +16008,9 @@ function lgHistorial(){
   /* las SELLADAS mandan: traen el resultado con el que se cerraron. Las de días
      anteriores que quedaron abiertas se calculan al vuelo, para no perder lo
      que ya había antes de que cerrar sellara. */
-  const selladas = (Array.isArray(S.lgCerradas) ? S.lgCerradas : []).map(c => ({
-    f: c.fecha, sellada: true, ses: { tp:c.tp, dd:c.dd, trades:c.maxT },
-    r: { pnl:c.pnl, dd:c.ddReal, n:c.n, estado:c.estado,
+  const selladas = lgCerradasMias().map(c => ({
+    f: c.fecha, sellada: true, ses: { tp:c.tp, dd:c.dd, trades:c.maxT, mult:c.mult||1 },
+    r: { pnl:c.pnl, dd:c.ddReal, n:c.n, estado:c.estado, tp:c.tp, tope:c.dd, mult:c.mult||1,
          roto:c.estado==='roto', listo:c.estado==='listo', deMas:c.estado==='demas' },
   }));
   const abiertas = Object.keys(lgSesiones()).filter(f => f !== hoy).sort().reverse()
@@ -15862,7 +16018,7 @@ function lgHistorial(){
   const R = selladas.concat(abiertas).slice(0, 30);
   /* el id de la sellada, para poder editarla o borrarla sin confundir dos del
      mismo día */
-  const sel = f2 => { const c = (Array.isArray(S.lgCerradas)?S.lgCerradas:[]).find(x=>x.fecha===f2);
+  const sel = f2 => { const c = lgCerradasMias().find(x => x.fecha === f2);
     return c ? c.id : ''; };
   if(!R.length){
     host.innerHTML = `<div class="bd-t">${bi('SESIONES PASADAS','PAST SESSIONS')}</div>
@@ -15878,12 +16034,12 @@ function lgHistorial(){
          resultado; el resumen sólo repetía. -->
     <div class="lg-hist-tabla">
       ${R.map(({f, ses, r, sellada}) => `
-        <div class="lg-hist-fila ${r.estado} abrible" data-dia="${f}" role="button" tabindex="0"
-             title="${bi('Ver el día completo','See the full day')}">
+        <div class="lg-hist-fila ${r.estado} abrible ${lgVerDia && lgVerDia.fecha===f ? 'viendo' : ''}" data-dia="${f}" role="button" tabindex="0"
+             title="${bi('Poner la gráfica en este día','Put the chart on this day')}">
           <span class="lgh-f">${esc(fmtFecha(f))}${f === hoy ? ' <em style="font-style:normal;opacity:.6">'+bi('hoy','today')+'</em>' : ''}</span>
           <b class="lgh-p ${r.pnl>=0?'up':'down'}">${fmt$(r.pnl,true)}</b>
-          <span class="lgh-n">${bi('objetivo','target')} ${fmt$(ses.tp)}</span>
-          <span class="lgh-n ${r.roto?'mal':''}">dd ${fmt$(r.dd,true)} <em>${bi('de','of')} −${fmt$(ses.dd)}</em></span>
+          <span class="lgh-n">${bi('objetivo','target')} ${fmt$(r.tp != null ? r.tp : ses.tp)}</span>
+          <span class="lgh-n ${r.roto?'mal':''}">dd ${fmt$(r.dd,true)} <em>${bi('de','of')} −${fmt$(r.tope != null ? r.tope : ses.dd)}</em></span>
           <span class="lgh-n ${r.deMas?'mal':''}">${r.n}${ses.trades?'/'+ses.trades:''} ${bi('trades','trades')}</span>
           <span class="lgh-e">${r.roto ? bi('ROTO','BROKEN') : r.listo ? bi('CUMPLIDO','MET') : r.deMas ? bi('DE MÁS','OVER') : '—'} ›</span>
           <!-- EDITAR Y BORRAR una sesión sellada (André, 31-ago-2026): quedaba
@@ -15897,7 +16053,7 @@ function lgHistorial(){
     </div>`;
   /* AL PICAR UN DÍA se abre su panel: las cifras, la curva, los trades con su
      captura y su nota. Antes la fila era un renglón muerto. (André, 31-ago) */
-  const cerradas = () => Array.isArray(S.lgCerradas) ? S.lgCerradas : (S.lgCerradas = []);
+  const cerradas = () => lgCerradasMias();
   host.querySelectorAll('[data-eds]').forEach(b => b.onclick = e => {
     e.stopPropagation();
     const c = cerradas().find(x => x.id === b.dataset.eds); if(!c) return;
@@ -15925,13 +16081,27 @@ function lgHistorial(){
     cerradas().splice(i, 1); save(); lgHistorial();
     toast(bi('Sesión borrada','Session deleted'));
   });
+  /* ══ PICAR UN DÍA MUEVE LA GRÁFICA ══ (André, 31-ago-2026)
+     Antes abría un panel encima con su propia curva, sus propios trades y sus
+     propias cifras: para comparar dos días había que abrir, cerrar y abrir, y
+     acababas leyendo la misma información en dos sitios distintos. Ahora la
+     fila apunta la gráfica que YA estás viendo a ese día y pone sus cifras
+     debajo. Volver a picarla la regresa a la vista completa. */
+  const cual = new Map(R.map(x => [x.f, x]));
   host.querySelectorAll('[data-dia]').forEach(el => {
-    const abre = () => { const d = el.dataset.dia;
-      const hay = ((tradesByDay()[d] || []).length) || misTrades().some(t => t.date === d);
-      if(hay) abrirDia(d, { todas:true });
-      else toast(bi('Ese día no tiene trades registrados.','That day has no logged trades.')); };
-    el.onclick = abre;
-    el.onkeydown = e => { if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); abre(); } };
+    const ver = () => {
+      const d = el.dataset.dia;
+      if(lgVerDia && lgVerDia.fecha === d){ lgVerDia = null; }
+      else {
+        const x = cual.get(d); if(!x) return;
+        lgVerDia = { fecha:d, r:x.r, ses:x.ses, sellada:x.sellada };
+      }
+      lgStats(); lgDibuja(1); lgHistorial();
+      const wrap = $('#lgVerBar');
+      if(wrap && lgVerDia) wrap.scrollIntoView({ behavior:'smooth', block:'center' });
+    };
+    el.onclick = ver;
+    el.onkeydown = e => { if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); ver(); } };
   });
   host.hidden = false;
 }
@@ -15943,6 +16113,7 @@ function renderLog(){
   lgLigado = true;
   $('#lgCta').addEventListener('change', e => {
     lgSel = e.target.value;
+    lgVerDia = null;          /* otra cuenta, otro día: la gráfica vuelve a lo suyo */
     lgCtas(); lgBalancePanel(); lgStats(); lgLog(); lgHoy(); lgHistorial();
     requestAnimationFrame(() => lgDibuja(1));
   });
