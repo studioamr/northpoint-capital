@@ -1743,13 +1743,6 @@ button.st-chip:hover{border-color:rgba(255,255,255,.45)}
 .bd-chips b em{font-style:normal;font-size:10px;font-weight:400;color:var(--faint)}
 .bd-roto,.bd-listo{font-size:12px;line-height:1.5;margin:11px 0 0;padding-top:10px;border-top:1px solid var(--line-soft)}
 .bd-roto{color:var(--down)} .bd-listo{color:var(--up)}
-/* EL RIVAL sobre su ecosistema: el mundo de fondo y su ficha encima */
-.bat-panel.sinGraf{position:relative;padding:0;overflow:hidden;min-height:150px}
-.bat-rival-esc{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:0}
-.bat-rival-in{position:relative;z-index:1;padding:16px 18px}
-.bat-panel.sinGraf .bat-panel-nom,.bat-panel.sinGraf .bat-panel-nt{color:rgba(255,255,255,.9)}
-.bat-panel.sinGraf .bt-log-row{color:rgba(255,255,255,.85)}
-.bat-panel.sinGraf .bt-log-empty{color:rgba(255,255,255,.55)}
 .bat-panel.rival{border-color:var(--line-soft)}
 .bat-panel.lead{border-color:var(--up);box-shadow:inset 0 0 0 1px rgba(48,209,88,.25)}
 .bat-panel-h{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
@@ -12035,11 +12028,16 @@ function zenNinja(c,x,base,s,now,ph,col,nj,flip,anda){ const kc=col||'#b53a2e';
        hoja  : acero gris con su filo claro
        mango : del color de su katana, aclarado para que no se hunda
        aura  : sólo sobre la empuñadura, discreta */
-  const _mx = corta ? 2*s : 8.5*s, _my = corta ? -27*s : -24*s;   /* la empuñadura */
-  const _hx = corta ? _mx + Math.cos(aSl)*17*s : 26*s;            /* la punta */
-  const _hy = corta ? _my + Math.sin(aSl)*17*s : -30.5*s;
-  const _px = corta ? _mx - Math.cos(aSl)*4.5*s : 3.6*s;          /* el pomo */
-  const _py = corta ? _my - Math.sin(aSl)*4.5*s : -22.8*s;
+  /* TRES POSES: cortando, EN GUARDIA (sólo cuando pelean, con las dos manos
+     al frente) y en reposo — la katana colgada a la espalda, que es como se
+     ve normal y como estaba bien. */
+  const guardia = anda === 'guardia';
+  const _mx = corta ? 2*s : (guardia ? 8.5*s : -9*s);              /* la empuñadura */
+  const _my = corta ? -27*s : (guardia ? -24*s : -38*s);
+  const _hx = corta ? _mx + Math.cos(aSl)*17*s : (guardia ? 26*s : 9*s);   /* la punta */
+  const _hy = corta ? _my + Math.sin(aSl)*17*s : (guardia ? -30.5*s : -16*s);
+  const _px = corta ? _mx - Math.cos(aSl)*4.5*s : (guardia ? 3.6*s : -13*s);  /* el pomo */
+  const _py = corta ? _my - Math.sin(aSl)*4.5*s : (guardia ? -22.8*s : -43*s);
   const _kh = String(kc).replace('#','');
   const _claro = _kh.length === 6
     ? '#' + [0,2,4].map(i2=>{ const v = parseInt(_kh.slice(i2,i2+2),16);
@@ -12071,10 +12069,13 @@ function zenNinja(c,x,base,s,now,ph,col,nj,flip,anda){ const kc=col||'#b53a2e';
   const p1 = anda ? Math.sin(now/150)*2.2*s : 0, p2 = -p1;
   c.fillStyle=cfg.traje; c.fillRect(-5*s,-14*s+Math.max(0,p1),4*s,14*s-Math.max(0,p1)); c.fillRect(2*s,-14*s+Math.max(0,p2),4*s,14*s-Math.max(0,p2));
   c.fillRect(-6.5*s,-30*s,13*s,18*s);
-  /* LAS DOS MANOS al mango, por delante del torso */
-  c.strokeStyle=cfg.traje; c.lineWidth=2.8*s; c.lineCap='round';
-  c.beginPath(); c.moveTo(3.5*s,-26.5*s); c.lineTo(_mx-0.6*s,_my+0.4*s); c.stroke();
-  c.beginPath(); c.moveTo(1*s,-25*s);     c.lineTo(_px+1.2*s,_py+0.6*s); c.stroke();
+  /* LAS DOS MANOS al mango — SÓLO EN GUARDIA. En reposo la katana va a la
+     espalda y no hay nada que sujetar por delante. */
+  if(guardia){
+    c.strokeStyle=cfg.traje; c.lineWidth=2.8*s; c.lineCap='round';
+    c.beginPath(); c.moveTo(3.5*s,-26.5*s); c.lineTo(_mx-0.6*s,_my+0.4*s); c.stroke();
+    c.beginPath(); c.moveTo(1*s,-25*s);     c.lineTo(_px+1.2*s,_py+0.6*s); c.stroke();
+  }
   c.fillStyle=cfg.traje; c.beginPath(); c.arc(0,-33*s,5.6*s,0,7); c.fill();
   /* EL ANTIFAZ: franja del color de su katana sobre los ojos, y los ojos
      encima. Sin esto la cabeza era un círculo negro y a la distancia del
@@ -13716,48 +13717,24 @@ function renderBatallaInterno(){
       <!-- EL RIVAL sólo en los 1v1: contra un jefe no hay nadie operando
            enfrente, así que una ficha con su P&L en $0 sobraba. -->
       ${c.boss != null ? '' : `
-      <div class="bat-panel rival sinGraf ${!gano?'lead':''}">
-        <canvas id="rivalEscenaCv" class="bat-rival-esc" width="1000" height="420"></canvas>
-        <div class="bat-rival-in">
-          <div class="bat-panel-h">
-            <span class="bat-panel-nom">${esc(batNom(rivalDe))}</span>
-            <b class="bat-panel-p ${pRival>=0?'up':'down'}">${fmt$(pRival,true)}</b>
-            <span class="bat-panel-nt">${batNTrades(c,rivalDe)} ${bi('trades','trades')}</span>
-          </div>
-          <div class="bat-panel-log">${filas(rivalDe)}</div>
+      <!-- CONTRA UN SOCIO, SU FICHA NORMAL con su gráfica: ahí sí hay alguien
+           operando y su curva dice cómo va. La escena de fondo la quitó André
+           por confusa. -->
+      <div class="bat-panel rival ${!gano?'lead':''}">
+        <div class="bat-panel-h">
+          <span class="bat-panel-nom">${esc(batNom(rivalDe))}</span>
+          <b class="bat-panel-p ${pRival>=0?'up':'down'}">${fmt$(pRival,true)}</b>
+          <span class="bat-panel-nt">${batNTrades(c,rivalDe)} ${bi('trades','trades')}</span>
         </div>
+        <div class="bat-graf"><canvas id="batGrafRival"></canvas><div id="batGrafRivalE" class="bat-graf-e"></div></div>
+        <div class="bat-panel-log">${filas(rivalDe)}</div>
       </div>`}`;
-    /* la gráfica del rival se fue; la tuya se queda */
+    /* las dos curvas — la del rival sólo existe en un 1v1 */
     const vac = bi('Sin trades aún','No trades yet');
     requestAnimationFrame(() => {
       pintaCurva($('#batGrafYo'), $('#batGrafYoE'), (c.trades[yo]||[]).map(t=>t.pnl||0), 1, vac);
+      if($('#batGrafRival')) pintaCurva($('#batGrafRival'), $('#batGrafRivalE'), (c.trades[rivalDe]||[]).map(t=>t.pnl||0), 1, vac);
     });
-    /* ── EL RIVAL EN SU ECOSISTEMA ── de fondo, su mundo (el de su katana),
-       y él de pie encima. Se ve a quién te enfrentas mientras operas. */
-    (()=>{ const rv=$('#rivalEscenaCv'); cancelAnimationFrame(window._rvRAF||0); if(!rv) return;
-      const rx=rv.getContext('2d'), RW=rv.width, RH=rv.height;
-      const kIdx = batEquipadaDe(rivalDe), kR = KATANAS[kIdx];
-      const E0 = ZEN_ESCENAS[kIdx] || ZEN_ESCENAS[0];
-      const E = { ...E0, sinNinja:true, frase:null };
-      const rr2 = i => ((Math.sin(i*12.9898)*43758.5453)%1+1)%1;
-      const pet = Array.from({length:16},(_,k)=>({ x:rr2(k)*RW, y:rr2(k+9)*RH, s:3+rr2(k+18)*4,
-        sp:.4+rr2(k+27)*.9, dr:rr2(k+36)*6.3, sw:.5+rr2(k+45)*.8 }));
-      const njR = batNinjaDe(rivalDe);
-      const pintaR=(t)=>{ if(!rv.isConnected) return;
-        if(rv.offsetParent===null){ window._rvRAF=requestAnimationFrame(pintaR); return; }
-        rx.clearRect(0,0,RW,RH);
-        try{ zenDibujaEscena(rx, RW, RH, E, t, pet, kR.belt); }catch(e){ rx.fillStyle='#12161d'; rx.fillRect(0,0,RW,RH); }
-        /* él, de pie a la derecha, mirando hacia ti */
-        rx.fillStyle='rgba(0,0,0,.3)';
-        rx.beginPath(); rx.ellipse(RW*0.80, RH*0.80, 42, 11, 0,0,7); rx.fill();
-        try{ zenNinja(rx, RW*0.80, RH*0.80, 2.4, t*0.5, 0, kR.belt, njR, true, 'corte'); }catch(e){}
-        /* un velo para que el texto de encima se lea */
-        const g4=rx.createLinearGradient(0,0,0,RH);
-        g4.addColorStop(0,'rgba(6,9,14,.72)'); g4.addColorStop(.55,'rgba(6,9,14,.45)'); g4.addColorStop(1,'rgba(6,9,14,.8)');
-        rx.fillStyle=g4; rx.fillRect(0,0,RW,RH);
-        window._rvRAF=requestAnimationFrame(pintaR); };
-      pintaR(performance.now()); window._rvRAF=requestAnimationFrame(pintaR);
-    })();
     /* ⚔ LA ESCENA DE LA PELEA — EL MUNDO DEL NINJA CONTRA EL QUE VAS (André),
        no la sede. Peleas en SU ecosistema: contra AO es su mar, contra KIIRO
        su buda dorado. Los dos se acechan con deriva lenta, cruzan katanas
@@ -13827,8 +13804,10 @@ function renderBatallaInterno(){
         /* sombras al piso, para que no floten */
         dx.fillStyle='rgba(0,0,0,.28)';
         [xa,xb].forEach(x=>{ dx.beginPath(); dx.ellipse(x, base+6, 34, 8, 0,0,7); dx.fill(); });
-        zenNinja(dx, xa, base, esc, t*0.5, 0,   nj.a.col, nj.a.cfg, false, andaA);
-        zenNinja(dx, xb, base, esc, t*0.5, 1.7, nj.b.col, nj.b.cfg, true,  andaB);
+        /* quietos van EN GUARDIA (katana al frente, a dos manos): están
+           peleando. En cualquier otra pantalla la llevan a la espalda. */
+        zenNinja(dx, xa, base, esc, t*0.5, 0,   nj.a.col, nj.a.cfg, false, andaA || 'guardia');
+        zenNinja(dx, xb, base, esc, t*0.5, 1.7, nj.b.col, nj.b.cfg, true,  andaB || 'guardia');
         if(golpe>0 && victima){ const vx = victima==='a'?xa:xb, vy = base-32*esc;
           dx.save(); dx.globalAlpha=golpe;
           dx.strokeStyle='#fff'; dx.lineWidth=5;
