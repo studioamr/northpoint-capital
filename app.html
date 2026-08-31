@@ -23260,7 +23260,7 @@ tamTit = tamTitSel == "Normal" ? size.normal : tamTitSel == "Enorme" ? size.huge
 g1 = "1 · Killzones"
 tz       = input.string("America/New_York", "Zona horaria de sesiones", group = g1)
 tfLim    = input.timeframe("30", "No dibujar en TF mayores a", group = g1)
-verLbls  = input.bool(true, "Etiquetas en los H/L", group = g1)
+verLbls  = input.bool(false, "Etiquetas en los H/L", group = g1)
 kzNegrita = input.bool(true, "Nombres en negritas", group = g1, tooltip = "ASIA, LNDN, ORB y NY salen en negritas. Pine no tiene negritas de verdad: se cambia cada letra por su versión gruesa de Unicode, así que se ve igual de negrita en cualquier tema y en cualquier zoom.")
 alertar  = input.bool(false, "Alertar cuando tomen un H/L", group = g1, tooltip = "Avisa cuando el precio toma el alto o el bajo de una sesión ya cerrada.")
 grosor   = input.int(1, "Grosor de las líneas de liquidez", minval = 1, maxval = 5, group = g1)
@@ -23297,7 +23297,7 @@ cajaN = input.bool(true, "caja", inline = "N", group = g1)
 
 // ── 2 · MEDIAS MÓVILES ─────────────────────────────────────────
 g2 = "2 · Medias móviles"
-useE1 = input.bool(false, "", inline = "E1", group = g2)
+useE1 = input.bool(true, "", inline = "E1", group = g2)
 tipE1 = input.string("EMA", "", options = ["EMA", "SMA", "WMA"], inline = "E1", group = g2)
 lenE1 = input.int(14, "", minval = 1, inline = "E1", group = g2)
 inColE1 = input.color(#f5c542, "", inline = "E1", group = g2)
@@ -23333,7 +23333,7 @@ eWc = input.string("No hay mercado. Descansa.", "", inline = "RS", group = g3)
 sesDia = input.session("2000-1600", "Sesión TOTAL (overall)", group = g3, tooltip = "Para la fila TOTAL del panel: de la apertura de ASIA al cierre de NY (hora NY).")
 sesNY  = input.session("0930-1600", "Sesión NY (conteo de puntos)", group = g3)
 neutro = input.float(0, "Umbral neutro (pts)", minval = 0, step = 0.25, group = g3, tooltip = "Si el neto de la sesión no supera esto en ninguna dirección, el número se pinta neutro.")
-reglaFija = input.string("Sin señal no hay trade · 1 posición al día · protege la cuenta", "Regla fija (recordatorio)", group = g3)
+reglaFija = input.string("1 posición al día · protege la cuenta", "Regla fija (recordatorio)", group = g3)
 inAlza  = input.color(#089981, "Alcista", inline = "C3", group = g3)
 inBaja  = input.color(#f23645, "Bajista", inline = "C3", group = g3, tooltip = "Los dos colores de las cifras del panel. Solo mandan con la paleta en Personalizado.")
 
@@ -24505,6 +24505,16 @@ if verPanel and barstate.islast
         etapaTit := "3/4 " + e3t
         consejo := e3c
         cEtapa := pAlza
+    else if tA
+        // (André, 31-ago-2026) ASIA ya abrió: el ciclo nuevo arrancó
+        // y el día de ayer se terminó. Antes se quedaba en 4/4 DÍA
+        // TERMINADO toda la noche, al mismo tiempo que la fila de
+        // arriba decía ASIA. Ahora la cuenta va al premarket que
+        // sigue, que es lo próximo que de verdad tienes que hacer.
+        etapa := eFt + " · faltan " + f_dur(1440 - mdNow + mPre)
+        etapaTit := eFt
+        consejo := eFc
+        cEtapa := color.gray
     else
         etapa := "4/4 " + e4t
         etapaTit := "4/4 " + e4t
@@ -24630,8 +24640,8 @@ if verPanel and barstate.islast
     string sesTxt = ""
     color cSes = color.gray
     if cerrado
-        sesTxt := abNom
-        cSes := abCol
+        sesTxt := abNom + " abre en " + f_dur(abMin)
+        cSes := color.gray
     else if f_en(oIni, oFin, mdNY)
         sesTxt := txtO
         cSes := colN
@@ -24645,8 +24655,12 @@ if verPanel and barstate.islast
         sesTxt := txtL
         cSes := colL
     else
-        sesTxt := abNom
-        cSes := abCol
+        // (André, 31-ago-2026) Ninguna sesión corriendo. Antes se
+        // escribía el nombre de la que sigue a secas y el panel
+        // parecía decir que ASIA ya había abierto cuando faltaban
+        // dos horas. Ahora dice lo que es: cuál abre y en cuánto.
+        sesTxt := abNom + " abre en " + f_dur(abMin)
+        cSes := color.gray
 
     string diaTxt = dowNY == dayofweek.monday ? "LUN" : dowNY == dayofweek.tuesday ? "MAR" : dowNY == dayofweek.wednesday ? "MIÉ" : dowNY == dayofweek.thursday ? "JUE" : dowNY == dayofweek.friday ? "VIE" : dowNY == dayofweek.saturday ? "SÁB" : "DOM"
     // arriba, solo el día y la hora de NY: la de aquí ya la traes en el reloj
@@ -24948,7 +24962,7 @@ indicator("NP ESTRUCTURA", "NP ESTRUCTURA", overlay = true, max_lines_count = 50
 // cada cosa desde aquí, sin ir a buscarla grupo por grupo. Lo que
 // apagues no pierde sus ajustes, solo deja de dibujarse.
 gV = "1 · Qué ver"
-inVerKZ     = input.bool(true, "Killzones · ASIA · LONDRES · NY", group = gV, tooltip = "El apagador de TODAS las killzones de un golpe: sus cajas, sus líneas de alto y bajo y sus nombres. Apagado, el chart se queda sin una sola marca de sesión y lo demás sigue igual. Cuál de las cuatro se dibuja y de qué color se sigue eligiendo abajo, en su grupo — esto solo las prende o las apaga todas.")
+inVerKZ     = input.bool(false, "Killzones · ASIA · LONDRES · NY", group = gV, tooltip = "El apagador de TODAS las killzones de un golpe: sus cajas, sus líneas de alto y bajo y sus nombres. Apagado, el chart se queda sin una sola marca de sesión y lo demás sigue igual. Cuál de las cuatro se dibuja y de qué color se sigue eligiendo abajo, en su grupo — esto solo las prende o las apaga todas.")
 inVerEsc    = input.bool(true, "La orden · la caja de la entrada", group = gV, tooltip = "La caja que flota a la derecha: riesgo arriba, premio abajo y la línea de la entrada partiéndolas, igual que la herramienta Short/Long Position. Apagada, el chart se queda con el rango, el AOI, el Order Block y el Fibonacci.")
 inVerCanal  = input.bool(true, "Canal de regresión", group = gV, tooltip = "La recta que mejor le queda al precio de las últimas velas, con sus bandas. Se mide en su propia temporalidad —5m, 15m o 1h, la que elijas en el grupo 11— sin importar en cuál estés parado. No toca nada de la estructura: es una capa aparte para leer la inclinación y saber si el precio va estirado hacia un borde o cómodo por el centro.")
 inVerORB    = input.bool(true, "ORB · la killzone del OR (9:30-9:45)", group = gV, tooltip = "Aquí el ORB solo se calcula, no se pinta —de dibujarlo se encarga el script del día—, así que esto apaga su H/L por si prendes \\"Dibujar las killzones aquí\\" en el grupo 1.")
