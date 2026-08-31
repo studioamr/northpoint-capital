@@ -15431,6 +15431,7 @@ function lgLog(){
       'Esto borra los ' + n + ' trades de tu historial real. No se puede deshacer.\n\nEscribe BORRAR para confirmar:',
       'This deletes all ' + n + ' trades from your real history. It cannot be undone.\n\nType BORRAR to confirm:'));
     if((r||'').trim().toUpperCase() !== 'BORRAR') return;
+    S.trades.forEach(marcaBorradoObj);      /* sin lápida, la nube los devuelve */
     S.trades = []; S.seqTrade = 0; save();
     lgBalancePanel(); lgStats(); lgDibuja(1); lgLog(); lgHoy(); lgHistorial(); updateBadges();
     toast(bi('Se borraron ' + n + ' trades. Registra el que sí llevas.',
@@ -15439,7 +15440,12 @@ function lgLog(){
   host.querySelectorAll('.del').forEach(b => b.onclick = () => {
     if(!confirm(bi('¿Borrar este trade real?','Delete this real trade?'))) return;
     const i = S.trades.findIndex(x=>x.id===b.dataset.id);
-    if(i>=0){ S.trades.splice(i,1); save(); lgStats(); lgDibuja(1); lgLog(); updateBadges(); }
+    /* SIN LÁPIDA LA NUBE LO RESUCITA (André, 31-ago-2026): aquí se hacía un
+       splice a secas. La fusión es una UNIÓN, así que en el siguiente sync el
+       trade volvía desde el servidor — se borraban y reaparecían una y otra
+       vez. Otras pantallas ya marcaban la lápida; ésta no. */
+    if(i>=0){ marcaBorradoObj(S.trades[i]); S.trades.splice(i,1); save();
+      lgBalancePanel(); lgStats(); lgDibuja(1); lgLog(); lgHoy(); lgHistorial(); updateBadges(); }
   });
   host.querySelectorAll('.lg-img').forEach(b => b.onclick = () => {
     const t = S.trades.find(x=>x.id===b.dataset.img); if(!t) return;
@@ -18546,6 +18552,16 @@ function marcaBorrado(id){
   S.borrados = S.borrados || {};
   S.borrados[String(id)] = Date.now();
 }
+/* LA LÁPIDA DE UN ELEMENTO SIN ID (André, 31-ago-2026): fusionarListas usa el
+   CONTENIDO como llave cuando no hay id, pero las lápidas se guardaban sólo por
+   id — así que un trade viejo sin id no se podía enterrar y la nube lo devolvía
+   siempre. Esta entierra por la misma llave con la que se fusiona. */
+function claveFusion(x){ return x && x.id != null ? 'id:' + x.id : 'sin:' + JSON.stringify(x); }
+function marcaBorradoObj(x){
+  if(!x) return;
+  if(x.id != null) marcaBorrado(x.id);
+  marcaBorrado(claveFusion(x));
+}
 function fusionarListas(mias, suyas, borrados){
   /* La llave es el id — y si un elemento viejo no trae id, su CONTENIDO hace de
      llave en vez de tirarlo. La versión anterior descartaba todo lo sin id, y
@@ -18567,7 +18583,9 @@ function fusionarListas(mias, suyas, borrados){
   (mias  || []).forEach(poner);
   const B = borrados || {};
   return [...out.values()].filter(x => {
-    const ts = B[String(x && x.id)];
+    /* se consulta por id Y por la llave de contenido: los trades viejos nacieron
+       sin id y sólo se pueden enterrar por lo que son */
+    const ts = Math.max(+B[String(x && x.id)] || 0, +B[clave(x)] || 0);
     if(!ts) return true;
     return (+x.upd || 0) > ts;      // se editó DESPUÉS de borrarlo: revive a propósito
   });
