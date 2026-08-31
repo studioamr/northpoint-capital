@@ -1710,6 +1710,7 @@ button.st-chip:hover{border-color:rgba(255,255,255,.45)}
 .bat-panel{border:1px solid var(--line);border-radius:16px;background:var(--w02);padding:16px 18px;margin:0}
 /* ── EL PANEL DEL JEFE: sus requisitos con tu avance ── */
 .bat-duelo-req{border:1px solid var(--line);border-radius:16px;padding:14px 16px;background:var(--w02);margin:0 0 14px}
+.lg-hoy{padding:0;border:none;background:none;margin-bottom:14px}
 .bat-duelo-req.roto{border-color:color-mix(in srgb, var(--down) 55%, var(--line))}
 .bd-t{font-family:var(--mono);font-size:9px;letter-spacing:.2em;color:var(--faint);margin-bottom:12px}
 .bd-t b{color:var(--txt)}
@@ -1902,7 +1903,8 @@ button.st-chip:hover{border-color:rgba(255,255,255,.45)}
 .stage-btn.play:hover{border-color:rgba(200,165,240,.8)}
 /* EL DUELO de la sede a todo lo ancho */
 .bat-duelo{position:relative;margin-top:14px;border:1px solid var(--line);border-radius:16px;overflow:hidden}
-.bat-duelo canvas{display:block;width:100%;height:auto;aspect-ratio:1200/420}
+.bat-duelo canvas{display:block;width:100%;height:auto;aspect-ratio:1200/560}
+@media (min-width:760px){ .bat-duelo canvas{aspect-ratio:1200/460} }
 /* LO QUE SE JUEGA — cinco datos en una tira bajo el reloj */
 /* FLEX y no grid: con cinco datos en una rejilla de 3 o 5 columnas, la
    última fila dejaba una celda vacía que enseñaba el fondo de la rejilla
@@ -4601,6 +4603,12 @@ stop[stop-color="#9BC0DC"]{stop-color:var(--txt)}
           <div class="bt-sel"><select id="lgCta" class="bt-cuenta-sel"></select></div>
           <button type="button" id="lgAjustar" class="bt-mini" hidden data-i18n="en.log.ajustar">Ajustar metas</button>
         </div>
+        <!-- LO QUE VAS A HACER HOY (André, 31-ago-2026): el mismo panel de
+             requisitos que se probó en el duelo, pero con TUS reglas de
+             verdad — el objetivo del día, tu drawdown y cuántos trades
+             llevas. Nada de ninjas ni de katanas: esto es operar. -->
+        <div class="panel lg-hoy" id="lgHoy"></div>
+
         <div class="bt">
           <div class="bt-top">
             <div>
@@ -11981,7 +11989,13 @@ const NJ_OPCIONES = {
   banda:[['#d6dce8','Blanca'],['#e7c24a','Oro'],['#4fae6a','Jade'],['#3e82c8','Cielo'],['#c8443c','Roja'],['#8a5cc8','Violeta']],
   buf:[['#b53a2e','Roja'],['#e0863c','Naranja'],['#e7c24a','Oro'],['#4fae6a','Jade'],['#3e82c8','Azul'],['#8a5cc8','Violeta'],['#EDEFF2','Blanca'],['#23272E','Negra']]
 };
-function batNinjaDe(u){ const nj=(S.batNinja||{})[u]; if(nj) return nj;
+function batNinjaDe(u){
+  /* UN JEFE VISTE SU KATANA: sin esto se le generaba un ninja al azar desde
+     el hash de su uid y AO —el de la katana azul— salía de rojo. */
+  const _bn = (typeof bossDeUid === 'function') ? bossDeUid(u) : null;
+  if(_bn){ const kb = KATANAS[_bn.kat];
+    return { traje:'#0f1218', banda:kb.belt, buf:kb.belt }; }
+  const nj=(S.batNinja||{})[u]; if(nj) return nj;
   /* rivales sin registro: ninja determinístico a partir de su uid */
   let h=0; for(const ch of String(u||'')) h=(h*31+ch.charCodeAt(0))>>>0;
   /* >>> y no >>: el hash es sin signo y pasa de 2^31 seguido; con el
@@ -12003,50 +12017,53 @@ function zenNinja(c,x,base,s,now,ph,col,nj,flip,anda){ const kc=col||'#b53a2e';
      hoja pintada del color de la cinta, y así ninguna parecía una katana.
      Como en el arsenal — filo de acero, empuñadura de color. */
   c.lineCap = 'round';
-  /* EL AURA, SÓLO EN EL MANGO Y DISCRETA (André). Envolvía la hoja entera y
-     el ninja quedaba dentro de una mancha de color. Ahora es un resplandor
-     corto sobre la empuñadura: dice de quién es la espada sin gritarlo. */
-  c.save();
-  c.strokeStyle = kc; c.lineCap = 'round';
-  c.globalAlpha = 0.22; c.lineWidth = 5.5*s;
-  c.beginPath();
-  if(corta){ c.moveTo(2*s,-27*s); c.lineTo(2*s-Math.cos(aSl)*4*s, -27*s-Math.sin(aSl)*4*s); }
-  else { c.moveTo(-9.5*s,-38.6*s); c.lineTo(-12.5*s,-42.4*s); }
-  c.stroke();
-  c.restore();
-  c.strokeStyle = '#8d95a3'; c.lineWidth = 2.6*s; c.beginPath();
-  if(corta){ const bx2=2*s, by2=-27*s, len=17*s; c.moveTo(bx2,by2); c.lineTo(bx2+Math.cos(aSl)*len, by2+Math.sin(aSl)*len); }
-  else { c.moveTo(-9*s,-38*s); c.lineTo(9*s,-16*s); }
-  c.stroke();
-  c.strokeStyle = 'rgba(226,232,240,.55)'; c.lineWidth = 0.8*s; c.beginPath();
-  if(corta){ const bx2=2*s, by2=-27*s, len=17*s; c.moveTo(bx2,by2); c.lineTo(bx2+Math.cos(aSl)*len, by2+Math.sin(aSl)*len); }
-  else { c.moveTo(-9*s,-38*s); c.lineTo(9*s,-16*s); }
-  c.stroke();
-  /* EL MANGO, del color de su katana — MÁS DELGADO QUE LA HOJA. Iba a 3.2
-     contra 1.8 de hoja, así que en el retrato parecía una segunda espada
-     cruzada del color de la cinta. Un mango es un mango. */
-  /* EL MANGO, MÁS CLARO (André): con el color puro se hundía contra la hoja
-     gris y el traje negro. Se aclara mezclándolo con blanco — Shiro queda
-     blanco de verdad y Kiiro un amarillo brillante, sin perder de quién es. */
+  /* ── LA KATANA, SOSTENIDA CON LAS DOS MANOS AL FRENTE (André) ──
+     Antes colgaba a la espalda, cruzada. Ahora va en guardia: el mango a la
+     altura del pecho, las dos manos encima y la hoja apuntando adelante y un
+     poco arriba. Cuando corta, la hoja gira desde ese mismo punto.
+       hoja  : acero gris con su filo claro
+       mango : del color de su katana, aclarado para que no se hunda
+       aura  : sólo sobre la empuñadura, discreta */
+  const _mx = corta ? 2*s : 8.5*s, _my = corta ? -27*s : -24*s;   /* la empuñadura */
+  const _hx = corta ? _mx + Math.cos(aSl)*17*s : 26*s;            /* la punta */
+  const _hy = corta ? _my + Math.sin(aSl)*17*s : -30.5*s;
+  const _px = corta ? _mx - Math.cos(aSl)*4.5*s : 3.6*s;          /* el pomo */
+  const _py = corta ? _my - Math.sin(aSl)*4.5*s : -22.8*s;
   const _kh = String(kc).replace('#','');
   const _claro = _kh.length === 6
     ? '#' + [0,2,4].map(i2=>{ const v = parseInt(_kh.slice(i2,i2+2),16);
         return Math.round(v + (255 - v) * 0.45).toString(16).padStart(2,'0'); }).join('')
     : kc;
-  c.strokeStyle=_claro; c.lineWidth=2.2*s; c.lineCap='round'; c.beginPath();
-  if(corta){ c.moveTo(2*s,-27*s); c.lineTo(2*s-Math.cos(aSl)*4*s, -27*s-Math.sin(aSl)*4*s); }
-  else { c.moveTo(-9.5*s,-38.6*s); c.lineTo(-12.5*s,-42.4*s); }
-  c.stroke();
-  /* la guarda, entre mango y hoja */
-  c.strokeStyle='#c9ced6'; c.lineWidth=1.1*s; c.beginPath();
-  if(corta){ c.moveTo(1*s,-25.6*s); c.lineTo(3*s,-28.4*s); }
-  else { c.moveTo(-10.6*s,-36.6*s); c.lineTo(-7.4*s,-39.4*s); }
-  c.stroke();
+  c.lineCap = 'round';
+  /* aura, sólo en el mango */
+  c.save(); c.strokeStyle = kc; c.globalAlpha = 0.22; c.lineWidth = 5.5*s;
+  c.beginPath(); c.moveTo(_px,_py); c.lineTo(_mx,_my); c.stroke(); c.restore();
+  /* la hoja */
+  c.strokeStyle = '#8d95a3'; c.lineWidth = 2.6*s;
+  c.beginPath(); c.moveTo(_mx,_my); c.lineTo(_hx,_hy); c.stroke();
+  c.strokeStyle = 'rgba(226,232,240,.55)'; c.lineWidth = 0.8*s;
+  c.beginPath(); c.moveTo(_mx,_my-0.8*s); c.lineTo(_hx,_hy-0.8*s); c.stroke();
+  /* el mango */
+  c.strokeStyle = _claro; c.lineWidth = 2.6*s;
+  c.beginPath(); c.moveTo(_px,_py); c.lineTo(_mx,_my); c.stroke();
+  /* la guarda, cruzada entre mango y hoja */
+  (()=>{ const ang = Math.atan2(_hy-_my, _hx-_mx), n = ang + Math.PI/2;
+    c.strokeStyle = '#c9ced6'; c.lineWidth = 1.2*s;
+    c.beginPath();
+    c.moveTo(_mx + Math.cos(n)*2.2*s, _my + Math.sin(n)*2.2*s);
+    c.lineTo(_mx - Math.cos(n)*2.2*s, _my - Math.sin(n)*2.2*s);
+    c.stroke(); })();
+  if(corta){ c.strokeStyle='rgba(255,255,255,.35)'; c.lineWidth=1*s;
+    c.beginPath(); c.arc(_mx,_my,15*s,aSl-0.5,aSl+0.12); c.stroke(); }
 
   /* piernas: alternan al caminar */
   const p1 = anda ? Math.sin(now/150)*2.2*s : 0, p2 = -p1;
   c.fillStyle=cfg.traje; c.fillRect(-5*s,-14*s+Math.max(0,p1),4*s,14*s-Math.max(0,p1)); c.fillRect(2*s,-14*s+Math.max(0,p2),4*s,14*s-Math.max(0,p2));
   c.fillRect(-6.5*s,-30*s,13*s,18*s);
+  /* LAS DOS MANOS al mango, por delante del torso */
+  c.strokeStyle=cfg.traje; c.lineWidth=2.8*s; c.lineCap='round';
+  c.beginPath(); c.moveTo(3.5*s,-26.5*s); c.lineTo(_mx-0.6*s,_my+0.4*s); c.stroke();
+  c.beginPath(); c.moveTo(1*s,-25*s);     c.lineTo(_px+1.2*s,_py+0.6*s); c.stroke();
   c.fillStyle=cfg.traje; c.beginPath(); c.arc(0,-33*s,5.6*s,0,7); c.fill();
   /* EL ANTIFAZ: franja del color de su katana sobre los ojos, y los ojos
      encima. Sin esto la cabeza era un círculo negro y a la distancia del
@@ -13591,7 +13608,7 @@ function renderBatallaInterno(){
            ficha para registrar, el VS grande y al final la de él. Sin cajas
            alrededor: las tarjetas ya son cajas y encajarlas otra vez apretaba. -->
       <div class="bat-duelo">
-        <canvas id="dueloCv" width="1200" height="420"></canvas>
+        <canvas id="dueloCv" width="1200" height="560"></canvas>
       </div>
 
       <!-- EL RELOJ GRANDE cuenta AL INICIO mientras la killzone no ha abierto
@@ -14085,15 +14102,63 @@ function lgAgrega(){
   lgCtas(); lgStats(); lgAnima(); lgLog(); animaSello(pnl); updateBadges();
   $('#lgPnl').focus();
 }
+/* ── EL PANEL DE HOY ── objetivo, drawdown y trades del día, con tu avance
+   vivo. Los límites salen de SISTEMA.fases (los del contrato firmado) y la
+   fase, de la cuenta que tengas elegida; el drawdown es el peor bajón desde
+   un máximo de la curva de hoy, que es como lo mide una fondeadora. */
+function lgHoy(){
+  const host = $('#lgHoy'); if(!host) return;
+  const hoy = todayISO();
+  const mios = lgTradesReales().filter(t => t.date === hoy);
+  /* la fase sale de LA CUENTA ELEGIDA (o de la primera activa si están todas):
+     un examen y una fondeada no tienen los mismos límites del día. */
+  const cta = (lgSel && lgSel !== '__all') ? (S.accounts||[]).find(x=>x.id===lgSel)
+            : mias(S.accounts||[]).find(x=>x.estado==='activa');
+  const fase = (cta && cta.fase) || 'buffer';
+  const F = (typeof SISTEMA !== 'undefined' && SISTEMA.fases)
+    ? (SISTEMA.fases[fase] || SISTEMA.fases.buffer) : null;
+  if(!F){ host.hidden = true; return; }
+  host.hidden = false;
+  const pnl = mios.reduce((a,t)=>a+(t.pnl||0),0);
+  let eq = 0, pico = 0, dd = 0;
+  mios.forEach(t => { eq += (t.pnl||0); if(eq>pico) pico=eq; const c2=eq-pico; if(c2<dd) dd=c2; });
+  const meta = F.objetivoDia || 0, tope = F.maxPerdidaDia || 0, maxT = F.maxTrades || 0;
+  const pct = meta ? Math.max(0, Math.min(100, pnl/meta*100)) : 0;
+  const ddPct = tope ? Math.max(0, Math.min(100, Math.abs(dd)/tope*100)) : 0;
+  const roto = tope && Math.abs(dd) >= tope;
+  const deMas = maxT && mios.length > maxT;
+  const barra = (v, cls) => `<span class="bd-b"><i class="${cls}" style="width:${v}%"></i></span>`;
+  host.innerHTML = `<div class="bat-duelo-req ${roto?'roto':''}" style="margin:0">
+    <div class="bd-t">${bi('TU DÍA','YOUR DAY')} · <b>${fmtFecha(hoy)}</b></div>
+    <div class="bd-fila">
+      <span class="bd-et">${bi('OBJETIVO','TARGET')}</span>
+      <b class="bd-v ${pnl>=meta?'ok':''}">${fmt$(pnl,true)} <em>${bi('de','of')} ${fmt$(meta)}</em></b>
+      ${barra(pct,'up')}
+    </div>
+    <div class="bd-fila">
+      <span class="bd-et">${bi('LÍMITE DE PÉRDIDA','LOSS LIMIT')}</span>
+      <b class="bd-v ${roto?'mal':''}">${fmt$(dd,true)} <em>${bi('de','of')} −${fmt$(tope)}</em></b>
+      ${barra(ddPct,'down')}
+    </div>
+    <div class="bd-chips">
+      <span><i>${bi('TRADES','TRADES')}</i><b class="${deMas?'mal':''}">${mios.length}<em>/${maxT}</em></b></span>
+      <span><i>${bi('GANADOS','WON')}</i><b>${mios.filter(t=>(t.pnl||0)>0).length}</b></span>
+      <span><i>${bi('SESIÓN','SESSION')}</i><b>${esc(sesionMundial(ahora()).split(' ')[0])}</b></span>
+    </div>
+    ${roto ? `<p class="bd-roto">${bi('Llegaste a tu límite de pérdida. El día se acabó.','You hit your loss limit. The day is over.')}</p>`
+      : deMas ? `<p class="bd-roto">${bi('Pasaste tu tope de trades del día.','You went over your daily trade cap.')}</p>`
+      : pnl>=meta ? `<p class="bd-listo">${bi('Objetivo del día cumplido. Lo de más ya es jugar con dinero que era tuyo.','Daily target met. Anything more is playing with money that was yours.')}</p>` : ''}
+  </div>`;
+}
 function renderLog(){
   imgInit();
-  lgCtas(); lgStats(); lgLog();
+  lgCtas(); lgStats(); lgLog(); lgHoy();
   requestAnimationFrame(() => lgDibuja(1));
   if(lgLigado) return;
   lgLigado = true;
   $('#lgCta').addEventListener('change', e => {
     lgSel = e.target.value;
-    lgCtas(); lgStats(); lgLog();
+    lgCtas(); lgStats(); lgLog(); lgHoy();
     requestAnimationFrame(() => lgDibuja(1));
   });
   $('#lgDir').addEventListener('click', e => {
