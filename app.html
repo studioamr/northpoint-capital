@@ -23143,6 +23143,7 @@ verOrhOrl = input.bool(false, "Escribir los nombres ORH / ORL", group = g6, tool
 orbPronDias = input.int(60, "Cuántos ORB de historia mide", minval = 10, maxval = 500, group = g6, tooltip = "El pronóstico se calcula con lo que TradingView tenga cargado en el chart: si estás en 1m se cargan menos días que en 15m, así que la muestra cambia con la temporalidad. Este número es el tope de días que guarda.")
 orbPronMin = input.int(8, "Muestra mínima para opinar (días)", minval = 3, maxval = 100, group = g6, tooltip = "Con menos días que esto en el grupo que toca, el pronóstico usa TODOS los días juntos; y si ni así alcanza, dice \\"muestra corta\\" y se calla. Mejor no opinar que inventar un porcentaje con cuatro días.")
 borrarNY = input.bool(true, "Quitar todo el ORB cuando abre ASIA", group = g6, tooltip = "El ORB del día se queda visible toda la tarde y toda la noche, y se borra hasta que ABRE ASIA (fila ASIA del grupo 1): caja del OR, ORH/ORL/ORM, objetivos, señales y sus H/L. Así el viernes en la tarde y todo el fin de semana sigues viendo el ORB del último día, y el chart amanece limpio para la nueva sesión. Los FVG no se tocan (son del TF del grupo 5).")
+orbInf = input.bool(true, "Que el ORB NO se corte: seguir hasta el siguiente NY", group = g6, tooltip = "El ORH, el ORL y el ORM dejaban de crecer al cerrar NY y se quedaban cortados a media pantalla, con el precio siguiéndose de largo sin ellos. Prendido, las tres líneas siguen creciendo vela por vela toda la tarde, toda la noche y la mañana siguiente, hasta que ABRE EL SIGUIENTE NY (9:30): ahí se borra el ORB viejo y arranca el nuevo. Prendido también manda sobre la línea de arriba — el ORB ya NO se quita cuando abre ASIA, dura hasta el NY que sigue. Apagado, todo vuelve a como estaba.")
 tPer = input.float(50, "Objetivo: % del rango", minval = 1, group = g6, tooltip = "Usa este % del ancho del OR como distancia entre objetivos.") * 0.01
 maTog = input.bool(false, "", inline = "MA6", group = g6)
 
@@ -23667,6 +23668,9 @@ up_signal = false
 var target h_ln = target.new(na, na)
 var target l_ln = target.new(na, na)
 var line m_ln = na
+// el ORB del día sigue DIBUJADO aunque el motor ya se haya apagado:
+// esto es lo que deja que las líneas sigan creciendo de noche
+var bool orbVivo = false
 
 orm = math.avg(orh, orl)
 orw = math.abs(orh - orl)
@@ -23705,6 +23709,7 @@ if or_start
     l_ln.lab.delete()
     up_targs.clear()
     down_targs.clear()
+    orbVivo := false
 
     orh := high
     orl := low
@@ -23743,9 +23748,13 @@ if or_end and or_token
 
     day_dir := orm > prev_orm ? 1 : orm < prev_orm ? -1 : 0
     linefill.new(h_ln.ln, l_ln.ln, day_dir == 1 ? greenFill : day_dir == -1 ? redFill : invis)
+    orbVivo := true
 
-// fuera de la sesión del OR
-if not or_sesh and or_token
+// fuera de la sesión del OR. Con "que el ORB no se corte" prendido
+// las líneas siguen creciendo aunque el motor ya se haya apagado al
+// cerrar NY: así el ORH, el ORL y el ORM llegan SIEMPRE hasta la
+// última vela, hasta que abra el siguiente NY y se borren solos
+if not or_sesh and (or_token or (orbInf and orbVivo))
     h_ln.ln.set_x2(bar_index)
     l_ln.ln.set_x2(bar_index)
     // el ORH y el ORL viven un carril más a la derecha que las
@@ -23953,7 +23962,7 @@ if finNY
 // Al arrancar en ASIA y no al cierre de NY, el ORB del día se
 // queda toda la tarde, toda la noche y todo el fin de semana.
 bool abreAsia = tA and not tA[1]
-if abreAsia and borrarNY
+if abreAsia and borrarNY and not orbInf
     box.delete(kzO.bx)
     line.delete(kzO.hiLn)
     line.delete(kzO.loLn)
@@ -23981,6 +23990,7 @@ if abreAsia and borrarNY
         lab.delete()
     signals.clear()
     or_token := false
+    orbVivo := false
 
 // ═══ MEDIAS MÓVILES ════════════════════════════════════════════
 // ta.* siempre a nivel global (largo simple); el selector elige cuál se pinta
@@ -24568,6 +24578,7 @@ if verPanel and barstate.islast
             table.merge_cells(panel, 1, 8, 4, 8)
         // la celda de NY en la fila de liquidez ocupa las columnas 3-4
         unido := true
+
 `;
 const ALGO_PINE_KZP_ESTRUCTURA = `// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
 // Idea de killzones con H/L derivada de "ICT Killzones & Pivots [TFO]" © tradeforopp.
