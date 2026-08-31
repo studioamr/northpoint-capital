@@ -23087,7 +23087,7 @@ if array.size(agLin) > 0
             if m >= 0 and mdBarra >= m and nz(mdBarra[1], 1441) < m
                 alert("NP A+ ⏰ " + ln, alert.freq_once_per_bar)
 
-var table panel = table.new(posPanel == "Arriba centro" ? position.top_center : posPanel == "Arriba izquierda" ? position.top_left : posPanel == "Abajo derecha" ? position.bottom_right : posPanel == "Abajo centro" ? position.bottom_center : posPanel == "Abajo izquierda" ? position.bottom_left : position.top_right, 5, 14, chart.bg_color, chart.fg_color, 2, chart.fg_color, 1)
+var table panel = table.new(posPanel == "Arriba centro" ? position.top_center : posPanel == "Arriba izquierda" ? position.top_left : posPanel == "Abajo derecha" ? position.bottom_right : posPanel == "Abajo centro" ? position.bottom_center : posPanel == "Abajo izquierda" ? position.bottom_left : position.top_right, 5, 13, chart.bg_color, chart.fg_color, 2, chart.fg_color, 1)
 tamTxt = tamPanel == "Diminuto" ? size.tiny : tamPanel == "Normal" ? size.normal : tamPanel == "Grande" ? size.large : size.small
 
 if verPanel and barstate.islast
@@ -23146,12 +23146,16 @@ if verPanel and barstate.islast
     if timenow >= evalIni and timenow < evalFin
         int dF = math.max(1, f_diasHabiles(evalIni, timenow))
         int tF = f_diasHabiles(evalIni, evalFin - 1)
-        fase := "EVAL · día " + str.tostring(dF) + "/" + str.tostring(tF) + (dF <= 3 ? "" : " · colchón")
+        // los trades que pide la fase, contados por el peor caso (todos
+        // a 1:1): son los que de verdad hay que aguantar
+        int trF = int(math.ceil((53000 - 50000) / float(riesgoDia)))
+        fase := "EVAL · día " + str.tostring(dF) + "/" + str.tostring(tF) + " · trades " + str.tostring(math.min(dF, trF)) + "/" + str.tostring(trF) + (dF <= 3 ? "" : " · colchón")
         cFase := pAcento
     else if timenow >= buffIni and timenow < buffFin
         int dF = math.max(1, f_diasHabiles(buffIni, timenow))
         int tF = f_diasHabiles(buffIni, buffFin - 1)
-        fase := "BUFFER · día " + str.tostring(dF) + "/" + str.tostring(tF)
+        int trF = int(math.ceil((52500 - 50000) / float(riesgoDia)))
+        fase := "BUFFER · día " + str.tostring(dF) + "/" + str.tostring(tF) + " · trades " + str.tostring(math.min(dF, trF)) + "/" + str.tostring(trF)
         cFase := pBaja
     else if timenow >= payIni and timenow < payFin
         int dF = math.max(1, f_diasHabiles(payIni, timenow))
@@ -23313,27 +23317,6 @@ if verPanel and barstate.islast
     string alTxt = alQue == "" ? "no tienes alertas prendidas" : "en " + f_dur(alSigue) + " · " + alQue
     color alCol = alSigue <= 5 ? pSuave : chart.fg_color
 
-    // ── CUÁNTO FALTA, EN TRADES (André, 31-ago-2026) ──────────
-    // Ver la meta en dinero desespera; en trades se ve corta. Con un
-    // trade al día, el número del día ES el número del trade. Lo que
-    // falta se mide contra el balance conservador (haber cerrado cada
-    // día con el mínimo) y sale como rango: pocos si salen 1:2, más
-    // si salen 1:1.
-    string camino = ""
-    if (timenow >= evalIni and timenow < evalFin) or (timenow >= buffIni and timenow < buffFin)
-        bool esEval = timenow >= evalIni and timenow < evalFin
-        int dC = math.max(1, f_diasHabiles(esEval ? evalIni : buffIni, timenow))
-        int metaC = esEval ? 53000 : 52500
-        // el total se cuenta SIEMPRE con el peor caso —todos a 1:1—, que
-        // es el número de trades que de verdad hay que aguantar; si salen
-        // 1:2 llegas antes, y eso nunca decepciona
-        int totalTr = int(math.ceil((metaC - 50000) / float(riesgoDia)))
-        camino := (esEval ? "EVAL" : "BUFFER") + " · " + str.tostring(math.min(dC, totalTr)) + "/" + str.tostring(totalTr) + " trades"
-    else if timenow >= payIni and timenow < payFin
-        camino := "cobro diario"
-    else
-        camino := "aún no arranca"
-
     table.cell(panel, 0, 0, "NP A+", text_color = chart.fg_color, text_size = tamTxt)
     table.cell(panel, 1, 0, reloj, text_color = color.gray, text_size = tamTxt)
     table.cell(panel, 0, 1, "Sesión", text_color = color.gray, text_size = tamTxt)
@@ -23344,39 +23327,37 @@ if verPanel and barstate.islast
         string tipFase = "Lock in 30 días. La meta del día viene en RANGO: el primer número es cerrar con un 1:1 —que ya es día ganado— y el segundo con un 1:2, el día redondo. Los dos salen del riesgo por trade del grupo 4. Abajo van las 3 fases con sus fechas, su escalera y su regla de tamaño (▶ = en la que vas · ✓ = ya pasó). Si pasas la eval antes, adelanta BUFFER empieza en config. Fechas y reglas editables (grupo 4)."
         table.cell(panel, 0, 3, "Fase", text_color = color.gray, text_size = tamTxt)
         table.cell(panel, 1, 3, fase, text_color = cFase == color.gray ? chart.fg_color : cFase, text_size = tamTxt, tooltip = tipFase)
-        table.cell(panel, 0, 4, "Camino", text_color = color.gray, text_size = tamTxt)
-        table.cell(panel, 1, 4, camino, text_color = chart.fg_color, text_size = tamTxt, tooltip = "En qué trade vas del total que pide la fase. El total se cuenta con el peor caso —todos cerrados en 1:1—, que son los que de verdad hay que aguantar: EVAL 6 trades para los $3,000 y BUFFER 5 para los $2,500 con riesgo de $500. Si alguno sale 1:2 llegas antes.")
-        table.cell(panel, 0, 5, "F1 EVAL", text_color = pAcento, text_size = tamTxt)
-        table.cell(panel, 1, 5, txtEval, text_color = cE, bgcolor = bgE, text_size = tamTxt, tooltip = "Pasar la evaluación. El día bueno son +$" + str.tostring(riesgoDia) + " y el tope +$" + str.tostring(riesgoDia * 2) + "; si sale mal se va −$" + str.tostring(riesgoDia) + ". Los últimos días son colchón por si uno se tuerce.")
-        table.cell(panel, 0, 6, "F2 BUFFER", text_color = pBaja, text_size = tamTxt)
-        table.cell(panel, 1, 6, txtBuff, text_color = cB, bgcolor = bgB, text_size = tamTxt, tooltip = "Construir el colchón antes de cobrar, con la mitad de tamaño que en EVAL: +$" + str.tostring(riesgoDia) + " el día bueno, +$" + str.tostring(riesgoDia * 2) + " de tope, −$" + str.tostring(riesgoDia) + " si sale mal.")
-        table.cell(panel, 0, 7, "F3 PAYOUTS", text_color = pAlza, text_size = tamTxt)
-        table.cell(panel, 1, 7, txtPay, text_color = cP, bgcolor = bgP, text_size = tamTxt, tooltip = "FASE 3 · cobrar: 1 mini, riesgo chico, retiro diario. Aquí ya no creces la cuenta, la ordeñas sin romperla.")
-    table.cell(panel, 0, 8, "Protocolo", text_color = color.gray, text_size = tamTxt)
-    table.cell(panel, 1, 8, reglaFija, text_color = pSuave, text_size = tamTxt)
+        table.cell(panel, 0, 4, "F1 EVAL", text_color = pAcento, text_size = tamTxt)
+        table.cell(panel, 1, 4, txtEval, text_color = cE, bgcolor = bgE, text_size = tamTxt, tooltip = "Pasar la evaluación. El día bueno son +$" + str.tostring(riesgoDia) + " y el tope +$" + str.tostring(riesgoDia * 2) + "; si sale mal se va −$" + str.tostring(riesgoDia) + ". Los últimos días son colchón por si uno se tuerce.")
+        table.cell(panel, 0, 5, "F2 BUFFER", text_color = pBaja, text_size = tamTxt)
+        table.cell(panel, 1, 5, txtBuff, text_color = cB, bgcolor = bgB, text_size = tamTxt, tooltip = "Construir el colchón antes de cobrar, con la mitad de tamaño que en EVAL: +$" + str.tostring(riesgoDia) + " el día bueno, +$" + str.tostring(riesgoDia * 2) + " de tope, −$" + str.tostring(riesgoDia) + " si sale mal.")
+        table.cell(panel, 0, 6, "F3 PAYOUTS", text_color = pAlza, text_size = tamTxt)
+        table.cell(panel, 1, 6, txtPay, text_color = cP, bgcolor = bgP, text_size = tamTxt, tooltip = "FASE 3 · cobrar: 1 mini, riesgo chico, retiro diario. Aquí ya no creces la cuenta, la ordeñas sin romperla.")
+    table.cell(panel, 0, 7, "Protocolo", text_color = color.gray, text_size = tamTxt)
+    table.cell(panel, 1, 7, reglaFija, text_color = pSuave, text_size = tamTxt)
     if hayAlertas
-        table.cell(panel, 0, 9, "⏰ Agenda", text_color = color.gray, text_size = tamTxt)
-        table.cell(panel, 1, 9, alTxt, text_color = alCol, bgcolor = color.new(pSuave, alSigue <= 5 ? 85 : 100), text_size = tamTxt, tooltip = "Cuánto falta para tu próxima alerta y cuál es. Si la última de hoy ya pasó, cuenta hasta la primera del siguiente día hábil. Cuando falten 5 minutos o menos la fila se pone naranja. Los eventos son tus alertas de horario (config, grupo 7): hasta 7, cada una con su hora y su texto. Para que SUENEN en el teléfono crea UNA alerta de TradingView con condición Any alert() function call.")
-    table.cell(panel, 0, 10, txtA, text_color = colA, text_size = tamTxt)
-    table.cell(panel, 1, 10, tkA1, text_color = not dibujable ? color.gray : chart.fg_color, text_size = tamTxt, tooltip = tipA)
-    table.cell(panel, 2, 10, flA, text_color = cNetA, text_size = tamTxt, tooltip = tipA)
-    table.cell(panel, 3, 10, tkA1c, text_color = chart.fg_color, text_size = tamTxt, tooltip = tipA)
-    table.cell(panel, 4, 10, tkA2, text_color = cNetA, text_size = tamTxt, tooltip = tipA)
-    table.cell(panel, 0, 11, txtL, text_color = colL, text_size = tamTxt)
-    table.cell(panel, 1, 11, tkL1, text_color = not dibujable ? color.gray : chart.fg_color, text_size = tamTxt, tooltip = tipL)
-    table.cell(panel, 2, 11, flL, text_color = cNetL, text_size = tamTxt, tooltip = tipL)
-    table.cell(panel, 3, 11, tkL1c, text_color = chart.fg_color, text_size = tamTxt, tooltip = tipL)
-    table.cell(panel, 4, 11, tkL2, text_color = cNetL, text_size = tamTxt, tooltip = tipL)
-    table.cell(panel, 0, 12, txtN, text_color = colN, text_size = tamTxt)
-    table.cell(panel, 1, 12, tkN1, text_color = not dibujable ? color.gray : chart.fg_color, text_size = tamTxt, tooltip = tipN)
-    table.cell(panel, 2, 12, flN, text_color = cNetN, text_size = tamTxt, tooltip = tipN)
-    table.cell(panel, 3, 12, tkN1c, text_color = chart.fg_color, text_size = tamTxt, tooltip = tipN)
-    table.cell(panel, 4, 12, tkN2, text_color = cNetN, text_size = tamTxt, tooltip = tipN)
-    table.cell(panel, 0, 13, "TOTAL", text_color = chart.fg_color, text_size = tamTxt)
-    table.cell(panel, 1, 13, tkD1, text_color = not dibujable ? color.gray : chart.fg_color, text_size = tamTxt, tooltip = tipD)
-    table.cell(panel, 2, 13, flD, text_color = cNetD, text_size = tamTxt, tooltip = tipD)
-    table.cell(panel, 3, 13, tkD1c, text_color = chart.fg_color, text_size = tamTxt, tooltip = tipD)
-    table.cell(panel, 4, 13, tkD2, text_color = cNetD, text_size = tamTxt, tooltip = tipD)
+        table.cell(panel, 0, 8, "⏰ Agenda", text_color = color.gray, text_size = tamTxt)
+        table.cell(panel, 1, 8, alTxt, text_color = alCol, bgcolor = color.new(pSuave, alSigue <= 5 ? 85 : 100), text_size = tamTxt, tooltip = "Cuánto falta para tu próxima alerta y cuál es. Si la última de hoy ya pasó, cuenta hasta la primera del siguiente día hábil. Cuando falten 5 minutos o menos la fila se pone naranja. Los eventos son tus alertas de horario (config, grupo 7): hasta 7, cada una con su hora y su texto. Para que SUENEN en el teléfono crea UNA alerta de TradingView con condición Any alert() function call.")
+    table.cell(panel, 0, 9, txtA, text_color = colA, text_size = tamTxt)
+    table.cell(panel, 1, 9, tkA1, text_color = not dibujable ? color.gray : chart.fg_color, text_size = tamTxt, tooltip = tipA)
+    table.cell(panel, 2, 9, flA, text_color = cNetA, text_size = tamTxt, tooltip = tipA)
+    table.cell(panel, 3, 9, tkA1c, text_color = chart.fg_color, text_size = tamTxt, tooltip = tipA)
+    table.cell(panel, 4, 9, tkA2, text_color = cNetA, text_size = tamTxt, tooltip = tipA)
+    table.cell(panel, 0, 10, txtL, text_color = colL, text_size = tamTxt)
+    table.cell(panel, 1, 10, tkL1, text_color = not dibujable ? color.gray : chart.fg_color, text_size = tamTxt, tooltip = tipL)
+    table.cell(panel, 2, 10, flL, text_color = cNetL, text_size = tamTxt, tooltip = tipL)
+    table.cell(panel, 3, 10, tkL1c, text_color = chart.fg_color, text_size = tamTxt, tooltip = tipL)
+    table.cell(panel, 4, 10, tkL2, text_color = cNetL, text_size = tamTxt, tooltip = tipL)
+    table.cell(panel, 0, 11, txtN, text_color = colN, text_size = tamTxt)
+    table.cell(panel, 1, 11, tkN1, text_color = not dibujable ? color.gray : chart.fg_color, text_size = tamTxt, tooltip = tipN)
+    table.cell(panel, 2, 11, flN, text_color = cNetN, text_size = tamTxt, tooltip = tipN)
+    table.cell(panel, 3, 11, tkN1c, text_color = chart.fg_color, text_size = tamTxt, tooltip = tipN)
+    table.cell(panel, 4, 11, tkN2, text_color = cNetN, text_size = tamTxt, tooltip = tipN)
+    table.cell(panel, 0, 12, "TOTAL", text_color = chart.fg_color, text_size = tamTxt)
+    table.cell(panel, 1, 12, tkD1, text_color = not dibujable ? color.gray : chart.fg_color, text_size = tamTxt, tooltip = tipD)
+    table.cell(panel, 2, 12, flD, text_color = cNetD, text_size = tamTxt, tooltip = tipD)
+    table.cell(panel, 3, 12, tkD1c, text_color = chart.fg_color, text_size = tamTxt, tooltip = tipD)
+    table.cell(panel, 4, 12, tkD2, text_color = cNetD, text_size = tamTxt, tooltip = tipD)
     // filas de texto largo → columnas 1-4 fusionadas; en las filas de
     // sesión cada pieza tiene su celda: abrió · → · cerró · puntos
     // (se hace UNA sola vez)
@@ -23392,27 +23373,27 @@ if verPanel and barstate.islast
         table.cell(panel, 3, 2, "", text_size = tamTxt)
         table.cell(panel, 4, 2, "", text_size = tamTxt)
         if verContrato
-            for r = 3 to 7
+            for r = 3 to 6
                 table.cell(panel, 2, r, "", text_size = tamTxt)
                 table.cell(panel, 3, r, "", text_size = tamTxt)
                 table.cell(panel, 4, r, "", text_size = tamTxt)
-        table.cell(panel, 2, 8, "", text_size = tamTxt)
-        table.cell(panel, 3, 8, "", text_size = tamTxt)
-        table.cell(panel, 4, 8, "", text_size = tamTxt)
+        table.cell(panel, 2, 7, "", text_size = tamTxt)
+        table.cell(panel, 3, 7, "", text_size = tamTxt)
+        table.cell(panel, 4, 7, "", text_size = tamTxt)
         if hayAlertas
-            table.cell(panel, 2, 9, "", text_size = tamTxt)
-            table.cell(panel, 3, 9, "", text_size = tamTxt)
-            table.cell(panel, 4, 9, "", text_size = tamTxt)
+            table.cell(panel, 2, 8, "", text_size = tamTxt)
+            table.cell(panel, 3, 8, "", text_size = tamTxt)
+            table.cell(panel, 4, 8, "", text_size = tamTxt)
         table.merge_cells(panel, 1, 0, 4, 0)
         table.merge_cells(panel, 1, 1, 4, 1)
         table.merge_cells(panel, 1, 2, 4, 2)
         if verContrato
             // Fase + las 3 fases explicadas: una línea completa cada una
-            for r = 3 to 7
+            for r = 3 to 6
                 table.merge_cells(panel, 1, r, 4, r)
-        table.merge_cells(panel, 1, 8, 4, 8)
+        table.merge_cells(panel, 1, 7, 4, 7)
         if hayAlertas
-            table.merge_cells(panel, 1, 9, 4, 9)
+            table.merge_cells(panel, 1, 8, 4, 8)
         // la celda de NY en la fila de liquidez ocupa las columnas 3-4
         unido := true
  `;
