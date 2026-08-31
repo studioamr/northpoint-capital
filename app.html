@@ -3360,7 +3360,16 @@ button.tag.quemada{text-decoration:line-through;text-decoration-color:var(--down
 .amr-k{font-family:var(--mono);font-size:9px;letter-spacing:.26em;color:var(--dim)}
 .amr-h h3{margin:6px 0 0;font-size:19px;font-weight:800;letter-spacing:-.01em}
 .amr-h .btn{margin-left:auto}
+.amr-p{margin:0 0 14px;font-size:13px;line-height:1.65;color:var(--dim);max-width:78ch}
+.amr-p b{color:var(--txt);font-weight:600}
 .amr-cols{display:grid;grid-template-columns:repeat(5,1fr);gap:10px}
+.amr-cols.cuatro{grid-template-columns:repeat(4,1fr)}
+.amr-shot{margin:16px 0 0;border:1px solid var(--line);border-radius:12px;overflow:hidden;background:#0b0b0b}
+.amr-shot img{display:block;width:100%;height:auto}
+.amr-shot figcaption{padding:9px 12px;border-top:1px solid var(--line-soft);
+  font-family:var(--mono);font-size:10px;letter-spacing:.1em;color:var(--faint)}
+.amr-sub{margin:22px 0 12px;font-size:12px;font-weight:700;letter-spacing:.12em;
+  text-transform:uppercase;color:var(--dim)}
 @media(max-width:900px){.amr-cols{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:520px){.amr-cols{grid-template-columns:1fr}}
 .amr-col{display:block;text-align:left;padding:12px;border:1px solid var(--line);
@@ -4884,10 +4893,6 @@ stop[stop-color="#9BC0DC"]{stop-color:var(--txt)}
         <div class="panel mt2 algo-carrusel">
           <div class="algo-pista" id="algoPista"></div>
         </div>
-
-        <!-- QUÉ HACE CADA COSA: la explicación larga del script que
-             tengas abierto en la pestaña de abajo. -->
-        <div class="panel mt2 algo-desc" id="algoDesc"></div>
 
         <!-- CÓMO SE OPERA: las dos pantallas de André y el método,
              dibujado en vez de escrito. -->
@@ -26675,120 +26680,6 @@ if barstate.islast
             float pos = math.min(115, math.max(-15, (close - aD) / ancho * 100))
             canLb := label.new(time, cnY2, kzNegrita ? f_negrita("CANAL " + canTF + " " + (pend > 0 ? "↑" : pend < 0 ? "↓" : "→")) : "CANAL " + canTF + " " + (pend > 0 ? "↑" : pend < 0 ? "↓" : "→"), xloc = xloc.bar_time, style = label.style_label_left, color = #ffffff00, textcolor = color.new(colCanal, 10), size = tamLbl, tooltip = "Canal de regresión · " + canTF + " · " + str.tostring(canLen) + " velas\\nDe punta a punta " + (pend > 0 ? "sube " : pend < 0 ? "baja " : "va plano, ") + str.tostring(math.abs(pend), "#.##") + " pts\\n\\nBorde de arriba " + str.tostring(aU, format.mintick) + "\\nCentro " + str.tostring(cnY2, format.mintick) + "\\nBorde de abajo " + str.tostring(aD, format.mintick) + "\\n\\nEl precio va al " + str.tostring(pos, "#") + "% del canal (0 = borde de abajo, 100 = el de arriba).\\nEl ancho sale del error de la recta, no de la volatilidad pelona: mientras mejor explique la recta al precio, más flaco el canal.")
 `;
-/* ════ QUÉ HACE CADA INDICADOR, EXPLICADO COMPLETO ════════════════
-   (André, 31-ago-2026) Las viñetas del carrusel eran de una línea y
-   daban por sabido lo que significa cada cosa. Aquí va la versión
-   larga: qué dibuja cada pieza, con qué regla y qué significa el
-   término — sin dar por hecho que el que lee ya conoce el ORB, un
-   FVG o un Order Block. Se pinta la del script que tengas abierto
-   en la pestaña de abajo. */
-const ALGO_DESC = {
-  'kzp-dia': [
-    { t:['Killzones · las cuatro sesiones','Killzones · the four sessions'], li:[
-      ['Una killzone es la ventana de horario en la que opera un mercado. El indicador dibuja cuatro: ASIA (20:00 a 02:00 de Nueva York, arrancando el domingo), LONDRES (02:00 a 08:30), el ORB (09:30 a 09:45) y NUEVA YORK (09:30 a 16:00). Todas se calculan en hora del mercado, no en la de tu computadora, así que no se recorren si viajas o si cambia el horario de verano.',
-       'A killzone is the time window in which a market trades. The indicator draws four: ASIA (20:00 to 02:00 New York, starting Sunday), LONDON (02:00 to 08:30), the ORB (09:30 to 09:45) and NEW YORK (09:30 to 16:00). All of them are computed in exchange time, not your computer clock, so they do not shift when you travel or when daylight saving changes.'],
-      ['De cada sesión pinta la caja del rango que hizo y dos líneas horizontales: su punto más alto y su punto más bajo.',
-       'For each session it paints the box of the range it made plus two horizontal lines: its highest and its lowest point.'],
-      ['Esas dos líneas siguen creciendo hacia la derecha mientras nadie las rompe. En el momento en que el precio las toca, la línea deja de crecer y se queda parada en esa vela. De un vistazo se ve qué niveles siguen sin visitar y cuáles ya se consumieron.',
-       'Those two lines keep growing to the right for as long as nobody breaks them. The moment price touches one, the line stops growing and freezes on that candle. At a glance you can see which levels are still untouched and which ones have already been consumed.'],
-      ['El ORB es la excepción: se puede dejar de corrido para que sus líneas no se detengan nunca, ni siquiera al ser tomadas, hasta que abra la sesión de Nueva York del día siguiente.',
-       'The ORB is the exception: it can be left uncut so its lines never stop, not even when taken, until the next day New York session opens.'] ] },
-    { t:['ORB · el rango de apertura','ORB · the opening range'], li:[
-      ['ORB quiere decir Opening Range Breakout: el rango de los primeros quince minutos de Nueva York, de 09:30 a 09:45. Se dibuja como una caja y deja tres niveles vivos — el ORH, que es su techo; el ORL, su piso; y el ORM, la mitad exacta entre los dos.',
-       'ORB stands for Opening Range Breakout: the range of the first fifteen minutes of New York, 09:30 to 09:45. It is drawn as a box and leaves three live levels — the ORH, its ceiling; the ORL, its floor; and the ORM, the exact midpoint between them.'],
-      ['Cuando el precio sale de la caja aparece una flecha, hacia arriba o hacia abajo. La señal se vuelve a armar solo cuando el precio regresa al ORM, así que no se repite dentro del mismo movimiento.',
-       'When price leaves the box an arrow appears, up or down. The signal only re-arms when price comes back to the ORM, so it does not repeat inside the same move.'],
-      ['Objetivos numerados: niveles proyectados cada 50% del ancho de la caja, hacia arriba y hacia abajo. Pueden verse todos o solo los que están en juego en ese momento.',
-       'Numbered targets: levels projected every 50% of the box width, above and below. You can show all of them or only the ones currently in play.'],
-      ['Mientras nadie rompe, el indicador puede decir hacia qué lado suele romper. No es una predicción ni un porcentaje de acierto probado: es el conteo de lo que pasó en las velas cargadas de ese mismo gráfico, separando los días en que el precio estaba arriba del ORM de aquellos en que estaba abajo. El tamaño de la muestra va escrito al lado, a propósito.',
-       'While nothing has broken yet, the indicator can say which side it usually breaks toward. It is not a prediction nor a proven win rate: it is a count of what happened on the candles loaded in that same chart, split by whether price sat above or below the ORM. The sample size is written next to it on purpose.'],
-      ['Los puntos del rompimiento se cuentan desde el nivel roto, nunca desde la apertura: si rompió el ORH, cuenta hacia arriba desde el ORH.',
-       'Breakout points are counted from the level that broke, never from the open: if it broke the ORH, it counts up from the ORH.'],
-      ['El ORB del día se borra solo cuando arranca el siguiente, así que nunca ves dos encimados.',
-       'The day ORB erases itself when the next one starts, so you never see two of them stacked.'] ] },
-    { t:['FVG · los huecos de precio','FVG · price gaps'], li:[
-      ['Un FVG (Fair Value Gap) es un hueco de tres velas: la mecha de la primera y la de la tercera no llegan a tocarse, y en medio queda un tramo de precio por el que el mercado pasó de largo sin negociar. Es un desequilibrio, y suele actuar como imán.',
-       'An FVG (Fair Value Gap) is a three-candle gap: the wick of the first and the wick of the third never meet, leaving a stretch of price the market ran through without trading. It is an imbalance, and it tends to act as a magnet.'],
-      ['El indicador marca dos: el hueco alcista más cercano al precio y el bajista más cercano, leídos de la temporalidad que elijas — no necesariamente la del gráfico.',
-       'The indicator marks two: the bullish gap nearest to price and the bearish one nearest to price, read from the timeframe you choose — not necessarily the chart one.'],
-      ['Aparte marca los que nacen dentro del ORB. Cuando el precio atraviesa uno de esos, el rectángulo no se borra: se corta en esa vela y se queda pintado del color contrario. Eso es un FVG invertido, y significa lo opuesto que el hueco original — el desequilibrio se resolvió y ahora esa zona estorba del otro lado.',
-       'It also marks the ones born inside the ORB. When price runs through one of those, the rectangle is not deleted: it is cut on that candle and stays painted in the opposite color. That is an inverted FVG, and it means the opposite of the original gap — the imbalance resolved and now that zone pushes back from the other side.'] ] },
-    { t:['Medias móviles','Moving averages'], li:[
-      ['Dos medias configurables por separado: cada una con su tipo (EMA, SMA o WMA), su largo, su fuente y su color. Vienen apagadas de fábrica.',
-       'Two independently configurable moving averages: each with its own type (EMA, SMA or WMA), length, source and color. They ship turned off.'],
-      ['Aparte hay una media de sesión que arranca en la apertura del ORB y solo promedia lo que va del día.',
-       'There is also a session average that starts at the ORB open and only averages what has happened so far that day.'] ] },
-    { t:['El panel · la mesa en una tabla','The panel · the desk in one table'], li:[
-      ['Sesión: cuál de las tres está corriendo en este momento — ASIA, LONDRES o NUEVA YORK.',
-       'Session: which of the three is running right now — ASIA, LONDON or NEW YORK.'],
-      ['Rutina: en qué etapa del día vas, de cuatro, con la instrucción de esa etapa escrita completa. Cambia sola con el reloj.',
-       'Routine: which stage of the day you are in, out of four, with that stage instruction spelled out. It changes on its own with the clock.'],
-      ['Fase: en qué fase del contrato estás, qué día llevas de esa fase y cuántas operaciones llevas del límite.',
-       'Phase: which contract phase you are in, which day of that phase, and how many trades you have taken against the limit.'],
-      ['Un renglón por cada fase del contrato, con sus fechas, el objetivo del día, cuántos contratos se operan y cuánto riesgo lleva cada operación. La que está viva se resalta.',
-       'One row per contract phase, with its dates, the daily target, how many contracts are traded and how much risk each trade carries. The live one is highlighted.'],
-      ['Protocolo: las reglas que no se negocian, siempre a la vista.',
-       'Protocol: the rules that are not up for debate, always in sight.'],
-      ['Agenda: cuánto falta para el siguiente aviso del día — la revisión de noticias, el arranque, el cierre.',
-       'Agenda: how long until the next checkpoint of the day — the news check, the open, the close.'],
-      ['Un renglón por sesión (ASIA, LONDRES, NY y el ORB): a qué precio abrió, en cuál va o cerró, y cuántos puntos lleva, con su signo y su color. Abajo, el TOTAL del día completo.',
-       'One row per session (ASIA, LONDON, NY and the ORB): the price it opened at, where it is now or where it closed, and how many points it has moved, signed and colored. At the bottom, the TOTAL for the whole day.'] ] },
-    { t:['Alertas y aspecto','Alerts and looks'], li:[
-      ['Alertas de horario y de liquidez tomada. Se arman con una sola alerta de TradingView, la de tipo "Any alert() function call".',
-       'Time alerts and liquidity-taken alerts. They are set up with a single TradingView alert, the "Any alert() function call" type.'],
-      ['Una sola paleta pinta el indicador completo, y cada pieza se prende o se apaga desde el primer grupo de ajustes sin perder su configuración.',
-       'A single palette paints the whole indicator, and every piece can be switched on or off from the first settings group without losing its configuration.'] ] } ],
-
-  'kzp-estructura': [
-    { t:['El rango · la estructura','The range · the structure'], li:[
-      ['Lee los swings —los picos y los valles— de la temporalidad que elijas, 5m, 15m o 1h, y de ahí saca UN tramo: su punto más alto y su punto más bajo. Ese tramo es la estructura, y absolutamente todo lo demás se mide sobre él.',
-       'It reads the swings — the peaks and troughs — of the timeframe you choose, 5m, 15m or 1h, and from those it extracts ONE leg: its highest and its lowest point. That leg is the structure, and absolutely everything else is measured on it.'],
-      ['La dirección no se adivina: sale de cuál de los dos extremos se formó después. Si el bajo es el más reciente, el precio venía de arriba y el impulso fue bajista. Si es el alto, fue alcista. El letrero grande dice LONGS o SHORTS según eso, y se pone del lado por donde entraría el precio a buscar la operación.',
-       'The direction is not guessed: it comes from which of the two extremes formed later. If the low is the more recent one, price came from above and the impulse was bearish. If it is the high, it was bullish. The big label reads LONGS or SHORTS accordingly, and sits on the side price would come from to look for the trade.'],
-      ['Hay una vista opcional de la estructura interna: el tramo más chico que se está formando dentro del grande, en línea punteada para no confundirlo con el de fondo.',
-       'There is an optional internal-structure view: the smaller leg forming inside the big one, drawn dotted so it is never confused with the background one.'] ] },
-    { t:['Order Block','Order Block'], li:[
-      ['Es la última vela contraria antes del movimiento que rompió la estructura: la última vela alcista antes de una caída, o la última bajista antes de una subida. Es la zona de donde salió el impulso, y por eso es la que no debería romperse si la idea sigue en pie.',
-       'It is the last opposite candle before the move that broke structure: the last bullish candle before a drop, or the last bearish one before a rally. It is the zone the impulse came out of, which is why it is the one that should not break if the idea still stands.'],
-      ['Si su mecha se sale del rango, el rango se estira hasta taparlo. El bloque que originó el movimiento no puede quedar colgando fuera de su propia estructura, y cuando eso pasa se recalculan también la dirección y el Fibonacci.',
-       'If its wick sticks out of the range, the range stretches to cover it. The block that originated the move cannot hang outside its own structure, and when that happens the direction and the Fibonacci are recomputed too.'] ] },
-    { t:['El mejor FVG del rango','The best FVG in the range'], li:[
-      ['Un FVG es un hueco de tres velas por el que el precio pasó sin negociar. Aquí no se marcan todos: se marca UNO, el de más confluencia — el que se encima con el Order Block, el que cae dentro del área de interés y el que está más cerca del precio. Ese es el hueco del setup.',
-       'An FVG is a three-candle gap price ran through without trading. Here they are not all marked: only ONE is, the one with the most confluence — the one overlapping the Order Block, the one falling inside the area of interest, and the one closest to price. That is the setup gap.'],
-      ['Si el hueco vive completo dentro del Order Block es la misma zona pintada dos veces, y se deja solo el bloque.',
-       'If the gap lives entirely inside the Order Block it is the same zone painted twice, so only the block is kept.'] ] },
-    { t:['AOI · el área de interés','AOI · the area of interest'], li:[
-      ['Es la franja por la que el precio ha pasado más veces, buscada lo más delgada posible: se prueban varios grosores del más flaco al más gordo y gana el primero que junte los toques mínimos. Así el área queda apretada en vez de ser una mancha ancha que no dice nada.',
-       'It is the band price has passed through the most times, searched as thin as possible: several thicknesses are tried from thinnest to thickest and the first one that gathers the minimum touches wins. That keeps the area tight instead of a wide smear that says nothing.'],
-      ['Cada toque queda marcado sobre la franja, así se ve cuántas veces se ha respetado.',
-       'Every touch is marked on the band, so you can see how many times it has been respected.'] ] },
-    { t:['Fibonacci','Fibonacci'], li:[
-      ['Los niveles se trazan sobre el MISMO tramo, con el 0 donde terminó el impulso y el 1 donde arrancó. Así el retroceso profundo siempre queda del lado por donde regresaría el precio.',
-       'The levels are drawn on the SAME leg, with 0 where the impulse ended and 1 where it started. That way the deep retracement always sits on the side price would come back from.'],
-      ['Los de fábrica mezclan la cuadrícula de Gann (0.25 y 0.5) con los retrocesos 0.62, 0.705 y 0.79. Se pueden poner los que quieras, separados por coma.',
-       'The defaults mix the Gann grid (0.25 and 0.5) with the 0.62, 0.705 and 0.79 retracements. You can set whichever you want, comma separated.'] ] },
-    { t:['La orden · entrada, stop y premio','The order · entry, stop and target'], li:[
-      ['Dibuja la operación completa como la herramienta Long/Short Position de TradingView: la caja del riesgo, la caja del premio y la línea de la entrada partiéndolas.',
-       'It draws the whole trade the way the TradingView Long/Short Position tool does: the risk box, the reward box and the entry line splitting them.'],
-      ['El stop cuelga del extremo que originó el tramo y no se mueve. Como es el mismo para todos los niveles, entrar más profundo acorta el riesgo y agranda el beneficio-riesgo sin cambiar nada más — esa es la idea completa.',
-       'The stop hangs off the extreme that originated the leg and does not move. Since it is the same for every level, entering deeper shortens the risk and grows the reward-to-risk without changing anything else — that is the whole idea.'],
-      ['La entrada puede fijarse en un nivel concreto (0.5, 0.62, 0.705 o 0.79), dejarse en automático, o pintar la escalera completa: una caja por nivel, numeradas, para compararlas de un vistazo.',
-       'The entry can be pinned to a specific level (0.5, 0.62, 0.705 or 0.79), left on automatic, or drawn as the full ladder: one box per level, numbered, to compare them at a glance.'],
-      ['El objetivo se elige entre siete: 1:1, 1:2, la liquidez interna más cercana, el extremo de la estructura, más allá de ese extremo, o el alto o bajo que siga SIN TOMARSE de Asia, de Londres o de Nueva York.',
-       'The target is picked from seven: 1:1, 1:2, the nearest internal liquidity, the structure extreme, beyond that extreme, or the still-UNTAKEN high or low of Asia, London or New York.'],
-      ['Cada caja puede llevar adentro su número, el nivel, el beneficio-riesgo y un porcentaje de confluencia. Ese porcentaje NO es un win rate probado: es cuánto se junta en ese nivel — si le pega un FVG, si cae en el Order Block, si cae en el área de interés, qué tan profundo va, si el precio ya lo pasó de largo y qué beneficio-riesgo deja. Sirve para comparar los niveles entre ellos, no para prometer nada.',
-       'Each box can carry its number, the level, the reward-to-risk and a confluence percentage. That percentage is NOT a proven win rate: it is how much stacks up at that level — whether an FVG lands on it, whether it falls in the Order Block, whether it falls in the area of interest, how deep it is, whether price has already run past it, and what reward-to-risk it leaves. It is for comparing levels against each other, not for promising anything.'] ] },
-    { t:['Canal de regresión','Regression channel'], li:[
-      ['La recta que mejor le queda al precio de las últimas velas, con una banda a cada lado. Dice tres cosas de golpe: hacia dónde va la inclinación, qué tan lejos del centro anda el precio ahora, y dónde están los bordes.',
-       'The line that best fits price over the last candles, with a band on each side. It says three things at once: which way the slope points, how far from the center price is right now, and where the edges are.'],
-      ['Se mide en SU propia temporalidad —5m, 15m o 1h— sin importar en cuál estés parado: el canal de 1h se dibuja igual aunque trabajes en un minuto.',
-       'It is measured in ITS own timeframe — 5m, 15m or 1h — regardless of the one you are standing on: the 1h channel looks the same even if you work on one minute.'],
-      ['El ancho de las bandas no sale de la volatilidad a secas, sale del error de la recta: mientras mejor explique la recta al precio, más flaco es el canal. Por eso tocar un borde significa algo, en vez de ser un canal inflado en cualquier tendencia.',
-       'The band width does not come from raw volatility, it comes from the error of the fit: the better the line explains price, the tighter the channel. That is why touching an edge means something, instead of being a channel that inflates in any trend.'] ] },
-    { t:['Killzones','Killzones'], li:[
-      ['Las mismas cuatro sesiones del otro indicador —Asia, Londres, el ORB y Nueva York— con sus cajas y sus altos y bajos, para leer la estructura junto con la liquidez que dejó cada sesión.',
-       'The same four sessions as the other indicator — Asia, London, the ORB and New York — with their boxes and their highs and lows, so the structure can be read alongside the liquidity each session left behind.'] ] } ]
-};
 
 /* ════ CÓMO SE OPERA · el método, dibujado ═══════════════════════
    (André, 31-ago-2026) Pidió que no fuera un muro de texto: la
@@ -26860,104 +26751,7 @@ function algoComoHTML(){
     <p class="como-nota">${T('Horas de Nueva York. La regla dura está en el 09:45: antes de que cierre el rango de apertura no se entra, ni aunque el setup se vea perfecto.','New York hours. The hard rule sits at 09:45: before the opening range closes you do not enter, not even if the setup looks perfect.')}</p>
   </div>
 
-  <div class="como-bloque">
-    <h4>${T('Los dos setups','The two setups')}</h4>
-    <div class="como-2">
-      <div class="como-card como-setup">
-        <span class="como-k">${T('SETUP A','SETUP A')}</span>
-        <b>${T('Cazar la liquidez de Asia y Londres','Hunting Asia and London liquidity')}</b>
-        <div class="como-svg">
-          <svg viewBox="0 0 440 260" role="img" aria-label="${T('Entrada 25 puntos antes del nivel','Entry 25 points before the level')}">
-            <rect x="150" y="70" width="250" height="70" class="f-up"/>
-            <rect x="150" y="140" width="250" height="42" class="f-dn"/>
-            <line x1="20" y1="70" x2="420" y2="70" class="s-liq"/>
-            <line x1="150" y1="140" x2="420" y2="140" class="s-ent"/>
-            <line x1="150" y1="182" x2="420" y2="182" class="s-sl"/>
-            <path d="M20 236 L52 210 L84 224 L116 186 L148 200 L180 160 L212 174 L244 140" class="s-px"/>
-            <circle cx="244" cy="140" r="5" class="s-dot"/>
-            <path d="M244 140 L300 104 L340 118 L392 72" class="s-px s-px-f"/>
-            <text x="24" y="62"  class="s-t">${T('ASIA H / LNDN H · sin tomar','ASIA H / LNDN H · untaken')}</text>
-            <text x="24" y="134" class="s-t s-on">${T('ENTRADA · 25 pts antes','ENTRY · 25 pts before')}</text>
-            <text x="24" y="198" class="s-t s-red">SL</text>
-            <text x="412" y="110" class="s-t s-grn" text-anchor="end">${T('el nivel ES el objetivo','the level IS the target')}</text>
-          </svg>
-        </div>
-        <ol>
-          <li>${T('En el premarket se marcan los altos y bajos de Asia y de Londres que siguen sin tocarse. Son los imanes del día.','In premarket you mark the Asia and London highs and lows still untouched. Those are the magnets of the day.')}</li>
-          <li>${T('Se entra unos 25 puntos ANTES de que el precio llegue al nivel, a favor del movimiento que va hacia él.','You enter about 25 points BEFORE price reaches the level, in the direction of the move heading toward it.')}</li>
-          <li>${T('El nivel no es la entrada: es el objetivo. El stop es lo que hace que el trade pague 1:1 o 1:2.','The level is not the entry: it is the target. The stop is what makes the trade pay 1:1 or 1:2.')}</li>
-          <li class="mal">${T('Si el nivel se tomó ANTES de las 09:45, se acabó: ese imán ya no existe y no hay trade.','If the level was taken BEFORE 09:45, it is over: that magnet no longer exists and there is no trade.')}</li>
-        </ol>
-      </div>
-
-      <div class="como-card como-setup">
-        <span class="como-k">${T('SETUP B','SETUP B')}</span>
-        <b>${T('Entrar en el nivel clave del tramo','Entering at the key level of the leg')}</b>
-        <div class="como-svg">
-          <svg viewBox="0 0 440 260" role="img" aria-label="${T('Entrada en el retroceso profundo','Entry at the deep retracement')}">
-            <rect x="150" y="40" width="250" height="146" class="f-up"/>
-            <rect x="150" y="186" width="250" height="42" class="f-dn"/>
-            <line x1="20" y1="40"  x2="420" y2="40"  class="s-rg"/>
-            <line x1="20" y1="228" x2="420" y2="228" class="s-rg"/>
-            <line x1="150" y1="120" x2="400" y2="120" class="s-fib"/>
-            <line x1="150" y1="152" x2="400" y2="152" class="s-fib"/>
-            <line x1="150" y1="170" x2="400" y2="170" class="s-fib"/>
-            <line x1="150" y1="186" x2="400" y2="186" class="s-fib"/>
-            <rect x="150" y="166" width="250" height="24" class="f-zone"/>
-            <path d="M20 214 L52 120 L84 150 L116 96 L148 132 L180 170 L212 186" class="s-px"/>
-            <circle cx="212" cy="186" r="5" class="s-dot"/>
-            <path d="M212 186 L268 130 L306 152 L364 44" class="s-px s-px-f"/>
-            <text x="404" y="116" class="s-n" text-anchor="start">0.5</text>
-            <text x="404" y="156" class="s-n" text-anchor="start">.62</text>
-            <text x="404" y="182" class="s-n" text-anchor="start">.79</text>
-            <text x="24" y="32"  class="s-t s-grn">${T('el otro extremo · objetivo','the other extreme · target')}</text>
-            <text x="24" y="180" class="s-t s-on">${T('FVG u Order Block encima','FVG or Order Block on it')}</text>
-            <text x="24" y="246" class="s-t s-red">${T('el extremo que originó el tramo · SL','the extreme that started the leg · SL')}</text>
-          </svg>
-        </div>
-        <ol>
-          <li>${T('El tramo del 5 minutos manda: su alto, su bajo y de qué lado se busca.','The 5-minute leg rules: its high, its low and which side you look for.')}</li>
-          <li>${T('La entrada va en el retroceso, entre el 0.5 y el 0.79 — y vale el doble cuando ahí encima cae un FVG o el Order Block.','The entry goes on the retracement, between 0.5 and 0.79 — and it is worth double when an FVG or the Order Block lands right there.')}</li>
-          <li>${T('El stop cuelga del extremo que originó el tramo y no se mueve. Por eso entrar más profundo da más beneficio-riesgo con el mismo trade.','The stop hangs off the extreme that started the leg and does not move. That is why entering deeper gives more reward-to-risk on the same trade.')}</li>
-          <li>${T('El objetivo natural es el otro extremo del tramo. Si la liquidez de una sesión queda antes, esa manda.','The natural target is the other extreme of the leg. If a session liquidity sits before it, that one rules.')}</li>
-        </ol>
-      </div>
-    </div>
-  </div>
-
-  <div class="como-bloque">
-    <h4>${T('La orden, por dentro','Inside the order')}</h4>
-    <div class="como-svg">
-      <svg viewBox="0 0 960 214" role="img" aria-label="${T('Riesgo, entrada y objetivo','Risk, entry and target')}">
-        <rect x="120" y="30"  width="700" height="54" class="f-up2"/>
-        <rect x="120" y="84"  width="700" height="54" class="f-up"/>
-        <rect x="120" y="138" width="700" height="54" class="f-dn"/>
-        <line x1="120" y1="138" x2="820" y2="138" class="s-ent"/>
-        <line x1="120" y1="192" x2="820" y2="192" class="s-sl"/>
-        <line x1="120" y1="30"  x2="820" y2="30"  class="s-tp"/>
-        <text x="836" y="24"  class="s-t s-grn">1:2 · +$1,000</text>
-        <text x="836" y="80"  class="s-t s-grn">1:1 · +$500</text>
-        <text x="836" y="134" class="s-t s-on">${T('ENTRADA','ENTRY')}</text>
-        <text x="836" y="188" class="s-t s-red">SL · −$500</text>
-        <text x="130" y="60"  class="s-sub2">${T('día máximo','best day')}</text>
-        <text x="130" y="114" class="s-sub2">${T('día bueno','good day')}</text>
-        <text x="130" y="168" class="s-sub2">${T('día malo','bad day')}</text>
-      </svg>
-    </div>
-    <p class="como-nota">${T('Las cifras salen del panel: dos minis, un solo trade, riesgo de $500 por operación. Un 1:1 cierra el día bueno y un 1:2 lo cierra en el máximo. En la fase de cobros baja a un mini y el riesgo a $250.','The numbers come from the panel: two minis, a single trade, $500 risk per trade. A 1:1 closes a good day and a 1:2 closes it at the maximum. In the payout phase it drops to one mini and $250 of risk.')}</p>
-  </div>
-
-  <div class="como-bloque">
-    <h4>${T('Lo que no se negocia','What is not up for debate')}</h4>
-    <div class="como-reglas">
-      <div><b>1</b><span>${T('posición al día','position per day')}</span></div>
-      <div><b>09:45</b><span>${T('antes de eso, nada','before that, nothing')}</span></div>
-      <div><b>1:1 → 1:2</b><span>${T('el rango de objetivos','the target range')}</span></div>
-      <div><b>$500</b><span>${T('de riesgo, siempre el mismo','of risk, always the same')}</span></div>
-      <div><b>16:00</b><span>${T('se acabó, ganes o pierdas','over, win or lose')}</span></div>
-      <div><b>${T('SIN NIVEL','NO LEVEL')}</b><span>${T('no hay trade','no trade')}</span></div>
-    </div>
-  </div>`;
+  `;
 }
 
 const ALGO_SCRIPTS = [
@@ -26979,6 +26773,15 @@ let algoActivo = ALGO_SCRIPTS[0] ? ALGO_SCRIPTS[0].id : null;
    Debajo, cómo se pone, porque el diseño tiene una regla que no es obvia y que
    cuesta media hora descubrir sola: un color que muevas en su propio grupo
    MANDA aunque sigas en AMR SETUP. No hay que cambiar de diseño para tocar uno. */
+/* EL CHART, PRIMERO: «AMR SETUP» no es sólo la paleta del indicador — es cómo
+   se ve el chart. Los hex están MEDIDOS de la captura de sus ajustes de
+   TradingView, no copiados de memoria. */
+const AMR_CHART = [
+  { hex:'#FFFFFF', n:['Fondo','Background'],   q:['el lienzo, en blanco','the canvas, white'] },
+  { hex:'#3861F6', n:['Vela de alza','Up candle'], q:['el cuerpo cuando sube','the body when it rises'] },
+  { hex:'#000000', n:['Vela de baja','Down candle'], q:['el cuerpo cuando baja','the body when it falls'] },
+  { hex:'#000000', n:['Bordes y mechas','Borders and wicks'], q:['negros los dos, suba o baje','black on both, up or down'] }
+];
 const AMR_COLORES = [
   { hex:'#2e6da4', n:['Alza','Up'],    q:['NY, FVG ↑, las cifras en verde','NY, FVG ↑, figures in green'] },
   { hex:'#0a2342', n:['Baja','Down'],  q:['ASIA, FVG ↓, las cifras en rojo','ASIA, FVG ↓, figures in red'] },
@@ -27002,23 +26805,31 @@ function amrPinta(){
      bi('Pon «Diseño» en PERSONALIZADO y los cinco de arriba mandan: cambias esos cinco y cambia el chart entero sin tocar nada más.',
         'Set «Diseño» to PERSONALIZADO and the five above take over: change those five and the whole chart changes.')]
   ];
+  const muestras = (arr) => arr.map(c => `
+    <button type="button" class="amr-col" data-hex="${c.hex}"
+      title="${bi('Clic para copiar','Click to copy')}">
+      <span class="amr-mu" style="background:${c.hex}"></span>
+      <span class="amr-tx"><b>${esc(loc(c.n))}</b><em>${c.hex}</em></span>
+      <span class="amr-q">${esc(loc(c.q))}</span>
+    </button>`).join('');
   host.innerHTML = `
     <div class="amr-h">
       <div>
         <span class="amr-k">AMR SETUP</span>
-        <h3>${bi('Mis colores','My colors')}</h3>
+        <h3>${bi('Mi chart','My chart')}</h3>
       </div>
-      <button type="button" class="btn sm" id="amrTodo">${bi('Copiar los cinco','Copy all five')}</button>
+      <button type="button" class="btn sm" id="amrTodo">${bi('Copiar todos','Copy all')}</button>
     </div>
-    <div class="amr-cols">
-      ${AMR_COLORES.map(c => `
-        <button type="button" class="amr-col" data-hex="${c.hex}"
-          title="${bi('Clic para copiar','Click to copy')}">
-          <span class="amr-mu" style="background:${c.hex}"></span>
-          <span class="amr-tx"><b>${esc(loc(c.n))}</b><em>${c.hex}</em></span>
-          <span class="amr-q">${esc(loc(c.q))}</span>
-        </button>`).join('')}
-    </div>
+    <p class="amr-p">${bi(
+      'Fondo blanco, la vela que sube en azul y la que baja en negro, con bordes y mechas negros. En TradingView: <b>Opciones de configuración → Símbolo → Velas</b>.',
+      'White background, the up candle in blue and the down one in black, with black borders and wicks. In TradingView: <b>Chart settings → Symbol → Candles</b>.')}</p>
+    <div class="amr-cols cuatro">${muestras(AMR_CHART)}</div>
+    <figure class="amr-shot">
+      <img src="amr-chart.jpg" alt="${bi('Los ajustes de velas en TradingView','TradingView candle settings')}" loading="lazy">
+      <figcaption>${bi('Así queda y ahí se pone.','That is how it looks, and that is where you set it.')}</figcaption>
+    </figure>
+    <h4 class="amr-sub">${bi('Y los cinco del indicador','And the five of the indicator')}</h4>
+    <div class="amr-cols">${muestras(AMR_COLORES)}</div>
     <ol class="amr-pasos">
       ${pasos.map(([t,d]) => `<li><b>${esc(t)}</b><span>${esc(d)}</span></li>`).join('')}
     </ol>`;
@@ -27031,8 +26842,8 @@ function amrPinta(){
   });
   const todo = $('#amrTodo');
   if(todo) todo.onclick = () => copia(
-    AMR_COLORES.map(c => c.hex).join('\n'),
-    bi('Los cinco colores, copiados','All five colors copied'));
+    AMR_CHART.concat(AMR_COLORES).map(c => esc(loc(c.n)) + '  ' + c.hex).join('\n'),
+    bi('Todos los colores, copiados','All colors copied'));
 }
 function renderAlgoritmo(){
   const root = $('#v-algoritmo'); if(!root) return;
@@ -27112,14 +26923,6 @@ function renderAlgoritmo(){
   const pre = $('#algoCodigo'); if(pre) pre.textContent = activo ? activo.codigo : '';
   const como = $('#algoComo');
   if(como && typeof algoComoHTML === 'function') como.innerHTML = algoComoHTML();
-  const desc = $('#algoDesc');
-  if(desc){
-    const bloques = (typeof ALGO_DESC !== 'undefined' && ALGO_DESC[algoActivo]) ? ALGO_DESC[algoActivo] : [];
-    desc.innerHTML = bloques.map(b =>
-      `<div><h4>${esc(loc(b.t))}</h4><ul>${b.li.map(x=>`<li>${esc(loc(x))}</li>`).join('')}</ul></div>`
-    ).join('');
-    desc.style.display = bloques.length ? '' : 'none';
-  }
 }
 $('#algoCopiar')?.addEventListener('click', async () => {
   const activo = ALGO_SCRIPTS.find(s=>s.id===algoActivo); if(!activo) return;
