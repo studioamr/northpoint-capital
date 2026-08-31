@@ -3025,14 +3025,12 @@ button.tag.quemada{text-decoration:line-through;text-decoration-color:var(--down
 .algo-card img{display:block;width:100%;height:auto}
 .algo-card figcaption{padding:10px 14px;border-top:1px solid var(--line-soft)}
 .algo-card figcaption b{display:block;font-size:13px;color:var(--txt)}
-.algo-card figcaption span{font-family:var(--mono);font-size:10px;letter-spacing:.06em;color:var(--faint)}
-/* los puntos clave de cada una, debajo */
-.algo-puntos{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:14px;margin-top:16px}
-.algo-pt{border:1px solid var(--line-soft);border-radius:12px;padding:13px 15px;background:var(--w02)}
-.algo-pt b{display:block;font-size:12.5px;color:var(--txt);margin-bottom:7px}
-.algo-pt ul{list-style:none;margin:0;padding:0;display:grid;gap:5px}
-.algo-pt li{position:relative;padding-left:14px;font-size:12px;line-height:1.5;color:var(--dim)}
-.algo-pt li::before{content:'·';position:absolute;left:4px;color:var(--faint);font-weight:700}
+.algo-card figcaption span{display:block;font-family:var(--mono);font-size:10px;letter-spacing:.06em;color:var(--faint)}
+/* los puntos clave, DENTRO de su propia tarjeta */
+.algo-card figcaption ul{list-style:none;margin:10px 0 0;padding:10px 0 0;display:grid;gap:5px;
+  border-top:1px solid var(--line-soft)}
+.algo-card figcaption li{position:relative;padding-left:14px;font-size:12px;line-height:1.5;color:var(--dim)}
+.algo-card figcaption li::before{content:'·';position:absolute;left:4px;color:var(--faint);font-weight:700}
 .algo-shots2{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px;padding:16px}
 .algo-shot{border:1px solid var(--line-soft);border-radius:12px;overflow:hidden;background:var(--w02)}
 .algo-shot img{display:block;width:100%;height:auto}
@@ -4430,7 +4428,6 @@ stop[stop-color="#9BC0DC"]{stop-color:var(--txt)}
              DEBAJO sus puntos clave — qué es lo que estás mirando. -->
         <div class="panel mt2 algo-carrusel">
           <div class="algo-pista" id="algoPista"></div>
-          <div class="algo-puntos" id="algoPuntos"></div>
         </div>
 
         <div class="panel mt2 algo-code-wrap">
@@ -23292,15 +23289,15 @@ function renderAlgoritmo(){
     if(!shots.length){ pista.innerHTML=''; if(pts) pts.innerHTML=''; return; }
     const tarjeta = (x, k) => `<figure class="algo-card" data-k="${k}">
       <img src="${x.img}" alt="${esc(loc(x.t))}" loading="lazy">
-      <figcaption><b>${esc(loc(x.t))}</b><span>${esc(loc(x.sub))}</span></figcaption>
+      <figcaption>
+        <b>${esc(loc(x.t))}</b><span>${esc(loc(x.sub))}</span>
+        <ul>${x.cl.map(c=>`<li>${esc(loc(c))}</li>`).join('')}</ul>
+      </figcaption>
     </figure>`;
     /* dos vueltas seguidas: la animación corre el 50% y reinicia sin costura */
     pista.innerHTML = shots.map(tarjeta).join('') + shots.map(tarjeta).join('');
     pista.style.setProperty('--n', shots.length);
-    if(pts) pts.innerHTML = shots.map(x => `<div class="algo-pt">
-      <b>${esc(loc(x.t))}</b>
-      <ul>${x.cl.map(c=>`<li>${esc(loc(c))}</li>`).join('')}</ul>
-    </div>`).join('');
+    if(pts) pts.innerHTML = '';   /* los puntos viven dentro de su tarjeta */
   })();
   setImg('algoShotDia', typeof ALGO_SHOT_DIA !== 'undefined' ? ALGO_SHOT_DIA : '');
   setTxt('algoShotDiaCap','NP A+ en el chart real — Micro E-mini Nasdaq-100 (MNQ), 5m','NP A+ on the real chart — Micro E-mini Nasdaq-100 (MNQ), 5m');
