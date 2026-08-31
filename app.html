@@ -1804,6 +1804,24 @@ button.st-chip:hover{border-color:rgba(255,255,255,.45)}
 .c30-prot{margin-top:10px;padding:9px 12px;border:1px solid rgba(233,180,70,.24);
   border-radius:10px;background:rgba(233,180,70,.06)}
 .c30-prot span{font-size:11.5px;letter-spacing:.02em;color:#e9b446}
+.lg-hist-fila.abrible{cursor:pointer;transition:border-color .15s ease,background .15s ease}
+.lg-hist-fila.abrible:hover{border-color:var(--line);background:var(--w04)}
+.lg-hist-fila.abrible:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.dia-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(92px,1fr));gap:8px;margin:14px 0}
+.dia-st{border:1px solid var(--line-soft);border-radius:10px;padding:9px 11px;background:var(--w02)}
+.dia-st em{display:block;font-family:var(--mono);font-size:8px;letter-spacing:.16em;color:var(--faint);
+  font-style:normal;margin-bottom:5px}
+.dia-st b{font-family:var(--mono);font-size:14px;font-weight:600;font-variant-numeric:tabular-nums}
+.dia-st b.up{color:var(--up)} .dia-st b.down{color:var(--down)}
+.dia-curva{position:relative;height:170px;margin-bottom:16px;border:1px solid var(--line-soft);
+  border-radius:12px;overflow:hidden;background:var(--w02)}
+.dia-curva canvas{display:block;width:100%;height:100%}
+.lg-nota{border:1px solid var(--line);background:transparent;color:var(--faint);
+  font-size:12px;line-height:1;padding:5px 8px;border-radius:8px;cursor:pointer}
+.lg-nota:hover{color:var(--txt)}
+.lg-nota.tiene{color:#e9b446;border-color:rgba(233,180,70,.4)}
+.lg-nota-txt{grid-column:1/-1;margin:2px 0 8px;padding:8px 11px;border-left:2px solid rgba(233,180,70,.4);
+  font-size:12px;line-height:1.55;color:var(--dim);background:rgba(233,180,70,.04);border-radius:0 8px 8px 0}
 .lg-vaciar{margin-left:auto;border:1px solid var(--line);background:transparent;color:var(--faint);
   font-family:var(--mono);font-size:9px;letter-spacing:.14em;text-transform:uppercase;
   padding:4px 10px;border-radius:99px;cursor:pointer}
@@ -5236,14 +5254,15 @@ stop[stop-color="#9BC0DC"]{stop-color:var(--txt)}
   <div class="modal" role="dialog" aria-modal="true" aria-labelledby="diaTitle" style="max-width:640px">
     <h3 id="diaTitle">Día</h3>
     <p class="sub" id="diaSub"></p>
+    <!-- EL DÍA DE UN VISTAZO (André, 31-ago-2026): antes el modal abría directo
+         en la lista de trades. Primero los números del día y su curva; los
+         trades, después. -->
+    <div id="diaStats" class="dia-stats"></div>
+    <div class="dia-curva"><canvas id="diaCurvaCv"></canvas><div id="diaCurvaE" class="bt-graf-e"></div></div>
     <div id="diaTrades"></div>
-    <div style="margin-top:16px">
-      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
-        <span class="micro">Day analysis</span>
-        <button class="btn sm" id="diaIA" style="margin-left:auto">Analyse with AI</button>
-      </div>
-      <div id="diaIACaja" style="margin-top:8px"></div>
-    </div>
+    <!-- FUERA el análisis con IA (André, 31-ago-2026): pedía pegar una llave
+         de Anthropic que además quedaba compartida con toda la mesa, y el día
+         ya se lee solo con sus números. -->
     <div class="m-foot">
       <button class="btn" data-close>Close</button>
     </div>
@@ -9351,18 +9370,46 @@ function abrirDia(iso){
   $('#diaTitle').textContent = fmtFecha(iso);
   $('#diaSub').innerHTML = `<b class="${pnl>0?'up':pnl<0?'down':''}">${fmt$(pnl,true)}</b> · ${trs.length} trade${trs.length>1?'s':''} · ${wins}W·${loss}L`
     + (vios.length ? ` · <span class="tag wr">${vios.join(' · ')}</span>` : '');
+  /* ── LAS CIFRAS DEL DÍA ── el drawdown es el peor bajón desde un máximo de la
+     curva del día, como lo mide una fondeadora, no el peor trade suelto. Y si
+     ese día abriste sesión, se compara contra lo que TÚ te habías puesto. */
+  (()=>{
+    let eq=0, pico=0, ddDia=0;
+    trs.forEach(t=>{ eq+=(t.pnl||0); if(eq>pico) pico=eq; const c=eq-pico; if(c<ddDia) ddDia=c; });
+    const wr = trs.length ? Math.round(wins/trs.length*100) : 0;
+    const mejor = trs.reduce((m,t)=>Math.max(m, t.pnl||0), 0);
+    const peor  = trs.reduce((m,t)=>Math.min(m, t.pnl||0), 0);
+    const sell = (Array.isArray(S.lgCerradas)?S.lgCerradas:[]).find(c=>c.fecha===iso);
+    const ses  = sell || (lgSesiones()[iso] || null);
+    const meta = ses ? (sell ? sell.tp : ses.tp) : null;
+    const tope = ses ? (sell ? sell.dd : ses.dd) : null;
+    const cel = (k,v,cls) => `<div class="dia-st"><em>${k}</em><b class="${cls||''}">${v}</b></div>`;
+    $('#diaStats').innerHTML =
+      cel(bi('P&L','P&L'), fmt$(pnl,true), pnl>0?'up':pnl<0?'down':'') +
+      cel(bi('TRADES','TRADES'), trs.length) +
+      cel(bi('WINRATE','WIN RATE'), wr+'%') +
+      cel(bi('DRAWDOWN','DRAWDOWN'), fmt$(ddDia,true), (tope && Math.abs(ddDia)>=tope)?'down':'') +
+      cel(bi('MEJOR','BEST'), mejor?fmt$(mejor,true):'—', mejor?'up':'') +
+      cel(bi('PEOR','WORST'), peor?fmt$(peor,true):'—', peor?'down':'') +
+      (meta ? cel(bi('OBJETIVO','TARGET'), fmt$(meta), pnl>=meta?'up':'') : '') +
+      (tope ? cel(bi('SU TOPE','THEIR CAP'), '−'+fmt$(tope)) : '');
+    requestAnimationFrame(()=>{
+      const cv = $('#diaCurvaCv');
+      if(cv) pintaCurva(cv, $('#diaCurvaE'), trs.map(t=>t.pnl||0), 1,
+        bi('Sin trades','No trades'), meta||tope ? { target:meta||0, dd:tope||0 } : {});
+    });
+  })();
   $('#diaTrades').innerHTML = trs.map(t => `
     <div class="dia-t">
       <div class="dt-h">
         <b class="${(t.pnl||0)>0?'up':(t.pnl||0)<0?'down':''}">${fmt$(t.pnl,true)}</b>
         <span>${t.time||'—'} · ${esc(t.sym||'')} · ${t.dir==='L'?'LONG':'SHORT'} · ${t.qty||1} ct${t.nAcc>1?` · ×${t.nAcc} cuentas`:''}${t.setupOk===false?' · <i style="color:var(--warn)">setup incompleto</i>':''}</span>
       </div>
-      ${t.notas ? `<div class="dt-n">${esc(t.notas)}</div>` : ''}
+      ${t.nota || t.notas ? `<div class="dt-n">${esc(t.nota || t.notas)}</div>` : ''}
       ${t.shot ? `<img src="${t.shot}" alt="Screenshot del trade" loading="lazy">`
                : `<div class="dt-n" style="color:var(--faint)">Sin screenshot — se agrega editando el trade.</div>`}
     </div>`).join('');
   $$('#diaTrades img').forEach(im => im.onclick = () => im.classList.toggle('abierta'));
-  $('#diaIACaja').innerHTML = '';
   openOv('ovDia');
 }
 
@@ -9371,91 +9418,8 @@ function abrirDia(iso){
    viendo el mismo renglón de Supabase), y el USO se sigue cobrando a la cuenta
    de Anthropic de quien la pegó, no a quien la usa después. Sin llave no hay
    análisis — nada de fingir inteligencia con reglas fijas disfrazadas. */
-$('#diaIA').addEventListener('click', () => analizarDiaIA());
-function iaPideLlave(caja, mensajePrevio){
-  caja.innerHTML = `<div class="dia-ia" style="white-space:normal">
-    ${mensajePrevio ? `<div style="color:var(--down);margin-bottom:8px">${esc(mensajePrevio)}</div>` : ''}
-    Pega tu llave de Anthropic (empieza con <code>sk-ant-</code>). Se guarda para toda la mesa —André, Pablo y Gerardo la comparten desde aquí— y el uso se cobra en TU cuenta de Anthropic.
-    <div style="display:flex;gap:8px;margin-top:10px">
-      <input id="iaLlaveIn" type="password" placeholder="sk-ant-..." style="flex:1;min-width:0">
-      <button class="btn sm primary" id="iaLlaveOk">Save</button>
-    </div>
-    <a class="micro" href="https://console.anthropic.com" target="_blank" rel="noopener" style="display:inline-block;margin-top:8px">${tr('ag.llaveSacar')}</a>
-  </div>`;
-  $('#iaLlaveOk').onclick = () => {
-    const v = $('#iaLlaveIn').value.trim();
-    if(!v.startsWith('sk-ant-')){ toast(tr('ag.llaveMala')); return; }
-    guardaLlaveIA(v);
-    analizarDiaIA();
-  };
-}
-async function analizarDiaIA(){
-  const caja = $('#diaIACaja');
-  const llave = llaveIA();
-  if(!llave){ iaPideLlave(caja); return; }
-  const iso = diaAbierto;
-  const trs = tradesByDay()[iso] || [];
-  if(!trs.length) return;
-
-  const M = metas();
-  const vios = [...new Set(trs.flatMap(t => violations(t, trs)))];
-  const resumen = trs.map((t,i) =>
-    `Trade ${i+1}: ${t.time||'?'} · ${t.sym} · ${t.dir==='L'?'LONG':'SHORT'} · ${t.qty||1} contratos`
-    + ` · entrada ${t.entry ?? '?'} · salida ${t.exit ?? '?'} · P&L ${fmt$(t.pnl1 ?? t.pnl, true)} por cuenta`
-    + ` · setup del checklist: ${t.setupOk===false?'INCOMPLETO':'completo'}`
-    + (t.notas ? ` · nota del trader: "${t.notas}"` : '')
-    + (t.shot ? ' · (screenshot adjunto)' : '')
-  ).join('\n');
-  const bloques = [];
-  trs.filter(t => t.shot).slice(0, 4).forEach(t => {
-    bloques.push({ type:'image', source:{ type:'base64', media_type:'image/jpeg', data: t.shot.split(',')[1] } });
-  });
-  bloques.push({ type:'text', text:
-`Día ${iso}. Meta diaria del plan: ${fmt$(M.dia)}. Instrumento de la casa: ${SISTEMA.instrumento}.
-${resumen}
-${vios.length ? 'Violaciones detectadas por el sistema: ' + vios.join(', ') + '.' : 'Sin violaciones detectadas.'}
-
-Analiza el día de este trader. Si hay screenshots, comenta lo que se ve en el gráfico (calidad de la entrada y la salida respecto a la estructura). Sé honesto y directo: qué se hizo bien, qué se hizo mal, y UN consejo concreto para mañana. Máximo 150 palabras, en español.` });
-
-  caja.innerHTML = `<div class="dia-ia">Analizando el día…</div>`;
-  $('#diaIA').disabled = true;
-  try{
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
-      method:'POST',
-      headers:{
-        'content-type':'application/json',
-        'x-api-key': llave,
-        'anthropic-version':'2023-06-01',
-        'anthropic-dangerous-direct-browser-access':'true',
-      },
-      body: JSON.stringify({
-        model:'claude-opus-5',
-        max_tokens: 1024,
-        system:'Eres el analista de la mesa de NORTHPOINT, una mesa de futuros (MNQ/NQ) con cuentas de fondeo. Hablas claro y sin adornos, como un coach de trading serio. Nunca inventas datos que no estén en el registro.',
-        messages:[{ role:'user', content: bloques }],
-      }),
-    });
-    const j = await res.json();
-    if(!res.ok){
-      const msg = (j && j.error && j.error.message) || ('HTTP ' + res.status);
-      if(res.status === 401){ tiraLlaveIA(llave); iaPideLlave(caja, 'Esa llave no sirvió: ' + msg); return; }
-      throw new Error(msg);
-    }
-    if(j.stop_reason === 'refusal'){
-      caja.innerHTML = `<div class="dia-ia">La IA declinó analizar este contenido.</div>`;
-      return;
-    }
-    const texto = (j.content||[]).filter(b => b.type === 'text').map(b => b.text).join('\n').trim();
-    caja.innerHTML = `<div class="dia-ia">${esc(texto || 'La IA no devolvió texto.')}</div>
-      <button class="cja-x" id="iaLlaveBorrar" style="margin-top:6px">borrar la llave de este navegador</button>`;
-    $('#iaLlaveBorrar').onclick = () => { tiraLlaveIA(llaveIA()); toast(tr('ag.llaveFuera')); };
-  }catch(e){
-    caja.innerHTML = `<div class="dia-ia" style="white-space:normal;color:var(--down)">No se pudo analizar: ${esc(e.message||String(e))}</div>`;
-  }finally{
-    $('#diaIA').disabled = false;
-  }
-}
-
+/* iaPideLlave() se fue con el análisis del día: nadie pedía ya la llave. */
+/* analizarDiaIA() se retiró con su botón: no queda quien la llame. */
 /* franja de KPIs de Mi desempeño: arrastra o usa las flechas, igual que Precios en Inicio */
 /* las tres hileras se mueven igual: flechas, arrastre y rueda */
 /* Las flechas de las dos cintas se fueron con el scroll: corren solas y un
@@ -15413,8 +15377,13 @@ function lgLog(){
         <span class="pnl ${up?'up':'down'}">${fmt$(t.pnl,true)}</span>
         <span class="acc">${fmt$(acc,true)}</span>
         <button type="button" class="lg-img ${t.shot?'tiene':''}" data-img="${t.id}" title="${t.shot?bi('Ver la imagen','View image'):bi('Subir imagen','Upload image')}">${t.shot?bi('ver imagen','view image'):bi('subir imagen','upload image')}</button>
+        <!-- EL LÁPIZ (André, 31-ago-2026): la captura dice QUÉ pasó; la nota
+             dice POR QUÉ entraste. Sin eso, revisar un día viejo es mirar
+             números sin memoria. -->
+        <button type="button" class="lg-nota ${t.nota?'tiene':''}" data-nota="${t.id}"
+          title="${t.nota ? esc(t.nota) : bi('Escribir una nota','Write a note')}">✎</button>
         <button type="button" class="del" data-id="${t.id}" title="Borrar">✕</button>
-      </div>`;
+      </div>${t.nota ? `<div class="lg-nota-txt">${esc(t.nota)}</div>` : ''}`;
     }).join('');
   host.innerHTML = `
     <!-- VACIAR, donde está el log (André, 31-ago-2026): borrar diez trades de
@@ -15424,6 +15393,17 @@ function lgLog(){
     <div class="bt-log-h"><b>${tr('en.log.t')}</b><span class="micro">${list.length} ${list.length===1?'trade':'trades'}</span>
       ${list.length ? `<button type="button" class="lg-vaciar" id="lgVaciar">${bi('vaciar','clear')}</button>` : ''}</div>
     ${list.length ? `<div class="bt-log-body">${filas}</div>` : `<div class="bt-log-empty">${bi('Aún no hay trades registrados.','No trades logged yet.')}</div>`}`;
+  host.querySelectorAll('.lg-nota').forEach(b => b.onclick = () => {
+    const t = S.trades.find(x=>x.id===b.dataset.nota); if(!t) return;
+    const v = prompt(bi('Nota del trade — por qué entraste, qué viste, qué harías distinto:',
+                        'Trade note — why you entered, what you saw, what you would do differently:'),
+                     t.nota || '');
+    if(v === null) return;                     /* cancelar no borra lo que había */
+    const txt = v.trim();
+    if(txt) t.nota = txt.slice(0, 600); else delete t.nota;
+    sellaCambio(t); save(); lgLog();
+    toast(txt ? bi('Nota guardada','Note saved') : bi('Nota quitada','Note removed'));
+  });
   const vac = $('#lgVaciar');
   if(vac) vac.onclick = () => {
     const n = S.trades.length;
@@ -15761,15 +15741,25 @@ function lgHistorial(){
     </div>
     <div class="lg-hist-tabla">
       ${R.map(({f, ses, r, sellada}) => `
-        <div class="lg-hist-fila ${r.estado}">
+        <div class="lg-hist-fila ${r.estado} abrible" data-dia="${f}" role="button" tabindex="0"
+             title="${bi('Ver el día completo','See the full day')}">
           <span class="lgh-f">${esc(fmtFecha(f))}${f === hoy ? ' <em style="font-style:normal;opacity:.6">'+bi('hoy','today')+'</em>' : ''}</span>
           <b class="lgh-p ${r.pnl>=0?'up':'down'}">${fmt$(r.pnl,true)}</b>
           <span class="lgh-n">${bi('objetivo','target')} ${fmt$(ses.tp)}</span>
           <span class="lgh-n ${r.roto?'mal':''}">dd ${fmt$(r.dd,true)} <em>${bi('de','of')} −${fmt$(ses.dd)}</em></span>
           <span class="lgh-n ${r.deMas?'mal':''}">${r.n}${ses.trades?'/'+ses.trades:''} ${bi('trades','trades')}</span>
-          <span class="lgh-e">${r.roto ? bi('ROTO','BROKEN') : r.listo ? bi('CUMPLIDO','MET') : r.deMas ? bi('DE MÁS','OVER') : '—'}</span>
+          <span class="lgh-e">${r.roto ? bi('ROTO','BROKEN') : r.listo ? bi('CUMPLIDO','MET') : r.deMas ? bi('DE MÁS','OVER') : '—'} ›</span>
         </div>`).join('')}
     </div>`;
+  /* AL PICAR UN DÍA se abre su panel: las cifras, la curva, los trades con su
+     captura y su nota. Antes la fila era un renglón muerto. (André, 31-ago) */
+  host.querySelectorAll('[data-dia]').forEach(el => {
+    const abre = () => { const d = el.dataset.dia;
+      if((tradesByDay()[d] || []).length) abrirDia(d);
+      else toast(bi('Ese día no tiene trades registrados.','That day has no logged trades.')); };
+    el.onclick = abre;
+    el.onkeydown = e => { if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); abre(); } };
+  });
   host.hidden = false;
 }
 function renderLog(){
