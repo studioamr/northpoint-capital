@@ -738,26 +738,6 @@ function katana(c, W, H, col){
     c.fillStyle='rgba(190,208,238,.55)';
     c.beginPath(); c.arc(lx-lr*0.3,ly-lr*0.22,lr*0.20,0,7); c.fill();
     c.beginPath(); c.arc(lx+lr*0.28,ly+lr*0.18,lr*0.14,0,7); c.fill();
-    /* ══ LA ESTRELLA FUGAZ ══ una cada catorce segundos, con su cola: hay que
-       alcanzarla, y por eso vale. Si cruzaran todo el rato no sería un momento. */
-    (function(){
-      var ci = 14000, k = Math.floor(now/ci), u = (now % ci)/ci;
-      if(u > 0.16) return;
-      var v = u/0.16, r0 = rnd(k*3.7), r1 = rnd(k*8.1);
-      var x0 = W*(0.10 + r0*0.55), y0 = H*(0.04 + r1*0.20);
-      var lg = W*(0.16 + rnd(k*5.5)*0.16), ca = Math.PI*0.22 + rnd(k*2.2)*0.16;
-      var x1 = x0 + Math.cos(ca)*lg*v, y1 = y0 + Math.sin(ca)*lg*v;
-      var fade = Math.sin(v*Math.PI);
-      var gf = c.createLinearGradient(x1 - Math.cos(ca)*lg*0.34, y1 - Math.sin(ca)*lg*0.34, x1, y1);
-      gf.addColorStop(0,'rgba(226,240,255,0)');
-      gf.addColorStop(1,'rgba(238,248,255,'+(0.85*fade)+')');
-      c.strokeStyle = gf; c.lineWidth = 1.8; c.lineCap='round';
-      c.beginPath(); c.moveTo(x1 - Math.cos(ca)*lg*0.34, y1 - Math.sin(ca)*lg*0.34);
-      c.lineTo(x1, y1); c.stroke();
-      var gh = c.createRadialGradient(x1,y1,0,x1,y1,9);
-      gh.addColorStop(0,'rgba(255,255,255,'+(0.9*fade)+')'); gh.addColorStop(1,'rgba(255,255,255,0)');
-      c.fillStyle = gh; c.beginPath(); c.arc(x1,y1,9,0,7); c.fill();
-    })();
     /* nubes altas cruzando el cielo */
     for(var na=0;na<5;na++){
       var da = ((now/(110000 + rnd(na*2.2)*70000)) + rnd(na*6.1)) % 1.4 - 0.2;
@@ -774,17 +754,7 @@ function katana(c, W, H, col){
     /* ── LAS CORDILLERAS DEL FONDO ── se pierden en la bruma ── */
     sierra(2, mar + H*0.062, H*0.150, W*0.34, 'rgba(92,124,176,.34)', 'rgba(214,230,252,.26)');
     sierra(3, mar + H*0.045, H*0.115, W*0.26, 'rgba(74,106,158,.50)', 'rgba(206,224,250,.34)');
-    /* BOSQUE EN LA FALDA DE LAS LEJANAS: sin él son triángulos planos. Va entre
-       la segunda y la tercera cordillera, para que se vea profundidad. */
-    for(var pl=0; pl<40; pl++){
-      var px2 = rnd(pl*2.7)*W*1.05 - W*0.02;
-      var py2 = mar + H*(0.026 + rnd(pl*7.3)*0.020);
-      pino(px2, py2, Math.min(W,H)/1500*(0.7 + rnd(pl*4.1)*0.7), 'rgba(44,68,110,.55)', null);
-    }
     sierra(7, mar + H*0.030, H*0.085, W*0.18, 'rgba(52,80,128,.72)', 'rgba(196,216,246,.42)');
-    /* una pagoda y un torii lejanísimos, en la cresta del fondo */
-    pagoda(W*0.235, mar + H*0.016, Math.min(W,H)/1100, 'rgba(30,50,86,.85)');
-    torii(W*0.585, mar + H*0.020, Math.min(W,H)/1400);
     /* LOS PUEBLOS DEL VALLE: apenas unas lucecitas debajo de las nubes.
        Son lo que te dice cuánto has subido. */
     var epue = Math.min(W,H)/900;
@@ -795,31 +765,6 @@ function katana(c, W, H, col){
     var bh = c.createLinearGradient(0, mar - H*0.14, 0, mar + H*0.06);
     bh.addColorStop(0,'rgba(80,116,172,0)'); bh.addColorStop(1,'rgba(80,116,172,.42)');
     c.fillStyle = bh; c.fillRect(0, mar - H*0.14, W, H*0.20);
-
-    /* ══ EL MAR DE NUBES VA DETRÁS ══ (André, 31-ago-2026)
-       Estaba pintado DESPUÉS de la montaña, y sus tres bandas cruzan la
-       pantalla de borde a borde: le pasaban una capa de luz por encima a media
-       ladera y la roca acababa MÁS CLARA que el cielo. Una masa delante de un
-       cielo iluminado es más oscura, nunca más clara — por eso se leía como
-       vidrio. Ahora el pico sale DEL mar de nubes, y sólo unas pocas cruzan
-       por delante, que es lo que hacen las nubes de verdad. */
-    /* ── EL MAR DE NUBES a media ladera ── */
-    for(var b=0;b<3;b++){
-      var yy = mar + b*H*0.05, al = 0.15 - b*0.04;
-      var fg = c.createLinearGradient(0, yy - H*0.07, 0, yy + H*0.09);
-      fg.addColorStop(0,'rgba(178,202,240,0)');
-      fg.addColorStop(.55,'rgba(178,202,240,'+al+')');
-      fg.addColorStop(1,'rgba(140,172,220,0)');
-      c.fillStyle = fg; c.fillRect(0, yy - H*0.07, W, H*0.16);
-    }
-    for(var n2=0;n2<15;n2++){
-      var d2 = ((now/(64000 + rnd(n2*3.3)*54000)) + rnd(n2*7.7)) % 1.4 - 0.2;
-      nube(d2*W*1.3 - W*0.15 + mx*(10+rnd(n2)*16),
-           mar + (rnd(n2*5.5)-0.35)*H*0.075,
-           W*(0.17 + rnd(n2*2.2)*0.28), H*(0.013 + rnd(n2*9.1)*0.017),
-           0.14 + rnd(n2*4.4)*0.20);
-    }
-
 
     /* ── LA MONTAÑA ── */
     function flanco(dir, sem){
@@ -834,10 +779,8 @@ function katana(c, W, H, col){
     var izq = flanco(-1, 11), der = flanco(1, 23);
     /* la roca tiene CUERPO: se oscurece hacia el pie, como una masa con peso,
        y así se despega del cielo en vez de fundirse con él */
-    /* MÁS OSCURA QUE EL CIELO EN TODO SU ALTO: es lo único que hace que una
-       silueta se lea como masa y no como cristal */
     var roca = c.createLinearGradient(0, sy, 0, H);
-    roca.addColorStop(0,'#152744'); roca.addColorStop(.42,'#0C1A2E'); roca.addColorStop(1,'#050A14');
+    roca.addColorStop(0,'#22395C'); roca.addColorStop(.45,'#16263F'); roca.addColorStop(1,'#0A1526');
     masa(izq, roca); masa(der, roca);
     /* el filo de la silueta contra el cielo: una línea finísima de luz de luna
        que dice dónde acaba la montaña y empieza el aire */
@@ -853,8 +796,8 @@ function katana(c, W, H, col){
     c.save();
     c.beginPath(); suave(der); c.lineTo(W*2,H+200); c.lineTo(-W,H+200); c.closePath(); c.clip();
     var cara = c.createLinearGradient(cx - W*0.10, 0, cx + W*0.62, 0);
-    cara.addColorStop(0,'rgba(126,164,220,0)'); cara.addColorStop(.22,'rgba(126,164,220,.19)');
-    cara.addColorStop(.70,'rgba(74,110,172,.07)'); cara.addColorStop(1,'rgba(44,70,118,0)');
+    cara.addColorStop(0,'rgba(126,164,220,0)'); cara.addColorStop(.22,'rgba(126,164,220,.30)');
+    cara.addColorStop(.70,'rgba(74,110,172,.12)'); cara.addColorStop(1,'rgba(44,70,118,0)');
     c.fillStyle = cara; c.fillRect(0,0,W,H);
     c.restore();
     /* aristas que bajan de la cumbre: es lo que le da volumen */
@@ -917,12 +860,27 @@ function katana(c, W, H, col){
       c.quadraticCurveTo((a.x+b2.x)/2 + ld*an*2 + an*1.4, (a.y+b2.y)/2, a.x + an*0.5, a.y);
       c.closePath(); c.fill();
     }
-    /* NADA DE CANALES DE NIEVE (André, 31-ago-2026): eran vetas pálidas
-       largas bajando por la ladera y, contra una roca oscura, no se leían como
-       nieve sino como HACES DE LUZ atravesándola. Eso era la transparencia que
-       no se iba: la montaña parecía de vidrio con el cielo colándose por
-       dentro. Las costillas de roca de arriba sí se quedan — ésas oscurecen,
-       que es lo que hace bulto. */
+    /* canales de nieve: MUCHOS y FINOS, sólo en el tercio alto, siguiendo la
+       misma caída. Así se leen como nieve metida en las hondonadas. */
+    for(var g2=0; g2<22; g2++){
+      var ld2 = g2 % 2 ? 1 : -1;
+      var ses2 = 0.06 + rnd(g2*5.5)*0.52;
+      /* NACEN DEBAJO DE LA CUMBRE, no en ella: naciendo todos en el vértice
+         convergían como los rayos de un sol y la montaña parecía un destello. */
+      var ta = 0.13 + rnd(g2*2.2)*0.19;
+      var tb = ta + 0.04 + rnd(g2*8.1)*0.13;
+      var a2 = caida(ta, ld2, ses2), b3 = caida(tb, ld2, ses2*1.04);
+      var an2 = W*(0.002 + rnd(g2*3.7)*0.006);
+      var gg2 = c.createLinearGradient(a2.x, a2.y, b3.x, b3.y);
+      gg2.addColorStop(0,'rgba(240,248,255,'+(0.10 + rnd(g2)*0.13)+')');
+      gg2.addColorStop(1,'rgba(216,232,252,0)');
+      c.fillStyle = gg2;
+      c.beginPath(); c.moveTo(a2.x - an2, a2.y);
+      c.quadraticCurveTo((a2.x+b3.x)/2, (a2.y+b3.y)/2, b3.x, b3.y);
+      c.lineTo(b3.x + an2*2.2, b3.y);
+      c.quadraticCurveTo((a2.x+b3.x)/2 + an2*1.6, (a2.y+b3.y)/2, a2.x + an2, a2.y);
+      c.closePath(); c.fill();
+    }
     c.restore();
     /* el campo de nieve de la cumbre */
     c.save();
@@ -938,6 +896,23 @@ function katana(c, W, H, col){
     }
     c.lineTo(W*2, sy - H*0.12); c.closePath(); c.fill();
     c.restore();
+
+    /* ── EL MAR DE NUBES a media ladera ── */
+    for(var b=0;b<3;b++){
+      var yy = mar + b*H*0.05, al = 0.15 - b*0.04;
+      var fg = c.createLinearGradient(0, yy - H*0.07, 0, yy + H*0.09);
+      fg.addColorStop(0,'rgba(178,202,240,0)');
+      fg.addColorStop(.55,'rgba(178,202,240,'+al+')');
+      fg.addColorStop(1,'rgba(140,172,220,0)');
+      c.fillStyle = fg; c.fillRect(0, yy - H*0.07, W, H*0.16);
+    }
+    for(var n2=0;n2<15;n2++){
+      var d2 = ((now/(64000 + rnd(n2*3.3)*54000)) + rnd(n2*7.7)) % 1.4 - 0.2;
+      nube(d2*W*1.3 - W*0.15 + mx*(10+rnd(n2)*16),
+           mar + (rnd(n2*5.5)-0.35)*H*0.075,
+           W*(0.17 + rnd(n2*2.2)*0.28), H*(0.013 + rnd(n2*9.1)*0.017),
+           0.14 + rnd(n2*4.4)*0.20);
+    }
 
     /* ── LA FALDA: bosque, sendero y torii ── */
     var fy = H*0.815 + p*H*0.05;
@@ -955,34 +930,6 @@ function katana(c, W, H, col){
     c.quadraticCurveTo(W*0.27, fy - H*0.035, W*0.31, fy - H*0.055);
     c.stroke();
     torii(W*0.243, fy + H*0.010, Math.min(W,H)/230);
-    /* EL ARROYO: cruza la falda con la luna encima. Un suelo sin agua es un
-       suelo plano; el reflejo es lo que le da materia. */
-    (function(){
-      var ay2 = fy + H*0.115;
-      c.save();
-      c.fillStyle = 'rgba(96,132,190,.30)';
-      c.beginPath(); c.moveTo(-20, ay2 + H*0.05);
-      c.quadraticCurveTo(W*0.30, ay2 - H*0.020, W*0.62, ay2 + H*0.010);
-      c.quadraticCurveTo(W*0.86, ay2 + H*0.030, W+20, ay2 - H*0.004);
-      c.lineTo(W+20, ay2 + H*0.055);
-      c.quadraticCurveTo(W*0.60, ay2 + H*0.078, -20, ay2 + H*0.086);
-      c.closePath(); c.fill();
-      for(var br2=0; br2<12; br2++){
-        var bx = rnd(br2*5.5)*W, bw2 = W*(0.02 + rnd(br2*2.9)*0.05);
-        c.fillStyle = 'rgba(214,232,255,'+(0.10 + rnd(br2*8.1)*0.16)+')';
-        c.fillRect(bx, ay2 + H*(0.012 + rnd(br2*3.3)*0.045), bw2, 1.4);
-      }
-      c.restore();
-      /* piedras a la orilla */
-      for(var pd=0; pd<14; pd++){
-        var qx = rnd(pd*6.6)*W, qy = ay2 + H*(0.06 + rnd(pd*4.4)*0.04);
-        var qs = Math.min(W,H)/300*(0.10 + rnd(pd*9.2)*0.16);
-        c.fillStyle = 'rgba(18,30,50,.9)';
-        c.beginPath(); c.ellipse(qx, qy, qs*2.2, qs, 0, 0, 7); c.fill();
-        c.fillStyle = 'rgba(210,228,255,.22)';
-        c.beginPath(); c.ellipse(qx - qs*0.5, qy - qs*0.4, qs*1.1, qs*0.42, 0, 0, 7); c.fill();
-      }
-    })();
     /* EL PUEBLO DE LA FALDA: el último antes de que empiece la subida */
     var ep = Math.min(W,H)/300;
     pueblo(W*0.150, fy + H*0.054, ep*0.62, 12, 12, now);
@@ -998,17 +945,14 @@ function katana(c, W, H, col){
       var py = fy + H*(0.012 + prof*0.14) - Math.sin((px/W)*7.5 + 1.2)*H*0.035;
       var ps = Math.min(W,H)/560 * (0.55 + prof*1.25);
       pino(px, py, ps, prof > 0.55 ? '#0A1220' : '#101E33',
-           prof > 0.20 ? 'rgba(228,240,255,'+(0.35 + prof*0.5)+')' : null);
-      /* nieve posada en el primer piso de ramas de los más cercanos */
-      if(prof > 0.62){
-        c.fillStyle = 'rgba(226,238,255,.42)';
-        c.beginPath(); c.moveTo(px - 6*ps, py - 4*ps);
-        c.lineTo(px + 6*ps, py - 4*ps); c.lineTo(px + 4*ps, py - 6.5*ps);
-        c.lineTo(px - 4*ps, py - 6.5*ps); c.closePath(); c.fill();
-      }
+           prof > 0.35 ? 'rgba(226,238,255,.55)' : null);
     }
     /* una pagoda lejana en la cresta de la derecha */
     pagoda(W*0.845, fy - H*0.012, Math.min(W,H)/430, '#0A1424');
+    /* bruma entre el bosque y el mar de nubes */
+    var br = c.createLinearGradient(0, mar + H*0.02, 0, fy + H*0.02);
+    br.addColorStop(0,'rgba(120,152,206,.17)'); br.addColorStop(1,'rgba(12,22,42,0)');
+    c.fillStyle = br; c.fillRect(0, mar + H*0.02, W, fy - mar);
 
     /* ══ LA CUMBRE: KURO ══
        EL AURA SE PASÓ DE MANO (André, 31-ago-2026): un disco de tinta con su
@@ -1019,35 +963,10 @@ function katana(c, W, H, col){
        de verse, que es como debe sentirse. */
     var esc = Math.min(W,H)/300 * (1 + p*0.55);
     var ay = sy + 4*esc;
-    var R  = Math.min(30*esc, sy*0.5);
-    /* EL AURA, MÁS GRANDE: un halo frío que atraviesa la nevada —es lo único
-       que ilumina en toda la escena— y debajo el núcleo de tinta, para que la
-       silueta negra siga leyéndose contra el resplandor. */
-    c.save(); c.globalCompositeOperation = 'lighter';
-    var luz = c.createRadialGradient(cx, ay, 2, cx, ay, R*3.4);
-    luz.addColorStop(0,  'rgba(176,232,208,'+(0.30 + p*0.14)+')');
-    luz.addColorStop(.24,'rgba(140,206,190,'+(0.15 + p*0.07)+')');
-    luz.addColorStop(.60,'rgba(110,170,168,.05)');
-    luz.addColorStop(1,  'rgba(90,150,150,0)');
-    c.fillStyle = luz; c.beginPath(); c.arc(cx, ay, R*3.4, 0, 7); c.fill();
-    c.restore();
-    /* rayos largos girando muy despacio */
-    c.save(); c.translate(cx, ay); c.rotate(REDUCE?0:now/22000);
-    c.globalCompositeOperation = 'lighter';
-    for(var rr=0; rr<18; rr++){
-      c.rotate(Math.PI*2/18);
-      var lg2 = (34 + rnd(rr*9.1)*52) * esc * (1 + p*0.5);
-      var gr3 = c.createLinearGradient(0,0,0,-lg2);
-      gr3.addColorStop(0,'rgba(182,238,214,'+(0.10+p*0.05)+')');
-      gr3.addColorStop(.45,'rgba(182,238,214,.028)');
-      gr3.addColorStop(1,'rgba(182,238,214,0)');
-      c.fillStyle = gr3; c.beginPath();
-      c.moveTo(-1.5*esc,0); c.lineTo(1.5*esc,0); c.lineTo(0,-lg2); c.closePath(); c.fill();
-    }
-    c.restore();
+    var R  = Math.min(26*esc, sy*0.5);
     var tinta = c.createRadialGradient(cx, ay, 1, cx, ay, R);
-    tinta.addColorStop(0,  'rgba(4,7,14,'+(0.68 + p*0.10)+')');
-    tinta.addColorStop(.45,'rgba(6,10,20,'+(0.34 + p*0.06)+')');
+    tinta.addColorStop(0,  'rgba(4,7,14,'+(0.62 + p*0.10)+')');
+    tinta.addColorStop(.45,'rgba(6,10,20,'+(0.30 + p*0.06)+')');
     tinta.addColorStop(1,  'rgba(8,14,28,0)');
     c.fillStyle = tinta; c.beginPath(); c.arc(cx, ay, R, 0, 7); c.fill();
     /* la sombra que escurre por la nieve hacia abajo */
@@ -1077,60 +996,6 @@ function katana(c, W, H, col){
           { espalda:true, cuerpo:'#05070C', casco:'#05070C',
             filo:'#2B3444', mango:'#05070C', ojos:'rgba(214,228,255,.92)' });
 
-    /* ══ EL CLIMA VA DELANTE ══ (André, 31-ago-2026)
-       Lo de antes fallaba porque eran VELOS: degradados translúcidos de borde
-       a borde que sólo aclaraban la roca, y eso se lee como vidrio. Estas
-       nubes son MASAS —opacas, con su lomo iluminado y su vientre en sombra—,
-       así que tapan en vez de aclarar: por eso sí se leen delante.
-       Y encima la nevada, que es lo que de verdad dice «hay algo entre tú y la
-       montaña»: partículas con viento, no una capa de color. */
-    for(var nd=0; nd<5; nd++){
-      var dd = ((now/(52000 + rnd(nd*6.1)*38000)) + rnd(nd*2.3)) % 1.5 - 0.25;
-      var nx = dd*W*1.4 - W*0.2 + mx*(20 + nd*7);
-      var ny = H*(0.60 + rnd(nd*4.9)*0.22);
-      var nw = W*(0.26 + rnd(nd*8.3)*0.30), nh = H*(0.020 + rnd(nd*3.1)*0.018);
-      c.save();
-      /* el lomo, iluminado por la luna */
-      c.fillStyle = 'rgba(178,198,230,'+(0.52 + rnd(nd)*0.22)+')';
-      c.beginPath();
-      for(var lb=0; lb<9; lb++){
-        var tb = lb/8, lx2 = nx - nw/2 + tb*nw;
-        var lh2 = nh*(0.42 + Math.sin(tb*Math.PI)*1.05);
-        c.ellipse(lx2, ny - lh2*0.22, nw*0.16, lh2, 0, 0, 7);
-      }
-      c.fill();
-      /* el vientre en sombra: sin esto una nube es una mancha */
-      c.fillStyle = 'rgba(38,58,98,'+(0.42 + rnd(nd*7.7)*0.2)+')';
-      c.beginPath(); c.ellipse(nx, ny + nh*0.62, nw*0.44, nh*0.52, 0, 0, 7); c.fill();
-      c.restore();
-    }
-    /* la neblina del valle: baja y pegada al suelo, donde sí es niebla */
-    var nb = c.createLinearGradient(0, fy - H*0.05, 0, H);
-    nb.addColorStop(0,'rgba(186,206,238,0)');
-    nb.addColorStop(.42,'rgba(186,206,238,.20)');
-    nb.addColorStop(1,'rgba(150,176,214,.30)');
-    c.fillStyle = nb; c.fillRect(0, fy - H*0.05, W, H - fy + H*0.05);
-    /* ── LA TORMENTA DE NIEVE ── */
-    var viento = Math.sin(now/5200)*0.45 + 0.85;
-    for(var nv=0; nv<220; nv++){
-      var prof2 = rnd(nv*3.3);                       /* 0 lejos, 1 cerca */
-      var vel2 = 0.16 + prof2*0.62;
-      var yy2 = ((rnd(nv*1.7)*H*1.3 + now*vel2*0.09) % (H*1.3)) - H*0.15;
-      var xx2 = ((rnd(nv*5.5)*W*1.3 + now*vel2*viento*0.052 + Math.sin(now/1400 + nv)*22*prof2)
-                 % (W*1.3)) - W*0.15;
-      var rad = (0.5 + prof2*2.0);
-      c.fillStyle = 'rgba(236,244,255,'+(0.16 + prof2*0.62)+')';
-      c.beginPath(); c.arc(xx2, yy2, rad, 0, 7); c.fill();
-    }
-    /* la ráfaga cercana: unas pocas grandes y borrosas, cruzando rápido */
-    for(var rg=0; rg<14; rg++){
-      var u3 = ((now/(2600 + rnd(rg*4.4)*2400)) + rnd(rg*8.8)) % 1;
-      c.save(); c.globalAlpha = 0.16*Math.sin(u3*Math.PI);
-      c.fillStyle = '#EFF5FF';
-      c.beginPath();
-      c.ellipse(u3*W*1.3 - W*0.15, rnd(rg*2.2)*H, 9 + rnd(rg)*13, 2.2, -0.22, 0, 7);
-      c.fill(); c.restore();
-    }
     /* viñeta suave: el cielo no se apaga, sólo se recoge en los bordes */
     var vg = c.createRadialGradient(W/2,H*0.46,H*0.34,W/2,H*0.46,H*1.02);
     vg.addColorStop(0,'rgba(5,10,24,0)'); vg.addColorStop(1,'rgba(5,10,24,.62)');
