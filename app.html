@@ -1779,11 +1779,27 @@ button.st-chip:hover{border-color:rgba(255,255,255,.45)}
 /* la puerta de Kuro ocupa la pantalla: sin lobby debajo, el contenedor medía
    cero y el overlay absoluto no se veía */
 #batRoot.puerta{min-height:calc(100vh - 150px)}
-/* ── LOS NUEVE ── pantalla negra, KURO arriba y la fila. Nada más.
+/* ── LOS NUEVE ── pantalla negra, KURO arriba, 3×3 de ninjas y 3×3 de espadas.
    Cuelga del body: dentro de la columna de contenido su z-index quedaba
    encerrado y el menú se le montaba encima. */
-.pres-ov{position:fixed;inset:0;z-index:220;background:#04060b;overflow:hidden;cursor:pointer}
-.pres-ov canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+.pres-ov{position:fixed;inset:0;z-index:220;background:#04060b;overflow-y:auto;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;padding:clamp(20px,4vh,48px) 20px}
+.pres-hoja{width:100%;max-width:860px;text-align:center}
+.pres-tit{display:block;font-size:clamp(34px,7vw,76px);font-weight:800;letter-spacing:-.02em;
+  color:#fff;line-height:1;margin-bottom:clamp(18px,3.4vh,40px);
+  animation:presPop .7s cubic-bezier(.2,.7,.3,1) both}
+@keyframes presPop{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:none}}
+.pres-malla{display:grid;grid-template-columns:repeat(3,1fr);
+  gap:clamp(6px,1.4vw,16px) clamp(10px,2vw,26px)}
+.pres-malla.espadas{margin-top:clamp(16px,3vh,34px);
+  padding-top:clamp(14px,2.6vh,28px);border-top:1px solid rgba(255,255,255,.07)}
+.pres-cel{margin:0;opacity:0;animation:presSube .6s cubic-bezier(.2,.7,.3,1) var(--d) both}
+@keyframes presSube{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+.pres-nj{display:block;width:100%;height:clamp(84px,13vh,132px)}
+.pres-kat{display:block;width:100%;height:clamp(30px,5.4vh,52px);padding:0 8%}
+.pres-cel figcaption{margin-top:5px;font-family:var(--mono);font-size:clamp(8px,1vw,10px);
+  letter-spacing:.14em;color:var(--kt)}
+.pres-cel.kat figcaption{opacity:.72}
 .peli-saltar{position:fixed;right:20px;top:18px;z-index:230;border:1px solid rgba(255,255,255,.2);
   background:rgba(8,10,16,.55);color:rgba(255,255,255,.7);font-family:var(--mono);font-size:10px;
   letter-spacing:.18em;padding:9px 16px;border-radius:99px;cursor:pointer}
@@ -13330,94 +13346,78 @@ function batPuerta(){
   return true;
 }
 /* ══════════ LOS NUEVE ══════════ (André, 31-ago-2026)
-   Pantalla negra, KURO arriba y los nueve ninjas formados. Nada más.
-   Antes esto fue película, cómic y una presentación hablada con un sensei;
-   todas contaban de más. Lo único que hay que ver al entrar es contra quiénes
-   vas y de qué color es cada uno — y en negro, los colores de las katanas son
-   lo único que se ve, que es justo lo que se quiere memorizar. */
+   Pantalla negra, KURO arriba, los nueve ninjas en tres filas de tres, y
+   debajo sus nueve katanas en la misma retícula. Nada más.
+   Antes esto fue película, cómic y una presentación hablada; las tres
+   contaban de más. En negro, los colores de las katanas son lo único que se
+   ve, que es justo lo que se quiere memorizar: contra quiénes vas, en qué
+   orden, y cuál espada te llevas de cada uno.
+   Va en 3×3 y no en una fila de nueve porque en fila los ninjas quedaban del
+   tamaño de una uña y no se distinguía uno de otro. */
 function batPresentacion(){
   const yo = batYo();
   let host = document.getElementById('peliHost');
   if(!host){ host = document.createElement('div'); host.id='peliHost'; document.body.appendChild(host); }
-  /* SIN la clase ars-ov: trae fondo al 90% y un backdrop-filter, y la app se
-     colaba por debajo como una lluvia de puntos grises sobre el negro. */
-  host.innerHTML = `<div class="pres-ov">
-    <canvas id="presCv"></canvas>
-    <button type="button" class="peli-saltar" id="presX">${bi('entrar','enter')} ›</button>
-  </div>`;
-  const cv = $('#presCv');
-  const dpr = Math.min(2, window.devicePixelRatio || 1);
-  const medir = () => { const w = cv.clientWidth || 960, h = cv.clientHeight || 540;
-    cv.width = Math.round(w*dpr); cv.height = Math.round(h*dpr); return { w, h }; };
-  let M = medir();
-  const g = cv.getContext('2d');
-  const salir = () => {
-    cancelAnimationFrame(window._peliRAF||0);
-    removeEventListener('resize', alRedim);
-    window._batPeli = null;
-    const h2 = document.getElementById('peliHost'); if(h2) h2.remove();
-    if(!((S.batNinja||{})[yo])) window._batOnb='como';
-    renderBatalla();
-  };
-  const alRedim = () => { M = medir(); };
-  addEventListener('resize', alRedim);
-  $('#presX').onclick = salir;
-  cv.onclick = salir;
-  const N = KURO_BOSSES.length;
-  const t0 = performance.now();
   /* el nombre de KURO es negro sobre negro: para la ETIQUETA se aclara lo
-     mínimo para que se lea, sin tocar el color del ninja */
+     mínimo para que se lea, sin tocar el color del ninja ni el de la espada */
   const legible = c2 => { const h2 = String(c2).replace('#','');
     if(h2.length !== 6) return c2;
     const [r2,g2,b2] = [0,2,4].map(k2=>parseInt(h2.slice(k2,k2+2),16));
     if(r2+g2+b2 > 260) return c2;
     return '#' + [r2,g2,b2].map(v=>Math.round(v + (210-v)*0.62).toString(16).padStart(2,'0')).join(''); };
-  const pinta = (now) => {
-    if(!cv.isConnected) return;
-    const seg = (now - t0)/1000;
-    const w = M.w, h = M.h;
-    g.setTransform(dpr,0,0,dpr,0,0);
-    /* alpha a 1 SIEMPRE antes del fondo: si un cuadro anterior lo dejó abajo,
-       el negro sale translúcido y se ve la app por debajo */
-    g.globalAlpha = 1;
-    g.fillStyle = '#04060b'; g.fillRect(0,0,w,h);
-    /* KURO, arriba */
-    g.save(); g.textAlign = 'center';
-    g.font = '800 ' + Math.round(Math.max(30, Math.min(96, h*0.115))) + 'px system-ui, sans-serif';
-    g.fillStyle = '#fff';
-    g.globalAlpha = Math.min(1, seg/0.9);
-    g.fillText('KURO', w/2, h*0.22);
-    g.font = '600 ' + Math.round(Math.max(9, h*0.017)) + 'px "IBM Plex Mono", monospace';
-    g.fillStyle = 'rgba(255,255,255,.42)';
-    g.letterSpacing = '0.3em';
-    g.fillText(bi('LOS NUEVE','THE NINE'), w/2, h*0.28);
-    g.restore();
-    /* la fila: los nueve, centrados, cada uno apareciendo un pelo después */
-    const suelo = h*0.70;
-    g.strokeStyle = 'rgba(255,255,255,.06)'; g.lineWidth = 1;
-    g.beginPath(); g.moveTo(w*0.06, suelo+2); g.lineTo(w*0.94, suelo+2); g.stroke();
-    const x0 = w*0.10, x1 = w*0.90, paso = (x1-x0)/(N-1);
-    const escN = Math.max(0.9, Math.min(2.1, h/290));
-    for(let i2=0; i2<N; i2++){
-      const B = KURO_BOSSES[i2], K = KATANAS[B.kat] || {};
-      const col = K.belt || '#9aa3b2', colTxt = legible(col);
-      const nj = { traje:'#0f1218', banda:col, buf:col };
-      const px2 = x0 + i2*paso;
-      const ap = Math.max(0, Math.min(1, (seg - 0.45 - i2*0.16)/0.55));
-      if(ap <= 0) continue;
-      g.save(); g.globalAlpha = 0.12*ap;
-      g.fillStyle = col; g.beginPath();
-      g.ellipse(px2, suelo-h*0.075, h*0.055, h*0.095, 0, 0, 7); g.fill(); g.restore();
-      g.save(); g.globalAlpha = ap;
-      try{ zenNinja(g, px2, suelo + (1-ap)*10, escN, now, i2*0.7, col, nj, false, 'guardia'); }catch(e){}
-      g.textAlign='center'; g.font='700 10px "IBM Plex Mono", monospace';
-      g.fillStyle = colTxt; g.fillText(B.nom, px2, suelo+24);
-      g.restore();
-    }
-    if(seg < 0.7){ g.fillStyle='rgba(4,6,11,'+(1-seg/0.7).toFixed(3)+')'; g.fillRect(0,0,w,h); }
-    window._peliRAF = requestAnimationFrame(pinta);
+  /* SIN la clase ars-ov: trae fondo al 90% y un backdrop-filter, y la app se
+     colaba por debajo como una lluvia de puntos grises sobre el negro. */
+  host.innerHTML = `<div class="pres-ov">
+    <div class="pres-hoja">
+      <b class="pres-tit">KURO</b>
+      <div class="pres-malla">
+        ${KURO_BOSSES.map((B,ix)=>{ const K = KATANAS[B.kat] || {}, col = K.belt || '#9aa3b2';
+          return `<figure class="pres-cel" style="--kc:${col};--kt:${legible(col)};--d:${(ix*70)}ms">
+            <canvas class="pres-nj" data-nj="${ix}"></canvas>
+            <figcaption>${esc(B.nom)}</figcaption>
+          </figure>`; }).join('')}
+      </div>
+      <div class="pres-malla espadas">
+        ${KURO_BOSSES.map((B,ix)=>{ const K = KATANAS[B.kat] || {}, col = K.belt || '#9aa3b2';
+          return `<figure class="pres-cel kat" style="--kc:${col};--kt:${legible(col)};--d:${(640 + ix*70)}ms">
+            <span class="pres-kat">${katanaSVG(col, true)}</span>
+            <figcaption>${esc(loc(K.n||['','']))}</figcaption>
+          </figure>`; }).join('')}
+      </div>
+    </div>
+    <button type="button" class="peli-saltar" id="presX">${bi('entrar','enter')} ›</button>
+  </div>`;
+  const salir = () => {
+    cancelAnimationFrame(window._peliRAF||0);
+    removeEventListener('resize', repinta);
+    window._batPeli = null;
+    const h2 = document.getElementById('peliHost'); if(h2) h2.remove();
+    if(!((S.batNinja||{})[yo])) window._batOnb='como';
+    renderBatalla();
   };
-  window._peliRAF = requestAnimationFrame(pinta);
+  $('#presX').onclick = e => { e.stopPropagation(); salir(); };
+  host.querySelector('.pres-ov').onclick = salir;
+  /* ── los nueve monitos, cada uno en su celda ── */
+  const dpr = Math.min(2, window.devicePixelRatio || 1);
+  const dibuja = () => {
+    host.querySelectorAll('.pres-nj').forEach(cv => {
+      const ix = +cv.dataset.nj, B = KURO_BOSSES[ix], K = KATANAS[B.kat] || {};
+      const col = K.belt || '#9aa3b2';
+      const w = cv.clientWidth || 150, h = cv.clientHeight || 130;
+      cv.width = Math.round(w*dpr); cv.height = Math.round(h*dpr);
+      const g = cv.getContext('2d'); g.setTransform(dpr,0,0,dpr,0,0);
+      g.clearRect(0,0,w,h);
+      /* un halo de su color para recortarlo del negro */
+      g.save(); g.globalAlpha = 0.13; g.fillStyle = col;
+      g.beginPath(); g.ellipse(w/2, h*0.56, w*0.30, h*0.42, 0, 0, 7); g.fill(); g.restore();
+      const esc2 = Math.max(0.9, Math.min(2.6, h/62));
+      try{ zenNinja(g, w/2, h*0.90, esc2, 3000 + ix*900, ix*0.7, col,
+                    { traje:'#0f1218', banda:col, buf:col }, false, 'guardia'); }catch(e){}
+    });
+  };
+  const repinta = () => requestAnimationFrame(dibuja);
+  requestAnimationFrame(dibuja);
+  addEventListener('resize', repinta);
 }
 function renderBatalla(){
   try{ batLimpiaZombi(); }catch(_){}
