@@ -1779,6 +1779,30 @@ button.st-chip:hover{border-color:rgba(255,255,255,.45)}
 /* la puerta de Kuro ocupa la pantalla: sin lobby debajo, el contenedor medía
    cero y el overlay absoluto no se veía */
 #batRoot.puerta{min-height:calc(100vh - 150px)}
+/* ── EL ALTA ── la feria, la espada de madera y el objetivo, en tres tiempos */
+.alta-ov{position:fixed;inset:0;z-index:220;background:#04060b;overflow-y:auto;
+  display:flex;align-items:center;justify-content:center;padding:clamp(20px,5vh,60px) 20px}
+.alta-hoja{width:100%;max-width:560px;text-align:center}
+.alta-paso{opacity:0;animation:altaSube .8s cubic-bezier(.2,.7,.3,1) both}
+.alta-paso.p1{animation-delay:.15s}
+.alta-paso.p2{animation-delay:1.9s;margin-top:clamp(22px,4vh,44px);
+  padding-top:clamp(20px,3.6vh,38px);border-top:1px solid rgba(255,255,255,.08)}
+.alta-paso.p3{animation-delay:3.5s;margin-top:clamp(22px,4vh,44px);
+  padding-top:clamp(20px,3.6vh,38px);border-top:1px solid rgba(255,255,255,.08)}
+@keyframes altaSube{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+.alta-k{display:block;font-family:var(--mono);font-size:9px;letter-spacing:.32em;
+  color:rgba(255,255,255,.38);margin-bottom:12px}
+.alta-cifra{display:block;font-size:clamp(38px,7vw,66px);font-weight:800;letter-spacing:-.02em;
+  color:#fff;line-height:1;font-variant-numeric:tabular-nums}
+.alta-arma{display:block;width:100%;max-width:340px;height:clamp(46px,8vh,74px);margin:6px auto 0}
+.alta-arma.negra{max-width:260px;height:clamp(34px,6vh,54px);opacity:.9}
+.alta-nom{display:block;margin-top:8px;font-family:var(--mono);font-size:11px;letter-spacing:.16em;
+  color:#c49a63}
+.alta-kuro{display:block;font-size:clamp(34px,6.4vw,58px);font-weight:800;letter-spacing:.02em;
+  color:#fff;line-height:1}
+.alta-paso p{margin:12px auto 0;max-width:46ch;font-size:clamp(12.5px,1.2vw,14.5px);
+  line-height:1.65;color:rgba(255,255,255,.66)}
+.alta-ir{margin-top:clamp(18px,3vh,30px);min-width:190px}
 /* ── LOS NUEVE ── pantalla negra, KURO arriba, 3×3 de ninjas y 3×3 de espadas.
    Cuelga del body: dentro de la columna de contenido su z-index quedaba
    encerrado y el menú se le montaba encima. */
@@ -13360,6 +13384,78 @@ function batPuerta(){
   batPresentacion();
   return true;
 }
+/* ══════════ LA ESPADA DE MADERA ══════════ (André, 31-ago-2026)
+   El bokken con el que empiezas: madera, sin filo y sin guarda. Es lo único
+   que te dan; las nueve de acero se ganan. Se dibuja aparte de katanaSVG
+   porque ahí TODA hoja es de acero, que es la regla de las nueve. */
+function bokkenSVG(){
+  return `<svg viewBox="0 0 200 56" width="100%" height="100%" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
+    <defs><linearGradient id="bkm" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#b98d55"/><stop offset="1" stop-color="#7d5a30"/>
+    </linearGradient></defs>
+    <path d="M18 30 C 60 20, 112 16, 150 17 L 150 23 C 112 23, 62 27, 20 35 Z" fill="url(#bkm)"/>
+    <path d="M18 30 C 60 20, 112 16, 150 17 L 150 19 C 112 19, 62 23, 19 32 Z" fill="rgba(255,232,196,.35)"/>
+    <rect x="150" y="15" width="34" height="11" rx="3" fill="#6b4a26"/>
+    <g stroke="rgba(40,26,12,.55)" stroke-width="1.4">
+      <path d="M156 15 l5 11"/><path d="M164 15 l5 11"/><path d="M172 15 l5 11"/></g>
+    <circle cx="186" cy="20.5" r="3" fill="#5b3f20"/>
+  </svg>`;
+}
+/* ══════════ EL ALTA ══════════ (André, 31-ago-2026)
+   Lo que pasa al registrarte, en tres tiempos: te dan la feria de la cuenta,
+   te dan tu espada —de madera, la única que se regala— y te dicen a dónde vas.
+   Antes esto era un toast de dos segundos: entrabas con $50,000 y una katana
+   blanca sin que nadie te dijera para qué. */
+function batAlta(){
+  if(!window._batAlta) return false;
+  const root = $('#batRoot'); if(!root) return false;
+  const yo = batYo();
+  root.classList.add('puerta');
+  root.innerHTML = '';
+  let host = document.getElementById('peliHost');
+  if(!host){ host = document.createElement('div'); host.id='peliHost'; document.body.appendChild(host); }
+  const kNegra = KATANAS[KATANAS.length-1] || {};
+  host.innerHTML = `<div class="alta-ov">
+    <div class="alta-hoja">
+      <div class="alta-paso p1">
+        <span class="alta-k">${bi('TU CUENTA','YOUR ACCOUNT')}</span>
+        <b class="alta-cifra" id="altaCifra">$0</b>
+        <p>${bi('Tu kit de bienvenida. Una sola vez en la vida.','Your welcome kit. Once in a lifetime.')}</p>
+      </div>
+      <div class="alta-paso p2">
+        <span class="alta-k">${bi('TU ESPADA','YOUR SWORD')}</span>
+        <span class="alta-arma">${bokkenSVG()}</span>
+        <b class="alta-nom">${bi('Bokken · de madera','Bokken · wooden')}</b>
+        <p>${bi('Es la única que se regala. Las nueve de acero se ganan, una por una.','It is the only one given. The nine steel ones are earned, one by one.')}</p>
+      </div>
+      <div class="alta-paso p3">
+        <span class="alta-k">${bi('TU OBJETIVO','YOUR GOAL')}</span>
+        <b class="alta-kuro">KURO</b>
+        <span class="alta-arma negra">${katanaSVG(kNegra.belt||'#23272E', true)}</span>
+        <p>${bi('Llegar hasta la novena. Con esta espada de madera en la mano, y ocho maestros entre tú y ella.','Reach the ninth. With this wooden sword in hand, and eight masters between you and it.')}</p>
+        <button type="button" class="btn primary alta-ir" id="altaIr">${bi('Empezar','Begin')} →</button>
+      </div>
+    </div>
+  </div>`;
+  /* la feria sube contando: se siente que te la están dando */
+  (()=>{ const el = $('#altaCifra'); if(!el) return;
+    const T0 = performance.now(), DUR = 1500, DESDE = 500;
+    const sube = (now) => { if(!el.isConnected) return;
+      const u = Math.max(0, Math.min(1, (now - T0 - DESDE)/DUR));
+      const e = 1 - Math.pow(1-u, 3);
+      el.textContent = fmt$(Math.round(BAT_BIENVENIDA*e/100)*100);
+      if(u < 1) window._peliRAF = requestAnimationFrame(sube);
+      else el.textContent = fmt$(BAT_BIENVENIDA); };
+    window._peliRAF = requestAnimationFrame(sube); })();
+  $('#altaIr').onclick = () => {
+    cancelAnimationFrame(window._peliRAF||0);
+    window._batAlta = false;
+    const h = document.getElementById('peliHost'); if(h) h.remove();
+    toast(bi('Bienvenido al dojo, ','Welcome to the dojo, ') + batNom(yo) + '.');
+    renderBatalla();
+  };
+  return true;
+}
 /* ══════════ LOS NUEVE ══════════ (André, 31-ago-2026)
    Pantalla negra, KURO arriba, los nueve ninjas en tres filas de tres, y
    debajo sus nueve katanas en la misma retícula. Nada más.
@@ -13389,26 +13485,26 @@ function batPresentacion(){
      Y dice la misma regla del sistema, sin decirla: la cuenta no se pierde por
      un mal trade, se pierde por romperse. */
   const LEYENDA = [
-    [ 'Nueve espadas duermen en nueve mundos.',
-      'Ninguna se entrega. Todas se arrancan.' ],
-    [ 'La blanca se gana en una sesión.',
-      'La negra, en mil.',
-      'Entre las dos hay siete que van a doler.' ],
-    [ 'Cada espada que tomas te cambia el mundo:',
-      'el cielo, la tierra, y el que te espera enfrente.' ],
-    [ 'Ocho van a aprender tu nombre.',
-      'El noveno lleva mil años esperándolo.' ],
+    [ 'Hubo un coleccionista que las quiso todas.',
+      'Nueve espadas. Ni una menos.' ],
+    [ 'Empezó con una de madera, que no vale nada.',
+      'Consiguió ocho: blanca, amarilla, naranja, verde,',
+      'azul, morada, marrón y roja.' ],
+    [ 'Cada una le costó más que la anterior.',
+      'Y en su pared quedó un hueco.' ],
+    [ 'Nadie ha llenado ese hueco.',
+      'La novena se llama Kuro y sigue sin dueño.' ],
   ];
   const LEYENDA_EN = [
-    [ 'Nine swords sleep in nine worlds.',
-      'None is handed over. Every one is taken.' ],
-    [ 'The white one is won in a session.',
-      'The black one, in a thousand.',
-      'Between them lie seven that will hurt.' ],
-    [ 'Every sword you take changes your world:',
-      'the sky, the ground, and whoever waits in front of you.' ],
-    [ 'Eight will learn your name.',
-      'The ninth has waited a thousand years to hear it.' ],
+    [ 'There was a collector who wanted them all.',
+      'Nine swords. Not one less.' ],
+    [ 'He began with a wooden one, worth nothing.',
+      'He got eight: white, yellow, orange, green,',
+      'blue, violet, brown and red.' ],
+    [ 'Each one cost him more than the last.',
+      'And one gap stayed on his wall.' ],
+    [ 'No one has filled that gap.',
+      'The ninth is called Kuro and still has no owner.' ],
   ];
   host.innerHTML = `<div class="pres-ov">
     <div class="pres-hoja">
@@ -13470,6 +13566,7 @@ function batPresentacion(){
 }
 function renderBatalla(){
   try{ batLimpiaZombi(); }catch(_){}
+  try{ if(batAlta()) return; }catch(e){ window._batAlta=false; }
   try{ if(batPuerta()) return; }catch(e){ window._batPortada=false; window._batPeli=null; }
   const _rt = $('#batRoot'); if(_rt) _rt.classList.remove('puerta');
   /* fuera de la película no debe quedar su lienzo colgado del body */
@@ -14026,6 +14123,9 @@ function renderBatallaInterno(){
         if(!S.batKit[yo]){ S.batKit[yo]=true; kitDado=true;
           batStackSet(yo, batBanco(yo)+BAT_BIENVENIDA); window._batPagoFlash={monto:BAT_BIENVENIDA,mult:1,bienvenida:true}; } }
       save(); window._batCrearNinja=false; window._batOnb=null;
+      /* AL DARTE DE ALTA hay una ceremonia: la feria, tu espada de madera y
+         el objetivo. Sólo la primera vez — al renacer no se repite. */
+      if(kitDado){ window._batAlta = true; renderBatalla(); return; }
       toast(kitDado?bi('Tu ninja está listo · kit de bienvenida: +'+fmt$(BAT_BIENVENIDA),'Your ninja is ready · welcome kit: +'+fmt$(BAT_BIENVENIDA))
         :nuevo?bi('Renaciste. El kit de bienvenida fue una sola vez — a ganar desde cero.','Reborn. The welcome kit was one-time — earn it back from zero.')
         :bi('Ninja actualizado','Ninja updated')); renderBatalla(); });
