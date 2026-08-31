@@ -64,7 +64,31 @@
     <tbody id="tabla"></tbody>
   </table>
 
-  <button class="btn" id="bkp">1 · Descargar respaldo</button>
+  <!-- ══ EL LOG, aparte ══ (André, 31-ago-2026) Vaciar el log NO es lo mismo
+       que reiniciar la cuenta: aquí sólo se tocan los trades, y el resto —tus
+       cuentas, tu caja, tu monito, Kuro— se queda intacto. Por eso va en su
+       propio bloque y no dentro del botón rojo. -->
+  <div style="margin:30px 0 0;padding-top:26px;border-top:1px solid var(--hair)">
+    <span class="et">Sólo el log de trades</span>
+    <p style="margin:10px 0 0">Borra los trades y deja <b style="color:var(--tinta)">uno solo</b>.
+       No toca tus cuentas, tu caja, tu monito ni Kuro.</p>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;margin-top:14px">
+      <label style="flex:1;min-width:140px"><span class="et" style="display:block;margin-bottom:6px">P&L</span>
+        <input id="lgPnl2" type="number" step="10" value="-510"
+          style="width:100%;padding:12px;border-radius:12px;border:1px solid var(--hair);
+                 background:transparent;color:var(--tinta);font-family:var(--mono);font-size:14px"></label>
+      <label style="flex:1;min-width:140px"><span class="et" style="display:block;margin-bottom:6px">Dirección</span>
+        <select id="lgDir2" style="width:100%;padding:12px;border-radius:12px;border:1px solid var(--hair);
+                 background:#0b0d13;color:var(--tinta);font-family:var(--mono);font-size:14px">
+          <option value="S">SHORT</option><option value="L">LONG</option></select></label>
+      <label style="flex:2;min-width:200px"><span class="et" style="display:block;margin-bottom:6px">¿De qué cuenta?</span>
+        <select id="lgCta2" style="width:100%;padding:12px;border-radius:12px;border:1px solid var(--hair);
+                 background:#0b0d13;color:var(--tinta);font-family:var(--mono);font-size:13px"></select></label>
+    </div>
+    <button class="btn" id="soloUno">Dejar sólo ese trade</button>
+  </div>
+
+  <button class="btn" id="bkp" style="margin-top:30px">1 · Descargar respaldo</button>
   <button class="btn rojo" id="go" disabled>2 · Borrar y dejarla nueva</button>
   <button class="btn" id="ir" style="display:none">Abrir el terminal →</button>
 
@@ -111,6 +135,40 @@ const claveEstado = () => {
     if(parece && v.length > may){ may = v.length; mejor = k; }
   }
   return mejor;
+};
+
+/* el desplegable de cuentas se llena con las que tengas dadas de alta: sin
+   saber a cuál pertenece el trade, la cuenta no lo cuenta y el camino a payout
+   quedaría mintiendo. */
+(()=>{ const k = claveEstado(); const sel = $('#lgCta2');
+  let ctas = [];
+  try{ ctas = (JSON.parse(localStorage.getItem(k)) || {}).accounts || []; }catch(e){}
+  sel.innerHTML = '<option value="">— ninguna —</option>' +
+    ctas.filter(a=>a && a.estado==='activa')
+        .map(a=>`<option value="${a.id}">${a.alias}</option>`).join('');
+})();
+
+$('#soloUno').onclick = () => {
+  const k = claveEstado();
+  if(!k){ log('No encuentro el estado en este navegador.', 'no'); return; }
+  let S; try{ S = JSON.parse(localStorage.getItem(k)); }catch(e){ log('No se pudo leer: '+e.message,'no'); return; }
+  const pnl = parseFloat($('#lgPnl2').value);
+  if(!isFinite(pnl)){ log('Ese P&L no es un número.','no'); return; }
+  const cta = $('#lgCta2').value;
+  const cuantos = (S.trades || []).length;
+  if(!confirm('Se borran ' + cuantos + ' trades y queda uno de ' + money(pnl) + '. ¿Seguro?')) return;
+  const hoy = new Date();
+  const iso = hoy.getFullYear()+'-'+String(hoy.getMonth()+1).padStart(2,'0')+'-'+String(hoy.getDate()).padStart(2,'0');
+  S.trades = [{
+    id: 't_' + Math.random().toString(36).slice(2,10),
+    date: iso, dir: $('#lgDir2').value, pnl,
+    accts: cta ? [cta] : [], ts: Date.now(),
+  }];
+  S.seqTrade = 1;
+  try{ localStorage.setItem(k, JSON.stringify(S)); }catch(e){ log('No se pudo guardar: '+e.message,'no'); return; }
+  log('Listo: se fueron ' + cuantos + ' trades y quedó uno de ' + money(pnl) +
+      (cta ? ' en ' + $('#lgCta2').selectedOptions[0].textContent : ' sin cuenta asignada') + '.', 'ok');
+  $('#ir').style.display = 'block';
 };
 
 $('#bkp').onclick = () => {
