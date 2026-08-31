@@ -185,7 +185,9 @@ hr.linea{border:none;border-top:1px solid var(--hair);margin:0}
    rangos y drawdowns contesta «cuánto», pero ahí arriba nadie pregunta eso
    todavía. Pregunta «¿qué voy a hacer?». Seis frases, cada una una invitación,
    y el guion que las abre es el que te mete en la fila. */
-.ra-lista{display:block;margin-top:22px;border-top:1px solid var(--hair)}
+.ra-vis{display:block;height:132px;margin-top:20px}
+.ra-vis canvas{display:block;width:100%;height:100%}
+.ra-lista{display:block;margin-top:18px;border-top:1px solid var(--hair)}
 .rl{display:block;position:relative;padding:11px 0 11px 22px;
   border-bottom:1px solid var(--hair);font-size:14px;font-weight:300;
   color:rgba(237,239,242,.82)}
@@ -376,30 +378,26 @@ hr.linea{border:none;border-top:1px solid var(--hair);margin:0}
       <a class="rama rev" href="/app.html">
         <span class="ra-k">九</span>
         <span class="ra-t">CAMPA&Ntilde;A</span>
-        <span class="ra-p">Ponte los retos que te va a pedir una cuenta de verdad, uno
-          por uno, y qu&iacute;tale su katana al maestro que los cuida.</span>
+        <span class="ra-p">Los retos que te va a pedir una cuenta de verdad.</span>
+        <span class="ra-vis"><canvas></canvas></span>
         <span class="ra-lista">
-          <span class="rl">Pasa un examen de $50K de un tir&oacute;n</span>
-          <span class="rl">Arma el colch&oacute;n y no lo sueltes</span>
-          <span class="rl">Consigue tu primer payout</span>
-          <span class="rl">C&oacute;bralo dos veces seguidas</span>
-          <span class="rl">Y otra vez, a la mitad del riesgo</span>
-          <span class="rl">G&aacute;nale la katana negra a Kuro</span>
+          <span class="rl">Pasa un examen de $50K</span>
+          <span class="rl">Arma el colch&oacute;n</span>
+          <span class="rl">Consigue tu payout</span>
+          <span class="rl">Qu&iacute;tale la negra a Kuro</span>
         </span>
         <span class="ra-go">Empezar la campa&ntilde;a &rarr;</span>
       </a>
       <a class="rama rev" href="/app.html">
         <span class="ra-k">決</span>
         <span class="ra-t">1&nbsp;v&nbsp;1</span>
-        <span class="ra-p">Juega con tus amigos. Se sientan a la misma hora, operan lo
-          suyo, y al final del d&iacute;a hay una tabla que no discute.</span>
+        <span class="ra-p">Juega con tus amigos, a la misma hora.</span>
+        <span class="ra-vis"><canvas></canvas></span>
         <span class="ra-lista">
-          <span class="rl">R&eacute;talos en la sesi&oacute;n de Asia, de Londres o de NY</span>
-          <span class="rl">De una sentada, o de varios d&iacute;as seguidos</span>
-          <span class="rl">M&eacute;tanse todos en la misma party</span>
-          <span class="rl">Pongan lo que quieran: gana el que m&aacute;s saque</span>
-          <span class="rl">Hay pelea puesta todos los d&iacute;as</span>
-          <span class="rl">Y un torneo el viernes</span>
+          <span class="rl">En Asia, Londres o Nueva York</span>
+          <span class="rl">De un d&iacute;a o de varios</span>
+          <span class="rl">Todos en la misma party</span>
+          <span class="rl">Gana el que m&aacute;s saque</span>
         </span>
         <span class="ra-go">Retar a un amigo &rarr;</span>
       </a>
@@ -1196,6 +1194,82 @@ function katana(c, W, H, col){
     d.querySelector('.fi-hoja').appendChild(cv);
     host.appendChild(d);
   });
+})();
+
+/* ══════════════ LAS DOS RAMAS, VIVAS ══════════════ (André, 31-ago-2026)
+   Dos tarjetas de puro texto, aunque el texto sea bueno, se leen como dos
+   columnas de un documento. Cada una lleva ahora su propio dibujo, y el dibujo
+   dice lo mismo que las cuatro líneas pero de un golpe: la escalera de las
+   nueve katanas encendiéndose una tras otra, y las dos curvas corriendo con su
+   marcador. Canvas y no GIF: pesan cero y se apagan fuera de cuadro. */
+(function(){
+  var UP = '#57C79B', TIN = 'rgba(237,239,242,.85)', DIM = 'rgba(237,239,242,.20)';
+  var CIN = ['#EDEFF2','#E7C24A','#E0863C','#4FAE6A','#3E82C8','#8A5CC8','#7A5230','#C8443C','#8E96A4'];
+  var lz = [].slice.call(document.querySelectorAll('.ra-vis canvas'));
+  if(!lz.length) return;
+  function escalera(c, W, H, t){
+    /* nueve peldaños que suben, encendiéndose uno tras otro */
+    var n = 9, gap = 6, bw = (W - gap*(n-1))/n;
+    var ciclo = (t % 9000)/9000;
+    for(var i=0;i<n;i++){
+      var alt = H*(0.16 + (i/(n-1))*0.80);
+      var x = i*(bw+gap), y = H - alt;
+      var on = ciclo*n - i;
+      c.fillStyle = 'rgba(237,239,242,.055)';
+      c.fillRect(x, y, bw, alt);
+      if(on > 0){
+        var u = Math.min(1, on);
+        c.fillStyle = CIN[i];
+        c.globalAlpha = 0.20 + 0.55*Math.min(1, on/1.4);
+        c.fillRect(x, H - alt*u, bw, alt*u);
+        c.globalAlpha = 1;
+        /* la hoja de la katana, cruzando el peldaño */
+        if(on > 0.7){
+          c.strokeStyle = 'rgba(240,246,255,'+(0.30 + 0.5*Math.min(1,(on-0.7)/1.2))+')';
+          c.lineWidth = 1.6; c.lineCap='round';
+          c.beginPath(); c.moveTo(x + bw*0.12, y + 7); c.lineTo(x + bw*0.88, y + 3); c.stroke();
+        }
+      }
+    }
+  }
+  function duelo(c, W, H, t){
+    /* dos curvas corriendo y su marcador */
+    var ciclo = (t % 8000)/8000, av = Math.min(1, ciclo*1.30);
+    [[UP, 0.0, 1.00, 'TÚ'], [TIN, 1.9, 0.66, 'RIVAL']].forEach(function(q, k){
+      c.strokeStyle = q[0]; c.lineWidth = 2; c.lineJoin='round';
+      c.globalAlpha = k ? .5 : 1;
+      c.beginPath();
+      var lx = 0, ly = 0;
+      for(var i2=0;i2<=52;i2++){
+        var u = i2/52; if(u > av) break;
+        var yy = H*0.86 - (Math.sin(u*7.4 + q[1])*0.14 + u*q[2]*0.70 + 0.06)*H;
+        lx = u*W*0.86; ly = yy;
+        if(i2===0) c.moveTo(0, yy); else c.lineTo(lx, yy);
+      }
+      c.stroke();
+      c.globalAlpha = 1;
+      c.fillStyle = q[0];
+      c.beginPath(); c.arc(lx, ly, k ? 2.4 : 3.2, 0, 7); c.fill();
+      c.font = '600 8px "IBM Plex Mono", monospace'; c.textAlign='left';
+      c.globalAlpha = k ? .55 : 1;
+      c.fillText(q[3], lx + 7, ly + 3); c.globalAlpha = 1;
+    });
+    c.strokeStyle = DIM; c.lineWidth = 1; c.setLineDash([3,4]);
+    c.beginPath(); c.moveTo(0, H*0.86); c.lineTo(W, H*0.86); c.stroke(); c.setLineDash([]);
+  }
+  function loop5(t){
+    lz.forEach(function(cv, i){
+      var r = cv.getBoundingClientRect();
+      if(r.bottom < -80 || r.top > (innerHeight||800)+80) return;
+      var D = Math.min(2, devicePixelRatio||1), W = cv.offsetWidth, H = cv.offsetHeight;
+      if(!W || !H) return;
+      if(cv.width !== W*D){ cv.width = W*D; cv.height = H*D; }
+      var c = cv.getContext('2d'); c.setTransform(D,0,0,D,0,0); c.clearRect(0,0,W,H);
+      if(i === 0) escalera(c, W, H, t||0); else duelo(c, W, H, t||0);
+    });
+    requestAnimationFrame(loop5);
+  }
+  if(REDUCE) loop5(4200); else loop5(0);
 })();
 
 /* ══════════════ LA CINTA ══════════════
