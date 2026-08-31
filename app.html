@@ -24716,7 +24716,7 @@ escHasta = input.float(0.79, "hasta este", minval = 0, maxval = 1, step = 0.005,
 oteDe = input.float(0.705, "El área buena va del nivel", minval = 0, maxval = 1, step = 0.005, group = g10, inline = "OTE", tooltip = "El área donde de verdad quieres entrar: de fábrica del 0.705 al 0.79. En AUTOMÁTICO la mejor entrada NO es un nivel suelto — es el FVG del rango que caiga aquí dentro: la orden se pone en el 50% de ese hueco. Si ningún hueco llega, el automático se cae al conteo de confluencia nivel por nivel.")
 oteA_ = input.float(0.79, "al", minval = 0, maxval = 1, step = 0.005, group = g10, inline = "OTE")
 oteFuera = input.string("Igual, el 50% del FVG", "Si el FVG queda fuera del área", options = ["Igual, el 50% del FVG", "Mejor el nivel de más confluencia"], group = g10, tooltip = "Qué hace el AUTOMÁTICO cuando el hueco del rango NO alcanza el área de arriba. De fábrica entra igual en el 50% del FVG —donde está el hueco es donde está el negocio— y solo le quita la ★. La otra opción se olvida del hueco y marca el nivel del Fibonacci que junte más confluencia.")
-escTP = input.string("Al break (el extremo)", "El TP de cada caja", options = ["1:1", "1:2", "Al break (el extremo)", "Más allá del break"], group = g10, tooltip = "Dónde termina el premio de TODAS las cajas. 1:1 y 1:2 salen del riesgo de cada nivel, así que cada caja tiene su propio objetivo. AL BREAK es el extremo del tramo, el mismo para todas — el objetivo natural de la estructura. MÁS ALLÁ DEL BREAK lo pasa de largo, tanto como digas en la línea de abajo, que es donde vive la liquidez del otro lado.")
+escTP = input.string("Al break (el extremo)", "El TP de la orden", options = ["1:1", "1:2", "Liquidez interna más cercana (mín 1:1)", "Al break (el extremo)", "Más allá del break", "Liquidez de ASIA", "Liquidez de LONDRES", "Liquidez de NY", "La primera liquidez de sesión"], group = g10, tooltip = "Dónde termina el premio. 1:1 y 1:2 salen del riesgo de cada nivel. LIQUIDEZ INTERNA MÁS CERCANA: el primer imán de ADENTRO que quede a favor —el AOI, el mejor FVG, el Order Block o el equilibrio del tramo— y si ese queda más cerca que el stop, se empuja hasta pagar 1:1, nunca menos. AL BREAK es el extremo del tramo, el objetivo natural de la estructura. MÁS ALLÁ DEL BREAK lo pasa de largo tanto como digas abajo. Las tres de SESIÓN van al alto o al bajo de ASIA, LONDRES o NY que siga SIN TOMARSE y quede a favor del trade; LA PRIMERA LIQUIDEZ DE SESIÓN toma la más cercana de las tres. Si la que pediste no existe hoy, el objetivo se cae al break y la caja igual se dibuja.")
 escMas = input.float(27, "Qué tanto pasa del break (% del rango)", minval = 0, maxval = 300, step = 1, group = g10, tooltip = "Solo cuenta con el objetivo MÁS ALLÁ DEL BREAK. 27% es la extensión que queda justo después del extremo; 100% sería un tramo entero más.")
 escColchon = input.float(0, "Colchón del stop (% del rango)", minval = 0, maxval = 50, step = 2.5, group = g10, tooltip = "Qué tanto pasa el stop del extremo que originó el tramo. En 0 el stop queda EXACTO en el HIGH (o el LOW) del rango, que es como lo traes tú.")
 escMedida = input.string("Proporcional al rango", "Cómo se miden las cajas", options = ["Proporcional al rango", "En velas fijas"], group = g10, tooltip = "PROPORCIONAL AL RANGO: cada caja mide un porcentaje del ancho de la propia estructura. Es la que aguanta el zoom — como la estructura y las cajas se miden con la misma vara, se estiran y se encogen juntas, y la escalera nunca se te despega del rango por mover el chart. EN VELAS FIJAS: siempre el mismo número de velas, pase lo que pase con el zoom.")
@@ -25763,6 +25763,33 @@ if barstate.islast
                         bool  escLong = not bajista
                         int   escDir  = escLong ? 1 : -1
                         float escSL   = pIni + (pIni - pFin) * escColchon / 100
+                        // ── LA LIQUIDEZ QUE SIGUE VIVA ────────────────
+                        // (André, 31-ago-2026) Los altos y bajos de cada
+                        // sesión que NADIE ha tomado todavía: son los
+                        // imanes a los que puede ir el objetivo. Se leen
+                        // con if, no con ternario, porque preguntarle el
+                        // precio a una línea que no existe truena.
+                        float liqAH = na
+                        float liqAL = na
+                        float liqLH = na
+                        float liqLL = na
+                        float liqNH = na
+                        float liqNL = na
+                        if useA and kzA.activa
+                            if kzA.hiVivo
+                                liqAH := kzA.hiLn.get_y1()
+                            if kzA.loVivo
+                                liqAL := kzA.loLn.get_y1()
+                        if useL and kzL.activa
+                            if kzL.hiVivo
+                                liqLH := kzL.hiLn.get_y1()
+                            if kzL.loVivo
+                                liqLL := kzL.loLn.get_y1()
+                        if useN and kzN.activa
+                            if kzN.hiVivo
+                                liqNH := kzN.hiLn.get_y1()
+                            if kzN.loVivo
+                                liqNL := kzN.loLn.get_y1()
                         array<float> eEnt = array.new<float>()
                         array<float> eTp  = array.new<float>()
                         array<float> eRr  = array.new<float>()
@@ -25776,7 +25803,34 @@ if barstate.islast
                             float r   = array.get(eR, i)
                             float ent = pFin + (pIni - pFin) * r
                             float rk  = math.max(math.abs(escSL - ent), syminfo.mintick)
-                            float tp  = escTP == "1:1" ? ent + escDir * rk : escTP == "1:2" ? ent + escDir * rk * 2 : escTP == "Al break (el extremo)" ? pFin : pFin + escDir * alto * escMas / 100
+                            // ── EL OBJETIVO ────────────────────────
+                            // (André, 31-ago-2026) Seis formas: múltiplo
+                            // del riesgo, el break, más allá del break, la
+                            // liquidez de ADENTRO (AOI, el FVG, el Order
+                            // Block o el equilibrio del tramo) y la de las
+                            // sesiones que siga sin tomarse. Lo que no
+                            // exista se cae al break, nunca queda sin TP.
+                            float tp = escTP == "1:1" ? ent + escDir * rk : escTP == "1:2" ? ent + escDir * rk * 2 : escTP == "Al break (el extremo)" ? pFin : escTP == "Más allá del break" ? pFin + escDir * alto * escMas / 100 : na
+                            if na(tp)
+                                float cand = na
+                                bool interna = escTP == "Liquidez interna más cercana (mín 1:1)"
+                                for k = 0 to 6
+                                    float v = na
+                                    if interna
+                                        v := k == 0 ? aoiT : k == 1 ? aoiB : k == 2 ? frT : k == 3 ? frB : k == 4 ? obT : k == 5 ? obB : (pIni + pFin) / 2
+                                    else
+                                        bool usa = escTP == "La primera liquidez de sesión" or (escTP == "Liquidez de ASIA" and k <= 1) or (escTP == "Liquidez de LONDRES" and (k == 2 or k == 3)) or (escTP == "Liquidez de NY" and (k == 4 or k == 5))
+                                        if usa
+                                            v := k == 0 ? liqAH : k == 1 ? liqAL : k == 2 ? liqLH : k == 3 ? liqLL : k == 4 ? liqNH : k == 5 ? liqNL : na
+                                    if not na(v) and escDir * (v - ent) > 0
+                                        if na(cand) or escDir * (v - ent) < escDir * (cand - ent)
+                                            cand := v
+                                // el mínimo 1:1 solo aplica a la de adentro:
+                                // si el imán queda más cerca que el stop, se
+                                // empuja hasta pagar por lo menos el riesgo
+                                if interna and not na(cand) and escDir * (cand - ent) < rk
+                                    cand := ent + escDir * rk
+                                tp := nz(cand, pFin)
                             float rrx = math.abs(tp - ent) / rk
                             // la confluencia: no es un win rate probado,
                             // es cuánto se junta en ese nivel. El combo
