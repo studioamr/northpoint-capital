@@ -13117,10 +13117,10 @@ function batProximoDOW(dow, hora, durh){
 function batTorneos(){
   if(!S.batTorneosInsc) S.batTorneosInsc={};
   const insc=S.batTorneosInsc;
+  /* UN SOLO TORNEO (André, 31-ago-2026): eran cuatro y ninguno destacaba —
+     cuatro filas casi iguales, con cuatro entradas y cuatro premios, que sólo
+     hacían ruido debajo de las sesiones. Uno a la semana, el grande, y ya. */
   const defs=[
-    {id:'asia',   nom:['Copa Asia','Asia Cup'],            ico:'🇯🇵', col:'#4a90d9', premio:5000,  costo:1000, cupo:32, dow:0, hora:7,  durh:3},
-    {id:'londres',nom:['Abierto de Londres','London Open'],ico:'🇬🇧', col:'#c9a227', premio:8000,  costo:1500, cupo:48, dow:1, hora:2,  durh:4},
-    {id:'ny',     nom:['Maratón NY','NY Marathon'],        ico:'🗽', col:'#30d158', premio:12000, costo:2000, cupo:64, dow:2, hora:8,  durh:6},
     {id:'kuro',   nom:['Torneo Kuro','Kuro Invitational'], ico:'🐉', col:'#8a6bd6', premio:25000, costo:5000, cupo:16, dow:5, hora:9,  durh:8}
   ];
   const nt=Date.now();
@@ -14372,11 +14372,15 @@ function renderBatallaInterno(){
               const viva = BAT_SESIONES.find(s=> batSesionEstado({sesion:s.id}).viva);
               if(!viva) return `<div class="evt-vacio">${bi('Ninguna sesión en vivo ahora','No session live right now')}</div>`;
               const Ev = batSesionEstado({sesion:viva.id});
-              return `<div class="ag-row live"><div class="ag-when"><b>${batSesAbreTxt(viva)}</b><span>● ${bi('EN VIVO','LIVE')}</span></div><div class="ag-i"><b>${viva.ico} ${loc(viva.nom)}</b><span>${batSesAbreTxt(viva)} → ${batSesCierraTxt(viva)} (${batSesDurTxt(viva)}) · ${bi('quedan','left')} <i>${batMinTxt(Ev.min)}</i></span><span>${bi('paga','pays')} <i>×2</i></span></div><button type="button" class="btn primary sm" data-abreses="${viva.id}" data-mult="2">${bi('Retar','Battle')}</button></div>`; })()}
+              /* SÓLO EL RELOJ (André, 31-ago-2026): la fila traía la hora de
+                 apertura, la de cierre, la duración, el multiplicador y la
+                 entrada — cinco datos para decir una cosa. Lo único que se
+                 mira aquí es cuánto falta. */
+              return `<div class="ag-row live"><div class="ag-when"><b>${bi('YA','NOW')}</b><span>● ${bi('EN VIVO','LIVE')}</span></div><div class="ag-i"><b>${viva.ico} ${loc(viva.nom)}</b><span>${bi('cierra en','closes in')} <i>${batMinTxt(Ev.min)}</i></span></div><button type="button" class="btn primary sm" data-abreses="${viva.id}" data-mult="2">${bi('Retar','Battle')}</button></div>`; })()}
             <div class="evt-sec">${bi('PRÓXIMAS SESIONES','UPCOMING SESSIONS')}</div>
-            ${BAT_SESIONES.map(s=>{ const ap=batProxAperturas(s.hora,1,s.id)[0], dt=ap?batDiaTxt(ap.getTime()):null;
-              const falta=ap?` · ${bi('empieza en','starts in')} <i>${batEnTiempo(ap.getTime()-Date.now())}</i>`:'';
-              return `<div class="ag-row"><div class="ag-when"><b>${dt?dt.hora:batSesAbreTxt(s)}</b><span>${dt?esc(dt.dia):''}</span></div><div class="ag-i"><b>${s.ico} ${loc(s.nom)}</b><span>${batSesAbreTxt(s)} → ${batSesCierraTxt(s)} (${batSesDurTxt(s)})${falta}</span><span>${bi('paga','pays')} <i>×2</i> · ${bi('entrada gratis','free entry')}</span></div><button type="button" class="btn sm" data-abreses="${s.id}" data-mult="2">${bi('Retar','Battle')}</button></div>`; }).join('')}
+            ${BAT_SESIONES.map(s=>{ const ap=batProxAperturas(s.hora,1,s.id)[0];
+              const falta=ap? batEnTiempo(ap.getTime()-Date.now()) : '—';
+              return `<div class="ag-row"><div class="ag-when"><b>${esc(falta)}</b><span>${bi('para abrir','to open')}</span></div><div class="ag-i"><b>${s.ico} ${loc(s.nom)}</b></div><button type="button" class="btn sm" data-abreses="${s.id}" data-mult="2">${bi('Retar','Battle')}</button></div>`; }).join('')}
             <div class="evt-sec">${bi('SIGUIENTES TORNEOS','NEXT TOURNAMENTS')}</div>
             ${batTorneos().map(t=>{ const dt=batDiaTxt(t.inicio); const AHORA=Date.now();
               const cuando=t.estado==='live'?`${bi('quedan','left')} <i>${batEnTiempo(t.fin-AHORA)}</i>`:`${bi('empieza en','starts in')} <i>${batEnTiempo(t.inicio-AHORA)}</i>`;
