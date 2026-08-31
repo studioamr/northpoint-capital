@@ -22969,10 +22969,11 @@ indicator("NP A+", "NP A+", overlay = true, max_lines_count = 500, max_boxes_cou
 // cada cosa desde aquí, sin ir a buscarla grupo por grupo. Lo que
 // apagues no pierde sus ajustes, solo deja de dibujarse.
 gV = "1 · Qué ver"
+inVerORB    = input.bool(true, "ORB · la caja del OR y TODO lo suyo", group = gV, tooltip = "El interruptor de todo el ORB de un golpe: la caja del OR (9:30-9:45), el ORH, el ORL, el ORM, los objetivos numerados, las señales ▲▼, la MA de sesión, los FVG que nacen dentro del ORB y la killzone ORB con su H/L. Apagado, el chart queda sin una sola marca del ORB y lo demás —ASIA, LONDRES, NY, la estructura y el panel— sigue igual. Los ajustes de cada pieza no se pierden: al volver a prenderlo, todo regresa como lo tenías.")
+orbInf      = input.bool(true, "ORB de corrido, hasta el NY del día siguiente", group = gV, tooltip = "El ORB no se corta NUNCA hasta que abra el NY del día siguiente. Dos cosas al mismo tiempo: el ORH, el ORL y el ORM siguen creciendo vela por vela después del cierre de NY, y el ORB H / ORB L de la killzone YA NO se congela cuando le toman el nivel — sigue de largo igual. Toda la tarde, toda la noche y la mañana siguiente el ORB se ve entero; a las 9:30 del día que sigue se borra solo y nace el nuevo. Prendido también manda sobre \\"Quitar todo el ORB cuando abre ASIA\\" del grupo 6: ya no se quita en la madrugada. Apagado, todo vuelve a como estaba.")
 verPanel    = input.bool(true, "Panel de la rutina", group = gV, tooltip = "La tabla de la esquina: sesión en curso, etapa del día, fase del contrato, agenda, liquidez viva y los tickers de cada sesión.")
 inVerFVG    = input.bool(true, "FVG más cercano (los 2 del día)", group = gV, tooltip = "Solo dos: el FVG alcista más cercano al precio y el bajista más cercano, leídos del TF del grupo 5.")
 inVerFvgORB = input.bool(true, "FVG dentro del ORB", group = gV, tooltip = "Los huecos que se forman dentro de la ventana del ORB (9:30-9:45), medidos con las velas del gráfico que estés viendo: en 1m salen los de 1m, en 5m los de 5m. El que se invierte no se borra — el rectángulo se corta en esa vela y ahí se queda, en el color contrario. Todos se borran cuando abre ASIA, como el resto del ORB.")
-inVerORB    = input.bool(true, "ORB · la caja del OR y TODO lo suyo", group = gV, tooltip = "El interruptor de todo el ORB de un golpe: la caja del OR (9:30-9:45), el ORH, el ORL, el ORM, los objetivos numerados, las señales ▲▼, la MA de sesión, los FVG que nacen dentro del ORB y la killzone ORB con su H/L. Apagado, el chart queda sin una sola marca del ORB y lo demás —ASIA, LONDRES, NY, la estructura y el panel— sigue igual. Los ajustes de cada pieza no se pierden: al volver a prenderlo, todo regresa como lo tenías.")
 tTog        = input.bool(false, "Objetivos del ORB", group = gV, tooltip = "Los niveles numerados cada 50% del rango del OR, arriba y abajo.")
 sigTog      = input.bool(true, "Señales ▲▼ del rompimiento", group = gV, tooltip = "La flecha que aparece cuando el precio rompe el ORH o el ORL. Se re-arma al volver al ORM.")
 
@@ -23143,7 +23144,6 @@ verOrhOrl = input.bool(false, "Escribir los nombres ORH / ORL", group = g6, tool
 orbPronDias = input.int(60, "Cuántos ORB de historia mide", minval = 10, maxval = 500, group = g6, tooltip = "El pronóstico se calcula con lo que TradingView tenga cargado en el chart: si estás en 1m se cargan menos días que en 15m, así que la muestra cambia con la temporalidad. Este número es el tope de días que guarda.")
 orbPronMin = input.int(8, "Muestra mínima para opinar (días)", minval = 3, maxval = 100, group = g6, tooltip = "Con menos días que esto en el grupo que toca, el pronóstico usa TODOS los días juntos; y si ni así alcanza, dice \\"muestra corta\\" y se calla. Mejor no opinar que inventar un porcentaje con cuatro días.")
 borrarNY = input.bool(true, "Quitar todo el ORB cuando abre ASIA", group = g6, tooltip = "El ORB del día se queda visible toda la tarde y toda la noche, y se borra hasta que ABRE ASIA (fila ASIA del grupo 1): caja del OR, ORH/ORL/ORM, objetivos, señales y sus H/L. Así el viernes en la tarde y todo el fin de semana sigues viendo el ORB del último día, y el chart amanece limpio para la nueva sesión. Los FVG no se tocan (son del TF del grupo 5).")
-orbInf = input.bool(true, "Que el ORB NO se corte: seguir hasta el siguiente NY", group = g6, tooltip = "El ORH, el ORL y el ORM dejaban de crecer al cerrar NY y se quedaban cortados a media pantalla, con el precio siguiéndose de largo sin ellos. Prendido, las tres líneas siguen creciendo vela por vela toda la tarde, toda la noche y la mañana siguiente, hasta que ABRE EL SIGUIENTE NY (9:30): ahí se borra el ORB viejo y arranca el nuevo. Prendido también manda sobre la línea de arriba — el ORB ya NO se quita cuando abre ASIA, dura hasta el NY que sigue. Apagado, todo vuelve a como estaba.")
 tPer = input.float(50, "Objetivo: % del rango", minval = 1, group = g6, tooltip = "Usa este % del ancho del OR como distancia entre objetivos.") * 0.01
 maTog = input.bool(false, "", inline = "MA6", group = g6)
 
@@ -23281,7 +23281,7 @@ tN = not na(time("", sesN, tz))
 
 dibujable = timeframe.in_seconds("") <= timeframe.in_seconds(tfLim)
 
-f_kz(kzona k, bool use, bool t, bool caja) =>
+f_kz(kzona k, bool use, bool t, bool caja, bool sinCorte) =>
     if dibujable and use
         if t and not t[1]
             // si esta misma vela toma un nivel que seguía vivo de la sesión
@@ -23346,6 +23346,13 @@ f_kz(kzona k, bool use, bool t, bool caja) =>
                     k.loLn.set_x2(time)
                     if alertar
                         alert("NP A+ — tomaron el BAJO de " + k.nombre + " (" + str.tostring(k.loLn.get_y1(), format.mintick) + ").", alert.freq_once_per_bar)
+            // (André, 31-ago-2026) El ORB DE CORRIDO: aunque le tomen el
+            // alto o el bajo, su línea no se congela en esa vela — sigue
+            // creciendo hasta que abra el NY del día siguiente, que es
+            // cuando el ORB entero se borra y nace el nuevo
+            if sinCorte
+                k.hiLn.set_x2(time + pasoBar * liqExt)
+                k.loLn.set_x2(time + pasoBar * liqExt)
         // las etiquetas viven SIEMPRE en el margen de la derecha, en
         // su carril: ni encima de las velas ni encimadas entre ellas.
         // (André, 31-ago-2026) La tomada YA NO lleva tache: se
@@ -23380,10 +23387,10 @@ f_kz(kzona k, bool use, bool t, bool caja) =>
     // exigiría que todas sus ramas terminaran en el mismo tipo (CE10235)
     0
 
-f_kz(kzA, useA, tA, cajaA)
-f_kz(kzL, useL, tL, cajaL)
-f_kz(kzO, useO, tO, cajaO)
-f_kz(kzN, useN, tN, cajaN)
+f_kz(kzA, useA, tA, cajaA, false)
+f_kz(kzL, useL, tL, cajaL, false)
+f_kz(kzO, useO, tO, cajaO, orbInf)
+f_kz(kzN, useN, tN, cajaN, false)
 
 // ── BOLITA AL ABRIR CADA SESIÓN ────────────────────────────────
 // Una bolita SOBRE la vela donde arranca cada killzone, clavada en
