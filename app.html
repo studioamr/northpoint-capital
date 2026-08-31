@@ -9963,11 +9963,25 @@ const BAT_DUR = [
    Cada killzone abre a una hora fija (hora local de la mesa) y dura su ventana.
    El reto se cita en la PRÓXIMA apertura de la sesión elegida — como buscar
    partida: eliges cancha (Asia/Londres/NY), horario y formato. */
+/* LAS KILLZONES DE VERDAD (André, 30-ago-2026), en hora de NY y con minutos:
+   ASIA 20:00 → 02:00 (6 h, y ARRANCA LA SEMANA EL DOMINGO)
+   LONDRES 02:00 → 08:30 (6 h 30)
+   NUEVA YORK 09:30 → 16:00 (6 h 30)
+   Antes estaban puestas a ojo (Asia 4 h, Londres 01:00, NY 07:00) y sin
+   minutos, por eso ninguna coincidía con el indicador. `min` es el minuto de
+   la apertura: sin él no se podía escribir 09:30 ni 08:30. */
 const BAT_SESIONES = [
-  { id:'asia',    ico:'🇯🇵', ciudad:['Tokio','Tokyo'],      nom:['Asia','Asia'],        hora:20, dur:240 },
-  { id:'londres', ico:'🇬🇧', ciudad:['Londres','London'],   nom:['Londres','London'],   hora:1,  dur:180 },
-  { id:'ny',      ico:'🗽', ciudad:['Nueva York','New York'], nom:['Nueva York','New York'], hora:7, dur:180 },
+  { id:'asia',    ico:'🇯🇵', ciudad:['Tokio','Tokyo'],      nom:['Asia','Asia'],        hora:20, min:0,  dur:360 },
+  { id:'londres', ico:'🇬🇧', ciudad:['Londres','London'],   nom:['Londres','London'],   hora:2,  min:0,  dur:390 },
+  { id:'ny',      ico:'🗽', ciudad:['Nueva York','New York'], nom:['Nueva York','New York'], hora:9, min:30, dur:390 },
 ];
+/* helpers de horario: el minuto de apertura obliga a escribir las horas con
+   una función y no pegando ':00' a mano como se hacía antes */
+function batSesIni(s){ return (s.hora||0)*60 + (s.min||0); }
+function batHM(mins){ const m=((mins%1440)+1440)%1440; return String(Math.floor(m/60)).padStart(2,'0')+':'+String(m%60).padStart(2,'0'); }
+function batSesAbreTxt(s){ return batHM(batSesIni(s)); }
+function batSesCierraTxt(s){ return batHM(batSesIni(s) + (s.dur||0)); }
+function batSesDurTxt(s){ const d=s.dur||0; const h=Math.floor(d/60), m=d%60; return m ? h+'h '+m : h+'h'; }
 /* formatos de duelo: sprint (rápido, arranca ya), sesión (cita en un killzone),
    maratón (largo aliento, acumulas profit) */
 const BAT_SPRINTS = [
@@ -10015,7 +10029,7 @@ function batSesionEstado(c, now){
   const S2 = batSesion((c&&c.sesion)||'asia');
   const t = now || ahora();
   const m = minutosEn(TZ_MERCADO, t), wd = diaSemanaEn(TZ_MERCADO, t);
-  const ini = S2.hora*60, fin = ini + S2.dur;
+  const ini = batSesIni(S2), fin = ini + S2.dur;
   /* la ventana puede cruzar la medianoche (Asia abre 20:00 y dura 4 h) */
   const dentro = (fin <= 1440) ? (m >= ini && m < fin) : (m >= ini || m < (fin-1440));
   const habil = (wd>=1 && wd<=5) || (wd===0 && S2.id==='asia');
@@ -10056,11 +10070,34 @@ function batMundito(id){
   </svg>`;
 }
 /* próximas N aperturas de una sesión (hora fija), saltando fin de semana */
-function batProxAperturas(hora, n){
-  const out=[], now=new Date(); let d=new Date(now); d.setHours(hora,0,0,0);
-  if(d.getTime() <= now.getTime()) d.setDate(d.getDate()+1);
-  let guard=0;
-  while(out.length<n && guard++<20){ const dow=d.getDay(); if(dow!==0 && dow!==6) out.push(new Date(d.getTime())); d.setDate(d.getDate()+1); }
+/* EL INSTANTE EXACTO DE LA PRÓXIMA APERTURA (André, 30-ago-2026).
+   Antes esto hacía `d.setHours(hora,0,0,0)` con la hora LOCAL del navegador:
+   desde México, "Asia 20:00" quedaba a las 20:00 de Morelia = 22:00 NY, dos
+   horas después de que la killzone abrió de verdad. Ahora la cuenta se hace
+   en la zona del mercado y se devuelve el timestamp real; quien lo pinte lo
+   verá en su propia hora. Sábado nunca; domingo solo Asia, que es la que
+   arranca la semana. */
+function batTsApertura(S, desde){
+  const t = new Date(desde || Date.now());
+  const mNY = minutosEn(TZ_MERCADO, t);
+  const ini = batSesIni(S);
+  let falta = ini - mNY; if(falta <= 0) falta += 1440;
+  let ts = t.getTime() + falta*60000 - (t.getSeconds()*1000 + t.getMilliseconds());
+  for(let g=0; g<10; g++){
+    const dow = diaSemanaEn(TZ_MERCADO, new Date(ts));
+    if(dow !== 6 && (dow !== 0 || S.id === 'asia')) break;
+    ts += 86400000;
+  }
+  return ts;
+}
+function batProxAperturas(hora, n, sesId){
+  const S = sesId ? batSesion(sesId) : { hora:hora, min:0, id:sesId };
+  const out = []; let desde = Date.now(); let guard = 0;
+  while(out.length < n && guard++ < 30){
+    const ts = batTsApertura(S, desde);
+    out.push(new Date(ts));
+    desde = ts + 60000;
+  }
   return out;
 }
 /* etiqueta amable de una fecha: Hoy / Mañana / Lun 3 sep, con la hora */
@@ -10081,6 +10118,32 @@ function batDiaTxt(ts){
 function batDuracionMs(dur, iniTs){
   if(dur==='finde'){ const d=new Date(iniTs); const dow=d.getDay(); const dias=(dow===0?0:7-dow); const fin=new Date(d); fin.setDate(d.getDate()+dias); fin.setHours(23,59,0,0); return Math.max(3600000, fin-iniTs); }
   return (+dur||30)*60000;
+}
+/* EL DUELO NO SE PASA DE SU KILLZONE (André, 30-ago-2026): la pelea se juega
+   DENTRO de la sesión, así que su final se empareja con el CIERRE de la
+   killzone de la sede. Antes se sellaban las horas completas desde que
+   arrancabas: si entrabas 16 min tarde a Asia, el reloj marcaba 4 h y el duelo
+   seguía vivo 16 min después de que la sesión ya había cerrado.
+   No aplica a los formatos largos (24 h, semana, mes, fin de semana) ni a los
+   duelos sin sede: ahí manda la duración tal cual. */
+function batMsCierra(c, now){
+  const t = now || ahora();
+  const E = batSesionEstado(c, t);
+  if(!E.viva) return 0;
+  /* E.min son minutos enteros: se le quita lo corrido del minuto para que el
+     segundero del reloj grande caiga exacto con el de la killzone */
+  return Math.max(0, E.min*60000 - (t.getSeconds()*1000 + t.getMilliseconds()));
+}
+function batFinMs(c, desdeTs){
+  const base = batDuracionMs(c && c.duracion, desdeTs);
+  const S = c && c.sesion ? batSesion(c.sesion) : null;
+  if(!S) return base;
+  const dur = +(c && c.duracion);
+  if(!isFinite(dur) || dur > S.dur) return base;   // 24 h, semana, mes: sin recorte
+  const d = new Date(desdeTs);
+  const E = batSesionEstado(c, d);
+  if(!E.viva) return base;
+  return Math.min(base, batMsCierra(c, d));
 }
 /* texto corto de una duración para las tarjetas y el resumen */
 function batDurTxt(dur){
@@ -11426,16 +11489,27 @@ function batSetupCardHTML(){
   if(!Array.isArray(batSel.ops)) batSel.ops = batSel.op? [batSel.op] : [];
   batSel.ops = batSel.ops.filter(u=>ops.includes(u));
   const sesObj = batSesion(batSel.ses);
-  if(batFmt==='sesion' && !batSel.cuando){ const ap=batProxAperturas(sesObj.hora,1)[0]; if(ap){ batSel.cuando=ap.getTime(); batSel.cuandoSes=batSel.ses; } }
+  if(batFmt==='sesion' && !batSel.cuando && !batSesionEstado({sesion:batSel.ses}).viva){ const ap=batProxAperturas(sesObj.hora,1,batSel.ses)[0]; if(ap){ batSel.cuando=ap.getTime(); batSel.cuandoSes=batSel.ses; } }
   let cal='';
   if(batFmt==='sesion'){
-    batProxAperturas(sesObj.hora, 6).forEach(d=>{ const t=batDiaTxt(d.getTime()), ts=d.getTime();
+    /* LA SESIÓN EN CURSO (André, 30-ago-2026): batProxAperturas tira la
+       apertura de HOY en cuanto pasa su hora, así que con Asia abierta y
+       3h 44m por delante el calendario solo ofrecía mañana. Si la killzone
+       de la sede está VIVA, el primer chip es ella: la invitación se manda
+       para entrar YA y el duelo dura lo que le quede a la sesión. */
+    const Ekz = batSesionEstado({sesion:batSel.ses});
+    if(Ekz.viva){
+      cal += `<button type="button" class="bat-cal-card ahora ${!batSel.cuando?'on':''}" data-ts="" data-ses="${batSel.ses}">
+        <span class="bat-cal-ico">${sesObj.ico}</span><span class="bat-cal-dia">${bi('Ahora','Now')}</span>
+        <span class="bat-cal-hora">${batMinTxt(Ekz.min)} ${bi('restantes','left')}</span></button>`;
+    }
+    batProxAperturas(sesObj.hora, 6, batSel.ses).forEach(d=>{ const t=batDiaTxt(d.getTime()), ts=d.getTime();
       cal += `<button type="button" class="bat-cal-card ${batSel.cuando===ts?'on':''}" data-ts="${ts}" data-ses="${batSel.ses}">
         <span class="bat-cal-ico">${sesObj.ico}</span><span class="bat-cal-dia">${t.dia}</span><span class="bat-cal-hora">${t.hora}</span></button>`; });
   } else {
     cal += `<button type="button" class="bat-cal-card ahora ${!batSel.cuando?'on':''}" data-ts="" data-ses="">
       <span class="bat-cal-ico">⚡</span><span class="bat-cal-dia">${bi('Ahora','Now')}</span><span class="bat-cal-hora">${bi('al instante','instant')}</span></button>`;
-    let ups=[]; BAT_SESIONES.forEach(s=> batProxAperturas(s.hora,2).forEach(d=> ups.push({ts:d.getTime(), s})));
+    let ups=[]; BAT_SESIONES.forEach(s=> batProxAperturas(s.hora,2,s.id).forEach(d=> ups.push({ts:d.getTime(), s})));
     ups.sort((a,b)=>a.ts-b.ts); ups.slice(0,6).forEach(u=>{ const t=batDiaTxt(u.ts);
       cal += `<button type="button" class="bat-cal-card ${batSel.cuando===u.ts?'on':''}" data-ts="${u.ts}" data-ses="${u.s.id}">
         <span class="bat-cal-ico">${u.s.ico}</span><span class="bat-cal-dia">${t.dia} ${t.hora}</span><span class="bat-cal-hora">${loc(u.s.nom)}</span></button>`; });
@@ -11453,7 +11527,7 @@ function batSetupCardHTML(){
       <div class="bat-f"><label>${bi('Formato','Format')}</label>
         <div class="bat-fmt-tabs">${fmts.map(f=>`<button type="button" class="bat-fmt-tab ${batFmt===f[0]?'on':''}" data-fmt="${f[0]}"><b>${f[1]}</b>${f[2]}</button>`).join('')}</div></div>
       ${batFmt==='sesion' ? `<div class="bat-f"><label>${bi('Sesión','Session')}</label>
-        <div class="bat-ses-chips">${BAT_SESIONES.map(s=>`<button type="button" class="bat-ses-chip ${batSel.ses===s.id?'on':''}" data-ses="${s.id}"><b class="bat-ses-ico">${s.ico}</b><b>${loc(s.nom)}</b><i>${String(s.hora).padStart(2,'0')}:00 · ${Math.round(s.dur/60)}h</i></button>`).join('')}</div></div>` : ''}
+        <div class="bat-ses-chips">${BAT_SESIONES.map(s=>`<button type="button" class="bat-ses-chip ${batSel.ses===s.id?'on':''}" data-ses="${s.id}"><b class="bat-ses-ico">${s.ico}</b><b>${loc(s.nom)}</b><i>${batSesAbreTxt(s)} · ${batSesDurTxt(s)}</i></button>`).join('')}</div></div>` : ''}
       ${durHTML ? `<div class="bat-f"><label>${bi('Duración','Duration')}</label>${durHTML}</div>` : ''}
       <div class="bat-f"><label>${batFmt==='sesion'?bi('¿Qué día?','Which day?'):bi('¿Cuándo?','When?')}</label><div class="bat-cal">${cal}</div></div>
       <div class="bat-f"><label>${bi('Balance inicial','Starting balance')}</label>
@@ -11524,17 +11598,28 @@ function renderBatalla(){
       if(!Array.isArray(batSel.ops)) batSel.ops = batSel.op? [batSel.op] : [];
       batSel.ops = batSel.ops.filter(u=>ops.includes(u));
       const sesObj = batSesion(batSel.ses);
-      if(batFmt==='sesion' && !batSel.cuando){ const ap=batProxAperturas(sesObj.hora,1)[0]; if(ap){ batSel.cuando=ap.getTime(); batSel.cuandoSes=batSel.ses; } }
+      if(batFmt==='sesion' && !batSel.cuando && !batSesionEstado({sesion:batSel.ses}).viva){ const ap=batProxAperturas(sesObj.hora,1,batSel.ses)[0]; if(ap){ batSel.cuando=ap.getTime(); batSel.cuandoSes=batSel.ses; } }
       /* CALENDARIO por formato */
       let cal='';
       if(batFmt==='sesion'){
-        batProxAperturas(sesObj.hora, 6).forEach(d=>{ const t=batDiaTxt(d.getTime()), ts=d.getTime();
+        /* LA SESIÓN EN CURSO (André, 30-ago-2026): batProxAperturas tira la
+           apertura de HOY en cuanto pasa su hora, así que con Asia abierta y
+           3h 44m por delante el calendario solo ofrecía mañana. Si la killzone
+           de la sede está VIVA, el primer chip es ella: la invitación se manda
+           para entrar YA y el duelo dura lo que le quede a la sesión. */
+        const Ekz = batSesionEstado({sesion:batSel.ses});
+        if(Ekz.viva){
+          cal += `<button type="button" class="bat-cal-card ahora ${!batSel.cuando?'on':''}" data-ts="" data-ses="${batSel.ses}">
+            <span class="bat-cal-ico">${sesObj.ico}</span><span class="bat-cal-dia">${bi('Ahora','Now')}</span>
+            <span class="bat-cal-hora">${batMinTxt(Ekz.min)} ${bi('restantes','left')}</span></button>`;
+        }
+        batProxAperturas(sesObj.hora, 6, batSel.ses).forEach(d=>{ const t=batDiaTxt(d.getTime()), ts=d.getTime();
           cal += `<button type="button" class="bat-cal-card ${batSel.cuando===ts?'on':''}" data-ts="${ts}" data-ses="${batSel.ses}">
             <span class="bat-cal-ico">${sesObj.ico}</span><span class="bat-cal-dia">${t.dia}</span><span class="bat-cal-hora">${t.hora}</span></button>`; });
       } else {
         cal += `<button type="button" class="bat-cal-card ahora ${!batSel.cuando?'on':''}" data-ts="" data-ses="">
           <span class="bat-cal-ico">⚡</span><span class="bat-cal-dia">${bi('Ahora','Now')}</span><span class="bat-cal-hora">${bi('al instante','instant')}</span></button>`;
-        let ups=[]; BAT_SESIONES.forEach(s=> batProxAperturas(s.hora,2).forEach(d=> ups.push({ts:d.getTime(), s})));
+        let ups=[]; BAT_SESIONES.forEach(s=> batProxAperturas(s.hora,2,s.id).forEach(d=> ups.push({ts:d.getTime(), s})));
         ups.sort((a,b)=>a.ts-b.ts); ups.slice(0,6).forEach(u=>{ const t=batDiaTxt(u.ts);
           cal += `<button type="button" class="bat-cal-card ${batSel.cuando===u.ts?'on':''}" data-ts="${u.ts}" data-ses="${u.s.id}">
             <span class="bat-cal-ico">${u.s.ico}</span><span class="bat-cal-dia">${t.dia} ${t.hora}</span><span class="bat-cal-hora">${loc(u.s.nom)}</span></button>`; });
@@ -11558,7 +11643,7 @@ function renderBatalla(){
           <div class="bat-f"><label>${bi('Formato','Format')}</label>
             <div class="bat-fmt-tabs">${fmts.map(f=>`<button type="button" class="bat-fmt-tab ${batFmt===f[0]?'on':''}" data-fmt="${f[0]}"><b>${f[1]}</b>${f[2]}</button>`).join('')}</div></div>
           ${batFmt==='sesion' ? `<div class="bat-f"><label>${bi('Sesión','Session')}</label>
-            <div class="bat-ses-chips">${BAT_SESIONES.map(s=>`<button type="button" class="bat-ses-chip ${batSel.ses===s.id?'on':''}" data-ses="${s.id}"><b class="bat-ses-ico">${s.ico}</b><b>${loc(s.nom)}</b><i>${String(s.hora).padStart(2,'0')}:00 · ${Math.round(s.dur/60)}h</i></button>`).join('')}</div></div>` : ''}
+            <div class="bat-ses-chips">${BAT_SESIONES.map(s=>`<button type="button" class="bat-ses-chip ${batSel.ses===s.id?'on':''}" data-ses="${s.id}"><b class="bat-ses-ico">${s.ico}</b><b>${loc(s.nom)}</b><i>${batSesAbreTxt(s)} · ${batSesDurTxt(s)}</i></button>`).join('')}</div></div>` : ''}
           ${durHTML ? `<div class="bat-f"><label>${bi('Duración','Duration')}</label>${durHTML}</div>` : ''}
           <div class="bat-f"><label>${batFmt==='sesion'?bi('¿Qué día?','Which day?'):bi('¿Cuándo?','When?')}</label><div class="bat-cal">${cal}</div></div>
           <div class="bat-f"><label>${bi('Balance inicial','Starting balance')}</label>
@@ -11752,15 +11837,16 @@ function renderBatalla(){
                 filas2.push(`<div class="ag-row ${t.estado==='live'?'live':''}" style="--kc:${t.col}"><div class="ag-when"><b>${t.estado==='live'?bi('HOY','NOW'):dt.hora}</b><span>${t.estado==='live'?'● '+bi('EN VIVO','LIVE'):esc(dt.dia)}</span></div><div class="ag-i"><b>${t.ico} ${loc(t.nom)}</b><span>${esc(dt.dia)} ${dt.hora} → ${batHHMM(t.fin)} (${t.durh}h) · ${cuando}</span><span>${bi('premio','prize')} <i>${fmt$(t.premio)}</i> · ${bi('paga','pays')} <i>×3</i> · ${bi('cupo','spots')} ${t.inscritos}/${t.cupo}</span></div><span class="evt-tag">${bi('Inscrito','Joined')}</span></div>`); });
               return filas2.length? filas2.join('') : `<div class="evt-vacio">${bi('No estás dentro de ninguna todavía','You are not in any yet')}</div>`; })()}
             <div class="evt-sec">${bi('SESIÓN ACTUAL','CURRENT SESSION')}</div>
-            ${(()=>{ const h=new Date().getHours(); const dow=new Date().getDay(); const viva=BAT_SESIONES.find(s=>{ const fin=s.hora+Math.round(s.dur/60); const abierto=(dow>=1&&dow<=5)||(dow===0&&s.id==='asia'); return abierto && h>=s.hora && h<fin; });
+            ${(()=>{ /* quién está viva lo dice batSesionEstado, que ya sabe de
+                 minutos, de cruces de medianoche y del domingo de Asia */
+              const viva = BAT_SESIONES.find(s=> batSesionEstado({sesion:s.id}).viva);
               if(!viva) return `<div class="evt-vacio">${bi('Ninguna sesión en vivo ahora','No session live right now')}</div>`;
-              const finH=(viva.hora+Math.round(viva.dur/60))%24; const d2=new Date(); d2.setHours(finH,0,0,0); if(d2.getTime()<Date.now()) d2.setDate(d2.getDate()+1);
-              return `<div class="ag-row live"><div class="ag-when"><b>${String(viva.hora).padStart(2,'0')}:00</b><span>● ${bi('EN VIVO','LIVE')}</span></div><div class="ag-i"><b>${viva.ico} ${loc(viva.nom)}</b><span>${String(viva.hora).padStart(2,'0')}:00 → ${String(finH).padStart(2,'0')}:00 (${Math.round(viva.dur/60)}h) · ${bi('quedan','left')} <i>${batEnTiempo(d2.getTime()-Date.now())}</i></span><span>${bi('paga','pays')} <i>×2</i> · ${bi('entrada gratis · el que pierde paga','free entry · loser pays')} ${fmt$(BAT_FEE)}</span></div><button type="button" class="btn primary sm" data-abreses="${viva.id}" data-mult="2">${bi('Retar','Battle')}</button></div>`; })()}
+              const Ev = batSesionEstado({sesion:viva.id});
+              return `<div class="ag-row live"><div class="ag-when"><b>${batSesAbreTxt(viva)}</b><span>● ${bi('EN VIVO','LIVE')}</span></div><div class="ag-i"><b>${viva.ico} ${loc(viva.nom)}</b><span>${batSesAbreTxt(viva)} → ${batSesCierraTxt(viva)} (${batSesDurTxt(viva)}) · ${bi('quedan','left')} <i>${batMinTxt(Ev.min)}</i></span><span>${bi('paga','pays')} <i>×2</i> · ${bi('entrada gratis · el que pierde paga','free entry · loser pays')} ${fmt$(BAT_FEE)}</span></div><button type="button" class="btn primary sm" data-abreses="${viva.id}" data-mult="2">${bi('Retar','Battle')}</button></div>`; })()}
             <div class="evt-sec">${bi('PRÓXIMAS SESIONES','UPCOMING SESSIONS')}</div>
-            ${BAT_SESIONES.map(s=>{ const ap=batProxAperturas(s.hora,1)[0], dt=ap?batDiaTxt(ap.getTime()):null;
-              const finH=(s.hora+Math.round(s.dur/60))%24;
+            ${BAT_SESIONES.map(s=>{ const ap=batProxAperturas(s.hora,1,s.id)[0], dt=ap?batDiaTxt(ap.getTime()):null;
               const falta=ap?` · ${bi('empieza en','starts in')} <i>${batEnTiempo(ap.getTime()-Date.now())}</i>`:'';
-              return `<div class="ag-row"><div class="ag-when"><b>${dt?dt.hora:String(s.hora).padStart(2,'0')+':00'}</b><span>${dt?esc(dt.dia):''}</span></div><div class="ag-i"><b>${s.ico} ${loc(s.nom)}</b><span>${String(s.hora).padStart(2,'0')}:00 → ${String(finH).padStart(2,'0')}:00 (${Math.round(s.dur/60)}h)${falta}</span><span>${bi('paga','pays')} <i>×2</i> · ${bi('entrada gratis','free entry')}</span></div><button type="button" class="btn sm" data-abreses="${s.id}" data-mult="2">${bi('Retar','Battle')}</button></div>`; }).join('')}
+              return `<div class="ag-row"><div class="ag-when"><b>${dt?dt.hora:batSesAbreTxt(s)}</b><span>${dt?esc(dt.dia):''}</span></div><div class="ag-i"><b>${s.ico} ${loc(s.nom)}</b><span>${batSesAbreTxt(s)} → ${batSesCierraTxt(s)} (${batSesDurTxt(s)})${falta}</span><span>${bi('paga','pays')} <i>×2</i> · ${bi('entrada gratis','free entry')}</span></div><button type="button" class="btn sm" data-abreses="${s.id}" data-mult="2">${bi('Retar','Battle')}</button></div>`; }).join('')}
             <div class="evt-sec">${bi('SIGUIENTES TORNEOS','NEXT TOURNAMENTS')}</div>
             ${batTorneos().map(t=>{ const dt=batDiaTxt(t.inicio); const AHORA=Date.now();
               const cuando=t.estado==='live'?`${bi('quedan','left')} <i>${batEnTiempo(t.fin-AHORA)}</i>`:`${bi('empieza en','starts in')} <i>${batEnTiempo(t.inicio-AHORA)}</i>`;
@@ -12118,10 +12204,10 @@ function renderBatalla(){
         c.trades = { [c.host]:[], [c.rival]:[] };
         if(c.programado && c.programado > Date.now() + 9000){
           /* cita a futuro: se agenda y espera hasta la apertura de la sesión */
-          c.estado = 'programado'; c.inicio = c.programado; c.fin = c.inicio + batDuracionMs(c.duracion, c.inicio);
+          c.estado = 'programado'; c.inicio = c.programado; c.fin = c.inicio + batFinMs(c, c.inicio);
         } else {
           const vuelo = 9000;   // 9 s de vuelo/animación antes de arrancar
-          c.estado = 'volando'; c.inicio = Date.now() + vuelo; c.fin = c.inicio + batDuracionMs(c.duracion, c.inicio);
+          c.estado = 'volando'; c.inicio = Date.now() + vuelo; c.fin = c.inicio + batFinMs(c, c.inicio);
         }
         batGuarda();
       };
@@ -12258,11 +12344,17 @@ function renderBatalla(){
     if(!enEspera){
       if(!c.arrancado){
         c.arrancado = Date.now();
-        c.fin = c.arrancado + (c.duracion||30)*60000;
+        c.fin = c.arrancado + batFinMs(c, c.arrancado);
         batGuarda();
         toast(bi('¡Empieza el duelo!','The duel begins!'));
       }
       if(Date.now() >= c.fin){ c.estado = 'terminado'; batGuarda(); return; }
+    }
+    /* duelos que ya venían guardados con las horas completas: se emparejan
+       con su killzone en cuanto se abren, sin tener que crearlos de nuevo */
+    if(c.arrancado && c.sesion){
+      const tope = c.arrancado + batFinMs(c, c.arrancado);
+      if(c.fin > tope + 1000){ c.fin = tope; batGuarda(); }
     }
     const restante = Math.max(0, c.fin - Date.now());
     /* MINUTOS DE LA HORA, no minutos totales: sin el módulo, 3h 59m 19s se
@@ -12299,8 +12391,8 @@ function renderBatalla(){
             <span class="bat-sede-l2">
               <span class="bat-sede-ses ${E2.viva?'viva':''}">${E2.viva
                 ? '● ' + bi('KILLZONE ABIERTA · cierra en ','KILLZONE OPEN · closes in ') + batMinTxt(E2.min)
-                : bi('abre en ','opens in ') + batMinTxt(E2.min) + ' · ' + String(E2.ses.hora).padStart(2,'0') + ':00 NY'}</span>
-              <span class="bat-sede-dur">${esc(batDurTxt(c.duracion))}</span>
+                : bi('abre en ','opens in ') + batMinTxt(E2.min) + ' · ' + batSesAbreTxt(E2.ses) + ' NY'}</span>
+              <span class="bat-sede-dur">${esc(batDurTxt(c.duracion))}${(c.arrancado && c.fin && c.fin < c.arrancado + batDuracionMs(c.duracion, c.arrancado) - 60000) ? ' · ' + bi('hasta el cierre','until close') : ''}</span>
             </span>
           </span>`; })()}
         <button type="button" class="btn sm bat-end" id="batEndBtn">⏹ ${bi('Terminar','End')}</button>
@@ -12326,7 +12418,7 @@ function renderBatalla(){
           const ss2 = String(Math.floor(ms%60000/1000)).padStart(2,'0');
           const cuenta = (hh2>0 ? String(hh2).padStart(2,'0')+':' : '') + mm2 + ':' + ss2;
           return `<div class="bat-reloj-wrap porArrancar">
-            <span class="bat-vs-mini">${esc(loc(E3.ses.nom).toUpperCase())} · ${String(E3.ses.hora).padStart(2,'0')}:00 NY</span>
+            <span class="bat-vs-mini">${esc(loc(E3.ses.nom).toUpperCase())} · ${batSesAbreTxt(E3.ses)} NY</span>
             <div class="bat-reloj-grande mono">${cuenta}</div>
             <span class="bat-reloj-lbl">${bi('para empezar','until it starts')}</span>
           </div>`;
