@@ -11004,15 +11004,24 @@ const KURO_BOSSES = [
 
 /* posiciones: el índice -1 es EL ARRANQUE del camino —donde empiezas—, y de
    ahí el sendero sube a ASHURA, que es la primera parada de verdad. */
-function bossNodoPos(i, W, H){
-  const n = KURO_BOSSES.length;
-  const y0 = H - 150, yN = 190;               /* salida abajo, templo arriba */
-  const paso = (y0 - yN) / n;                 /* n saltos: salida + 9 jefes */
-  const y = y0 - paso * (i + 1);
-  const x = W/2 + Math.sin((i+1)*1.05 + 0.6) * (W*0.26);
-  return { x, y };
+/* ── EL CAMINO EMPIEZA ANTES DE SHIRO (André, 31-ago-2026) ──
+   El mapa arrancaba directo en las nieves, con la SALIDA plantada dentro del
+   mundo del primer jefe. El camino de verdad es: sales de tu EDÉN, cruzas el
+   BOSQUE, y hasta entonces llegas a las montañas de Shiro. Son dos tramos de
+   CAMINO, no dos jefes: no tienen dueño, no se pelean, se cruzan. */
+const MAPA_INTRO = 2;                          /* Edén y el bosque */
+function bossSlotY(s, W, H){
+  const n = KURO_BOSSES.length + MAPA_INTRO;
+  const y0 = H - 150, yN = 190;
+  return y0 - ((y0 - yN) / n) * s;
 }
-function bossSalidaPos(W, H){ return { x: W/2 + Math.sin(0.6)*(W*0.26), y: H - 150 }; }
+function bossSlotX(s, W){ return W/2 + Math.sin(s*1.05 + 0.6) * (W*0.26); }
+function bossNodoPos(i, W, H){
+  const s = i + MAPA_INTRO;                    /* 0 = salida, 1 = bosque */
+  return { x: bossSlotX(s, W), y: bossSlotY(s, W, H) };
+}
+function bossSalidaPos(W, H){ return { x: bossSlotX(0, W), y: bossSlotY(0, W, H) }; }
+function bossBosquePos(W, H){ return { x: bossSlotX(1, W), y: bossSlotY(1, W, H) }; }
 /* ══ EL MAPA ══ UNA sola escena pintada, no bandas de color: un valle en
    niebla al amanecer que sube hasta el templo, con el dragón encima. Los
    ninjas esperan sobre losas de piedra a lo largo del sendero.
@@ -11277,19 +11286,26 @@ function bossPintaMapa(){
 
        Cada tramo se recorta con un borde ONDULADO y su vecino se le mete
        encima, así que no queda ni una línea recta entre escena y escena. */
-    if(!window._bmPets) window._bmPets = KURO_BOSSES.map((_,i)=>
+    /* LOS TRAMOS son 11: el Edén, el bosque y los nueve mundos de los jefes */
+    const TRAMOS = KURO_BOSSES.length + MAPA_INTRO;
+    const escDe = s2 => s2 === 0 ? ZEN_JARDIN
+                      : s2 === 1 ? ZEN_BOSQUE
+                      : (ZEN_ESCENAS[KURO_BOSSES[s2-MAPA_INTRO].kat] || ZEN_ESCENAS[0]);
+    const beltDe = s2 => s2 < MAPA_INTRO ? '#b98d55'
+                       : KATANAS[KURO_BOSSES[s2-MAPA_INTRO].kat].belt;
+    if(!window._bmPets) window._bmPets = Array.from({length:TRAMOS},(_,i)=>
       Array.from({length:14},(_,k)=>({ x:rr(k+i*31)*W, y:rr(k+i*17+5)*H, s:4+rr(k+i*7)*5,
         sp:.35+rr(k+i*11)*.9, dr:rr(k+i*13)*6.3, sw:.5+rr(k+i*19)*.7 })));
-    for(let i = 0; i < KURO_BOSSES.length; i++){
+    for(let i = 0; i < TRAMOS; i++){
       /* sinNinja: cada escena dibuja su propio ninja de adorno en x=26%, y en
          el mapa eso son DOS ninjas por tramo — el del adorno y el jefe sobre
          su losa. Se apaga con una copia de la escena. */
-      const E0 = ZEN_ESCENAS[KURO_BOSSES[i].kat] || ZEN_ESCENAS[0];
+      const E0 = escDe(i);
       const E = window._bmEsc && window._bmEsc[i] ? window._bmEsc[i]
               : ((window._bmEsc = window._bmEsc || [])[i] = { ...E0, sinNinja:true });
-      const centro = pos[i].y;
-      const prev = i > 0 ? pos[i-1].y : H + 240;
-      const sig  = i < KURO_BOSSES.length-1 ? pos[i+1].y : -240;
+      const centro = bossSlotY(i, W, H);
+      const prev = i > 0 ? bossSlotY(i-1, W, H) : H + 240;
+      const sig  = i < TRAMOS-1 ? bossSlotY(i+1, W, H) : -240;
       /* el tramo se estira hacia sus vecinos para traslaparlos */
       const yAbajo  = centro + (prev - centro) * 0.72;
       const yArriba = centro + (sig  - centro) * 0.72;
@@ -11302,13 +11318,12 @@ function bossPintaMapa(){
       c.lineTo(W+40, yAbajo + 80);
       c.closePath(); c.clip();
       c.translate(0, yArriba);
-      try{ zenDibujaEscena(c, W, alto, E, t + i*1700, window._bmPets[i],
-                           KATANAS[KURO_BOSSES[i].kat].belt); }catch(e){}
+      try{ zenDibujaEscena(c, W, alto, E, t + i*1700, window._bmPets[i], beltDe(i)); }catch(e){}
       c.restore();
     }
     /* una bruma sobre cada unión, para que el corte entre escenas desaparezca */
-    for(let i = 1; i < KURO_BOSSES.length; i++){
-      const y = (pos[i].y + pos[i-1].y) / 2;
+    for(let i = 1; i < TRAMOS; i++){
+      const y = (bossSlotY(i, W, H) + bossSlotY(i-1, W, H)) / 2;
       const g3 = c.createLinearGradient(0, y-90, 0, y+90);
       g3.addColorStop(0,'rgba(255,255,255,0)');
       g3.addColorStop(.5,'rgba(255,255,255,.13)');
@@ -11318,8 +11333,8 @@ function bossPintaMapa(){
 
     /* ── EL SENDERO: cinta pálida, con borde y su tramo recorrido claro ── */
     /* EL SENDERO NACE EN LA SALIDA y sube a ASHURA, que es la primera parada */
-    const S0 = bossSalidaPos(W,H);
-    const ruta = [S0].concat(pos);
+    const S0 = bossSalidaPos(W,H), B0 = bossBosquePos(W,H);
+    const ruta = [S0, B0].concat(pos);
     const cinta=(w2,col)=>{ c.strokeStyle=col; c.lineWidth=w2; c.lineCap='round'; c.lineJoin='round';
       c.beginPath(); c.moveTo(ruta[0].x,ruta[0].y);
       for(let i=0;i<ruta.length-1;i++){ const a=ruta[i],b2=ruta[i+1],my=(a.y+b2.y)/2;
@@ -11335,6 +11350,19 @@ function bossPintaMapa(){
     c.fillStyle='rgba(238,246,252,.96)'; c.beginPath(); c.ellipse(S0.x,S0.y+14,29,10,0,0,7); c.fill();
     c.save(); c.textAlign='center'; c.font='700 20px "IBM Plex Mono", monospace';
     c.fillStyle='rgba(30,40,50,.6)'; c.fillText(bi('SALIDA','START'), S0.x, S0.y+20); c.restore();
+    /* la losa del BOSQUE: es camino, no parada — losa sin ninja y sin ficha */
+    c.fillStyle='rgba(40,34,26,.30)'; c.beginPath(); c.ellipse(B0.x,B0.y+19,30,10,0,0,7); c.fill();
+    c.fillStyle='rgba(226,238,230,.9)'; c.beginPath(); c.ellipse(B0.x,B0.y+14,25,8,0,0,7); c.fill();
+    /* ── EL NOMBRE DE CADA ZONA DE CAMINO ── el Edén y el bosque no tienen
+       ficha de jefe, así que sin esto no se sabe dónde estás parado. */
+    [[S0, loc(ZEN_JARDIN.etapa)], [B0, loc(ZEN_BOSQUE.etapa)]].forEach(([P2, nom])=>{
+      c.save(); c.textAlign='center';
+      c.font='700 19px "IBM Plex Mono", monospace';
+      c.letterSpacing = '5px';
+      c.fillStyle='rgba(255,255,255,.92)';
+      c.shadowColor='rgba(8,16,28,.75)'; c.shadowBlur=12;
+      c.fillText(nom, P2.x, P2.y - 52);
+      c.shadowBlur=0; c.letterSpacing='0px'; c.restore(); });
 
 
     /* ── LAS LOSAS Y SUS NINJAS ── */
@@ -11358,8 +11386,14 @@ function bossPintaMapa(){
     /* tú esperas UN PASO ANTES del jefe que te toca: en la salida si aún no
        has vencido a nadie, o en la losa del que ya caíste */
     const Pprev = actual === 0 ? S0 : pos[actual-1];
-    try{ zenNinja(c, Pprev.x+58, Pprev.y+12, 1.9, t*0.5, 0,
-          KATANAS[batEquipadaDe(yo)].belt, batNinjaDe(yo), false, false); }catch(e){}
+    /* sin jefes vencidos todavía cargas el BOKKEN, no una katana de acero */
+    let _sinKat = false;
+    try{ _sinKat = Object.keys(bossVencidos()).length === 0; }catch(e){}
+    const _njMio = _sinKat
+      ? { ...batNinjaDe(yo), bokken:true, banda:'#b98d55', buf:'#8a6b45' }
+      : batNinjaDe(yo);
+    const _colMio = _sinKat ? '#b98d55' : KATANAS[batEquipadaDe(yo)].belt;
+    try{ zenNinja(c, Pprev.x+58, Pprev.y+12, 1.9, t*0.5, 0, _colMio, _njMio, false, false); }catch(e){}
 
     /* ── PÉTALOS ── */
     pet.forEach(pp=>{ pp.y+=pp.sp; pp.x+=Math.sin(t/820+pp.dr)*pp.sw;
@@ -13489,6 +13523,20 @@ const ZEN_JARDIN = { bioma:['Edén','Eden'],
   pastoCorto:true, pastoCol:'rgba(38,92,48,.95)',
   florecitas:true, florecitasCol:'rgba(248,160,202,.96)', florecitasDens:1.6,
   part:'sakura', partCol:'rgba(255,202,216,.96)' };
+
+/* ══════════ EL BOSQUE ══════════ (André, 31-ago-2026)
+   El segundo tramo del camino: sales del Edén, cruzas el bosque, y hasta
+   entonces llegas a las nieves de Shiro. Como el Edén, no tiene dueño ni
+   jefe — es camino, no parada. */
+const ZEN_BOSQUE = { bioma:['El bosque','The forest'],
+  etapa:['EL BOSQUE','THE FOREST'],
+  cielo:['#2c6f96','#4f97b8','#8fc0c6','#cfe6d8'],
+  sol:{x:.22,y:.26,r:52,col:'rgba(255,248,214,.9)',halo:'rgba(220,238,180,.24)'},
+  montes:[['#1d4a2c',1],['#2c6b3c',.72]], agua:'rgba(46,96,64,.6)',
+  bosque:true, bambu:true, nubes:true, nubesCol:'rgba(228,240,225,.7)',
+  pastoCorto:true, pastoCol:'rgba(24,62,32,.95)',
+  florecitas:true, florecitasCol:'rgba(226,238,180,.9)', florecitasDens:0.7,
+  part:'hoja', partCol:'rgba(150,205,120,.9)' };
 
 /* ══ EL RÓTULO DEL MUNDO ══ el nombre de la etapa, escrito en el cielo:
    letras finas muy espaciadas y un filete a cada lado. No es una etiqueta de
