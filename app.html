@@ -21815,6 +21815,7 @@ buffIni = input.time(timestamp("7 Sep 2026 00:00:00 GMT-4"), "BUFFER empieza", g
 buffFin = input.time(timestamp("19 Sep 2026 00:00:00 GMT-4"), "BUFFER termina", group = g4)
 payIni  = input.time(timestamp("21 Sep 2026 00:00:00 GMT-4"), "PAYOUTS empieza", group = g4)
 payFin  = input.time(timestamp("1 Oct 2026 00:00:00 GMT-4"), "PAYOUTS termina", group = g4)
+balHoy = input.int(0, "Con cuánto abriste hoy ($)", minval = 0, step = 500, group = g4, tooltip = "El día va de +$500 a +$1,000 SOBRE LO QUE TRAES, no sobre los $50,000 del principio. Déjalo en 0 y lo estima solo, suponiendo que cada día cerraste con el mínimo; pon tu balance real de la mañana y la meta de hoy sale exacta.")
 riesgoDia = input.int(500, "Riesgo por trade ($)", minval = 50, step = 50, group = g4, tooltip = "De aquí sale la meta del día, y sale como RANGO en vez de un número seco: un día a 1:1 ya es un día bueno (+$500 con riesgo de $500) y un 1:2 es el día redondo (+$1,000). El panel te dice entre cuánto y cuánto deberías cerrar hoy.")
 reglaEval = input.string("4 minis · 1 trade · riesgo $500", "Regla EVAL", group = g4)
 reglaBuff = input.string("2 minis · 1 trade · riesgo $500", "Regla BUFFER", group = g4)
@@ -22823,20 +22824,23 @@ if verPanel and barstate.islast
     if timenow >= evalIni and timenow < evalFin
         int dF = math.max(1, f_diasHabiles(evalIni, timenow))
         int tF = f_diasHabiles(evalIni, evalFin - 1)
-        // el día bueno no es un número seco: va de 1:1 (lo mínimo que
-        // cuenta como día ganado) a 1:2 (el día redondo)
-        // los tres finales posibles del día, con el riesgo en la mano:
-        // bien = 1:1, tope = 1:2 (arriba de eso no se pide más), mal = el
-        // stop. El tope se corta en el target de la fase.
-        int metaMin = math.min(50000 + dF * riesgoDia, 53000)
-        int metaMax = math.min(50000 + dF * riesgoDia * 2, 53000)
+        // EL DÍA SE MIDE DESDE DONDE ABRISTE (André, 31-ago-2026): antes
+        // el tope se multiplicaba por todos los días —como si hubieras
+        // hecho el máximo siempre— y el día 2 marcaba $52K. La franja va
+        // de un riesgo al doble SOBRE LO QUE TRAES: si cierras el día 1
+        // en $50.5K, el día 2 va de $51K a $51.5K. Sin el dato real se
+        // supone que cada día cerró con el mínimo, que es lo conservador.
+        int baseHoy = balHoy > 0 ? balHoy : 50000 + (dF - 1) * riesgoDia
+        int metaMin = math.min(baseHoy + riesgoDia, 53000)
+        int metaMax = math.min(baseHoy + riesgoDia * 2, 53000)
         fase := "EVAL · día " + str.tostring(dF) + "/" + str.tostring(tF) + (dF <= 3 ? " · hoy " + f_fmtK(metaMin) + " a " + f_fmtK(metaMax) : " · colchón · " + f_fmtK(53000))
         cFase := pAcento
     else if timenow >= buffIni and timenow < buffFin
         int dF = math.max(1, f_diasHabiles(buffIni, timenow))
         int tF = f_diasHabiles(buffIni, buffFin - 1)
-        int metaMin = math.min(50000 + dF * riesgoDia, 52500)
-        int metaMax = math.min(50000 + dF * riesgoDia * 2, 52500)
+        int baseHoy = balHoy > 0 ? balHoy : 50000 + (dF - 1) * riesgoDia
+        int metaMin = math.min(baseHoy + riesgoDia, 52500)
+        int metaMax = math.min(baseHoy + riesgoDia * 2, 52500)
         fase := "BUFFER · día " + str.tostring(dF) + "/" + str.tostring(tF) + (dF <= 5 ? " · hoy " + f_fmtK(metaMin) + " a " + f_fmtK(metaMax) : " · mantén " + f_fmtK(52500))
         cFase := pBaja
     else if timenow >= payIni and timenow < payFin
