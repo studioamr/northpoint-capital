@@ -1782,6 +1782,33 @@ button.st-chip:hover{border-color:rgba(255,255,255,.45)}
 .bm-sec{font-family:var(--mono);font-size:8.5px;letter-spacing:.2em;color:rgba(255,255,255,.42);
   margin:18px 0 9px;padding-bottom:6px;border-bottom:1px solid rgba(255,255,255,.09)}
 /* LAS REGLAS del reto, en el lenguaje de una cuenta fondeada */
+/* EL TRATO: el techo y el piso de la cuenta, con el cero en medio */
+.bm-trato{border:1px solid color-mix(in srgb, var(--kc) 40%, rgba(255,255,255,.12));
+  border-radius:16px;overflow:hidden;background:linear-gradient(180deg,
+    rgba(87,199,155,.09), rgba(0,0,0,.15) 45%, rgba(0,0,0,.15) 55%, rgba(255,110,95,.09))}
+.bm-vara{position:relative;padding:18px 18px 16px}
+.bm-lado{display:flex;flex-direction:column;gap:2px}
+.bm-lado.arriba{align-items:flex-start}
+.bm-lado.abajo{align-items:flex-end;text-align:right}
+.bm-lado i{font-style:normal;font-family:var(--mono);font-size:8.5px;letter-spacing:.2em;
+  color:rgba(255,255,255,.5)}
+.bm-lado b{font-size:clamp(26px,7vw,36px);font-weight:900;line-height:1;letter-spacing:-.02em}
+.bm-lado.arriba b{color:#6fe39a;text-shadow:0 0 26px rgba(87,199,155,.35)}
+.bm-lado.abajo b{color:#ff7a6e;text-shadow:0 0 26px rgba(255,110,95,.3)}
+/* el cero: la línea que separa vivir de morir */
+.bm-cero{display:flex;align-items:center;gap:10px;margin:12px 0}
+.bm-cero::before,.bm-cero::after{content:'';flex:1;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.3),transparent)}
+.bm-cero span{font-family:var(--mono);font-size:10px;color:rgba(255,255,255,.4)}
+/* los límites con los que hay que llegar */
+.bm-lims{display:flex;flex-wrap:wrap;gap:1px;background:rgba(255,255,255,.1);
+  border-top:1px solid rgba(255,255,255,.12)}
+.bm-lim{flex:1 1 96px;display:flex;flex-direction:column;align-items:center;gap:2px;
+  padding:11px 8px;background:rgba(8,11,18,.92)}
+.bm-lim u{text-decoration:none;font-size:14px;line-height:1}
+.bm-lim b{font-size:14.5px;font-weight:800;color:#fff}
+.bm-lim i{font-style:normal;font-family:var(--mono);font-size:7.5px;letter-spacing:.1em;
+  color:rgba(255,255,255,.45);text-align:center;line-height:1.4}
 .bm-reglas{display:grid;gap:1px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.12);
   border-radius:12px;overflow:hidden}
 .bm-rg{display:flex;align-items:center;justify-content:space-between;gap:12px;
@@ -10994,23 +11021,36 @@ function bossPintaFicha(){
         : `<span class="bm-f-et">🔒</span>`}
     </div>
 
-    <!-- SÓLO LA LISTA (André): nada de párrafos. Lo que hay que cumplir,
-         renglón por renglón, con su número a la derecha. Se lee de un
-         vistazo y no hay que leer nada dos veces. -->
+    <!-- EL TRATO ── la tablita de renglones no decía nada. Un reto de trading
+         son DOS números que se miran a la vez: a dónde tienes que llegar y
+         dónde te mueres. Así que se pintan como lo que son —una cuenta con su
+         techo y su piso, el cero en medio— y debajo, los límites con los que
+         hay que llegar ahí. -->
     ${(()=>{ const R2 = b.reglas || {};
-      const req = [];
-      req.push([bi('PROFIT','PROFIT'), fmt$(R2.tp), 'up']);
-      req.push([bi('DRAWDOWN MÁX','MAX DRAWDOWN'), '−'+fmt$(R2.dd), 'down']);
-      req.push([bi('TRADES MÁX','MAX TRADES'), R2.trades + bi(' por sesión',' per session')]);
-      req.push([bi('RIESGO POR TRADE','RISK PER TRADE'), fmt$(R2.riesgo)]);
-      req.push([bi('SESIONES','SESSIONS'), R2.sesiones]);
-      if(R2.libre) req.push([bi('SESIÓN','SESSION'), bi('la que quieras','any you want')]);
-      else if(b.ses) req.push([bi('SESIÓN','SESSION'), esc(loc(batSesion(b.ses).nom))]);
-      if(R2.pagos) req.push([bi('PAGOS','PAYOUTS'), R2.pagos + (R2.unaSesion ? bi(' · 1 por sesión',' · 1 per session') : '')]);
-      if(R2.porCiclo) req.push([bi('POR CICLO','PER CYCLE'), R2.porCiclo + bi(' sesiones máx',' sessions max')]);
-      return `<div class="bm-sec">${bi('PARA VENCERLO','TO BEAT HIM')}</div>
-        <div class="bm-reglas">${req.map(r =>
-          `<div class="bm-rg"><i>${r[0]}</i><b class="${r[2]||''}">${r[1]}</b></div>`).join('')}</div>`;
+      const lim = [];
+      lim.push(['⚔', R2.trades + bi(' trades',' trades'), bi('por sesión','per session')]);
+      lim.push(['◎', fmt$(R2.riesgo), bi('riesgo por trade','risk per trade')]);
+      lim.push(['⏱', R2.sesiones, R2.sesiones === 1 ? bi('sesión','session') : bi('sesiones','sessions')]);
+      if(R2.libre) lim.push(['🌏', bi('libre','any'), bi('la sesión que quieras','session of your choice')]);
+      else if(b.ses) lim.push(['🌏', esc(loc(batSesion(b.ses).nom)), bi('sólo esa sesión','that session only')]);
+      if(R2.pagos) lim.push(['💰', R2.pagos, R2.unaSesion ? bi('pagos · 1 por sesión','payouts · 1 per session') : bi('pagos','payouts')]);
+      if(R2.porCiclo) lim.push(['⏳', R2.porCiclo, bi('sesiones máx por ciclo','sessions max per cycle')]);
+      return `<div class="bm-sec">${bi('EL TRATO','THE DEAL')}</div>
+      <div class="bm-trato">
+        <div class="bm-vara">
+          <div class="bm-lado arriba">
+            <i>${bi('LLEGAS A','YOU REACH')}</i>
+            <b>+${fmt$(R2.tp)}</b>
+          </div>
+          <div class="bm-cero"><span>0</span></div>
+          <div class="bm-lado abajo">
+            <b>−${fmt$(R2.dd)}</b>
+            <i>${bi('Y MUERES AQUÍ','AND YOU DIE HERE')}</i>
+          </div>
+        </div>
+        <div class="bm-lims">${lim.map(l=>
+          `<span class="bm-lim"><u>${l[0]}</u><b>${l[1]}</b><i>${l[2]}</i></span>`).join('')}</div>
+      </div>`;
     })()}
 
     <!-- LAS ETAPAS, cuando son varias: en orden y con su monto. -->
@@ -11067,14 +11107,26 @@ window.bossReta = function(i){
   if(i !== bossActual()){ toast(bi('Primero vence al que te toca.','Beat the one in front of you first.')); return; }
   const b = KURO_BOSSES[i]; if(!b) return;
   const yo = batYo();
-  /* la duración real del reto: una sesión son 4 h; los de varios días se
-     miden en sesiones de 4 h, que es lo que dura una killzone */
-  /* una sesión son 4 h; los retos de varias sesiones duran ese múltiplo */
-  const mins = Math.max(1, (b.reglas && b.reglas.sesiones) || 1) * 240;
+  /* LA SEDE ES LA SUYA (André): el reto se creaba SIEMPRE en Asia, así que
+     retar a ALBION —el de Londres— te mandaba a pelear a Tokio. Y si acepta
+     cualquiera, se pelea en la que esté abierta ahora, o en la siguiente. */
+  const ses = b.ses || (()=>{
+    const t0 = ahora(), mNY = minutosEn(TZ_MERCADO, t0);
+    const viva = BAT_SESIONES.find(x=>{ const ini=x.hora*60+(x.min||0), fin=ini+x.dur;
+      return (fin<=1440) ? (mNY>=ini && mNY<fin) : (mNY>=ini || mNY<fin-1440); });
+    if(viva) return viva.id;
+    /* la que abra primero */
+    return BAT_SESIONES.map(x=>({id:x.id, ts:batProxAperturas(x.hora,1,x.id)[0].getTime()}))
+             .sort((a2,b2)=>a2.ts-b2.ts)[0].id;
+  })();
+  /* la duración sale de LA SESIÓN, no de cuatro horas fijas: Asia dura 6 h y
+     Londres 6:30. Un reto de varias sesiones dura ese múltiplo. */
+  const durSes = batSesion(ses).dur || 240;
+  const mins = Math.max(1, (b.reglas && b.reglas.sesiones) || 1) * durSes;
   S.challenge = {
     id: 'boss'+i+'_'+uid(), estado:'activo', boss:i,
     host: yo, rival: BOSS_UID(i),
-    sesion: 'asia', duracion: mins, mult: 1,
+    sesion: ses, duracion: mins, mult: 1,
     arrancado: Date.now(), fin: Date.now() + mins*60000,
     trades: { [yo]: [], [BOSS_UID(i)]: [] },
   };
