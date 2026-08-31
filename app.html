@@ -4977,6 +4977,13 @@ stop[stop-color="#9BC0DC"]{stop-color:var(--txt)}
           <div class="bt-log lg-log" id="lgLog"></div>
         </div>
 
+        <!-- LA PUERTA VA AL FINAL (André, 31-ago-2026): con la sesión cerrada
+             lo que importa es lo que ya pasó —la curva y el registro—; abrir
+             la siguiente es lo ÚLTIMO que haces, no lo primero que ves. En
+             cuanto la sesión está abierta el panel sube: el cronómetro y las
+             barras tienen que estar arriba de todo mientras operas. -->
+        <div class="panel lg-hoy" id="lgHoyPie" hidden></div>
+
       </section>
 
       <!-- ════ PAYOUT MANAGEMENT ════ -->
@@ -16067,10 +16074,16 @@ window.lgCierraSesion = function(){
    drawdown es el peor bajón desde un máximo de la curva de hoy, que es como
    lo mide una fondeadora — no el peor trade suelto. */
 function lgHoy(){
-  const host = $('#lgHoy'); if(!host) return;
-  host.hidden = false;
   const hoy = todayISO();
   const ses = lgSesionHoy();
+  /* sin sesión (o eligiendo los números) vive ABAJO, después de la gráfica y
+     del registro; con la sesión corriendo sube arriba de todo */
+  const abajo = !ses;
+  const host = $(abajo ? '#lgHoyPie' : '#lgHoy');
+  const otro = $(abajo ? '#lgHoy' : '#lgHoyPie');
+  if(!host) return;
+  if(otro){ otro.hidden = true; otro.innerHTML = ''; }
+  host.hidden = false;
   /* ══ PRIMERO EL BOTÓN, DESPUÉS LOS NÚMEROS ══ (André, 31-ago-2026)
      Los tres campos estaban ahí siempre, llenos con los de ayer: lo primero
      que veías al entrar al Log era una forma a medio llenar, y el objetivo del
