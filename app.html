@@ -10993,13 +10993,18 @@ const KURO_BOSSES = [
 
   { kat:8, nom:'KURO',     kanji:'黒', final:true,
     titulo:['El maestro','The master'],
-    pide:['Cinco pagos máximos, uno por sesión, con dos trades como máximo cada uno.',
-          'Five max payouts, one per session, two trades max on each.'],
-    reglas:{ tp:5000, dd:1000, trades:2, riesgo:250, sesiones:5, pagos:5, unaSesion:true,
+    pide:['Preséntate con las ocho katanas puestas y hazme cinco pagos máximos, uno por sesión, con dos trades cada uno.',
+          'Show up wearing all eight katanas and make me five max payouts, one per session, two trades each.'],
+    /* LA CURVA SE DESPLOMABA EN EL ÚLTIMO PELDAÑO (André, 31-ago-2026): Kuro
+       pedía $5,000 contra los $12,200 de Cha y los $18,300 de Aka, así que el
+       jefe FINAL era el cuarto más difícil. Ahora son cinco pagos de $5,000
+       —los topes de verdad de una cuenta madura— y además exige las OCHO
+       katanas puestas, que es lo que dice su leyenda. */
+    reglas:{ tp:25000, dd:1500, trades:2, riesgo:250, sesiones:5, pagos:5, unaSesion:true,
              ventana:['5 sesiones','5 sessions'],
-             etapas:[{t:['Pago 1','Payout 1'], m:1000},{t:['Pago 2','Payout 2'], m:1000},
-                     {t:['Pago 3','Payout 3'], m:1000},{t:['Pago 4','Payout 4'], m:1000},
-                     {t:['Pago 5','Payout 5'], m:1000}],
+             etapas:[{t:['Pago 1','Payout 1'], m:5000},{t:['Pago 2','Payout 2'], m:5000},
+                     {t:['Pago 3','Payout 3'], m:5000},{t:['Pago 4','Payout 4'], m:5000},
+                     {t:['Pago 5','Payout 5'], m:5000}],
              nota:['Un pago máximo por sesión, cinco sesiones seguidas. Esto ya no es hacer dinero: es hacerlo IGUAL cinco veces.',
                    'One max payout per session, five sessions running. This is no longer making money: it is making it THE SAME five times.'] } },
 ];
@@ -11695,12 +11700,46 @@ window.bossReta = function(i){
   toast(bi('Reto aceptado · '+b.nom,'Challenge accepted · '+b.nom));
 };
 /* Al cerrar un reto de jefe: si le ganaste, su katana es tuya. */
+/* ══ EL JUEZ DEL RETO ══ (André, 31-ago-2026)
+   UNA sola cuenta, la misma para el panel que te la muestra y para el cierre
+   que te da la katana. Antes eran dos: el panel medía objetivo, drawdown y
+   trades, y el cierre comparaba tu profit contra el DEL JEFE — que no opera,
+   así que su profit siempre era 0 y le ganabas a cualquiera de los nueve, Kuro
+   incluido, con +$1. Las reglas se pintaban y no se comprobaban.
+   El drawdown es el peor bajón desde un máximo de TU curva dentro del reto,
+   que es como lo mide una fondeadora — no el peor trade suelto. */
+function bossEvalua(c){
+  const i = (c && c.boss != null) ? c.boss : -1;
+  if(i < 0) return null;
+  const b = KURO_BOSSES[i], R = (b && b.reglas) || {};
+  const yo = c.host;
+  const mios = (c.trades && c.trades[yo]) || [];
+  let eq = 0, pico = 0, ddMax = 0;
+  mios.forEach(t => { eq += (t.pnl || 0); if(eq > pico) pico = eq;
+    const caida = eq - pico; if(caida < ddMax) ddMax = caida; });
+  const pnl   = eq;
+  const meta  = R.tp || 0;
+  const tope  = R.dd || 0;
+  const maxT  = R.trades || 0;
+  const roto  = !!(tope && Math.abs(ddMax) >= tope);
+  const deMas = !!(maxT && mios.length > maxT);
+  const llego = !!(meta && pnl >= meta);
+  /* KURO pide además las OCHO anteriores en el cinturón: su katana no se gana
+     venciéndolo, se gana llegando hasta él con todo lo demás hecho. Es la
+     misma leyenda de la portada, hecha regla. */
+  const faltan = b && b.final
+    ? KURO_BOSSES.slice(0, i).filter((_,k)=>!bossVencido(k)).length : 0;
+  return { i, b, R, pnl, ddMax, trades: mios.length, meta, tope, maxT,
+           roto, deMas, llego, faltan,
+           gana: llego && !roto && !deMas && faltan === 0 };
+}
 function bossCierra(c){
   const i = (c && c.boss != null) ? c.boss : -1; if(i < 0) return null;
   if(bossVencido(i)) return null;
   const yo = c.host;
-  const mio = batProfit(c, yo), suyo = batProfit(c, c.rival);
-  if(mio <= suyo) return null;
+  const J = bossEvalua(c);
+  if(!J || !J.gana) return null;
+  const mio = J.pnl, suyo = 0;
   bossVencidos()[i] = { ts: Date.now(), mio, suyo };
   const k = KATANAS[KURO_BOSSES[i].kat];
   const mias = batKatanasDe(yo);
@@ -14865,6 +14904,7 @@ function renderBatallaInterno(){
            son lenguaje de 1v1 y ahí no significan nada. */
         if(c.boss != null){
           const b2 = KURO_BOSSES[c.boss], R3 = (b2 && b2.reglas) || {};
+          const J = bossEvalua(c) || {};
           const mios = (c.trades[yo] || []);
           /* el drawdown REAL de tu curva dentro del reto: el peor bajón desde
              un máximo, que es como lo mide una fondeadora — no el peor trade */
@@ -14874,7 +14914,7 @@ function renderBatallaInterno(){
           const meta = R3.tp || 0, tope = R3.dd || 0;
           const pct = meta ? Math.max(0, Math.min(100, pYo / meta * 100)) : 0;
           const ddPct = tope ? Math.max(0, Math.min(100, Math.abs(ddMax) / tope * 100)) : 0;
-          const roto = tope && Math.abs(ddMax) >= tope;
+          const roto = J.roto, deMas = J.deMas;
           const barra = (v, cls) => `<span class="bd-b"><i class="${cls}" style="width:${v}%"></i></span>`;
           return `<div class="bat-duelo-req ${roto?'roto':''}">
             <div class="bd-t">${bi('LO QUE TE PIDE PARA GANAR SU KATANA','WHAT HE ASKS FOR HIS KATANA')}</div>
@@ -14893,8 +14933,11 @@ function renderBatallaInterno(){
               <span><i>${bi('RIESGO','RISK')}</i><b>${fmt$(R3.riesgo)}</b></span>
               <span><i>${bi('SESIONES','SESSIONS')}</i><b>${R3.sesiones}</b></span>
             </div>
+            ${b2 && b2.final && J.faltan > 0 ? `<p class="bd-roto">${bi('Te faltan '+J.faltan+' katanas. Kuro no pelea con quien no llega completo.','You are missing '+J.faltan+' katanas. Kuro does not fight anyone who arrives incomplete.')}</p>` : ''}
             ${roto ? `<p class="bd-roto">${bi('Rompiste el drawdown. Este intento no cuenta.','You broke the drawdown. This attempt does not count.')}</p>`
-              : pYo >= meta ? `<p class="bd-listo">${bi('Objetivo cumplido. Termina el reto para cobrar su katana.','Target met. End the challenge to claim his katana.')}</p>` : ''}
+              : deMas ? `<p class="bd-roto">${bi('Pasaste su tope de trades. Este intento no cuenta.','You went over his trade cap. This attempt does not count.')}</p>`
+              : J.gana ? `<p class="bd-listo">${bi('Cumpliste todo. Termina el reto para cobrar su katana.','You met everything. End the challenge to claim his katana.')}</p>`
+              : pYo >= meta ? `<p class="bd-listo">${bi('Objetivo cumplido. Te falta cerrar sin romper nada.','Target met. Now close without breaking anything.')}</p>` : ''}
           </div>`;
         }
         /* MULT, VA GANANDO y DIFERENCIA fuera (André, 31-ago-2026): quién va
