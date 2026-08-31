@@ -1753,6 +1753,11 @@ button.st-chip:hover{border-color:rgba(255,255,255,.45)}
 .cam-nodo.sellado{border-color:rgba(255,255,255,.2);opacity:.55;background:rgba(8,11,18,.7)}
 .cam-nodo-k{font-size:15px;line-height:1}
 .cam-nodo-n{font-family:var(--mono);font-size:8px;letter-spacing:.1em;opacity:.85}
+/* el nombre del ecosistema, flotando junto a su primer nodo */
+.cam-region{position:absolute;transform:translate(-50%,-50%);white-space:nowrap;pointer-events:none;
+  padding:5px 12px;border-radius:99px;background:rgba(8,11,18,.72);backdrop-filter:blur(5px);
+  border:1px solid rgba(255,255,255,.16);color:#fff;font-size:11.5px;font-weight:600;
+  box-shadow:0 4px 14px rgba(0,0,0,.4)}
 .cam-ficha-hueco{margin-top:14px}
 .cam-ficha{border:1px solid color-mix(in srgb, var(--kc) 45%, rgba(255,255,255,.12));
   border-radius:14px;padding:14px 16px;background:rgba(255,255,255,.04)}
@@ -1774,6 +1779,10 @@ button.st-chip:hover{border-color:rgba(255,255,255,.45)}
 .cam-p-n i{font-style:normal;color:rgba(255,255,255,.4)}
 .cam-p-b{grid-column:1/-1;height:3px;border-radius:2px;background:rgba(255,255,255,.1);overflow:hidden}
 .cam-p-b i{display:block;height:100%;background:var(--kc);border-radius:2px}
+.cam-pelear{width:100%;margin-top:14px;padding:13px;border-radius:12px;cursor:pointer;
+  border:1px solid var(--kc);background:color-mix(in srgb, var(--kc) 18%, #0b0e14);
+  color:#fff;font:800 14px/1 inherit;letter-spacing:.04em}
+.cam-pelear:hover{background:color-mix(in srgb, var(--kc) 30%, #0b0e14)}
 .cam-atajo{font-family:var(--mono);font-size:9.5px;letter-spacing:.08em;color:rgba(255,255,255,.42);margin:12px 0 0}
 /* PLAY KURO: el botón grande del modo historia, encima de Battle */
 .stage-btn.play{display:flex;flex-direction:column;align-items:center;gap:2px;
@@ -10285,7 +10294,11 @@ function batH2H(a, b){
 /* jugadores de un reto: party = toda la mesa; 1v1 = host + rival */
 function batJugadores(c){ return (c && c.party && Array.isArray(c.jugadores)) ? c.jugadores.slice() : (c ? [c.host, c.rival] : []); }
 function batYo(){ return socioEnSesion() || DUENO_ORIGEN; }
-function batNom(uid){ return (USERS[uid] && USERS[uid].nombre) || uid; }
+function batNom(uid){
+  const cap = (typeof bossCap === 'function') ? bossCap(uid) : null;
+  if(cap) return loc(cap.maestro);
+  return (USERS[uid] && USERS[uid].nombre) || uid;
+}
 function batOponentes(){ return SOCIOS_REALES.filter(u => u !== batYo()); }
 function batProfit(c, uid){ return ((c.trades && c.trades[uid]) || []).reduce((a,t) => a + (t.pnl||0), 0); }
 function batNTrades(c, uid){ return ((c.trades && c.trades[uid]) || []).length; }
@@ -10426,13 +10439,6 @@ const KURO_REGIONES = {
   vacio:  { nom:['El vacío','The void'], c1:'#0a0a0d', c2:'#1c1626', acento:'#8A5CC8' },
 };
 const KURO_CAMINO = [
-  { kat:1, region:'bambu', kanji:'黄', escala:1.0, tipo:'jefe',
-    maestro:['Rin, cría de jade','Rin, jade hatchling'],
-    t:['El primer dragón','The first dragon'],
-    lema:['Antes de cortar, mirar. Un mes de mirar es un mes ganado.',
-          'Before cutting, look. A month of looking is a month earned.'],
-    pruebas:[ {k:'trades', meta:10}, {k:'dias', meta:5}, {k:'duelos', meta:1} ] },
-
   { kat:2, region:'bambu', kanji:'橙', escala:1.35, tipo:'sesion', ses:'asia',
     maestro:['ASHURA, guardián de Asia','ASHURA, warden of Asia'],
     t:['El jefe de Asia','The boss of Asia'],
@@ -10563,58 +10569,154 @@ function camPintaMapa(){
   const actual = historiaCapActual();
   const pos = KURO_CAMINO.map((_,i)=>camNodoPos(i,W,H));
   const njCfg = batNinjaDe(yo);
+  const rr = i => ((Math.sin(i*12.9898)*43758.5453)%1+1)%1;
+  /* los pétalos y la niebla viven entre cuadros */
+  if(!window._camPet) window._camPet = Array.from({length:70},(_,i)=>({
+    x:rr(i)*W, y:rr(i+40)*H, s:3+rr(i+80)*4, sp:0.35+rr(i+120)*0.9,
+    dr:rr(i+160)*6.3, sw:0.4+rr(i+200)*0.8 }));
+  const pet = window._camPet;
+
   const frame = (t) => {
     if(!cv.isConnected) return;
     if(cv.offsetParent === null){ window._camRAF = requestAnimationFrame(frame); return; }
     c.clearRect(0,0,W,H);
-    /* las REGIONES, como franjas de terreno de abajo hacia arriba */
-    let desde = H;
+
+    /* ── LAS REGIONES, una tras otra de abajo hacia arriba ── */
     const bandas = [];
     KURO_CAMINO.forEach((cap,i)=>{
-      const prev = i>0 ? KURO_CAMINO[i-1].region : null;
-      if(cap.region !== prev){ bandas.push({ region:cap.region, i }); }
+      if(i===0 || cap.region !== KURO_CAMINO[i-1].region) bandas.push({ region:cap.region, i });
     });
-    bandas.forEach((b,bi2)=>{
-      const yIni = bi2===0 ? H : (pos[b.i].y + pos[b.i-1].y)/2;
+    const limite = (bi2) => {
+      const b = bandas[bi2];
+      const yIni = bi2===0 ? H : (pos[b.i].y + pos[b.i-1].y)/2 + 40;
       const sig = bandas[bi2+1];
-      const yFin = sig ? (pos[sig.i].y + pos[sig.i-1].y)/2 : 0;
-      const R = KURO_REGIONES[b.region];
-      const g = c.createLinearGradient(0,yIni,0,yFin);
-      g.addColorStop(0, R.c1); g.addColorStop(1, R.c2);
-      c.fillStyle = g; c.fillRect(0, yFin, W, yIni-yFin);
-      /* el nombre de la región, tenue al margen */
-      c.save(); c.translate(16, (yIni+yFin)/2); c.rotate(-Math.PI/2);
-      c.textAlign='center'; c.font='700 12px "IBM Plex Mono", monospace';
-      c.fillStyle = R.acento + '66';
-      c.fillText(loc(R.nom).toUpperCase(), 0, 0); c.restore();
-    });
-    /* EL SENDERO: piedras entre nodo y nodo, iluminadas hasta donde llegaste */
-    for(let i=0;i<pos.length-1;i++){
-      const a=pos[i], b=pos[i+1];
-      for(let k=1;k<=6;k++){
-        const u=k/7, px=a.x+(b.x-a.x)*u, py=a.y+(b.y-a.y)*u
-                 + Math.sin(u*Math.PI)*22*(i%2?1:-1);
-        const hecho = i < actual;
-        c.fillStyle = hecho ? 'rgba(255,255,255,.5)' : 'rgba(255,255,255,.13)';
-        c.beginPath(); c.arc(px,py,3.6,0,7); c.fill();
+      const yFin = sig ? (pos[sig.i].y + pos[sig.i-1].y)/2 + 40 : -10;
+      return { yIni, yFin };
+    };
+    bandas.forEach((b,bi2)=>{
+      const { yIni, yFin } = limite(bi2);
+      const R = KURO_REGIONES[b.region], alto = yIni - yFin;
+      const g = c.createLinearGradient(0,yFin,0,yIni);
+      g.addColorStop(0, R.c2); g.addColorStop(1, R.c1);
+      c.save(); c.beginPath(); c.rect(0,yFin,W,alto); c.clip();
+      c.fillStyle = g; c.fillRect(0,yFin,W,alto);
+      /* LUNA en la banda más alta */
+      if(bi2 === bandas.length-1){
+        const mx = W*0.74, my = yFin + alto*0.16;
+        c.fillStyle='rgba(255,252,236,.14)'; c.beginPath(); c.arc(mx,my,58,0,7); c.fill();
+        c.fillStyle='rgba(255,252,236,.92)'; c.beginPath(); c.arc(mx,my,30,0,7); c.fill();
+        for(let k=0;k<40;k++){ c.fillStyle=`rgba(255,255,255,${.2+rr(k)*.55})`;
+          c.fillRect(rr(k+7)*W, yFin+rr(k+13)*alto*0.5, 1.8,1.8); }
       }
-    }
-    /* LOS DRAGONES */
-    KURO_CAMINO.forEach((cap,i)=>{
-      const k = KATANAS[cap.kat], P = pos[i];
-      const vencido = mias.includes(k.id);
-      const abierto = vencido || i === actual;
-      c.save();
-      c.globalAlpha = vencido ? 0.42 : (abierto ? 1 : 0.3);
-      /* los de SESIÓN comparten escala; los demás crecen */
-      try{ zenDragon(c, P.x, P.y - 46 - cap.escala*10, cap.escala * 0.62,
-                     abierto ? k.belt : '#6b7280', t + i*900); }catch(e){}
+      /* SIERRAS en capas, con niebla entre ellas */
+      for(let capa=0; capa<3; capa++){
+        const base = yFin + alto*(0.34 + capa*0.19);
+        c.fillStyle = capa===0 ? R.c2 : (capa===1 ? R.c1 : 'rgba(0,0,0,.28)');
+        c.globalAlpha = 0.9 - capa*0.16;
+        c.beginPath(); c.moveTo(-20, base+120);
+        for(let x=-20; x<=W+20; x+=52){
+          const h = 40 + rr(x+capa*57+bi2*31)*88 + capa*14;
+          c.lineTo(x+26, base-h); c.lineTo(x+52, base);
+        }
+        c.lineTo(W+20, base+120); c.closePath(); c.fill();
+        c.globalAlpha = 1;
+        /* la niebla se desliza sola */
+        const nx = ((t/90) + capa*260 + bi2*140) % (W+420) - 210;
+        c.fillStyle = 'rgba(255,255,255,.07)';
+        c.beginPath(); c.ellipse(nx, base-8, 190, 20, 0,0,7); c.fill();
+        c.beginPath(); c.ellipse(W-nx, base+16, 150, 15, 0,0,7); c.fill();
+      }
+      /* ÁRBOLES del ecosistema, a los lados para no tapar el sendero */
+      const sueloB = yIni - 30;
+      [0.06,0.16,0.85,0.94].forEach((u,ti)=>{
+        const x = u*W, yb = sueloB - rr(ti+bi2*11)*alto*0.5;
+        try{
+          if(b.region==='bambu'){ zenSakuraTree(c, x, yb, 0.85 + rr(ti)*0.3); }
+          else if(b.region==='niebla'){ c.fillStyle='rgba(20,26,34,.9)';
+            c.fillRect(x-4, yb-56, 8, 56);
+            c.beginPath(); c.arc(x, yb-64, 22, 0, 7); c.fill(); }
+          else if(b.region==='neon'){ c.fillStyle='rgba(10,16,28,.92)';
+            c.fillRect(x-16, yb-120, 32, 120);
+            for(let w=0;w<10;w++){ c.fillStyle=`rgba(255,220,140,${.25+rr(w+ti)*.5})`;
+              c.fillRect(x-10+ (w%2)*11, yb-110+Math.floor(w/2)*20, 7, 9); } }
+          else if(b.region==='volcan'){ c.fillStyle='rgba(30,10,8,.9)';
+            c.beginPath(); c.moveTo(x-30,yb); c.lineTo(x,yb-70); c.lineTo(x+30,yb); c.fill(); }
+        }catch(e){}
+      });
+      /* el TEMPLO corona la región del vacío: ahí vive KURO */
+      if(b.region === 'vacio'){
+        try{ zenPagoda(c, W*0.5, yFin + alto*0.62, 1.5, '#3a2440'); }catch(e){}
+        try{ zenTorii(c, W*0.5, yFin + alto*0.78, 1.0); }catch(e){}
+      }
+      if(b.region === 'bambu'){ try{ zenTorii(c, W*0.5, yIni - 26, 0.9); }catch(e){} }
       c.restore();
     });
-    /* TU NINJA, parado en el nodo donde vas */
+
+    /* ── EL SENDERO: una cinta pálida que serpentea, iluminada hasta donde vas ── */
+    const cinta = (ancho, color) => {
+      c.strokeStyle = color; c.lineWidth = ancho; c.lineCap='round'; c.lineJoin='round';
+      c.beginPath(); c.moveTo(pos[0].x, pos[0].y);
+      for(let i=0;i<pos.length-1;i++){
+        const a=pos[i], b=pos[i+1], mx=(a.x+b.x)/2, my=(a.y+b.y)/2;
+        c.quadraticCurveTo(a.x + (i%2?70:-70), my, mx, my);
+        c.quadraticCurveTo(b.x + (i%2?-70:70), my, b.x, b.y);
+      }
+      c.stroke();
+    };
+    cinta(20, 'rgba(0,0,0,.28)');
+    cinta(14, 'rgba(244,240,228,.5)');
+    /* el tramo recorrido, más brillante */
+    c.save(); c.beginPath();
+    c.rect(0, pos[Math.min(actual,pos.length-1)].y - 10, W, H); c.clip();
+    cinta(14, 'rgba(255,250,235,.92)');
+    c.restore();
+
+    /* ── LOS DRAGONES sobre sus nodos ── */
+    KURO_CAMINO.forEach((cap,i)=>{
+      const k = KATANAS[cap.kat], P = pos[i];
+      const vencido = mias.includes(k.id), abierto = vencido || i === actual;
+      c.save();
+      c.globalAlpha = vencido ? 0.4 : (abierto ? 1 : 0.5);
+      const dy = P.y - 74 - cap.escala*16;
+      /* el aura hace que el dragón se lea sobre la sierra: sin ella se
+         confundía con el fondo y parecía una voluta de humo */
+      if(abierto && !vencido){
+        const au = c.createRadialGradient(P.x, dy, 4, P.x, dy, 90*cap.escala);
+        au.addColorStop(0, k.belt+'55'); au.addColorStop(1, 'rgba(0,0,0,0)');
+        c.fillStyle = au; c.beginPath(); c.arc(P.x, dy, 90*cap.escala, 0, 7); c.fill();
+      }
+      c.save(); c.translate(0,5); c.globalAlpha *= .35;
+      try{ zenDragon(c, P.x, dy, cap.escala*0.82, '#000', t + i*900); }catch(e){}
+      c.restore();
+      try{ zenDragon(c, P.x, dy, cap.escala*0.82,
+                     abierto ? k.belt : '#8b95a3', t + i*900); }catch(e){}
+      c.restore();
+    });
+
+    /* ── LAS PLATAFORMAS de piedra bajo cada nodo ── */
+    pos.forEach((P,i)=>{
+      const k = KATANAS[KURO_CAMINO[i].kat];
+      const vencido = mias.includes(k.id), abierto = vencido || i === actual;
+      c.fillStyle = 'rgba(0,0,0,.3)';
+      c.beginPath(); c.ellipse(P.x, P.y+16, 30, 9, 0,0,7); c.fill();
+      c.fillStyle = abierto ? 'rgba(226,236,244,.92)' : 'rgba(150,160,172,.6)';
+      c.beginPath(); c.ellipse(P.x, P.y+12, 26, 8, 0,0,7); c.fill();
+    });
+
+    /* ── TU NINJA, de pie en el nodo donde vas ── */
     const P = pos[Math.min(actual, pos.length-1)];
-    try{ zenNinja(c, P.x - 34, P.y + 16, 1.15, t*0.5, 0,
+    try{ zenNinja(c, P.x, P.y + 10, 1.25, t*0.5, 0,
                   KATANAS[batEquipadaDe(yo)].belt, njCfg, false, false); }catch(e){}
+
+    /* ── PÉTALOS cayendo sobre todo ── */
+    pet.forEach(pp=>{
+      pp.y += pp.sp; pp.x += Math.sin(t/820 + pp.dr) * pp.sw;
+      if(pp.y > H){ pp.y = -12; pp.x = Math.random()*W; }
+      c.save(); c.globalAlpha = .8; c.fillStyle = 'rgba(255,193,208,.95)';
+      c.translate(pp.x, pp.y); c.rotate(t/720 + pp.dr);
+      c.beginPath(); c.ellipse(0,0,pp.s,pp.s*0.58,0,0,7); c.fill(); c.restore();
+    });
+
     window._camRAF = requestAnimationFrame(frame);
   };
   frame(performance.now());
@@ -10640,7 +10742,9 @@ function camPintaNodos(){
       aria-label="${esc(loc(cap.t))}">
       <span class="cam-nodo-k">${vencido?'✓':cap.kanji}</span>
       <span class="cam-nodo-n">${vencido ? bi('vencido','beaten') : abierto ? est.hechas+'/'+est.total : '🔒'}</span>
-    </button>`;
+    </button>` + ((i===0 || cap.region !== KURO_CAMINO[i-1].region)
+      ? `<span class="cam-region" style="left:${P.x/W*100}%;top:${(P.y+62)/H*100}%">${esc(loc(KURO_REGIONES[cap.region].nom))}</span>`
+      : '');
   }).join('');
   cont.querySelectorAll('[data-nodo]').forEach(b => b.onclick = () => {
     window._camNodo = +b.dataset.nodo; camPintaFicha();
@@ -10676,10 +10780,67 @@ function camPintaFicha(){
             <span class="cam-p-b"><i style="width:${pr.pct}%"></i></span>
           </div>`).join('')}
       </div>
-      ${!vencido ? `<p class="cam-atajo">${bi('O fórjala con lo que ganes peleando','Or forge it with what you win in duels')} · ${fmt$(k.precio)}</p>` : ''}
+      ${!vencido ? `
+        <button type="button" class="cam-pelear" onclick="camPelea(${i})">
+          ⚔ ${bi('Combatir a','Fight')} ${esc(loc(cap.maestro))}
+        </button>
+        <p class="cam-atajo">${bi('O fórjala con lo que ganes peleando','Or forge it with what you win in duels')} · ${fmt$(k.precio)}</p>` : ''}
     ` : `<p class="cam-lema" style="opacity:.6">${bi('Vence primero a','First beat')} ${esc(loc(KURO_CAMINO[i-1].t))}.</p>`}
   </div>`;
 }
+
+/* ══ PELEAR CONTRA UN JEFE ══ usa EXACTAMENTE la pantalla del 1v1: el jefe
+   entra como el rival del duelo, con su nombre, su ninja y su katana. Así no
+   hay una segunda pantalla de combate que mantener, y lo aprendido peleando
+   con Gerardo sirve igual contra ASHURA.
+
+   El jefe SÍ opera: va soltando sus trades durante la pelea (bossLatido), así
+   que lo ves adelantarse y hay que remontarlo. Su objetivo sale de su escala:
+   entre más grande el dragón, más profit hay que hacerle. */
+const BOSS_PREFIJO = 'boss:';
+function bossIdx(uid){ return String(uid||'').startsWith(BOSS_PREFIJO) ? +String(uid).slice(BOSS_PREFIJO.length) : -1; }
+function bossCap(uid){ const i = bossIdx(uid); return i >= 0 ? KURO_CAMINO[i] : null; }
+function bossObjetivo(cap){ return Math.round(300 * (cap.escala || 1) * 4); }
+function bossGolpes(cap){ return Math.max(3, Math.round(3 + (cap.escala||1) * 2)); }
+/* Un golpe del jefe cada tanto: reparte su objetivo a lo largo del duelo.
+   Determinístico —del número de golpe, no del azar—, para que los dos equipos
+   vean la MISMA pelea al sincronizar. */
+function bossLatido(c){
+  const cap = bossCap(c.rival); if(!cap || !c.arrancado) return;
+  const uid = c.rival;
+  c.trades[uid] = c.trades[uid] || [];
+  const n = bossGolpes(cap), dur = (c.duracion||30) * 60000;
+  const paso = dur / (n + 1);
+  const debidos = Math.min(n, Math.floor((Date.now() - c.arrancado) / paso));
+  if(c.trades[uid].length >= debidos) return;
+  const total = bossObjetivo(cap);
+  while(c.trades[uid].length < debidos){
+    const k = c.trades[uid].length;
+    const rr = ((Math.sin((k + 1) * 12.9898) * 43758.5453) % 1 + 1) % 1;
+    /* el último golpe cuadra la suma EXACTA a su objetivo */
+    const pnl = (k === n - 1)
+      ? Math.round(total - c.trades[uid].reduce((a,t)=>a+t.pnl,0))
+      : Math.round((total / n) * (0.55 + rr * 0.9));
+    c.trades[uid].push({ dir: rr > .5 ? 'L' : 'S', pnl, ts: c.arrancado + paso * (k + 1) });
+  }
+  c.upd = Date.now();
+}
+/* Arranca la pelea contra el jefe i, en la sede que le toca. */
+window.camPelea = function(i){
+  const cap = KURO_CAMINO[i]; if(!cap) return;
+  const yo = batYo();
+  if(i !== historiaCapActual()){ toast(bi('Ese jefe todavía no te toca.','That boss is not yours yet.')); return; }
+  const dur = 240;
+  S.challenge = {
+    id: 'boss_' + i + '_' + uid(), estado:'activo', boss:i,
+    host: yo, rival: BOSS_PREFIJO + i,
+    sesion: cap.ses || 'asia', duracion: dur, mult: 1,
+    arrancado: Date.now(), fin: Date.now() + dur*60000,
+    trades: { [yo]: [], [BOSS_PREFIJO+i]: [] },
+  };
+  window._batCamino = false; batMin = false;
+  batGuarda();
+};
 
 /* En qué capítulo vas: el primero cuya katana aún no tienes. */
 function historiaCapActual(){
@@ -10782,6 +10943,9 @@ function batKatanasDe(u){ if(!S.batKatanas) S.batKatanas={}; if(!Array.isArray(S
 /* la katana EQUIPADA (la que define tu ecosistema y tu espada del perfil).
    Por defecto la más alta que tengas; el jugador la cambia picando otra suya. */
 function batEquipadaDe(u){
+  /* el jefe porta SU katana: la que suelta al caer */
+  const _bc = (typeof bossCap === 'function') ? bossCap(u) : null;
+  if(_bc) return _bc.kat;
   const kw=batKatanasDe(u); const maxi=KATANAS.reduce((mx,k,i)=> kw.includes(k.id)?i:mx,0);
   if(!S.batEquipada) S.batEquipada={};
   const eq=S.batEquipada[u]; const i=eq? KATANAS.findIndex(k=>k.id===eq):-1;
@@ -12303,8 +12467,8 @@ function renderBatallaInterno(){
             <button type="button" class="ars-x" id="camX" aria-label="${bi('cerrar','close')}">✕</button></div>
           <div class="cam-body">
             <p class="cam-intro">${bi(
-              'Ocho dragones, ocho katanas. Cada región tiene su guardián: los tres jefes de sesión —Asia, Londres y Nueva York— son del mismo tamaño entre ellos; todos los demás crecen, hasta KURO. Se les vence cumpliendo sus pruebas con tu trading de verdad.',
-              'Eight dragons, eight katanas. Each region has its warden: the three session bosses —Asia, London and New York— are equals in size; every other one grows, up to KURO. You beat them by passing their trials with your real trading.')}</p>
+              'Siete dragones, siete katanas. Cada región tiene su guardián: los tres jefes de sesión —Asia, Londres y Nueva York— son del mismo tamaño entre ellos; todos los demás crecen, hasta KURO. Se les vence cumpliendo sus pruebas con tu trading de verdad.',
+              'Seven dragons, seven katanas. Each region has its warden: the three session bosses —Asia, London and New York— are equals in size; every other one grows, up to KURO. You beat them by passing their trials with your real trading.')}</p>
             <!-- EL SENDERO: un lienzo con las regiones, el camino serpenteante,
                  los dragones y tu ninja en el nodo donde vas. Se pica un nodo
                  para abrir su ficha. -->
@@ -12855,6 +13019,7 @@ function renderBatallaInterno(){
          marcaba 'terminado', guardaba y hacía `return` SIN pintar nada —
          Kuro se quedaba en blanco. Ahora vuelve a entrar, que la rama de
          'terminado' ya tiene su pantalla de resultado. */
+      if(c.boss != null) bossLatido(c);   /* el jefe va soltando sus trades */
       if(Date.now() >= c.fin){ c.estado = 'terminado'; batGuarda(); renderBatalla(); return; }
     }
     /* duelos que ya venían guardados con las horas completas: se emparejan
