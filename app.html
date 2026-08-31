@@ -10494,21 +10494,21 @@ const KURO_BOSSES = [
      riesgo—, y lo que pide va subiendo. Empieza en $1,000 en una sesión con
      dos trades, y termina en cinco pagos máximos, uno por sesión.
      Es el camino de una cuenta fondeada, convertido en escalera. */
-  { kat:0, nom:'ASHURA',   kanji:'白', ses:'asia',
+  { kat:0, nom:'SHIRO',   kanji:'白', ses:'asia',
     titulo:['El primer objetivo','The first target'],
     pide:['Hazme $1,000 de profit en UNA sesión — Asia, Londres o Nueva York, la que quieras.',
           'Make me $1,000 profit in ONE session — Asia, London or New York, your pick.'],
     reglas:{ tp:1000, dd:1000, trades:2, riesgo:500, sesiones:1,
              ventana:['1 sesión','1 session'], libre:true } },
 
-  { kat:1, nom:'ALBION',   kanji:'黄', ses:'londres',
+  { kat:1, nom:'KIIRO',   kanji:'黄', ses:'londres',
     titulo:['El doble','The double'],
     pide:['Los mismos dos trades, el doble de objetivo: $2,000 en una sesión.',
           'Same two trades, double the target: $2,000 in one session.'],
     reglas:{ tp:2000, dd:1000, trades:2, riesgo:500, sesiones:1,
              ventana:['1 sesión','1 session'], libre:true } },
 
-  { kat:2, nom:'LIBERTY',  kanji:'橙', ses:'ny',
+  { kat:2, nom:'DAIDAI',  kanji:'橙', ses:'ny',
     titulo:['Pasar la cuenta','Pass the account'],
     pide:['Pásame una cuenta: $3,000 de profit, y en UNA sola sesión.',
           'Pass me an account: $3,000 profit, in a SINGLE session.'],
@@ -11224,7 +11224,19 @@ function katanaBonoTxt(idx){ const b=katanaBono(idx); return { loot:'+'+Math.rou
 function katanaSVG(hex, flat, oculta){
   const dark = hex==='#23272E';
   /* bloqueada: silueta VISIBLE (se ve la espada y se intuye su color), sin detalles */
-  const blade = oculta?'#4a515c': (dark?'#3a4048':'#d7dee7'), edge = oculta?'#2b313b':(dark?'#20242b':'#aeb8c4');
+  /* LA HOJA LLEVA EL COLOR DE SU KATANA (André): antes las nueve eran de la
+     misma plata y sólo cambiaba el mango — en la colección se veían idénticas.
+     Se mezcla con blanco para que siga leyéndose como acero y no como
+     plástico, y el filo va un tono más oscuro. */
+  const mezcla = (hex2, p2) => { const h2 = hex2.replace('#','');
+    const r2 = parseInt(h2.slice(0,2),16), g2 = parseInt(h2.slice(2,4),16), b2 = parseInt(h2.slice(4,6),16);
+    const m2 = v => Math.round(v + (255 - v) * p2);
+    return '#' + [m2(r2),m2(g2),m2(b2)].map(v=>v.toString(16).padStart(2,'0')).join(''); };
+  const oscuro = (hex2, p2) => { const h2 = hex2.replace('#','');
+    const m2 = v => Math.round(v * p2);
+    return '#' + [0,2,4].map(i2=>m2(parseInt(h2.slice(i2,i2+2),16)).toString(16).padStart(2,'0')).join(''); };
+  const blade = oculta ? '#4a515c' : (dark ? '#59606c' : mezcla(hex, 0.62));
+  const edge  = oculta ? '#2b313b' : (dark ? '#2a2f37' : oscuro(hex, 0.55));
   const mango = hex, tsuba = oculta?'#2a3039':'#2b3038', filo = oculta?'0':'0.5';
   const mangoOp = oculta?' fill-opacity="0.55"':'';
   const gid='ks'+(katanaSVG._n=(katanaSVG._n||0)+1);
@@ -11913,16 +11925,39 @@ function zenNinja(c,x,base,s,now,ph,col,nj,flip,anda){ const kc=col||'#b53a2e';
   c.fillStyle=cfg.traje; c.fillRect(-5*s,-14*s+Math.max(0,p1),4*s,14*s-Math.max(0,p1)); c.fillRect(2*s,-14*s+Math.max(0,p2),4*s,14*s-Math.max(0,p2));
   c.fillRect(-6.5*s,-30*s,13*s,18*s);
   /* la katana: en la espalda — o cortando el aire */
-  /* LA HOJA lleva el color de SU katana —era gris para los nueve— con un
-     filo claro encima para que no se pierda sobre fondos oscuros */
-  c.strokeStyle=kc; c.lineWidth=2.4*s; c.lineCap='round'; c.beginPath();
-  if(corta){ const bx2=2*s, by2=-27*s, len=17*s; c.moveTo(bx2,by2); c.lineTo(bx2+Math.cos(aSl)*len, by2+Math.sin(aSl)*len); }
-  else { c.moveTo(-9*s,-38*s); c.lineTo(9*s,-16*s); }
-  c.stroke();
-  c.strokeStyle='rgba(255,255,255,.75)'; c.lineWidth=0.9*s; c.beginPath();
-  if(corta){ const bx2=2*s, by2=-27*s, len=17*s; c.moveTo(bx2,by2); c.lineTo(bx2+Math.cos(aSl)*len, by2+Math.sin(aSl)*len); }
-  else { c.moveTo(-9*s,-38*s); c.lineTo(9*s,-16*s); }
-  c.stroke();
+  /* ── LA KATANA DE VERDAD ── era una raya recta. Ahora es una katana: hoja
+     CURVA del color de su cinta con su filo claro, tsuba (la guarda) y mango
+     oscuro con su trenzado. Se dibuja igual cortando que en reposo, sólo
+     cambia dónde nace y hacia dónde apunta. */
+  (()=>{
+    const px = corta ? 2*s   : 9*s,      /* dónde nace (mango) */
+          py = corta ? -27*s : -16*s,
+          ang = corta ? aSl : Math.atan2(-22*s, -18*s),   /* hacia dónde apunta */
+          L   = corta ? 17*s : 23*s;
+    c.save(); c.translate(px, py); c.rotate(ang);
+    /* mango, del talón hacia atrás */
+    c.strokeStyle = '#23272e'; c.lineWidth = 3.2*s; c.lineCap = 'butt';
+    c.beginPath(); c.moveTo(0,0); c.lineTo(-6.5*s, 0); c.stroke();
+    c.strokeStyle = 'rgba(255,255,255,.22)'; c.lineWidth = 0.7*s;
+    for(let w=1; w<=3; w++){ c.beginPath();
+      c.moveTo(-1.4*s*w, -1.6*s); c.lineTo(-1.4*s*w-1.1*s, 1.6*s); c.stroke(); }
+    /* tsuba */
+    c.fillStyle = '#c9ced6';
+    c.fillRect(-0.9*s, -3.1*s, 1.9*s, 6.2*s);
+    /* hoja curva, de su color */
+    c.beginPath();
+    c.moveTo(1*s, -1.5*s);
+    c.quadraticCurveTo(L*0.55, -3.4*s, L, -3.2*s);
+    c.quadraticCurveTo(L*0.55, -0.5*s, 1*s, 1.5*s);
+    c.closePath();
+    c.fillStyle = kc; c.fill();
+    c.strokeStyle = 'rgba(0,0,0,.35)'; c.lineWidth = 0.5*s; c.stroke();
+    /* el filo, claro, por el lomo */
+    c.strokeStyle = 'rgba(255,255,255,.85)'; c.lineWidth = 0.9*s; c.lineCap='round';
+    c.beginPath(); c.moveTo(1.4*s, -1.4*s);
+    c.quadraticCurveTo(L*0.55, -3.2*s, L*0.97, -3*s); c.stroke();
+    c.restore();
+  })();
   if(corta){ c.strokeStyle='rgba(255,255,255,.35)'; c.lineWidth=1*s; c.beginPath(); c.arc(2*s,-27*s,15*s,aSl-0.5,aSl+0.12); c.stroke(); }
   c.strokeStyle=kc; c.lineWidth=2.6*s; c.beginPath();
   if(corta){ c.moveTo(2*s,-27*s); c.lineTo(2*s-Math.cos(aSl)*4*s, -27*s-Math.sin(aSl)*4*s); }
@@ -12861,7 +12896,7 @@ function renderBatallaInterno(){
                 <div class="ars-sw">${katanaSVG(k.belt, true, !owned)}</div>
                 <b class="ars-nom" style="border-bottom:2px solid ${k.belt}">${loc(k.n)}</b>
                 ${owned? `<button type="button" class="ars-eq" data-equip="${i}">${bi('Equipar','Equip')}</button>`
-                  : `<span class="ars-precio">🔒 ${dueno ? esc(dueno.nom) : '—'}</span>`}
+                  : `<span class="ars-precio">🔒 ${dueno ? esc(loc(dueno.titulo)) : '—'}</span>`}
               </div>`;}).join('')}
             </div>
           </div>
