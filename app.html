@@ -1711,6 +1711,18 @@ button.st-chip:hover{border-color:rgba(255,255,255,.45)}
 /* ── EL PANEL DEL JEFE: sus requisitos con tu avance ── */
 .bat-duelo-req{border:1px solid var(--line);border-radius:16px;padding:14px 16px;background:var(--w02);margin:0 0 14px}
 .lg-hoy{padding:0;border:none;background:none;margin-bottom:14px}
+/* ABRIR EL DÍA a mano: los números con los que entras */
+.lg-abrir{border:1px solid var(--line);border-radius:16px;padding:16px 18px;background:var(--w02)}
+.lg-abrir-p{font-size:12.5px;line-height:1.55;color:var(--dim);margin:0 0 14px}
+.lg-campos{display:grid;grid-template-columns:repeat(auto-fit,minmax(132px,1fr));gap:10px}
+.lg-campos label{display:flex;flex-direction:column;gap:5px}
+.lg-campos i{font-style:normal;font-family:var(--mono);font-size:8px;letter-spacing:.14em;color:var(--faint)}
+.lg-campos input{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:10px;
+  background:var(--w02);color:var(--txt);font:600 15px/1 var(--mono);text-align:right}
+.lg-abrir-b{width:100%;margin-top:14px}
+.lg-cerrar-ses{float:right;border:1px solid var(--line);background:transparent;color:var(--faint);
+  font-family:var(--mono);font-size:8.5px;letter-spacing:.12em;padding:2px 8px;border-radius:99px;cursor:pointer}
+.lg-cerrar-ses:hover{color:var(--txt)}
 .bat-duelo-req.roto{border-color:color-mix(in srgb, var(--down) 55%, var(--line))}
 .bd-t{font-family:var(--mono);font-size:9px;letter-spacing:.2em;color:var(--faint);margin-bottom:12px}
 .bd-t b{color:var(--txt)}
@@ -14101,34 +14113,77 @@ function lgAgrega(){
   lgCtas(); lgStats(); lgAnima(); lgLog(); animaSello(pnl); updateBadges();
   $('#lgPnl').focus();
 }
-/* ── EL PANEL DE HOY ── objetivo, drawdown y trades del día, con tu avance
-   vivo. Los límites salen de SISTEMA.fases (los del contrato firmado) y la
-   fase, de la cuenta que tengas elegida; el drawdown es el peor bajón desde
-   un máximo de la curva de hoy, que es como lo mide una fondeadora. */
-function lgHoy(){
-  const host = $('#lgHoy'); if(!host) return;
-  const hoy = todayISO();
-  const mios = lgTradesReales().filter(t => t.date === hoy);
-  /* la fase sale de LA CUENTA ELEGIDA (o de la primera activa si están todas):
-     un examen y una fondeada no tienen los mismos límites del día. */
+/* ══ LA SESIÓN DEL DÍA ══ (André, 31-ago-2026)
+   Antes el panel sacaba los límites de SISTEMA.fases y ya. Ahora el día se
+   ABRE a mano: pones tu objetivo, tu límite de pérdida, cuántos trades te
+   das y cuánto arriesgas por trade — y esos son los números contra los que
+   se mide la sesión. Escribirlos ANTES de operar es medio oficio; heredarlos
+   de una tabla no compromete a nada.
+   Se guardan por fecha, así que abrir el día es un acto, no una casilla. */
+function lgSesiones(){ if(!S.lgSesion || typeof S.lgSesion !== 'object') S.lgSesion = {}; return S.lgSesion; }
+function lgSesionHoy(){ return lgSesiones()[todayISO()] || null; }
+/* los valores con los que abre el formulario: los de la fase de tu cuenta,
+   para no empezar de cero — pero se pueden cambiar todos */
+function lgSugerido(){
   const cta = (lgSel && lgSel !== '__all') ? (S.accounts||[]).find(x=>x.id===lgSel)
             : mias(S.accounts||[]).find(x=>x.estado==='activa');
-  const fase = (cta && cta.fase) || 'buffer';
   const F = (typeof SISTEMA !== 'undefined' && SISTEMA.fases)
-    ? (SISTEMA.fases[fase] || SISTEMA.fases.buffer) : null;
-  if(!F){ host.hidden = true; return; }
+    ? (SISTEMA.fases[(cta && cta.fase) || 'buffer'] || SISTEMA.fases.buffer) : null;
+  return { tp: (F && F.objetivoDia) || 500, dd: (F && F.maxPerdidaDia) || 500,
+           trades: (F && F.maxTrades) || 2, riesgo: 250 };
+}
+window.lgAbreSesion = function(){
+  const num = id => { const v = ($('#'+id) && $('#'+id).value || '').trim();
+    return v === '' ? 0 : Math.abs(parseFloat(v) || 0); };
+  const tp = num('lgSesTP'), dd = num('lgSesDD'), tr = num('lgSesTr'), ri = num('lgSesRi');
+  if(!(tp > 0)){ toast(bi('Ponle un objetivo al día.','Set a target for the day.')); return; }
+  if(!(dd > 0)){ toast(bi('Ponle un límite de pérdida.','Set a loss limit.')); return; }
+  lgSesiones()[todayISO()] = { tp, dd, trades: tr || 0, riesgo: ri || 0, ini: Date.now() };
+  save(); lgHoy();
+  toast(bi('Sesión abierta · objetivo '+fmt$(tp),'Session open · target '+fmt$(tp)));
+};
+window.lgCierraSesion = function(){
+  if(!confirm(bi('¿Cerrar la sesión del día? Podrás abrir otra.','Close the day session? You can open another.'))) return;
+  delete lgSesiones()[todayISO()]; save(); lgHoy();
+};
+/* ── EL PANEL DE HOY ── objetivo, límite y trades, con tu avance vivo. El
+   drawdown es el peor bajón desde un máximo de la curva de hoy, que es como
+   lo mide una fondeadora — no el peor trade suelto. */
+function lgHoy(){
+  const host = $('#lgHoy'); if(!host) return;
   host.hidden = false;
+  const hoy = todayISO();
+  const ses = lgSesionHoy();
+  if(!ses){
+    const d = lgSugerido();
+    host.innerHTML = `<div class="lg-abrir">
+      <div class="bd-t">${bi('ANTES DE OPERAR','BEFORE YOU TRADE')} · <b>${fmtFecha(hoy)}</b></div>
+      <p class="lg-abrir-p">${bi(
+        'Escribe con qué números entras hoy. La sesión se mide contra esto.',
+        'Write the numbers you are going in with. The session is measured against them.')}</p>
+      <div class="lg-campos">
+        <label><i>${bi('OBJETIVO','TARGET')}</i><input type="number" id="lgSesTP" step="50" value="${d.tp}"></label>
+        <label><i>${bi('LÍMITE DE PÉRDIDA','LOSS LIMIT')}</i><input type="number" id="lgSesDD" step="50" value="${d.dd}"></label>
+        <label><i>${bi('TRADES MÁX','MAX TRADES')}</i><input type="number" id="lgSesTr" step="1" value="${d.trades}"></label>
+        <label><i>${bi('RIESGO / TRADE','RISK / TRADE')}</i><input type="number" id="lgSesRi" step="50" value="${d.riesgo}"></label>
+      </div>
+      <button type="button" class="btn primary lg-abrir-b" onclick="lgAbreSesion()">${bi('Iniciar sesión','Start session')} →</button>
+    </div>`;
+    return;
+  }
+  const mios = lgTradesReales().filter(t => t.date === hoy);
   const pnl = mios.reduce((a,t)=>a+(t.pnl||0),0);
   let eq = 0, pico = 0, dd = 0;
   mios.forEach(t => { eq += (t.pnl||0); if(eq>pico) pico=eq; const c2=eq-pico; if(c2<dd) dd=c2; });
-  const meta = F.objetivoDia || 0, tope = F.maxPerdidaDia || 0, maxT = F.maxTrades || 0;
+  const meta = ses.tp, tope = ses.dd, maxT = ses.trades;
   const pct = meta ? Math.max(0, Math.min(100, pnl/meta*100)) : 0;
   const ddPct = tope ? Math.max(0, Math.min(100, Math.abs(dd)/tope*100)) : 0;
   const roto = tope && Math.abs(dd) >= tope;
   const deMas = maxT && mios.length > maxT;
   const barra = (v, cls) => `<span class="bd-b"><i class="${cls}" style="width:${v}%"></i></span>`;
   host.innerHTML = `<div class="bat-duelo-req ${roto?'roto':''}" style="margin:0">
-    <div class="bd-t">${bi('TU DÍA','YOUR DAY')} · <b>${fmtFecha(hoy)}</b></div>
+    <div class="bd-t">${bi('TU DÍA','YOUR DAY')} · <b>${fmtFecha(hoy)}</b>
+      <button type="button" class="lg-cerrar-ses" onclick="lgCierraSesion()">${bi('cerrar','close')}</button></div>
     <div class="bd-fila">
       <span class="bd-et">${bi('OBJETIVO','TARGET')}</span>
       <b class="bd-v ${pnl>=meta?'ok':''}">${fmt$(pnl,true)} <em>${bi('de','of')} ${fmt$(meta)}</em></b>
@@ -14140,7 +14195,8 @@ function lgHoy(){
       ${barra(ddPct,'down')}
     </div>
     <div class="bd-chips">
-      <span><i>${bi('TRADES','TRADES')}</i><b class="${deMas?'mal':''}">${mios.length}<em>/${maxT}</em></b></span>
+      <span><i>${bi('TRADES','TRADES')}</i><b class="${deMas?'mal':''}">${mios.length}<em>${maxT?'/'+maxT:''}</em></b></span>
+      <span><i>${bi('RIESGO','RISK')}</i><b>${ses.riesgo?fmt$(ses.riesgo):'—'}</b></span>
       <span><i>${bi('GANADOS','WON')}</i><b>${mios.filter(t=>(t.pnl||0)>0).length}</b></span>
       <span><i>${bi('SESIÓN','SESSION')}</i><b>${esc(sesionMundial(ahora()).split(' ')[0])}</b></span>
     </div>
