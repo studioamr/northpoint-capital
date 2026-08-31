@@ -150,20 +150,6 @@ hr.linea{border:none;border-top:1px solid var(--hair);margin:0}
 .lienzo{border:1px solid var(--hair);border-radius:16px;overflow:hidden;
   box-shadow:0 40px 90px rgba(0,0,0,.6)}
 .lienzo canvas,.lienzo img{display:block;width:100%;height:auto}
-/* ── EL DUELO: la escena de Asia a todo lo ancho, con el copy encima ── */
-.duelo{position:relative;max-width:none;padding:0;margin:clamp(70px,12vh,130px) 0;
-  min-height:min(62vh,520px);display:grid;place-items:center;overflow:hidden;
-  border-top:1px solid var(--hair);border-bottom:1px solid var(--hair)}
-.duelo-fondo{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;
-  object-position:center 62%}
-/* la escena es preciosa pero está llena de detalle: sin apagarla, el titular
-   compite con el sakura y no se lee ninguno de los dos */
-.duelo::after{content:'';position:absolute;inset:0;
-  background:linear-gradient(180deg,rgba(4,6,12,.72),rgba(4,6,12,.28) 46%,rgba(4,6,12,.88)),
-             radial-gradient(58% 54% at 50% 34%,rgba(4,6,12,.52),rgba(4,6,12,0) 72%)}
-.duelo-in{position:relative;z-index:1;text-align:center;padding:60px 24px}
-.duelo-in h2{text-shadow:0 4px 30px rgba(4,6,12,1),0 2px 8px rgba(4,6,12,.9)}
-.duelo-in .eyebrow{color:rgba(237,239,242,.68)}
 /* ── LAS DOS RAMAS ──
    Dos tarjetas grandes, una por manera de jugar. Es lo primero que se ve al
    salir de la montaña: si sólo cuentas la campaña, nadie se entera de que
@@ -231,6 +217,14 @@ hr.linea{border:none;border-top:1px solid var(--hair);margin:0}
   .cinta{overflow-x:auto}
   .cinta-pista{animation:none}
 }
+/* ── LA ESCENA DEL DUELO ──
+   Los dos que están peleando, con su cinta: Carlos de blanco, David de
+   amarillo. Antes había una foto genérica de Asia con un rótulo encima; esto
+   son ELLOS. (André, 31-ago-2026) */
+.escena-duelo{margin-top:clamp(30px,5vh,50px);border:1px solid var(--hair);
+  border-radius:16px;overflow:hidden;box-shadow:0 34px 80px rgba(0,0,0,.55)}
+.escena-duelo canvas{display:block;width:100%;height:auto;aspect-ratio:24/9}
+@media(max-width:640px){.escena-duelo canvas{aspect-ratio:16/9}}
 /* ── EL PANEL DE LA PELEA ──
    La recreación del duelo tal cual corre en la terminal: la tabla viva, las dos
    curvas y el registro de trades cayendo. (André, 31-ago-2026) */
@@ -518,19 +512,12 @@ hr.linea{border:none;border-top:1px solid var(--hair);margin:0}
     <div class="retos rev" id="retos"></div>
   </section>
 
-  <!-- 06 · LOS DUELOS · con la escena de Asia de fondo -->
-  <section class="duelo">
-    <img class="duelo-fondo" src="kuro-duelo.jpg" width="1200" height="560"
-      alt="Dos ninjas frente a frente bajo el sakura, en Asia">
-    <div class="duelo-in">
-      <p class="eyebrow rev">SANGRE CONTRA SANGRE</p>
-    </div>
-  </section>
 
   <!-- ═══ EL PANEL DE LA PELEA, EN VIVO ═══ -->
   <section>
     <p class="eyebrow rev">AS&Iacute; SE VE UNA PELEA</p>
     <h2 class="rev">Carlos contra David.<span class="baja-t">Asia, seis horas, en vivo.</span></h2>
+    <div class="escena-duelo rev"><canvas id="duCv"></canvas></div>
     <div class="pelea rev" id="pelea">
       <div class="pl-top">
         <span class="pl-sede"><i></i>ASIA &middot; 6 h</span>
@@ -1379,6 +1366,120 @@ var MESA = [
   }
   llena(A, [0,1,2,3,4,5,6]);
   llena(B, [4,6,1,5,3,0,2]);
+})();
+
+/* ══════════════ CARLOS Y DAVID, PELEANDO ══════════════ (André, 31-ago-2026)
+   Antes ahí había una foto genérica del duelo en Asia con «SANGRE CONTRA
+   SANGRE» encima: una imagen bonita de dos desconocidos. Esto son ELLOS, los
+   dos de los que habla el panel de abajo — Carlos con la cinta blanca, David
+   con la amarilla —, y cada tantos segundos se lanzan y cruzan los aceros. */
+(function(){
+  var cv = document.getElementById('duCv'); if(!cv) return;
+  var c = cv.getContext('2d'), W = 0, H = 0;
+  var BLANCO = '#EDEFF2', AMARILLO = '#E7C24A';
+  function medir(){
+    var D = Math.min(2, devicePixelRatio||1);
+    W = cv.offsetWidth; H = cv.offsetHeight;
+    if(!W || !H) return false;
+    if(cv.width !== Math.round(W*D)){ cv.width = Math.round(W*D); cv.height = Math.round(H*D); }
+    c.setTransform(D,0,0,D,0,0); return true;
+  }
+  function pinta(now){
+    if(!medir()) return;
+    /* el cielo de Asia al anochecer */
+    var g = c.createLinearGradient(0,0,0,H);
+    g.addColorStop(0,'#1B1436'); g.addColorStop(.46,'#3D2C55'); g.addColorStop(1,'#6E5A78');
+    c.fillStyle = g; c.fillRect(0,0,W,H);
+    /* la luna y sus nubes */
+    var lx = W*0.50, ly = H*0.26, lr = Math.min(W,H)*0.075;
+    var lg = c.createRadialGradient(lx,ly,lr*0.5,lx,ly,lr*4.2);
+    lg.addColorStop(0,'rgba(255,246,214,.30)'); lg.addColorStop(1,'rgba(255,246,214,0)');
+    c.fillStyle = lg; c.beginPath(); c.arc(lx,ly,lr*4.2,0,7); c.fill();
+    c.fillStyle = '#FFF6D8'; c.beginPath(); c.arc(lx,ly,lr,0,7); c.fill();
+    for(var nb=0;nb<4;nb++){
+      var dx = ((now/(90000+rnd(nb*3.1)*60000)) + rnd(nb*7.7)) % 1.3 - 0.15;
+      c.fillStyle = 'rgba(206,196,230,'+(0.16+rnd(nb)*0.12)+')';
+      c.beginPath();
+      for(var lb=0;lb<5;lb++)
+        c.ellipse(dx*W*1.3 - W*0.15 + lb*W*0.035, H*(0.14+rnd(nb*2.2)*0.14),
+                  W*0.035, H*(0.020+rnd(nb*5.5)*0.012), 0,0,7);
+      c.fill();
+    }
+    /* montes */
+    [[H*0.62,'rgba(58,42,74,.85)',W*0.26,H*0.26],[H*0.68,'rgba(44,32,58,.95)',W*0.19,H*0.18]]
+      .forEach(function(L,li){
+      c.fillStyle = L[1]; c.beginPath(); c.moveTo(-30,H);
+      var x=-30,i=0;
+      while(x<W+30){ var w2=L[2]*(0.6+rnd(li*9+i)*0.9), h2=L[3]*(0.45+rnd(li*4+i)*1.0);
+        c.lineTo(x+w2*0.5, L[0]-h2); x+=w2; i++; c.lineTo(x, L[0]-h2*0.12); }
+      c.lineTo(W+30,H); c.closePath(); c.fill();
+    });
+    /* el suelo y su pasto */
+    var sy = H*0.78;
+    var gs = c.createLinearGradient(0,sy,0,H);
+    gs.addColorStop(0,'#3E3252'); gs.addColorStop(1,'#231B33');
+    c.fillStyle = gs; c.fillRect(0,sy,W,H-sy);
+    c.strokeStyle = 'rgba(160,150,190,.30)'; c.lineWidth = 1;
+    for(var pz=0;pz<150;pz++){
+      var px2 = rnd(pz*1.7)*W, ph = H*(0.03+rnd(pz*5.3)*0.05);
+      c.beginPath(); c.moveTo(px2, sy+H*0.02); c.lineTo(px2 + Math.sin(now/2600+pz)*3, sy+H*0.02-ph);
+      c.stroke();
+    }
+    /* ── EL CRUCE ── se lanzan, chocan y vuelven */
+    var CIC = 5200, u = (now % CIC)/CIC;
+    var emb = u < 0.30 ? u/0.30 : u < 0.46 ? 1 : u < 0.62 ? 1-(u-0.46)/0.16 : 0;
+    var choque = u >= 0.28 && u < 0.44;
+    var s2 = Math.min(W,H)/210;
+    var xC = W*0.30 + emb*W*0.135, xD = W*0.70 - emb*W*0.135;
+    /* sombras */
+    [[xC],[xD]].forEach(function(o){
+      c.fillStyle = 'rgba(20,14,32,.45)';
+      c.beginPath(); c.ellipse(o[0], sy+3*s2, 17*s2, 3.4*s2, 0,0,7); c.fill();
+    });
+    var corte = choque ? Math.min(1,(u-0.28)/0.16) : 0;
+    ninja(c, xC, sy, s2, BLANCO, false,
+      { filo:'#F2F7FF', mango:BLANCO, cuerpo:'#141821' });
+    c.save(); c.translate(xD*2, 0); c.scale(-1,1);
+    ninja(c, xD, sy, s2, AMARILLO, false,
+      { filo:'#F2F7FF', mango:AMARILLO, cuerpo:'#141821' });
+    c.restore();
+    /* el destello del cruce */
+    if(choque){
+      var mx2 = (xC+xD)/2, my2 = sy - 30*s2, f = Math.sin(corte*Math.PI);
+      c.save(); c.globalCompositeOperation = 'lighter';
+      var fg = c.createRadialGradient(mx2,my2,1,mx2,my2,34*s2);
+      fg.addColorStop(0,'rgba(255,250,230,'+(0.85*f)+')');
+      fg.addColorStop(1,'rgba(255,240,190,0)');
+      c.fillStyle = fg; c.beginPath(); c.arc(mx2,my2,34*s2,0,7); c.fill();
+      c.strokeStyle = 'rgba(255,252,240,'+(0.75*f)+')'; c.lineWidth = 1.6*s2;
+      for(var ch=0; ch<5; ch++){
+        var an = ch/5*6.283 + corte*2;
+        c.beginPath(); c.moveTo(mx2, my2);
+        c.lineTo(mx2+Math.cos(an)*30*s2*f, my2+Math.sin(an)*30*s2*f); c.stroke();
+      }
+      c.restore();
+    }
+    /* sus nombres */
+    c.font = '600 ' + Math.max(9, Math.round(Math.min(W,H)*0.030)) + 'px "IBM Plex Mono", monospace';
+    c.textAlign = 'center';
+    c.fillStyle = BLANCO;   c.fillText('CARLOS', xC, sy + H*0.115);
+    c.fillStyle = AMARILLO; c.fillText('DAVID',  xD, sy + H*0.115);
+    /* pétalos */
+    for(var pe=0; pe<26; pe++){
+      var uu = ((now/(11000+rnd(pe*4.4)*9000)) + rnd(pe*8.1)) % 1;
+      c.save();
+      c.globalAlpha = 0.35 + rnd(pe*2.9)*0.4;
+      c.translate(((rnd(pe*1.3)*W) + Math.sin(now/2400+pe)*26) % W, uu*H*1.1 - H*0.05);
+      c.rotate(now/900 + pe);
+      c.fillStyle = '#F3B9CE';
+      c.beginPath(); c.ellipse(0,0,3.4,2.0,0,0,7); c.fill(); c.restore();
+    }
+  }
+  var t = 0;
+  function tic2(){ t += 90; pinta(t); }
+  pinta(0);
+  if(!REDUCE) setInterval(tic2, 90);
+  addEventListener('resize', function(){ pinta(t); }, {passive:true});
 })();
 
 /* ══════════════ LA PELEA EN VIVO ══════════════ (André, 31-ago-2026)
