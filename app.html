@@ -21906,7 +21906,7 @@ maTog = input.bool(false, "", inline = "MA6", group = g6)
 // Para que lleguen a tu teléfono crea UNA alerta de TradingView
 // con condición "Any alert() function call".
 g7 = "7 · Alertas de horario"
-agendaTxt = input.text_area("06:30 Despierta · revisa las noticias del día\\n06:55 En 5 min: PREMARKET\\n07:25 En 5 min: OPENING NY · solo observa\\n07:40 En 5 min se abre TU ventana\\n13:30 30 min para el cierre · cuida lo del día\\n13:55 En 5 min cierra NY", "Una por línea: HH:MM y el texto", group = g7, tooltip = "Escribe las que quieras, una por renglón, empezando con la hora en formato HH:MM. Borra un renglón para quitar esa alerta. Para que SUENEN en el teléfono crea UNA alerta de TradingView con condición Any alert() function call.")
+agendaTxt = input.text_area("06:55 En 5 min: PREMARKET · revisa las noticias\\n07:25 En 5 min: OPENING NY · solo observa\\n07:40 En 5 min se abre TU ventana\\n13:30 30 min para el cierre · cuida lo del día\\n13:55 En 5 min cierra NY", "Una por línea: HH:MM y el texto", group = g7, tooltip = "Escribe las que quieras, una por renglón, empezando con la hora en formato HH:MM. Borra un renglón para quitar esa alerta. Para que SUENEN en el teléfono crea UNA alerta de TradingView con condición Any alert() function call.")
 
 // ═══ PALETA: de 5 papeles salen TODOS los colores ══════════════
 // pAlza  → NY, FVG alcista, objetivos alcistas, señal ▲, cifras en verde
@@ -22805,7 +22805,7 @@ if array.size(agLin) > 0
             if m >= 0 and mdBarra >= m and nz(mdBarra[1], 1441) < m
                 alert("NP A+ ⏰ " + ln, alert.freq_once_per_bar)
 
-var table panel = table.new(posPanel == "Arriba centro" ? position.top_center : posPanel == "Arriba izquierda" ? position.top_left : posPanel == "Abajo derecha" ? position.bottom_right : posPanel == "Abajo centro" ? position.bottom_center : posPanel == "Abajo izquierda" ? position.bottom_left : position.top_right, 5, 14, chart.bg_color, chart.fg_color, 2, chart.fg_color, 1)
+var table panel = table.new(posPanel == "Arriba centro" ? position.top_center : posPanel == "Arriba izquierda" ? position.top_left : posPanel == "Abajo derecha" ? position.bottom_right : posPanel == "Abajo centro" ? position.bottom_center : posPanel == "Abajo izquierda" ? position.bottom_left : position.top_right, 5, 13, chart.bg_color, chart.fg_color, 2, chart.fg_color, 1)
 tamTxt = tamPanel == "Diminuto" ? size.tiny : tamPanel == "Normal" ? size.normal : tamPanel == "Grande" ? size.large : size.small
 
 if verPanel and barstate.islast
@@ -22912,29 +22912,6 @@ if verPanel and barstate.islast
     color bgB = color.new(pBaja, enBuff ? 88 : 100)
     color bgP = color.new(pAlza, enPay ? 88 : 100)
 
-    // ── liquidez viva por sesión, con precio; ASIA y LNDN expiran al
-    // cierre de NY, los H/L de NY sobreviven la noche (≈ PDH/PDL)
-    int vAH = f_vivo(kzA, useA, true)
-    int vAL = f_vivo(kzA, useA, false)
-    int vLH = f_vivo(kzL, useL, true)
-    int vLL = f_vivo(kzL, useL, false)
-    int vNH = f_vivo(kzN, useN, true)
-    int vNL = f_vivo(kzN, useN, false)
-    string liqA = ""
-    if vAH == 1
-        liqA += "H " + str.tostring(kzA.hiLn.get_y1(), format.mintick)
-    if vAL == 1
-        liqA += (liqA != "" ? " · " : "") + "L " + str.tostring(kzA.loLn.get_y1(), format.mintick)
-    string liqL = ""
-    if vLH == 1
-        liqL += "H " + str.tostring(kzL.hiLn.get_y1(), format.mintick)
-    if vLL == 1
-        liqL += (liqL != "" ? " · " : "") + "L " + str.tostring(kzL.loLn.get_y1(), format.mintick)
-    string liqN = ""
-    if vNH == 1
-        liqN += "H " + str.tostring(kzN.hiLn.get_y1(), format.mintick)
-    if vNL == 1
-        liqN += (liqN != "" ? " · " : "") + "L " + str.tostring(kzN.loLn.get_y1(), format.mintick)
     // cuándo ABRE cada sesión (hora NY, saltando el fin de semana)
     int mdNY = hour(timenow, tz) * 60 + minute(timenow, tz)
     int dowNY = dayofweek(timenow, tz)
@@ -23075,38 +23052,26 @@ if verPanel and barstate.islast
     if hayAlertas
         table.cell(panel, 0, 8, "⏰ Agenda", text_color = color.gray, text_size = tamTxt)
         table.cell(panel, 1, 8, alTxt, text_color = alCol, bgcolor = color.new(pSuave, alSigue <= 5 ? 85 : 100), text_size = tamTxt, tooltip = "Cuánto falta para tu próxima alerta y cuál es. Si la última de hoy ya pasó, cuenta hasta la primera del siguiente día hábil. Cuando falten 5 minutos o menos la fila se pone naranja. Los eventos son tus alertas de horario (config, grupo 7): hasta 7, cada una con su hora y su texto. Para que SUENEN en el teléfono crea UNA alerta de TradingView con condición Any alert() function call.")
-    string tipLiq = "Liquidez viva con su precio: H y L de cada sesión que el precio aún no toca. Lo tomado desaparece; si una sesión no tiene nada, dice cuándo abre. Al cierre de NY lo de ASIA y LNDN expira; los H/L de NY sobreviven la noche (≈ PDH/PDL). En fin de semana las tres celdas solo dicen cuándo abre cada sesión."
-    table.cell(panel, 0, 9, "Liquidez", text_color = color.gray, text_size = tamTxt)
-    if not dibujable
-        table.cell(panel, 1, 9, "usa TF ≤ " + tfLim, text_color = color.gray, text_size = tamTxt, tooltip = tipLiq)
-        table.cell(panel, 2, 9, "", text_size = tamTxt)
-        table.cell(panel, 3, 9, "", text_size = tamTxt)
-    else
-        // con el mercado cerrado (fin de semana) ya nada está vivo de
-        // verdad: las tres celdas dicen cuándo abre cada sesión
-        table.cell(panel, 1, 9, liqA != "" and not cerrado ? txtA + "  " + liqA : txtA + " abre en " + f_dur(abreA), text_color = colA, text_size = tamTxt, tooltip = tipLiq)
-        table.cell(panel, 2, 9, liqL != "" and not cerrado ? txtL + "  " + liqL : txtL + " abre en " + f_dur(abreL), text_color = colL, text_size = tamTxt, tooltip = tipLiq)
-        table.cell(panel, 3, 9, liqN != "" and not cerrado ? txtN + "  " + liqN : txtN + " abre en " + f_dur(abreN), text_color = colN, text_size = tamTxt, tooltip = tipLiq)
-    table.cell(panel, 0, 10, txtA, text_color = colA, text_size = tamTxt)
-    table.cell(panel, 1, 10, tkA1, text_color = not dibujable ? color.gray : chart.fg_color, text_size = tamTxt, tooltip = tipA)
-    table.cell(panel, 2, 10, flA, text_color = cNetA, text_size = tamTxt, tooltip = tipA)
-    table.cell(panel, 3, 10, tkA1c, text_color = chart.fg_color, text_size = tamTxt, tooltip = tipA)
-    table.cell(panel, 4, 10, tkA2, text_color = cNetA, text_size = tamTxt, tooltip = tipA)
-    table.cell(panel, 0, 11, txtL, text_color = colL, text_size = tamTxt)
-    table.cell(panel, 1, 11, tkL1, text_color = not dibujable ? color.gray : chart.fg_color, text_size = tamTxt, tooltip = tipL)
-    table.cell(panel, 2, 11, flL, text_color = cNetL, text_size = tamTxt, tooltip = tipL)
-    table.cell(panel, 3, 11, tkL1c, text_color = chart.fg_color, text_size = tamTxt, tooltip = tipL)
-    table.cell(panel, 4, 11, tkL2, text_color = cNetL, text_size = tamTxt, tooltip = tipL)
-    table.cell(panel, 0, 12, txtN, text_color = colN, text_size = tamTxt)
-    table.cell(panel, 1, 12, tkN1, text_color = not dibujable ? color.gray : chart.fg_color, text_size = tamTxt, tooltip = tipN)
-    table.cell(panel, 2, 12, flN, text_color = cNetN, text_size = tamTxt, tooltip = tipN)
-    table.cell(panel, 3, 12, tkN1c, text_color = chart.fg_color, text_size = tamTxt, tooltip = tipN)
-    table.cell(panel, 4, 12, tkN2, text_color = cNetN, text_size = tamTxt, tooltip = tipN)
-    table.cell(panel, 0, 13, "TOTAL", text_color = chart.fg_color, text_size = tamTxt)
-    table.cell(panel, 1, 13, tkD1, text_color = not dibujable ? color.gray : chart.fg_color, text_size = tamTxt, tooltip = tipD)
-    table.cell(panel, 2, 13, flD, text_color = cNetD, text_size = tamTxt, tooltip = tipD)
-    table.cell(panel, 3, 13, tkD1c, text_color = chart.fg_color, text_size = tamTxt, tooltip = tipD)
-    table.cell(panel, 4, 13, tkD2, text_color = cNetD, text_size = tamTxt, tooltip = tipD)
+    table.cell(panel, 0, 9, txtA, text_color = colA, text_size = tamTxt)
+    table.cell(panel, 1, 9, tkA1, text_color = not dibujable ? color.gray : chart.fg_color, text_size = tamTxt, tooltip = tipA)
+    table.cell(panel, 2, 9, flA, text_color = cNetA, text_size = tamTxt, tooltip = tipA)
+    table.cell(panel, 3, 9, tkA1c, text_color = chart.fg_color, text_size = tamTxt, tooltip = tipA)
+    table.cell(panel, 4, 9, tkA2, text_color = cNetA, text_size = tamTxt, tooltip = tipA)
+    table.cell(panel, 0, 10, txtL, text_color = colL, text_size = tamTxt)
+    table.cell(panel, 1, 10, tkL1, text_color = not dibujable ? color.gray : chart.fg_color, text_size = tamTxt, tooltip = tipL)
+    table.cell(panel, 2, 10, flL, text_color = cNetL, text_size = tamTxt, tooltip = tipL)
+    table.cell(panel, 3, 10, tkL1c, text_color = chart.fg_color, text_size = tamTxt, tooltip = tipL)
+    table.cell(panel, 4, 10, tkL2, text_color = cNetL, text_size = tamTxt, tooltip = tipL)
+    table.cell(panel, 0, 11, txtN, text_color = colN, text_size = tamTxt)
+    table.cell(panel, 1, 11, tkN1, text_color = not dibujable ? color.gray : chart.fg_color, text_size = tamTxt, tooltip = tipN)
+    table.cell(panel, 2, 11, flN, text_color = cNetN, text_size = tamTxt, tooltip = tipN)
+    table.cell(panel, 3, 11, tkN1c, text_color = chart.fg_color, text_size = tamTxt, tooltip = tipN)
+    table.cell(panel, 4, 11, tkN2, text_color = cNetN, text_size = tamTxt, tooltip = tipN)
+    table.cell(panel, 0, 12, "TOTAL", text_color = chart.fg_color, text_size = tamTxt)
+    table.cell(panel, 1, 12, tkD1, text_color = not dibujable ? color.gray : chart.fg_color, text_size = tamTxt, tooltip = tipD)
+    table.cell(panel, 2, 12, flD, text_color = cNetD, text_size = tamTxt, tooltip = tipD)
+    table.cell(panel, 3, 12, tkD1c, text_color = chart.fg_color, text_size = tamTxt, tooltip = tipD)
+    table.cell(panel, 4, 12, tkD2, text_color = cNetD, text_size = tamTxt, tooltip = tipD)
     // filas de texto largo → columnas 1-4 fusionadas; en las filas de
     // sesión cada pieza tiene su celda: abrió · → · cerró · puntos
     // (se hace UNA sola vez)
@@ -23133,7 +23098,6 @@ if verPanel and barstate.islast
             table.cell(panel, 2, 8, "", text_size = tamTxt)
             table.cell(panel, 3, 8, "", text_size = tamTxt)
             table.cell(panel, 4, 8, "", text_size = tamTxt)
-        table.cell(panel, 4, 9, "", text_size = tamTxt)
         table.merge_cells(panel, 1, 0, 4, 0)
         table.merge_cells(panel, 1, 1, 4, 1)
         table.merge_cells(panel, 1, 2, 4, 2)
@@ -23145,7 +23109,6 @@ if verPanel and barstate.islast
         if hayAlertas
             table.merge_cells(panel, 1, 8, 4, 8)
         // la celda de NY en la fila de liquidez ocupa las columnas 3-4
-        table.merge_cells(panel, 3, 9, 4, 9)
         unido := true
  `;
 const ALGO_PINE_KZP_ESTRUCTURA = `// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
