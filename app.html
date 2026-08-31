@@ -10417,6 +10417,43 @@ function batNom(uid){
   return (USERS[uid] && USERS[uid].nombre) || uid;
 }
 function batOponentes(){ return SOCIOS_REALES.filter(u => u !== batYo()); }
+/* ── LOS TRES EVENTOS DE LA SEMANA (André, 31-ago-2026) ── Uno por sede: un
+   socio te espera en Asia, otro en Londres y otro en Nueva York. Es el reto
+   que ya existía —el mismo duelo, la misma apuesta— pero servido: no tienes
+   que armarlo, sólo aceptar y aparece programado para la próxima apertura de
+   esa killzone. Las sedes van en el orden en que abren, y a cada una le toca
+   un socio distinto, rotando, para que nunca salgan tres veces el mismo. */
+function batEventos(){
+  const ops = batOponentes(); if(!ops.length) return [];
+  return BAT_SESIONES.map((ses, i) => {
+    const E = batSesionEstado({ sesion: ses.id });
+    const ap = batProxAperturas(ses.hora, 1, ses.id)[0];
+    const cuando = E.viva ? null : (ap ? ap.getTime() : null);
+    /* la semana fija el rival: cambia sola cada lunes, sin sorteos ni azar */
+    const sem = Math.floor(Date.now() / (7*86400000));
+    return { id:'ev_'+ses.id, ses, viva:E.viva, min:E.min, cuando,
+             rival: ops[(sem + i) % ops.length],
+             apuesta: BAT_APUESTA_DEF, mult: 2 };
+  });
+}
+/* aceptar un evento = el mismo reto de siempre, ya armado */
+function batEventoAcepta(evId){
+  const ev = batEventos().find(e => e.id === evId); if(!ev) return;
+  const yo2 = batYo();
+  if(S.challenge && ['invitado','programado','volando','activo'].includes(S.challenge.estado)){
+    if(!confirm(bi('Ya hay un reto vivo. ¿Lo cancelo y entro a este evento?',
+                   'A challenge is already live. Cancel it and enter this event?'))) return;
+    S.challenge = null;
+  }
+  S.challenge = { id:'bt_'+uid(), host:yo2, rival:ev.rival, formato:'sesion',
+    sesion: ev.ses.id, duracion: ev.ses.dur, balance:50000, tp:null, dd:null,
+    mult: ev.mult, torneo:null, apuesta: ev.apuesta, evento: ev.id,
+    programado: ev.cuando, estado:'invitado', creado:Date.now(), upd:Date.now(),
+    inicio:null, fin:null, trades:{} };
+  window._batEventos = false; batPantalla = 'home';
+  toast(bi('Reto enviado a ','Challenge sent to ') + batNom(ev.rival) + ' · ' + loc(ev.ses.ciudad));
+  batGuarda();
+}
 function batProfit(c, uid){ return ((c.trades && c.trades[uid]) || []).reduce((a,t) => a + (t.pnl||0), 0); }
 function batNTrades(c, uid){ return ((c.trades && c.trades[uid]) || []).length; }
 function batReset(){
@@ -12009,9 +12046,24 @@ function batNinjaDe(u){
   return { traje:NJ_OPCIONES.traje[h%NJ_OPCIONES.traje.length][0], banda:NJ_OPCIONES.banda[(h>>>3)%NJ_OPCIONES.banda.length][0], buf:NJ_OPCIONES.buf[(h>>>5)%NJ_OPCIONES.buf.length][0] }; }
 function zenNinja(c,x,base,s,now,ph,col,nj,flip,anda){ const kc=col||'#b53a2e';
   const cfg = nj||NJ_DEF;
-  const bob = anda ? Math.sin(now/140+(ph||0))*1.1 : Math.sin(now/900+(ph||0))*1.5;
-  /* corte de katana cada ~8 s (cuando está quieto) */
-  const cicloSl = (now+ (ph||0)*1000) % 8400, corta = anda==='corte' && cicloSl < 460, aSl = corta ? (-0.95 + (cicloSl/460)*1.6) : 0;
+  /* 'guardia' es estar plantado: no debe mover las piernas como si corriera */
+  /* EL ESPADAZO (André, 31-ago-2026): la hoja giraba mal al llegar el golpe
+     porque el ángulo salía de un reloj propio de 8.4 s —el ninja alcanzaba al
+     otro en cualquier punto del arco, o ni cortaba—. Ahora quien pega manda el
+     avance: 'corte:0.42' pinta ese instante exacto del tajo. Sin número
+     ('corte' a secas) se conserva lo de siempre: un corte cada ~8 s, que es lo
+     que usan las estampas quietas del mapa. */
+  const esCorte = typeof anda === 'string' && anda.slice(0,5) === 'corte';
+  const cicloSl = (now+ (ph||0)*1000) % 8400;
+  const cortePr = !esCorte ? -1
+    : (anda.length > 5 ? Math.max(0, Math.min(1, parseFloat(anda.slice(6)) || 0))
+                       : (cicloSl < 460 ? cicloSl/460 : -1));
+  const corta = cortePr >= 0;
+  /* de arriba-atrás a abajo-adelante, un tajo entero */
+  const aSl = corta ? (-1.45 + cortePr*2.25) : 0;
+  /* el que corta está plantado: las piernas no corren */
+  const mueve = anda && anda !== 'guardia' && !esCorte;
+  const bob = mueve ? Math.sin(now/140+(ph||0))*1.1 : Math.sin(now/900+(ph||0))*1.5;
   c.save(); c.translate(x,base+bob); if(flip) c.scale(-1,1);
   /* ── LA KATANA VA PRIMERO: se dibujaba DESPUÉS del torso y le cruzaba el
      cuerpo por delante, como si la llevara pegada al pecho. Pintándola antes
@@ -12031,9 +12083,11 @@ function zenNinja(c,x,base,s,now,ph,col,nj,flip,anda){ const kc=col||'#b53a2e';
   /* TRES POSES: cortando, EN GUARDIA (sólo cuando pelean, con las dos manos
      al frente) y en reposo — la katana colgada a la espalda, que es como se
      ve normal y como estaba bien. */
-  const guardia = anda === 'guardia';
-  const _mx = corta ? 2*s : (guardia ? 8.5*s : -9*s);              /* la empuñadura */
-  const _my = corta ? -27*s : (guardia ? -24*s : -38*s);
+  /* en guardia Y corriendo la katana va al frente: se lanza CON la espada
+     por delante, no colgada a la espalda */
+  const guardia = anda === 'guardia' || anda === 'corriendo';
+  const _mx = corta ? (1 + cortePr*7)*s : (guardia ? 8.5*s : -9*s);   /* la empuñadura */
+  const _my = corta ? (-30 + cortePr*5)*s : (guardia ? -24*s : -38*s);
   const _hx = corta ? _mx + Math.cos(aSl)*17*s : (guardia ? 26*s : 9*s);   /* la punta */
   const _hy = corta ? _my + Math.sin(aSl)*17*s : (guardia ? -30.5*s : -16*s);
   const _px = corta ? _mx - Math.cos(aSl)*4.5*s : (guardia ? 3.6*s : -13*s);  /* el pomo */
@@ -12062,11 +12116,13 @@ function zenNinja(c,x,base,s,now,ph,col,nj,flip,anda){ const kc=col||'#b53a2e';
     c.moveTo(_mx + Math.cos(n)*2.2*s, _my + Math.sin(n)*2.2*s);
     c.lineTo(_mx - Math.cos(n)*2.2*s, _my - Math.sin(n)*2.2*s);
     c.stroke(); })();
-  if(corta){ c.strokeStyle='rgba(255,255,255,.35)'; c.lineWidth=1*s;
-    c.beginPath(); c.arc(_mx,_my,15*s,aSl-0.5,aSl+0.12); c.stroke(); }
+  if(corta){ /* la estela: el pedazo de arco que la hoja ya barrió */
+    c.strokeStyle='rgba(255,255,255,'+(0.42*(1-Math.abs(cortePr-0.5)*1.4)).toFixed(3)+')';
+    c.lineWidth=1.4*s;
+    c.beginPath(); c.arc(_mx,_my,16*s, Math.max(-1.45,aSl-0.9), aSl+0.06); c.stroke(); }
 
   /* piernas: alternan al caminar */
-  const p1 = anda ? Math.sin(now/150)*2.2*s : 0, p2 = -p1;
+  const p1 = mueve ? Math.sin(now/150)*2.2*s : 0, p2 = -p1;
   c.fillStyle=cfg.traje; c.fillRect(-5*s,-14*s+Math.max(0,p1),4*s,14*s-Math.max(0,p1)); c.fillRect(2*s,-14*s+Math.max(0,p2),4*s,14*s-Math.max(0,p2));
   c.fillRect(-6.5*s,-30*s,13*s,18*s);
   /* LAS DOS MANOS al mango — SÓLO EN GUARDIA. En reposo la katana va a la
@@ -13043,6 +13099,21 @@ function renderBatallaInterno(){
                 const cuando=t.estado==='live'?`${bi('quedan','left')} <i>${batEnTiempo(t.fin-AHORA)}</i>`:`${bi('empieza en','starts in')} <i>${batEnTiempo(t.inicio-AHORA)}</i>`;
                 filas2.push(`<div class="ag-row ${t.estado==='live'?'live':''}" style="--kc:${t.col}"><div class="ag-when"><b>${t.estado==='live'?bi('HOY','NOW'):dt.hora}</b><span>${t.estado==='live'?'● '+bi('EN VIVO','LIVE'):esc(dt.dia)}</span></div><div class="ag-i"><b>${t.ico} ${loc(t.nom)}</b><span>${esc(dt.dia)} ${dt.hora} → ${batHHMM(t.fin)} (${t.durh}h) · ${cuando}</span><span>${bi('premio','prize')} <i>${fmt$(t.premio)}</i> · ${bi('paga','pays')} <i>×3</i> · ${bi('cupo','spots')} ${t.inscritos}/${t.cupo}</span></div><span class="evt-tag">${bi('Inscrito','Joined')}</span></div>`); });
               return filas2.length? filas2.join('') : `<div class="evt-vacio">${bi('No estás dentro de ninguna todavía','You are not in any yet')}</div>`; })()}
+            <div class="evt-sec">${bi('LOS TRES EVENTOS','THE THREE EVENTS')}</div>
+            ${batEventos().map(ev=>{
+              const cuandoTxt = ev.viva
+                ? `● ${bi('EN VIVO','LIVE')} · ${bi('quedan','left')} <i>${batMinTxt(ev.min)}</i>`
+                : (ev.cuando ? `${bi('abre en','opens in')} <i>${batEnTiempo(ev.cuando-Date.now())}</i>` : '');
+              const dt = ev.cuando ? batDiaTxt(ev.cuando) : null;
+              return `<div class="ag-row ${ev.viva?'live':''}">
+                <div class="ag-when"><b>${ev.viva?bi('HOY','NOW'):(dt?dt.hora:batSesAbreTxt(ev.ses))}</b><span>${ev.viva?'● '+bi('EN VIVO','LIVE'):(dt?esc(dt.dia):'')}</span></div>
+                <div class="ag-i">
+                  <b>${ev.ses.ico} ${loc(ev.ses.ciudad)} · ${bi('vs','vs')} ${esc(batNom(ev.rival))}</b>
+                  <span>${batSesAbreTxt(ev.ses)} → ${batSesCierraTxt(ev.ses)} (${batSesDurTxt(ev.ses)}) · ${cuandoTxt}</span>
+                  <span>${bi('apuesta','stake')} <i>${fmt$(ev.apuesta)}</i> · ${bi('paga','pays')} <i>×${ev.mult}</i> · ${bi('entrada gratis','free entry')}</span>
+                </div>
+                <button type="button" class="btn ${ev.viva?'primary ':''}sm" data-evento="${ev.id}">${bi('Entrar','Enter')}</button>
+              </div>`; }).join('')}
             <div class="evt-sec">${bi('SESIÓN ACTUAL','CURRENT SESSION')}</div>
             ${(()=>{ /* quién está viva lo dice batSesionEstado, que ya sabe de
                  minutos, de cruces de medianoche y del domingo de Asia */
@@ -13187,6 +13258,7 @@ function renderBatallaInterno(){
       </div>
       `;
 
+    root.querySelectorAll('[data-evento]').forEach(b=> b.onclick=()=> batEventoAcepta(b.dataset.evento));
     root.querySelectorAll('[data-abreses]').forEach(b=> b.onclick=()=>{ batSel={ops:[],ses:b.dataset.abreses,dur:30,cuando:null,mult:+(b.dataset.mult||1),fmt:'sesion',torneo:b.dataset.torneo||null}; window._batEventos=false; window._batSetup=true; renderBatalla(); });
     root.querySelectorAll('[data-trnjoin]').forEach(b=> b.onclick=(e)=>{ e.stopPropagation(); const id=b.dataset.trnjoin;
       const t=batTorneos().find(x=>x.id===id); if(!t) return; const costo=t.costo||0;
@@ -13795,8 +13867,13 @@ function renderBatallaInterno(){
             const meta = g.de==='a' ? (xb-46*esc) : (xa+46*esc);
             const prog = k<0.5 ? eio(k/0.5) : k<0.64 ? 1 : eio(1-((k-0.64)/0.36));
             const X = casa + (meta-casa)*prog;
-            if(g.de==='a'){ xa=X; andaA = (k<0.5||k>0.64) ? true : 'corte'; }
-            else          { xb=X; andaB = (k<0.5||k>0.64) ? true : 'corte'; }
+            /* CORRIENDO con la espada al frente, y AL LLEGAR el espadazo.
+               Antes corría con la katana a la espalda y el golpe aparecía de
+               la nada; ahora se lanza con ella por delante, corta al llegar y
+               regresa a su sitio. */
+            const tajo = 'corte:' + Math.max(0, Math.min(1, (k-0.5)/0.14)).toFixed(3);
+            if(g.de==='a'){ xa=X; andaA = (k<0.5||k>0.64) ? 'corriendo' : tajo; }
+            else          { xb=X; andaB = (k<0.5||k>0.64) ? 'corriendo' : tajo; }
             if(k>=0.5 && k<0.64){ golpe = 1-((k-0.5)/0.14); victima = g.de==='a'?'b':'a'; }
           }
         }
