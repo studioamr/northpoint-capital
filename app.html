@@ -24619,9 +24619,12 @@ escHasta = input.float(0.79, "hasta este", minval = 0, maxval = 1, step = 0.005,
 escTP = input.string("Al break (el extremo)", "El TP de cada caja", options = ["1:1", "1:2", "Al break (el extremo)", "Más allá del break"], group = g10, tooltip = "Dónde termina el premio de TODAS las cajas. 1:1 y 1:2 salen del riesgo de cada nivel, así que cada caja tiene su propio objetivo. AL BREAK es el extremo del tramo, el mismo para todas — el objetivo natural de la estructura. MÁS ALLÁ DEL BREAK lo pasa de largo, tanto como digas en la línea de abajo, que es donde vive la liquidez del otro lado.")
 escMas = input.float(27, "Qué tanto pasa del break (% del rango)", minval = 0, maxval = 300, step = 1, group = g10, tooltip = "Solo cuenta con el objetivo MÁS ALLÁ DEL BREAK. 27% es la extensión que queda justo después del extremo; 100% sería un tramo entero más.")
 escColchon = input.float(0, "Colchón del stop (% del rango)", minval = 0, maxval = 50, step = 2.5, group = g10, tooltip = "Qué tanto pasa el stop del extremo que originó el tramo. En 0 el stop queda EXACTO en el HIGH (o el LOW) del rango, que es como lo traes tú.")
-escAncho = input.int(14, "Ancho de cada caja (velas)", minval = 3, maxval = 100, group = g10, inline = "E2")
+escAncho = input.int(10, "Ancho de cada caja (velas)", minval = 3, maxval = 100, group = g10, inline = "E2")
 escSep = input.int(2, "Separación", minval = 0, maxval = 20, group = g10, inline = "E2")
 escVerProb = input.bool(true, "Escribir adentro el número, el nivel y la probabilidad", group = g10, tooltip = "El texto que va dentro de la caja del premio: 1/4, el nivel, si le pega un FVG, el porcentaje de confluencia y el RR. El porcentaje NO es un win rate probado: es cuánta confluencia junta ese nivel (FVG, Order Block, AOI, qué tan profundo es, si el precio ya lo pasó y el RR que deja). Sirve para comparar los cuatro entre ellos, no para prometerte nada.")
+escColR = input.color(#f23645, "Riesgo", inline = "E3", group = g10)
+escColP = input.color(#089981, "Premio", inline = "E3", group = g10, tooltip = "Los dos colores de la escalera. Vienen en el rojo y el verde de la herramienta Long/Short Position de TradingView a propósito: son las únicas cajas del script que NO siguen la paleta, porque lo que tienen que gritar es riesgo abajo, premio arriba. Si prefieres que se apaguen, súbeles la transparencia.")
+escTrans = input.int(80, "Transparencia de las cajas", minval = 40, maxval = 96, group = g10, tooltip = "Qué tan encimables son. 80 deja ver las velas y las killzones por debajo; bájala si quieres que las cajas manden.")
 
 // ═══ PALETA: de 5 papeles salen TODOS los colores ══════════════
 // pAlza  → NY, FVG alcista, objetivos alcistas, señal ▲, cifras en verde
@@ -25667,9 +25670,16 @@ if barstate.islast
                             int bx2 = math.min(bx1 + escAncho, bar_index + 490)
                             string num = str.tostring(i + 1) + "/" + str.tostring(nEsc)
                             string txt = (esMejor ? "★ " : "") + num + "\\n" + str.tostring(r) + (array.get(eFvg, i) ? " + FVG" : "") + "\\n" + str.tostring(sc, "#") + "%\\n1:" + str.tostring(rrx, "#.#")
-                            array.push(planBx, box.new(bx1, math.max(escSL, ent), bx2, math.min(escSL, ent), border_color = esMejor ? color.new(colEnt, 40) : #ffffff00, border_width = esMejor ? 1 : 0, bgcolor = color.new(colSL, 82)))
-                            array.push(planBx, box.new(bx1, math.max(tp, ent), bx2, math.min(tp, ent), border_color = esMejor ? color.new(colEnt, 40) : #ffffff00, border_width = esMejor ? 1 : 0, bgcolor = color.new(colTP, esMejor ? 82 : 88), text = escVerProb ? txt : "", text_size = size.tiny, text_color = color.new(colEnt, esMejor ? 0 : 30), text_halign = text.align_center, text_valign = text.align_center))
-                            array.push(planLn, line.new(bx1, ent, bx2, ent, color = color.new(chart.fg_color, 30), width = 1))
+                            // rojo el riesgo, verde el premio, y el texto
+                            // PEGADO a la línea de la entrada: la caja del
+                            // premio es larguísima y centrado se iba solo
+                            // al fondo de la pantalla, lejos del nivel
+                            color cRi = color.new(escColR, escTrans)
+                            color cPr = color.new(escColP, escTrans)
+                            color cBd = esMejor ? color.new(escColP, 20) : color.new(chart.fg_color, 75)
+                            array.push(planBx, box.new(bx1, math.max(escSL, ent), bx2, math.min(escSL, ent), border_color = cBd, border_width = 1, bgcolor = cRi))
+                            array.push(planBx, box.new(bx1, math.max(tp, ent), bx2, math.min(tp, ent), border_color = cBd, border_width = 1, bgcolor = cPr, text = escVerProb ? txt : "", text_size = esMejor ? size.small : size.tiny, text_color = color.new(chart.fg_color, esMejor ? 0 : 25), text_halign = text.align_center, text_valign = escLong ? text.align_bottom : text.align_top))
+                            array.push(planLn, line.new(bx1, ent, bx2, ent, color = color.new(chart.fg_color, 15), width = esMejor ? 2 : 1))
                             array.push(planLb, label.new(int((bx1 + bx2) / 2), ent, "", style = label.style_label_center, color = #ffffff00, textcolor = #ffffff00, size = size.tiny, tooltip = (escLong ? "LONG " : "SHORT ") + num + " · nivel " + str.tostring(r) + (esMejor ? "  ★ el mejor combo" : "") + "\\nEntrada " + str.tostring(ent, format.mintick) + "  ·  SL " + str.tostring(escSL, format.mintick) + "  ·  TP " + str.tostring(tp, format.mintick) + "\\nRiesgo " + str.tostring(math.abs(escSL - ent), "#.##") + " pts  ·  premio " + str.tostring(math.abs(tp - ent), "#.##") + " pts  ·  1:" + str.tostring(rrx, "#.#") + "\\n\\nConfluencia " + str.tostring(sc, "#") + "% · FVG " + (array.get(eFvg, i) ? "sí" : "no") + " · Order Block " + (array.get(eOb, i) ? "sí" : "no") + " · AOI " + (array.get(eAoi, i) ? "sí" : "no") + "\\nNo es un win rate probado: es cuánta confluencia junta el nivel."))
                         escCorr := nEsc * (escAncho + escSep) + escSep
 
@@ -25795,7 +25805,7 @@ if barstate.islast
                         array.push(planLn, line.new(x1, entrada, x2, entrada, color = color.new(chart.fg_color, 30), width = 1))
                         float ratio = math.abs(tp - entrada) / rr
                         if inVerRR
-                            array.push(planLb, label.new(int((x1 + x2) / 2), (tp + entrada) / 2, (esLong ? "LONG" : "SHORT") + "  1:" + str.tostring(ratio, "#.#") + "\\n" + objetivo + (objetivo == "Liquidez más cercana" and not na(tpLiq) ? " (" + liqNom + ")" : ""), style = label.style_label_center, color = #ffffff00, textcolor = colEnt, size = size.tiny, tooltip = "Entrada " + str.tostring(entrada, format.mintick) + "  ·  SL " + str.tostring(sl, format.mintick) + "  ·  TP " + str.tostring(tp, format.mintick) + "\\nRiesgo " + str.tostring(rr, "#.##") + " pts  ·  premio " + str.tostring(math.abs(tp - entrada), "#.##") + " pts\\n\\nOtros objetivos: 1:1 " + str.tostring(tp1, format.mintick) + "  ·  1:2 " + str.tostring(tp2, format.mintick) + "  ·  rompimiento " + str.tostring(tpRompe, format.mintick) + (na(tpLiq) ? "" : "  ·  liq " + liqNom + " " + str.tostring(tpLiq, format.mintick))))
+                            array.push(planLb, label.new(int((x1 + x2) / 2), entrada + (esLong ? 1 : -1) * rr * 0.5, (esLong ? "LONG" : "SHORT") + "  1:" + str.tostring(ratio, "#.#") + "\\n" + objetivo + (objetivo == "Liquidez más cercana" and not na(tpLiq) ? " (" + liqNom + ")" : ""), style = label.style_label_center, color = #ffffff00, textcolor = colEnt, size = size.tiny, tooltip = "Entrada " + str.tostring(entrada, format.mintick) + "  ·  SL " + str.tostring(sl, format.mintick) + "  ·  TP " + str.tostring(tp, format.mintick) + "\\nRiesgo " + str.tostring(rr, "#.##") + " pts  ·  premio " + str.tostring(math.abs(tp - entrada), "#.##") + " pts\\n\\nOtros objetivos: 1:1 " + str.tostring(tp1, format.mintick) + "  ·  1:2 " + str.tostring(tp2, format.mintick) + "  ·  rompimiento " + str.tostring(tpRompe, format.mintick) + (na(tpLiq) ? "" : "  ·  liq " + liqNom + " " + str.tostring(tpLiq, format.mintick))))
 
 
     // el plan está prendido y aun así no salió nada: en vez de dejar
