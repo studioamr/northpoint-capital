@@ -11574,7 +11574,30 @@ function batSetupBind(scope, yo, alCerrar){
     batGuarda();
   };
 }
+/* KURO NUNCA SE QUEDA EN BLANCO (André, 30-ago-2026): si algo revienta a
+   medio dibujar, la pantalla quedaba vacía y sin salida — no había ni cómo
+   volver al lobby, y desde fuera era imposible saber qué falló. Ahora el
+   render va envuelto: si truena, se ve el error (para poder mandarlo) y un
+   botón que limpia el duelo y devuelve el lobby. */
 function renderBatalla(){
+  try{ renderBatallaInterno(); }
+  catch(e){
+    const root = $('#batRoot'); if(!root) return;
+    const donde = ((e && e.stack || '').split('\n')[1] || '').trim();
+    root.innerHTML = `
+      <div class="bat-hero"><div class="bat-vs-ico">⚠</div>
+        <h2>${bi('Kuro tropezó','Kuro tripped')}</h2>
+        <p>${bi('Algo se rompió al dibujar la pantalla. Tu cuenta y tu historial están a salvo.','Something broke while drawing this screen. Your account and history are safe.')}</p>
+        <p style="font-family:var(--mono);font-size:11px;opacity:.7;word-break:break-word">${esc(String(e && e.message || e))}<br>${esc(donde)}</p></div>
+      <div class="bat-actions">
+        <button type="button" class="btn primary bat-crear" id="batSOS">${bi('Reiniciar Kuro','Reset Kuro')}</button>
+      </div>`;
+    const b = $('#batSOS');
+    if(b) b.onclick = ()=>{ S.challenge = null; batPantalla = 'home'; batMin = false; save(); renderBatalla(); };
+    try{ console.error('[Kuro] render falló:', e); }catch(_){}
+  }
+}
+function renderBatallaInterno(){
   const root = $('#batRoot'); if(!root) return;
   const yo = batYo();
   const c = S.challenge;
