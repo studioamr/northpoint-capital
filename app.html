@@ -1779,30 +1779,21 @@ button.st-chip:hover{border-color:rgba(255,255,255,.45)}
 /* la puerta de Kuro ocupa la pantalla: sin lobby debajo, el contenedor medía
    cero y el overlay absoluto no se veía */
 #batRoot.puerta{min-height:calc(100vh - 150px)}
-/* ── EL ALTA ── la feria, la espada de madera y el objetivo, en tres tiempos */
-.alta-ov{position:fixed;inset:0;z-index:220;background:#04060b;overflow-y:auto;
-  display:flex;align-items:center;justify-content:center;padding:clamp(20px,5vh,60px) 20px}
-.alta-hoja{width:100%;max-width:560px;text-align:center}
-.alta-paso{opacity:0;animation:altaSube .8s cubic-bezier(.2,.7,.3,1) both}
-.alta-paso.p1{animation-delay:.15s}
-.alta-paso.p2{animation-delay:1.9s;margin-top:clamp(22px,4vh,44px);
-  padding-top:clamp(20px,3.6vh,38px);border-top:1px solid rgba(255,255,255,.08)}
-.alta-paso.p3{animation-delay:3.5s;margin-top:clamp(22px,4vh,44px);
-  padding-top:clamp(20px,3.6vh,38px);border-top:1px solid rgba(255,255,255,.08)}
-@keyframes altaSube{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+/* ── EL ALTA ── la pared, la feria, el bokken y la salida al jardín */
+.alta-ov{position:fixed;inset:0;z-index:220;background:#04060b;overflow:hidden;
+  display:flex;flex-direction:column;align-items:center;justify-content:center}
+.alta-cuadro{width:100%;display:flex;justify-content:center}
+.alta-cuadro canvas{display:block;width:100%;height:auto;aspect-ratio:16/9;
+  max-width:min(100%, calc(62vh * 16 / 9));margin:0 auto}
+.alta-pie{width:100%;max-width:640px;margin:0 auto;padding:clamp(16px,3vh,30px) 26px 0;
+  text-align:center;opacity:1;transition:opacity .45s ease}
 .alta-k{display:block;font-family:var(--mono);font-size:9px;letter-spacing:.32em;
-  color:rgba(255,255,255,.38);margin-bottom:12px}
-.alta-cifra{display:block;font-size:clamp(38px,7vw,66px);font-weight:800;letter-spacing:-.02em;
-  color:#fff;line-height:1;font-variant-numeric:tabular-nums}
-.alta-arma{display:block;width:100%;max-width:340px;height:clamp(46px,8vh,74px);margin:6px auto 0}
-.alta-arma.negra{max-width:260px;height:clamp(34px,6vh,54px);opacity:.9}
-.alta-nom{display:block;margin-top:8px;font-family:var(--mono);font-size:11px;letter-spacing:.16em;
-  color:#c49a63}
-.alta-kuro{display:block;font-size:clamp(34px,6.4vw,58px);font-weight:800;letter-spacing:.02em;
-  color:#fff;line-height:1}
-.alta-paso p{margin:12px auto 0;max-width:46ch;font-size:clamp(12.5px,1.2vw,14.5px);
-  line-height:1.65;color:rgba(255,255,255,.66)}
-.alta-ir{margin-top:clamp(18px,3vh,30px);min-width:190px}
+  color:rgba(255,255,255,.4);margin-bottom:9px}
+.alta-t{display:block;font-size:clamp(20px,3vw,32px);font-weight:800;letter-spacing:-.01em;
+  color:#fff;line-height:1.1}
+.alta-p{margin:10px auto 0;max-width:52ch;font-size:clamp(12.5px,1.2vw,14.5px);
+  line-height:1.65;color:rgba(255,255,255,.7)}
+.alta-ir{margin-top:clamp(14px,2.4vh,24px);min-width:200px}
 /* ── LOS NUEVE ── pantalla negra, KURO arriba, 3×3 de ninjas y 3×3 de espadas.
    Cuelga del body: dentro de la columna de contenido su z-index quedaba
    encerrado y el menú se le montaba encima. */
@@ -13465,7 +13456,7 @@ function batAlta(){
       <span class="alta-k" id="altaK"></span>
       <b class="alta-t" id="altaT"></b>
       <p class="alta-p" id="altaP"></p>
-      <button type="button" class="btn primary alta-ir" id="altaIr" hidden>${bi('Entrar al bosque','Enter the forest')} →</button>
+      <button type="button" class="btn primary alta-ir" id="altaIr" hidden>${bi('Entrar al jardín','Enter the garden')} →</button>
     </div>
     <button type="button" class="peli-saltar" id="altaX">${bi('saltar','skip')} ›</button>
   </div>`;
@@ -13490,9 +13481,9 @@ function batAlta(){
     { d:5.0, k:['TU ESPADA','YOUR SWORD'], t:['Bokken · de madera','Bokken · wooden'],
       p:['Es la única que se regala. Las nueve de acero se ganan, una por una.',
          'It is the only one given. The nine steel ones are earned, one by one.'] },
-    { d:6.5, k:['EL PRIMER MUNDO','THE FIRST WORLD'], t:['El bosque','The forest'],
-      p:['Sales de la casa con la espada de madera en la mano. Aquí empieza. Las nieves vienen después, cuando le ganes a Shiro — y al final, Kuro.',
-         'You leave the house with the wooden sword in hand. It starts here. The snows come later, when you beat Shiro — and at the end, Kuro.'] },
+    { d:6.5, k:['EL PRIMER MUNDO','THE FIRST WORLD'], t:['El jardín','The garden'],
+      p:['Sales de la casa con la espada de madera en la mano. Aquí empieza. Las nieves de Shiro vienen después, cuando le ganes — y al final, Kuro.',
+         'You leave the house with the wooden sword in hand. It starts here. Shiro’s snows come later, when you beat him — and at the end, Kuro.'] },
   ];
   const TOTAL = BEATS.reduce((a,b)=>a+b.d,0);
   const t0 = performance.now();
@@ -13503,7 +13494,7 @@ function batAlta(){
     removeEventListener('resize', alRedim);
     window._batAlta = false;
     const h2 = document.getElementById('peliHost'); if(h2) h2.remove();
-    toast(bi('Bienvenido al bosque, ','Welcome to the forest, ') + batNom(yo) + '.');
+    toast(bi('Bienvenido al jardín, ','Welcome to the garden, ') + batNom(yo) + '.');
     renderBatalla();
   };
   const alRedim = () => { M = medir(); };
@@ -13539,11 +13530,11 @@ function batAlta(){
     const ab = eio(Math.max(0, Math.min(1, abre)));
     if(ab > 0){
       const luz = g.createLinearGradient(px2, 0, px2 + pw*ab, 0);
-      luz.addColorStop(0,'rgba(214,236,190,'+(0.85*ab).toFixed(3)+')');
-      luz.addColorStop(1,'rgba(150,200,140,'+(0.15*ab).toFixed(3)+')');
+      luz.addColorStop(0,'rgba(226,242,255,'+(0.88*ab).toFixed(3)+')');
+      luz.addColorStop(1,'rgba(170,210,240,'+(0.15*ab).toFixed(3)+')');
       g.fillStyle = luz; g.fillRect(px2, py2, pw*ab, ph);
       const der = g.createRadialGradient(px2, h*0.55, 4, px2, h*0.55, w*0.5);
-      der.addColorStop(0,'rgba(190,225,170,'+(0.22*ab).toFixed(3)+')');
+      der.addColorStop(0,'rgba(200,230,255,'+(0.22*ab).toFixed(3)+')');
       der.addColorStop(1,'rgba(190,225,170,0)');
       g.fillStyle = der; g.fillRect(0,0,w,h);
     }
@@ -13606,8 +13597,11 @@ function batAlta(){
       const nx = w*(0.14 + Math.min(1, u*1.25)*0.40);
       try{ zenNinja(g, nx, h*0.72, esc2, now, 0, '#b98d55', nj, false,
                     u < 0.8 ? 'corriendo' : 'guardia'); }catch(e){}
-      /* el fundido desde la puerta: entra el bosque */
-      if(u < 0.22){ g.fillStyle='rgba(214,236,190,'+(1-u/0.22).toFixed(3)+')'; g.fillRect(0,0,w,h); }
+      /* el nombre de la etapa, escrito en el cielo */
+      zenRotuloCielo(g, w, h, loc(ZEN_JARDIN.etapa), loc(ZEN_JARDIN.bioma).toUpperCase(),
+                     Math.max(0, Math.min(1, (u-0.22)/0.3)));
+      /* el fundido desde la puerta: entra el jardín */
+      if(u < 0.22){ g.fillStyle='rgba(226,242,255,'+(1-u/0.22).toFixed(3)+')'; g.fillRect(0,0,w,h); }
     }
     if(seg < 0.8){ g.fillStyle='rgba(4,6,11,'+(1-seg/0.8).toFixed(3)+')'; g.fillRect(0,0,w,h); }
     if(seg >= TOTAL){ $('#altaIr').hidden = false; }
@@ -13645,7 +13639,7 @@ function batPresentacion(){
      Y dice la misma regla del sistema, sin decirla: la cuenta no se pierde por
      un mal trade, se pierde por romperse. */
   const LEYENDA = [
-    [ 'Kuro subió este camino antes que tú.',
+    [ 'Kuro escogió este camino.',
       'Peleó con los ocho maestros y les ganó a los ocho.' ],
     [ 'No se quedó con sus espadas.',
       'Se las devolvió, para que hubiera con quién medirse.' ],
@@ -13655,7 +13649,7 @@ function batPresentacion(){
       'Hoy le tocas tú.' ],
   ];
   const LEYENDA_EN = [
-    [ 'Kuro walked this road before you.',
+    [ 'Kuro chose this road.',
       'He fought the eight masters and beat all eight.' ],
     [ 'He did not keep their swords.',
       'He gave them back, so there would be someone to measure against.' ],
@@ -23304,7 +23298,7 @@ if verPanel and barstate.islast
         // es el número de trades que de verdad hay que aguantar; si salen
         // 1:2 llegas antes, y eso nunca decepciona
         int totalTr = int(math.ceil((metaC - 50000) / float(riesgoDia)))
-        camino := str.tostring(math.min(dC, totalTr)) + "/" + str.tostring(totalTr) + " trades · " + (esEval ? "EVAL" : "BUFFER")
+        camino := (esEval ? "EVAL" : "BUFFER") + " · " + str.tostring(math.min(dC, totalTr)) + "/" + str.tostring(totalTr) + " trades"
     else if timenow >= payIni and timenow < payFin
         camino := "cobro diario"
     else
