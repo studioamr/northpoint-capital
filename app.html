@@ -21851,10 +21851,6 @@ kzNegrita = input.bool(true, "Nombres en negritas", group = g1, tooltip = "ASIA,
 alertar  = input.bool(false, "Alertar cuando tomen un H/L", group = g1, tooltip = "Avisa cuando el precio toma el alto o el bajo de una sesión ya cerrada.")
 grosor   = input.int(1, "Grosor de líneas", minval = 1, maxval = 5, group = g1)
 verIni   = input.bool(true, "Bolita al abrir cada sesión", group = g1, tooltip = "Un punto del tamaño de un tick en la vela donde arranca cada killzone, en el color de su sesión. Sale aunque las cajas y las líneas estén apagadas. Si traes los dos scripts en el mismo chart, apágalo en uno para no verlas dobles.")
-verCien  = input.bool(true, "Estrella en los precios redondos", group = g1, tooltip = "Los números cerrados son imán: el precio los busca y ahí se frena. Se marca cada uno con una estrellita chiquita en el margen derecho, sin líneas que ensucien el chart. Si traes los dos scripts en el mismo gráfico, apágalo en uno para no verlas dobles.")
-pasoCien = input.float(100, "Cada cuántos puntos", minval = 5, step = 5, group = g1, tooltip = "100 marca 29,400 · 29,500 · 29,600… Ponlo en 50 o en 25 si quieres la cuadrícula más fina, o en 250 para ver solo los grandes.")
-nCien    = input.int(6, "Cuántas arriba y abajo", minval = 1, maxval = 30, group = g1, tooltip = "Cuántos niveles se pintan a cada lado del precio de ahora. Con 6 y paso de 100 cubres 600 puntos arriba y 600 abajo.")
-sepCien  = input.int(0, "Separarlas del borde (velas)", minval = 0, maxval = 50, group = g1, tooltip = "Las estrellas se pegan al filo derecho de lo que estás viendo, junto a la barra de precios. Súbelo si prefieres meterlas un poco hacia adentro del gráfico.")
 
 // cada fila: prendido · color · nombre · horario · caja
 inUseA  = input.bool(true, "", inline = "A", group = g1)
@@ -22239,30 +22235,6 @@ plotshape(verIni and dibujable and useL and tL and not tL[1], "Abre LONDRES", sh
 plotshape(verIni and dibujable and useO and tO and not tO[1], "Abre ORB", shape.circle, location.belowbar, colIniO, size = size.tiny, editable = false, display = display.pane)
 plotshape(verIni and dibujable and useN and tN and not tN[1], "Abre NY", shape.circle, location.belowbar, colIniN, size = size.tiny, editable = false, display = display.pane)
 
-// ── ESTRELLA EN CADA PRECIO REDONDO ────────────────────────────
-// Los números cerrados son imán: el precio los busca, los usa de
-// freno y de trampolín. Se marcan con una estrellita —nada de líneas
-// de lado a lado— y se recalculan alrededor del precio de ahora.
-// PEGADAS A LA ESCALA (André, 31-ago-2026): antes se ponían a dos
-// velas de la última y quedaban encima del gráfico. Pine no puede
-// escribir dentro de la barra de precios, pero sí anclarlas al borde
-// derecho VISIBLE (chart.right_visible_bar_time), que se mueve
-// contigo: hagas zoom o scroll, siempre quedan al filo de la escala.
-var array<label> cienLb = array.new<label>()
-if barstate.islast
-    for lb in cienLb
-        label.delete(lb)
-    array.clear(cienLb)
-    if verCien and dibujable
-        color colCien = palPers ? inColO : pNeutro
-        // el filo derecho de lo que estás viendo; si el chart no lo
-        // reporta todavía, se cae a un par de velas después de la última
-        int xCien = na(chart.right_visible_bar_time) ? time + pasoBar * 2 : chart.right_visible_bar_time - pasoBar * sepCien
-        float baseCien = math.floor(close / pasoCien) * pasoCien
-        for i = -nCien to nCien
-            float yCien = baseCien + i * pasoCien
-            if yCien > 0
-                array.push(cienLb, label.new(xCien, yCien, "★", xloc = xloc.bar_time, style = label.style_label_right, color = #ffffff00, textcolor = color.new(colCien, 20), size = size.tiny, tooltip = "Número redondo · " + str.tostring(yCien, format.mintick)))
 
 // ── fin del día: al cerrar NY, la liquidez que no se tomó EXPIRA
 // (las líneas se congelan) y el conteo se limpia; se re-arma solo
@@ -23377,10 +23349,6 @@ kzNegrita = input.bool(true, "Nombres en negritas", group = g1, tooltip = "ASIA,
 alertar  = input.bool(false, "Alertar cuando tomen un H/L", group = g1, tooltip = "Avisa cuando el precio toma el alto o el bajo de una sesión ya cerrada.")
 grosor   = input.int(1, "Grosor de líneas", minval = 1, maxval = 5, group = g1)
 verIni   = input.bool(true, "Bolita al abrir cada sesión", group = g1, tooltip = "Un punto del tamaño de un tick en la vela donde arranca cada killzone, en el color de su sesión. Sale aunque las cajas y las líneas estén apagadas. Si traes los dos scripts en el mismo chart, apágalo en uno para no verlas dobles.")
-verCien  = input.bool(true, "Estrella en los precios redondos", group = g1, tooltip = "Los números cerrados son imán: el precio los busca y ahí se frena. Se marca cada uno con una estrellita chiquita en el margen derecho, sin líneas que ensucien el chart. Si traes los dos scripts en el mismo gráfico, apágalo en uno para no verlas dobles.")
-pasoCien = input.float(100, "Cada cuántos puntos", minval = 5, step = 5, group = g1, tooltip = "100 marca 29,400 · 29,500 · 29,600… Ponlo en 50 o en 25 si quieres la cuadrícula más fina, o en 250 para ver solo los grandes.")
-nCien    = input.int(6, "Cuántas arriba y abajo", minval = 1, maxval = 30, group = g1, tooltip = "Cuántos niveles se pintan a cada lado del precio de ahora. Con 6 y paso de 100 cubres 600 puntos arriba y 600 abajo.")
-sepCien  = input.int(0, "Separarlas del borde (velas)", minval = 0, maxval = 50, group = g1, tooltip = "Las estrellas se pegan al filo derecho de lo que estás viendo, junto a la barra de precios. Súbelo si prefieres meterlas un poco hacia adentro del gráfico.")
 
 // cada fila: prendido · color · nombre · horario · caja
 inUseA  = input.bool(true, "", inline = "A", group = g1)
@@ -23750,30 +23718,6 @@ plotshape(verIni and dibujable and useL and tL and not tL[1], "Abre LONDRES", sh
 plotshape(verIni and dibujable and useO and tO and not tO[1], "Abre ORB", shape.circle, location.belowbar, colIniO, size = size.tiny, editable = false, display = display.pane)
 plotshape(verIni and dibujable and useN and tN and not tN[1], "Abre NY", shape.circle, location.belowbar, colIniN, size = size.tiny, editable = false, display = display.pane)
 
-// ── ESTRELLA EN CADA PRECIO REDONDO ────────────────────────────
-// Los números cerrados son imán: el precio los busca, los usa de
-// freno y de trampolín. Se marcan con una estrellita —nada de líneas
-// de lado a lado— y se recalculan alrededor del precio de ahora.
-// PEGADAS A LA ESCALA (André, 31-ago-2026): antes se ponían a dos
-// velas de la última y quedaban encima del gráfico. Pine no puede
-// escribir dentro de la barra de precios, pero sí anclarlas al borde
-// derecho VISIBLE (chart.right_visible_bar_time), que se mueve
-// contigo: hagas zoom o scroll, siempre quedan al filo de la escala.
-var array<label> cienLb = array.new<label>()
-if barstate.islast
-    for lb in cienLb
-        label.delete(lb)
-    array.clear(cienLb)
-    if verCien and dibujable
-        color colCien = palPers ? inColO : pNeutro
-        // el filo derecho de lo que estás viendo; si el chart no lo
-        // reporta todavía, se cae a un par de velas después de la última
-        int xCien = na(chart.right_visible_bar_time) ? time + pasoBar * 2 : chart.right_visible_bar_time - pasoBar * sepCien
-        float baseCien = math.floor(close / pasoCien) * pasoCien
-        for i = -nCien to nCien
-            float yCien = baseCien + i * pasoCien
-            if yCien > 0
-                array.push(cienLb, label.new(xCien, yCien, "★", xloc = xloc.bar_time, style = label.style_label_right, color = #ffffff00, textcolor = color.new(colCien, 20), size = size.tiny, tooltip = "Número redondo · " + str.tostring(yCien, format.mintick)))
 
 // ── fin del día: al cerrar NY, la liquidez que no se tomó EXPIRA
 // (las líneas se congelan) y el conteo se limpia; se re-arma solo
