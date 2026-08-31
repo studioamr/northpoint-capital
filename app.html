@@ -21815,8 +21815,9 @@ buffIni = input.time(timestamp("7 Sep 2026 00:00:00 GMT-4"), "BUFFER empieza", g
 buffFin = input.time(timestamp("19 Sep 2026 00:00:00 GMT-4"), "BUFFER termina", group = g4)
 payIni  = input.time(timestamp("21 Sep 2026 00:00:00 GMT-4"), "PAYOUTS empieza", group = g4)
 payFin  = input.time(timestamp("1 Oct 2026 00:00:00 GMT-4"), "PAYOUTS termina", group = g4)
-reglaEval = input.string("4 minis · 1 trade · 1:2 · riesgo $500 → +$1,000", "Regla EVAL", group = g4)
-reglaBuff = input.string("2 minis · 1 trade · 1:1 · riesgo $500 → +$500", "Regla BUFFER", group = g4)
+riesgoDia = input.int(500, "Riesgo por trade ($)", minval = 50, step = 50, group = g4, tooltip = "De aquí sale la meta del día, y sale como RANGO en vez de un número seco: un día a 1:1 ya es un día bueno (+$500 con riesgo de $500) y un 1:2 es el día redondo (+$1,000). El panel te dice entre cuánto y cuánto deberías cerrar hoy.")
+reglaEval = input.string("4 minis · 1 trade · riesgo $500 → +$500 en 1:1 · +$1,000 en 1:2", "Regla EVAL", group = g4)
+reglaBuff = input.string("2 minis · 1 trade · riesgo $500 → +$500 en 1:1 · +$1,000 en 1:2", "Regla BUFFER", group = g4)
 reglaPay  = input.string("1 mini · 1 trade · riesgo $250 → +$250 a +$1,000", "Regla PAYOUTS", group = g4)
 
 // ── 5 · ORB · SMC ──────────────────────────────────────────────
@@ -22822,14 +22823,18 @@ if verPanel and barstate.islast
     if timenow >= evalIni and timenow < evalFin
         int dF = math.max(1, f_diasHabiles(evalIni, timenow))
         int tF = f_diasHabiles(evalIni, evalFin - 1)
-        int meta = math.min(50000 + dF * 1000, 53000)
-        fase := "FASE 1 · EVAL · día " + str.tostring(dF) + "/" + str.tostring(tF) + (dF <= 3 ? " · hoy cierras en " + f_fmtK(meta) : " · colchón · target " + f_fmtK(53000))
+        // el día bueno no es un número seco: va de 1:1 (lo mínimo que
+        // cuenta como día ganado) a 1:2 (el día redondo)
+        int metaMin = math.min(50000 + dF * riesgoDia, 53000)
+        int metaMax = math.min(50000 + dF * riesgoDia * 2, 53000)
+        fase := "FASE 1 · EVAL · día " + str.tostring(dF) + "/" + str.tostring(tF) + (dF <= 3 ? " · hoy cierras entre " + f_fmtK(metaMin) + " y " + f_fmtK(metaMax) : " · colchón · target " + f_fmtK(53000))
         cFase := pAcento
     else if timenow >= buffIni and timenow < buffFin
         int dF = math.max(1, f_diasHabiles(buffIni, timenow))
         int tF = f_diasHabiles(buffIni, buffFin - 1)
-        int meta = math.min(50000 + dF * 500, 52500)
-        fase := "FASE 2 · BUFFER · día " + str.tostring(dF) + "/" + str.tostring(tF) + (dF <= 5 ? " · hoy cierras en " + f_fmtK(meta) : " · mantén " + f_fmtK(52500))
+        int metaMin = math.min(50000 + dF * riesgoDia, 52500)
+        int metaMax = math.min(50000 + dF * riesgoDia * 2, 52500)
+        fase := "FASE 2 · BUFFER · día " + str.tostring(dF) + "/" + str.tostring(tF) + (dF <= 5 ? " · hoy cierras entre " + f_fmtK(metaMin) + " y " + f_fmtK(metaMax) : " · mantén " + f_fmtK(52500))
         cFase := pBaja
     else if timenow >= payIni and timenow < payFin
         int dF = math.max(1, f_diasHabiles(payIni, timenow))
@@ -22856,8 +22861,10 @@ if verPanel and barstate.islast
     string preEval = enEval ? "▶ " : timenow >= evalFin ? "✓ " : ""
     string preBuff = enBuff ? "▶ " : timenow >= buffFin ? "✓ " : ""
     string prePay  = enPay ? "▶ " : timenow >= payFin ? "✓ " : ""
-    string txtEval = preEval + f_rangoF(evalIni, evalFin) + " · +$1K/día → " + f_fmtK(53000) + "\\n" + reglaEval
-    string txtBuff = preBuff + f_rangoF(buffIni, buffFin) + " · +$500/día → " + f_fmtK(52500) + "\\n" + reglaBuff
+    string paso11 = "+$" + str.tostring(riesgoDia) + " (1:1)"
+    string paso12 = "+$" + str.tostring(riesgoDia * 2) + " (1:2)"
+    string txtEval = preEval + f_rangoF(evalIni, evalFin) + " · " + paso11 + " a " + paso12 + " al día → " + f_fmtK(53000) + "\\n" + reglaEval
+    string txtBuff = preBuff + f_rangoF(buffIni, buffFin) + " · " + paso11 + " a " + paso12 + " al día → " + f_fmtK(52500) + "\\n" + reglaBuff
     string txtPay  = prePay + f_rangoF(payIni, payFin) + " · cobro diario\\n" + reglaPay
     // la fase en curso va en su color y resaltada; la que ya pasó, gris
     color cE = enEval ? pAcento : timenow >= evalFin ? color.gray : chart.fg_color
@@ -23015,7 +23022,7 @@ if verPanel and barstate.islast
     table.cell(panel, 0, 2, "Rutina", text_color = color.gray, text_size = tamTxt)
     table.cell(panel, 1, 2, etapa + "\\n" + consejo, text_color = cEtapa == color.gray ? chart.fg_color : cEtapa, bgcolor = color.new(cEtapa, 88), text_size = tamTxt, tooltip = "Itinerario (" + tzPlan + "): " + h1 + " premarket · " + h2 + " opening NY · " + h3 + " ORB + entry · " + h4 + " cierre · " + h5 + " fin del día. Horas y textos editables en config (grupo 3).")
     if verContrato
-        string tipFase = "Lock in 30 días. Abajo van las 3 fases con sus fechas, su escalera y su regla de tamaño (▶ = en la que vas · ✓ = ya pasó). Si pasas la eval antes, adelanta BUFFER empieza en config. Fechas y reglas editables (grupo 4)."
+        string tipFase = "Lock in 30 días. La meta del día viene en RANGO: el primer número es cerrar con un 1:1 —que ya es día ganado— y el segundo con un 1:2, el día redondo. Los dos salen del riesgo por trade del grupo 4. Abajo van las 3 fases con sus fechas, su escalera y su regla de tamaño (▶ = en la que vas · ✓ = ya pasó). Si pasas la eval antes, adelanta BUFFER empieza en config. Fechas y reglas editables (grupo 4)."
         table.cell(panel, 0, 3, "Fase", text_color = color.gray, text_size = tamTxt)
         table.cell(panel, 1, 3, fase, text_color = cFase == color.gray ? chart.fg_color : cFase, text_size = tamTxt, tooltip = tipFase)
         table.cell(panel, 0, 4, "F1 EVAL", text_color = pAcento, text_size = tamTxt)
