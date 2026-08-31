@@ -809,41 +809,70 @@ function katana(c, W, H, col){
     br.addColorStop(0,'rgba(120,152,206,.30)'); br.addColorStop(1,'rgba(12,22,42,0)');
     c.fillStyle = br; c.fillRect(0, mar + H*0.02, W, fy - mar);
 
-    /* ── LA CUMBRE: el aura y él ── */
+    /* ══ LA CUMBRE: KURO Y SU AURA NEGRA ══
+       El aura de Kuro no ilumina: APAGA. Sobre el campo de nieve blanco, un
+       halo de tinta se lee más fuerte que cualquier resplandor —es el único
+       lugar de la escena donde el negro tiene contraste—. Lleva su filo de luz
+       fría por fuera para que la mancha tenga forma y no parezca un borrón, y
+       las brasas suben oscuras, no encendidas.
+       Él va de negro, con la katana envainada a la espalda y el mango negro. */
     var esc = Math.min(W,H)/300 * (1 + p*0.55);
-    var ay = sy - 13*esc;
-    var lejos = c.createRadialGradient(cx, ay, 4*esc, cx, ay, 128*esc);
-    lejos.addColorStop(0,'rgba(160,240,204,'+(0.17+p*0.10)+')');
-    lejos.addColorStop(.45,'rgba(125,205,180,.06)');
-    lejos.addColorStop(1,'rgba(95,175,155,0)');
-    c.fillStyle = lejos; c.beginPath(); c.arc(cx, ay, 150*esc, 0, 7); c.fill();
-    var cerca = c.createRadialGradient(cx, ay, 1, cx, ay, 40*esc);
-    cerca.addColorStop(0,'rgba(232,255,245,'+(0.36+p*0.16)+')');
-    cerca.addColorStop(.4,'rgba(175,240,212,'+(0.16+p*0.08)+')');
-    cerca.addColorStop(1,'rgba(145,222,192,0)');
-    c.fillStyle = cerca; c.beginPath(); c.arc(cx, ay, 40*esc, 0, 7); c.fill();
-    c.save(); c.translate(cx, ay); c.rotate(REDUCE?0:now/16000);
-    for(var r=0;r<20;r++){
-      c.rotate(Math.PI*2/20);
-      var largo = (54 + rnd(r*9.1)*70) * esc * (1 + p*0.5);
+    var ay = sy - 11*esc;
+    /* el halo no puede salirse por arriba: en pantallas bajas el aro quedaba
+       cortado contra el borde y se leía como un error, no como un eclipse */
+    var R  = Math.min(52*esc, ay*0.94);
+    var tinta = c.createRadialGradient(cx, ay, 2, cx, ay, R);
+    tinta.addColorStop(0,   'rgba(2,3,7,'+(0.94)+')');
+    tinta.addColorStop(.34, 'rgba(3,5,11,'+(0.80 + p*0.10)+')');
+    tinta.addColorStop(.68, 'rgba(6,10,20,'+(0.34 + p*0.10)+')');
+    tinta.addColorStop(1,   'rgba(8,14,28,0)');
+    c.fillStyle = tinta; c.beginPath(); c.arc(cx, ay, R, 0, 7); c.fill();
+    /* el filo frío del halo: sin él la tinta es un borrón sin forma */
+    c.save(); c.globalCompositeOperation = 'lighter';
+    var filo = c.createRadialGradient(cx, ay, R*0.60, cx, ay, R*1.02);
+    filo.addColorStop(0,  'rgba(120,150,205,0)');
+    filo.addColorStop(.50,'rgba(158,188,238,'+(0.20+p*0.08)+')');
+    filo.addColorStop(1,  'rgba(120,150,205,0)');
+    c.fillStyle = filo; c.beginPath(); c.arc(cx, ay, R*1.02, 0, 7); c.fill();
+    c.restore();
+    /* la columna de sombra que baja del cielo */
+    var col2 = c.createLinearGradient(0, 0, 0, sy);
+    col2.addColorStop(0,'rgba(3,5,12,0)');
+    col2.addColorStop(1,'rgba(3,5,12,'+(0.42+p*0.16)+')');
+    c.fillStyle = col2; c.beginPath();
+    c.moveTo(cx - 5*esc, 0); c.lineTo(cx + 5*esc, 0);
+    c.lineTo(cx + 17*esc, sy + 2*esc); c.lineTo(cx - 17*esc, sy + 2*esc);
+    c.closePath(); c.fill();
+    /* rayos de tinta girando despacio */
+    c.save(); c.translate(cx, ay); c.rotate(REDUCE?0:now/17000);
+    for(var r=0;r<22;r++){
+      c.rotate(Math.PI*2/22);
+      var largo = (26 + rnd(r*9.1)*40) * esc * (1 + p*0.5);
       var gg = c.createLinearGradient(0,0,0,-largo);
-      gg.addColorStop(0,'rgba(186,250,220,'+(0.11+p*0.05)+')');
-      gg.addColorStop(.4,'rgba(186,250,220,.03)');
-      gg.addColorStop(1,'rgba(186,250,220,0)');
+      gg.addColorStop(0,'rgba(3,5,11,'+(0.55+p*0.12)+')');
+      gg.addColorStop(.45,'rgba(4,7,15,.20)');
+      gg.addColorStop(1,'rgba(6,10,20,0)');
       c.fillStyle = gg; c.beginPath();
-      c.moveTo(-1.2*esc,0); c.lineTo(1.2*esc,0); c.lineTo(0,-largo); c.closePath(); c.fill();
+      c.moveTo(-1.6*esc,0); c.lineTo(1.6*esc,0); c.lineTo(0,-largo); c.closePath(); c.fill();
     }
     c.restore();
-    for(var e=0;e<36;e++){
+    /* brasas oscuras subiendo: se ven porque la nieve es blanca */
+    for(var e=0;e<40;e++){
       var ph = rnd(e*3.7), sp = 6200 + rnd(e*8.2)*7000;
       var u = ((now/sp) + ph) % 1;
-      c.fillStyle = 'rgba(210,255,236,'+(0.5*(1-u)*(1-u))+')';
+      c.fillStyle = 'rgba(3,5,12,'+(0.62*(1-u)*(1-u))+')';
       c.beginPath();
-      c.arc(cx + (rnd(e*1.9)-0.5)*70*esc*(0.4+u), sy + 4*esc - u*126*esc,
+      c.arc(cx + (rnd(e*1.9)-0.5)*46*esc*(0.4+u), sy + 3*esc - u*82*esc,
             (0.45+rnd(e*4.4)*0.6)*esc, 0, 7);
       c.fill();
     }
-    ninja(c, cx, sy + 2*esc, esc*0.36, '#EDEFF2', false);
+    /* el filo de luna que le recorta la silueta: sin él, negro sobre negro */
+    var vestido = { espalda:true, cuerpo:'#05070C', casco:'#05070C',
+                    filo:'#2B3444', mango:'#05070C', ojos:'rgba(214,228,255,.92)' };
+    ninja(c, cx + 1.0, sy + 2*esc, esc*0.46, '#54637A',
+          false, { espalda:true, cuerpo:'#54637A', casco:'#54637A',
+                   filo:'#54637A', mango:'#54637A', ojos:'rgba(0,0,0,0)' });
+    ninja(c, cx, sy + 2*esc, esc*0.46, '#0A0D14', false, vestido);
 
     /* viñeta suave: el cielo no se apaga, sólo se recoge en los bordes */
     var vg = c.createRadialGradient(W/2,H*0.46,H*0.34,W/2,H*0.46,H*1.02);
