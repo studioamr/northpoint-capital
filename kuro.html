@@ -555,6 +555,48 @@ function katana(c, W, H, col){
       c.lineTo(x - 2.6*s, base - 20*s); c.closePath(); c.fill();
     }
   }
+  /* UNA CASA: tejado a dos aguas, cuerpo oscuro y su ventana encendida.
+     La ventana es el punto: una lucecita cálida a lo lejos es lo que le pone
+     ESCALA a la montaña — sin ella no sabes si mide cien metros o cuatro mil. */
+  function casa(x, base, s, luz){
+    c.fillStyle = 'rgba(4,8,18,.45)';
+    c.beginPath(); c.ellipse(x, base + 0.8*s, 7*s, 1.6*s, 0, 0, 7); c.fill();
+    c.fillStyle = '#131E31';
+    c.fillRect(x - 4.6*s, base - 6*s, 9.2*s, 6*s);
+    c.fillStyle = '#0B1322';
+    c.beginPath(); c.moveTo(x - 6.4*s, base - 5.6*s); c.lineTo(x, base - 11*s);
+    c.lineTo(x + 6.4*s, base - 5.6*s); c.closePath(); c.fill();
+    if(luz){
+      var h = c.createRadialGradient(x, base - 3.4*s, 0.4*s, x, base - 3.4*s, 9*s);
+      h.addColorStop(0,'rgba(255,196,108,.42)'); h.addColorStop(1,'rgba(255,180,90,0)');
+      c.fillStyle = h; c.beginPath(); c.arc(x, base - 3.4*s, 9*s, 0, 7); c.fill();
+      c.fillStyle = '#FFC46C'; c.fillRect(x - 1.5*s, base - 4.4*s, 3*s, 2.6*s);
+    }
+  }
+  /* UN PUEBLO: unas casas juntas y el resplandor tibio que las delata desde
+     lejos, cuando ya no se distingue una de otra. */
+  function pueblo(x, base, s, n, sem){
+    var g = c.createRadialGradient(x, base - 4*s, 1, x, base - 4*s, 34*s);
+    g.addColorStop(0,'rgba(255,186,104,.20)'); g.addColorStop(1,'rgba(255,170,80,0)');
+    c.fillStyle = g; c.beginPath(); c.arc(x, base - 4*s, 34*s, 0, 7); c.fill();
+    for(var i=0;i<n;i++){
+      var d = (rnd(sem*3.1+i)-0.5)*26*s;
+      casa(x + d, base + (rnd(sem*7.7+i)-0.5)*2.6*s,
+           s*(0.72 + rnd(sem*5.3+i)*0.55), rnd(sem*9.9+i) > 0.22);
+    }
+  }
+  /* un farol de piedra del sendero */
+  function farol(x, base, s){
+    c.fillStyle = '#1A2740';
+    c.fillRect(x - 1*s, base - 7*s, 2*s, 7*s);
+    c.fillRect(x - 3*s, base - 10.5*s, 6*s, 3.4*s);
+    c.beginPath(); c.moveTo(x - 3.8*s, base - 10.5*s); c.lineTo(x, base - 13*s);
+    c.lineTo(x + 3.8*s, base - 10.5*s); c.closePath(); c.fill();
+    var g = c.createRadialGradient(x, base - 8.8*s, 0.3*s, x, base - 8.8*s, 11*s);
+    g.addColorStop(0,'rgba(255,196,108,.36)'); g.addColorStop(1,'rgba(255,180,90,0)');
+    c.fillStyle = g; c.beginPath(); c.arc(x, base - 8.8*s, 11*s, 0, 7); c.fill();
+    c.fillStyle = '#FFCE84'; c.fillRect(x - 1.1*s, base - 9.8*s, 2.2*s, 2.4*s);
+  }
   /* el torii del sendero */
   function torii(x, base, s){
     c.fillStyle = '#8E2E28';
@@ -619,8 +661,15 @@ function katana(c, W, H, col){
     var mar = H*0.575 + p*H*0.10;
 
     /* ── LAS CORDILLERAS DEL FONDO ── se pierden en la bruma ── */
+    sierra(2, mar + H*0.062, H*0.150, W*0.34, 'rgba(92,124,176,.34)', 'rgba(214,230,252,.26)');
     sierra(3, mar + H*0.045, H*0.115, W*0.26, 'rgba(74,106,158,.50)', 'rgba(206,224,250,.34)');
     sierra(7, mar + H*0.030, H*0.085, W*0.18, 'rgba(52,80,128,.72)', 'rgba(196,216,246,.42)');
+    /* LOS PUEBLOS DEL VALLE: apenas unas lucecitas debajo de las nubes.
+       Son lo que te dice cuánto has subido. */
+    var epue = Math.min(W,H)/900;
+    pueblo(W*0.135, mar + H*0.052, epue*1.0, 7, 21);
+    pueblo(W*0.685, mar + H*0.044, epue*0.85, 6, 44);
+    pueblo(W*0.895, mar + H*0.058, epue*1.1, 8, 63);
     var bh = c.createLinearGradient(0, mar - H*0.14, 0, mar + H*0.06);
     bh.addColorStop(0,'rgba(80,116,172,0)'); bh.addColorStop(1,'rgba(80,116,172,.42)');
     c.fillStyle = bh; c.fillRect(0, mar - H*0.14, W, H*0.20);
@@ -723,6 +772,13 @@ function katana(c, W, H, col){
     c.quadraticCurveTo(W*0.27, fy - H*0.035, W*0.31, fy - H*0.055);
     c.stroke();
     torii(W*0.243, fy + H*0.010, Math.min(W,H)/230);
+    /* EL PUEBLO DE LA FALDA: el último antes de que empiece la subida */
+    var ep = Math.min(W,H)/300;
+    pueblo(W*0.155, fy + H*0.052, ep*0.60, 9, 12);
+    pueblo(W*0.735, fy + H*0.070, ep*0.72, 11, 33);
+    pueblo(W*0.885, fy + H*0.040, ep*0.50, 6, 55);
+    farol(W*0.215, fy + H*0.028, ep*0.42);
+    farol(W*0.268, fy + H*0.058, ep*0.42);
     /* los pinos, más chicos y pálidos hacia el fondo */
     for(var t2=0;t2<46;t2++){
       var px = rnd(t2*1.7)*W*1.06 - W*0.03 + mx*10;
