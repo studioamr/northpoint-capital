@@ -10605,19 +10605,17 @@ function bossEco(i){ return BOSS_ECO[Math.max(0,Math.min(BOSS_ECO.length-1,i|0))
    la ciudad negra… Se fueron los picos de triángulos grises que había detrás
    de todo — eran el mismo telón repetido nueve veces y se veían mal.
    `rr` es ruido determinístico: el mismo mapa en todos los equipos. */
-function ecoMonte(c, x, base, w, h, col, nieve){
+/* MONTAÑA EN CENITAL: una masa redondeada con su cara iluminada y su sombra,
+   no un triángulo de perfil. Vista desde arriba, que es como se lee un mapa. */
+function ecoMonte(c, x, y, r, col, nieve){
+  c.fillStyle='rgba(0,0,0,.2)';
+  c.beginPath(); c.ellipse(x+r*0.16, y+r*0.2, r*1.02, r*0.72, 0,0,7); c.fill();
   c.fillStyle = col;
-  c.beginPath(); c.moveTo(x-w/2, base); c.lineTo(x, base-h); c.lineTo(x+w/2, base);
-  c.closePath(); c.fill();
-  if(nieve){ const nh = h*0.34;
-    c.fillStyle = 'rgba(255,255,255,.94)';
-    c.beginPath(); c.moveTo(x, base-h);
-    c.lineTo(x + w*0.5*(nh/h), base-h+nh);
-    c.lineTo(x + w*0.22*(nh/h), base-h+nh*0.74);
-    c.lineTo(x, base-h+nh*1.05);
-    c.lineTo(x - w*0.24*(nh/h), base-h+nh*0.7);
-    c.lineTo(x - w*0.5*(nh/h), base-h+nh);
-    c.closePath(); c.fill(); }
+  c.beginPath(); c.ellipse(x, y, r, r*0.72, 0,0,7); c.fill();
+  c.fillStyle = 'rgba(255,255,255,.14)';
+  c.beginPath(); c.ellipse(x-r*0.2, y-r*0.16, r*0.6, r*0.4, -0.4,0,7); c.fill();
+  if(nieve){ c.fillStyle='rgba(255,255,255,.95)';
+    c.beginPath(); c.ellipse(x-r*0.1, y-r*0.1, r*0.44, r*0.3, -0.3,0,7); c.fill(); }
 }
 function ecoPino(c, x, base, s, col, nieve){
   c.fillStyle='#4a3a2a'; c.fillRect(x-2*s, base-6*s, 4*s, 6*s);
@@ -10677,18 +10675,17 @@ function ecoPinta(c, bioma, W, y0, y1, tinta, t, rr, sem){
   const h = y1 - y0, suelo = y1;
   const R = k => rr(k + sem*57);
   if(bioma === 'nieve'){
-    for(let i=0;i<7;i++){ const x = R(i)*W;
-      ecoMonte(c, x, suelo - R(i+9)*h*0.15, 150+R(i+3)*160, 120+R(i+5)*150, '#7d8fa4', true); }
-    for(let i=0;i<14;i++) ecoPino(c, R(i+30)*W, suelo - R(i+40)*h*0.7, 0.8+R(i+50)*0.5, '#37543f', true);
-    ecoAgua(c, W*0.28, suelo - h*0.18, 200, 52, 'rgba(180,214,232,.75)', t);
+    for(let i=0;i<9;i++) ecoMonte(c, R(i)*W, y0 + R(i+9)*h, 46+R(i+3)*54, '#8496ab', true);
+    for(let i=0;i<20;i++) ecoPino(c, R(i+30)*W, y0 + R(i+40)*h, 0.7+R(i+50)*0.5, '#37543f', true);
+    ecoAgua(c, W*0.26, y0 + h*0.72, 210, 66, 'rgba(180,214,232,.75)', t);
   }
   else if(bioma === 'desierto'){
-    for(let i=0;i<5;i++){ const x=R(i)*W, y=suelo - R(i+7)*h*0.55, w=110+R(i+2)*130;
+    for(let i=0;i<5;i++){ const x=R(i)*W, y=y0 + R(i+7)*h, w=110+R(i+2)*130;
       c.fillStyle = i%2 ? '#b07840' : '#96632f';
       c.fillRect(x-w/2, y-52-R(i+4)*40, w, 52+R(i+4)*40);
       c.fillStyle='rgba(255,220,160,.2)'; c.fillRect(x-w/2, y-52-R(i+4)*40, w, 9); }
-    for(let i=0;i<11;i++) ecoCactus(c, R(i+20)*W, suelo - R(i+31)*h*0.75, 0.8+R(i+41)*0.6);
-    for(let i=0;i<9;i++) ecoRoca(c, R(i+60)*W, suelo - R(i+70)*h*0.8, 12+R(i+80)*16, '#8a5f2e');
+    for(let i=0;i<15;i++) ecoCactus(c, R(i+20)*W, y0 + R(i+31)*h, 0.7+R(i+41)*0.6);
+    for(let i=0;i<12;i++) ecoRoca(c, R(i+60)*W, y0 + R(i+70)*h, 12+R(i+80)*16, '#8a5f2e');
   }
   else if(bioma === 'dunas'){
     for(let i=0;i<6;i++){ const y = suelo - (i/6)*h*0.9;
@@ -10697,20 +10694,21 @@ function ecoPinta(c, bioma, W, y0, y1, tinta, t, rr, sem){
       for(let x=-20;x<=W+20;x+=70) c.quadraticCurveTo(x+35, y-30-R(x+i*13)*40, x+70, y);
       c.lineTo(W+20, y+90); c.closePath(); c.fill(); }
     /* la kasbah: casas de adobe apiladas */
-    for(let i=0;i<5;i++){ const x=W*(0.1+i*0.19), y=suelo - h*(0.3+R(i)*0.35);
+    for(let i=0;i<6;i++){ const x=W*(0.08+i*0.17), y=y0 + h*(0.15+R(i)*0.75);
       c.fillStyle='#c08a52'; c.fillRect(x-22, y-40, 44, 40);
       c.fillStyle='#a86f3c'; c.fillRect(x-26, y-46, 52, 8);
       c.fillStyle='rgba(60,30,10,.6)'; c.fillRect(x-6, y-24, 12, 24); }
-    for(let i=0;i<7;i++) ecoPalma(c, R(i+15)*W, suelo - R(i+25)*h*0.6, 0.9+R(i+35)*0.5);
+    for(let i=0;i<11;i++) ecoPalma(c, R(i+15)*W, y0 + R(i+25)*h, 0.85+R(i+35)*0.5);
   }
   else if(bioma === 'bosque'){
     /* el río que baja por el bosque */
     c.strokeStyle='rgba(120,180,210,.7)'; c.lineWidth=26; c.lineCap='round';
     c.beginPath(); c.moveTo(W*0.12, y0);
     c.quadraticCurveTo(W*0.28, y0+h*0.4, W*0.1, suelo); c.stroke();
-    for(let i=0;i<16;i++) ecoPino(c, R(i)*W, suelo - R(i+9)*h*0.9, 0.9+R(i+18)*0.6, i%3?'#2f5d38':'#3f7a48');
-    ecoCasaJp(c, W*0.76, suelo - h*0.36, 1.1, '#7a3b32');
-    for(let i=0;i<7;i++) ecoRoca(c, R(i+40)*W, suelo - R(i+50)*h*0.8, 10+R(i+60)*14, '#3c4a38');
+    for(let i=0;i<24;i++) ecoPino(c, R(i)*W, y0 + R(i+9)*h, 0.8+R(i+18)*0.6, i%3?'#2f5d38':'#3f7a48');
+    ecoCasaJp(c, W*0.78, y0 + h*0.4, 1.1, '#7a3b32');
+    ecoCasaJp(c, W*0.2,  y0 + h*0.82, 0.85, '#6a4a34');
+    for(let i=0;i<10;i++) ecoRoca(c, R(i+40)*W, y0 + R(i+50)*h, 10+R(i+60)*14, '#3c4a38');
   }
   else if(bioma === 'mar'){
     c.fillStyle='#2f6a86'; c.fillRect(0, y0, W, h);
@@ -10723,46 +10721,63 @@ function ecoPinta(c, bioma, W, y0, y1, tinta, t, rr, sem){
     try{ zenTorii(c, W*0.72, y0 + h*0.62, 0.9); }catch(e){}
   }
   else if(bioma === 'jardin'){
-    for(let i=0;i<16;i++) ecoRosal(c, R(i)*W, suelo - R(i+9)*h*0.9, 0.9+R(i+18)*0.7);
-    ecoAgua(c, W*0.7, suelo - h*0.5, 190, 58, 'rgba(150,110,200,.62)', t);
+    for(let i=0;i<22;i++) ecoRosal(c, R(i)*W, y0 + R(i+9)*h, 0.8+R(i+18)*0.7);
+    ecoAgua(c, W*0.72, y0 + h*0.42, 200, 64, 'rgba(150,110,200,.62)', t);
     for(let i=0;i<8;i++){ /* luciérnagas */
-      const x = R(i+30)*W, y = suelo - R(i+40)*h + Math.sin(t/700+i)*10;
+      const x = R(i+30)*W, y = y0 + R(i+40)*h + Math.sin(t/700+i)*10;
       c.fillStyle=`rgba(240,200,255,${.35+Math.sin(t/420+i)*0.3})`;
       c.beginPath(); c.arc(x, y, 3.4, 0, 7); c.fill(); }
-    for(let i=0;i<4;i++) try{ zenFarol(c, W*(0.14+i*0.24), suelo - h*(0.2+R(i)*0.5), 1.5); }catch(e){}
+    for(let i=0;i<5;i++) try{ zenFarol(c, W*(0.12+i*0.2), y0 + h*(0.15+R(i)*0.75), 1.5); }catch(e){}
   }
   else if(bioma === 'acantilado'){
-    for(let capa=0; capa<5; capa++){ const y = suelo - (capa/5)*h*0.95;
-      c.fillStyle = ['#7a5a38','#6a4c2e','#5a3f26','#4a3520','#3a2818'][capa];
-      c.beginPath(); c.moveTo(-20, y+70);
-      for(let x=-20;x<=W+20;x+=90){ c.lineTo(x+45, y - 20 - R(x+capa*7)*46); c.lineTo(x+90, y); }
-      c.lineTo(W+20, y+70); c.closePath(); c.fill(); }
-    /* la cascada */
-    c.fillStyle='rgba(220,240,250,.72)'; c.fillRect(W*0.66, y0+h*0.2, 22, h*0.55);
-    c.fillStyle='rgba(255,255,255,.5)';
-    c.beginPath(); c.ellipse(W*0.67, y0+h*0.75, 40, 12, 0,0,7); c.fill();
-    for(let i=0;i<8;i++) ecoRoca(c, R(i+20)*W, suelo - R(i+30)*h*0.7, 14+R(i+40)*20, '#4a3520');
+    /* MESETAS vistas desde arriba: manchas de roca encimadas, cada una con
+       su escalón más claro. Antes eran cinco sierras de dientes de sierra y
+       parecían un serrucho, no un acantilado. */
+    for(let i=0;i<11;i++){
+      const x=R(i)*W, y=y0+R(i+7)*h, w=70+R(i+3)*90, hh=(46+R(i+5)*54);
+      c.fillStyle='rgba(0,0,0,.22)';
+      c.beginPath(); c.ellipse(x+8, y+8, w, hh, 0,0,7); c.fill();
+      c.fillStyle=['#7a5a38','#6a4c2e','#5a3f26'][i%3];
+      c.beginPath(); c.ellipse(x, y, w, hh, 0,0,7); c.fill();
+      c.fillStyle='rgba(255,236,200,.16)';
+      c.beginPath(); c.ellipse(x-w*0.18, y-hh*0.2, w*0.6, hh*0.55, 0,0,7); c.fill();
+    }
+    /* el río que corta el cañón, de arriba abajo */
+    c.strokeStyle='rgba(180,220,240,.7)'; c.lineWidth=20; c.lineCap='round';
+    c.beginPath(); c.moveTo(W*0.68, y0);
+    c.quadraticCurveTo(W*0.5, y0+h*0.45, W*0.72, y0+h); c.stroke();
+    c.strokeStyle='rgba(255,255,255,.35)'; c.lineWidth=6; c.stroke();
+    for(let i=0;i<10;i++) ecoRoca(c, R(i+20)*W, y0 + R(i+30)*h, 12+R(i+40)*16, '#463119');
   }
   else if(bioma === 'volcan'){
-    for(let i=0;i<5;i++) ecoMonte(c, R(i)*W, suelo - R(i+7)*h*0.2, 170+R(i+3)*150, 130+R(i+5)*140, '#5e2418', false);
+    for(let i=0;i<7;i++) ecoMonte(c, R(i)*W, y0 + R(i+7)*h, 48+R(i+3)*56, '#6b2a1c', false);
     try{ zenLava(c, W, suelo - h*0.12, t); }catch(e){}
-    for(let i=0;i<10;i++){ const x=R(i+20)*W, y=suelo - R(i+30)*h*0.9;
+    for(let i=0;i<14;i++){ const x=R(i+20)*W, y=y0 + R(i+30)*h;
       c.fillStyle=`rgba(255,${120+R(i)*90|0},60,${.3+R(i+40)*.5})`;
       c.beginPath(); c.arc(x, y + Math.sin(t/500+i)*12, 3+R(i+50)*4, 0, 7); c.fill(); }
-    for(let i=0;i<7;i++) ecoRoca(c, R(i+60)*W, suelo - R(i+70)*h*0.8, 13+R(i+80)*18, '#3d1710');
+    for(let i=0;i<10;i++) ecoRoca(c, R(i+60)*W, y0 + R(i+70)*h, 13+R(i+80)*18, '#3d1710');
   }
   else if(bioma === 'ciudad'){
-    for(let capa=0; capa<3; capa++){
-      const y = suelo - capa*h*0.16;
-      for(let i=0;i<12;i++){ const x = (i/12)*W + R(i+capa*11)*40;
-        const w = 40+R(i+capa*7)*44, hh = 70+R(i+capa*13)*180 + capa*30;
-        c.fillStyle = ['#1c1a2c','#141322','#0b0a14'][capa];
-        c.fillRect(x, y-hh, w, hh);
-        for(let k=0;k<16;k++){ if(R(i*31+k+capa*3) < 0.42) continue;
-          c.fillStyle=`rgba(255,214,140,${.3+R(k+i)*.55})`;
-          c.fillRect(x+6+(k%3)*13, y-hh+10+Math.floor(k/3)*22, 7, 10); } } }
-    for(let i=0;i<40;i++){ c.fillStyle=`rgba(255,255,255,${.2+R(i)*.6})`;
-      c.fillRect(R(i*3)*W, y0 + R(i*5)*h*0.4, 1.8, 1.8); }
+    /* MANZANAS DESDE ARRIBA: azoteas con sus luces y las calles entre
+       ellas. La silueta de rascacielos de perfil no cabe en un mapa cenital. */
+    const paso = W/6;
+    for(let fx=0; fx<6; fx++) for(let fy=0; fy<9; fy++){
+      const x = fx*paso + 10, y = y0 + (fy/9)*h + 8;
+      const w = paso-22, hh = (h/9)-20;
+      if(hh <= 4) continue;
+      c.fillStyle='rgba(0,0,0,.45)';
+      c.fillRect(x+5, y+5, w, hh);
+      c.fillStyle = ['#221f36','#1a1830','#141226'][(fx+fy)%3];
+      c.fillRect(x, y, w, hh);
+      c.fillStyle='rgba(255,255,255,.05)'; c.fillRect(x, y, w, 5);
+      for(let k=0;k<10;k++){ if(R(fx*37+fy*11+k) < 0.5) continue;
+        c.fillStyle=`rgba(255,214,140,${.35+R(k+fx+fy)*.5})`;
+        c.fillRect(x+8+(k%4)*(w/4.6), y+8+Math.floor(k/4)*(hh/3.4), 6, 6); }
+    }
+    /* los faroles de la calle */
+    for(let i=0;i<26;i++){ const x=R(i*3)*W, y=y0+R(i*5)*h;
+      c.fillStyle=`rgba(255,220,160,${.2+R(i)*.35})`;
+      c.beginPath(); c.arc(x, y, 3.2, 0, 7); c.fill(); }
   }
   /* fauna: unas aves cruzando, menos en la ciudad y el volcán */
   if(bioma!=='ciudad' && bioma!=='volcan'){
@@ -10771,21 +10786,6 @@ function ecoPinta(c, bioma, W, y0, y1, tinta, t, rr, sem){
       ecoAve(c, x, y0 + h*(0.18 + i*0.12), 1.1, tinta, t, i*1.7);
     }
   }
-}
-function bossTemplo(c, x, base, s){
-  /* el templo del final: tres cuerpos con aleros, escalinata y farolillos */
-  for(let i=0;i<3;i++){
-    const w = (150 - i*34)*s, h = 34*s, y = base - i*(h+10*s);
-    c.fillStyle = '#6b3a3a';
-    c.beginPath(); c.moveTo(x-w/2-16*s, y); c.lineTo(x+w/2+16*s, y);
-    c.lineTo(x+w/2-6*s, y-13*s); c.lineTo(x-w/2+6*s, y-13*s); c.closePath(); c.fill();
-    c.fillStyle = '#8a5a4a';
-    c.fillRect(x-w/2+10*s, y-h, w-20*s, h-13*s);
-    c.fillStyle = 'rgba(255,214,150,.75)';
-    for(let k=-1;k<=1;k++) c.fillRect(x+k*22*s-5*s, y-h+7*s, 10*s, 13*s);
-  }
-  c.fillStyle='rgba(228,214,196,.85)';
-  for(let e=0;e<6;e++) c.fillRect(x-30*s+e*2*s, base+e*7*s, 60*s-e*4*s, 5*s);
 }
 /* El lienzo toma el tamaño del hueco donde vive, con un mínimo alto para que
    el sendero sea largo. Con medidas fijas quedaba una franja negra debajo del
@@ -10822,70 +10822,56 @@ function bossPintaMapa(){
     if(!cv.isConnected) return;
     if(cv.offsetParent === null){ window._bmRAF = requestAnimationFrame(frame); return; }
 
-    /* ── CADA BIOMA PINTA SU FRANJA ── se llama después del cielo y antes
-       del sendero: montañas nevadas, desierto, dunas, bosque, mar, jardín,
-       acantilados, volcán y la ciudad negra, cada uno en su tramo. */
-    /* ── LOS NUEVE MUNDOS, uno por jefe, FUNDIDOS entre sí ──
-       El degradado va del mundo de arriba (el templo) al de abajo (el bosque
-       de Asia) pasando por todos: cada tramo pone su color de suelo donde
-       está su jefe y su color de cielo un poco antes, así que el terreno se
-       transforma de uno a otro sin líneas duras. */
-    const cielo = c.createLinearGradient(0,0,0,H);
-    for(let i = KURO_BOSSES.length - 1; i >= 0; i--){
+    /* ── EL TERRENO, EN 2D Y SIN COSTURAS ──
+       Antes cada bioma se recortaba con un rect: eso dejaba una LÍNEA RECTA
+       entre uno y otro y el mapa parecía franjas apiladas. Ahora cada mundo
+       se pinta como una MANCHA de borde ondulado que se mete en el de arriba
+       y en el de abajo, y sus bordes se desvanecen con un degradado que
+       termina en transparente. Vecinos que se traslapan y se funden: ni una
+       sola línea horizontal en todo el mapa. */
+    c.fillStyle = bossEco(0).suelo; c.fillRect(0,0,W,H);
+    for(let i = 0; i < KURO_BOSSES.length; i++){
       const E = bossEco(i);
-      const u = 1 - ((i + 1) / (KURO_BOSSES.length));   /* 0 arriba, 1 abajo */
-      cielo.addColorStop(Math.max(0, Math.min(1, u - 0.045)), E.cielo[0]);
-      cielo.addColorStop(Math.max(0, Math.min(1, u + 0.045)), E.cielo[1]);
+      const centro = pos[i].y;
+      const prev = i > 0 ? pos[i-1].y : H + 200;
+      const sig  = i < KURO_BOSSES.length-1 ? pos[i+1].y : -200;
+      /* la mancha se estira MÁS ALLÁ de sus vecinos, para traslaparlos */
+      const yAbajo  = centro + (prev - centro) * 0.78;
+      const yArriba = centro + (sig  - centro) * 0.78;
+      const alto = yAbajo - yArriba;
+      c.save();
+      /* borde ondulado arriba y abajo — nada de rectas */
+      c.beginPath();
+      c.moveTo(-40, yAbajo);
+      for(let x = -40; x <= W+40; x += 46)
+        c.lineTo(x, yArriba + Math.sin(x/150 + i*2.1) * 34 + Math.sin(x/61 + i) * 13);
+      c.lineTo(W+40, yAbajo + 60);
+      for(let x = W+40; x >= -40; x -= 46)
+        c.lineTo(x, yAbajo + Math.sin(x/135 + i*1.7 + 2) * 30 + Math.sin(x/74 + i) * 11);
+      c.closePath(); c.clip();
+      /* el relleno se desvanece en los extremos: ahí es donde se funde con
+         el vecino, y por eso no se ve dónde acaba uno y empieza el otro */
+      const g2 = c.createLinearGradient(0, yArriba, 0, yAbajo);
+      const suelo = E.suelo, cielo = E.cielo[1];
+      g2.addColorStop(0.00, 'rgba(0,0,0,0)');
+      g2.addColorStop(0.16, cielo);
+      g2.addColorStop(0.55, suelo);
+      g2.addColorStop(0.86, suelo);
+      g2.addColorStop(1.00, 'rgba(0,0,0,0)');
+      c.fillStyle = g2; c.fillRect(-40, yArriba - 60, W+80, alto + 160);
+      /* y sus cosas, recortadas a la mancha */
+      try{ ecoPinta(c, E.bioma, W, yArriba, yAbajo, E.tinta, t, rr, i); }catch(e){}
+      c.restore();
     }
-    cielo.addColorStop(1, bossEco(0).suelo);
-    c.fillStyle = cielo; c.fillRect(0,0,W,H);
-    /* luna */
-    c.fillStyle='rgba(255,252,242,.34)'; c.beginPath(); c.arc(W*0.79, H*0.052, 46,0,7); c.fill();
-    c.fillStyle='rgba(255,252,242,.92)'; c.beginPath(); c.arc(W*0.79, H*0.052, 26,0,7); c.fill();
-
-    /* ── SIERRAS LEJANAS, cada capa más pálida y más envuelta en niebla ── */
-    for(let capa=0; capa<5; capa++){
-      const base = H*(0.10 + capa*0.052);
-      c.globalAlpha = 0.30 + capa*0.11;
-      c.fillStyle = ['#8f9aa4','#7d8b93','#6b7d80','#5b7168','#4b6553'][capa];
-      c.beginPath(); c.moveTo(-30, base+220);
-      for(let x=-30; x<=W+30; x+=44){
-        const h = 40 + rr(x*0.7 + capa*31)*120 + capa*10;
-        c.lineTo(x+22, base-h); c.lineTo(x+44, base-h*0.28);
-      }
-      c.lineTo(W+30, base+220); c.closePath(); c.fill();
-      /* la neblina que separa las capas, deslizándose */
-      c.globalAlpha = 0.5;
-      const nx = ((t/110) + capa*230) % (W+520) - 260;
-      c.fillStyle = 'rgba(238,236,232,.5)';
-      c.beginPath(); c.ellipse(nx, base+6, 230, 24, 0,0,7); c.fill();
-      c.beginPath(); c.ellipse(W-nx*0.7, base+22, 190, 18, 0,0,7); c.fill();
-      c.globalAlpha = 1;
+    /* una bruma suave sobre cada unión, para rematar el fundido */
+    for(let i = 1; i < KURO_BOSSES.length; i++){
+      const y = (pos[i].y + pos[i-1].y) / 2;
+      const g3 = c.createLinearGradient(0, y-70, 0, y+70);
+      g3.addColorStop(0,'rgba(255,255,255,0)');
+      g3.addColorStop(.5,'rgba(255,255,255,.10)');
+      g3.addColorStop(1,'rgba(255,255,255,0)');
+      c.fillStyle = g3; c.fillRect(0, y-70, W, 140);
     }
-
-    /* la franja de cada mundo, de abajo (Asia) hacia arriba (la ciudad) */
-    {
-      const S0y = bossSalidaPos(W,H).y;
-      for(let i = 0; i < KURO_BOSSES.length; i++){
-        const E = bossEco(i);
-        const yAbajo = i === 0 ? H : (pos[i].y + pos[i-1].y)/2 + 60;
-        const yArriba = (i === KURO_BOSSES.length-1) ? -20 : (pos[i+1].y + pos[i].y)/2 + 60;
-        c.save(); c.beginPath(); c.rect(0, yArriba, W, yAbajo - yArriba); c.clip();
-        const g2 = c.createLinearGradient(0, yArriba, 0, yAbajo);
-        g2.addColorStop(0, E.cielo[1]); g2.addColorStop(1, E.suelo);
-        c.fillStyle = g2; c.fillRect(0, yArriba, W, yAbajo - yArriba);
-        try{ ecoPinta(c, E.bioma, W, yArriba, yAbajo, E.tinta, t, rr, i); }catch(e){}
-        c.restore();
-      }
-    }
-
-    /* ── EL TEMPLO, coronando el valle, con su dragón enroscado ── */
-    try{ bossTemplo(c, W*0.5, H*0.098, 1.15); }catch(e){}
-    c.save(); c.globalAlpha=.85;
-    try{ zenDragon(c, W*0.5, H*0.088, 1.5, '#5f8f7a', t); }catch(e){}
-    c.restore();
-    /* la pagoda chica de la ladera, como en el valle real */
-    try{ zenPagoda(c, W*0.16, H*0.63, 0.95, '#7a4038'); }catch(e){}
 
     /* ── EL SENDERO: cinta pálida, con borde y su tramo recorrido claro ── */
     /* EL SENDERO NACE EN LA SALIDA y sube a ASHURA, que es la primera parada */
