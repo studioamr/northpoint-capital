@@ -449,28 +449,44 @@ var REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
 function rnd(i){ var x = Math.sin(i*127.1)*43758.5453; return x - Math.floor(x); }
 
 /* ── el ninja: cuerpo negro, cinta de su color, katana al frente ── */
-function ninja(c, x, base, s, col, aura){
+function ninja(c, x, base, s, col, aura, op){
+  op = op || {};
+  var cuerpo = op.cuerpo || '#141821';
+  var casco  = op.casco  || '#0C0F16';
+  var filo   = op.filo   || '#D6DBE2';
+  var mango  = op.mango  || col;
+  var ojos   = op.ojos   || 'rgba(255,255,255,.85)';
   if(aura){
     var g = c.createRadialGradient(x, base-30*s, 2*s, x, base-30*s, 66*s);
     g.addColorStop(0,'rgba(155,232,196,.30)'); g.addColorStop(1,'rgba(155,232,196,0)');
     c.fillStyle = g; c.beginPath(); c.arc(x, base-30*s, 66*s, 0, 7); c.fill();
   }
   c.save(); c.translate(x, base);
-  /* katana al frente, en guardia */
-  c.strokeStyle = '#D6DBE2'; c.lineWidth = 2.4*s; c.lineCap='round';
-  c.beginPath(); c.moveTo(4*s, -28*s); c.lineTo(30*s, -40*s); c.stroke();
-  c.strokeStyle = col; c.lineWidth = 3.4*s;
-  c.beginPath(); c.moveTo(-8*s, -24*s); c.lineTo(3*s, -28*s); c.stroke();
+  c.lineCap = 'round';
+  if(op.espalda){
+    /* LA KATANA A LA ESPALDA: envainada en diagonal, de la cadera izquierda al
+       hombro derecho. Va antes que el torso para quedar DETRÁS de él. */
+    c.strokeStyle = filo; c.lineWidth = 2.6*s;
+    c.beginPath(); c.moveTo(-7*s, -16*s); c.lineTo(11*s, -44*s); c.stroke();
+    c.strokeStyle = mango; c.lineWidth = 3.6*s;
+    c.beginPath(); c.moveTo(-13*s, -7*s); c.lineTo(-7.5*s, -15*s); c.stroke();
+  } else {
+    /* katana al frente, en guardia */
+    c.strokeStyle = filo; c.lineWidth = 2.4*s;
+    c.beginPath(); c.moveTo(4*s, -28*s); c.lineTo(30*s, -40*s); c.stroke();
+    c.strokeStyle = mango; c.lineWidth = 3.4*s;
+    c.beginPath(); c.moveTo(-8*s, -24*s); c.lineTo(3*s, -28*s); c.stroke();
+  }
   /* cuerpo */
-  c.fillStyle = '#141821';
+  c.fillStyle = cuerpo;
   c.fillRect(-8*s, -34*s, 16*s, 22*s);
   c.fillRect(-7*s, -13*s, 5.5*s, 13*s);
   c.fillRect(1.5*s, -13*s, 5.5*s, 13*s);
   /* cabeza y cinta */
-  c.fillStyle = '#0C0F16'; c.fillRect(-6.5*s, -46*s, 13*s, 12*s);
+  c.fillStyle = casco; c.fillRect(-6.5*s, -46*s, 13*s, 12*s);
   c.fillStyle = col; c.fillRect(-7.5*s, -43*s, 15*s, 4*s);
   c.beginPath(); c.moveTo(-7.5*s,-42*s); c.lineTo(-19*s,-36*s); c.lineTo(-7.5*s,-38*s); c.closePath(); c.fill();
-  c.fillStyle = 'rgba(255,255,255,.85)';
+  c.fillStyle = ojos;
   c.fillRect(-4*s, -38.5*s, 3*s, 1.6*s); c.fillRect(1*s, -38.5*s, 3*s, 1.6*s);
   c.restore();
 }
