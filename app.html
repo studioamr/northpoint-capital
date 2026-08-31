@@ -1816,15 +1816,24 @@ button.st-chip:hover{border-color:rgba(255,255,255,.45)}
 .lg-hist-fila.abrible{cursor:pointer;transition:background .15s ease}
 .lg-hist-fila.abrible:hover{background:var(--w02)}
 .lg-hist-fila.abrible:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+.dia-marca{display:block;font-family:var(--mono);font-size:8.5px;letter-spacing:.28em;
+  color:var(--faint);margin-bottom:8px}
+.dia-t img{width:100%;border-radius:10px;border:1px solid var(--line-soft);margin-bottom:10px;display:block}
+.dt-nota{margin-left:auto;border:1px solid var(--line);background:transparent;color:var(--faint);
+  font-family:var(--mono);font-size:9px;letter-spacing:.1em;padding:4px 9px;border-radius:99px;cursor:pointer}
+.dt-nota:hover{color:var(--txt)}
 .dia-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(92px,1fr));gap:8px;margin:14px 0}
 .dia-st{border:1px solid var(--line-soft);border-radius:10px;padding:9px 11px;background:var(--w02)}
 .dia-st em{display:block;font-family:var(--mono);font-size:8px;letter-spacing:.16em;color:var(--faint);
   font-style:normal;margin-bottom:5px}
 .dia-st b{font-family:var(--mono);font-size:14px;font-weight:600;font-variant-numeric:tabular-nums}
+.dia-st b em{font-style:normal;font-size:10px;font-weight:400;color:var(--faint);white-space:nowrap}
 .dia-st b.up{color:var(--up)} .dia-st b.down{color:var(--down)}
 .dia-curva{position:relative;height:170px;margin-bottom:16px;border:1px solid var(--line-soft);
   border-radius:12px;overflow:hidden;background:var(--w02)}
 .dia-curva canvas{display:block;width:100%;height:100%}
+.bt-log-row .pnl.edita{cursor:pointer;border-bottom:1px dashed transparent}
+.bt-log-row .pnl.edita:hover{border-bottom-color:currentColor}
 .lg-nota{border:1px solid var(--line);background:transparent;color:var(--faint);
   font-size:12px;line-height:1;padding:5px 8px;border-radius:8px;cursor:pointer}
 .lg-nota:hover{color:var(--txt)}
@@ -5265,6 +5274,7 @@ stop[stop-color="#9BC0DC"]{stop-color:var(--txt)}
 <div class="overlay" id="ovDia">
   <div class="modal" role="dialog" aria-modal="true" aria-labelledby="diaTitle" style="max-width:640px">
     <h3 id="diaTitle">Día</h3>
+    <span class="dia-marca">NORTHPOINT · ${bi('REPORTE DE LA SESIÓN','SESSION REPORT')}</span>
     <p class="sub" id="diaSub"></p>
     <!-- EL DÍA DE UN VISTAZO (André, 31-ago-2026): antes el modal abría directo
          en la lista de trades. Primero los números del día y su curva; los
@@ -5728,6 +5738,7 @@ const I18N = {
   'vio.OUT_OF_WINDOW': { es:'Fuera de ventana',      en:'Outside window' },
   /* Ya no es "3er trade": el plan permite 5 en evaluación y 2 en las otras fases. */
   'vio.THIRD_TRADE':   { es:'Trades de más',         en:'Over trade limit' },
+  'vio.OVERTRADING':   { es:'Overtrading',           en:'Overtrading' },
   'vio.AFTER_WIN':     { es:'Operó tras ganar',      en:'Traded after a win' },   // histórico: trades viejos
   'vio.AFTER_TARGET':  { es:'Operó pasado el objetivo', en:'Traded past the target' },
   'vio.REVENGE':       { es:'Revenge',               en:'Revenge' },
@@ -7197,7 +7208,11 @@ function violationsRaw(trade, dayTrades){
   /* MNQ es EL instrumento de la casa, no una violación. Antes se marcaba cada trade
      real como "minis" porque la regla estaba escrita para un sistema de NQ. */
   if(esInstrumentoAjeno(trade.sym)) v.push('OTRO_INSTRUMENTO');
-  if(trade.time && !estrDeTrade(trade)) v.push('OUT_OF_WINDOW');
+  /* FUERA 'OUT_OF_WINDOW' (André, 31-ago-2026): saltaba en trades que sí eran
+     de la ventana. La hora que se compara viene del sello del registro, no de
+     cuándo se ejecutó la orden — capturar un trade a las 11 lo marcaba fuera de
+     ventana aunque lo hubieras tomado a las 9:35. Una falta que no cometiste,
+     escrita en tu reporte, es peor que no marcar nada. */
   /* ── SIN ALARMA NO HAY TRADE ──
      La regla de la casa: sin señal del sistema no se entra.
      No es una preferencia — es lo único que separa una entrada del sistema de
@@ -7210,8 +7225,10 @@ function violationsRaw(trade, dayTrades){
      sonó: desde ese día la pregunta es parte de registrar el trade.
 
      Si algún día quieres que aplique hacia atrás, es UNA constante. */
-  /* El tope de trades sale del plan de ESE día, no de un número cableado. */
-  if(idx >= P.maxT) v.push('THIRD_TRADE');
+  /* El tope de trades sale del plan de ESE día, no de un número cableado.
+     Se llamaba THIRD_TRADE, de cuando el plan eran dos trades: con un plan de
+     UNO, el segundo salía marcado como «tercer trade». Es OVERTRADING. */
+  if(idx >= P.maxT) v.push('OVERTRADING');
   /* "Operó tras ganar" se retira: era la vieja regla de 2 trades con cierre al
      primer verde. Hoy el plan dice cuántos trades caben y el objetivo dice
      cuándo parar — seguir después de tocarlo es lo que sí se marca. */
@@ -7283,7 +7300,7 @@ function computeScore(){
   if(last.length === 0) return null;
   if(last.length < SCORE_MIN) return { total:null, dims:[], grade:'MUESTRA INSUFICIENTE', n:last.length, min:SCORE_MIN };
   const vioOf = t => violations(t, byDay[t.date]);
-  const risk = last.filter(t => { const v = vioOf(t); return !v.includes('MICROS') && !v.includes('OUT_OF_WINDOW') && !v.includes('THIRD_TRADE'); }).length / last.length;
+  const risk = last.filter(t => { const v = vioOf(t); return !v.includes('MICROS') && !v.includes('OVERTRADING') && !v.includes('THIRD_TRADE'); }).length / last.length;
   const emo  = last.filter(t => { const v = vioOf(t); return !v.includes('REVENGE') && !v.includes('AFTER_WIN'); }).length / last.length;
   const dec  = last.filter(t => t.setupOk).length / last.length;
   const dims = [
@@ -9378,8 +9395,16 @@ function abrirDia(iso, opts){
      está roto. Desde el registro se pide con todas: el día es el día. */
   const O = opts || {};
   let trs = tradesByDay()[iso] || [];
-  if(!trs.length && O.todas) trs = (tradesByDay(null) || {})[iso] || [];
-  if(!trs.length && O.todas) trs = misTrades().filter(t => t.date === iso);
+  if(!trs.length && O.todas){
+    /* UN TRADE EN VARIAS CUENTAS VALE POR VARIAS (André, 31-ago-2026): el mismo
+       −$500 ejecutado en tres cuentas son −$1,500 del día. El respaldo de aquí
+       leía S.trades EN CRUDO, sin multiplicar, así que el reporte enseñaba
+       −$500 donde el log decía −$1,500 — dos cifras distintas para el mismo
+       día. Se proyecta igual que el log: sobre TODAS tus cuentas prop. */
+    const ids = new Set((typeof lgCtasProp === 'function' ? lgCtasProp() : []).map(a => a.id));
+    trs = misTrades().filter(t => t.date === iso)
+      .map(t => { const n = nSel(t, ids); return n > 1 ? proy(t, n) : t; });
+  }
   if(!trs.length && !O.todas) return;
   diaAbierto = iso;
   const pnl = trs.reduce((a,t)=>a+(t.pnl||0),0);
@@ -9414,27 +9439,44 @@ function abrirDia(iso, opts){
       cel(bi('P&L','P&L'), fmt$(pnl,true), pnl>0?'up':pnl<0?'down':'') +
       cel(bi('TRADES','TRADES'), trs.length) +
       cel(bi('WINRATE','WIN RATE'), wr+'%') +
-      cel(bi('DRAWDOWN','DRAWDOWN'), fmt$(ddDia,true), (tope && Math.abs(ddDia)>=tope)?'down':'') +
+      cel(bi('DRAWDOWN','DRAWDOWN'),
+          fmt$(ddDia,true) + (tope ? ` <em>de −${fmt$(tope)}</em>` : ''),
+          (tope && Math.abs(ddDia)>=tope)?'down':'') +
       cel(bi('MEJOR','BEST'), mejor?fmt$(mejor,true):'—', mejor?'up':'') +
       cel(bi('PEOR','WORST'), peor?fmt$(peor,true):'—', peor?'down':'') +
-      (meta ? cel(bi('OBJETIVO','TARGET'), fmt$(meta), pnl>=meta?'up':'') : '') +
-      (tope ? cel(bi('SU TOPE','THEIR CAP'), '−'+fmt$(tope)) : '');
+      (meta ? cel(bi('OBJETIVO','TARGET'), fmt$(pnl,true) + ` <em>de ${fmt$(meta)}</em>`, pnl>=meta?'up':'') : '');
     requestAnimationFrame(()=>{
       const cv = $('#diaCurvaCv');
       if(cv) pintaCurva(cv, $('#diaCurvaE'), trs.map(t=>t.pnl||0), 1,
         bi('Sin trades','No trades'), meta||tope ? { target:meta||0, dd:tope||0 } : {});
     });
   })();
+  /* LA CAPTURA VA ARRIBA Y ABIERTA (André, 31-ago-2026): es lo primero que se
+     mira al revisar un trade y estaba hasta el final, encogida y con un clic de
+     por medio. Debajo, la nota; y si no hay, el botón para escribirla — porque
+     el momento de anotar es justo cuando estás mirando el gráfico. */
   $('#diaTrades').innerHTML = trs.map(t => `
     <div class="dia-t">
+      ${t.shot ? `<img src="${t.shot}" class="abierta" alt="Screenshot del trade" loading="lazy">` : ''}
       <div class="dt-h">
         <b class="${(t.pnl||0)>0?'up':(t.pnl||0)<0?'down':''}">${fmt$(t.pnl,true)}</b>
         <span>${t.time||'—'} · ${esc(t.sym||'')} · ${t.dir==='L'?'LONG':'SHORT'} · ${t.qty||1} ct${t.nAcc>1?` · ×${t.nAcc} cuentas`:''}${t.setupOk===false?' · <i style="color:var(--warn)">setup incompleto</i>':''}</span>
+        <button type="button" class="dt-nota" data-dnota="${t.id}">${t.nota||t.notas?'✎ '+bi('editar nota','edit note'):'✎ '+bi('anotar','add note')}</button>
       </div>
       ${t.nota || t.notas ? `<div class="dt-n">${esc(t.nota || t.notas)}</div>` : ''}
-      ${t.shot ? `<img src="${t.shot}" alt="Screenshot del trade" loading="lazy">`
-               : `<div class="dt-n" style="color:var(--faint)">Sin screenshot — se agrega editando el trade.</div>`}
+      ${!t.shot ? `<div class="dt-n" style="color:var(--faint)">${bi('Sin captura — se sube desde el log.','No screenshot — upload it from the log.')}</div>` : ''}
     </div>`).join('');
+  /* anotar SIN salir del reporte, y el reporte se repinta con la nota */
+  $$('#diaTrades [data-dnota]').forEach(b => b.onclick = e => {
+    e.stopPropagation();
+    const t = S.trades.find(x => x.id === b.dataset.dnota); if(!t) return;
+    libretaNota(bi('NOTA DEL TRADE','TRADE NOTE'),
+      `${t.dir==='L'?'LONG':'SHORT'} · ${fmt$(t.pnl,true)} · ${fmtFecha(t.date)}`,
+      t.nota || t.notas || '',
+      txt => { if(txt) t.nota = txt.slice(0, 2000); else delete t.nota;
+        sellaCambio(t); save(); abrirDia(iso, { todas:true });
+        if(typeof lgLog === 'function' && $('#lgLog')) lgLog(); });
+  });
   $$('#diaTrades img').forEach(im => im.onclick = () => im.classList.toggle('abierta'));
   openOv('ovDia');
 }
@@ -9467,6 +9509,8 @@ const PORQUE_VIO = {
     'MNQ es el instrumento del sistema. Operar otro rompe la comparación: el tamaño del tick, el margen y el comportamiento cambian, y las estadísticas dejan de significar lo mismo.'],
   OUT_OF_WINDOW: ['Fuera de la ventana de operación',
     'El trade cayó fuera del horario del plan. La ventaja del sistema está medida DENTRO de esa ventana; afuera es otra cosa que no está probada.'],
+  OVERTRADING: ['Más trades de los que permite el plan',
+    'More trades than the plan allows'],
   THIRD_TRADE: ['Más trades de los que permite el plan',
     'El plan del día fijó un tope de trades. Pasarlo es donde empieza el sobreoperar: los trades de más son, en promedio, los peores del día.'],
   AFTER_TARGET: ['Siguió operando pasado el objetivo',
@@ -10208,6 +10252,36 @@ function abreLibreta(){
   ov.onclick=(e)=>{ if(e.target===ov) cerrar(); };
   document.addEventListener('keydown', onKey);
   document.body.appendChild(ov); pinta(true);
+}
+/* ══ UNA HOJA SUELTA ══ (André, 31-ago-2026)
+   La misma libreta NorthPoint, pero para UNA nota que no vive en el cuaderno:
+   la de un trade. Antes esto era un prompt() del navegador — una cajita gris
+   del sistema, sin sitio para escribir de verdad y sin nada que ver con la
+   app. Aquí se escribe en la hoja, con su tapa y su marca. */
+function libretaNota(titulo, sub, valor, alGuardar){
+  const ov = document.createElement('div'); ov.className = 'lib-ov';
+  const cerrar = () => { document.removeEventListener('keydown', onKey); ov.remove(); };
+  const onKey = e => { if(e.key === 'Escape') cerrar(); };
+  ov.innerHTML = `<div class="lib">
+    <div class="lib-top">
+      <div class="lib-mark"><b>NORTHPOINT</b><span>${esc(titulo || bi('NOTA','NOTE'))}</span></div>
+      ${sub ? `<span class="lib-auto">${esc(sub)}</span>` : ''}
+      <button type="button" class="lib-x" aria-label="${bi('cerrar','close')}">✕</button>
+    </div>
+    <div class="lib-paper"><textarea id="libNotaTa" spellcheck="false"
+      placeholder="${bi('Por qué entraste, qué viste, qué harías distinto…','Why you entered, what you saw, what you would do differently…')}">${esc(valor || '')}</textarea></div>
+    <div class="lib-nav">
+      <button type="button" class="lib-b del" id="libNotaX">${bi('Quitar la nota','Remove note')}</button>
+      <button type="button" class="lib-b add" id="libNotaOk" style="margin-left:auto">${bi('Guardar','Save')}</button>
+    </div></div>`;
+  const ta = ov.querySelector('#libNotaTa');
+  ov.querySelector('.lib-x').onclick = cerrar;
+  ov.querySelector('#libNotaOk').onclick = () => { alGuardar(ta.value.trim()); cerrar(); };
+  ov.querySelector('#libNotaX').onclick  = () => { alGuardar(''); cerrar(); };
+  ov.onclick = e => { if(e.target === ov) cerrar(); };
+  document.addEventListener('keydown', onKey);
+  document.body.appendChild(ov);
+  ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length);
 }
 /* la misma libreta pero INLINE (para leer la lección y escribir a la vez) */
 function montaLibretaInline(box){
@@ -15400,7 +15474,8 @@ function lgLog(){
       return `<div class="bt-log-row">
         <span class="ix">${t.date.slice(8)}/${t.date.slice(5,7)}</span>
         <span class="dir ${t.dir==='S'?'S':'L'}">${t.dir==='S'?'SHORT':'LONG'}</span>
-        <span class="pnl ${up?'up':'down'}">${fmt$(t.pnl,true)}</span>
+        <span class="pnl edita ${up?'up':'down'}" data-edita="${t.id}"
+              title="${bi('Corregir el P&L','Fix the P&L')}">${fmt$(t.pnl,true)}</span>
         <span class="acc">${fmt$(acc,true)}</span>
         <button type="button" class="lg-img ${t.shot?'tiene':''}" data-img="${t.id}" title="${t.shot?bi('Ver la imagen','View image'):bi('Subir imagen','Upload image')}">${t.shot?bi('ver imagen','view image'):bi('subir imagen','upload image')}</button>
         <!-- EL LÁPIZ (André, 31-ago-2026): la captura dice QUÉ pasó; la nota
@@ -15421,14 +15496,26 @@ function lgLog(){
     ${list.length ? `<div class="bt-log-body">${filas}</div>` : `<div class="bt-log-empty">${bi('Aún no hay trades registrados.','No trades logged yet.')}</div>`}`;
   host.querySelectorAll('.lg-nota').forEach(b => b.onclick = () => {
     const t = S.trades.find(x=>x.id===b.dataset.nota); if(!t) return;
-    const v = prompt(bi('Nota del trade — por qué entraste, qué viste, qué harías distinto:',
-                        'Trade note — why you entered, what you saw, what you would do differently:'),
-                     t.nota || '');
-    if(v === null) return;                     /* cancelar no borra lo que había */
-    const txt = v.trim();
-    if(txt) t.nota = txt.slice(0, 600); else delete t.nota;
-    sellaCambio(t); save(); lgLog();
-    toast(txt ? bi('Nota guardada','Note saved') : bi('Nota quitada','Note removed'));
+    libretaNota(bi('NOTA DEL TRADE','TRADE NOTE'),
+      `${t.dir==='L'?'LONG':'SHORT'} · ${fmt$(t.pnl,true)} · ${fmtFecha(t.date)}`,
+      t.nota || '',
+      txt => { if(txt) t.nota = txt.slice(0, 2000); else delete t.nota;
+        sellaCambio(t); save(); lgLog();
+        toast(txt ? bi('Nota guardada','Note saved') : bi('Nota quitada','Note removed')); });
+  });
+  /* CORREGIR UN TRADE (André, 31-ago-2026): un dedazo en el P&L movía la curva,
+     las estadísticas y el drawdown del día, y la única salida era borrarlo y
+     capturarlo otra vez — perdiendo su captura y su nota. Se pica la cifra. */
+  host.querySelectorAll('[data-edita]').forEach(b => b.onclick = () => {
+    const t = S.trades.find(x=>x.id===b.dataset.edita); if(!t) return;
+    const v = prompt(bi('P&L de este trade (+ gana, − pierde):','Trade P&L (+ win, − loss):'),
+                     String(t.pnl ?? ''));
+    if(v === null) return;
+    const n = parseFloat(String(v).replace(/[^0-9.\-]/g, ''));
+    if(!isFinite(n)){ toast(bi('Ese número no se entiende.','That number does not parse.')); return; }
+    t.pnl = n; sellaCambio(t); save();
+    lgStats(); lgDibuja(1); lgLog(); lgHoy(); lgHistorial(); updateBadges();
+    toast(bi('Trade corregido · ','Trade fixed · ') + fmt$(n, true));
   });
   const vac = $('#lgVaciar');
   if(vac) vac.onclick = () => {

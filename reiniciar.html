@@ -70,11 +70,15 @@
        propio bloque y no dentro del botón rojo. -->
   <div style="margin:30px 0 0;padding-top:26px;border-top:1px solid var(--hair)">
     <span class="et">Sólo el log de trades</span>
-    <p style="margin:10px 0 0">Borra los trades y deja <b style="color:var(--tinta)">uno solo</b>.
-       No toca tus cuentas, tu caja, tu monito ni Kuro.</p>
+    <p style="margin:10px 0 0">Borra los trades y deja <b style="color:var(--tinta)">los que de verdad
+       llevas</b>. No toca tus cuentas, tu caja, tu monito ni Kuro.</p>
     <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;margin-top:14px">
-      <label style="flex:1;min-width:140px"><span class="et" style="display:block;margin-bottom:6px">P&L</span>
-        <input id="lgPnl2" type="number" step="10" value="-510"
+      <label style="flex:1;min-width:110px"><span class="et" style="display:block;margin-bottom:6px">P&L de cada uno</span>
+        <input id="lgPnl2" type="number" step="10" value="-500"
+          style="width:100%;padding:12px;border-radius:12px;border:1px solid var(--hair);
+                 background:transparent;color:var(--tinta);font-family:var(--mono);font-size:14px"></label>
+      <label style="flex:0 0 110px"><span class="et" style="display:block;margin-bottom:6px">¿Cuántos?</span>
+        <input id="lgN2" type="number" min="1" max="20" step="1" value="2"
           style="width:100%;padding:12px;border-radius:12px;border:1px solid var(--hair);
                  background:transparent;color:var(--tinta);font-family:var(--mono);font-size:14px"></label>
       <label style="flex:1;min-width:140px"><span class="et" style="display:block;margin-bottom:6px">Dirección</span>
@@ -85,7 +89,7 @@
         <select id="lgCta2" style="width:100%;padding:12px;border-radius:12px;border:1px solid var(--hair);
                  background:#0b0d13;color:var(--tinta);font-family:var(--mono);font-size:13px"></select></label>
     </div>
-    <button class="btn" id="soloUno">Dejar sólo ese trade</button>
+    <button class="btn" id="soloUno">Dejar sólo esos trades</button>
   </div>
 
   <button class="btn" id="bkp" style="margin-top:30px">1 · Descargar respaldo</button>
@@ -143,9 +147,13 @@ const claveEstado = () => {
 (()=>{ const k = claveEstado(); const sel = $('#lgCta2');
   let ctas = [];
   try{ ctas = (JSON.parse(localStorage.getItem(k)) || {}).accounts || []; }catch(e){}
-  sel.innerHTML = '<option value="">— ninguna —</option>' +
-    ctas.filter(a=>a && a.estado==='activa')
-        .map(a=>`<option value="${a.id}">${a.alias}</option>`).join('');
+  const act = ctas.filter(a=>a && a.estado==='activa');
+  /* «TODAS» es la opción por defecto porque así opera: un trade, la misma
+     decisión, ejecutada en las cinco cuentas a la vez. Cada cuenta se lo apunta
+     completo — que es justo lo que hace su tablero. */
+  sel.innerHTML = `<option value="*">todas las activas (${act.length})</option>` +
+    act.map(a=>`<option value="${a.id}">${a.alias}</option>`).join('') +
+    '<option value="">— ninguna —</option>';
 })();
 
 $('#soloUno').onclick = () => {
@@ -155,19 +163,31 @@ $('#soloUno').onclick = () => {
   const pnl = parseFloat($('#lgPnl2').value);
   if(!isFinite(pnl)){ log('Ese P&L no es un número.','no'); return; }
   const cta = $('#lgCta2').value;
+  const n = Math.max(1, Math.min(20, parseInt($('#lgN2').value, 10) || 1));
+  const activas = (S.accounts || []).filter(a=>a && a.estado==='activa').map(a=>a.id);
+  const accts = cta === '*' ? activas : (cta ? [cta] : []);
   const cuantos = (S.trades || []).length;
-  if(!confirm('Se borran ' + cuantos + ' trades y queda uno de ' + money(pnl) + '. ¿Seguro?')) return;
+  if(!confirm('Se borran ' + cuantos + ' trades y quedan ' + n + ' de ' + money(pnl) +
+              (accts.length ? ' en ' + accts.length + ' cuenta' + (accts.length>1?'s':'') : ' sin cuenta') +
+              '. ¿Seguro?')) return;
   const hoy = new Date();
   const iso = hoy.getFullYear()+'-'+String(hoy.getMonth()+1).padStart(2,'0')+'-'+String(hoy.getDate()).padStart(2,'0');
-  S.trades = [{
-    id: 't_' + Math.random().toString(36).slice(2,10),
+  /* SE ENTIERRAN LOS VIEJOS: la fusión con la nube es una unión, y sin lápida
+     el servidor los devuelve en el siguiente sync. */
+  S.borrados = S.borrados || {};
+  (S.trades || []).forEach(t => { const k = t && t.id != null ? 'id:'+t.id : 'sin:'+JSON.stringify(t);
+    if(t && t.id != null) S.borrados[String(t.id)] = Date.now();
+    S.borrados[k] = Date.now(); });
+  S.trades = Array.from({length:n}, (_,i) => ({
+    id: 't_' + Math.random().toString(36).slice(2,10) + i,
     date: iso, dir: $('#lgDir2').value, pnl,
-    accts: cta ? [cta] : [], ts: Date.now(),
-  }];
-  S.seqTrade = 1;
+    accts: accts.slice(), ts: Date.now() + i, upd: Date.now() + i,
+  }));
+  S.seqTrade = n;
   try{ localStorage.setItem(k, JSON.stringify(S)); }catch(e){ log('No se pudo guardar: '+e.message,'no'); return; }
-  log('Listo: se fueron ' + cuantos + ' trades y quedó uno de ' + money(pnl) +
-      (cta ? ' en ' + $('#lgCta2').selectedOptions[0].textContent : ' sin cuenta asignada') + '.', 'ok');
+  log('Listo: se fueron ' + cuantos + ' trades y quedaron ' + n + ' de ' + money(pnl) +
+      (accts.length ? ' en ' + accts.length + ' cuenta' + (accts.length>1?'s':'') : ' sin cuenta asignada') + '.', 'ok');
+  if(accts.length) log('Cada cuenta se apunta ' + money(pnl*n) + ' del día.');
   $('#ir').style.display = 'block';
 };
 
