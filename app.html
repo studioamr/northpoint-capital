@@ -1797,6 +1797,10 @@ button.st-chip:hover{border-color:rgba(255,255,255,.45)}
    entrar salía desde el primer tiempo. (André, 31-ago-2026) */
 .alta-ir{margin-top:clamp(14px,2.4vh,24px);min-width:200px}
 .alta-ir[hidden]{display:none}
+/* la ficha grande del arsenal cuando aún traes la de madera */
+.ars-hero.madera .ars-hero-sw{filter:none}
+.ars-hero-p{margin:8px 0 0;font-size:11.5px;line-height:1.55;color:rgba(255,255,255,.55);
+  max-width:46ch}
 /* ── LOS NUEVE ── pantalla negra, KURO arriba, 3×3 de ninjas y 3×3 de espadas.
    Cuelga del body: dentro de la columna de contenido su z-index quedaba
    encerrado y el menú se le montaba encima. */
@@ -11801,7 +11805,27 @@ const BAT_APUESTA_DEF = 5000;
 function batApuesta(c){ const v = c && c.apuesta; return (v > 0) ? v : BAT_APUESTA_DEF; }
 /* el bote: lo que puso cada quien, por cuántos juegan */
 function batBote(c){ return batApuesta(c) * Math.max(2, batJugadores(c).length); }
-function batKatanasDe(u){ if(!S.batKatanas) S.batKatanas={}; if(!Array.isArray(S.batKatanas[u])||!S.batKatanas[u].length) S.batKatanas[u]=['blanca']; return S.batKatanas[u]; }
+/* NO NACES CON SHIRO (André, 31-ago-2026): la lista arrancaba en ['blanca'],
+   así que el arsenal decía «2/9 ganadas» y a Shiro «Equipada» sin haberle
+   ganado a nadie. Empiezas con CERO katanas de acero y con el bokken de
+   madera, que no es una de las nueve: es la que te dan.
+   La migración es a la inversa de lo normal —hay que QUITAR lo que se regaló—
+   y sólo aplica a quien no ha vencido a nadie, para no despojar a nadie que ya
+   se la haya ganado de verdad. */
+function batKatanasDe(u){
+  if(!S.batKatanas) S.batKatanas={};
+  if(!Array.isArray(S.batKatanas[u])) S.batKatanas[u]=[];
+  if(!S.batKatanasLimpio){ S.batKatanasLimpio = true;
+    try{ if(Object.keys(bossVencidos()).length === 0)
+      Object.keys(S.batKatanas).forEach(k2=>{
+        if(Array.isArray(S.batKatanas[k2]) && S.batKatanas[k2].length===1 && S.batKatanas[k2][0]==='blanca')
+          S.batKatanas[k2] = []; });
+    }catch(e){}
+  }
+  return S.batKatanas[u];
+}
+/* ¿todavía andas con la de madera? */
+function batSinKatana(u){ return batKatanasDe(u).length === 0; }
 /* la katana EQUIPADA (la que define tu ecosistema y tu espada del perfil).
    Por defecto la más alta que tengas; el jugador la cambia picando otra suya. */
 function batEquipadaDe(u){
@@ -12836,7 +12860,9 @@ function batPintaMonito(){
   const cv=document.getElementById('zenMonitoCv'); if(!cv || typeof monitoPlano!=='function') return;
   const c=cv.getContext('2d'); const W=cv.width, H=cv.height; c.clearRect(0,0,W,H);
   const yo=(S.session||{}).user||''; const look=lookDe(yo);
-  const kw=batKatanasDe(yo), ki=KATANAS.reduce((mx,k,ix)=> kw.includes(k.id)?ix:mx,0), belt=KATANAS[ki].belt;
+  const kw=batKatanasDe(yo), ki=KATANAS.reduce((mx,k,ix)=> kw.includes(k.id)?ix:mx,0);
+  /* sin katana de acero, el monito carga la de madera */
+  const belt = kw.length ? KATANAS[ki].belt : '#b98d55';
   const feetY=H-18, esc=2.15;
   c.fillStyle='rgba(0,0,0,.35)'; c.beginPath(); c.ellipse(W/2, feetY+7, 46, 12, 0,0,7); c.fill();
   try{ monitoPlano(c, W/2, feetY, look, esc, { brazoDer:-2.35, brazoIzq:0.55, banda:'#c8443c', katana:true, katanaCol:belt }); }catch(e){}
@@ -14202,7 +14228,16 @@ function renderBatallaInterno(){
             <span class="ars-cash" style="opacity:.62">· ${fmt$(banco)} ${bi('en el banco','in the bank')}</span>
             <button type="button" class="ars-x" id="arsX" aria-label="${bi('cerrar','close')}">✕</button></div>
           <div class="ars-scroll">
-            ${(()=>{ const kEq=KATANAS[kEquipIdx]||KATANAS[0];
+            ${(()=>{ /* SIN NINGUNA DE ACERO, arriba va el BOKKEN: es lo que
+                 traes de verdad. Antes salía Shiro «Equipada» sin haberla
+                 ganado. (André, 31-ago-2026) */
+              if(!miKat.length) return `<div class="ars-hero madera" style="--kc:#b98d55">
+                <span class="ars-hero-kanji">木</span>
+                <div class="ars-hero-sw">${bokkenSVG()}</div>
+                <div class="ars-hero-i"><b style="border-bottom:3px solid #b98d55">${bi('Bokken','Bokken')}</b><span class="ars-tag">${bi('Equipada','Equipped')}</span></div>
+                <p class="ars-hero-p">${bi('De madera. La única que se regala — las nueve de acero se ganan.','Wooden. The only one given — the nine steel ones are earned.')}</p>
+              </div>`;
+              const kEq=KATANAS[kEquipIdx]||KATANAS[0];
               return `<div class="ars-hero" style="--kc:${kEq.belt}">
                 <span class="ars-hero-kanji">${kEq.kanji}</span>
                 <div class="ars-hero-sw">${katanaSVG(kEq.belt, true)}</div>
@@ -14212,7 +14247,7 @@ function renderBatallaInterno(){
             ${/* LAS KATANAS NO SE COMPRAN (André): cada una es de un ninja del
                   camino y se gana venciéndolo. Sin precios ni forja: la
                   colección es el registro de a quién ya tumbaste. */
-              KATANAS.map((k,i)=>{ const owned=miKat.includes(k.id), cur=(i===kEquipIdx&&owned);
+              KATANAS.map((k,i)=>{ const owned=miKat.includes(k.id), cur=(miKat.length>0 && i===kEquipIdx && owned);
               if(cur) return '';   /* la equipada ya está en grande arriba */
               const dueno = KURO_BOSSES.find(x=>x.kat===i);
               return `<div class="ars-card ${owned?'owned':'locked'}" style="--kc:${k.belt}">
