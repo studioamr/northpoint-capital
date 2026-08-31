@@ -43,7 +43,13 @@ a{color:inherit}
 #escena{position:fixed;inset:0;z-index:0;pointer-events:none}
 #heroCv{display:block;width:100%;height:100%}
 #velo{position:fixed;inset:0;z-index:1;pointer-events:none;background:var(--void);opacity:0}
-.hero{position:relative;z-index:2;height:210vh}
+/* ── LAS RELIQUIAS ── (André, 31-ago-2026)
+   Debajo del héroe la página era negro liso: kilómetros de vacío entre bloque
+   y bloque. Aquí flotan los restos del camino —kanji en rojo de sello, katanas
+   girando despacio, sellos hanko— tan tenues que no se leen de frente: se
+   sienten. Es el fondo de una vitrina, no un adorno encima del texto. */
+#reliquias{position:fixed;inset:0;z-index:2;pointer-events:none;opacity:0}
+.hero{position:relative;z-index:3;height:210vh}
 .hero-in{position:sticky;top:0;height:100vh;display:flex;flex-direction:column;
   align-items:center;justify-content:flex-end;padding:0 24px 6vh;text-align:center}
 .marca{position:fixed;top:26px;left:30px;z-index:6;font-family:var(--mono);font-size:10px;
@@ -72,7 +78,7 @@ a{color:inherit}
 @keyframes baja{0%,100%{transform:translate(-50%,0);opacity:.35}50%{transform:translate(-50%,7px);opacity:.9}}
 
 /* ── EL CUERPO ── */
-main{position:relative;z-index:2;background:var(--void)}
+main{position:relative;z-index:3}
 section{padding:clamp(90px,16vh,190px) 24px;max-width:1080px;margin:0 auto}
 .eyebrow{font-family:var(--mono);font-size:9.5px;letter-spacing:.42em;color:var(--tenue);
   margin:0 0 26px;text-indent:.42em}
@@ -315,6 +321,8 @@ hr.linea{border:none;border-top:1px solid var(--hair);margin:0}
 <!-- ═══ LA MONTAÑA: dieciséis cordilleras y el aura ═══ -->
 <div id="escena"><canvas id="heroCv"></canvas></div>
 <div id="velo"></div>
+<!-- RELIQUIAS: el fondo negro deja de ser un vacío -->
+<canvas id="reliquias" aria-hidden="true"></canvas>
 <a class="marca" href="/">NORTHPOINT</a>
 
 <header class="hero">
@@ -387,10 +395,6 @@ hr.linea{border:none;border-top:1px solid var(--hair);margin:0}
   <section>
     <p class="eyebrow rev">ENTRENA</p>
     <h2 class="rev">Nueve retos.<span class="baja-t">Ninguno te pide ganar.</span></h2>
-    <p class="p rev">Cada maestro te pone sus condiciones antes de que abras: cu&aacute;nto
-      le tienes que sacar, cu&aacute;nto puedes caer desde tu pico, cu&aacute;ntas veces
-      puedes entrar y cu&aacute;nto puedes poner en cada una. Operas donde operas siempre
-      y aqu&iacute; cantas el resultado. <b>&Eacute;l lleva la cuenta en vivo.</b></p>
     <div class="retos rev" id="retos"></div>
   </section>
 
@@ -400,7 +404,6 @@ hr.linea{border:none;border-top:1px solid var(--hair);margin:0}
       alt="Dos ninjas frente a frente bajo el sakura, en Asia">
     <div class="duelo-in">
       <p class="eyebrow rev">SANGRE CONTRA SANGRE</p>
-      <h2 class="rev">La misma ventana.<span class="baja-t">Dos curvas.</span></h2>
     </div>
   </section>
 
@@ -1061,6 +1064,98 @@ function katana(c, W, H, col){
     d.querySelector('.fi-hoja').appendChild(cv);
     host.appendChild(d);
   });
+})();
+
+/* ══════════════ LAS RELIQUIAS DEL FONDO ══════════════
+   Kanji en rojo de sello, katanas girando despacio y sellos hanko flotando muy
+   lentos detrás de todo el cuerpo de la página. Van a opacidad de textura —si
+   se leen de frente, están mal— y sólo aparecen DESPUÉS del héroe, cuando el
+   velo ya tapó la montaña: encima de la escena serían basura visual. */
+(function(){
+  var cv = document.getElementById('reliquias'); if(!cv) return;
+  var c = cv.getContext('2d'), W = 0, H = 0, DPR = 1;
+  var KAN = ['黒','剣','忍','道','静','心','刀','武','無','空','影','鋼','龍','侍'];
+  var piezas = [];
+  function medir(){
+    DPR = Math.min(2, window.devicePixelRatio || 1);
+    W = window.innerWidth; H = window.innerHeight;
+    cv.width = Math.round(W*DPR); cv.height = Math.round(H*DPR);
+    c.setTransform(DPR,0,0,DPR,0,0);
+    siembra();
+  }
+  function siembra(){
+    piezas = [];
+    var n = W < 700 ? 16 : 26;
+    for(var i=0;i<n;i++){
+      var r = rnd(i*3.7), r2 = rnd(i*8.1), r3 = rnd(i*5.3);
+      piezas.push({
+        tipo: r3 < 0.52 ? 'kanji' : (r3 < 0.80 ? 'katana' : 'sello'),
+        x: r*W*1.15 - W*0.07,
+        y: r2*H*1.2 - H*0.1,
+        s: 0.5 + rnd(i*2.9)*1.5,
+        gir: (rnd(i*6.6)-0.5)*1.4,
+        vel: 0.10 + rnd(i*4.4)*0.30,
+        der: rnd(i*9.9) > 0.5 ? 1 : -1,
+        k: KAN[i % KAN.length],
+        a: 0.030 + rnd(i*7.7)*0.055
+      });
+    }
+  }
+  function katanaSil(x, y, s, ang, a){
+    c.save(); c.translate(x, y); c.rotate(ang); c.globalAlpha = a;
+    c.strokeStyle = 'rgba(226,234,246,1)'; c.lineWidth = 2.4*s; c.lineCap='round';
+    c.beginPath(); c.moveTo(-58*s, 10*s);
+    c.quadraticCurveTo(0, -14*s, 46*s, -2*s); c.stroke();
+    c.strokeStyle = 'rgba(200,68,60,1)'; c.lineWidth = 3.6*s;
+    c.beginPath(); c.moveTo(48*s, -1*s); c.lineTo(74*s, 6*s); c.stroke();
+    c.restore();
+  }
+  function sello(x, y, s, ang, a, k){
+    c.save(); c.translate(x, y); c.rotate(ang); c.globalAlpha = a*1.5;
+    c.strokeStyle = '#C8443C'; c.lineWidth = 3*s;
+    var L = 34*s;
+    c.strokeRect(-L/2, -L/2, L, L);
+    c.fillStyle = '#C8443C';
+    c.font = '600 ' + (19*s) + 'px "Shippori Mincho B1", serif';
+    c.textAlign = 'center'; c.textBaseline = 'middle';
+    c.fillText(k, 0, 1*s);
+    c.restore();
+  }
+  function pinta(t){
+    if(!W) medir();
+    c.clearRect(0,0,W,H);
+    var y0 = window.scrollY || 0;
+    piezas.forEach(function(p2){
+      /* deriva propia + un poco de parallax con el scroll */
+      var x = p2.x + Math.sin(t/26000 + p2.y)*40*p2.der;
+      var y = ((p2.y - y0*0.06 - t/1000*p2.vel*6) % (H*1.3) + H*1.3) % (H*1.3) - H*0.15;
+      var ang = p2.gir + Math.sin(t/34000 + p2.x)*0.10;
+      if(p2.tipo === 'kanji'){
+        c.save(); c.translate(x, y); c.rotate(ang*0.25); c.globalAlpha = p2.a;
+        c.fillStyle = '#C8443C';
+        c.font = '700 ' + (66*p2.s) + 'px "Shippori Mincho B1", serif';
+        c.textAlign = 'center'; c.textBaseline = 'middle';
+        c.fillText(p2.k, 0, 0); c.restore();
+      } else if(p2.tipo === 'katana'){
+        katanaSil(x, y, p2.s*0.9, ang, p2.a*0.9);
+      } else {
+        sello(x, y, p2.s*0.8, ang*0.4, p2.a*0.8, p2.k);
+      }
+    });
+  }
+  function alScroll2(){
+    /* sólo después del héroe: encima de la montaña serían basura visual */
+    var h = document.querySelector('.hero');
+    var alto = h ? h.offsetHeight - window.innerHeight : 0;
+    var u = (window.scrollY - alto*0.80) / (window.innerHeight*0.6);
+    cv.style.opacity = Math.max(0, Math.min(1, u));
+  }
+  var raf3 = 0;
+  function loop3(t){ pinta(t||0); raf3 = requestAnimationFrame(loop3); }
+  addEventListener('resize', medir, {passive:true});
+  addEventListener('scroll', alScroll2, {passive:true});
+  medir(); alScroll2();
+  if(REDUCE) pinta(4000); else loop3(0);
 })();
 
 /* ══════════════ LA CINTA ══════════════
