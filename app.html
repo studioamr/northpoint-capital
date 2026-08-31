@@ -11558,8 +11558,13 @@ function batSetupBind(scope, yo, alCerrar){
   const crear=scope.querySelector('#batCrear'); if(crear) crear.onclick = () => {
     const rivales = (batSel.ops||[]).filter(Boolean);
     if(!rivales.length){ toast(bi('Elige al menos un rival','Pick at least one opponent')); return; }
+    /* antes era un callejón: avisaba y ya, sin decir cómo salir. Ahora ofrece
+       cancelar el que está vivo y mandar el nuevo de una vez. */
     if(S.challenge && ['invitado','programado','volando','activo'].includes(S.challenge.estado)){
-      toast(bi('Ya hay un reto vivo — termínalo o cancélalo primero','A challenge is already live — finish or cancel it first')); return; }
+      const ok = confirm(bi('Ya hay un reto vivo. ¿Lo cancelo y mando este?','A challenge is already live. Cancel it and send this one?'));
+      if(!ok) return;
+      S.challenge = null; try{ save(); }catch(_){}
+    }
     const sesObj = batSesion(batSel.ses);
     const sesFinal = batFmt==='sesion' ? batSel.ses : (batSel.cuandoSes||null);
     const durFinal = batFmt==='sesion' ? sesObj.dur : batSel.dur;
@@ -11599,7 +11604,27 @@ function batSOScard(titulo, detalle){
   const b = $('#batSOS');
   if(b) b.onclick = ()=>{ S.challenge = null; batPantalla = 'home'; batMin = false; save(); renderBatalla(); };
 }
+/* RETOS ZOMBI (André, 30-ago-2026): un duelo en un estado imposible —activo
+   con el final vencido hace horas, o activo sin fecha de fin ni de arranque—
+   secuestraba TODO Kuro: la pantalla en blanco y el botón "Enviar reto" ni
+   aparecía, porque con un reto vivo no se muestra el creador. Al entrar se
+   revisa y se cierra solo. */
+function batLimpiaZombi(){
+  const c = S.challenge; if(!c) return false;
+  let motivo = null;
+  if(c.estado === 'activo'){
+    if(c.fin && Date.now() > c.fin + 2*3600000) motivo = 'terminado';
+    else if(!c.fin && !c.arrancado) motivo = 'cancelado';
+  }
+  if(c.estado === 'volando' && c.inicio && Date.now() > c.inicio + 3600000) motivo = 'cancelado';
+  if(c.estado === 'programado' && c.inicio && Date.now() > c.inicio + 12*3600000) motivo = 'cancelado';
+  if(!motivo) return false;
+  c.estado = motivo;
+  try{ save(); }catch(_){}
+  return true;
+}
 function renderBatalla(){
+  try{ batLimpiaZombi(); }catch(_){}
   try{ renderBatallaInterno(); }
   catch(e){
     const root = $('#batRoot'); if(!root) return;
@@ -11726,8 +11751,13 @@ function renderBatallaInterno(){
       $('#batCrear').onclick = () => {
         const rivales = (batSel.ops||[]).filter(Boolean);
         if(!rivales.length){ toast(bi('Elige al menos un rival','Pick at least one opponent')); return; }
+    /* antes era un callejón: avisaba y ya, sin decir cómo salir. Ahora ofrece
+       cancelar el que está vivo y mandar el nuevo de una vez. */
     if(S.challenge && ['invitado','programado','volando','activo'].includes(S.challenge.estado)){
-      toast(bi('Ya hay un reto vivo — termínalo o cancélalo primero','A challenge is already live — finish or cancel it first')); return; }
+      const ok = confirm(bi('Ya hay un reto vivo. ¿Lo cancelo y mando este?','A challenge is already live. Cancel it and send this one?'));
+      if(!ok) return;
+      S.challenge = null; try{ save(); }catch(_){}
+    }
         const sesFinal = batFmt==='sesion' ? batSel.ses : (batSel.cuandoSes||null);
         const durFinal = batFmt==='sesion' ? sesObj.dur : batSel.dur;
         const base = { id:'bt_'+uid(), host:yo, formato:batFmt, sesion:sesFinal, duracion:durFinal,
