@@ -1558,13 +1558,29 @@ button.st-chip:hover{border-color:rgba(255,255,255,.45)}
 .bat-wbar-track i{display:block;height:100%;border-radius:6px;background:linear-gradient(90deg,var(--up),#8ad0ff);transition:width .6s}
 .bat-wbar-lbl{font-family:var(--mono);font-size:11px;color:var(--faint);margin-top:8px;text-align:center}
 /* objetivo del plan + decisiones de crecimiento */
+/* ── EL BALANCE Y EL PROGRESO, hasta arriba de Log trade ── */
+.lg-balance{margin-bottom:12px;padding:16px 18px}
+.lgb-top{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap}
+.lgb-k{display:block;font-family:var(--mono);font-size:9px;letter-spacing:.2em;color:var(--faint);margin-bottom:6px}
+.lgb-bal{display:block;font-size:30px;font-weight:700;letter-spacing:-.02em;line-height:1}
+.lgb-der{text-align:right}
+.lgb-pct{display:block;font-size:30px;font-weight:700;line-height:1;color:var(--dim)}
+.lgb-pct.ok{color:var(--up)}
+.lgb-sub{display:block;font-family:var(--mono);font-size:11px;color:var(--dim);margin-top:6px}
+.lgb-sub .up{color:var(--up)} .lgb-sub .down{color:var(--down)}
+.lgb-b{margin-top:12px}
+.lgb-pies{display:flex;gap:18px;flex-wrap:wrap;margin-top:10px;
+  font-family:var(--mono);font-size:10.5px;color:var(--faint)}
+.lgb-pies b{color:var(--txt)}
+.lgb-pies b.mal{color:var(--down)}
+@media(max-width:520px){ .lgb-bal,.lgb-pct{font-size:24px} }
 /* ── LOG TRADE: la cuenta dentro de la misma tarjeta del registro ── */
 .bt-sel-bar.en-tarjeta{margin:0 0 12px;padding:0 0 12px;border-bottom:1px solid var(--line-soft)}
 .lg-abrir .lg-cancel{margin-left:10px}
 /* ── EL REGISTRO DE SESIONES PASADAS ── */
 .lg-hist{margin-top:12px}
 .lg-hist-tabla{display:flex;flex-direction:column;gap:6px}
-.lg-hist-fila{display:grid;grid-template-columns:1.1fr .8fr 1fr 1fr .8fr 1fr .7fr;gap:10px;align-items:center;
+.lg-hist-fila{display:grid;grid-template-columns:1.1fr .8fr 1fr 1.3fr 1fr .7fr;gap:10px;align-items:center;
   padding:9px 12px;border:1px solid var(--line-soft);border-radius:10px;background:var(--w02);
   font-family:var(--mono);font-size:11.5px}
 .lg-hist-fila.roto{border-color:rgba(255,106,94,.34)}
@@ -4628,6 +4644,10 @@ stop[stop-color="#9BC0DC"]{stop-color:var(--txt)}
 
       <!-- ════ LOG TRADE (real · mismo formato que Backtesting) ════ -->
       <section class="view" id="v-log">
+        <!-- HASTA ARRIBA: cuánto trae la cuenta y qué tan cerca está de su
+             objetivo. Era lo primero que quería saber al abrir la vista y
+             había que bajar a las tarjetas para deducirlo. -->
+        <div class="panel lg-balance" id="lgBalance"></div>
         <!-- LO QUE VAS A HACER HOY (André, 31-ago-2026): el mismo panel de
              requisitos que se probó en el duelo, pero con TUS reglas de
              verdad — el objetivo del día, tu drawdown y cuántos trades
@@ -14534,27 +14554,31 @@ function lgSugerido(){
   /* TUS números mandan (André, 31-ago-2026): la primera vez arranca con los de
      la fase de tu cuenta, pero en cuanto abres un día con los tuyos se guardan
      como plantilla y mañana el formulario ya sale con ésos. Retecleárlos cada
-     mañana es lo que hacía que se dejaran en el default. */
+     mañana es lo que hacía que se dejaran en el default.
+     UNA SOLA CIFRA DE PÉRDIDA (André, 31-ago-2026): había 'límite de pérdida'
+     y 'riesgo por trade' y no cuadraban entre sí —$250 de riesgo contra $450
+     de límite no dice nada, y la ficha mostraba las dos como si midieran cosas
+     distintas—. Se queda el DRAWDOWN, que es lo que te saca de una cuenta. */
   const P = (S.lgPreset && typeof S.lgPreset === 'object') ? S.lgPreset : null;
-  if(P && P.tp > 0) return { tp:P.tp, dd:P.dd, trades:P.trades, riesgo:P.riesgo };
+  if(P && P.tp > 0) return { tp:P.tp, dd:P.dd, trades:P.trades };
   const cta = (lgSel && lgSel !== '__all') ? (S.accounts||[]).find(x=>x.id===lgSel)
             : mias(S.accounts||[]).find(x=>x.estado==='activa');
   const F = (typeof SISTEMA !== 'undefined' && SISTEMA.fases)
     ? (SISTEMA.fases[(cta && cta.fase) || 'buffer'] || SISTEMA.fases.buffer) : null;
   return { tp: (F && F.objetivoDia) || 500, dd: (F && F.maxPerdidaDia) || 500,
-           trades: (F && F.maxTrades) || 2, riesgo: 250 };
+           trades: (F && F.maxTrades) || 2 };
 }
 window.lgAbreSesion = function(){
   const num = id => { const v = ($('#'+id) && $('#'+id).value || '').trim();
     return v === '' ? 0 : Math.abs(parseFloat(v) || 0); };
-  const tp = num('lgSesTP'), dd = num('lgSesDD'), tr = num('lgSesTr'), ri = num('lgSesRi');
+  const tp = num('lgSesTP'), dd = num('lgSesDD'), tr = num('lgSesTr');
   if(!(tp > 0)){ toast(bi('Ponle un objetivo al día.','Set a target for the day.')); return; }
-  if(!(dd > 0)){ toast(bi('Ponle un límite de pérdida.','Set a loss limit.')); return; }
+  if(!(dd > 0)){ toast(bi('Ponle un drawdown.','Set a drawdown.')); return; }
   const antes = lgSesionHoy();
   /* editar NO reinicia el día: se conserva la hora de apertura */
-  lgSesiones()[todayISO()] = { tp, dd, trades: tr || 0, riesgo: ri || 0,
+  lgSesiones()[todayISO()] = { tp, dd, trades: tr || 0,
     ini: (antes && antes.ini) || Date.now() };
-  S.lgPreset = { tp, dd, trades: tr || 0, riesgo: ri || 0 };
+  S.lgPreset = { tp, dd, trades: tr || 0 };
   lgEditando = false;
   save(); lgHoy();
   toast(antes ? bi('Números actualizados · objetivo '+fmt$(tp),'Numbers updated · target '+fmt$(tp))
@@ -14580,7 +14604,7 @@ function lgHoy(){
   const hoy = todayISO();
   const ses = lgSesionHoy();
   if(!ses || lgEditando){
-    const d = ses ? { tp:ses.tp, dd:ses.dd, trades:ses.trades, riesgo:ses.riesgo } : lgSugerido();
+    const d = ses ? { tp:ses.tp, dd:ses.dd, trades:ses.trades } : lgSugerido();
     host.innerHTML = `<div class="lg-abrir">
       <div class="bd-t">${ses ? bi('TUS NÚMEROS DE HOY','TODAY\'S NUMBERS') : bi('ANTES DE OPERAR','BEFORE YOU TRADE')} · <b>${fmtFecha(hoy)}</b></div>
       <p class="lg-abrir-p">${ses ? bi(
@@ -14590,9 +14614,8 @@ function lgHoy(){
         'Write the numbers you are going in with. The session is measured against them.')}</p>
       <div class="lg-campos">
         <label><i>${bi('OBJETIVO','TARGET')}</i><input type="number" id="lgSesTP" step="50" value="${d.tp}"></label>
-        <label><i>${bi('LÍMITE DE PÉRDIDA','LOSS LIMIT')}</i><input type="number" id="lgSesDD" step="50" value="${d.dd}"></label>
+        <label><i>${bi('DRAWDOWN','DRAWDOWN')}</i><input type="number" id="lgSesDD" step="50" value="${d.dd}"></label>
         <label><i>${bi('TRADES MÁX','MAX TRADES')}</i><input type="number" id="lgSesTr" step="1" value="${d.trades}"></label>
-        <label><i>${bi('RIESGO / TRADE','RISK / TRADE')}</i><input type="number" id="lgSesRi" step="50" value="${d.riesgo}"></label>
       </div>
       <button type="button" class="btn primary lg-abrir-b" onclick="lgAbreSesion()">${ses ? bi('Guardar','Save') : bi('Iniciar sesión','Start session')+' →'}</button>
       ${ses ? `<button type="button" class="lg-cerrar-ses lg-cancel" onclick="lgCancelaEdita()">${bi('cancelar','cancel')}</button>` : ''}
@@ -14619,17 +14642,16 @@ function lgHoy(){
       ${barra(pct,'up')}
     </div>
     <div class="bd-fila">
-      <span class="bd-et">${bi('LÍMITE DE PÉRDIDA','LOSS LIMIT')}</span>
+      <span class="bd-et">${bi('DRAWDOWN','DRAWDOWN')}</span>
       <b class="bd-v ${roto?'mal':''}">${fmt$(dd,true)} <em>${bi('de','of')} −${fmt$(tope)}</em></b>
       ${barra(ddPct,'down')}
     </div>
     <div class="bd-chips">
       <span><i>${bi('TRADES','TRADES')}</i><b class="${deMas?'mal':''}">${mios.length}<em>${maxT?'/'+maxT:''}</em></b></span>
-      <span><i>${bi('RIESGO','RISK')}</i><b>${ses.riesgo?fmt$(ses.riesgo):'—'}</b></span>
       <span><i>${bi('GANADOS','WON')}</i><b>${mios.filter(t=>(t.pnl||0)>0).length}</b></span>
       <span><i>${bi('SESIÓN','SESSION')}</i><b>${esc(sesionMundial(ahora()).split(' ')[0])}</b></span>
     </div>
-    ${roto ? `<p class="bd-roto">${bi('Llegaste a tu límite de pérdida. El día se acabó.','You hit your loss limit. The day is over.')}</p>`
+    ${roto ? `<p class="bd-roto">${bi('Llegaste a tu drawdown. El día se acabó.','You hit your drawdown. The day is over.')}</p>`
       : deMas ? `<p class="bd-roto">${bi('Pasaste tu tope de trades del día.','You went over your daily trade cap.')}</p>`
       : pnl>=meta ? `<p class="bd-listo">${bi('Objetivo del día cumplido. Lo de más ya es jugar con dinero que era tuyo.','Daily target met. Anything more is playing with money that was yours.')}</p>` : ''}
   </div>`;
@@ -14652,6 +14674,52 @@ function lgDiaResumen(fecha, ses){
   return { pnl, dd, n:mios.length, roto, deMas, listo,
            estado: roto ? 'roto' : (listo ? 'listo' : (deMas ? 'demas' : 'neutro')) };
 }
+/* ══ EL BALANCE Y EL PROGRESO AL OBJETIVO ══ (André, 31-ago-2026)
+   Lo primero que quieres saber al abrir Log trade es cuánto trae la cuenta y
+   qué tan cerca está de su objetivo — y eso había que deducirlo bajando a las
+   tarjetas. Aquí va arriba de todo.
+   El balance es el tamaño de la cuenta MÁS lo que llevas acumulado, que es lo
+   que dice el broker; el progreso se mide contra el PICO de la curva, no
+   contra el P&L de ahorita, porque una fondeadora te da el objetivo cuando lo
+   TOCAS, aunque después devuelvas algo. */
+function lgBalancePanel(){
+  const host = $('#lgBalance'); if(!host) return;
+  const list = lgTradesReales();
+  const pnl = list.reduce((a,t)=>a+(t.pnl||0),0);
+  let eq = 0, pico = 0;
+  list.forEach(t => { eq += (t.pnl||0); if(eq > pico) pico = eq; });
+  const unaCta = typeof lgSel === 'string' && lgSel.startsWith('ac_');
+  const a = unaCta ? (S.accounts||[]).find(x=>x.id===lgSel) : null;
+  const M = a ? metasDe(a) : {};
+  const size = a ? (a.size || 0) : mias(S.accounts||[]).reduce((x,c)=>x+(c.size||0),0);
+  const bal = size + pnl;
+  const target = M.target || null, ddMax = M.dd || null;
+  const pct = target ? Math.max(0, Math.min(100, pico/target*100)) : 0;
+  const llego = target && pico >= target;
+  /* el drawdown de la cuenta: el peor bajón desde un máximo de TODA la curva */
+  let e2 = 0, p2 = 0, peor = 0;
+  list.forEach(t => { e2 += (t.pnl||0); if(e2>p2) p2=e2; const c2=e2-p2; if(c2<peor) peor=c2; });
+  host.innerHTML = `
+    <div class="lgb-top">
+      <div class="lgb-izq">
+        <span class="lgb-k">${a ? esc(a.alias) : bi('TODAS LAS CUENTAS','ALL ACCOUNTS')}</span>
+        <b class="lgb-bal">${fmt$(bal)}</b>
+        <span class="lgb-sub">${size?fmt$(size)+' + ':''}<b class="${pnl>=0?'up':'down'}">${fmt$(pnl,true)}</b></span>
+      </div>
+      ${target ? `<div class="lgb-der">
+        <span class="lgb-k">${bi('AL OBJETIVO','TO TARGET')}</span>
+        <b class="lgb-pct ${llego?'ok':''}">${llego ? '✓ '+bi('LLEGÓ','HIT') : Math.round(pct)+'%'}</b>
+        <span class="lgb-sub">${fmt$(pico,true)} ${bi('de','of')} ${fmt$(target)}</span>
+      </div>` : ''}
+    </div>
+    ${target ? `<span class="bd-b lgb-b"><i class="up" style="width:${pct}%"></i></span>` : ''}
+    <div class="lgb-pies">
+      ${target ? `<span>${bi('faltan','left')} <b>${fmt$(Math.max(0, target - pico))}</b></span>` : ''}
+      ${ddMax ? `<span>${bi('drawdown','drawdown')} <b class="${Math.abs(peor)>=ddMax?'mal':''}">${fmt$(peor,true)}</b> ${bi('de','of')} −${fmt$(ddMax)}</span>` : ''}
+      <span>${list.length} ${bi('trades','trades')}</span>
+    </div>`;
+  host.hidden = false;
+}
 function lgHistorial(){
   const host = $('#lgHist'); if(!host) return;
   const hoy = todayISO();
@@ -14670,7 +14738,7 @@ function lgHistorial(){
     <div class="bd-t">${bi('SESIONES PASADAS','PAST SESSIONS')} · <b>${R.length}</b></div>
     <div class="bd-chips" style="margin-bottom:10px">
       <span><i>${bi('OBJETIVO CUMPLIDO','TARGET MET')}</i><b class="ok">${cumplidos}<em>/${R.length}</em></b></span>
-      <span><i>${bi('LÍMITE ROTO','LIMIT BROKEN')}</i><b class="${rotos?'mal':''}">${rotos}</b></span>
+      <span><i>${bi('DRAWDOWN ROTO','DRAWDOWN BROKEN')}</i><b class="${rotos?'mal':''}">${rotos}</b></span>
       <span><i>${bi('SUMA','TOTAL')}</i><b class="${suma>=0?'ok':'mal'}">${fmt$(suma,true)}</b></span>
     </div>
     <div class="lg-hist-tabla">
@@ -14679,8 +14747,7 @@ function lgHistorial(){
           <span class="lgh-f">${esc(fmtFecha(f))}</span>
           <b class="lgh-p ${r.pnl>=0?'up':'down'}">${fmt$(r.pnl,true)}</b>
           <span class="lgh-n">${bi('objetivo','target')} ${fmt$(ses.tp)}</span>
-          <span class="lgh-n">${bi('límite','limit')} −${fmt$(ses.dd)}</span>
-          <span class="lgh-n ${r.roto?'mal':''}">dd ${fmt$(r.dd,true)}</span>
+          <span class="lgh-n ${r.roto?'mal':''}">dd ${fmt$(r.dd,true)} <em>${bi('de','of')} −${fmt$(ses.dd)}</em></span>
           <span class="lgh-n ${r.deMas?'mal':''}">${r.n}${ses.trades?'/'+ses.trades:''} ${bi('trades','trades')}</span>
           <span class="lgh-e">${r.roto ? bi('ROTO','BROKEN') : r.listo ? bi('CUMPLIDO','MET') : r.deMas ? bi('DE MÁS','OVER') : '—'}</span>
         </div>`).join('')}
@@ -14689,13 +14756,13 @@ function lgHistorial(){
 }
 function renderLog(){
   imgInit();
-  lgCtas(); lgStats(); lgLog(); lgHoy(); lgHistorial();
+  lgCtas(); lgBalancePanel(); lgStats(); lgLog(); lgHoy(); lgHistorial();
   requestAnimationFrame(() => lgDibuja(1));
   if(lgLigado) return;
   lgLigado = true;
   $('#lgCta').addEventListener('change', e => {
     lgSel = e.target.value;
-    lgCtas(); lgStats(); lgLog(); lgHoy(); lgHistorial();
+    lgCtas(); lgBalancePanel(); lgStats(); lgLog(); lgHoy(); lgHistorial();
     requestAnimationFrame(() => lgDibuja(1));
   });
   $('#lgDir').addEventListener('click', e => {
