@@ -25286,7 +25286,7 @@ escAnchoPct = input.int(34, "Ancho de la caja (% del rango)", minval = 4, maxval
 escAncho = input.int(10, "Ancho de cada caja (velas)", minval = 3, maxval = 100, group = g10, inline = "E2")
 escHueco = input.int(5, "Hueco antes de la caja (velas)", minval = 0, maxval = 200, group = g10, tooltip = "Qué tan lejos de la última vela arranca la caja, en velas del chart. 5 es lo que traes en tu dibujo: pegadita, en el aire, justo después del precio. Súbelo si quieres alejarla de las etiquetas del rango y del Fibonacci, que cuelgan del final de la estructura y le pueden caer encima.")
 escSep = input.int(2, "Separación", minval = 0, maxval = 20, group = g10, inline = "E2")
-escVerProb = input.bool(false, "Escribir adentro el nivel, la confluencia y el RR", group = g10, tooltip = "APAGADO de fábrica: la caja va limpia, sin una sola letra adentro. Prendido, escribe dentro de la caja del premio el nivel, si le pega un FVG, el porcentaje de confluencia y el RR — útil sobre todo con la ESCALERA COMPLETA, para comparar. El porcentaje NO es un win rate probado: es cuánta confluencia junta ese nivel (FVG, Order Block, AOI, qué tan profundo es, si el precio ya lo pasó y el RR que deja). Todo eso sigue vivo en el tooltip de la caja aunque esto quede apagado.")
+escVerProb = input.bool(false, "Escribir el RR adentro de la caja", group = g10, tooltip = "APAGADO de fábrica: la caja va limpia, sin una sola letra adentro. Prendido, escribe dentro de la caja del premio el nivel, si le pega un FVG, el porcentaje de confluencia y el RR — útil sobre todo con la ESCALERA COMPLETA, para comparar. El porcentaje NO es un win rate probado: es cuánta confluencia junta ese nivel (FVG, Order Block, AOI, qué tan profundo es, si el precio ya lo pasó y el RR que deja). Todo eso sigue vivo en el tooltip de la caja aunque esto quede apagado.")
 escPal = input.bool(true, "La caja de la orden sigue la paleta", group = g10, tooltip = "PRENDIDO: la caja se pinta con los mismos azules que el resto de la estructura —el tono oscuro para el riesgo y el medio para el premio— y todo el chart se lee como una sola pieza. APAGADO: vuelve al rojo y verde de la herramienta Long/Short Position de TradingView, que gritan más pero se salen de la paleta. Los dos colores de abajo solo mandan con esto apagado.")
 escColR = input.color(#f23645, "Riesgo", inline = "E3", group = g10)
 escColLn = input.color(color.new(#131722, 40), "Línea de la entrada", group = g10, tooltip = "La raya que parte las dos cajas, la de tu precio de entrada. Aquí le pones color Y transparencia (el cuadrito de color trae su propia barra de opacidad), por si la quieres invisible o gritona.")
@@ -26582,7 +26582,10 @@ if barstate.islast
                             int bx1 = math.min(bar_index + escIni + col * (anchoCaja + sepCaja), bar_index + 460)
                             int bx2 = math.min(bx1 + anchoCaja, bar_index + 490)
                             string num = escTodo ? str.tostring(i + 1) + "/" + str.tostring(nEsc) : otePorFvg ? (oteEnArea ? "★ 50% del FVG" : "50% del FVG") : "entrada"
-                            string txt = (esMejor ? "★ " : "") + num + "\\n" + str.tostring(r) + (array.get(eFvg, i) ? " + FVG" : "") + "\\n" + str.tostring(sc, "#") + "%\\n1:" + str.tostring(rrx, "#.#")
+                            // (André, 31-ago-2026) Adentro de la caja SOLO el RR. El número,
+                            // el nivel y la confluencia se fueron al tooltip: la caja
+                            // se lee de un vistazo o no se lee
+                            string txt = "1:" + str.tostring(rrx, "#.#")
                             // rojo el riesgo, verde el premio, y el texto
                             // PEGADO a la línea de la entrada: la caja del
                             // premio es larguísima y centrado se iba solo
