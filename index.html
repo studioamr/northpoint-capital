@@ -442,8 +442,17 @@ body.doc-open #indice{display:none}
 /* CINCO listas tenían que nombrar la sección nueva, no cuatro. Ésta era la
    quinta y la que faltaba: sin `position:relative` aquí, el lienzo del skyline
    se colgaba de otro ancestro y la sección entera quedaba descuadrada. */
-#programa.doc-active,#filosofia.doc-active,#mesa.doc-active,#educacion.doc-active,#journal.doc-active,#terminal.doc-active,#comunidad.doc-active{position:relative;
-  overflow:hidden;background:var(--bg);min-height:100vh}
+/* (André, 31-ago-2026) Esta lista forzaba min-height:100vh a SIETE secciones,
+   pero sólo cuatro son una escena a pantalla completa (el leopardo, la ciudad
+   del journal, la torre de comunidad y el skyline de la mesa). En #terminal y
+   #educacion no hay lienzo: son texto, y el 100vh les dejaba un hueco BLANCO
+   debajo del contenido —282 px y 458 px medidos— que es justo lo que se veía
+   como «zonas en blanco». #programa ya ni existe como sección. */
+#filosofia.doc-active,#journal.doc-active,#comunidad.doc-active,#mesa.doc-active{
+  min-height:100vh}
+#filosofia.doc-active,#journal.doc-active,#comunidad.doc-active,#mesa.doc-active,
+#terminal.doc-active,#educacion.doc-active{position:relative;
+  overflow:hidden;background:var(--bg)}
 .caza-marco,.torre-marco{position:absolute;inset:0}
 /* bootcamp y journal tienen CONTENIDO debajo del héroe: sus marcos son bandas
    relativas de 76vh —no inset:0 de la sección, que ahora crece— y el
@@ -1075,6 +1084,14 @@ body.doc-open #indice{display:none}
         <li><i>05</i><b>Academia</b><span>4 programas, 12 módulos y 35 lecciones, con tu avance guardado.</span></li>
         <li><i>06</i><b>Kuro</b><span>Duelos 1v1 con tiempo y monto, ranking por dan y la campaña de nueve katanas.</span></li>
       </ul>
+    </div>
+
+    <!-- ══ VISTAZOS · pedazos REALES del Terminal, corriendo ══
+         (André, 31-ago-2026) La regla de la casa para los huecos: no se rellenan
+         con adorno, se rellenan con trozos de la aplicación de verdad. El script
+         de abajo llena todas las .vz-track que encuentre. -->
+    <div class="vz rv" aria-label="Vistazos del Terminal">
+      <div class="vz-track"></div>
     </div>
   </div>
 </section>
@@ -1721,8 +1738,11 @@ body.doc-open #indice{display:none}
    recorre justo la mitad, así el bucle no tiene costura. La segunda mitad va
    oculta a lectores de pantalla para no leer todo dos veces. */
 (function(){
-  var track = document.getElementById('vzTrack');
-  if (!track) return;
+  /* (André, 31-ago-2026) Antes esto llenaba UNA sola cinta por id. Ahora llena
+     todas las .vz-track que haya en la página: así el mismo material sirve para
+     tapar cualquier hueco nuevo sin duplicar el arreglo. */
+  var cintas = document.querySelectorAll('.vz-track');
+  if (!cintas.length) return;
   var V = [
     '<i>WIN RATE · POR TRADE</i><b>65%</b><span>13W · 7L</span><div class="vz-bar"><s style="flex:65"></s><em style="flex:35"></em></div>',
     '<i>BALANCE</i><b class="up">$170,490</b><span>3 CUENTAS · +$20,490</span>',
@@ -1749,8 +1769,10 @@ body.doc-open #indice{display:none}
     });
     return d;
   }
-  track.appendChild(mitad(false));
-  track.appendChild(mitad(true));
+  cintas.forEach(function(track){
+    track.appendChild(mitad(false));
+    track.appendChild(mitad(true));
+  });
 })();
 </script>
 
