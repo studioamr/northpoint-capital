@@ -25313,21 +25313,6 @@ canLbl = input.bool(true, "Etiqueta con la pendiente", group = g11, tooltip = "A
 canGrosor = input.int(1, "Grosor", minval = 1, maxval = 4, inline = "K2", group = g11)
 inColCanal = input.color(#1c4f82, "Color", inline = "K2", group = g11, tooltip = "Con la paleta puesta el canal toma el color de acento de esa paleta; en Personalizado manda este.")
 
-// ── 12 · TERMÓMETRO ────────────────────────────────────────────
-// (André, 31-ago-2026) Un solo número que dice qué tan CALIENTE está
-// la zona donde anda el precio AHORA. No es dirección ni señal: es
-// temperatura. Frío = tierra de nadie, no hay nada que hacer.
-// Fuego = el precio está pegado a un nivel del Fibonacci Y encima
-// tiene un FVG, un Order Block o el área de interés. Ese cruce —el
-// nivel con el hueco— es el fuego más grande de todos.
-g12 = "12 · Termómetro"
-inVerTermo = input.bool(true, "Termómetro de la zona", group = gV, tooltip = "Un panel chico que mide qué tan caliente está el lugar donde anda el precio: HIELO cuando está en tierra de nadie, TIBIO cuando se acerca a algo, y FUEGO cuando cae sobre un nivel del Fibonacci con un FVG o un Order Block encima. Ese cruce es el más caliente que hay. Su tamaño y su esquina se ajustan en el grupo 12.")
-tmPos = input.string("Abajo a la derecha", "Dónde va", options = ["Arriba a la derecha", "Arriba a la izquierda", "Abajo a la derecha", "Abajo a la izquierda", "Abajo al centro"], group = g12)
-tmTam = input.string("Normal", "Tamaño de la letra", options = ["Diminuto", "Chico", "Normal"], group = g12)
-tmCerca = input.float(6, "Qué tan cerca cuenta como pegado (% del rango)", minval = 1, maxval = 30, step = 0.5, group = g12, tooltip = "A qué distancia de un nivel del Fibonacci se considera que el precio ya está encima. 6% del alto del tramo: más abajo se vuelve exigente, más arriba se calienta con cualquier cosa.")
-tmColHielo = input.color(#4a90d9, "Hielo", inline = "T12", group = g12)
-tmColTibio = input.color(#d9a441, "Tibio", inline = "T12", group = g12)
-tmColFuego = input.color(#e5484d, "Fuego", inline = "T12", group = g12, tooltip = "Los tres colores del termómetro. Son los únicos del script que no siguen la paleta: la temperatura tiene que gritar aunque el resto del chart esté en azules.")
 
 // ═══ PALETA: de 5 papeles salen TODOS los colores ══════════════
 // pAlza  → NY, FVG alcista, objetivos alcistas, señal ▲, cifras en verde
@@ -25376,7 +25361,6 @@ verFib = inVerFib
 verPlan = inVerPos
 verEsc = inVerEsc
 verCanal = inVerCanal
-verTermo = inVerTermo
 // las killzones NO se dibujan aquí: se calculan calladas para que la
 // posición pueda apuntar a la liquidez que sigue sin tomarse
 verLblsKZ = verLbls and dibujarKZ
@@ -25853,8 +25837,6 @@ var array<box>   planBx = array.new<box>()
 var array<box>   fvgRgBx = array.new<box>()
 var array<label> fvgRgLb = array.new<label>()
 var label planAviso = na
-// el termómetro: se arma una vez y se rellena en la última vela
-var table tmTb = na
 // cuántas velas ocupa la escalera: la ficha del plan del grupo 9 se
 // recorre eso a la derecha para no encimarse con ella
 var int escCorr = 0
@@ -26312,66 +26294,6 @@ if barstate.islast
                             array.push(fibLn, line.new(tFib, py, tFin, py, xloc = xloc.bar_time, color = color.new(colFib, 35), width = fibGrosor))
                             array.push(fibLb, label.new(tFin + paso, py, str.tostring(r), xloc = xloc.bar_time, style = label.style_label_left, color = #ffffff00, textcolor = color.new(colFib, 10), size = size.tiny, tooltip = "Nivel " + str.tostring(r) + " · " + str.tostring(py, format.mintick)))
 
-                // ── EL TERMÓMETRO ─────────────────────────────────
-                // (André, 31-ago-2026) Mide la ZONA, no la dirección.
-                // Se calienta con la cercanía al nivel del Fibonacci y
-                // con lo que le caiga encima: el hueco pesa más que
-                // nada porque el nivel CON FVG es el mejor combo.
-                if verTermo
-                    // 1) ¿qué tan pegado está a un nivel del Fib?
-                    float tmD = 1e12
-                    float tmR = na
-                    nivT = str.split(nivelesTxt, ",")
-                    for i = 0 to array.size(nivT) - 1
-                        float r = nz(str.tonumber(str.replace_all(array.get(nivT, i), " ", "")), -1)
-                        if r >= 0
-                            float py = pFin + (pIni - pFin) * r
-                            float d = math.abs(close - py)
-                            if d < tmD
-                                tmD := d
-                                tmR := r
-                    float tol = math.max(alto * tmCerca / 100, syminfo.mintick)
-                    float prox = math.max(0, 1 - tmD / tol)
-                    // 2) qué le cae encima al precio, aquí y ahora
-                    bool tmFvg = not na(frT) and close <= frT and close >= frB
-                    bool tmOb  = obIdx >= 0 and close <= obT and close >= obB
-                    bool tmAoi = not na(aoiT) and close <= aoiT and close >= aoiB
-                    bool tmOte = not na(tmR) and tmR >= 0.5 and tmR <= 0.79
-                    float tmp = prox * 34
-                    tmp += tmFvg ? 26 : 0
-                    tmp += tmOb ? 18 : 0
-                    tmp += tmAoi ? 10 : 0
-                    tmp += tmOte and prox > 0.25 ? 12 : 0
-                    tmp := math.min(100, math.max(0, tmp))
-                    // el fuego máximo: el nivel Y el hueco al mismo tiempo
-                    bool combo = prox > 0.5 and tmFvg
-                    string tmTxt = combo ? "FUEGO MÁXIMO" : tmp >= 67 ? "FUEGO" : tmp >= 34 ? "TIBIO" : "HIELO"
-                    color tmCol = tmp >= 67 ? tmColFuego : tmp >= 34 ? tmColTibio : tmColHielo
-                    string tmSub = combo ? "el nivel Y el hueco, juntos" : tmp >= 67 ? "zona de decisión" : tmp >= 34 ? "se está acercando" : "tierra de nadie"
-                    // la barra: diez bloques que se van encendiendo
-                    string tmBar = ""
-                    for i = 0 to 9
-                        tmBar += tmp >= (i + 1) * 10 ? "█" : "░"
-                    string tmNiv = na(tmR) ? "—" : str.tostring(tmR) + " · " + str.tostring(tmD, "#.#") + " pts"
-                    string tmQue = (tmFvg ? "FVG " : "") + (tmOb ? "OB " : "") + (tmAoi ? "AOI" : "")
-                    if str.length(str.replace_all(tmQue, " ", "")) == 0
-                        tmQue := "nada encima"
-                    // se borra la anterior antes de armar la nueva: si no,
-                    // cada tick de la última vela deja una tabla huérfana
-                    table.delete(tmTb)
-                    tmTb := table.new(tmPos == "Arriba a la derecha" ? position.top_right : tmPos == "Arriba a la izquierda" ? position.top_left : tmPos == "Abajo a la izquierda" ? position.bottom_left : tmPos == "Abajo al centro" ? position.bottom_center : position.bottom_right, 2, 5, border_width = 1, border_color = color.new(chart.fg_color, 88), frame_width = 1, frame_color = color.new(chart.fg_color, 82), bgcolor = color.new(chart.bg_color, 8))
-                    tmSz = tmTam == "Diminuto" ? size.tiny : tmTam == "Chico" ? size.small : size.normal
-                    table.cell(tmTb, 0, 0, "TERMÓMETRO", text_color = color.new(chart.fg_color, 45), text_size = size.tiny, text_halign = text.align_left)
-                    table.cell(tmTb, 1, 0, str.tostring(tmp, "#") + "%", text_color = tmCol, text_size = size.tiny, text_halign = text.align_right)
-                    table.merge_cells(tmTb, 0, 1, 1, 1)
-                    table.cell(tmTb, 0, 1, tmTxt, text_color = tmCol, text_size = tmSz)
-                    table.merge_cells(tmTb, 0, 2, 1, 2)
-                    table.cell(tmTb, 0, 2, tmBar, text_color = tmCol, text_size = size.small)
-                    table.cell(tmTb, 0, 3, "nivel", text_color = color.new(chart.fg_color, 55), text_size = size.tiny, text_halign = text.align_left)
-                    table.cell(tmTb, 1, 3, tmNiv, text_color = chart.fg_color, text_size = size.tiny, text_halign = text.align_right)
-                    table.cell(tmTb, 0, 4, "encima", text_color = color.new(chart.fg_color, 55), text_size = size.tiny, text_halign = text.align_left)
-                    table.cell(tmTb, 1, 4, tmQue, text_color = tmCol, text_size = size.tiny, text_halign = text.align_right, tooltip = "El termómetro mide la ZONA, no la dirección.\\n\\n" + tmSub + ".\\n\\nSe calienta con dos cosas: qué tan pegado está el precio a un nivel del Fibonacci, y qué le cae encima ahí mismo — un FVG pesa más que todo, porque el nivel CON hueco es el mejor cruce que hay. El Order Block y el área de interés suman después.\\n\\nNo es una señal de entrada: es qué tan interesante es el lugar donde anda el precio ahora.")
-
                 // ── ESCALERA DE ENTRADAS ──────────────────────────
                 // (André, 31-ago-2026) LA ORDEN: una sola caja, igual que
                 // la herramienta Short Position, con la entrada en el
@@ -26739,7 +26661,14 @@ if barstate.islast
 // que hace de verdad un canal de regresión. Se redibuja completo en
 // la última vela, como todo lo demás de este script.
 tfCanal = canTF == "5m" ? "5" : canTF == "15m" ? "15" : "60"
-[cnY2, cnY1, cnSd, cnT0] = request.security(syminfo.tickerid, tfCanal, [ta.linreg(close, canLen, 0), ta.linreg(close, canLen, canLen - 1), ta.stdev(close, canLen) * math.sqrt(math.max(0, 1 - math.pow(nz(ta.correlation(close, bar_index, canLen)), 2))), time[canLen - 1]], lookahead = barmerge.lookahead_on)
+[cnY2, cnY1, cnSd] = request.security(syminfo.tickerid, tfCanal, [ta.linreg(close, canLen, 0), ta.linreg(close, canLen, canLen - 1), ta.stdev(close, canLen) * math.sqrt(math.max(0, 1 - math.pow(nz(ta.correlation(close, bar_index, canLen)), 2)))], lookahead = barmerge.lookahead_on)
+// (André, 31-ago-2026) El arranque del canal se mide EN EL CHART, no se pide
+// prestado a la otra temporalidad. Antes salía de time[canLen-1] dentro del
+// request.security, y cuando esa temporalidad no traía tantas velas cargadas
+// devolvía na: el guard de abajo se saltaba TODO el dibujo sin decir nada.
+// Prendías el canal y no salía pintado.
+int cnBars = int(canLen * timeframe.in_seconds(tfCanal) / math.max(1, timeframe.in_seconds("")))
+int cnT0 = time - int(nz(pasoBar, 60000)) * math.max(10, cnBars)
 
 var line canC  = na
 var line canU  = na
@@ -26759,7 +26688,7 @@ if barstate.islast
     linefill.delete(canF1)
     linefill.delete(canF2)
     label.delete(canLb)
-    if verCanal and not na(cnY1) and not na(cnY2) and not na(cnT0)
+    if verCanal and not na(cnY1) and not na(cnY2)
         float sd  = nz(cnSd)
         float aU  = cnY2 + sd * canDesv
         float aD  = cnY2 - sd * canDesv
@@ -26782,6 +26711,10 @@ if barstate.islast
             float ancho = math.max(aU - aD, syminfo.mintick)
             float pos = math.min(115, math.max(-15, (close - aD) / ancho * 100))
             canLb := label.new(time, cnY2, kzNegrita ? f_negrita("CANAL " + canTF + " " + (pend > 0 ? "↑" : pend < 0 ? "↓" : "→")) : "CANAL " + canTF + " " + (pend > 0 ? "↑" : pend < 0 ? "↓" : "→"), xloc = xloc.bar_time, style = label.style_label_left, color = #ffffff00, textcolor = color.new(colCanal, 10), size = tamLbl, tooltip = "Canal de regresión · " + canTF + " · " + str.tostring(canLen) + " velas\\nDe punta a punta " + (pend > 0 ? "sube " : pend < 0 ? "baja " : "va plano, ") + str.tostring(math.abs(pend), "#.##") + " pts\\n\\nBorde de arriba " + str.tostring(aU, format.mintick) + "\\nCentro " + str.tostring(cnY2, format.mintick) + "\\nBorde de abajo " + str.tostring(aD, format.mintick) + "\\n\\nEl precio va al " + str.tostring(pos, "#") + "% del canal (0 = borde de abajo, 100 = el de arriba).\\nEl ancho sale del error de la recta, no de la volatilidad pelona: mientras mejor explique la recta al precio, más flaco el canal.")
+    else if verCanal
+        // prendido y sin recta: casi siempre son pocas velas de esa
+        // temporalidad cargadas. Se dice, en vez de dejar el chart mudo
+        canLb := label.new(bar_index, close, "CANAL " + canTF + " sin datos\\nbaja \\"Cuántas velas mide\\" o carga más historial", style = label.style_label_left, color = color.new(chart.bg_color, 15), textcolor = color.new(colCanal, 10), size = size.small)
 `;
 
 /* ════ CÓMO SE OPERA · el método, dibujado ═══════════════════════
