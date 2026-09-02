@@ -23377,6 +23377,15 @@ const ALGO_PINE_KZP_DIA = `// This source code is subject to the terms of the Mo
 //      quieres que el rango y la posición manden. La transparencia
 //      de las zonas también se ajusta ahí.
 //
+//  DOS INTERRUPTORES DE ARRIBA (1-sep-2026):
+//   · "Opening Range" (grupo 1 · Qué ver) apaga SOLO la caja del OR
+//     y sus tres rectas (ORH / ORL / ORM); la killzone ORB, sus FVG,
+//     los objetivos y las señales ▲▼ siguen igual.
+//   · "Líneas de liquidez INFINITAS" (grupo 1 · Killzones) manda los
+//     H/L que siguen VIVOS hasta el borde derecho, sin tope de velas.
+//     Lo tomado sigue cortándose exacto en su vela, y al cerrar NY la
+//     liquidez que nadie tocó expira ahí mismo.
+//
 //  AJUSTES: la config trae solo lo que de verdad se mueve. Todo lo
 //  demás — los textos de la rutina, los estilos del port de
 //  LuxAlgo, los nombres de las sesiones y los colores que ya salen
@@ -23410,6 +23419,7 @@ indicator("NP A+", "NP A+", overlay = true, max_lines_count = 500, max_boxes_cou
 // cada cosa desde aquí, sin ir a buscarla grupo por grupo. Lo que
 // apagues no pierde sus ajustes, solo deja de dibujarse.
 gV = "1 · Qué ver"
+inVerOR     = input.bool(true, "Opening Range · la caja y el ORH / ORL / ORM", group = gV, tooltip = "El apagador de LA CAJA del rango de apertura y de sus tres rectas: el ORH, el ORL y el ORM. Apagado, el chart se queda sin el rectángulo del OR y sin esas líneas, pero TODO lo demás del ORB sigue igual: la killzone ORB con su H/L, los FVG que nacen dentro, los objetivos numerados y las señales ▲▼. Si lo que quieres es apagar el ORB ENTERO de un golpe, usa el interruptor de abajo.")
 inVerKZ     = input.bool(true, "Killzones · ASIA · LONDRES · NY", group = gV, tooltip = "El apagador de TODAS las killzones de un golpe: sus cajas, sus líneas de alto y bajo y sus nombres. Apagado, el chart se queda sin una sola marca de sesión y lo demás sigue igual. Cuál de las cuatro se dibuja y de qué color se sigue eligiendo abajo, en su grupo — esto solo las prende o las apaga todas.")
 inVerEMA    = input.bool(true, "Medias móviles", group = gV, tooltip = "El apagador de las dos medias. Cuáles son, de qué largo y de qué tipo se elige en su grupo; esto solo las prende o las apaga.")
 inVerORB    = input.bool(true, "ORB · la caja del OR y TODO lo suyo", group = gV, tooltip = "El interruptor de todo el ORB de un golpe: la caja del OR (9:30-9:45), el ORH, el ORL, el ORM, los objetivos numerados, las señales ▲▼, la MA de sesión, los FVG que nacen dentro del ORB y la killzone ORB con su H/L. Apagado, el chart queda sin una sola marca del ORB y lo demás —ASIA, LONDRES, NY, la estructura y el panel— sigue igual. Los ajustes de cada pieza no se pierden: al volver a prenderlo, todo regresa como lo tenías.")
@@ -23426,18 +23436,18 @@ sigTog      = input.bool(true, "Señales ▲▼ del rompimiento", group = gV, to
 // paleta usa 5 papeles: alza, baja, acento, neutro y suave.
 // "Personalizado" respeta los colores que elijas grupo por grupo.
 g0 = "0 · Paleta"
-paleta = input.string("AMR SETUP", "Diseño", options = ["AMR SETUP", "Personalizado"], group = g0, tooltip = "AMR SETUP es tu setup: los azules y grises con los que traes el chart, exactamente como está. PERSONALIZADO libera TODO — los cinco colores base de abajo y, con ellos, cada color que ya vive en su grupo (killzones, FVG, rango, AOI, Order Block, Fibonacci, la posición y la caja de la orden), más los tamaños y los grosores. Y no hace falta cambiar de diseño para tocar un color: cualquier color que muevas en su grupo MANDA de inmediato, aunque sigas en AMR SETUP — mientras lo dejes como viene de fábrica, lo pinta la paleta.")
+paleta = input.string("AMR SETUP", "Diseño", options = ["AMR SETUP", "Personalizado"], group = g0, tooltip = "AMR SETUP es tu setup: la escala de GRISES con la que traes el chart, exactamente como está — de la noche (lo más oscuro) al día (lo más claro), sin un solo color. PERSONALIZADO libera TODO — los cinco colores base de abajo y, con ellos, cada color que ya vive en su grupo (killzones, FVG, rango, AOI, Order Block, Fibonacci, la posición y la caja de la orden), más los tamaños y los grosores. Y no hace falta cambiar de diseño para tocar un color: cualquier color que muevas en su grupo MANDA de inmediato, aunque sigas en AMR SETUP — mientras lo dejes como viene de fábrica, lo pinta la paleta.")
 transZona = input.int(88, "Transparencia de las zonas", minval = 60, maxval = 97, group = g0, tooltip = "Qué tan tenues se ven los rellenos (FVG, caja del OR, cajas de killzone). Más alto = más discreto. 88 es un buen punto para que la vela siempre se lea encima.")
 // ── 0b · MI DISEÑO (manda con PERSONALIZADO) ──────────────────
 // Los cinco papeles de los que sale TODO el color del script. Con
 // AMR SETUP se quedan como están; con Personalizado mandan estos,
 // y además cada grupo puede pisarlos con su propio color.
 g0b = "0b · Mi diseño"
-basAlza   = input.color(#2e6da4, "Alza · NY, FVG ↑, cifras en verde", group = g0b)
-basBaja   = input.color(#0a2342, "Baja · ASIA, FVG ↓, cifras en rojo", group = g0b)
-basAcento = input.color(#1c4f82, "Acento · LONDRES, AOI", group = g0b)
-basNeutro = input.color(#7b93ad, "Neutro · ORB, niveles del OR, Fib", group = g0b)
-basSuave  = input.color(#4a90d9, "Suave · la entrada, la MA de sesión", group = g0b, tooltip = "Los cinco papeles. Todo lo que el script pinta sale de aquí: cambia estos cinco y cambia el chart entero sin tocar nada más. Solo mandan con el diseño en PERSONALIZADO.")
+basAlza   = input.color(#b8b8b8, "Alza · NY, FVG ↑, cifras en verde", group = g0b)
+basBaja   = input.color(#3c3c3c, "Baja · ASIA, FVG ↓, cifras en rojo", group = g0b)
+basAcento = input.color(#6e6e6e, "Acento · LONDRES, AOI", group = g0b)
+basNeutro = input.color(#8f8f8f, "Neutro · ORB, niveles del OR, Fib", group = g0b)
+basSuave  = input.color(#d0d0d0, "Suave · la entrada, la MA de sesión", group = g0b, tooltip = "Los cinco papeles. Todo lo que el script pinta sale de aquí: cambia estos cinco y cambia el chart entero sin tocar nada más. Solo mandan con el diseño en PERSONALIZADO.")
 tamLblSel = input.string("Chico", "Tamaño de las etiquetas", options = ["Diminuto", "Chico", "Normal"], group = g0b, tooltip = "El tamaño de TODOS los nombres que cuelgan a la derecha: ASIA, LNDN, ORB, NY, HIGH, LOW y los números del Fibonacci.")
 zonaHalSel = input.string("Izquierda", "Título de cada zona · a lo ancho", options = ["Izquierda", "Centro", "Derecha"], group = g0b, tooltip = "Dónde se escribe el nombre DENTRO de su propio recuadro: el FVG, el Order Block, el AOI y los huecos del ORB. Izquierda es lo de siempre; centro y derecha ayudan cuando la zona arranca fuera de la pantalla.")
 verTitZona = input.bool(true, "Ponerle nombre a cada zona", group = g0b, tooltip = "El nombre que va escrito DENTRO de cada recuadro: FVG ↑ · 5, AOI · 5m, OB ↓ · 5m. Apagado, las zonas quedan pintadas pero mudas —el chart respira— y los datos siguen en el tooltip de cada una.")
@@ -23459,31 +23469,32 @@ alertar  = input.bool(false, "Alertar cuando tomen un H/L", group = g1, tooltip 
 grosor   = input.int(1, "Grosor de las líneas de liquidez", minval = 1, maxval = 5, group = g1)
 transLiq = input.int(0, "Transparencia de las líneas de liquidez", minval = 0, maxval = 80, group = g1, tooltip = "En 0 van SÓLIDAS, que es como se leen mejor: son los niveles que el precio va a buscar. Súbela solo si te tapan las velas.")
 liqExt   = input.int(20, "Qué tanto se pasan a la derecha (velas)", minval = 0, maxval = 300, group = g1, tooltip = "Las líneas de liquidez que siguen VIVAS se proyectan estas velas más allá de la última, para que se vean bien y no queden pegadas al precio. En cuanto el precio las toma se cortan exacto en esa vela, sin proyección: lo tomado se queda donde pasó.")
+liqInf   = input.bool(false, "Líneas de liquidez INFINITAS", group = g1, tooltip = "Las líneas de liquidez que siguen VIVAS se van hasta el infinito por la derecha, en vez de pasarse solo las velas de arriba. Prendido, el número de arriba deja de mandar mientras el nivel esté vivo. Lo que NO cambia: en cuanto el precio se lleva el nivel, la línea se corta EXACTO en esa vela y ahí se queda — lo tomado no se proyecta. Y al cerrar NY, la liquidez de ASIA, LONDRES y el ORB que nadie tomó expira y también se corta ahí.")
 sepLbl   = input.int(3, "Separación de las etiquetas (velas)", minval = 0, maxval = 20, group = g1, tooltip = "Cada nombre vive en su propio carril a la derecha para que NUNCA se encimen, aunque dos niveles caigan en el mismo precio (pasa seguido: el alto de NY suele ser el mismo ORH). Este número es lo que se separa un carril del siguiente: ASIA, LNDN, ORB, NY, el ORH/ORL del ORB y el HIGH/LOW del rango, en ese orden de izquierda a derecha. Súbelo si trabajas con mucho zoom out y aun así se te juntan.")
 datosDonde = input.string("En el panel", "Los datos de cada sesión", options = ["En su caja del chart", "En el panel", "En los dos"], group = g1, tooltip = "Dónde se leen el abrió → cerró y los puntos de ASIA, LONDRES, NY y el ORB. EN SU CAJA DEL CHART: cada sesión los escribe en SU tramo, justo encima de su máximo y a la mitad de su horario, con el detalle en el tooltip; el panel se queda solo con la rutina, el contrato y el TOTAL. EN EL PANEL: como siempre, en sus filas. EN LOS DOS: por si quieres tenerlos a la mano en las dos partes.")
 verIni   = input.bool(true, "Bolita al abrir cada sesión", group = g1, tooltip = "Un círculo diminuto en la vela donde arranca cada killzone, clavado en su precio de apertura y del color de esa sesión. Cuando dos abren en la misma vela —el ORB y NY arrancan los dos a las 9:30— se pinta UNA sola, la primera de esta lista: ORB, NY, Londres, Asia. Sale aunque las cajas de killzone estén apagadas. Si traes los dos scripts en el mismo chart, apágala en uno para no verlas dobles.")
 
 // cada fila: prendido · color · nombre · horario · caja
 inUseA  = input.bool(true, "", inline = "A", group = g1)
-inColA  = input.color(#0f2f52, "", inline = "A", group = g1)
+inColA  = input.color(#3c3c3c, "", inline = "A", group = g1)
 txtA  = input.string("ASIA", "", inline = "A", group = g1)
 sesA  = input.session("2000-0200", "", inline = "A", group = g1)
 cajaA = input.bool(true, "caja", inline = "A", group = g1)
 
 inUseL  = input.bool(true, "", inline = "L", group = g1)
-inColL  = input.color(#1c5a9e, "", inline = "L", group = g1)
+inColL  = input.color(#6e6e6e, "", inline = "L", group = g1)
 txtL  = input.string("LNDN", "", inline = "L", group = g1)
 sesL  = input.session("0200-0900", "", inline = "L", group = g1)
 cajaL = input.bool(true, "caja", inline = "L", group = g1)
 
 inUseO  = input.bool(true, "", inline = "O", group = g1)
-inColO  = input.color(#1f6fd8, "", inline = "O", group = g1)
+inColO  = input.color(#a8a8a8, "", inline = "O", group = g1)
 txtO  = input.string("ORB", "", inline = "O", group = g1)
 sesO  = input.session("0930-0945", "", inline = "O", group = g1)
 cajaO = input.bool(true, "caja", inline = "O", group = g1)
 
 inUseN  = input.bool(true, "", inline = "N", group = g1)
-inColN  = input.color(#4a90d9, "", inline = "N", group = g1)
+inColN  = input.color(#d0d0d0, "", inline = "N", group = g1)
 txtN  = input.string("NY", "", inline = "N", group = g1)
 sesN  = input.session("0930-1600", "", inline = "N", group = g1)
 cajaN = input.bool(true, "caja", inline = "N", group = g1)
@@ -23493,12 +23504,12 @@ g2 = "2 · Medias móviles"
 useE1 = input.bool(true, "", inline = "E1", group = g2)
 tipE1 = input.string("EMA", "", options = ["EMA", "SMA", "WMA"], inline = "E1", group = g2)
 lenE1 = input.int(14, "", minval = 1, inline = "E1", group = g2)
-inColE1 = input.color(#f5c542, "", inline = "E1", group = g2)
+inColE1 = input.color(#d0d0d0, "", inline = "E1", group = g2)
 groE1 = input.int(1, "", minval = 1, maxval = 6, inline = "E1", group = g2)
 useE2 = input.bool(false, "", inline = "E2", group = g2)
 tipE2 = input.string("EMA", "", options = ["EMA", "SMA", "WMA"], inline = "E2", group = g2)
 lenE2 = input.int(50, "", minval = 1, inline = "E2", group = g2)
-inColE2 = input.color(#2962ff, "", inline = "E2", group = g2)
+inColE2 = input.color(#8f8f8f, "", inline = "E2", group = g2)
 groE2 = input.int(1, "", minval = 1, maxval = 6, inline = "E2", group = g2)
 srcE  = input.source(close, "Fuente", group = g2)
 
@@ -23518,7 +23529,7 @@ e1c = input.string("Marca niveles y observa. CERO entradas.", "", inline = "R1",
 e2t = input.string("OPENING NY", "2", inline = "R2", group = g3)
 e2c = input.string("Se está formando el ORB. Todavía NO.", "", inline = "R2", group = g3)
 e3t = input.string("TU VENTANA", "3", inline = "R3", group = g3)
-e3c = input.string("Ya puedes tradear. Espera TU setup. 2 trades.", "", inline = "R3", group = g3)
+e3c = input.string("Ya puedes tradear. Espera TU setup. 1 trade.", "", inline = "R3", group = g3)
 e4t = input.string("DÍA TERMINADO", "4", inline = "R4", group = g3)
 e4c = input.string("NY cerró. Nos vemos mañana.", "", inline = "R4", group = g3)
 eWt = input.string("FIN DE SEMANA", "S", inline = "RS", group = g3)
@@ -23526,9 +23537,9 @@ eWc = input.string("No hay mercado. Descansa.", "", inline = "RS", group = g3)
 sesDia = input.session("2000-1600", "Sesión TOTAL (overall)", group = g3, tooltip = "Para la fila TOTAL del panel: de la apertura de ASIA al cierre de NY (hora NY).")
 sesNY  = input.session("0930-1600", "Sesión NY (conteo de puntos)", group = g3)
 neutro = input.float(0, "Umbral neutro (pts)", minval = 0, step = 0.25, group = g3, tooltip = "Si el neto de la sesión no supera esto en ninguna dirección, el número se pinta neutro.")
-reglaFija = input.string("2 posiciones al día · protege la cuenta", "Regla fija (recordatorio)", group = g3)
-inAlza  = input.color(#089981, "Alcista", inline = "C3", group = g3)
-inBaja  = input.color(#f23645, "Bajista", inline = "C3", group = g3, tooltip = "Los dos colores de las cifras del panel. Solo mandan con la paleta en Personalizado.")
+reglaFija = input.string("1 posición al día · protege la cuenta", "Regla fija (recordatorio)", group = g3)
+inAlza  = input.color(#d0d0d0, "Alcista", inline = "C3", group = g3)
+inBaja  = input.color(#6e6e6e, "Bajista", inline = "C3", group = g3, tooltip = "Los dos colores de las cifras del panel. Solo mandan con la paleta en Personalizado.")
 
 // ── 4 · CONTRATO 30 DÍAS ───────────────────────────────────────
 g4 = "4 · Contrato 30 días"
@@ -23540,17 +23551,17 @@ buffFin = input.time(timestamp("19 Sep 2026 00:00:00 GMT-4"), "BUFFER termina", 
 payIni  = input.time(timestamp("21 Sep 2026 00:00:00 GMT-4"), "PAYOUTS empieza", group = g4)
 payFin  = input.time(timestamp("1 Oct 2026 00:00:00 GMT-4"), "PAYOUTS termina", group = g4)
 riesgoDia = input.int(500, "Riesgo por trade ($)", minval = 50, step = 50, group = g4, tooltip = "De aquí sale la meta del día, y sale como RANGO en vez de un número seco: un día a 1:1 ya es un día bueno (+$500 con riesgo de $500) y un 1:2 es el día redondo (+$1,000). El panel te dice entre cuánto y cuánto deberías cerrar hoy.")
-reglaEval = input.string("2 minis · 2 trades · riesgo $500", "Regla EVAL", group = g4)
-reglaBuff = input.string("2 minis · 2 trades · riesgo $500", "Regla BUFFER", group = g4)
-reglaPay  = input.string("1 mini · 2 trades · riesgo $250", "Regla PAYOUTS", group = g4)
+reglaEval = input.string("2 minis · 1 trade · riesgo $500", "Regla EVAL", group = g4)
+reglaBuff = input.string("2 minis · 1 trade · riesgo $500", "Regla BUFFER", group = g4)
+reglaPay  = input.string("1 mini · 1 trade · riesgo $250", "Regla PAYOUTS", group = g4)
 
 // ── 5 · ORB · SMC ──────────────────────────────────────────────
 g5 = "5 · ORB · SMC"
 tfFVG   = input.timeframe("5", "TF de los FVG", group = g5, tooltip = "Los FVG se leen SIEMPRE de este timeframe, no del que tengas abierto: cambias el chart y siguen siendo los mismos. Ponlo en el TF donde VES tus FVG (si los marcas en 5m, aquí va 5): en un TF mayor los huecos chicos se tapan dentro de la vela y desaparecen.")
 muereFVG = input.string("Se invierte (cierre del otro lado)", "El FVG muere cuando", options = ["Se invierte (cierre del otro lado)", "Se llena completo (mecha)", "Toca el 50%"], group = g5, tooltip = "Se invierte: sigue VIVO aunque lo toquen; solo muere cuando una vela del TF elegido CIERRA del otro lado (ahí se volvería iFVG). Es la regla que usas tú. Las otras dos matan el FVG con solo tocarlo (mecha completa o mitad).")
 nFVG    = input.int(1, "Cuántos por lado", minval = 1, maxval = 3, group = g5, tooltip = "1 = solo el alcista más cercano y el bajista más cercano. Súbelo a 2 o 3 si quieres ver también los que vienen detrás.")
-inFvgUp = input.color(#4a90d9, "Alcista", inline = "FC", group = g5)
-inFvgDn = input.color(#0f2f52, "Bajista", inline = "FC", group = g5, tooltip = "Colores del FVG. Solo mandan con la paleta en Personalizado; con cualquier otra paleta los FVG toman sus colores para que todo combine.")
+inFvgUp = input.color(#d0d0d0, "Alcista", inline = "FC", group = g5)
+inFvgDn = input.color(#3c3c3c, "Bajista", inline = "FC", group = g5, tooltip = "Colores del FVG. Solo mandan con la paleta en Personalizado; con cualquier otra paleta los FVG toman sus colores para que todo combine.")
 minFVG  = input.float(2, "Tamaño mínimo del FVG (pts)", minval = 0.25, group = g5)
 minFvgORB = input.float(0.25, "Tamaño mínimo del FVG del ORB (pts)", minval = 0.25, group = g5, tooltip = "En 0.25 se marcan TODOS los huecos que se formen dentro del ORB, del tamaño que sean. Súbelo si en tu gráfico salen demasiados chiquitos.")
 txtFvgORB = input.bool(true, "Ponerles título", group = g5, tooltip = "Cada hueco lleva su nombre (FVG ↑ / iFVG ↓) al arranque de su caja. Si dos quedan tan pegados que se encimarían, solo se escribe el primero: nunca vas a ver títulos amontonados.")
@@ -23573,15 +23584,15 @@ tStyle = input.string("___", "Estilo de objetivos", options = ["___", "- - -", "
 txtSize = str.lower(input.string("Small", "Tamaño de texto", options = ["Tiny", "Small", "Normal", "Large", "Huge"], group = g6))
 maLen = input.int(20, "", inline = "MA6", group = g6)
 maType = input.string("EMA", "", options = ["SMA", "EMA", "RMA", "WMA", "VWMA"], inline = "MA6", group = g6)
-inMaCol = input.color(color.orange, "MA de sesión", inline = "MA6", group = g6, tooltip = "Se reinicia al inicio de cada OR.")
-inUpSig = input.color(#1f6fd8, "▲", inline = "SC", group = g6)
-inDnSig = input.color(#1f6fd8, "▼", inline = "SC", group = g6)
-inGreen = input.color(color.new(#1f6fd8, 50), "Objetivo alcista", inline = "B6", group = g6)
-inGreenFill = input.color(color.new(#1f6fd8, 88), "", inline = "B6", group = g6)
-inRed = input.color(color.new(#1f6fd8, 50), "Objetivo bajista", inline = "R6", group = g6)
-inRedFill = input.color(color.new(#1f6fd8, 88), "", inline = "R6", group = g6)
-inOrCol = input.color(#1f6fd8, "Niveles del OR", inline = "O6", group = g6)
-inOrFill = input.color(color.new(#1f6fd8, 85), "", inline = "O6", group = g6)
+inMaCol = input.color(#a8a8a8, "MA de sesión", inline = "MA6", group = g6, tooltip = "Se reinicia al inicio de cada OR.")
+inUpSig = input.color(#a8a8a8, "▲", inline = "SC", group = g6)
+inDnSig = input.color(#a8a8a8, "▼", inline = "SC", group = g6)
+inGreen = input.color(color.new(#a8a8a8, 50), "Objetivo alcista", inline = "B6", group = g6)
+inGreenFill = input.color(color.new(#a8a8a8, 88), "", inline = "B6", group = g6)
+inRed = input.color(color.new(#a8a8a8, 50), "Objetivo bajista", inline = "R6", group = g6)
+inRedFill = input.color(color.new(#a8a8a8, 88), "", inline = "R6", group = g6)
+inOrCol = input.color(#a8a8a8, "Niveles del OR", inline = "O6", group = g6)
+inOrFill = input.color(color.new(#a8a8a8, 85), "", inline = "O6", group = g6)
 orbPron = input.bool(true, "Decir hacia dónde rompería (mientras el ORB siga entero)", group = g6, tooltip = "Mientras nadie rompe el ORH ni el ORL, el chart no dice nada. Con esto sale una etiqueta a la altura del ORM con el sesgo MEDIDO EN ESTE CHART: de los días en que, justo antes de romper, el precio andaba del MISMO lado del ORM que ahora, cuántos rompieron primero el ORH y cuántos el ORL. No es una promesa ni un win rate probado: es el conteo, y la muestra va escrita al lado. Se borra sola en cuanto rompe.")
 verOrhOrl = input.bool(false, "Escribir los nombres ORH / ORL", group = g6, tooltip = "APAGADO: las dos líneas del rango de apertura van peladas, sin nombre. Se leen igual —son las únicas dos rectas que salen del ORB— y el margen derecho queda libre. Préndelo si quieres el letrero de vuelta.")
 orbPronDias = input.int(60, "Cuántos ORB de historia mide", minval = 10, maxval = 500, group = g6, tooltip = "El pronóstico se calcula con lo que TradingView tenga cargado en el chart: si estás en 1m se cargan menos días que en 15m, así que la muestra cambia con la temporalidad. Este número es el tope de días que guarda.")
@@ -23605,11 +23616,11 @@ agendaTxt = input.text_area("06:55 En 5 min: PREMARKET · revisa las noticias\\n
 // pSuave → EMA rápida, MA de sesión
 // default = Azul marino, la paleta de la casa; cada rama de abajo la
 // pisa con su propio juego de cinco colores
-color pAlza   = #2e6da4
-color pBaja   = #0a2342
-color pAcento = #1c4f82
-color pNeutro = #7b93ad
-color pSuave  = #4a90d9
+color pAlza   = #b8b8b8
+color pBaja   = #3c3c3c
+color pAcento = #6e6e6e
+color pNeutro = #8f8f8f
+color pSuave  = #d0d0d0
 if paleta == "Personalizado"
     // los cinco papeles los pones tú en el grupo 0b
     pAlza   := basAlza
@@ -23633,13 +23644,13 @@ verFvgORB = verORB and inVerFvgORB
 
 // colores efectivos: con una paleta puesta mandan sus cinco papeles;
 // en "Personalizado" manda el color que elegiste en cada grupo
-// ── LA ESCALA DE AZULES · TUS COLORES MANDAN SIEMPRE ──────────
-// (André, 31-ago-2026) Todo el chart vive en la misma familia: ASIA
-// el azul de la noche (#0f2f52), LONDRES el de la madrugada
-// (#1c5a9e), el ORB el eléctrico (#1f6fd8) y NY el del día
-// (#4a90d9); los FVG usan esos MISMOS dos extremos —el claro del
-// día para el alcista y el profundo de la noche para el bajista—, el
-// Order Block azul cuando es demanda y gris cuando es oferta. Esas
+// ── LA ESCALA DE GRISES · TUS COLORES MANDAN SIEMPRE ──────────
+// (André, 31-ago-2026) Todo el chart vive en UNA sola escala de grises:
+// ASIA el gris de la noche (#3c3c3c), LONDRES el de la madrugada
+// (#6e6e6e), el ORB el más visible (#a8a8a8) y NY el del día
+// (#d0d0d0); los FVG usan esos MISMOS dos extremos —el claro del
+// día para el alcista y el oscuro de la noche para el bajista—, el
+// Order Block claro cuando es demanda y medio cuando es oferta. Esas
 // piezas salen DIRECTO de su input —si cayeran a la paleta se
 // perdería la escala— y las demás siguen la regla de abajo.
 // (André, 31-ago-2026) Antes, con AMR SETUP puesto, los colores de
@@ -23651,15 +23662,15 @@ colA  = inColA
 colL  = inColL
 colO  = inColO
 colN  = inColN
-colE1 = (palPers or inColE1 != #f5c542) ? inColE1 : pSuave
-colE2 = (palPers or inColE2 != #2962ff) ? inColE2 : pAcento
-cAlza = (palPers or inAlza != #089981) ? inAlza  : pAlza
-cBaja = (palPers or inBaja != #f23645) ? inBaja  : pBaja
+colE1 = (palPers or inColE1 != #d0d0d0) ? inColE1 : pSuave
+colE2 = (palPers or inColE2 != #8f8f8f) ? inColE2 : pAcento
+cAlza = (palPers or inAlza != #d0d0d0) ? inAlza  : pAlza
+cBaja = (palPers or inBaja != #6e6e6e) ? inBaja  : pBaja
 fvgUp = inFvgUp
 fvgDn = inFvgDn
 upSigColor   = inUpSig
 downSigColor = inDnSig
-maColor      = (palPers or inMaCol != color.orange) ? inMaCol : pSuave
+maColor      = (palPers or inMaCol != #a8a8a8) ? inMaCol : pSuave
 orColor      = inOrCol
 orFillColor  = inOrFill
 green        = inGreen
@@ -23776,16 +23787,26 @@ f_kz(kzona k, bool use, bool t, bool caja, bool sinCorte) =>
             // que sigue viva es un imán, y pegada a la última vela no se
             // alcanzaba a ver. Cuando la toman se corta EXACTO en esa vela.
             if k.hiVivo
-                k.hiLn.set_x2(time + pasoBar * liqExt)
+                if liqInf
+                    k.hiLn.set_extend(extend.right)
+                    k.hiLn.set_x2(time)
+                else
+                    k.hiLn.set_x2(time + pasoBar * liqExt)
                 if high > k.hiLn.get_y1()
                     k.hiVivo := false
+                    k.hiLn.set_extend(extend.none)
                     k.hiLn.set_x2(time)
                     if alertar
                         alert("NP A+ — tomaron el ALTO de " + k.nombre + " (" + str.tostring(k.hiLn.get_y1(), format.mintick) + ").", alert.freq_once_per_bar)
             if k.loVivo
-                k.loLn.set_x2(time + pasoBar * liqExt)
+                if liqInf
+                    k.loLn.set_extend(extend.right)
+                    k.loLn.set_x2(time)
+                else
+                    k.loLn.set_x2(time + pasoBar * liqExt)
                 if low < k.loLn.get_y1()
                     k.loVivo := false
+                    k.loLn.set_extend(extend.none)
                     k.loLn.set_x2(time)
                     if alertar
                         alert("NP A+ — tomaron el BAJO de " + k.nombre + " (" + str.tostring(k.loLn.get_y1(), format.mintick) + ").", alert.freq_once_per_bar)
@@ -23794,8 +23815,14 @@ f_kz(kzona k, bool use, bool t, bool caja, bool sinCorte) =>
             // creciendo hasta que abra el NY del día siguiente, que es
             // cuando el ORB entero se borra y nace el nuevo
             if sinCorte
-                k.hiLn.set_x2(time + pasoBar * liqExt)
-                k.loLn.set_x2(time + pasoBar * liqExt)
+                if liqInf
+                    k.hiLn.set_extend(extend.right)
+                    k.loLn.set_extend(extend.right)
+                    k.hiLn.set_x2(time)
+                    k.loLn.set_x2(time)
+                else
+                    k.hiLn.set_x2(time + pasoBar * liqExt)
+                    k.loLn.set_x2(time + pasoBar * liqExt)
         // las etiquetas viven SIEMPRE en el margen de la derecha, en
         // su carril: ni encima de las velas ni encimadas entre ellas.
         // (André, 31-ago-2026) La tomada YA NO lleva tache: se
@@ -23874,6 +23901,22 @@ if finNY
     kzO.activa := false
     kzO.hiVivo := false
     kzO.loVivo := false
+    // con las líneas infinitas prendidas, la liquidez que nadie tomó
+    // no se va de largo hasta el fin del mundo: expira aquí, con el
+    // cierre de NY, y su recta se queda donde terminó el día
+    if liqInf
+        if not na(kzA.hiLn)
+            kzA.hiLn.set_extend(extend.none)
+        if not na(kzA.loLn)
+            kzA.loLn.set_extend(extend.none)
+        if not na(kzL.hiLn)
+            kzL.hiLn.set_extend(extend.none)
+        if not na(kzL.loLn)
+            kzL.loLn.set_extend(extend.none)
+        if not na(kzO.hiLn) and not orbInf
+            kzO.hiLn.set_extend(extend.none)
+        if not na(kzO.loLn) and not orbInf
+            kzO.loLn.set_extend(extend.none)
 
 // ═══ SMC: FVG más cercano + BOS ════════════════════════════════
 // De todos los FVG vivos del timeframe elegido se dibujan SOLO dos:
@@ -24063,6 +24106,15 @@ if barstate.islast
 // viene de la fila ORB del grupo 1 (sesO).
 invis = color.rgb(0, 0, 0, 100)
 
+// ── el interruptor del Opening Range (grupo 1) ────────────────
+// La caja del OR y sus tres rectas se siguen calculando —de ahí
+// salen los objetivos, las señales y el panel—, nomás que cuando
+// el interruptor está apagado se pintan en transparente. Así no
+// hay que andar esquivando drawings en na más adelante.
+color orLnVis  = inVerOR ? orColor : invis
+color orTxtVis = inVerOR ? color.new(orColor, 0) : invis
+color orFilVis = inVerOR ? orFillColor : invis
+
 fz(_val) => _val == 0 ? 1 : _val
 
 day_ma(_start, _type, s, l) =>
@@ -24170,7 +24222,7 @@ if or_start
     down_check := true
 
     if verORB
-        or_bx := box.new(bar_index, high, bar_index, low, bgcolor = orFillColor, border_width = 0)
+        or_bx := box.new(bar_index, high, bar_index, low, bgcolor = orFilVis, border_width = 0)
 
     or_token := false
 
@@ -24190,14 +24242,14 @@ if or_sesh
 
 // al cerrar la sesión del OR
 if or_end and or_token
-    h_ln := target.new(line.new(bar_index, orh, bar_index, orh, color = orColor), label.new(bar_index, orh, text = verOrhOrl ? "ORH" : "", tooltip = str.tostring(orh, format.mintick), style = label.style_label_left, color = invis, textcolor = color.new(orColor, 0), size = txtSize))
-    l_ln := target.new(line.new(bar_index, orl, bar_index, orl, color = orColor), label.new(bar_index, orl, text = verOrhOrl ? "ORL" : "", tooltip = str.tostring(orl, format.mintick), style = label.style_label_left, color = invis, textcolor = color.new(orColor, 0), size = txtSize))
-    m_ln := line.new(bar_index, orm, bar_index, orm, style = line.style_dashed, color = orColor)
+    h_ln := target.new(line.new(bar_index, orh, bar_index, orh, color = orLnVis), label.new(bar_index, orh, text = (verOrhOrl and inVerOR) ? "ORH" : "", tooltip = str.tostring(orh, format.mintick), style = label.style_label_left, color = invis, textcolor = orTxtVis, size = txtSize))
+    l_ln := target.new(line.new(bar_index, orl, bar_index, orl, color = orLnVis), label.new(bar_index, orl, text = (verOrhOrl and inVerOR) ? "ORL" : "", tooltip = str.tostring(orl, format.mintick), style = label.style_label_left, color = invis, textcolor = orTxtVis, size = txtSize))
+    m_ln := line.new(bar_index, orm, bar_index, orm, style = line.style_dashed, color = orLnVis)
     hst := orh + (orw * tPer)
     lst := orl - (orw * tPer)
 
     day_dir := orm > prev_orm ? 1 : orm < prev_orm ? -1 : 0
-    linefill.new(h_ln.ln, l_ln.ln, day_dir == 1 ? greenFill : day_dir == -1 ? redFill : invis)
+    linefill.new(h_ln.ln, l_ln.ln, not inVerOR ? invis : day_dir == 1 ? greenFill : day_dir == -1 ? redFill : invis)
     orbVivo := true
 
 // fuera de la sesión del OR. Con "que el ORB no se corte" prendido
@@ -25141,8 +25193,19 @@ const ALGO_PINE_KZP_ESTRUCTURA = `// This source code is subject to the terms of
 //   · Fibonacci 0 · 0.25 · 0.5 · 0.62 · 0.705 · 0.79 · 1.
 //   · UNA caja de la orden: entrada en el 0.5, stop en el extremo,
 //     premio hasta el break — limpia por dentro y sin contorno.
-//   · Killzones en silencio (no se pintan aquí: las pinta NP A+).
+//   · Killzones ASIA · LNDN · ORB · NY dibujadas, con sus cajas
+//     y sus H/L de liquidez.
+//   · Opening Range: la caja de 9:30-9:45 y el ORH, el ORL y el
+//     ORM, de corrido hasta que abre el OR del día siguiente.
+//   · Medias móviles 14 y 50, las dos prendidas.
+//   · Los 2 FVG más cercanos de 5m (el alcista y el bajista),
+//     aparte del mejor FVG del rango.
 //  Todo eso se prende y se apaga en el grupo 1 · Qué ver.
+//
+//  (1-sep-2026) Estas cuatro cosas se agregaron para que ESTE
+//  script se baste solo. NP A+ dibuja exactamente lo mismo: si
+//  traes los dos en el mismo chart, apágalas aquí o allá — si no,
+//  las vas a ver dobles.
 //
 //  ALERTAS (opcional): crea UNA alerta con condición
 //  "Any alert() function call".
@@ -25155,10 +25218,13 @@ indicator("NP ESTRUCTURA", "NP ESTRUCTURA", overlay = true, max_lines_count = 50
 // cada cosa desde aquí, sin ir a buscarla grupo por grupo. Lo que
 // apagues no pierde sus ajustes, solo deja de dibujarse.
 gV = "1 · Qué ver"
-inVerKZ     = input.bool(false, "Killzones · ASIA · LONDRES · NY", group = gV, tooltip = "El apagador de TODAS las killzones de un golpe: sus cajas, sus líneas de alto y bajo y sus nombres. Apagado, el chart se queda sin una sola marca de sesión y lo demás sigue igual. Cuál de las cuatro se dibuja y de qué color se sigue eligiendo abajo, en su grupo — esto solo las prende o las apaga todas.")
+inVerKZ     = input.bool(true, "Killzones · ASIA · LONDRES · NY", group = gV, tooltip = "El apagador de TODAS las killzones de un golpe: sus cajas, sus líneas de alto y bajo y sus nombres. Apagado, el chart se queda sin una sola marca de sesión y lo demás sigue igual. Cuál de las cuatro se dibuja y de qué color se sigue eligiendo abajo, en su grupo — esto solo las prende o las apaga todas.")
 inVerEsc    = input.bool(true, "La orden · la caja de la entrada", group = gV, tooltip = "La caja que flota a la derecha: riesgo arriba, premio abajo y la línea de la entrada partiéndolas, igual que la herramienta Short/Long Position. Apagada, el chart se queda con el rango, el AOI, el Order Block y el Fibonacci.")
 inVerCanal  = input.bool(true, "Canal de regresión", group = gV, tooltip = "La recta que mejor le queda al precio de las últimas velas, con sus bandas. Se mide en su propia temporalidad —5m, 15m o 1h, la que elijas en el grupo 11— sin importar en cuál estés parado. No toca nada de la estructura: es una capa aparte para leer la inclinación y saber si el precio va estirado hacia un borde o cómodo por el centro.")
-inVerORB    = input.bool(true, "ORB · la killzone del OR (9:30-9:45)", group = gV, tooltip = "Aquí el ORB solo se calcula, no se pinta —de dibujarlo se encarga el script del día—, así que esto apaga su H/L por si prendes \\"Dibujar las killzones aquí\\" en el grupo 1.")
+inVerORB    = input.bool(true, "ORB · la killzone del OR (9:30-9:45)", group = gV, tooltip = "La killzone del ORB: la caja de la ventana 9:30-9:45 y su alto y su bajo como liquidez, igual que ASIA o NY. Es la fila ORB del grupo 1. La CAJA DEL OR con el ORH, el ORL y el ORM es el interruptor de abajo, y va aparte.")
+inVerOR     = input.bool(true, "Opening Range · la caja del OR y el ORH / ORL / ORM", group = gV, tooltip = "La caja de 9:30 a 9:45 dibujada, con sus tres rectas: el ORH, el ORL y el ORM (la mitad). Nacen cuando la ventana cierra y siguen de corrido hasta que abre el OR del día siguiente, así que en la tarde y en la noche sigues viendo el del día. OJO: NP A+ dibuja exactamente lo mismo — si traes los dos scripts en el mismo chart, apágalo en uno para no verlo doble.")
+inVerEMA    = input.bool(true, "Medias móviles · 14 y 50", group = gV, tooltip = "Las dos medias del grupo 2, prendidas de fábrica en 14 y 50. Tipo, largo, color y grosor se cambian ahí; esto solo las prende o las apaga. NP A+ también las trae: con los dos scripts encima, déjalas en uno solo.")
+inVerFVG    = input.bool(true, "FVG más cercano · los 2 de 5m", group = gV, tooltip = "El FVG alcista más cercano al precio y el bajista más cercano, leídos SIEMPRE del TF del grupo 5 (5m de fábrica), no del que tengas abierto. Es distinto del \\"mejor FVG del rango\\": ese es UNO, el de más confluencia; estos son los dos que el precio tiene enfrente. NP A+ los dibuja igual — préndelos en un solo script.")
 inVerTit    = input.bool(true, "Título LONGS / SHORTS del rango", group = gV, tooltip = "El letrero grande que dice de qué lado se busca el trade, sacado de la dirección del rango: si el impulso fue BAJISTA dice SHORTS y se pone ARRIBA del HIGH; si fue ALCISTA dice LONGS y se pone ABAJO del LOW. Va en la misma letra gruesa de los demás nombres.")
 inVerInt    = input.bool(false, "Estructura INTERNA (el tramo de adentro)", group = gV, tooltip = "Dentro del rango grande el precio va armando tramos más chicos. Esto dibuja el de AHORA —su alto y su bajo, punteados— para que veas la estructura interna sin perder la de fondo. Su sensibilidad se ajusta en el grupo 8.")
 inVerRango  = input.bool(true, "Rango · HIGH y LOW", group = gV, tooltip = "El tramo donde anda el precio: su techo y su piso. Es la base de todo lo demás — el Fibonacci, el FVG del rango y la posición se miden sobre él, así que apagarlo solo esconde las dos líneas.")
@@ -25176,18 +25242,18 @@ inVerRR     = input.bool(true, "Etiqueta del RR en la caja", group = gV, tooltip
 // paleta usa 5 papeles: alza, baja, acento, neutro y suave.
 // "Personalizado" respeta los colores que elijas grupo por grupo.
 g0 = "0 · Paleta"
-paleta = input.string("AMR SETUP", "Diseño", options = ["AMR SETUP", "Personalizado"], group = g0, tooltip = "AMR SETUP es tu setup: los azules y grises con los que traes el chart, exactamente como está. PERSONALIZADO libera TODO — los cinco colores base de abajo y, con ellos, cada color que ya vive en su grupo (killzones, FVG, rango, AOI, Order Block, Fibonacci, la posición y la caja de la orden), más los tamaños y los grosores. Y no hace falta cambiar de diseño para tocar un color: cualquier color que muevas en su grupo MANDA de inmediato, aunque sigas en AMR SETUP — mientras lo dejes como viene de fábrica, lo pinta la paleta.")
+paleta = input.string("AMR SETUP", "Diseño", options = ["AMR SETUP", "Personalizado"], group = g0, tooltip = "AMR SETUP es tu setup: la escala de GRISES con la que traes el chart, exactamente como está — de la noche (lo más oscuro) al día (lo más claro), sin un solo color. PERSONALIZADO libera TODO — los cinco colores base de abajo y, con ellos, cada color que ya vive en su grupo (killzones, FVG, rango, AOI, Order Block, Fibonacci, la posición y la caja de la orden), más los tamaños y los grosores. Y no hace falta cambiar de diseño para tocar un color: cualquier color que muevas en su grupo MANDA de inmediato, aunque sigas en AMR SETUP — mientras lo dejes como viene de fábrica, lo pinta la paleta.")
 transZona = input.int(88, "Transparencia de las zonas", minval = 60, maxval = 97, group = g0, tooltip = "Qué tan tenues se ven los rellenos (FVG, caja del OR, cajas de killzone). Más alto = más discreto. 88 es un buen punto para que la vela siempre se lea encima.")
 // ── 0b · MI DISEÑO (manda con PERSONALIZADO) ──────────────────
 // Los cinco papeles de los que sale TODO el color del script. Con
 // AMR SETUP se quedan como están; con Personalizado mandan estos,
 // y además cada grupo puede pisarlos con su propio color.
 g0b = "0b · Mi diseño"
-basAlza   = input.color(#2e6da4, "Alza · NY, FVG ↑, cifras en verde", group = g0b)
-basBaja   = input.color(#0a2342, "Baja · ASIA, FVG ↓, cifras en rojo", group = g0b)
-basAcento = input.color(#1c4f82, "Acento · LONDRES, AOI", group = g0b)
-basNeutro = input.color(#7b93ad, "Neutro · ORB, niveles del OR, Fib", group = g0b)
-basSuave  = input.color(#4a90d9, "Suave · la entrada, la MA de sesión", group = g0b, tooltip = "Los cinco papeles. Todo lo que el script pinta sale de aquí: cambia estos cinco y cambia el chart entero sin tocar nada más. Solo mandan con el diseño en PERSONALIZADO.")
+basAlza   = input.color(#b8b8b8, "Alza · NY, FVG ↑, cifras en verde", group = g0b)
+basBaja   = input.color(#3c3c3c, "Baja · ASIA, FVG ↓, cifras en rojo", group = g0b)
+basAcento = input.color(#6e6e6e, "Acento · LONDRES, AOI", group = g0b)
+basNeutro = input.color(#8f8f8f, "Neutro · ORB, niveles del OR, Fib", group = g0b)
+basSuave  = input.color(#d0d0d0, "Suave · la entrada, la MA de sesión", group = g0b, tooltip = "Los cinco papeles. Todo lo que el script pinta sale de aquí: cambia estos cinco y cambia el chart entero sin tocar nada más. Solo mandan con el diseño en PERSONALIZADO.")
 tamLblSel = input.string("Chico", "Tamaño de las etiquetas", options = ["Diminuto", "Chico", "Normal"], group = g0b, tooltip = "El tamaño de TODOS los nombres que cuelgan a la derecha: ASIA, LNDN, ORB, NY, HIGH, LOW y los números del Fibonacci.")
 tamRgSel = input.string("Chico", "Tamaño del HIGH / LOW del rango", options = ["Diminuto", "Chico", "Normal", "Grande"], group = g0b, tooltip = "El HIGH y el LOW de la estructura tienen su PROPIO tamaño, aparte del de las killzones: son las dos líneas que mandan, así que suelen querer leerse más grandes. Los números del Fibonacci van siempre en diminuto, esos no se tocan.")
 zonaHalSel = input.string("Izquierda", "Título de cada zona · a lo ancho", options = ["Izquierda", "Centro", "Derecha"], group = g0b, tooltip = "Dónde se escribe el nombre DENTRO de su propio recuadro: el FVG, el Order Block, el AOI y los huecos del ORB. Izquierda es lo de siempre; centro y derecha ayudan cuando la zona arranca fuera de la pantalla.")
@@ -25206,7 +25272,7 @@ g1 = "1 · Killzones"
 tz       = input.string("America/New_York", "Zona horaria de sesiones", group = g1)
 tfLim    = input.timeframe("30", "No dibujar en TF mayores a", group = g1)
 verLbls  = input.bool(true, "Etiquetas en los H/L", group = g1)
-dibujarKZ = input.bool(false, "Dibujar las killzones aquí", group = g1, tooltip = "APAGADO. Las sesiones se calculan de todas formas — la posición las necesita para el objetivo LIQUIDEZ MÁS CERCANA — pero no se pintan, porque de eso se encarga el otro script (NP A+). Préndelo solo si vas a usar este script solo.")
+dibujarKZ = input.bool(true, "Dibujar las killzones aquí", group = g1, tooltip = "PRENDIDO, para que este script se baste solo: ASIA, LONDRES, ORB y NY se pintan aquí con sus cajas y sus H/L. Las sesiones se calculan de todas formas —la posición las necesita para el objetivo LIQUIDEZ MÁS CERCANA—, así que apagarlo no rompe nada, solo deja de dibujarlas. Apágalo si traes NP A+ en el mismo chart: ese ya las dibuja y las verías dobles.")
 kzNegrita = input.bool(true, "Nombres en negritas", group = g1, tooltip = "ASIA, LNDN, ORB y NY salen en negritas. Pine no tiene negritas de verdad: se cambia cada letra por su versión gruesa de Unicode, así que se ve igual de negrita en cualquier tema y en cualquier zoom.")
 alertar  = input.bool(false, "Alertar cuando tomen un H/L", group = g1, tooltip = "Avisa cuando el precio toma el alto o el bajo de una sesión ya cerrada.")
 grosor   = input.int(1, "Grosor de las líneas de liquidez", minval = 1, maxval = 5, group = g1)
@@ -25217,36 +25283,52 @@ verIni   = input.bool(false, "Bolita al abrir cada sesión", group = g1, tooltip
 
 // cada fila: prendido · color · nombre · horario · caja
 inUseA  = input.bool(true, "", inline = "A", group = g1)
-inColA  = input.color(#0f2f52, "", inline = "A", group = g1)
+inColA  = input.color(#3c3c3c, "", inline = "A", group = g1)
 txtA  = input.string("ASIA", "", inline = "A", group = g1)
 sesA  = input.session("2000-0200", "", inline = "A", group = g1)
 cajaA = input.bool(true, "caja", inline = "A", group = g1)
 
 inUseL  = input.bool(true, "", inline = "L", group = g1)
-inColL  = input.color(#1c5a9e, "", inline = "L", group = g1)
+inColL  = input.color(#6e6e6e, "", inline = "L", group = g1)
 txtL  = input.string("LNDN", "", inline = "L", group = g1)
 sesL  = input.session("0200-0900", "", inline = "L", group = g1)
 cajaL = input.bool(true, "caja", inline = "L", group = g1)
 
 inUseO  = input.bool(true, "", inline = "O", group = g1)
-inColO  = input.color(#1f6fd8, "", inline = "O", group = g1)
+inColO  = input.color(#a8a8a8, "", inline = "O", group = g1)
 txtO  = input.string("ORB", "", inline = "O", group = g1)
 sesO  = input.session("0930-0945", "", inline = "O", group = g1)
 cajaO = input.bool(true, "caja", inline = "O", group = g1)
 
 inUseN  = input.bool(true, "", inline = "N", group = g1)
-inColN  = input.color(#4a90d9, "", inline = "N", group = g1)
+inColN  = input.color(#d0d0d0, "", inline = "N", group = g1)
 txtN  = input.string("NY", "", inline = "N", group = g1)
 sesN  = input.session("0930-1600", "", inline = "N", group = g1)
 cajaN = input.bool(true, "caja", inline = "N", group = g1)
+
+// ── 2 · MEDIAS MÓVILES ─────────────────────────────────────────
+// Las dos de siempre: la rápida en 14 y la lenta en 50. Cada fila
+// es prendido · tipo · largo · color · grosor.
+g2 = "2 · Medias móviles"
+useE1 = input.bool(true, "", inline = "E1", group = g2)
+tipE1 = input.string("EMA", "", options = ["EMA", "SMA", "WMA"], inline = "E1", group = g2)
+lenE1 = input.int(14, "", minval = 1, inline = "E1", group = g2)
+inColE1 = input.color(#d0d0d0, "", inline = "E1", group = g2)
+groE1 = input.int(1, "", minval = 1, maxval = 6, inline = "E1", group = g2)
+useE2 = input.bool(true, "", inline = "E2", group = g2)
+tipE2 = input.string("EMA", "", options = ["EMA", "SMA", "WMA"], inline = "E2", group = g2)
+lenE2 = input.int(50, "", minval = 1, inline = "E2", group = g2)
+inColE2 = input.color(#8f8f8f, "", inline = "E2", group = g2)
+groE2 = input.int(1, "", minval = 1, maxval = 6, inline = "E2", group = g2)
+srcE  = input.source(close, "Fuente", group = g2)
 
 // ── 5 · ORB · SMC ──────────────────────────────────────────────
 g5 = "5 · ORB · SMC"
 tfFVG   = input.timeframe("5", "TF de los FVG", group = g5, tooltip = "Los FVG se leen SIEMPRE de este timeframe, no del que tengas abierto: cambias el chart y siguen siendo los mismos. Ponlo en el TF donde VES tus FVG (si los marcas en 5m, aquí va 5): en un TF mayor los huecos chicos se tapan dentro de la vela y desaparecen.")
 muereFVG = input.string("Se invierte (cierre del otro lado)", "El FVG muere cuando", options = ["Se invierte (cierre del otro lado)", "Se llena completo (mecha)", "Toca el 50%"], group = g5, tooltip = "Se invierte: sigue VIVO aunque lo toquen; solo muere cuando una vela del TF elegido CIERRA del otro lado (ahí se volvería iFVG). Es la regla que usas tú. Las otras dos matan el FVG con solo tocarlo (mecha completa o mitad).")
 nFVG    = input.int(1, "Cuántos por lado", minval = 1, maxval = 3, group = g5, tooltip = "1 = solo el alcista más cercano y el bajista más cercano. Súbelo a 2 o 3 si quieres ver también los que vienen detrás.")
-inFvgUp = input.color(#4a90d9, "Alcista", inline = "FC", group = g5)
-inFvgDn = input.color(#0f2f52, "Bajista", inline = "FC", group = g5, tooltip = "Colores del FVG. Solo mandan con la paleta en Personalizado; con cualquier otra paleta los FVG toman sus colores para que todo combine.")
+inFvgUp = input.color(#d0d0d0, "Alcista", inline = "FC", group = g5)
+inFvgDn = input.color(#3c3c3c, "Bajista", inline = "FC", group = g5, tooltip = "Colores del FVG. Solo mandan con la paleta en Personalizado; con cualquier otra paleta los FVG toman sus colores para que todo combine.")
 minFVG  = input.float(2, "Tamaño mínimo del FVG (pts)", minval = 0.25, group = g5)
 minFvgORB = input.float(0.25, "Tamaño mínimo del FVG del ORB (pts)", minval = 0.25, group = g5, tooltip = "En 0.25 se marcan TODOS los huecos que se formen dentro del ORB, del tamaño que sean. Súbelo si en tu gráfico salen demasiados chiquitos.")
 txtFvgORB = input.bool(true, "Ponerles título", group = g5, tooltip = "Cada hueco lleva su nombre (FVG ↑ / iFVG ↓) al arranque de su caja. Si dos quedan tan pegados que se encimarían, solo se escribe el primero: nunca vas a ver títulos amontonados.")
@@ -25287,12 +25369,12 @@ titDonde = input.string("Al centro", "Título LONGS / SHORTS · a lo ancho", opt
 titLado = input.string("Fuera del rango", "Título LONGS / SHORTS · a lo alto", options = ["Fuera del rango", "Dentro del rango", "En el equilibrio (50%)"], group = g8, tooltip = "FUERA: arriba del HIGH cuando toca vender y abajo del LOW cuando toca comprar, que es lo natural. DENTRO: el mismo lado pero por dentro del tramo, si arriba no te cabe. EN EL EQUILIBRIO: en el 50% del rango, en medio de todo.")
 titSep = input.float(6, "Qué tan lejos del rango va el título (%)", minval = 0, maxval = 40, step = 1, group = g8, tooltip = "Qué tanto se separa el título del HIGH (o del LOW), en porcentaje de lo que mide el tramo. Súbelo si se te encima con algo.")
 rgAmbos   = input.bool(false, "Que crucen TODO el chart (también hacia atrás)", group = g8, tooltip = "APAGADO de fábrica: el HIGH y el LOW nacen en la mecha que los formó y de ahí se van al infinito SOLO hacia la derecha, que es a donde sirve la liquidez. Préndelo si además los quieres cruzando hacia atrás, tapando la historia. Necesita que \\"Líneas del rango infinitas\\" esté prendido.")
-inColAOI  = input.color(#1c4f82, "AOI", inline = "C8", group = g8)
-inColRg   = input.color(#0a2342, "Rango H/L", inline = "C8", group = g8)
-inColObUp = input.color(#4a90d9, "OB demanda", inline = "C8b", group = g8)
-inColObDn = input.color(#7b93ad, "OB oferta", inline = "C8b", group = g8, tooltip = "Los dos tonos del Order Block: AZUL cuando es demanda —el bloque del que sale una compra— y GRIS cuando es oferta, el que sale a vender. Salen directo de aquí, sin pasar por la paleta, para que ese contraste no se pierda.")
-inColFrUp = input.color(#4a90d9, "FVG del rango ↑", inline = "C8c", group = g8)
-inColFrDn = input.color(#0f2f52, "FVG del rango ↓", inline = "C8c", group = g8, tooltip = "Los huecos que caen dentro del rango pueden ir en su propio color, distinto al de los FVG de la rama A. Con la paleta puesta (y el interruptor de arriba apagado) toman los colores de la paleta.")
+inColAOI  = input.color(#6e6e6e, "AOI", inline = "C8", group = g8)
+inColRg   = input.color(#2b2b2b, "Rango H/L", inline = "C8", group = g8)
+inColObUp = input.color(#d0d0d0, "OB demanda", inline = "C8b", group = g8)
+inColObDn = input.color(#8f8f8f, "OB oferta", inline = "C8b", group = g8, tooltip = "Los dos tonos del Order Block: AZUL cuando es demanda —el bloque del que sale una compra— y GRIS cuando es oferta, el que sale a vender. Salen directo de aquí, sin pasar por la paleta, para que ese contraste no se pierda.")
+inColFrUp = input.color(#d0d0d0, "FVG del rango ↑", inline = "C8c", group = g8)
+inColFrDn = input.color(#3c3c3c, "FVG del rango ↓", inline = "C8c", group = g8, tooltip = "Los huecos que caen dentro del rango pueden ir en su propio color, distinto al de los FVG de la rama A. Con la paleta puesta (y el interruptor de arriba apagado) toman los colores de la paleta.")
 tfEst = tfEstSel == "1h" ? "60" : tfEstSel == "15m" ? "15" : "5"
 
 // ── 9 · FIBONACCI / GANN + PLAN DE TRADE ───────────────────────
@@ -25314,10 +25396,10 @@ posDonde = input.string("A la derecha, en el aire", "Dónde va la caja", options
 posAncho = input.int(20, "Ancho de la caja (velas)", minval = 5, maxval = 200, group = g9, tooltip = "Qué tan ancha es la ficha, contada en velas del chart. Así conserva el mismo tamaño en 1m que en 1h.")
 int posHueco = posDonde == "Pegada a la última vela" ? 1 : posDonde == "Más lejos a la derecha" ? 12 : posDonde == "Encima de las últimas velas" ? -posAncho - 1 : 4
 inFibGrosor = input.int(1, "Grosor de los niveles", minval = 1, maxval = 3, group = g9)
-inColFib = input.color(#7b93ad, "Niveles Fib", inline = "C9", group = g9)
-inColSL  = input.color(#0a2342, "Riesgo", inline = "C9", group = g9)
-inColEnt = input.color(#4a90d9, "Entrada", inline = "C9b", group = g9)
-inColTP  = input.color(#2e6da4, "Premio", inline = "C9b", group = g9, tooltip = "Los colores de la posición: la caja de abajo es el riesgo, la de arriba el premio y la línea de en medio la entrada. Vienen en el azul y el gris de la herramienta de TradingView. Solo mandan con la paleta en Personalizado o con el interruptor de colores propios del grupo 9.")
+inColFib = input.color(#8f8f8f, "Niveles Fib", inline = "C9", group = g9)
+inColSL  = input.color(#3c3c3c, "Riesgo", inline = "C9", group = g9)
+inColEnt = input.color(#d0d0d0, "Entrada", inline = "C9b", group = g9)
+inColTP  = input.color(#b8b8b8, "Premio", inline = "C9b", group = g9, tooltip = "Los colores de la posición: la caja de abajo es el riesgo, la de arriba el premio y la línea de en medio la entrada. Vienen en el azul y el gris de la herramienta de TradingView. Solo mandan con la paleta en Personalizado o con el interruptor de colores propios del grupo 9.")
 objetivo = input.string("Rompimiento", "Objetivo de la posición", options = ["TP1 · 1:1", "TP2 · 1:2", "Rompimiento", "Liquidez más cercana"], group = g9, tooltip = "Con esto se calcula la posición. Cuatro formas de poner el premio: 1:1 y 1:2 salen del riesgo; ROMPIMIENTO es hasta dónde llegó el impulso que salió de la zona; LIQUIDEZ MÁS CERCANA es el primer H o L de killzone que siga sin tomarse más allá del rompimiento. El stop no depende de esto: siempre cuelga del otro lado del Order Block, con su colchón. Los otros tres objetivos siguen calculados y los ves en el tooltip de la etiqueta del RR.")
 colchonSL = input.float(15, "Colchón del stop (% de la zona)", minval = 0, maxval = 60, step = 5, group = g9, tooltip = "Qué tanto pasa el stop del extremo de la zona de entrada, en porcentaje de la altura de esa zona.")
 
@@ -25352,10 +25434,10 @@ escHueco = input.int(5, "Hueco antes de la caja (velas)", minval = 0, maxval = 2
 escSep = input.int(2, "Separación", minval = 0, maxval = 20, group = g10, inline = "E2")
 escVerProb = input.bool(false, "Escribir el RR adentro de la caja", group = g10, tooltip = "APAGADO de fábrica: la caja va limpia, sin una sola letra adentro. Prendido, escribe dentro de la caja del premio el nivel, si le pega un FVG, el porcentaje de confluencia y el RR — útil sobre todo con la ESCALERA COMPLETA, para comparar. El porcentaje NO es un win rate probado: es cuánta confluencia junta ese nivel (FVG, Order Block, AOI, qué tan profundo es, si el precio ya lo pasó y el RR que deja). Todo eso sigue vivo en el tooltip de la caja aunque esto quede apagado.")
 escPal = input.bool(true, "La caja de la orden sigue la paleta", group = g10, tooltip = "PRENDIDO: la caja se pinta con los mismos azules que el resto de la estructura —el tono oscuro para el riesgo y el medio para el premio— y todo el chart se lee como una sola pieza. APAGADO: vuelve al rojo y verde de la herramienta Long/Short Position de TradingView, que gritan más pero se salen de la paleta. Los dos colores de abajo solo mandan con esto apagado.")
-escColR = input.color(#f23645, "Riesgo", inline = "E3", group = g10)
-escColLn = input.color(color.new(#131722, 40), "Línea de la entrada", group = g10, tooltip = "La raya que parte las dos cajas, la de tu precio de entrada. Aquí le pones color Y transparencia (el cuadrito de color trae su propia barra de opacidad), por si la quieres invisible o gritona.")
+escColR = input.color(#6e6e6e, "Riesgo", inline = "E3", group = g10)
+escColLn = input.color(color.new(#2b2b2b, 40), "Línea de la entrada", group = g10, tooltip = "La raya que parte las dos cajas, la de tu precio de entrada. Aquí le pones color Y transparencia (el cuadrito de color trae su propia barra de opacidad), por si la quieres invisible o gritona.")
 escGrosorLn = input.int(1, "Grosor de la línea de la entrada", minval = 1, maxval = 4, group = g10)
-escColP = input.color(#089981, "Premio", inline = "E3", group = g10, tooltip = "Los dos colores de la escalera. Vienen en el rojo y el verde de la herramienta Long/Short Position de TradingView a propósito: son las únicas cajas del script que NO siguen la paleta, porque lo que tienen que gritar es riesgo abajo, premio arriba. Si prefieres que se apaguen, súbeles la transparencia.")
+escColP = input.color(#d0d0d0, "Premio", inline = "E3", group = g10, tooltip = "Los dos colores de la escalera. Vienen en el rojo y el verde de la herramienta Long/Short Position de TradingView a propósito: son las únicas cajas del script que NO siguen la paleta, porque lo que tienen que gritar es riesgo abajo, premio arriba. Si prefieres que se apaguen, súbeles la transparencia.")
 escTrans = input.int(80, "Transparencia de las cajas", minval = 40, maxval = 96, group = g10, tooltip = "Qué tan encimables son. 80 deja ver las velas y las killzones por debajo; bájala si quieres que las cajas manden.")
 
 // ── 11 · CANAL DE REGRESIÓN ────────────────────────────────────
@@ -25375,7 +25457,7 @@ canExt = input.bool(true, "Proyectarlo a la derecha", group = g11, tooltip = "La
 canRelleno = input.bool(true, "Rellenar el canal", group = g11)
 canLbl = input.bool(true, "Etiqueta con la pendiente", group = g11, tooltip = "Al final del canal: la temporalidad, hacia dónde apunta y cuántos puntos sube o baja de punta a punta. En el tooltip van los tres precios de ahorita.")
 canGrosor = input.int(1, "Grosor", minval = 1, maxval = 4, inline = "K2", group = g11)
-inColCanal = input.color(#1c4f82, "Color", inline = "K2", group = g11, tooltip = "Con la paleta puesta el canal toma el color de acento de esa paleta; en Personalizado manda este.")
+inColCanal = input.color(#6e6e6e, "Color", inline = "K2", group = g11, tooltip = "Con la paleta puesta el canal toma el color de acento de esa paleta; en Personalizado manda este.")
 
 
 // ═══ PALETA: de 5 papeles salen TODOS los colores ══════════════
@@ -25386,11 +25468,11 @@ inColCanal = input.color(#1c4f82, "Color", inline = "K2", group = g11, tooltip =
 // pSuave → EMA rápida, MA de sesión
 // default = Azul marino, la paleta de la casa; cada rama de abajo la
 // pisa con su propio juego de cinco colores
-color pAlza   = #2e6da4
-color pBaja   = #0a2342
-color pAcento = #1c4f82
-color pNeutro = #7b93ad
-color pSuave  = #4a90d9
+color pAlza   = #b8b8b8
+color pBaja   = #3c3c3c
+color pAcento = #6e6e6e
+color pNeutro = #8f8f8f
+color pSuave  = #d0d0d0
 if paleta == "Personalizado"
     // los cinco papeles los pones tú en el grupo 0b
     pAlza   := basAlza
@@ -25409,12 +25491,14 @@ bool ramaB = true
 // al final, a la derecha
 bool lblIni  = rgLblDonde != "A la derecha, al final"
 bool lblFlot = rgLblDonde == "Flotando donde arranca"
-useA = inVerKZ
-useL = inVerKZ
-useO = inVerKZ and inVerORB
-useN = inVerKZ
-// los FVG del día y los del ORB viven en el otro script
-verFVG = false
+useA = inVerKZ and inUseA
+useL = inVerKZ and inUseL
+useO = inVerKZ and inVerORB and inUseO
+useN = inVerKZ and inUseN
+// el Opening Range se dibuja aquí; los FVG del ORB siguen siendo
+// cosa del script del día
+verOR = inVerOR
+verFVG = inVerFVG
 verFvgORB = false
 verInt = inVerInt
 verRango = inVerRango
@@ -25433,13 +25517,13 @@ verLblsKZ = verLbls and dibujarKZ
 // en "Personalizado" manda el color que elegiste en cada grupo.
 // Las killzones van transparentes salvo que pidas dibujarlas.
 color nada = #ffffff00
-// ── LA ESCALA DE AZULES · TUS COLORES MANDAN SIEMPRE ──────────
-// (André, 31-ago-2026) Todo el chart vive en la misma familia: ASIA
-// el azul de la noche (#0f2f52), LONDRES el de la madrugada
-// (#1c5a9e), el ORB el eléctrico (#1f6fd8) y NY el del día
-// (#4a90d9); los FVG usan esos MISMOS dos extremos —el claro del
-// día para el alcista y el profundo de la noche para el bajista—, el
-// Order Block azul cuando es demanda y gris cuando es oferta. Esas
+// ── LA ESCALA DE GRISES · TUS COLORES MANDAN SIEMPRE ──────────
+// (André, 31-ago-2026) Todo el chart vive en UNA sola escala de grises:
+// ASIA el gris de la noche (#3c3c3c), LONDRES el de la madrugada
+// (#6e6e6e), el ORB el más visible (#a8a8a8) y NY el del día
+// (#d0d0d0); los FVG usan esos MISMOS dos extremos —el claro del
+// día para el alcista y el oscuro de la noche para el bajista—, el
+// Order Block claro cuando es demanda y medio cuando es oferta. Esas
 // piezas salen DIRECTO de su input —si cayeran a la paleta se
 // perdería la escala— y las demás comparan con su color de fábrica:
 // lo dejas como viene y manda la paleta, lo mueves y mandas tú.
@@ -25448,6 +25532,11 @@ colL  = not dibujarKZ ? nada : inColL
 colO  = not dibujarKZ ? nada : inColO
 colN  = not dibujarKZ ? nada : inColN
 fvgUp = inFvgUp
+// el Opening Range se pinta con el azul de la fila ORB, y NO se apaga
+// con "dibujar las killzones aquí": es su propio interruptor
+colOR = inColO
+colE1 = (palPers or inColE1 != #d0d0d0) ? inColE1 : pSuave
+colE2 = (palPers or inColE2 != #8f8f8f) ? inColE2 : pAcento
 fvgDn = inFvgDn
 
 // los grupos 8 y 9 pueden saltarse la paleta con su propio interruptor
@@ -25456,17 +25545,17 @@ fvgDn = inFvgDn
 // oscuro (mandan), el Order Block en gris azulado (contexto), los
 // FVG en azul vivo (lo accionable) y el AOI en el tono claro, casi
 // un lavado de fondo
-colAOI  = (palPers or inColAOI != #1c4f82) ? inColAOI  : pSuave
+colAOI  = (palPers or inColAOI != #6e6e6e) ? inColAOI  : pSuave
 colCanal = palPers ? inColCanal : pAcento
-colRg   = (palPers or inColRg != #0a2342) ? inColRg   : pBaja
+colRg   = (palPers or inColRg != #2b2b2b) ? inColRg   : pBaja
 colObUp = inColObUp
 colObDn = inColObDn
 colFrUp = inColFrUp
 colFrDn = inColFrDn
-colFib  = (palPers or inColFib != #7b93ad) ? inColFib  : pNeutro
-colSL   = (palPers or inColSL != #0a2342) ? inColSL   : pNeutro
-colEnt  = (palPers or inColEnt != #4a90d9) ? inColEnt  : pSuave
-colTP   = (palPers or inColTP != #2e6da4) ? inColTP   : pAlza
+colFib  = (palPers or inColFib != #8f8f8f) ? inColFib  : pNeutro
+colSL   = (palPers or inColSL != #3c3c3c) ? inColSL   : pNeutro
+colEnt  = (palPers or inColEnt != #d0d0d0) ? inColEnt  : pSuave
+colTP   = (palPers or inColTP != #b8b8b8) ? inColTP   : pAlza
 fibGrosor = inFibGrosor
 
 // ═══ MOTOR DE KILLZONES ════════════════════════════════════════
@@ -25656,6 +25745,65 @@ if finNY
     kzO.activa := false
     kzO.hiVivo := false
     kzO.loVivo := false
+
+// ═══ OPENING RANGE · la caja del OR y sus tres rectas ══════════
+// El rango de 9:30 a 9:45 (la fila ORB del grupo 1) DIBUJADO: la
+// caja mientras se forma, y al cerrarse la ventana el ORH, el ORL
+// y el ORM. Las tres crecen vela por vela hasta que abre el OR del
+// día siguiente, que es cuando se borran solas y nace el nuevo: en
+// la tarde, en la noche y en fin de semana sigues viendo el del
+// último día. Se pinta con el azul de la fila ORB y NO depende de
+// "dibujar las killzones aquí".
+var box   orBx  = na
+var line  orHln = na
+var line  orLln = na
+var line  orMln = na
+var float orHi  = na
+var float orLo  = na
+
+if verOR and dibujable
+    if tO and not tO[1]
+        // OR nuevo: fuera el de ayer, entero
+        box.delete(orBx)
+        line.delete(orHln)
+        line.delete(orLln)
+        line.delete(orMln)
+        orHln := na
+        orLln := na
+        orMln := na
+        orHi := high
+        orLo := low
+        orBx := box.new(time, high, time, low, xloc = xloc.bar_time, border_color = #ffffff00, bgcolor = color.new(colOR, transZona))
+    else if tO and not na(orBx)
+        // dentro de la ventana: la caja se estira con el precio
+        orHi := math.max(orHi, high)
+        orLo := math.min(orLo, low)
+        orBx.set_right(time)
+        orBx.set_top(orHi)
+        orBx.set_bottom(orLo)
+    else if not na(orHi) and orHi > orLo
+        // ventana cerrada: nacen las tres rectas y se van de largo
+        if na(orHln)
+            float orMd = math.avg(orHi, orLo)
+            orHln := line.new(time, orHi, time, orHi, xloc = xloc.bar_time, color = color.new(colOR, transLiq), width = grosor)
+            orLln := line.new(time, orLo, time, orLo, xloc = xloc.bar_time, color = color.new(colOR, transLiq), width = grosor)
+            orMln := line.new(time, orMd, time, orMd, xloc = xloc.bar_time, color = color.new(colOR, math.min(transLiq + 30, 80)), style = line.style_dashed)
+        orHln.set_x2(time + pasoBar * liqExt)
+        orLln.set_x2(time + pasoBar * liqExt)
+        orMln.set_x2(time + pasoBar * liqExt)
+
+// ═══ MEDIAS MÓVILES ════════════════════════════════════════════
+// ta.* siempre a nivel global (largo simple); el selector elige cuál se pinta
+ma1e = ta.ema(srcE, lenE1)
+ma1s = ta.sma(srcE, lenE1)
+ma1w = ta.wma(srcE, lenE1)
+ma2e = ta.ema(srcE, lenE2)
+ma2s = ta.sma(srcE, lenE2)
+ma2w = ta.wma(srcE, lenE2)
+ma1 = tipE1 == "SMA" ? ma1s : tipE1 == "WMA" ? ma1w : ma1e
+ma2 = tipE2 == "SMA" ? ma2s : tipE2 == "WMA" ? ma2w : ma2e
+plot(useE1 and inVerEMA ? ma1 : na, "MA rápida", colE1, groE1)
+plot(useE2 and inVerEMA ? ma2 : na, "MA lenta", colE2, groE2)
 
 // ═══ SMC: FVG más cercano + BOS ════════════════════════════════
 // De todos los FVG vivos del timeframe elegido se dibujan SOLO dos:
