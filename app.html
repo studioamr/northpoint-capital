@@ -3434,6 +3434,34 @@ button.tag.quemada{text-decoration:line-through;text-decoration-color:var(--down
   display:grid;place-items:center;font-weight:700}
 .como-card ol li.mal::before{content:'×';background:var(--down);color:#fff}
 .como-bloque h4{margin:0 0 11px;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--txt)}
+/* ── EL PROTOCOLO ──
+   Se relee antes de operar, así que manda la legibilidad: numeral romano
+   grande a la izquierda, el paso en negritas y sus reglas debajo. El azul del
+   chart sólo en los numerales, para que el ojo salte de paso en paso.
+   (André, 31-ago-2026) */
+.proto{padding:22px 24px}
+.proto-h{max-width:72ch;margin-bottom:20px}
+.proto-k{font-family:var(--mono);font-size:9px;letter-spacing:.26em;color:var(--dim)}
+.proto-h h3{margin:8px 0 0;font-size:26px;font-weight:800;letter-spacing:-.02em}
+.proto-h p{margin:10px 0 0;font-size:13px;line-height:1.65;color:var(--dim)}
+.proto-lista{margin:0;padding:0;list-style:none;border-top:1px solid var(--line-soft)}
+.proto-lista > li{display:grid;grid-template-columns:56px 1fr;gap:16px;
+  padding:18px 0;border-bottom:1px solid var(--line-soft);
+  transition:background .25s;border-radius:8px}
+.proto-lista > li:hover{background:var(--w02)}
+.proto-r{font-family:var(--mono);font-size:19px;font-weight:600;line-height:1;
+  color:#3861F6;padding-top:2px;letter-spacing:.04em}
+.proto-lista b{display:block;font-size:14px;font-weight:700;color:var(--txt);margin-bottom:9px}
+.proto-lista ul{margin:0;padding:0;list-style:none}
+.proto-lista ul li{position:relative;padding:6px 0 6px 16px;font-size:13px;line-height:1.62;
+  color:var(--dim);max-width:82ch}
+.proto-lista ul li::before{content:'';position:absolute;left:0;top:15px;width:7px;height:1px;
+  background:var(--faint)}
+@media(max-width:640px){
+  .proto{padding:18px 16px}
+  .proto-lista > li{grid-template-columns:34px 1fr;gap:10px}
+  .proto-r{font-size:15px}
+}
 .como-svg{border:1px solid var(--line-soft);border-radius:10px;padding:10px 6px;background:var(--panel-bg);overflow-x:auto}
 /* ── LA LÍNEA DEL DÍA, VIVA ── (André, 31-ago-2026)
    Era un diagrama quieto y la única hora que importa —09:45, cuando cierra el
@@ -4918,6 +4946,9 @@ stop[stop-color="#9BC0DC"]{stop-color:var(--txt)}
         <!-- CÓMO SE OPERA: las dos pantallas de André y el método,
              dibujado en vez de escrito. -->
         <div class="panel mt2 algo-como" id="algoComo"></div>
+
+        <!-- EL PROTOCOLO: los seis pasos de la ejecución, para releerlos -->
+        <div class="panel mt2 proto" id="algoProto"></div>
 
         <div class="panel mt2 algo-code-wrap">
           <div class="algo-tabs" id="algoTabs"></div>
@@ -26722,6 +26753,73 @@ if barstate.islast
    captura de sus DOS pantallas y, debajo, el método con apoyos
    visuales — la línea del día, los dos setups y la anatomía de la
    orden, todo en SVG y con los colores del tema. */
+/* ══ EL PROTOCOLO DE EJECUCIÓN ══ (André, 31-ago-2026)
+   Los seis pasos de cómo se entra, escritos por él, tal cual. Está aquí y no
+   en una nota suelta porque es lo que se relee ANTES de operar, y lo que se
+   relee tiene que vivir junto al chart y al código, no en otra pestaña.
+   OJO CON LAS CIFRAS: este protocolo trabaja 3 a 5 cuentas con $100–$200 de
+   riesgo POR CUENTA y objetivos de 1:1 a 1:3. El panel del contrato habla de
+   $500 y de 1:1 a 1:2 sobre UNA cuenta. No se tocó ninguno de los dos: son
+   marcos distintos y quien manda es el que estés operando ese día. */
+const PROTOCOLO = [
+  { r:'I', t:['Estructura de riesgo','Risk structure'], li:[
+    ['Nodos activos: 3 a 5 cuentas sincronizadas por copytrading.',
+     'Active nodes: 3 to 5 accounts synced by copytrading.'],
+    ['Exposición máxima: $100 – $200 USD de riesgo por cuenta, por trade.',
+     'Maximum exposure: $100 – $200 USD of risk per account, per trade.'] ] },
+  { r:'II', t:['Mapeo de liquidez · premercado','Liquidity map · premarket'], li:[
+    ['Identificar y trazar los niveles de atracción institucional: los highs y lows de las sesiones de Asia y Londres.',
+     'Identify and draw the institutional magnets: the highs and lows of the Asia and London sessions.'] ] },
+  { r:'III', t:['Formación del rango · NY open','Range formation · NY open'], li:[
+    ['Apertura de Nueva York, 9:30 EST: cero exposición. Observación pasiva.',
+     'New York open, 9:30 EST: zero exposure. Passive observation.'],
+    ['Incubación, 9:30 a 9:45 EST: dejar que la volatilidad inicial establezca los límites de la subasta. Queda definido en gráfica el Opening Range High (ORH) y el Opening Range Low (ORL).',
+     'Incubation, 9:30 to 9:45 EST: let the opening volatility set the limits of the auction. The Opening Range High (ORH) and Low (ORL) get defined on the chart.'] ] },
+  { r:'IV', t:['Gatillo de entrada · confluencia en M5 desde las 9:45','Entry trigger · M5 confluence from 9:45'], li:[
+    ['Zona de acción: el precio se aproxima o interactúa con el ORH o el ORL.',
+     'Action zone: price approaches or interacts with the ORH or the ORL.'],
+    ['Momentum dinámico: rebotes direccionales sobre la EMA 14 y/o la EMA 50.',
+     'Dynamic momentum: directional bounces off the 14 EMA and/or the 50 EMA.'],
+    ['Acción de precio: validación de la dirección por rompimiento de estructura (BOS / ChoCH).',
+     'Price action: direction confirmed by a break of structure (BOS / ChoCH).'],
+    ['Desequilibrios: entradas sobre las ineficiencias del precio — FVG o IFVG.',
+     'Imbalances: entries on price inefficiencies — FVG or IFVG.'],
+    ['Vector 1 · ANTICIPACIÓN: entrada previa a la ruptura del ORH/ORL, activada por un rebote en las EMAs con un rompimiento de estructura interna que deja un FVG/IFVG proyectando el precio hacia la ruptura.',
+     'Vector 1 · ANTICIPATION: entry before the ORH/ORL break, triggered by a bounce off the EMAs with an internal break of structure leaving an FVG/IFVG that projects price into the break.'],
+    ['Vector 2 · CONFIRMACIÓN: entrada tras la ruptura del ORH/ORL, sobre el momentum ya roto el nivel, apoyada en un FVG nuevo o en el testeo a las EMAs.',
+     'Vector 2 · CONFIRMATION: entry after the ORH/ORL break, riding the momentum once the level is gone, on a fresh FVG or a test of the EMAs.'] ] },
+  { r:'V', t:['Protocolo de extracción · la regla de oro','Extraction protocol · the golden rule'], li:[
+    ['Target de extracción: 1:1 a 1:3.',
+     'Extraction target: 1:1 to 1:3.'],
+    ['Liquidación inmediata: tomar ganancias de forma agresiva en cuanto el momentum expanda a tu favor y el PnL esté en verde. Cero vacilación, técnica o emocional.',
+     'Immediate liquidation: take profit aggressively the moment momentum expands your way and PnL is green. Zero hesitation, technical or emotional.'],
+    ['Axioma: jamás te vas a arrepentir de tomar ganancias constantes. Retener el profit es el pilar matemático del sistema.',
+     'Axiom: you will never regret taking consistent profit. Keeping the profit is the mathematical pillar of the system.'] ] },
+  { r:'VI', t:['Cierre técnico','Technical close'], li:[
+    ['Posición liquidada en verde = pantallas apagadas.',
+     'Position closed green = screens off.'],
+    ['Deja que la simetría del multiplicador de cuentas consolide el volumen en dólares. Desconecta y retírate de la sesión.',
+     'Let the symmetry of the account multiplier consolidate the dollar volume. Disconnect and step away from the session.'] ] }
+];
+function algoProtoHTML(){
+  return `
+    <div class="proto-h">
+      <span class="proto-k">${esc(bi('PROTOCOLO DE EJECUCIÓN SISTEMÁTICA','SYSTEMATIC EXECUTION PROTOCOL'))}</span>
+      <h3>Sweep &amp; ORB</h3>
+      <p>${esc(bi('Los seis pasos, en orden. Se releen antes de abrir, no después de cerrar.',
+                  'The six steps, in order. You read them before you open, not after you close.'))}</p>
+    </div>
+    <ol class="proto-lista">
+      ${PROTOCOLO.map(b => `
+        <li>
+          <span class="proto-r">${b.r}</span>
+          <div>
+            <b>${esc(loc(b.t))}</b>
+            <ul>${b.li.map(x => `<li>${esc(loc(x))}</li>`).join('')}</ul>
+          </div>
+        </li>`).join('')}
+    </ol>`;
+}
 function algoComoHTML(){
   const T = (es,en)=>esc(bi(es,en));
   const shot = (typeof ALGO_SHOT_COMO !== 'undefined') ? ALGO_SHOT_COMO : '';
@@ -26961,6 +27059,8 @@ function renderAlgoritmo(){
   const pre = $('#algoCodigo'); if(pre) pre.textContent = activo ? activo.codigo : '';
   const como = $('#algoComo');
   if(como && typeof algoComoHTML === 'function') como.innerHTML = algoComoHTML();
+  const prot = $('#algoProto');
+  if(prot && typeof algoProtoHTML === 'function') prot.innerHTML = algoProtoHTML();
 }
 $('#algoCopiar')?.addEventListener('click', async () => {
   const activo = ALGO_SCRIPTS.find(s=>s.id===algoActivo); if(!activo) return;
