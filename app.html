@@ -1559,6 +1559,26 @@ button.st-chip:hover{border-color:rgba(255,255,255,.45)}
 .bat-wbar-lbl{font-family:var(--mono);font-size:11px;color:var(--faint);margin-top:8px;text-align:center}
 /* objetivo del plan + decisiones de crecimiento */
 /* ── EL BALANCE Y EL CAMINO ── */
+/* ── EL CUADRO DEL AVIÓN (Log · automático) ──
+   La escena se dibuja completa (1800×1160) y el cuadro enseña sólo la BANDA
+   donde viven el cartel y el jet: recortar por CSS deja la composición del
+   Desk intacta —si se aplastara el lienzo, el avión saldría ovalado— y aquí
+   ocupa el alto de un encabezado, no media pantalla. */
+.lg-jet{position:relative;margin-bottom:14px;border-radius:16px;overflow:hidden;
+  border:1px solid var(--line-soft);background:#0b1020;aspect-ratio:1800/790}
+.lg-jet canvas{display:block;width:100%;height:auto;margin-top:-5.278%}
+.lg-jet-pie{position:absolute;left:14px;bottom:12px;font-family:var(--mono);
+  font-size:10px;letter-spacing:.14em;color:rgba(255,255,255,.72);
+  background:rgba(8,11,18,.45);backdrop-filter:blur(4px);
+  border-radius:20px;padding:5px 13px;pointer-events:none}
+@media(max-width:640px){ .lg-jet{aspect-ratio:1800/860} .lg-jet canvas{margin-top:-4%} }
+/* el jet es decorado: si pides menos movimiento, se queda quieto */
+@media(prefers-reduced-motion:reduce){ .lg-jet canvas{opacity:.92} }
+/* la salida de escape del INICIAR automático */
+.lg-otros{display:block;margin:12px auto 0;background:none;border:0;cursor:pointer;
+  font-family:var(--mono);font-size:10px;letter-spacing:.12em;color:var(--faint);
+  text-decoration:underline;text-underline-offset:3px}
+.lg-otros:hover{color:var(--dim)}
 .lg-sel-top{margin-bottom:12px}
 .lg-balance{margin-bottom:12px;padding:14px 18px 12px}
 .lgb-fila{display:flex;align-items:center;gap:20px}
@@ -5135,6 +5155,14 @@ stop[stop-color="#9BC0DC"]{stop-color:var(--txt)}
 
       <!-- ════ LOG TRADE (real · mismo formato que Backtesting) ════ -->
       <section class="view" id="v-log">
+        <!-- EL CUADRO DEL AVIÓN, EN AUTOMÁTICO (André, 2-sep-2026):
+             la misma escena del Desk, pero sin el selector de escena: aquí
+             manda el reloj y nada más. Dice sobre qué sesión estás volando y
+             cuánto le queda, que es la mitad de la decisión de sentarse. -->
+        <div class="lg-jet">
+          <canvas id="lgJet" width="1800" height="1160" aria-label="El jet sobre la sesión abierta"></canvas>
+          <div class="lg-jet-pie" id="lgJetPie"></div>
+        </div>
         <!-- LA CUENTA, HASTA ARRIBA Y UNA SOLA VEZ (André, 31-ago-2026):
              primero eligo en qué cuenta estoy, y todo lo de abajo habla de
              ella. Estaba repetida dentro de la tarjeta del registro. -->
@@ -16471,6 +16499,31 @@ window.lgAbreSesion = function(){
   toast(antes ? bi('Números actualizados · objetivo '+fmt$(tp),'Numbers updated · target '+fmt$(tp))
               : bi('Sesión abierta · objetivo '+fmt$(tp),'Session open · target '+fmt$(tp)));
 };
+/* ══ INICIAR ENTRA SOLO ══ (André, 2-sep-2026)
+   Picar INICIAR abría una forma de tres campos. Ahora entra directo: los
+   números salen de tu plantilla (lo último con lo que abriste) y, la primera
+   vez, de la fase de tu cuenta. El mercado ya se detectaba solo por el reloj.
+   El tope de trades lo pone el SISTEMA, no la plantilla: una plantilla vieja
+   guardada con 1 seguiría marcando violación en el segundo trade.
+   Los números siguen siendo tuyos: 'entrar con otros números' abre la forma de
+   siempre, y con la sesión corriendo el botón 'editar' los cambia sin perder
+   nada de lo ya registrado. */
+window.lgEntraAuto = function(){
+  const d = lgSugerido();
+  let tope = d.trades;
+  try{ tope = maxTradesHoy(); }catch(e){}
+  const antes = lgSesionHoy();
+  lgSesiones();
+  S.lgSesion[lgClave(todayISO())] = { tp: d.tp, dd: d.dd, trades: tope || d.trades || 2,
+    id:  (antes && antes.id)  || ('ss_' + Math.random().toString(36).slice(2,9)),
+    mkt: (antes && antes.mkt) || sesionMundial(ahora()).replace(' SESSION','').replace('MARKET CLOSED','OFF'),
+    ini: (antes && antes.ini) || Date.now() };
+  lgEditando = false; lgPidiendo = false;
+  save(); lgHoy(); lgStats(); lgDibuja(1); lgLog();
+  toast(bi('Sesión abierta · objetivo ' + fmt$(d.tp) + ' · drawdown ' + fmt$(d.dd),
+           'Session open · target ' + fmt$(d.tp) + ' · drawdown ' + fmt$(d.dd)));
+};
+
 /* ── CAMBIAR LOS NÚMEROS A MEDIO DÍA ── (André, 31-ago-2026) Se podían poner
    al abrir y nunca más: la única salida era CERRAR el día, y cerrar tira la
    sesión entera. Ahora se editan sin perder nada — los trades ya registrados
@@ -16537,16 +16590,18 @@ function lgHoy(){
        mercado abierto y la hora de NY encima, porque el «cuándo» es la mitad
        de la decisión de sentarse. */
     const mkt = sesionMundial(ahora());
+    const sug = lgSugerido();
     host.innerHTML = `<div class="lg-abrir lg-abrir-cero">
       <div class="bd-t">${bi('ANTES DE OPERAR','BEFORE YOU TRADE')} · <b>${fmtFecha(hoy)}</b></div>
       <p class="lg-abrir-p">${bi(
         'Sin sesión abierta nada se está midiendo.',
         'With no session open nothing is being measured.')}</p>
-      <button type="button" class="lg-start" onclick="lgPideSesion()">
+      <button type="button" class="lg-start" onclick="lgEntraAuto()">
         <span class="lgs-dot" aria-hidden="true"></span>
         <span class="lgs-txt">
           <b>${bi('INICIAR SESIÓN','START SESSION')}</b>
-          <em>${bi('escribe con qué números entras','write the numbers you are going in with')}</em>
+          <em>${bi('entras directo con ' + fmt$(sug.tp) + ' / ' + fmt$(sug.dd) + ' / ' + sug.trades + ' trades',
+                   'straight in with ' + fmt$(sug.tp) + ' / ' + fmt$(sug.dd) + ' / ' + sug.trades + ' trades')}</em>
         </span>
         <span class="lgs-mkt">
           <b>${esc(mkt.replace(' SESSION','').replace('MARKET CLOSED', bi('CERRADO','CLOSED')))}</b>
@@ -16554,6 +16609,8 @@ function lgHoy(){
         </span>
         <span class="lgs-go" aria-hidden="true">→</span>
       </button>
+      <button type="button" class="lg-otros" onclick="lgPideSesion()">${bi(
+        'entrar con otros números','go in with different numbers')}</button>
     </div>`;
     lgCronoCorre();
     return;
@@ -16738,6 +16795,7 @@ function lgHistorial(){ const h = $('#lgHist'); if(h){ h.hidden = true; h.innerH
 function renderLog(){
   imgInit();
   lgCtas(); lgBalancePanel(); lgStats(); lgLog(); lgHoy(); lgHistorial();
+  lgJetVive();
   requestAnimationFrame(() => lgDibuja(1));
   if(lgLigado) return;
   lgLigado = true;
@@ -23152,23 +23210,14 @@ function escenaEdificio(c, W, H, t, E, rr, PC){
 
 }
 
+/* ── DÓNDE ESTAMOS, Y QUÉ RELOJ MANDA ──
+   El estado (arriba en el jet / abajo en la sesión) va ANTES del cielo
+   porque decide el RELOJ: en el jet se vive con la hora de MÉXICO, siempre;
+   al bajar a la sesión, la pantalla cambia a la hora local de esa ciudad —y
+   el cielo la sigue. Al cerrar la sesión (botón o fin del tramo) se sube
+   solo: el estado se resetea con la LLAVE ciudad+día, no con un timer. */
 function dibujaOficina(t){
   const cv = $('#agOficina'); if(!cv) return;
-  const c = cv.getContext('2d');
-  c.setTransform(1,0,0,1,0,0);
-  c.imageSmoothingEnabled = false;
-  const W = 1800, H = 1160;
-  c.clearRect(0, 0, W, H);
-  const rr = i => ((Math.sin(i * 12.9898) * 43758.5453) % 1 + 1) % 1;
-
-  /* ── DÓNDE ESTAMOS, Y QUÉ RELOJ MANDA ──
-     El estado (arriba en el jet / abajo en la sesión) va ANTES del cielo
-     porque decide el RELOJ: en el jet se vive con la hora de MÉXICO, siempre;
-     al bajar a la sesión, la pantalla cambia a la hora local de esa ciudad —y
-     el cielo la sigue. Al cerrar la sesión (botón o fin del tramo) se sube
-     solo: el estado se resetea con la LLAVE ciudad+día, no con un timer. */
-
-  const E = deskEscenaDe() || escenaAhora();
   /* la hora de NY, fija abajo a la izquierda — el reloj del MERCADO,
      independiente del reloj de escena (México en el jet / ciudad al bajar) */
   const hNY = $('#horaNY');
@@ -23177,6 +23226,21 @@ function dibujaOficina(t){
       { timeZone: TZ_MERCADO, hour12: false });
     if(hNY.textContent !== txtNY) hNY.textContent = txtNY;
   }
+  pintaEscena(cv, t, deskEscenaDe() || escenaAhora());
+}
+
+/* EL MISMO MOTOR EN OTRO LIENZO (André, 2-sep-2026): la escena estaba
+   amarrada a #agOficina y al selector manual del Desk. Ahora recibe el lienzo
+   y la escena, y así el Log puede colgar SU cuadro del avión en automático
+   sin duplicar una línea de dibujo ni tocar el Desk. */
+function pintaEscena(cv, t, E){
+  if(!cv) return;
+  const c = cv.getContext('2d');
+  c.setTransform(1,0,0,1,0,0);
+  c.imageSmoothingEnabled = false;
+  const W = cv.width, H = cv.height;
+  c.clearRect(0, 0, W, H);
+  const rr = i => ((Math.sin(i * 12.9898) * 43758.5453) % 1 + 1) % 1;
   const arriba = E.tipo === 'vuelo';
 
   const ciudadFoco = E.tipo === 'vuelo' ? E.a : E.c;
@@ -23240,6 +23304,60 @@ function animaOficina(){
   };
   ofiTronó = false;                  // cada arranque merece su propio intento
   ofiRAF = requestAnimationFrame(loop);
+}
+
+/* ══ EL CUADRO DEL AVIÓN DEL LOG ══ (André, 2-sep-2026)
+   Automático de nacimiento: NO lee deskEscenaDe(), así que el selector de
+   escena del Desk no lo mueve. Entre semana es el jet sobre la sesión que
+   esté abierta; el fin de semana sigue siendo el jet, con el cartel del
+   mercado cerrado — el cuadro es el avión, siempre. */
+let lgJetRAF = null, lgJetInt = null, lgJetTronó = false;
+function lgJetEscena(){
+  const E = escenaAhora();
+  if(E.tipo === 'vuelo') return E;
+  /* finde y cualquier otro estado: el jet en crucero, con el cartel de cerrado */
+  return { tipo:'vuelo', finde:true, de:'nyc', a:'nyc', c:'nyc', prog:.5 };
+}
+function lgJetPie(){
+  const el = $('#lgJetPie'); if(!el) return;
+  const mkt = sesionMundial(ahora()).replace(' SESSION','').replace('MARKET CLOSED', bi('CERRADO','CLOSED'));
+  const E = escenaAhora();
+  /* E.restan viene en minutos FRACCIONARIOS (el reloj corre con segundos):
+     sin redondear el pie decía «5h 59.4333333m». */
+  const q = E.tipo === 'vuelo' ? Math.max(0, Math.round(E.restan || 0)) : 0;
+  const restan = q > 0
+    ? ' · ' + Math.floor(q/60) + 'h ' + String(q%60).padStart(2,'0') + 'm ' + bi('para el cierre','to close')
+    : '';
+  const txt = mkt + ' · ' + horaMercadoAhora() + ' NY' + restan;
+  if(el.textContent !== txt) el.textContent = txt;
+}
+function lgJetVive(){
+  const cv = $('#lgJet'); if(!cv) return;
+  cancelAnimationFrame(lgJetRAF);
+  if(lgJetInt){ clearInterval(lgJetInt); lgJetInt = null; }
+  lgJetTronó = false;
+  const t0 = performance.now();
+  const cuadro = (now) => {
+    const c2 = $('#lgJet');
+    if(!c2) return false;                                   /* se fue de la vista: muere */
+    if(document.body.classList.contains('locked')) return true;   /* detrás del login */
+    if(c2.offsetParent === null) return true;               /* vista escondida: no se pinta */
+    try{ pintaEscena(c2, Math.max(0, now - t0), lgJetEscena()); lgJetPie(); }
+    catch(e){
+      if(!lgJetTronó){ lgJetTronó = true; console.error('[log/jet] la escena se detuvo:', e); }
+      return false;                                          /* congelada, no rota */
+    }
+    return true;
+  };
+  /* requestAnimationFrame no corre en todos los contextos: si al medio segundo
+     no llegó ni un cuadro, se cae a un intervalo. Un jet congelado se ve peor
+     que uno a 30 fps. */
+  let vino = false;
+  const loop = (now) => { vino = true; if(cuadro(now||performance.now())) lgJetRAF = requestAnimationFrame(loop); };
+  lgJetRAF = requestAnimationFrame(loop);
+  setTimeout(() => { if(!vino && $('#lgJet')){
+    lgJetInt = setInterval(() => { if(!cuadro(performance.now())){ clearInterval(lgJetInt); lgJetInt = null; } }, 40);
+  }}, 500);
 }
 
 /* El Quant Lab se eliminó: no medía nada. Con él se fueron el pre-vuelo, el
