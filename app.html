@@ -1559,21 +1559,6 @@ button.st-chip:hover{border-color:rgba(255,255,255,.45)}
 .bat-wbar-lbl{font-family:var(--mono);font-size:11px;color:var(--faint);margin-top:8px;text-align:center}
 /* objetivo del plan + decisiones de crecimiento */
 /* ── EL BALANCE Y EL CAMINO ── */
-/* ── EL CUADRO DEL AVIÓN (Log · automático) ──
-   La escena se dibuja completa (1800×1160) y el cuadro enseña sólo la BANDA
-   donde viven el cartel y el jet: recortar por CSS deja la composición del
-   Desk intacta —si se aplastara el lienzo, el avión saldría ovalado— y aquí
-   ocupa el alto de un encabezado, no media pantalla. */
-.lg-jet{position:relative;margin-bottom:14px;border-radius:16px;overflow:hidden;
-  border:1px solid var(--line-soft);background:#0b1020;aspect-ratio:1800/790}
-.lg-jet canvas{display:block;width:100%;height:auto;margin-top:-5.278%}
-.lg-jet-pie{position:absolute;left:14px;bottom:12px;font-family:var(--mono);
-  font-size:10px;letter-spacing:.14em;color:rgba(255,255,255,.72);
-  background:rgba(8,11,18,.45);backdrop-filter:blur(4px);
-  border-radius:20px;padding:5px 13px;pointer-events:none}
-@media(max-width:640px){ .lg-jet{aspect-ratio:1800/860} .lg-jet canvas{margin-top:-4%} }
-/* el jet es decorado: si pides menos movimiento, se queda quieto */
-@media(prefers-reduced-motion:reduce){ .lg-jet canvas{opacity:.92} }
 /* la salida de escape del INICIAR automático */
 .lg-otros{display:block;margin:12px auto 0;background:none;border:0;cursor:pointer;
   font-family:var(--mono);font-size:10px;letter-spacing:.12em;color:var(--faint);
@@ -1821,6 +1806,10 @@ button.st-chip:hover{border-color:rgba(255,255,255,.45)}
   line-height:1;color:var(--dim)}
 .lgs-mkt em{font-family:var(--mono);font-size:9px;font-style:normal;letter-spacing:.1em;
   line-height:1;color:var(--faint)}
+/* con el mercado cerrado la etiqueta se apaga: se sigue pudiendo abrir la
+   sesión (backtest, revisión, una tarde suelta), pero no finge que hay
+   killzone viva */
+.lgs-mkt.off b{color:var(--faint);opacity:.75}
 .lgs-go{flex:0 0 auto;width:36px;height:36px;border-radius:10px;display:grid;place-items:center;
   border:1px solid var(--line);color:var(--dim);font-size:15px;
   transition:transform .22s ease,color .22s ease,border-color .22s ease,background .22s ease}
@@ -5155,14 +5144,6 @@ stop[stop-color="#9BC0DC"]{stop-color:var(--txt)}
 
       <!-- ════ LOG TRADE (real · mismo formato que Backtesting) ════ -->
       <section class="view" id="v-log">
-        <!-- EL CUADRO DEL AVIÓN, EN AUTOMÁTICO (André, 2-sep-2026):
-             la misma escena del Desk, pero sin el selector de escena: aquí
-             manda el reloj y nada más. Dice sobre qué sesión estás volando y
-             cuánto le queda, que es la mitad de la decisión de sentarse. -->
-        <div class="lg-jet">
-          <canvas id="lgJet" width="1800" height="1160" aria-label="El jet sobre la sesión abierta"></canvas>
-          <div class="lg-jet-pie" id="lgJetPie"></div>
-        </div>
         <!-- LA CUENTA, HASTA ARRIBA Y UNA SOLA VEZ (André, 31-ago-2026):
              primero eligo en qué cuenta estoy, y todo lo de abajo habla de
              ella. Estaba repetida dentro de la tarjeta del registro. -->
@@ -7410,12 +7391,47 @@ function metas(){
    Londres de las 2 a la apertura de NY. Antes decía MARKET CLOSED cuatro
    horas (16→20) mientras Globex operaba — André lo cachó a la 1 AM con Asia
    viva y Londres a una hora. */
+/* ══ QUÉ SESIÓN ESTÁ ABIERTA ══ (André, 2-sep-2026)
+   Estaba escrita a mano y con horas VIEJAS: Asia arrancaba a las 18:00 NY, así
+   que a las 19:36 el terminal decía «ASIA SESSION» cuando Asia abre a las
+   20:00 — media hora larga de sesión inventada, y el Log abría con el mercado
+   mal etiquetado. Las horas de verdad ya vivían en BAT_SESIONES (ASIA 20:00 →
+   02:00, LONDRES 02:00 → 08:30, NY 09:30 → 16:00, corregidas el 30-ago-2026
+   contra el indicador). Ahora sale de ahí y de ningún otro lado: una sola
+   fuente, y cambiarla en un sitio la cambia en todos.
+   Entre killzones no hay sesión: dice CERRADO, que es la verdad. */
+function sesionVivaAhora(now){
+  try{
+    const m = minutosEn(TZ_MERCADO, now || ahora());
+    return BAT_SESIONES.find(s2 => {
+      const ini = s2.hora*60 + (s2.min||0), fin = ini + s2.dur;
+      return (fin <= 1440) ? (m >= ini && m < fin) : (m >= ini || m < fin - 1440);
+    }) || null;
+  }catch(e){ return null; }
+}
+/* la que abre primero, y en cuántos minutos */
+function sesionQueSigue(now){
+  try{
+    const t = now || ahora(), m = minutosEn(TZ_MERCADO, t);
+    let mejor = null, falta = 1e9;
+    BAT_SESIONES.forEach(s2 => {
+      const d = ((s2.hora*60 + (s2.min||0)) - m + 1440) % 1440;
+      if(d < falta){ falta = d; mejor = s2; }
+    });
+    return mejor ? { ses: mejor, min: falta } : null;
+  }catch(e){ return null; }
+}
+/* la etiqueta corta, para las fichas: ASIA / LONDON / NY / OFF.
+   Antes cada sitio hacía su propio .split(' ')[0], y con el mercado cerrado
+   eso pintaba «MARKET» como si fuera el nombre de una sesión. */
+function mktCorto(now){
+  const v = sesionVivaAhora(now);
+  return v ? (v.id === 'ny' ? 'NY' : v.id === 'londres' ? 'LONDON' : 'ASIA') : 'OFF';
+}
 function sesionMundial(now){
-  const m = minutosEn(TZ_MERCADO, now);
-  if(m >= 9*60+30 && m < 17*60) return 'NY SESSION';
-  if(m >= 17*60 && m < 18*60)   return 'MARKET CLOSED';   // el halt real
-  if(m >= 18*60 || m < 2*60)    return 'ASIA SESSION';
-  return 'LONDON SESSION';                                // 02:00 → 09:30
+  const v = sesionVivaAhora(now);
+  if(!v) return 'MARKET CLOSED';
+  return (v.id === 'ny' ? 'NY' : v.id === 'londres' ? 'LONDON' : 'ASIA') + ' SESSION';
 }
 /* TODO en hora de NY. Mezclar el reloj local con una ventana escrita en NY fue
    el mismo desfase de husos dos veces en dos días — aquí estaba la segunda. */
@@ -12183,16 +12199,29 @@ window.bossReta = function(i){
      Londres 6:30. Un reto de varias sesiones dura ese múltiplo. */
   const durSes = batSesion(ses).dur || 240;
   const mins = Math.max(1, (b.reglas && b.reglas.sesiones) || 1) * durSes;
+  /* ══ EL RETO ESPERA A SU KILLZONE ══ (André, 2-sep-2026)
+     Se creaba con `arrancado: Date.now()` siempre, y eso apagaba la espera que
+     la pantalla del duelo ya tenía: retar a SHIRO —sede Asia— a las 19:36 NY
+     arrancaba el reloj de una sesión que abre a las 20:00, y el duelo se
+     comía solo 24 minutos antes de que se pudiera operar. Ahora, si su
+     killzone no está viva, NO se sella el arranque: la pantalla del reto
+     cuenta «para empezar» y se sella sola en cuanto abre. */
+  const viva = batSesionEstado({ sesion: ses }).viva;
   S.challenge = {
     id: 'boss'+i+'_'+uid(), estado:'activo', boss:i,
     host: yo, rival: BOSS_UID(i),
     sesion: ses, duracion: mins, mult: 1,
-    arrancado: Date.now(), fin: Date.now() + mins*60000,
+    arrancado: viva ? Date.now() : null,
+    fin: viva ? Date.now() + mins*60000 : null,
+    espera: !viva, creado: Date.now(),
     trades: { [yo]: [], [BOSS_UID(i)]: [] },
   };
   window._batPlay = false; batMin = false;
   batGuarda();
-  toast(bi('Reto aceptado · '+b.nom,'Challenge accepted · '+b.nom));
+  const E4 = batSesionEstado(S.challenge);
+  toast(viva ? bi('Reto aceptado · '+b.nom, 'Challenge accepted · '+b.nom)
+             : bi('Reto aceptado · '+b.nom+' · '+loc(E4.ses.nom)+' abre en '+batMinTxt(E4.min),
+                  'Challenge accepted · '+b.nom+' · '+loc(E4.ses.nom)+' opens in '+batMinTxt(E4.min)));
 };
 /* Al cerrar un reto de jefe: si le ganaste, su katana es tuya. */
 /* ══ EL JUEZ DEL RETO ══ (André, 31-ago-2026)
@@ -13947,7 +13976,15 @@ function batLimpiaZombi(){
   let motivo = null;
   if(c.estado === 'activo'){
     if(c.fin && Date.now() > c.fin + 2*3600000) motivo = 'terminado';
-    else if(!c.fin && !c.arrancado) motivo = 'cancelado';
+    /* «activo sin fin ni arranque» dejó de ser imposible (André, 2-sep-2026):
+       un reto citado en una killzone que aún no abre vive exactamente así, y
+       este guardián lo cancelaba en el mismo instante en que se creaba. Se
+       distingue por la marca `espera`. Aun así se le pone un tope: si lleva
+       más de un día esperando, algo salió mal y se cierra. */
+    else if(!c.fin && !c.arrancado){
+      if(!c.espera) motivo = 'cancelado';
+      else if(c.creado && Date.now() > c.creado + 24*3600000) motivo = 'cancelado';
+    }
   }
   if(c.estado === 'volando' && c.inicio && Date.now() > c.inicio + 3600000) motivo = 'cancelado';
   if(c.estado === 'programado' && c.inicio && Date.now() > c.inicio + 12*3600000) motivo = 'cancelado';
@@ -15570,6 +15607,7 @@ function renderBatallaInterno(){
       if(!c.arrancado){
         c.arrancado = Date.now();
         c.fin = c.arrancado + batFinMs(c, c.arrancado);
+        c.espera = false;                 /* ya abrió: deja de estar citado */
         batGuarda();
         toast(bi('¡Empieza el duelo!','The duel begins!'));
       }
@@ -16491,7 +16529,7 @@ window.lgAbreSesion = function(){
      la misma sesión con otros números. */
   S.lgSesion[lgClave(todayISO())] = { tp, dd, trades: tr || 0,
     id:  (antes && antes.id)  || ('ss_' + Math.random().toString(36).slice(2,9)),
-    mkt: (antes && antes.mkt) || sesionMundial(ahora()).replace(' SESSION','').replace('MARKET CLOSED','OFF'),
+    mkt: (antes && antes.mkt) || mktCorto(),
     ini: (antes && antes.ini) || Date.now() };
   lgGuardaPreset({ tp, dd, trades: tr || 0 });
   lgEditando = false; lgPidiendo = false;
@@ -16516,7 +16554,7 @@ window.lgEntraAuto = function(){
   lgSesiones();
   S.lgSesion[lgClave(todayISO())] = { tp: d.tp, dd: d.dd, trades: tope || d.trades || 2,
     id:  (antes && antes.id)  || ('ss_' + Math.random().toString(36).slice(2,9)),
-    mkt: (antes && antes.mkt) || sesionMundial(ahora()).replace(' SESSION','').replace('MARKET CLOSED','OFF'),
+    mkt: (antes && antes.mkt) || mktCorto(),
     ini: (antes && antes.ini) || Date.now() };
   lgEditando = false; lgPidiendo = false;
   save(); lgHoy(); lgStats(); lgDibuja(1); lgLog();
@@ -16589,7 +16627,14 @@ function lgHoy(){
        hay nada que mirar, así que lo único que hay es la puerta. Trae el
        mercado abierto y la hora de NY encima, porque el «cuándo» es la mitad
        de la decisión de sentarse. */
-    const mkt = sesionMundial(ahora());
+    /* CON EL MERCADO CERRADO NO SE INVENTA UNA SESIÓN (André, 2-sep-2026):
+       el botón cantaba la última killzone como si estuviera viva. Ahora dice
+       CERRADO y cuánto falta para la que sigue. */
+    const viva = sesionVivaAhora(), sig = sesionQueSigue();
+    const mktT = viva ? (viva.id === 'ny' ? 'NY' : viva.id === 'londres' ? 'LONDON' : 'ASIA')
+                      : bi('CERRADO','CLOSED');
+    const mktSub = viva ? horaMercadoAhora() + ' NY'
+                        : (sig ? loc(sig.ses.nom).toUpperCase() + ' ' + bi('en','in') + ' ' + batMinTxt(sig.min) : '—');
     const sug = lgSugerido();
     host.innerHTML = `<div class="lg-abrir lg-abrir-cero">
       <div class="bd-t">${bi('ANTES DE OPERAR','BEFORE YOU TRADE')} · <b>${fmtFecha(hoy)}</b></div>
@@ -16603,9 +16648,9 @@ function lgHoy(){
           <em>${bi('entras directo con ' + fmt$(sug.tp) + ' / ' + fmt$(sug.dd) + ' / ' + sug.trades + ' trades',
                    'straight in with ' + fmt$(sug.tp) + ' / ' + fmt$(sug.dd) + ' / ' + sug.trades + ' trades')}</em>
         </span>
-        <span class="lgs-mkt">
-          <b>${esc(mkt.replace(' SESSION','').replace('MARKET CLOSED', bi('CERRADO','CLOSED')))}</b>
-          <em>${esc(horaMercadoAhora())} NY</em>
+        <span class="lgs-mkt ${viva ? '' : 'off'}">
+          <b>${esc(mktT)}</b>
+          <em>${esc(mktSub)}</em>
         </span>
         <span class="lgs-go" aria-hidden="true">→</span>
       </button>
@@ -16655,7 +16700,7 @@ function lgHoy(){
          entre «llevo dos trades» y «llevo dos trades en cuatro horas»: el
          tiempo sentado es el dato que nadie apunta y el que más caro sale. -->
     <div class="lg-crono" id="lgCrono" data-ini="${+ses.ini || 0}">
-      <b>00:00:00</b><em>${esc(ses.mkt || sesionMundial(ahora()).split(' ')[0])} · ${bi('EN SESIÓN','IN SESSION')}</em></div>
+      <b>00:00:00</b><em>${esc(ses.mkt || mktCorto())} · ${bi('EN SESIÓN','IN SESSION')}</em></div>
     <div class="bd-t">${bi('TU DÍA','YOUR DAY')} · <b>${fmtFecha(hoy)}</b>
       <button type="button" class="lg-cerrar-ses" onclick="lgEditaSesion()">${bi('editar','edit')}</button>
       <button type="button" class="lg-cerrar-ses sella" onclick="lgCierraSesion()">${bi('cerrar el día','close the day')}</button></div>
@@ -16672,7 +16717,7 @@ function lgHoy(){
     <div class="bd-chips">
       <span><i>${bi('TRADES','TRADES')}</i><b class="${deMas?'mal':''}">${mios.length}<em>${maxT?'/'+maxT:''}</em></b></span>
       <span><i>${bi('GANADOS','WON')}</i><b>${mios.filter(t=>(t.pnl||0)>0).length}</b></span>
-      <span><i>${bi('SESIÓN','SESSION')}</i><b>${esc(sesionMundial(ahora()).split(' ')[0])}</b></span>
+      <span><i>${bi('SESIÓN','SESSION')}</i><b>${esc(mktCorto())}</b></span>
     </div>
     ${roto ? `<p class="bd-roto">${bi('Llegaste a tu drawdown. El día se acabó.','You hit your drawdown. The day is over.')}</p>`
       : deMas ? `<p class="bd-roto">${bi('Pasaste tu tope de trades del día.','You went over your daily trade cap.')}</p>`
@@ -16795,7 +16840,6 @@ function lgHistorial(){ const h = $('#lgHist'); if(h){ h.hidden = true; h.innerH
 function renderLog(){
   imgInit();
   lgCtas(); lgBalancePanel(); lgStats(); lgLog(); lgHoy(); lgHistorial();
-  lgJetVive();
   requestAnimationFrame(() => lgDibuja(1));
   if(lgLigado) return;
   lgLigado = true;
@@ -20515,10 +20559,15 @@ const CIUDADES = {
    «CERRADO» que el mercado no tiene. El único hueco largo es 17:00–18:00 —el
    halt real del CME— y ahí sí se ve cerrado (35 min) antes del vuelo a Tokio.
    Asia entrega a Londres a las 02:00, como el indicador de la casa. */
+/* LAS MISMAS KILLZONES QUE TODO LO DEMÁS (André, 2-sep-2026): estas horas
+   estaban aparte de BAT_SESIONES —Asia desde las 18:00, NY hasta las 17:00— y
+   el jet cantaba «SESIÓN ABIERTA» sobre Tokio cuando Asia todavía no abría.
+   Ahora salen de la misma tabla; entre sesiones el jet viaja, que es la rama
+   que ya existía abajo. */
 const TRAMOS = [
-  { c:'londres', de:120,  a:545,  sig:'nyc'     },   // 02:00 – 09:05 NY
-  { c:'nyc',     de:570,  a:1020, sig:'tokio'   },   // 09:30 – 17:00 NY
-  { c:'tokio',   de:1080, a:1535, sig:'londres' },   // 18:00 – 01:35 NY (cruza medianoche)
+  { c:'londres', de:120,  a:510,  sig:'nyc'     },   // 02:00 – 08:30 NY
+  { c:'nyc',     de:570,  a:960,  sig:'tokio'   },   // 09:30 – 16:00 NY
+  { c:'tokio',   de:1200, a:1560, sig:'londres' },   // 20:00 – 02:00 NY (cruza medianoche)
 ];
 const VUELO_MIN = 25;                     // lo que dura el traslado en pantalla
 
@@ -23304,60 +23353,6 @@ function animaOficina(){
   };
   ofiTronó = false;                  // cada arranque merece su propio intento
   ofiRAF = requestAnimationFrame(loop);
-}
-
-/* ══ EL CUADRO DEL AVIÓN DEL LOG ══ (André, 2-sep-2026)
-   Automático de nacimiento: NO lee deskEscenaDe(), así que el selector de
-   escena del Desk no lo mueve. Entre semana es el jet sobre la sesión que
-   esté abierta; el fin de semana sigue siendo el jet, con el cartel del
-   mercado cerrado — el cuadro es el avión, siempre. */
-let lgJetRAF = null, lgJetInt = null, lgJetTronó = false;
-function lgJetEscena(){
-  const E = escenaAhora();
-  if(E.tipo === 'vuelo') return E;
-  /* finde y cualquier otro estado: el jet en crucero, con el cartel de cerrado */
-  return { tipo:'vuelo', finde:true, de:'nyc', a:'nyc', c:'nyc', prog:.5 };
-}
-function lgJetPie(){
-  const el = $('#lgJetPie'); if(!el) return;
-  const mkt = sesionMundial(ahora()).replace(' SESSION','').replace('MARKET CLOSED', bi('CERRADO','CLOSED'));
-  const E = escenaAhora();
-  /* E.restan viene en minutos FRACCIONARIOS (el reloj corre con segundos):
-     sin redondear el pie decía «5h 59.4333333m». */
-  const q = E.tipo === 'vuelo' ? Math.max(0, Math.round(E.restan || 0)) : 0;
-  const restan = q > 0
-    ? ' · ' + Math.floor(q/60) + 'h ' + String(q%60).padStart(2,'0') + 'm ' + bi('para el cierre','to close')
-    : '';
-  const txt = mkt + ' · ' + horaMercadoAhora() + ' NY' + restan;
-  if(el.textContent !== txt) el.textContent = txt;
-}
-function lgJetVive(){
-  const cv = $('#lgJet'); if(!cv) return;
-  cancelAnimationFrame(lgJetRAF);
-  if(lgJetInt){ clearInterval(lgJetInt); lgJetInt = null; }
-  lgJetTronó = false;
-  const t0 = performance.now();
-  const cuadro = (now) => {
-    const c2 = $('#lgJet');
-    if(!c2) return false;                                   /* se fue de la vista: muere */
-    if(document.body.classList.contains('locked')) return true;   /* detrás del login */
-    if(c2.offsetParent === null) return true;               /* vista escondida: no se pinta */
-    try{ pintaEscena(c2, Math.max(0, now - t0), lgJetEscena()); lgJetPie(); }
-    catch(e){
-      if(!lgJetTronó){ lgJetTronó = true; console.error('[log/jet] la escena se detuvo:', e); }
-      return false;                                          /* congelada, no rota */
-    }
-    return true;
-  };
-  /* requestAnimationFrame no corre en todos los contextos: si al medio segundo
-     no llegó ni un cuadro, se cae a un intervalo. Un jet congelado se ve peor
-     que uno a 30 fps. */
-  let vino = false;
-  const loop = (now) => { vino = true; if(cuadro(now||performance.now())) lgJetRAF = requestAnimationFrame(loop); };
-  lgJetRAF = requestAnimationFrame(loop);
-  setTimeout(() => { if(!vino && $('#lgJet')){
-    lgJetInt = setInterval(() => { if(!cuadro(performance.now())){ clearInterval(lgJetInt); lgJetInt = null; } }, 40);
-  }}, 500);
 }
 
 /* El Quant Lab se eliminó: no medía nada. Con él se fueron el pre-vuelo, el
