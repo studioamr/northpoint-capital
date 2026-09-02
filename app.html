@@ -3439,6 +3439,34 @@ button.tag.quemada{text-decoration:line-through;text-decoration-color:var(--down
    grande a la izquierda, el paso en negritas y sus reglas debajo. El azul del
    chart sólo en los numerales, para que el ojo salte de paso en paso.
    (André, 31-ago-2026) */
+/* ── LOS EJEMPLOS ──
+   Cinta infinita: la pista mide el doble y la animación se detiene a la mitad,
+   así el bucle no tiene costura. Se para al pasar el cursor — si una captura
+   te interesó, tienes que poder mirarla. (André, 31-ago-2026) */
+.ejem{padding:22px 0 24px}
+.ej-h{padding:0 24px;max-width:74ch;margin-bottom:18px}
+.ej-k{font-family:var(--mono);font-size:9px;letter-spacing:.26em;color:var(--dim)}
+.ej-h h3{margin:8px 0 0;font-size:26px;font-weight:800;letter-spacing:-.02em}
+.ej-h p{margin:10px 0 0;font-size:13px;line-height:1.65;color:var(--dim)}
+.ej-cinta{overflow:hidden;
+  -webkit-mask-image:linear-gradient(90deg,transparent,#000 4%,#000 96%,transparent);
+  mask-image:linear-gradient(90deg,transparent,#000 4%,#000 96%,transparent)}
+.ej-pista{display:flex;gap:14px;width:max-content;padding:0 24px;
+  animation:ejDesfile 92s linear infinite}
+.ej-cinta:hover .ej-pista{animation-play-state:paused}
+@keyframes ejDesfile{from{transform:translate3d(0,0,0)}to{transform:translate3d(-50%,0,0)}}
+/* ALTO FIJO: las capturas vienen en proporciones distintas —unas verticales,
+   otras apaisadas— y sin tope la cinta medía mil píxeles de alto. Se recortan
+   desde arriba, que es donde está el chart. */
+.ej-c{flex:0 0 auto;width:min(420px,80vw);height:clamp(220px,30vh,300px);padding:0;
+  border:1px solid var(--line);border-radius:12px;overflow:hidden;background:#08090d;
+  cursor:zoom-in;transition:border-color .25s,transform .25s}
+.ej-c:hover{border-color:var(--dim);transform:translateY(-3px)}
+.ej-c img{display:block;width:100%;height:100%;object-fit:cover;object-position:top center}
+@media(prefers-reduced-motion:reduce){
+  .ej-cinta{overflow-x:auto}
+  .ej-pista{animation:none}
+}
 .proto{padding:22px 24px}
 .proto-h{max-width:72ch;margin-bottom:20px}
 .proto-k{font-family:var(--mono);font-size:9px;letter-spacing:.26em;color:var(--dim)}
@@ -4949,6 +4977,9 @@ stop[stop-color="#9BC0DC"]{stop-color:var(--txt)}
 
         <!-- EL PROTOCOLO: los seis pasos de la ejecución, para releerlos -->
         <div class="panel mt2 proto" id="algoProto"></div>
+
+        <!-- LOS TRADES DE VERDAD, desfilando -->
+        <div class="panel mt2 ejem" id="algoEjem"></div>
 
         <div class="panel mt2 algo-code-wrap">
           <div class="algo-tabs" id="algoTabs"></div>
@@ -26827,6 +26858,37 @@ function algoProtoHTML(){
         </li>`).join('')}
     </ol>`;
 }
+/* ══ LOS EJEMPLOS ══ (André, 31-ago-2026)
+   Capturas de ejecuciones de verdad —el chart con su ORB y su entrada, y la
+   cuenta debajo—, desfilando sin fin. El protocolo de arriba dice CÓMO; esto
+   enseña CÓMO SE VE, que es lo que de verdad se aprende mirando.
+   No llevan pie de foto inventado: no sé de cada una qué pasó exactamente, y
+   ponerle una descripción de adorno a la captura de un trade real es mentir
+   sobre lo único que aquí no se puede mentir. Se pican y se abren en grande. */
+const ALGO_EJEMPLOS = Array.from({length:11}, (_,i) =>
+  'tr/np-tr-' + String(i+1).padStart(2,'0') + '.jpg');
+function algoEjemHTML(){
+  const carta = (src, i, copia) =>
+    `<button type="button" class="ej-c" data-src="${src}" data-i="${i+1}"
+       ${copia ? 'aria-hidden="true" tabindex="-1"' : ''}
+       title="Ver en grande"><img src="${src}" alt="Ejecución ${i+1}"></button>`;
+  const pista = (orden, copia) => orden.map(i => carta(ALGO_EJEMPLOS[i], i, copia)).join('');
+  const a = [0,1,2,3,4,5,6,7,8,9,10];
+  return `
+    <div class="ej-h">
+      <span class="ej-k">EJEMPLOS</span>
+      <h3>Así se ve</h3>
+      <p>Capturas de ejecuciones de verdad: el chart con su rango, su entrada y
+         la cuenta debajo. Pícalas para verlas en grande.</p>
+    </div>
+    <div class="ej-cinta"><div class="ej-pista">${pista(a,false)}${pista(a,true)}</div></div>`;
+}
+function algoEjemLiga(){
+  const host = document.getElementById('algoEjem'); if(!host) return;
+  host.querySelectorAll('.ej-c').forEach(b => b.onclick = () => {
+    if(typeof imgVisor === 'function') imgVisor(b.dataset.src, 'Ejecución ' + b.dataset.i);
+  });
+}
 function algoComoHTML(){
   /* ALGORITHM VA EN ESPAÑOL (André, 31-ago-2026): el resto de la terminal
      está en inglés a propósito —bi() devuelve siempre el inglés—, pero esta
@@ -27089,6 +27151,8 @@ function renderAlgoritmo(){
   if(como && typeof algoComoHTML === 'function') como.innerHTML = algoComoHTML();
   const prot = $('#algoProto');
   if(prot && typeof algoProtoHTML === 'function') prot.innerHTML = algoProtoHTML();
+  const ejem = $('#algoEjem');
+  if(ejem && typeof algoEjemHTML === 'function'){ ejem.innerHTML = algoEjemHTML(); algoEjemLiga(); }
   /* el rótulo de la barra de arriba también, mientras estés en esta vista:
      tener «The algorithm» encima de una pantalla en español la parte a la
      mitad. Lo pinta show() con tr(), que siempre devuelve inglés, así que se
