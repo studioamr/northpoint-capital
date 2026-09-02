@@ -3443,6 +3443,26 @@ button.tag.quemada{text-decoration:line-through;text-decoration-color:var(--down
    Cinta infinita: la pista mide el doble y la animación se detiene a la mitad,
    así el bucle no tiene costura. Se para al pasar el cursor — si una captura
    te interesó, tienes que poder mirarla. (André, 31-ago-2026) */
+/* ── LA FÁBULA ──
+   El calendario del mes con las dos maneras de recorrerlo. (31-ago-2026) */
+.fab{padding:22px 24px}
+.fab-h{max-width:70ch;margin-bottom:16px}
+.fab-k{font-family:var(--mono);font-size:9px;letter-spacing:.26em;color:var(--dim)}
+.fab-h h3{margin:8px 0 0;font-size:26px;font-weight:800;letter-spacing:-.02em}
+.fab-h p{margin:10px 0 0;font-size:13px;line-height:1.65;color:var(--dim)}
+.fab-cv{height:clamp(230px,32vh,300px);border:1px solid var(--line-soft);border-radius:12px;
+  background:linear-gradient(180deg,rgba(56,97,246,.05),transparent 62%);overflow:hidden}
+.fab-cv canvas{display:block;width:100%;height:100%}
+.fab-dos{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:14px}
+@media(max-width:720px){.fab-dos{grid-template-columns:1fr}}
+.fab-f{border:1px solid var(--line-soft);border-radius:10px;padding:14px 16px;
+  border-left-width:2px}
+.fab-f--l{border-left-color:#D9736A}
+.fab-f--t{border-left-color:#57C79B}
+.fab-t{font-family:var(--mono);font-size:9px;letter-spacing:.22em;color:var(--dim)}
+.fab-f p{margin:8px 0 0;font-size:12.5px;line-height:1.6;color:var(--dim)}
+.fab-pie{margin:14px 0 0;font-family:var(--mono);font-size:10px;letter-spacing:.06em;
+  line-height:1.6;color:var(--faint);max-width:74ch}
 .ejem{padding:22px 0 24px}
 .ej-h{padding:0 24px;max-width:74ch;margin-bottom:18px}
 .ej-k{font-family:var(--mono);font-size:9px;letter-spacing:.26em;color:var(--dim)}
@@ -4980,6 +5000,9 @@ stop[stop-color="#9BC0DC"]{stop-color:var(--txt)}
 
         <!-- EL PROTOCOLO: los seis pasos de la ejecución, para releerlos -->
         <div class="panel mt2 proto" id="algoProto"></div>
+
+        <!-- LA FÁBULA: por qué se mira el mes y no el día -->
+        <div class="panel mt2 fab" id="algoFabula"></div>
 
         <!-- LOS TRADES DE VERDAD, desfilando -->
         <div class="panel mt2 ejem" id="algoEjem"></div>
@@ -26861,6 +26884,166 @@ function algoProtoHTML(){
         </li>`).join('')}
     </ol>`;
 }
+/* ══ LA LIEBRE Y LA TORTUGA ══ (André, 31-ago-2026)
+   El calendario del mes, con las dos maneras de recorrerlo. La LIEBRE sale
+   disparada, hace en cuatro días lo que la tortuga en veinte, y luego se
+   rompe: se pasa de trades, sube el riesgo, devuelve todo y acaba debajo de
+   cero. La TORTUGA avanza una casilla al día, sin días grandes, y termina
+   arriba porque nunca tuvo que recuperar nada.
+   Es una FÁBULA, no un backtest: las dos curvas están dibujadas para explicar
+   la idea, y así se dice debajo. Poner cifras falsas aquí sería justo el tipo
+   de mentira que el resto de la pantalla evita. */
+function algoFabulaHTML(){
+  return `
+    <div class="fab-h">
+      <span class="fab-k">POR QUÉ SE MIRA EL MES</span>
+      <h3>La liebre y la tortuga</h3>
+      <p>La liebre gana la semana. La tortuga gana el mes. En una cuenta
+         fondeada sólo se cobra lo segundo.</p>
+    </div>
+    <div class="fab-cv"><canvas id="fabCv"></canvas></div>
+    <div class="fab-dos">
+      <div class="fab-f fab-f--l">
+        <span class="fab-t">LA LIEBRE</span>
+        <p>Un día bueno le sube el riesgo. Dos días malos la obligan a
+           recuperar. Se pasa de trades, y lo que ganó en cuatro días lo
+           devuelve en dos.</p>
+      </div>
+      <div class="fab-f fab-f--t">
+        <span class="fab-t">LA TORTUGA</span>
+        <p>El mismo riesgo todos los días. Cierra en verde y apaga.
+           Nunca tiene que recuperar nada, y por eso el día 30 sigue viva.</p>
+      </div>
+    </div>
+    <p class="fab-pie">Una fábula, no un backtest: las curvas están dibujadas
+       para explicar la idea, no medidas de una cuenta.</p>`;
+}
+function algoFabulaVive(){
+  const cv = document.getElementById('fabCv'); if(!cv) return;
+  const c = cv.getContext('2d');
+  const cl = () => document.documentElement.getAttribute('data-theme') === 'light';
+  const CLARO = () => cl() ? '#5E93D6' : '#8FC2FF',
+        ROJO  = () => cl() ? '#C2493D' : '#D9736A',
+        VERDE = () => cl() ? '#128B62' : '#57C79B';
+  const DIAS = 30;
+  /* las dos curvas, escritas a mano: la liebre se despega y se rompe el día
+     nueve; la tortuga sube parejo y termina más arriba de donde llegó la otra */
+  const liebre = [], tortu = [];
+  for(let d=0; d<=DIAS; d++){
+    liebre.push(d<=8 ? d*1.55 : d<=12 ? 12.4 - (d-8)*3.9 : Math.max(-6.5, -3.2 - (d-12)*0.20));
+    tortu.push(d*0.62);
+  }
+  function animal(x, y, s, tipo, col, paso){
+    c.save(); c.translate(x, y); c.fillStyle = col;
+    if(tipo === 'liebre'){
+      const salto = paso ? Math.abs(Math.sin(paso*6))*5*s : 0;
+      c.translate(0, -salto);
+      c.beginPath(); c.ellipse(0, -6*s, 8*s, 5.2*s, -0.15, 0, 7); c.fill();      /* cuerpo */
+      c.beginPath(); c.arc(8*s, -11*s, 3.6*s, 0, 7); c.fill();                    /* cabeza */
+      c.beginPath(); c.ellipse(8.6*s, -18*s, 1.5*s, 5.6*s, 0.22, 0, 7); c.fill(); /* orejas */
+      c.beginPath(); c.ellipse(6.2*s, -18*s, 1.4*s, 5.2*s, 0.05, 0, 7); c.fill();
+      c.beginPath(); c.ellipse(-8*s, -7*s, 2.4*s, 2.4*s, 0, 0, 7); c.fill();      /* cola */
+      c.fillRect(-4*s, -2*s, 2.2*s, 3*s); c.fillRect(3*s, -2*s, 2.2*s, 3*s);      /* patas */
+    } else {
+      const bob = paso ? Math.sin(paso*3)*1.1*s : 0;
+      c.translate(0, bob);
+      c.beginPath(); c.arc(0, -6*s, 8.4*s, Math.PI, 0); c.fill();                 /* caparazón */
+      c.fillRect(-8.4*s, -6.4*s, 16.8*s, 2.4*s);
+      c.beginPath(); c.arc(9.4*s, -5*s, 2.9*s, 0, 7); c.fill();                   /* cabeza */
+      c.fillRect(-7*s, -4*s, 2.4*s, 3.4*s); c.fillRect(4.6*s, -4*s, 2.4*s, 3.4*s);
+      c.save(); c.globalAlpha = .35; c.fillStyle = '#04060C';                      /* placas */
+      for(let k=-1;k<=1;k++){ c.beginPath(); c.arc(k*4.4*s, -7.4*s, 2.1*s, Math.PI, 0); c.fill(); }
+      c.restore();
+    }
+    c.restore();
+  }
+  function pinta(t){
+    const D = Math.min(2, devicePixelRatio||1);
+    const W = cv.offsetWidth, H = cv.offsetHeight;
+    if(!W || !H) return;
+    if(cv.width !== Math.round(W*D)){ cv.width = Math.round(W*D); cv.height = Math.round(H*D); }
+    c.setTransform(D,0,0,D,0,0); c.clearRect(0,0,W,H);
+    const claro = document.documentElement.getAttribute('data-theme') === 'light';
+    const tinta = a => claro ? 'rgba(16,20,28,' + a + ')' : 'rgba(237,239,242,' + a + ')';
+    const M = 18, calY = H - 46, gr = (W - M*2)/DIAS;
+    const CICLO = 15000, u = (t % CICLO)/CICLO;
+    const dia = Math.min(DIAS, u*1.18*DIAS);        /* corre y se queda quieto al final */
+    const X = d => M + d*gr, esc = (H - 96)/22;
+    const Y = v => calY - 34 - v*esc;
+    /* el calendario: una casilla por día */
+    for(let d=0; d<DIAS; d++){
+      const on = d < Math.floor(dia);
+      c.fillStyle = on ? 'rgba(56,97,246,.16)' : tinta('.06');
+      c.fillRect(X(d)+1, calY, gr-2, 26);
+      if((d+1) % 5 === 0 || d === 0){
+        c.fillStyle = tinta('.45');
+        c.font = '600 8px "IBM Plex Mono", monospace'; c.textAlign = 'center';
+        c.fillText(String(d+1), X(d)+gr/2, calY + 40);
+      }
+    }
+    c.strokeStyle = tinta('.13'); c.lineWidth = 1;
+    c.beginPath(); c.moveTo(M, Y(0)); c.lineTo(W-M, Y(0)); c.stroke();
+    c.fillStyle = tinta('.32');
+    c.font = '600 8px "IBM Plex Mono", monospace'; c.textAlign = 'right';
+    c.fillText('CERO', W - M, Y(0) - 6);
+    /* el contador: es lo que hace leer el dibujo como un mes y no como un rato */
+    c.textAlign = 'left'; c.fillStyle = tinta('.58');
+    c.font = '600 10px "IBM Plex Mono", monospace';
+    c.fillText('DÍA ' + String(Math.min(DIAS, Math.floor(dia)+1)).padStart(2,'0') + ' / 30', M, 24);
+    /* las dos curvas hasta el día que va */
+    const curva = (arr, col, ancho) => {
+      c.strokeStyle = col; c.lineWidth = ancho; c.lineJoin='round'; c.lineCap='round';
+      c.beginPath();
+      for(let d=0; d<=Math.floor(dia); d++){
+        const x = X(d), y = Y(arr[d]);
+        if(d===0) c.moveTo(x,y); else c.lineTo(x,y);
+      }
+      c.stroke();
+    };
+    curva(tortu, VERDE(), 2.4);
+    curva(liebre, dia > 9 ? ROJO() : CLARO(), 2.4);
+    const dEnt = Math.floor(dia);
+    c.save(); c.strokeStyle = 'rgba(56,97,246,.30)'; c.lineWidth = 1;
+    c.setLineDash([3,4]);
+    c.beginPath(); c.moveTo(X(dEnt), 30); c.lineTo(X(dEnt), calY); c.stroke();
+    c.restore();
+    /* los dos, sobre su curva */
+    const paso = t/900;
+    animal(X(dEnt), Y(liebre[dEnt]) - 2, Math.min(1.25, H/230),
+           'liebre', dia > 9 ? ROJO() : CLARO(), dia < 8.6 ? paso : 0);
+    animal(X(dEnt), Y(tortu[dEnt]) - 2, Math.min(1.25, H/230), 'tortuga', VERDE(), paso*0.5);
+    /* el momento en que se rompe */
+    if(dia > 8.4 && dia < 13.5){
+      const f = Math.sin(Math.min(1,(dia-8.4)/1.2)*Math.PI);
+      c.save(); c.globalAlpha = 0.85*f;
+      c.fillStyle = ROJO(); c.font = '600 9px "IBM Plex Mono", monospace'; c.textAlign='center';
+      c.fillText('SE ROMPE', X(9), Y(liebre[9]) - 22);
+      c.strokeStyle = ROJO(); c.lineWidth = 1;
+      c.beginPath(); c.moveTo(X(9), Y(liebre[9]) - 17); c.lineTo(X(9), Y(liebre[9]) - 8); c.stroke();
+      c.restore();
+    }
+    /* los dos rótulos */
+    c.font = '600 9px "IBM Plex Mono", monospace'; c.textAlign = 'right';
+    c.fillStyle = dia > 9 ? ROJO() : CLARO();
+    c.fillText('LIEBRE · EL DÍA', W - M, 22);
+    c.fillStyle = VERDE();
+    c.fillText('TORTUGA · EL MES', W - M, 38);
+  }
+  /* un temporizador y no rAF: hay contextos donde rAF no corre y la fábula se
+     quedaría congelada en el día uno, que es justo lo contrario del mensaje */
+  let t = 0, vino = false;
+  function loop(ts){ vino = true; t = ts||0; pinta(t); requestAnimationFrame(loop); }
+  pinta(0);
+  if(!REDU_FAB()){
+    requestAnimationFrame(loop);
+    setTimeout(() => { if(!vino) setInterval(() => { t += 33; pinta(t); }, 33); }, 500);
+  } else pinta(14200);
+  addEventListener('resize', () => pinta(t), {passive:true});
+}
+function REDU_FAB(){
+  try{ return matchMedia('(prefers-reduced-motion: reduce)').matches; }catch(e){ return false; }
+}
+
 /* ══ LOS EJEMPLOS ══ (André, 31-ago-2026)
    Capturas de ejecuciones de verdad —el chart con su ORB y su entrada, y la
    cuenta debajo—, desfilando sin fin. El protocolo de arriba dice CÓMO; esto
@@ -27156,6 +27339,8 @@ function renderAlgoritmo(){
   if(como && typeof algoComoHTML === 'function') como.innerHTML = algoComoHTML();
   const prot = $('#algoProto');
   if(prot && typeof algoProtoHTML === 'function') prot.innerHTML = algoProtoHTML();
+  const fab = $('#algoFabula');
+  if(fab && typeof algoFabulaHTML === 'function'){ fab.innerHTML = algoFabulaHTML(); algoFabulaVive(); }
   const ejem = $('#algoEjem');
   if(ejem && typeof algoEjemHTML === 'function'){ ejem.innerHTML = algoEjemHTML(); algoEjemLiga(); }
   /* el rótulo de la barra de arriba también, mientras estés en esta vista:
