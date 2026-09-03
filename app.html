@@ -29283,42 +29283,50 @@ setInterval(() => cargaMercado().then(m => {
    El campo del usuario sigue abriendo en blanco cuando sí toca login. */
 (async () => {
   const guardado = (S.session && S.session.user) || null;
-  /* ══ SIN NUBE NO HAY TOKEN QUE COMPROBAR ══ (André, 2-sep-2026)
-     El portón exigía `cloudOn() && cloudTok.refresh_token` para dejar pasar,
-     así que en un equipo SIN nube configurada —o con la nube caída— la
-     condición nunca se cumplía y CADA refresh te devolvía al login. Y eso es
-     lo que el portón venía justo a evitar.
-     Con nube, la regla no cambia: se pide token nuevo y sólo si contesta que
-     sí se entra, para no quedar en el limbo «sesión sin token».
-     Sin nube, no hay token que comprobar: la sesión es sólo qué perfil está
-     abierto en ESTE equipo, y los datos ya viven en este disco. Cerrarla en
-     cada refresh no protegía nada — sólo costaba un login. */
-  const hayNube = cloudOn();
-  const puedo = hayNube && cloudTok && cloudTok.refresh_token && guardado && USERS[guardado];
-  let entro = false;
-  let sinRed = false;
-  if(puedo){
-    try{ entro = await cloudRefresh(); }catch(e){ entro = false; }
-    /* no se pudo preguntar (sin red, servidor caído): se entra igual y se
-       trabaja con lo de este disco. El pill de la nube ya avisa que no está
-       sincronizando; sacarte al login además no arregla nada. */
-    if(!entro && _refreshSinRed){ entro = true; sinRed = true; }
-  } else if(!hayNube && guardado && USERS[guardado]){
-    entro = true;
-  }
-  if(entro){
+  /* ══ EL PORTÓN, DE UNA VEZ POR TODAS ══ (André, 3-sep-2026)
+     Tercera vuelta a esto, y la anterior sólo tapó la mitad: se entraba sin
+     red, sí, pero SOLO si además había un refresh_token guardado. Y hay
+     caminos de entrada que no dejan uno —el de recuperar la clave guarda
+     `refresh_token: null`—, así que a quien entró por ahí CADA refresh lo
+     devolvía al login, con red y todo. Tapar un caso a la vez no estaba
+     funcionando, así que se le da la vuelta al planteamiento:
+
+     LA SESIÓN LOCAL YA NO DEPENDE DE LA NUBE. Si en este disco hay un usuario
+     guardado y ese usuario existe, se entra. Punto. Los datos ya están en este
+     localStorage —cerrar la sesión no los protege de nadie, sólo cuesta un
+     login—, y el pill de la nube ya dice cuándo no está sincronizando.
+
+     La nube se revalida DESPUÉS y sin bloquear: si el servidor rechaza el
+     token se borra el token (no la sesión) y se avisa que hay que volver a
+     conectar; si simplemente no se pudo preguntar, no se toca nada.
+     Sólo se manda al login a quien de verdad no tiene sesión en este equipo. */
+  const dentro = !!(guardado && USERS[guardado]);
+  if(dentro){
     unlockUI();
     try{ renderAll(); }catch(e){}
-    try{ cloudPaint(); cloudPull(); }catch(e){}
     try{ S.presencia = S.presencia || {}; S.presencia[guardado] = Date.now();
       save(); marcaPresencia(); }catch(e){}
-    if(sinRed) try{ toast(bi('Entraste sin red: se trabaja con lo de este equipo.',
-                             'You are in without network: working from this device.')); }catch(e){}
+    /* la nube, en segundo plano: que tarde o falle no retiene la pantalla */
+    (async () => {
+      if(!cloudOn() || !cloudTok){ try{ cloudPaint(); }catch(e){} return; }
+      let ok = true;
+      if(cloudTok.refresh_token){
+        try{ ok = await cloudRefresh(); }catch(e){ ok = false; }
+        if(!ok && _refreshSinRed) ok = true;          /* no se pudo preguntar */
+      }
+      if(!ok){
+        /* el servidor lo rechazó: se cae el token, NO la sesión */
+        cloudTok = null;
+        try{ localStorage.removeItem('np_tok'); }catch(e){}
+        try{ toast(bi('La nube pide volver a conectar. Tus datos de este equipo están intactos.',
+                      'The cloud needs you to reconnect. Your data on this device is untouched.')); }catch(e){}
+      }
+      try{ cloudPaint(); }catch(e){}
+      if(ok) try{ cloudPull(); }catch(e){}
+    })();
     return;
   }
-  /* sólo se borra el token cuando el servidor lo RECHAZÓ. Si nunca se pudo
-     preguntar, arriba ya se entró y aquí no se llega. */
-  if(cloudOn()){ cloudTok = null; try{ localStorage.removeItem('np_tok'); }catch(e){} }
+  /* sin sesión en este equipo: ahí sí, el login */
   S.session = { user: null };
   lockUI();
   try{ localStorage.removeItem('np_last_user'); }catch(e){}
