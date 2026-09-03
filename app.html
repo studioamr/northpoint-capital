@@ -26080,22 +26080,8 @@ muereFVG = input.string("Se invierte (cierre del otro lado)", "El FVG muere cuan
 nFVG    = input.int(1, "Cuántos por lado", minval = 1, maxval = 3, group = g5, tooltip = "1 = solo el alcista más cercano y el bajista más cercano. Súbelo a 2 o 3 si quieres ver también los que vienen detrás.")
 inFvgUp = input.color(#5a5a5a, "Alcista", inline = "FC", group = g5)
 inFvgDn = input.color(#000000, "Bajista", inline = "FC", group = g5, tooltip = "Colores del FVG. Solo mandan con la paleta en Personalizado; con cualquier otra paleta los FVG toman sus colores para que todo combine.")
-// ── EL TAMAÑO MÍNIMO, PORTABLE ── (André, 2-sep-2026)
-// «2 puntos» está medido para el MNQ, que vale ~29,000: ahí 2 puntos es un
-// hueco chico y el filtro hace lo que tiene que hacer. En OTRO instrumento el
-// mismo número deja de significar lo mismo — en el ES (~5,800) filtra de más y
-// en un par de divisas (1.08) se come el gráfico entero. Por eso el indicador
-// puede verse "raro" en la pantalla de alguien más.
-// AUTOMÁTICO mide el hueco contra el ATR del propio instrumento, así que se
-// ajusta solo a lo que sea que tengas abierto. Se deja en PUNTOS por defecto
-// para no cambiarle el gráfico a quien ya lo tiene afinado.
-escalaFVG = input.string("Puntos (fijo)", "Cómo se mide el tamaño mínimo", options = ["Puntos (fijo)", "Automático (por ATR)"], group = g5, tooltip = "PUNTOS: el número de abajo, tal cual, en puntos del instrumento — está medido para el MNQ. AUTOMÁTICO: el mínimo sale del ATR de 14 del propio símbolo, así que el mismo indicador funciona igual en MNQ, en ES, en oro o en divisas sin tocar nada. Si le pasas el indicador a alguien que opera otro instrumento, dile que lo ponga en AUTOMÁTICO.")
-minFVG  = input.float(2, "Tamaño mínimo del FVG (pts)", minval = 0.25, group = g5, tooltip = "Sólo manda con la escala en PUNTOS.")
-minFvgORB = input.float(0.25, "Tamaño mínimo del FVG del ORB (pts)", minval = 0.25, group = g5, tooltip = "En 0.25 se marcan TODOS los huecos que se formen dentro del ORB, del tamaño que sean. Súbelo si en tu gráfico salen demasiados chiquitos. Sólo manda con la escala en PUNTOS.")
-factorFVG = input.float(6, "Automático: % del ATR", minval = 0.5, maxval = 60, step = 0.5, group = g5, tooltip = "Con la escala en AUTOMÁTICO, un hueco cuenta si mide al menos este porcentaje del ATR(14). En 6% el MNQ queda cerca de los 2 puntos de siempre.") * 0.01
-float atrFVG      = ta.atr(14)
-float minFvgEf    = escalaFVG == "Automático (por ATR)" ? math.max(syminfo.mintick, nz(atrFVG) * factorFVG) : minFVG
-float minFvgORBEf = escalaFVG == "Automático (por ATR)" ? math.max(syminfo.mintick, nz(atrFVG) * factorFVG * 0.125) : minFvgORB
+minFVG  = input.float(2, "Tamaño mínimo del FVG (pts)", minval = 0.25, group = g5)
+minFvgORB = input.float(0.25, "Tamaño mínimo del FVG del ORB (pts)", minval = 0.25, group = g5, tooltip = "En 0.25 se marcan TODOS los huecos que se formen dentro del ORB, del tamaño que sean. Súbelo si en tu gráfico salen demasiados chiquitos.")
 txtFvgORB = input.bool(true, "Ponerles título", group = g5, tooltip = "Cada hueco lleva su nombre (FVG ↑ / iFVG ↓) al arranque de su caja. Si dos quedan tan pegados que se encimarían, solo se escribe el primero: nunca vas a ver títulos amontonados.")
 transFVG = input.int(88, "Transparencia de los FVG", minval = 40, maxval = 97, group = g5, tooltip = "Los huecos tienen su PROPIA transparencia, aparte de la de las demás zonas: son lo que más miras, así que suelen querer verse más sólidos. Más alto = más tenue.")
 fvgTamSel = input.string("Diminuto", "Tamaño del texto del FVG", options = ["Diminuto", "Chico", "Normal"], group = g5)
@@ -26199,6 +26185,7 @@ escHueco = input.int(5, "Hueco antes de la caja (velas)", minval = 0, maxval = 2
 escSep = input.int(2, "Separación", minval = 0, maxval = 20, group = g10, inline = "E2")
 escVerProb = input.bool(false, "Escribir el RR adentro de la caja", group = g10, tooltip = "APAGADO de fábrica: la caja va limpia, sin una sola letra adentro. Prendido, escribe dentro de la caja del premio el nivel, si le pega un FVG, el porcentaje de confluencia y el RR — útil sobre todo con la ESCALERA COMPLETA, para comparar. El porcentaje NO es un win rate probado: es cuánta confluencia junta ese nivel (FVG, Order Block, AOI, qué tan profundo es, si el precio ya lo pasó y el RR que deja). Todo eso sigue vivo en el tooltip de la caja aunque esto quede apagado.")
 escPal = input.bool(true, "La caja de la orden sigue la paleta", group = g10, tooltip = "PRENDIDO: la caja se pinta con los mismos azules que el resto de la estructura —el tono oscuro para el riesgo y el medio para el premio— y todo el chart se lee como una sola pieza. APAGADO: vuelve al rojo y verde de la herramienta Long/Short Position de TradingView, que gritan más pero se salen de la paleta. Los dos colores de abajo solo mandan con esto apagado.")
+escSigue = input.bool(true, "Cuando la toque, la caja se mueve al fill", group = g10, tooltip = "APAGADO la caja se queda siempre flotando a la derecha, esperando. PRENDIDO hace lo que de verdad quieres ver: mientras el precio NO llega al nivel, la caja espera a la derecha —armada—; en cuanto una vela toca la entrada, la caja SE MUEVE a esa vela y se queda anclada ahí, creciendo con el precio, para que veas la orden viva sobre el gráfico: dónde entró, dónde está el stop, dónde el objetivo y cuánto lleva recorrido. El fill se busca desde que terminó el impulso hacia adelante, así que es la PRIMERA vez que el precio tocó ese nivel, no la última.")
 escColR = input.color(#f23645, "Riesgo", inline = "E3", group = g10)
 escColLn = input.color(color.new(#000000, 40), "Línea de la entrada", group = g10, tooltip = "La raya que parte las dos cajas, la de tu precio de entrada. Aquí le pones color Y transparencia (el cuadrito de color trae su propia barra de opacidad), por si la quieres invisible o gritona.")
 escGrosorLn = input.int(1, "Grosor de la línea de la entrada", minval = 1, maxval = 4, group = g10)
@@ -26525,12 +26512,12 @@ var array<int>   fX = array.new_int()
 bool htfNueva = not na(fvTc) and fvTc != nz(fvTc[1], fvTc)
 
 if (verFVG or verFvgRg) and htfNueva
-    if fvLC > fvHA and (fvLC - fvHA) >= minFvgEf
+    if fvLC > fvHA and (fvLC - fvHA) >= minFVG
         array.push(fS, 1)
         array.push(fT, fvLC)
         array.push(fB, fvHA)
         array.push(fX, fvTb)
-    if fvHC < fvLA and (fvLA - fvHC) >= minFvgEf
+    if fvHC < fvLA and (fvLA - fvHC) >= minFVG
         array.push(fS, -1)
         array.push(fT, fvLA)
         array.push(fB, fvHC)
@@ -26627,14 +26614,14 @@ if tO and not tO[1]
 
 // las tres velas del trío dentro de la ventana
 if verFvgORB and tO and tO[1] and tO[2]
-    if low > high[2] and (low - high[2]) >= minFvgORBEf
+    if low > high[2] and (low - high[2]) >= minFvgORB
         array.push(gS, 1)
         array.push(gT, low)
         array.push(gB, high[2])
         array.push(gX, time[1])
         array.push(gInv, 0)
         array.push(gFin, 0)
-    if high < low[2] and (low[2] - high) >= minFvgORBEf
+    if high < low[2] and (low[2] - high) >= minFvgORB
         array.push(gS, -1)
         array.push(gT, low[2])
         array.push(gB, high)
@@ -27398,6 +27385,29 @@ if barstate.islast
                                 mejorI := i
                         // con un nivel fijo o en automático se dibuja UNA
                         // sola caja: la del nivel elegido o la que ganó
+                        // ── ¿YA LA TOCÓ? ─────────────────────────────
+                        // (André, 3-sep-2026) Mientras el precio no llega al
+                        // nivel, la caja espera flotando a la derecha. En
+                        // cuanto una vela toca la entrada, la caja se MUEVE a
+                        // esa vela y se ancla ahí: de adorno pasa a ser el
+                        // seguimiento de la orden viva. Se busca desde que
+                        // terminó el impulso hacia adelante, así que es la
+                        // PRIMERA vez que se tocó, no la última.
+                        int   fillI = -1
+                        int   fillT = na
+                        float entAct = array.size(eEnt) > 0 ? array.get(eEnt, escAuto ? mejorI : 0) : na
+                        if escSigue and not escTodo and not na(entAct)
+                            int desdeF = math.max(0, math.max(rgHI, rgLI))
+                            for i = desdeF to n - 1
+                                if fillI < 0 and array.get(kL, i) <= entAct and array.get(kH, i) >= entAct
+                                    fillI := i
+                                    fillT := array.get(kT, i)
+                            // el tick de ahora también cuenta: si la está
+                            // tocando en esta misma vela, ya está llena
+                            if fillI < 0 and low <= entAct and high >= entAct
+                                fillI := n - 1
+                                fillT := array.get(kT, n - 1)
+
                         for i = (escAuto ? mejorI : 0) to (escAuto ? mejorI : nEsc - 1)
                             float r   = array.get(eR, i)
                             float ent = array.get(eEnt, i)
@@ -27413,6 +27423,9 @@ if barstate.islast
                             int col = escAuto ? 0 : i
                             int bx1 = math.min(bar_index + escIni + col * (anchoCaja + sepCaja), bar_index + 460)
                             int bx2 = math.min(bx1 + anchoCaja, bar_index + 490)
+                            // llena: la caja deja de flotar y se ancla en la
+                            // vela del fill, estirándose con el precio
+                            bool llena = fillI >= 0 and i == (escAuto ? mejorI : 0)
                             string num = escTodo ? str.tostring(i + 1) + "/" + str.tostring(nEsc) : otePorFvg ? (oteEnArea ? "★ 50% del FVG" : "50% del FVG") : "entrada"
                             // (André, 31-ago-2026) Adentro de la caja SOLO el RR. El número,
                             // el nivel y la confluencia se fueron al tooltip: la caja
@@ -27426,11 +27439,30 @@ if barstate.islast
                             // pelona, puro relleno, como la de TradingView
                             color cRi = color.new(escPal ? pBaja : escColR, escTrans)
                             color cPr = color.new(escPal ? pAlza : escColP, escTrans)
-                            array.push(planBx, box.new(bx1, math.max(escSL, ent), bx2, math.min(escSL, ent), border_color = #ffffff00, border_width = 0, bgcolor = cRi))
-                            array.push(planBx, box.new(bx1, math.max(tp, ent), bx2, math.min(tp, ent), border_color = #ffffff00, border_width = 0, bgcolor = cPr, text = escVerProb ? txt : "", text_size = esMejor ? size.small : size.tiny, text_color = color.new(chart.fg_color, esMejor ? 0 : 25), text_halign = text.align_center, text_valign = escLong ? text.align_bottom : text.align_top))
-                            array.push(planLn, line.new(bx1, ent, bx2, ent, color = escColLn, width = escGrosorLn))
-                            array.push(planLb, label.new(int((bx1 + bx2) / 2), ent, "", style = label.style_label_center, color = #ffffff00, textcolor = #ffffff00, size = size.tiny, tooltip = (escLong ? "LONG " : "SHORT ") + num + " · nivel " + str.tostring(r, "#.###") + (otePorFvg ? (oteEnArea ? "  ★ el 50% del FVG, y cae dentro del área " + str.tostring(math.min(oteDe, oteA_)) + "–" + str.tostring(math.max(oteDe, oteA_)) : "  el 50% del FVG (queda FUERA del área " + str.tostring(math.min(oteDe, oteA_)) + "–" + str.tostring(math.max(oteDe, oteA_)) + ", por eso sin ★)") : (esMejor ? "  ★ el mejor combo" : "")) + "\\nEntrada " + str.tostring(ent, format.mintick) + "  ·  SL " + str.tostring(escSL, format.mintick) + "  ·  TP " + str.tostring(tp, format.mintick) + "\\nRiesgo " + str.tostring(math.abs(escSL - ent), "#.##") + " pts  ·  premio " + str.tostring(math.abs(tp - ent), "#.##") + " pts  ·  1:" + str.tostring(rrx, "#.#") + "\\n\\nConfluencia " + str.tostring(sc, "#") + "% · FVG " + (array.get(eFvg, i) ? "sí" : "no") + " · Order Block " + (array.get(eOb, i) ? "sí" : "no") + " · AOI " + (array.get(eAoi, i) ? "sí" : "no") + "\\nNo es un win rate probado: es cuánta confluencia junta el nivel."))
-                        escCorr := escIni - posHueco + (escTodo ? nEsc : 1) * (anchoCaja + sepCaja) + sepCaja
+                            // con el fill hecho la caja ya no flota: nace en la vela que
+                            // tocó la entrada y se estira con el precio, así se ve
+                            // la orden viva encima del gráfico
+                            int  fx1 = llena ? fillT : na
+                            int  fx2 = llena ? tFin + int(nz(pasoBar, 1)) * escIni : na
+                            if llena
+                                array.push(planBx, box.new(fx1, math.max(escSL, ent), fx2, math.min(escSL, ent), xloc = xloc.bar_time, border_color = #ffffff00, border_width = 0, bgcolor = cRi))
+                            else
+                                array.push(planBx, box.new(bx1, math.max(escSL, ent), bx2, math.min(escSL, ent), border_color = #ffffff00, border_width = 0, bgcolor = cRi))
+                            if llena
+                                array.push(planBx, box.new(fx1, math.max(tp, ent), fx2, math.min(tp, ent), xloc = xloc.bar_time, border_color = #ffffff00, border_width = 0, bgcolor = cPr, text = escVerProb ? txt : "", text_size = esMejor ? size.small : size.tiny, text_color = color.new(chart.fg_color, esMejor ? 0 : 25), text_halign = text.align_center, text_valign = escLong ? text.align_bottom : text.align_top))
+                            else
+                                array.push(planBx, box.new(bx1, math.max(tp, ent), bx2, math.min(tp, ent), border_color = #ffffff00, border_width = 0, bgcolor = cPr, text = escVerProb ? txt : "", text_size = esMejor ? size.small : size.tiny, text_color = color.new(chart.fg_color, esMejor ? 0 : 25), text_halign = text.align_center, text_valign = escLong ? text.align_bottom : text.align_top))
+                            if llena
+                                array.push(planLn, line.new(fx1, ent, fx2, ent, xloc = xloc.bar_time, color = escColLn, width = escGrosorLn))
+                            else
+                                array.push(planLn, line.new(bx1, ent, bx2, ent, color = escColLn, width = escGrosorLn))
+                            if llena
+                                array.push(planLb, label.new(fillT + (fx2 - fillT) / 2, ent, "", xloc = xloc.bar_time, style = label.style_label_center, color = #ffffff00, textcolor = #ffffff00, size = size.tiny, tooltip = (llena ? "LLENA · tocó la entrada el " + str.format_time(fillT, "dd MMM HH:mm", tz) + " · lleva " + str.tostring((close - ent) * (escLong ? 1 : -1), "#.##") + " pts a favor\\n" : "ARMADA · esperando que el precio toque la entrada\\n") + (escLong ? "LONG " : "SHORT ") + num + " · nivel " + str.tostring(r, "#.###") + (otePorFvg ? (oteEnArea ? "  ★ el 50% del FVG, y cae dentro del área " + str.tostring(math.min(oteDe, oteA_)) + "–" + str.tostring(math.max(oteDe, oteA_)) : "  el 50% del FVG (queda FUERA del área " + str.tostring(math.min(oteDe, oteA_)) + "–" + str.tostring(math.max(oteDe, oteA_)) + ", por eso sin ★)") : (esMejor ? "  ★ el mejor combo" : "")) + "\\nEntrada " + str.tostring(ent, format.mintick) + "  ·  SL " + str.tostring(escSL, format.mintick) + "  ·  TP " + str.tostring(tp, format.mintick) + "\\nRiesgo " + str.tostring(math.abs(escSL - ent), "#.##") + " pts  ·  premio " + str.tostring(math.abs(tp - ent), "#.##") + " pts  ·  1:" + str.tostring(rrx, "#.#") + "\\n\\nConfluencia " + str.tostring(sc, "#") + "% · FVG " + (array.get(eFvg, i) ? "sí" : "no") + " · Order Block " + (array.get(eOb, i) ? "sí" : "no") + " · AOI " + (array.get(eAoi, i) ? "sí" : "no") + "\\nNo es un win rate probado: es cuánta confluencia junta el nivel."))
+                            else
+                                array.push(planLb, label.new(int((bx1 + bx2) / 2), ent, "", style = label.style_label_center, color = #ffffff00, textcolor = #ffffff00, size = size.tiny, tooltip = (llena ? "LLENA · tocó la entrada el " + str.format_time(fillT, "dd MMM HH:mm", tz) + " · lleva " + str.tostring((close - ent) * (escLong ? 1 : -1), "#.##") + " pts a favor\\n" : "ARMADA · esperando que el precio toque la entrada\\n") + (escLong ? "LONG " : "SHORT ") + num + " · nivel " + str.tostring(r, "#.###") + (otePorFvg ? (oteEnArea ? "  ★ el 50% del FVG, y cae dentro del área " + str.tostring(math.min(oteDe, oteA_)) + "–" + str.tostring(math.max(oteDe, oteA_)) : "  el 50% del FVG (queda FUERA del área " + str.tostring(math.min(oteDe, oteA_)) + "–" + str.tostring(math.max(oteDe, oteA_)) + ", por eso sin ★)") : (esMejor ? "  ★ el mejor combo" : "")) + "\\nEntrada " + str.tostring(ent, format.mintick) + "  ·  SL " + str.tostring(escSL, format.mintick) + "  ·  TP " + str.tostring(tp, format.mintick) + "\\nRiesgo " + str.tostring(math.abs(escSL - ent), "#.##") + " pts  ·  premio " + str.tostring(math.abs(tp - ent), "#.##") + " pts  ·  1:" + str.tostring(rrx, "#.#") + "\\n\\nConfluencia " + str.tostring(sc, "#") + "% · FVG " + (array.get(eFvg, i) ? "sí" : "no") + " · Order Block " + (array.get(eOb, i) ? "sí" : "no") + " · AOI " + (array.get(eAoi, i) ? "sí" : "no") + "\\nNo es un win rate probado: es cuánta confluencia junta el nivel."))
+                        // con la caja ya anclada al fill deja de ocupar el
+                        // margen derecho: la ficha del grupo 9 no se recorre
+                        escCorr := fillI >= 0 ? 0 : escIni - posHueco + (escTodo ? nEsc : 1) * (anchoCaja + sepCaja) + sepCaja
 
                 // ── PLAN: entrada, stop y cuatro objetivos ─────────
                 // La entrada sale del Order Block (o del nivel del
