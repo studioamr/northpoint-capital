@@ -3670,6 +3670,35 @@ html[data-theme="light"] .pd-tit .pd-asia{color:#B5473A}
 .dn-nums b{display:block;font-family:var(--mono);font-size:19px;letter-spacing:-.02em}
 .dn-nums b.up{color:#57C79B} .dn-nums b.dn{color:#D9736A}
 .dn-nums span{display:block;margin-top:7px;font-size:11px;color:var(--faint)}
+/* las tarjetas de situación */
+.dn-situ{display:grid;gap:12px;margin-top:16px}
+@media(min-width:900px){.dn-situ{grid-template-columns:repeat(2,1fr)}}
+.dn-situ-c{border:1px solid var(--line-soft);border-radius:16px;padding:20px 22px;
+  background:linear-gradient(135deg,var(--glass),transparent 60%);
+  transition:border-color .25s,background .25s}
+.dn-situ-c.on{border-color:#57C79B;background:linear-gradient(135deg,rgba(87,199,155,.12),transparent 62%)}
+.dn-situ-h{display:flex;gap:8px;align-items:center;margin-bottom:12px}
+.dn-situ-f{font-family:var(--mono);font-size:9px;letter-spacing:.2em;color:var(--bg);
+  background:var(--txt);border-radius:99px;padding:4px 10px}
+.dn-situ-t{font-family:var(--mono);font-size:9px;letter-spacing:.2em;color:var(--faint);
+  border:1px solid var(--line);border-radius:99px;padding:4px 10px}
+.dn-situ-c > b{display:block;font-size:16px;font-weight:700;letter-spacing:-.01em;line-height:1.3}
+.dn-situ-c > p{margin:8px 0 0;font-size:12.5px;line-height:1.6;color:var(--dim)}
+.dn-situ-cfg,.dn-situ-n{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:16px}
+.dn-situ-n{padding-top:14px;border-top:1px solid var(--line-soft)}
+.dn-situ-cfg i,.dn-situ-n i{display:block;font-style:normal;font-family:var(--mono);
+  font-size:7.5px;letter-spacing:.16em;color:var(--faint);margin-bottom:6px}
+.dn-situ-cfg b,.dn-situ-n b{font-family:var(--mono);font-size:15px;letter-spacing:-.01em}
+.dn-situ-cfg b.dn,.dn-situ-n b.dn{color:#D9736A}
+.dn-situ-n b.up{color:#57C79B}
+.dn-usa{width:100%;margin-top:16px;border:1px solid var(--line);border-radius:10px;
+  background:transparent;color:var(--dim);font-family:var(--mono);font-size:9.5px;
+  letter-spacing:.16em;text-transform:uppercase;padding:11px;cursor:pointer;
+  transition:background .2s,color .2s,border-color .2s}
+.dn-usa:hover{background:var(--glass-2);color:var(--txt);border-color:var(--accent-deep,#3861F6)}
+.dn-situ-c.on .dn-usa{border-color:rgba(87,199,155,.4);color:#57C79B;cursor:default}
+.dn-calc{padding:26px;text-align:center;font-family:var(--mono);font-size:10px;
+  letter-spacing:.2em;color:var(--faint)}
 .dn-nota{margin:18px 0 0;font-family:var(--mono);font-size:9.5px;letter-spacing:.06em;
   line-height:1.8;color:var(--faint);max-width:78ch}
 .pd-arbol{margin-top:10px;height:clamp(360px,52vh,520px)}
@@ -27820,24 +27849,22 @@ function dineroHTML(){
     </div>
     <div class="dn-sep"></div>
     <div class="pd-h">
-      <h3 class="pd-tit">A <span class="pd-ny">largo plazo</span></h3>
-      <p class="pd-sub">400 meses posibles con estas mismas reglas. La esperanza es una
-        línea; la realidad es la banda.</p>
+      <h3 class="pd-tit">Las mejores <span class="pd-ny">configuraciones</span></h3>
+      <p class="pd-sub">No la que más deja al día — la que más veces te lleva al pago
+        antes de romper el drawdown.</p>
     </div>
     <div class="dn-cfg dn-cfg-2">
-      <label><i>CUÁNTOS DÍAS</i><select id="dnDias">
-        ${[21,60,126,252].map(v => `<option value="${v}" ${+(c.simDias||60) === v ? 'selected' : ''}>${v}</option>`).join('')}
-      </select></label>
-      <label><i>¿CUENTA LA MADRUGADA?</i><select id="dnSN">
-        <option value="0" ${c.simNoche ? '' : 'selected'}>Sólo Nueva York</option>
-        <option value="1" ${c.simNoche ? 'selected' : ''}>NY + la madrugada</option>
-      </select></label>
+      <label><i>DRAWDOWN DE LA CUENTA</i><input type="number" id="dnDD" step="250" min="250" value="${c.dd || 2000}"></label>
+      <label><i>OBJETIVO</i><input type="number" id="dnMeta" step="250" min="250" value="${c.meta || 3000}"></label>
+      <label><i>PÉRDIDA MÁX. DEL DÍA</i><input type="number" id="dnTope" step="100" min="100" value="${c.topeDia || 1000}"></label>
     </div>
-    <div class="dn-graf"><canvas id="dnSim"></canvas></div>
-    <div class="dn-nums" id="dnSimNums"></div>
-    <p class="dn-nota">El azar va sembrado: la misma configuración da siempre la misma
-      nube, así que comparar dos setups compara los setups y no dos tiradas de dados.
-      Sigue siendo aritmética sobre el win rate que pusiste arriba.</p>
+    <div class="dn-situ" id="dnSitu"></div>
+    <p class="dn-nota">El win rate de cada RR no se inventa ni se copia: sale de tu
+      ventaja medida sobre el azar. En un mercado sin deriva, tocar R antes que −1
+      pasa 1/(1+R) de las veces; tú mides 48.86% donde el azar da 45.87% a tu R medio
+      de 1.18, o sea <b>+2.99 puntos de ventaja</b>. Esa ventaja se te respeta en
+      cualquier RR, y lo que cuesta alejar el objetivo se te cobra. Por eso 1:3 no
+      sale ganador aquí: pegarlo es más difícil, y eso ya está en la cuenta.</p>
 
     <div class="dn-total">
       <i>LOS DOS JUNTOS</i>
@@ -27845,127 +27872,142 @@ function dineroHTML(){
       <span>al día · ${f((D.esp + N.esp) * 21)} al mes</span>
     </div>`;
 }
-/* ══ LA SIMULACIÓN A LARGO PLAZO ══ (André, 3-sep-2026)
-   La esperanza es UNA línea; la realidad es una nube. Un día de +$16 esperados
-   no significa que el mes suba parejo: significa que hay muchos caminos y ese
-   es el promedio de todos. Aquí se corren 400 meses posibles con las mismas
-   reglas y se dibuja la banda donde cae el 80% de ellos, para que se vea la
-   diferencia entre «gana» y «gana casi siempre».
-   El azar va SEMBRADO: la misma configuración da siempre la misma nube, así
-   que comparar dos setups compara los setups y no dos tiradas de dados. */
-function simulaDias(c, dias, corridas){
-  const D = dineroCuenta(c), N = nocheCuenta(c);
-  const conNoche = !!c.simNoche;
-  /* LOS CORTES SON LA SUMA ACUMULADA (André, 3-sep-2026): estaban escritos a
-     mano como [p, p+qp, p+q²p] y el tercero salía MENOR que el segundo —el
-     camino C nunca ocurría y su probabilidad se la comía el peor final, que
-     pasaba de 13.4% a 26.6%. La simulación pintaba en rojo una configuración
-     que la aritmética daba en verde. Ahora se acumulan de las mismas
-     probabilidades que ya calculó dineroCuenta, así no pueden desalinearse. */
-  let acc = 0;
-  const cortes = D.cam.map(x => (acc += x.pr));
-  const val = D.cam.map(x => x.$);
-  let sem = 12345 + Math.round(D.r1 * 21 + D.RA*101 + D.RE*211 + D.p*10000)
-            + (conNoche ? 7777 : 0);
-  const rnd = () => { sem = (sem * 1664525 + 1013904223) % 4294967296; return sem / 4294967296; };
-  const fin = [], curvas = [];
-  let ddPeor = 0, verdes = 0;
-  for(let m = 0; m < corridas; m++){
-    let eq = 0, pico = 0, dd = 0; const cur = [0];
-    for(let d = 0; d < dias; d++){
-      const u = rnd();
-      let k = 0; while(k < cortes.length - 1 && u >= cortes[k]) k++;
-      eq += val[k];
-      if(conNoche) eq += rnd() < N.p ? N.cam[0].$ : N.cam[1].$;
+/* ══ LA MEJOR CONFIGURACIÓN PARA COBRAR ══ (André, 3-sep-2026)
+   Aquí NO se optimiza la esperanza. En una cuenta de fondeo la esperanza no
+   paga: paga LLEGAR AL OBJETIVO ANTES DE ROMPER EL DRAWDOWN. Son problemas
+   distintos y el ganador cambia — la configuración de más esperanza por día
+   es la que más veces te saca de la cuenta.
+
+   EL MODELO DEL WIN RATE, Y POR QUÉ ES ÉSTE:
+   con la entrada fija y moviendo sólo el objetivo, en un mercado sin deriva la
+   probabilidad de tocar R antes que −1 es 1/(1+R). André mide 48.86% a R=1.18
+   y 1/(1+1.18) = 45.87%: su ventaja real sobre el azar es de +2.99 puntos.
+   Así que p(R) = 1/(1+R) + ventaja. Es la única forma honesta de evaluar un RR
+   que no ha operado: se le respeta su edge medido y se le cobra lo que cuesta
+   alejar el objetivo. Pegar 1:3 es más difícil, y aquí se nota. */
+const VENT_R = 1.18;   /* el R medio de sus 745 fills */
+function ventaja(wr){ return (wr/100) - 1/(1 + VENT_R); }
+function pDeRR(R, wr){ return Math.min(.95, Math.max(.05, 1/(1+R) + ventaja(wr))); }
+/* una carrera hasta cobrar o romper. El drawdown se mide desde el MÁXIMO
+   (trailing), que es como lo miden las firmas y es el supuesto más duro. */
+function carreraRuina(r, R, maxT, dd, meta, wr, sem0, diasMax){
+  let sem = sem0;
+  const rnd = () => { sem = (sem*1664525 + 1013904223) % 4294967296; return sem/4294967296; };
+  const p = pDeRR(R, wr);
+  let eq = 0, pico = 0;
+  for(let d = 0; d < diasMax; d++){
+    for(let t = 0; t < maxT; t++){
+      const gana = rnd() < p;
+      eq += gana ? r*R : -r;
       if(eq > pico) pico = eq;
-      if(eq - pico < dd) dd = eq - pico;
-      cur.push(eq);
+      if(eq - pico <= -dd) return { fin:'rompe', d:d+1 };
+      if(eq >= meta)       return { fin:'cobra', d:d+1 };
+      if(gana) break;                    /* si gana, se para el día */
     }
-    curvas.push(cur); fin.push(eq);
-    if(eq > 0) verdes++;
-    ddPeor += dd;
   }
-  /* la banda: por cada día, el percentil 10, 50 y 90 de todas las corridas */
-  const band = { p10:[], p50:[], p90:[] };
-  for(let d = 0; d <= dias; d++){
-    const col = curvas.map(c2 => c2[d]).sort((x,y) => x - y);
-    band.p10.push(col[Math.floor(corridas * .10)]);
-    band.p50.push(col[Math.floor(corridas * .50)]);
-    band.p90.push(col[Math.floor(corridas * .90)]);
-  }
-  fin.sort((x,y) => x - y);
-  const esp = (D.esp + (conNoche ? N.esp : 0)) * dias;
-  return { band, esp, dias,
-    verdes: verdes / corridas,
-    medi: fin[Math.floor(corridas * .5)],
-    p10: fin[Math.floor(corridas * .1)], p90: fin[Math.floor(corridas * .9)],
-    dd: ddPeor / corridas };
+  return { fin:'lento', d:diasMax };
 }
-let simInt = null;
-function simulaPinta(){
-  const cv = document.getElementById('dnSim'); if(!cv) return;
+function mideConfig(r, R, maxT, dd, meta, wr, n){
+  let cobra = 0, rompe = 0, sd = 0;
+  for(let i = 0; i < n; i++){
+    const o = carreraRuina(r, R, maxT, dd, meta, wr, 991 + i*7919, 250);
+    if(o.fin === 'cobra'){ cobra++; sd += o.d; }
+    else if(o.fin === 'rompe') rompe++;
+  }
+  return { r, R, maxT, cobra: cobra/n, rompe: rompe/n,
+           dias: cobra ? sd/cobra : null, peor: r*maxT,
+           razon: rompe ? cobra/rompe : Infinity };
+}
+/* las situaciones: qué se está buscando en cada momento de la cuenta */
+const SITUAS = [
+  { k:'eval-agre', fase:'EVAL', tono:'AGRESIVO',
+    t:'Pasar rápido, y si se rompe se rompe',
+    d:'La eval cuesta la cuota, no la cuenta. Aquí el tiempo vale más que la supervivencia: se busca el objetivo en el menor número de días.',
+    ord:(a,b) => (a.dias||999) - (b.dias||999), min:{cobra:.45} },
+  { k:'eval-eq', fase:'EVAL', tono:'EQUILIBRADO',
+    t:'Pasar, sin regalar la cuota',
+    d:'Ni la más rápida ni la más segura: la que mejor cambia días por probabilidad.',
+    ord:(a,b) => (b.cobra/Math.max(30,b.dias||999)) - (a.cobra/Math.max(30,a.dias||999)), min:{cobra:.5} },
+  { k:'buffer', fase:'COLCHÓN', tono:'CONSERVADOR',
+    t:'La cuenta ya vale dinero',
+    d:'Pasaste: romper aquí cuesta la cuenta y lo que llevas. Se optimiza cuántas veces cobras por cada vez que rompes.',
+    ord:(a,b) => b.razon - a.razon, min:{cobra:.5} },
+  { k:'payout', fase:'COBRANDO', tono:'PROTEGER',
+    t:'No romperla, nada más',
+    d:'Con la cuenta pagando, el objetivo es el retiro chico y seguro. Manda la probabilidad de NO romper.',
+    ord:(a,b) => a.rompe - b.rompe, min:{cobra:.4} },
+];
+function mejoresConfigs(){
   const c = dineroCfg();
-  const dias = +c.simDias || 60;
-  const R = simulaDias(c, dias, 400);
-  const cl = () => document.documentElement.getAttribute('data-theme') === 'light';
-  const tinta = a2 => cl() ? 'rgba(16,20,28,' + a2 + ')' : 'rgba(237,239,242,' + a2 + ')';
-  const x2 = cv.getContext('2d');
-  const D2 = Math.min(2, devicePixelRatio || 1);
-  const W = cv.offsetWidth, H = cv.offsetHeight; if(!W || !H) return;
-  if(cv.width !== Math.round(W*D2)){ cv.width = Math.round(W*D2); cv.height = Math.round(H*D2); }
-  x2.setTransform(D2,0,0,D2,0,0); x2.clearRect(0,0,W,H);
-  const M = 34, todos = R.band.p10.concat(R.band.p90, [0, R.esp]);
-  const lo = Math.min(...todos), hi = Math.max(...todos);
-  const pad = (hi - lo) * .12 || 100, min = lo - pad, max = hi + pad, span = (max - min) || 1;
-  const X = i => M + i * (W - M - 12) / dias;
-  const Y = v => 14 + (H - 40) * (1 - (v - min) / span);
-  /* el cero */
-  x2.strokeStyle = tinta('.16'); x2.lineWidth = 1; x2.setLineDash([3,4]);
-  x2.beginPath(); x2.moveTo(M, Y(0)); x2.lineTo(W - 12, Y(0)); x2.stroke(); x2.setLineDash([]);
-  x2.font = '600 8px "IBM Plex Mono", monospace'; x2.textAlign = 'right';
-  x2.fillStyle = tinta('.34'); x2.fillText('$0', M - 6, Y(0) + 3);
-  x2.fillText(fmt$(Math.round(max)), M - 6, 18);
-  x2.fillText(fmt$(Math.round(min)), M - 6, H - 20);
-  /* la banda del 80% */
-  x2.beginPath();
-  R.band.p90.forEach((v,i) => i ? x2.lineTo(X(i), Y(v)) : x2.moveTo(X(0), Y(v)));
-  for(let i = dias; i >= 0; i--) x2.lineTo(X(i), Y(R.band.p10[i]));
-  x2.closePath();
-  x2.fillStyle = R.medi >= 0 ? 'rgba(87,199,155,.13)' : 'rgba(217,115,106,.13)';
-  x2.fill();
-  /* la mediana y la esperanza */
-  const linea = (arr, col, gr, guion) => {
-    x2.save(); x2.strokeStyle = col; x2.lineWidth = gr; x2.lineJoin = 'round';
-    if(guion) x2.setLineDash([5,4]);
-    x2.beginPath(); arr.forEach((v,i) => i ? x2.lineTo(X(i), Y(v)) : x2.moveTo(X(0), Y(v)));
-    x2.stroke(); x2.restore();
-  };
-  linea(R.band.p50, R.medi >= 0 ? '#57C79B' : '#D9736A', 2.2);
-  const rectaEsp = []; for(let i = 0; i <= dias; i++) rectaEsp.push(R.esp * i / dias);
-  linea(rectaEsp, '#3861F6', 1.4, true);
-  /* rótulos */
-  x2.textAlign = 'left'; x2.font = '700 8.5px "IBM Plex Mono", monospace';
-  x2.fillStyle = '#3861F6'; x2.fillText('ESPERANZA', M + 4, 14);
-  x2.fillStyle = R.medi >= 0 ? '#57C79B' : '#D9736A';
-  x2.fillText('MEDIANA · BANDA DEL 80%', M + 4, 26);
-  x2.textAlign = 'right'; x2.fillStyle = tinta('.34');
-  x2.fillText(dias + ' DÍAS', W - 12, H - 6);
-  /* las cifras de abajo */
-  const cajas = document.getElementById('dnSimNums');
-  if(cajas) cajas.innerHTML = `
-    <div><i>TERMINA EN VERDE</i><b class="${R.verdes >= .5 ? 'up' : 'dn'}">${Math.round(R.verdes*100)}%</b><span>de las corridas</span></div>
-    <div><i>MEDIANA A ${dias} DÍAS</i><b class="${R.medi >= 0 ? 'up' : 'dn'}">${fmt$(Math.round(R.medi), true)}</b><span>la corrida de en medio</span></div>
-    <div><i>MAL CAMINO · P10</i><b class="dn">${fmt$(Math.round(R.p10), true)}</b><span>1 de cada 10 va peor</span></div>
-    <div><i>BUEN CAMINO · P90</i><b class="up">${fmt$(Math.round(R.p90), true)}</b><span>1 de cada 10 va mejor</span></div>
-    <div><i>BAJÓN TÍPICO</i><b class="dn">${fmt$(Math.round(R.dd), true)}</b><span>desde su propio máximo</span></div>`;
+  const dd = +c.dd || 2000, meta = +c.meta || 3000, wr = +c.wr || 48.86;
+  const tope = +c.topeDia || 1000;
+  const out = [];
+  for(const r of [100,150,200,250,300,400,500])
+    for(const R of [1,1.5,2,2.5])
+      for(const mt of [1,2,3]){
+        if(r*mt > tope) continue;              /* se pasa de tu pérdida diaria */
+        out.push(mideConfig(r, R, mt, dd, meta, wr, 900));
+      }
+  return out;
 }
+function dineroMejores(){
+  const todas = mejoresConfigs();
+  return SITUAS.map(S2 => {
+    const aptas = todas.filter(x => x.cobra >= (S2.min.cobra || 0));
+    const lista = (aptas.length ? aptas : todas).slice().sort(S2.ord);
+    return { S: S2, top: lista[0] };
+  });
+}
+
+/* las tarjetas: una situación, su mejor configuración y sus números */
+function dineroSituPinta(){
+  const host = $('#dnSitu'); if(!host) return;
+  const c = dineroCfg();
+  host.innerHTML = '<div class="dn-calc">midiendo…</div>';
+  /* se deja respirar al navegador: son ~80 configuraciones × 900 carreras */
+  setTimeout(() => {
+    const h = $('#dnSitu'); if(!h) return;
+    let R;
+    try{ R = dineroMejores(); }catch(e){ h.innerHTML = '<div class="dn-calc">no se pudo medir</div>'; return; }
+    h.innerHTML = R.map(({ S:S2, top }) => {
+      if(!top) return '';
+      const usada = +c.riesgo === top.r && +c.rrA === top.R;
+      return `<div class="dn-situ-c ${usada ? 'on' : ''}">
+        <div class="dn-situ-h">
+          <span class="dn-situ-f">${esc(S2.fase)}</span>
+          <span class="dn-situ-t">${esc(S2.tono)}</span>
+        </div>
+        <b>${esc(S2.t)}</b>
+        <p>${esc(S2.d)}</p>
+        <div class="dn-situ-cfg">
+          <span><i>RIESGO</i><b>${fmt$(top.r)}</b></span>
+          <span><i>OBJETIVO</i><b>1:${top.R}</b></span>
+          <span><i>TRADES</i><b>${top.maxT}</b></span>
+          <span><i>PEOR DÍA</i><b class="dn">−${fmt$(top.peor)}</b></span>
+        </div>
+        <div class="dn-situ-n">
+          <span><i>COBRA</i><b class="up">${Math.round(top.cobra*100)}%</b></span>
+          <span><i>ROMPE</i><b class="dn">${Math.round(top.rompe*100)}%</b></span>
+          <span><i>POR CADA ROTA</i><b>${top.razon === Infinity ? '∞' : top.razon.toFixed(2)}</b></span>
+          <span><i>DÍAS</i><b>${top.dias ? Math.round(top.dias) : '—'}</b></span>
+        </div>
+        <button type="button" class="dn-usa" data-usa="${top.r},${top.R}">
+          ${usada ? 'Es la que tienes puesta' : 'Usar ésta arriba'}</button>
+      </div>`;
+    }).join('');
+    h.querySelectorAll('[data-usa]').forEach(b2 => b2.onclick = () => {
+      const [rr, RR] = b2.dataset.usa.split(',').map(Number);
+      c.riesgo = rr; c.rrA = RR; c.rrE = RR; save(); dineroVive();
+    });
+  }, 30);
+}
+
 function dineroVive(){
   const host = $('#diaDinero'); if(!host) return;
   host.innerHTML = dineroHTML();
   planDiaVive('dnArbol', null, arbolDinero(dineroCfg()));
   planDiaVive('dnNoche', null, arbolNoche$(dineroCfg()));
-  simulaPinta();
-  addEventListener('resize', () => { try{ simulaPinta(); }catch(e){} }, { passive:true });
+  dineroSituPinta();
   const c = dineroCfg();
   const g = () => { save(); dineroVive(); };
   const num = (id, k, min, max) => { const el = $('#'+id); if(!el) return;
@@ -27974,8 +28016,12 @@ function dineroVive(){
   num('dnW','wr',1,99);  num('dnRN','rN',0,1e6);
   const sel = (id, k) => { const el = $('#'+id); if(!el) return;
     el.onchange = () => { c[k] = +el.value; g(); }; };
-  sel('dnA','rrA'); sel('dnE','rrE'); sel('dnRRN','rrN'); sel('dnDias','simDias');
-  const sn = $('#dnSN'); if(sn) sn.onchange = () => { c.simNoche = sn.value === '1'; g(); };
+  sel('dnA','rrA'); sel('dnE','rrE'); sel('dnRRN','rrN');
+  num('dnDD','dd',250,1e6); num('dnMeta','meta',250,1e6); num('dnTope','topeDia',100,1e6);
+  host.querySelectorAll('[data-usa]').forEach(b => b.onclick = () => {
+    const [r, R] = b.dataset.usa.split(',').map(Number);
+    c.riesgo = r; c.rrA = R; c.rrE = R; g();
+  });
   host.querySelectorAll('[data-a]').forEach(b => b.onclick = () => {
     c.rrA = +b.dataset.a; c.rrE = +b.dataset.e; g(); });
 }
