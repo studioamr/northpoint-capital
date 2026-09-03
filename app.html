@@ -3468,6 +3468,13 @@ button.tag.quemada{text-decoration:line-through;text-decoration-color:var(--down
 .pd-titulo{display:block;font-family:var(--mono);font-size:clamp(26px,4.4vw,42px);
   font-weight:700;letter-spacing:-.01em;line-height:1;color:#57C79B}
 html[data-theme="light"] .pd-titulo{color:#128B62}
+/* cada sesión con su color del chart: Londres azul, Asia rojo. El resto del
+   título se queda en el verde del protocolo. */
+.pd-titulo s{text-decoration:none}
+.pd-titulo .pd-lon{color:#5E8BD6}
+.pd-titulo .pd-asia{color:#D9736A}
+html[data-theme="light"] .pd-titulo .pd-lon{color:#2E62B8}
+html[data-theme="light"] .pd-titulo .pd-asia{color:#B5473A}
 .pd-h h3{margin:12px 0 0;font-size:20px;font-weight:600;letter-spacing:-.015em;color:var(--dim)}
 /* el rotulo del camino: vacio en la lamina que enseña, vivo en Log trade */
 .pd-tot{display:block;margin-top:16px;padding-top:14px;border-top:1px solid var(--line-soft)}
@@ -3576,6 +3583,12 @@ html[data-theme="light"] .pd-titulo{color:#128B62}
 /* piezas del dibujo */
 .como-svg .s-soft{fill:var(--line);opacity:.5}
 .como-svg .s-mid{fill:var(--faint);opacity:.28}
+/* los colores con los que el chart pinta cada sesión: Asia roja, Londres
+   azul. Los mismos de las líneas de liquidez, para no tener que traducir. */
+.como-svg .s-asia{fill:#D9736A;opacity:.20}
+.como-svg .s-lon{fill:#5E8BD6;opacity:.20}
+.como-svg .s-lbl-asia{fill:#D9736A;opacity:.92}
+.como-svg .s-lbl-lon{fill:#7FA9E8;opacity:.92}
 .como-svg .s-live{fill:var(--accent);opacity:.16}
 .como-svg .s-tick{stroke:var(--faint);stroke-width:1}
 .como-svg .s-tick-on{stroke:var(--accent);stroke-width:2}
@@ -19795,22 +19808,36 @@ async function fijaClaveNube(accessToken, clave){
    promesa "en vuelo" compartida: quien llegue tarde espera la MISMA, nunca
    lanza una segunda. */
 let _refreshEnVuelo = null;
+/* «NO PUDE PREGUNTAR» NO ES «TE RECHAZARON» (André, 2-sep-2026)
+   cloudRefresh devolvía false igual si el servidor decía que el token ya no
+   vale que si el wifi se cayó medio segundo. Y al arrancar, un false BORRABA
+   el token — así que un parpadeo de red te dejaba fuera para siempre: login
+   en ese refresh y en todos los que siguieran. Era el «se me cierra la sesión
+   al refrescar».
+   Ahora la diferencia queda anotada en `_refreshSinRed`: el portón entra
+   igual cuando no se pudo preguntar (los datos ya están en este disco) y sólo
+   cierra cuando el servidor de verdad rechazó el token. */
+let _refreshSinRed = false;
 function cloudRefresh(){
   if(_refreshEnVuelo) return _refreshEnVuelo;
-  if(!cloudTok || !cloudTok.refresh_token) return Promise.resolve(false);
+  if(!cloudTok || !cloudTok.refresh_token){ _refreshSinRed = false; return Promise.resolve(false); }
+  if(navigator.onLine === false){ _refreshSinRed = true; return Promise.resolve(false); }
   _refreshEnVuelo = (async () => {
     try{
       const r = await fetch(CLOUD.url + '/auth/v1/token?grant_type=refresh_token', {
         method:'POST', headers:{ 'apikey':CLOUD.anon, 'Content-Type':'application/json' },
         body: JSON.stringify({ refresh_token: cloudTok.refresh_token }),
       });
+      /* 5xx es problema del servidor, no del token: tampoco se borra nada */
+      if(r.status >= 500){ _refreshSinRed = true; return false; }
       const d = await r.json();
-      if(!r.ok || !d.access_token) return false;
+      if(!r.ok || !d.access_token){ _refreshSinRed = false; return false; }
+      _refreshSinRed = false;
       cloudTok = { ...cloudTok, access_token:d.access_token, refresh_token:d.refresh_token,
                    exp: Date.now() + (d.expires_in || 3600) * 1000 };
       localStorage.setItem('np_tok', JSON.stringify(cloudTok));
       return true;
-    }catch(e){ return false; }
+    }catch(e){ _refreshSinRed = true; return false; }   /* la red, no el token */
   })();
   _refreshEnVuelo.finally(() => { _refreshEnVuelo = null; });
   return _refreshEnVuelo;
@@ -23921,8 +23948,22 @@ muereFVG = input.string("Se invierte (cierre del otro lado)", "El FVG muere cuan
 nFVG    = input.int(1, "Cuántos por lado", minval = 1, maxval = 3, group = g5, tooltip = "1 = solo el alcista más cercano y el bajista más cercano. Súbelo a 2 o 3 si quieres ver también los que vienen detrás.")
 inFvgUp = input.color(#5a5a5a, "Alcista", inline = "FC", group = g5)
 inFvgDn = input.color(#000000, "Bajista", inline = "FC", group = g5, tooltip = "Colores del FVG. Solo mandan con la paleta en Personalizado; con cualquier otra paleta los FVG toman sus colores para que todo combine.")
-minFVG  = input.float(2, "Tamaño mínimo del FVG (pts)", minval = 0.25, group = g5)
-minFvgORB = input.float(0.25, "Tamaño mínimo del FVG del ORB (pts)", minval = 0.25, group = g5, tooltip = "En 0.25 se marcan TODOS los huecos que se formen dentro del ORB, del tamaño que sean. Súbelo si en tu gráfico salen demasiados chiquitos.")
+// ── EL TAMAÑO MÍNIMO, PORTABLE ── (André, 2-sep-2026)
+// «2 puntos» está medido para el MNQ, que vale ~29,000: ahí 2 puntos es un
+// hueco chico y el filtro hace lo que tiene que hacer. En OTRO instrumento el
+// mismo número deja de significar lo mismo — en el ES (~5,800) filtra de más y
+// en un par de divisas (1.08) se come el gráfico entero. Por eso el indicador
+// puede verse "raro" en la pantalla de alguien más.
+// AUTOMÁTICO mide el hueco contra el ATR del propio instrumento, así que se
+// ajusta solo a lo que sea que tengas abierto. Se deja en PUNTOS por defecto
+// para no cambiarle el gráfico a quien ya lo tiene afinado.
+escalaFVG = input.string("Puntos (fijo)", "Cómo se mide el tamaño mínimo", options = ["Puntos (fijo)", "Automático (por ATR)"], group = g5, tooltip = "PUNTOS: el número de abajo, tal cual, en puntos del instrumento — está medido para el MNQ. AUTOMÁTICO: el mínimo sale del ATR de 14 del propio símbolo, así que el mismo indicador funciona igual en MNQ, en ES, en oro o en divisas sin tocar nada. Si le pasas el indicador a alguien que opera otro instrumento, dile que lo ponga en AUTOMÁTICO.")
+minFVG  = input.float(2, "Tamaño mínimo del FVG (pts)", minval = 0.25, group = g5, tooltip = "Sólo manda con la escala en PUNTOS.")
+minFvgORB = input.float(0.25, "Tamaño mínimo del FVG del ORB (pts)", minval = 0.25, group = g5, tooltip = "En 0.25 se marcan TODOS los huecos que se formen dentro del ORB, del tamaño que sean. Súbelo si en tu gráfico salen demasiados chiquitos. Sólo manda con la escala en PUNTOS.")
+factorFVG = input.float(6, "Automático: % del ATR", minval = 0.5, maxval = 60, step = 0.5, group = g5, tooltip = "Con la escala en AUTOMÁTICO, un hueco cuenta si mide al menos este porcentaje del ATR(14). En 6% el MNQ queda cerca de los 2 puntos de siempre.") * 0.01
+float atrFVG      = ta.atr(14)
+float minFvgEf    = escalaFVG == "Automático (por ATR)" ? math.max(syminfo.mintick, nz(atrFVG) * factorFVG) : minFVG
+float minFvgORBEf = escalaFVG == "Automático (por ATR)" ? math.max(syminfo.mintick, nz(atrFVG) * factorFVG * 0.125) : minFvgORB
 txtFvgORB = input.bool(true, "Ponerles título", group = g5, tooltip = "Cada hueco lleva su nombre (FVG ↑ / iFVG ↓) al arranque de su caja. Si dos quedan tan pegados que se encimarían, solo se escribe el primero: nunca vas a ver títulos amontonados.")
 transFVG = input.int(88, "Transparencia de los FVG", minval = 40, maxval = 97, group = g5, tooltip = "Los huecos tienen su PROPIA transparencia, aparte de la de las demás zonas: son lo que más miras, así que suelen querer verse más sólidos. Más alto = más tenue.")
 fvgTamSel = input.string("Diminuto", "Tamaño del texto del FVG", options = ["Diminuto", "Chico", "Normal"], group = g5)
@@ -24266,12 +24307,12 @@ var array<int>   fX = array.new_int()
 bool htfNueva = not na(fvTc) and fvTc != nz(fvTc[1], fvTc)
 
 if verFVG and htfNueva
-    if fvLC > fvHA and (fvLC - fvHA) >= minFVG
+    if fvLC > fvHA and (fvLC - fvHA) >= minFvgEf
         array.push(fS, 1)
         array.push(fT, fvLC)
         array.push(fB, fvHA)
         array.push(fX, fvTb)
-    if fvHC < fvLA and (fvLA - fvHC) >= minFVG
+    if fvHC < fvLA and (fvLA - fvHC) >= minFvgEf
         array.push(fS, -1)
         array.push(fT, fvLA)
         array.push(fB, fvHC)
@@ -24368,14 +24409,14 @@ if tO and not tO[1]
 
 // las tres velas del trío dentro de la ventana
 if verFvgORB and tO and tO[1] and tO[2]
-    if low > high[2] and (low - high[2]) >= minFvgORB
+    if low > high[2] and (low - high[2]) >= minFvgORBEf
         array.push(gS, 1)
         array.push(gT, low)
         array.push(gB, high[2])
         array.push(gX, time[1])
         array.push(gInv, 0)
         array.push(gFin, 0)
-    if high < low[2] and (low[2] - high) >= minFvgORB
+    if high < low[2] and (low[2] - high) >= minFvgORBEf
         array.push(gS, -1)
         array.push(gT, low[2])
         array.push(gB, high)
@@ -25616,8 +25657,22 @@ muereFVG = input.string("Se invierte (cierre del otro lado)", "El FVG muere cuan
 nFVG    = input.int(1, "Cuántos por lado", minval = 1, maxval = 3, group = g5, tooltip = "1 = solo el alcista más cercano y el bajista más cercano. Súbelo a 2 o 3 si quieres ver también los que vienen detrás.")
 inFvgUp = input.color(#5a5a5a, "Alcista", inline = "FC", group = g5)
 inFvgDn = input.color(#000000, "Bajista", inline = "FC", group = g5, tooltip = "Colores del FVG. Solo mandan con la paleta en Personalizado; con cualquier otra paleta los FVG toman sus colores para que todo combine.")
-minFVG  = input.float(2, "Tamaño mínimo del FVG (pts)", minval = 0.25, group = g5)
-minFvgORB = input.float(0.25, "Tamaño mínimo del FVG del ORB (pts)", minval = 0.25, group = g5, tooltip = "En 0.25 se marcan TODOS los huecos que se formen dentro del ORB, del tamaño que sean. Súbelo si en tu gráfico salen demasiados chiquitos.")
+// ── EL TAMAÑO MÍNIMO, PORTABLE ── (André, 2-sep-2026)
+// «2 puntos» está medido para el MNQ, que vale ~29,000: ahí 2 puntos es un
+// hueco chico y el filtro hace lo que tiene que hacer. En OTRO instrumento el
+// mismo número deja de significar lo mismo — en el ES (~5,800) filtra de más y
+// en un par de divisas (1.08) se come el gráfico entero. Por eso el indicador
+// puede verse "raro" en la pantalla de alguien más.
+// AUTOMÁTICO mide el hueco contra el ATR del propio instrumento, así que se
+// ajusta solo a lo que sea que tengas abierto. Se deja en PUNTOS por defecto
+// para no cambiarle el gráfico a quien ya lo tiene afinado.
+escalaFVG = input.string("Puntos (fijo)", "Cómo se mide el tamaño mínimo", options = ["Puntos (fijo)", "Automático (por ATR)"], group = g5, tooltip = "PUNTOS: el número de abajo, tal cual, en puntos del instrumento — está medido para el MNQ. AUTOMÁTICO: el mínimo sale del ATR de 14 del propio símbolo, así que el mismo indicador funciona igual en MNQ, en ES, en oro o en divisas sin tocar nada. Si le pasas el indicador a alguien que opera otro instrumento, dile que lo ponga en AUTOMÁTICO.")
+minFVG  = input.float(2, "Tamaño mínimo del FVG (pts)", minval = 0.25, group = g5, tooltip = "Sólo manda con la escala en PUNTOS.")
+minFvgORB = input.float(0.25, "Tamaño mínimo del FVG del ORB (pts)", minval = 0.25, group = g5, tooltip = "En 0.25 se marcan TODOS los huecos que se formen dentro del ORB, del tamaño que sean. Súbelo si en tu gráfico salen demasiados chiquitos. Sólo manda con la escala en PUNTOS.")
+factorFVG = input.float(6, "Automático: % del ATR", minval = 0.5, maxval = 60, step = 0.5, group = g5, tooltip = "Con la escala en AUTOMÁTICO, un hueco cuenta si mide al menos este porcentaje del ATR(14). En 6% el MNQ queda cerca de los 2 puntos de siempre.") * 0.01
+float atrFVG      = ta.atr(14)
+float minFvgEf    = escalaFVG == "Automático (por ATR)" ? math.max(syminfo.mintick, nz(atrFVG) * factorFVG) : minFVG
+float minFvgORBEf = escalaFVG == "Automático (por ATR)" ? math.max(syminfo.mintick, nz(atrFVG) * factorFVG * 0.125) : minFvgORB
 txtFvgORB = input.bool(true, "Ponerles título", group = g5, tooltip = "Cada hueco lleva su nombre (FVG ↑ / iFVG ↓) al arranque de su caja. Si dos quedan tan pegados que se encimarían, solo se escribe el primero: nunca vas a ver títulos amontonados.")
 transFVG = input.int(88, "Transparencia de los FVG", minval = 40, maxval = 97, group = g5, tooltip = "Los huecos tienen su PROPIA transparencia, aparte de la de las demás zonas: son lo que más miras, así que suelen querer verse más sólidos. Más alto = más tenue.")
 fvgTamSel = input.string("Diminuto", "Tamaño del texto del FVG", options = ["Diminuto", "Chico", "Normal"], group = g5)
@@ -26047,12 +26102,12 @@ var array<int>   fX = array.new_int()
 bool htfNueva = not na(fvTc) and fvTc != nz(fvTc[1], fvTc)
 
 if (verFVG or verFvgRg) and htfNueva
-    if fvLC > fvHA and (fvLC - fvHA) >= minFVG
+    if fvLC > fvHA and (fvLC - fvHA) >= minFvgEf
         array.push(fS, 1)
         array.push(fT, fvLC)
         array.push(fB, fvHA)
         array.push(fX, fvTb)
-    if fvHC < fvLA and (fvLA - fvHC) >= minFVG
+    if fvHC < fvLA and (fvLA - fvHC) >= minFvgEf
         array.push(fS, -1)
         array.push(fT, fvLA)
         array.push(fB, fvHC)
@@ -26149,14 +26204,14 @@ if tO and not tO[1]
 
 // las tres velas del trío dentro de la ventana
 if verFvgORB and tO and tO[1] and tO[2]
-    if low > high[2] and (low - high[2]) >= minFvgORB
+    if low > high[2] and (low - high[2]) >= minFvgORBEf
         array.push(gS, 1)
         array.push(gT, low)
         array.push(gB, high[2])
         array.push(gX, time[1])
         array.push(gInv, 0)
         array.push(gFin, 0)
-    if high < low[2] and (low[2] - high) >= minFvgORB
+    if high < low[2] and (low[2] - high) >= minFvgORBEf
         array.push(gS, -1)
         array.push(gT, low[2])
         array.push(gB, high)
@@ -27362,7 +27417,9 @@ function planDiaHTML(id, A){
          cuando la lámina sólo está enseñando. El rótulo sigue existiendo, pero
          SOLO habla en Log trade, donde dice dónde vas de verdad. -->
     <div class="pd-h">
-      <b class="pd-titulo">${noche ? 'PROTOCOLO LON Y ASIA' : 'PROTOCOLO NY'}</b>
+      <b class="pd-titulo">${noche
+        ? 'PROTOCOLO <s class="pd-lon">LON</s> Y <s class="pd-asia">ASIA</s>'
+        : 'PROTOCOLO NY'}</b>
       <h3>${noche ? 'Un intento. Uno.' : 'Si el primero gana, el día se acabó.'}</h3>
       <span class="pd-tot"><b id="${cv}Rot"></b></span>
     </div>
@@ -27660,37 +27717,51 @@ function lineaDiaHTML(){
             <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
           </filter>
         </defs>
-        <rect x="40" y="58" width="260" height="34" rx="4" class="s-soft"/>
-        <rect x="300" y="58" width="80"  height="34" rx="4" class="s-mid"/>
+        <!-- EL DÍA COMPLETO (André, 2-sep-2026): la línea sólo pintaba Nueva
+             York, y el día empieza mucho antes — Asia deja la liquidez que
+             Londres barre y que Nueva York va a buscar. Ahora están las tres,
+             con el color con el que las pinta el chart: Asia roja, Londres
+             azul, y la ventana de Nueva York con su acento de siempre.
+             El ancho es esquemático, no proporcional: a escala real el ORB
+             mediría diez píxeles y no cabría su nombre. -->
+        <rect x="40"  y="58" width="200" height="34" rx="4" class="s-asia"/>
+        <rect x="240" y="58" width="200" height="34" rx="4" class="s-lon"/>
+        <rect x="440" y="58" width="110" height="34" rx="4" class="s-soft"/>
+        <rect x="550" y="58" width="70"  height="34" rx="4" class="s-mid"/>
         <!-- LA VENTANA ES LA QUE IMPORTA: va en azul de verdad, con su
              resplandor, su barrido de luz y su borde que respira -->
-        <rect x="380" y="58" width="480" height="34" rx="4" class="dia-vent"/>
-        <rect x="380" y="58" width="480" height="34" rx="4" class="dia-vent-borde"/>
-        <g clip-path="inset(0 round 4px)">
-          <rect x="380" y="58" width="480" height="34" rx="4" fill="none"/>
-        </g>
-        <rect class="dia-barrido" x="380" y="58" width="150" height="34" rx="4"/>
+        <rect x="620" y="58" width="240" height="34" rx="4" class="dia-vent"/>
+        <rect x="620" y="58" width="240" height="34" rx="4" class="dia-vent-borde"/>
+        <rect class="dia-barrido" x="620" y="58" width="90" height="34" rx="4"/>
         <rect x="40" y="88" width="820" height="2" class="dia-riel"/>
-        <rect class="dia-carga" x="380" y="88" width="480" height="2"/>
-        <line x1="300" y1="46" x2="300" y2="104" class="s-tick"/>
-        <line x1="380" y1="46" x2="380" y2="104" class="s-tick s-tick-on dia-corte"/>
+        <rect class="dia-carga" x="620" y="88" width="240" height="2"/>
+        <line x1="240" y1="46" x2="240" y2="104" class="s-tick"/>
+        <line x1="440" y1="46" x2="440" y2="104" class="s-tick"/>
+        <line x1="550" y1="46" x2="550" y2="104" class="s-tick"/>
+        <line x1="620" y1="46" x2="620" y2="104" class="s-tick s-tick-on dia-corte"/>
         <line x1="860" y1="46" x2="860" y2="104" class="s-tick"/>
-        <circle class="dia-pulso" cx="380" cy="75" r="6"/>
-        <circle class="dia-pulso dia-pulso-2" cx="380" cy="75" r="6"/>
-        <circle class="dia-nucleo" cx="380" cy="75" r="3.6"/>
-        <text x="170" y="80"  class="s-lbl">${T('PREMARKET','PREMARKET')}</text>
-        <text x="340" y="80"  class="s-lbl s-rot">ORB</text>
-        <text x="620" y="80"  class="s-lbl s-on">${T('TU VENTANA','YOUR WINDOW')}</text>
-        <text x="890" y="80"  class="s-lbl">${T('CIERRE','CLOSE')}</text>
-        <text x="300" y="124" class="s-h">09:30</text>
-        <text x="380" y="124" class="s-h s-on">09:45</text>
+        <circle class="dia-pulso" cx="620" cy="75" r="6"/>
+        <circle class="dia-pulso dia-pulso-2" cx="620" cy="75" r="6"/>
+        <circle class="dia-nucleo" cx="620" cy="75" r="3.6"/>
+        <text x="140" y="80" class="s-lbl s-lbl-asia">ASIA</text>
+        <text x="340" y="80" class="s-lbl s-lbl-lon">LONDRES</text>
+        <text x="495" y="80" class="s-lbl">${T('PREMARKET','PREMARKET')}</text>
+        <text x="585" y="80" class="s-lbl s-rot">ORB</text>
+        <text x="740" y="80" class="s-lbl s-on">${T('TU VENTANA','YOUR WINDOW')}</text>
+        <text x="890" y="80" class="s-lbl">${T('CIERRE','CLOSE')}</text>
+        <text x="40"  y="124" class="s-h" text-anchor="start">20:00</text>
+        <text x="240" y="124" class="s-h">02:00</text>
+        <text x="440" y="124" class="s-h">08:30</text>
+        <text x="550" y="124" class="s-h">09:30</text>
+        <text x="620" y="124" class="s-h s-on">09:45</text>
         <text x="860" y="124" class="s-h">16:00</text>
-        <text x="170" y="146" class="s-sub">${T('marcar niveles · cero entradas','mark levels · zero entries')}</text>
-        <text x="380" y="146" class="s-sub" text-anchor="start">${T('se forma el rango · todavía no','the range forms · not yet')}</text>
+        <text x="140" y="146" class="s-sub">${T('deja la liquidez','it leaves the liquidity')}</text>
+        <text x="340" y="146" class="s-sub">${T('la barre o la respeta','it sweeps it or respects it')}</text>
+        <text x="620" y="146" class="s-sub" text-anchor="start">${T('aquí sí se entra','here you do enter')}</text>
         <text x="860" y="146" class="s-sub" text-anchor="end">${T('se acabó, ganes o pierdas','it is over, win or lose')}</text>
       </svg>
     </div>
-    <p class="como-nota">${T('Horas de Nueva York. La regla dura está en el 09:45: antes de que cierre el rango de apertura no se entra, ni aunque el setup se vea perfecto.','New York hours. The hard rule sits at 09:45: before the opening range closes you do not enter, not even if the setup looks perfect.')}</p>
+    <p class="como-nota">${T('Horas de Nueva York. Asia deja la liquidez, Londres la barre o la respeta, y Nueva York va a buscarla. La regla dura está en el 09:45: antes de que cierre el rango de apertura no se entra, ni aunque el setup se vea perfecto.','New York hours. Asia leaves the liquidity, London sweeps it or respects it, and New York goes for it. The hard rule sits at 09:45: before the opening range closes you do not enter, not even if the setup looks perfect.')}</p>
   </div>
   `;
 }
@@ -28944,10 +29015,28 @@ setInterval(() => cargaMercado().then(m => {
    El campo del usuario sigue abriendo en blanco cuando sí toca login. */
 (async () => {
   const guardado = (S.session && S.session.user) || null;
-  const puedo = cloudOn() && cloudTok && cloudTok.refresh_token && guardado && USERS[guardado];
+  /* ══ SIN NUBE NO HAY TOKEN QUE COMPROBAR ══ (André, 2-sep-2026)
+     El portón exigía `cloudOn() && cloudTok.refresh_token` para dejar pasar,
+     así que en un equipo SIN nube configurada —o con la nube caída— la
+     condición nunca se cumplía y CADA refresh te devolvía al login. Y eso es
+     lo que el portón venía justo a evitar.
+     Con nube, la regla no cambia: se pide token nuevo y sólo si contesta que
+     sí se entra, para no quedar en el limbo «sesión sin token».
+     Sin nube, no hay token que comprobar: la sesión es sólo qué perfil está
+     abierto en ESTE equipo, y los datos ya viven en este disco. Cerrarla en
+     cada refresh no protegía nada — sólo costaba un login. */
+  const hayNube = cloudOn();
+  const puedo = hayNube && cloudTok && cloudTok.refresh_token && guardado && USERS[guardado];
   let entro = false;
+  let sinRed = false;
   if(puedo){
     try{ entro = await cloudRefresh(); }catch(e){ entro = false; }
+    /* no se pudo preguntar (sin red, servidor caído): se entra igual y se
+       trabaja con lo de este disco. El pill de la nube ya avisa que no está
+       sincronizando; sacarte al login además no arregla nada. */
+    if(!entro && _refreshSinRed){ entro = true; sinRed = true; }
+  } else if(!hayNube && guardado && USERS[guardado]){
+    entro = true;
   }
   if(entro){
     unlockUI();
@@ -28955,8 +29044,12 @@ setInterval(() => cargaMercado().then(m => {
     try{ cloudPaint(); cloudPull(); }catch(e){}
     try{ S.presencia = S.presencia || {}; S.presencia[guardado] = Date.now();
       save(); marcaPresencia(); }catch(e){}
+    if(sinRed) try{ toast(bi('Entraste sin red: se trabaja con lo de este equipo.',
+                             'You are in without network: working from this device.')); }catch(e){}
     return;
   }
+  /* sólo se borra el token cuando el servidor lo RECHAZÓ. Si nunca se pudo
+     preguntar, arriba ya se entró y aquí no se llega. */
   if(cloudOn()){ cloudTok = null; try{ localStorage.removeItem('np_tok'); }catch(e){} }
   S.session = { user: null };
   lockUI();
@@ -28964,7 +29057,7 @@ setInterval(() => cargaMercado().then(m => {
 })();
 
 /* QA hook */
-window.__np = { state: () => S, score: computeScore };
+window.__np = { state: () => S, score: computeScore, sinRed: () => _refreshSinRed };
 </script>
 
 <!-- Vista de lección (contenido extenso para dummies, con apoyos visuales) -->
