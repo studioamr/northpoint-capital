@@ -1659,6 +1659,12 @@ button.st-chip:hover{border-color:rgba(255,255,255,.45)}
 .bat-party-chip{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--line);border-radius:20px;
   background:var(--w02);padding:5px 12px 5px 5px;font-size:12.5px;font-weight:600}
 .bat-party-nota{font-family:var(--mono);font-size:11px;color:var(--faint);margin:0}
+/* la arena de la party y su seguimiento (André, 2-sep-2026) */
+.bat-party-arena{margin-bottom:14px}
+.bat-party-arena canvas{display:block;width:100%;height:clamp(220px,30vh,300px)}
+.bat-party-graf{margin:14px 0;border:1px solid var(--line-soft);border-radius:12px;
+  overflow:hidden;background:rgba(255,255,255,.02)}
+.bat-party-graf canvas{display:block;width:100%;height:clamp(170px,24vh,230px)}
 .bat-party-board{display:grid;gap:8px;margin:12px 0 16px}
 .bat-pboard-row{display:flex;align-items:center;gap:12px;border:1px solid var(--line-soft);border-radius:12px;background:var(--w02);padding:11px 14px}
 .bat-pboard-row.yo{border-color:var(--up)}
@@ -12324,6 +12330,160 @@ function bossCierra(c){
   return k;
 }
 
+/* ══════════════ LA PARTY, DIBUJADA ══════════════ (André, 2-sep-2026)
+   Dos lienzos: la ARENA con todos los ninjas y el SEGUIMIENTO con una curva
+   por jugador. Los dos se repintan enteros en cada render porque la vista de
+   la party reconstruye su innerHTML cada segundo — igual que el duelo, y por
+   la misma razón: esperar al primer cuadro dejaba el lienzo en blanco.
+   Con seis o siete jugadores el ninja se encoge solo: el tamaño sale del
+   ancho disponible entre todos, no de una constante. */
+let ptRAF = null, ptInt = null;
+function partyPinta(c){
+  const arena = document.getElementById('ptArena');
+  const graf  = document.getElementById('ptCurvas');
+  if(!arena && !graf) return;
+  cancelAnimationFrame(ptRAF || 0);
+  if(ptInt){ clearInterval(ptInt); ptInt = null; }
+  const J = batJugadores(c);
+  const rnd = i => ((Math.sin(i*12.9898)*43758.5453)%1+1)%1;
+  const cl = () => document.documentElement.getAttribute('data-theme') === 'light';
+  const tinta = a2 => cl() ? 'rgba(16,20,28,'+a2+')' : 'rgba(237,239,242,'+a2+')';
+  /* EL COLOR DE CADA QUIEN ES SU BANDA, NO SU KATANA (André, 2-sep-2026):
+     con la katana, los seis salían del mismo blanco —casi nadie tiene otra— y
+     las seis curvas eran seis líneas blancas encimadas. La banda es lo que
+     de verdad distingue a un ninja del otro en la arena.
+     Y si dos coinciden, al segundo se le da un color de la reserva: dos curvas
+     del mismo color en la misma gráfica no se pueden leer. */
+  const RESERVA = ['#3861F6','#57C79B','#D9736A','#E0B23C','#A87BE0','#4CC9E0','#E07BB0','#7BE08A'];
+  const filoDe = u => (KATANAS[batEquipadaDe(u)] || {}).belt || '#9aa3b2';
+  const _col = {}; const _usados = {};
+  J.forEach((u, i) => {
+    let cbase = ((batNinjaDe(u) || {}).banda) || RESERVA[i % RESERVA.length];
+    if(_usados[cbase.toLowerCase()]){
+      cbase = RESERVA.find(x2 => !_usados[x2.toLowerCase()]) || RESERVA[i % RESERVA.length];
+    }
+    _usados[cbase.toLowerCase()] = 1; _col[u] = cbase;
+  });
+  const colDe = u => _col[u] || '#9aa3b2';
+  /* la escena de la sede, cacheada por minuto como en el duelo */
+  const conSede = !!(c.sesion && BAT_MUNDOS[c.sesion]);
+  const E0 = conSede ? BAT_MUNDOS[c.sesion] : ZEN_ESCENAS[0];
+  const minuto = Math.floor(Date.now()/60000);
+  const cid = 'party:' + (c.sesion||'-') + '@' + minuto;
+  const M = (window._ptEsc && window._ptEsc.id === cid) ? window._ptEsc.E
+    : ((window._ptEsc = { id:cid, E: batEscenaViva({ ...E0, sinNinja:true }, c) }).E);
+  let pet = window._ptPet;
+  let golpe = null, ultimo = -1;
+
+  function pintaArena(t){
+    if(!arena || !arena.isConnected) return;
+    const D = Math.min(2, devicePixelRatio||1);
+    const W = arena.offsetWidth, H = arena.offsetHeight;
+    if(!W || !H) return;
+    if(arena.width !== Math.round(W*D)){ arena.width = Math.round(W*D); arena.height = Math.round(H*D); }
+    const x = arena.getContext('2d');
+    x.setTransform(D,0,0,D,0,0); x.clearRect(0,0,W,H);
+    if(!pet || !pet.length) pet = window._ptPet = Array.from({length:34},()=>({
+      x:Math.random()*W, y:Math.random()*H, s:3.4+Math.random()*4.4,
+      sp:0.5+Math.random()*1.3, dr:Math.random()*6.3, sw:0.5+Math.random()*0.9 }));
+    try{ zenDibujaEscena(x, W, H, M, t, pet, filoDe(J[0])); }
+    catch(e){ x.fillStyle = '#12101c'; x.fillRect(0,0,W,H); }
+    /* EL GOLPE: pega quien acaba de registrar */
+    const G = window.__ptGolpe;
+    if(G && G.sello !== ultimo){ ultimo = G.sello; golpe = { ...G, ini: t }; }
+    let av = 0, quien = null;
+    if(golpe){
+      const u = (t - golpe.ini)/1100;
+      if(u >= 1) golpe = null;
+      else { quien = golpe.u; av = u < .38 ? u/.38 : u < .58 ? 1 : 1 - (u-.58)/.42; }
+    }
+    const base = H*0.74;
+    /* el tamaño sale del hueco entre todos: con siete no se encima ninguno */
+    const paso = W/(J.length + 1);
+    const esc = Math.max(1.1, Math.min(2.7, paso/58));
+    const rank = J.map(u => ({u, p:batProfit(c,u)})).sort((a2,b2)=>b2.p-a2.p);
+    const lider = rank.length && rank[0].p > 0 ? rank[0].u : null;
+    J.forEach((u, i) => {
+      const xx = paso*(i+1) + (u === quien ? av*paso*0.28 : 0);
+      const col = colDe(u);
+      x.fillStyle = 'rgba(0,0,0,.28)';
+      x.beginPath(); x.ellipse(xx, base+6, 26*esc/2.2, 7, 0,0,7); x.fill();
+      const pose = u === quien ? (av > .55 ? 'corte:0.8' : 'corriendo') : 'guardia';
+      try{ zenNinja(x, xx, base, esc, t*0.5, i*0.7, filoDe(u), batNinjaDe(u), i % 2 === 1, pose); }catch(e){}
+      /* la corona del que va arriba */
+      if(u === lider){
+        x.save(); x.font = (13*esc/1.8|0)+'px serif'; x.textAlign='center';
+        x.fillText('👑', xx, base - 46*esc); x.restore();
+      }
+      /* placa detrás del nombre: sobre el pasto y los pétalos el texto solo
+         se perdía, y el nombre es la mitad de para qué sirve la arena */
+      const nom = batNom(u).toUpperCase().slice(0,10);
+      const p = batProfit(c, u);
+      x.font = '700 10px "IBM Plex Mono", monospace';
+      const anc = Math.max(x.measureText(nom).width, 56) + 16;
+      x.fillStyle = 'rgba(6,9,16,.62)';
+      x.beginPath();
+      if(x.roundRect) x.roundRect(xx - anc/2, base + 14, anc, 36, 9);
+      else x.rect(xx - anc/2, base + 14, anc, 36);
+      x.fill();
+      x.textAlign = 'center';
+      x.fillStyle = col;
+      x.fillText(nom, xx, base + 28);
+      x.font = '700 11px "IBM Plex Mono", monospace';
+      x.fillStyle = p > 0 ? '#57C79B' : p < 0 ? '#D9736A' : 'rgba(237,239,242,.5)';
+      x.fillText(fmt$(p, true), xx, base + 44);
+    });
+  }
+
+  function pintaCurvas(){
+    if(!graf || !graf.isConnected) return;
+    const D = Math.min(2, devicePixelRatio||1);
+    const W = graf.offsetWidth, H = graf.offsetHeight;
+    if(!W || !H) return;
+    if(graf.width !== Math.round(W*D)){ graf.width = Math.round(W*D); graf.height = Math.round(H*D); }
+    const x = graf.getContext('2d');
+    x.setTransform(D,0,0,D,0,0); x.clearRect(0,0,W,H);
+    /* una curva por jugador: el acumulado trade a trade */
+    const curvas = J.map(u => {
+      const ts = (c.trades && c.trades[u]) || [];
+      let a2 = 0; return [0].concat(ts.map(t2 => (a2 += (t2.pnl||0))));
+    });
+    const pasos = Math.max(1, ...curvas.map(v => v.length - 1));
+    const todos = curvas.reduce((a2,b2)=>a2.concat(b2), [0]);
+    const lo = Math.min(0, ...todos), hi = Math.max(0, ...todos);
+    const pad = Math.max(200, (hi-lo)*0.2), min = lo-pad, max = hi+pad, span = (max-min)||1;
+    const M2 = 16, X = i => M2 + i*(W-M2*2-56)/pasos, Y = v => M2 + (H-M2*2)*(1-(v-min)/span);
+    x.strokeStyle = tinta('.10'); x.lineWidth = 1; x.setLineDash([3,4]);
+    x.beginPath(); x.moveTo(0, Y(0)); x.lineTo(W, Y(0)); x.stroke(); x.setLineDash([]);
+    x.font = '600 8px "IBM Plex Mono", monospace'; x.textAlign = 'left';
+    x.fillStyle = tinta('.3'); x.fillText('CERO', M2, Y(0)-5);
+    curvas.forEach((v, i) => {
+      const col = colDe(J[i]);
+      x.strokeStyle = col; x.lineWidth = 2.1; x.lineJoin='round'; x.lineCap='round';
+      x.beginPath();
+      v.forEach((val, k) => { const px = X(k), py = Y(val); if(k===0) x.moveTo(px,py); else x.lineTo(px,py); });
+      x.stroke();
+      const k = v.length-1;
+      x.fillStyle = col;
+      x.beginPath(); x.arc(X(k), Y(v[k]), 3.2, 0, 7); x.fill();
+      x.font = '700 9px "IBM Plex Mono", monospace'; x.textAlign = 'left';
+      x.fillText(batNom(J[i]).toUpperCase().slice(0,8), X(k)+7, Y(v[k])+3);
+    });
+  }
+
+  const cuadro = t => { pintaArena(t); pintaCurvas(); };
+  cuadro(performance.now());
+  /* rAF con respaldo por CUADROS, no por «llegó uno»: hay contextos donde
+     entrega un cuadro y nunca más, y la arena se quedaría congelada */
+  let n = 0;
+  const loop = ts => { n++; cuadro(ts||performance.now());
+    if(arena && arena.isConnected) ptRAF = requestAnimationFrame(loop); };
+  ptRAF = requestAnimationFrame(loop);
+  setTimeout(() => { if(n < 3 && arena && arena.isConnected)
+    ptInt = setInterval(() => { if(!arena.isConnected){ clearInterval(ptInt); ptInt=null; return; }
+      cuadro(performance.now()); }, 40); }, 500);
+}
+
 /* ── RANGO POR CINTAS (según ELO) · usa la misma paleta de cintas que las katanas ── */
 const BAT_RANGO_MIN = [-1e9, 1000, 1120, 1240, 1360, 1480, 1620, 1800, 2000];
 function batRango(elo){ let i=0; for(let k=0;k<BAT_RANGO_MIN.length;k++){ if(elo>=BAT_RANGO_MIN[k]) i=k; } return i; }
@@ -15609,8 +15769,15 @@ function renderBatallaInterno(){
         <span class="bat-activo-sede">👥 ${bi('Party','Party')} · ${esc(batDestino(c))} · ${esc(batDurTxt(c.duracion))}</span>
         <button type="button" class="btn sm bat-end" id="batEndBtn">⏹ ${bi('Terminar','End')}</button>
       </div>
+      <!-- ══ LA ARENA DE LA PARTY ══ (André, 2-sep-2026)
+           En el 1v1 salen los dos peleando y en la party no salía nadie: sólo
+           una tabla. Ahora salen TODOS los ninjas —cada uno con su katana y su
+           nombre— y el que registra un trade se lanza y pega. -->
+      <div class="bat-duelo bat-party-arena"><canvas id="ptArena"></canvas></div>
       <div class="bat-reloj-wrap"><span class="bat-vs-mini">👥 ${bi('PARTY','PARTY')}</span>
         <div class="bat-reloj-grande mono">${reloj}</div><span class="bat-reloj-lbl">${bi('tiempo restante','time left')}</span></div>
+      <!-- ══ EL SEGUIMIENTO ══ una línea por jugador, con su color y su nombre -->
+      <div class="bat-party-graf"><canvas id="ptCurvas"></canvas></div>
       <div class="bat-party-board">
         ${rank.map((r,idx)=>`<div class="bat-pboard-row ${r.u===yo?'yo':''} ${idx===0&&r.p!==0?'lead':''}">
           <span class="bat-pboard-pos">${idx===0&&r.p>0?'👑':'#'+(idx+1)}</span>
@@ -15630,11 +15797,15 @@ function renderBatallaInterno(){
           <button type="button" id="batGo" class="btn primary bt-go">+ ${bi('Registrar','Log')}</button>
         </div>
       </div>`;
+    partyPinta(c);
     $('#batTdir').onclick = e => { const b=e.target.closest('button[data-dir]'); if(!b) return; batDir=b.dataset.dir; $('#batTdir').querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b)); };
     const registrar = () => {
       const pnl=parseFloat($('#batPnl').value);
       if(!isFinite(pnl)){ toast(bi('Falta el P&L','P&L is missing')); return; }
       c.trades[yo]=c.trades[yo]||[]; c.trades[yo].push({dir:batDir,pnl,ts:Date.now()});
+      /* el golpe lo manda el trade, igual que en el 1v1: pega quien acaba de
+         registrar, y el color lo pone el resultado */
+      window.__ptGolpe = { u: yo, gano: pnl >= 0, sello: Date.now() };
       save(); $('#batPnl').value=''; animaSello(pnl); renderBatalla();
     };
     $('#batGo').onclick=registrar;
