@@ -1630,13 +1630,20 @@ var MESA = [
      TRABADO. Una animación de movimiento pide requestAnimationFrame. Pero hay
      contextos donde rAF no corre nunca y la escena se quedaría congelada, así
      que si no llega ni un cuadro en medio segundo, cae solo a un intervalo. */
-  var t = 0, vino = false;
-  function loop6(ts){ vino = true; t = ts || 0; pinta(t); requestAnimationFrame(loop6); }
+  /* EL RESPALDO CUENTA CUADROS, NO UNO SOLO (André, 2-sep-2026): decía
+     `if(!vino)`, y hay contextos donde requestAnimationFrame entrega UN cuadro
+     y nunca más. Ese único cuadro marcaba `vino = true`, el respaldo no
+     arrancaba y la pelea se quedaba clavada: los dos ninjas en guardia y
+     ningún golpe, aunque abajo los trades siguieran cayendo. Medio segundo de
+     animación real trae ~30 cuadros; con menos de tres, esto no está
+     corriendo y entra el intervalo. */
+  var t = 0, cuadros = 0;
+  function loop6(ts){ cuadros++; t = ts || 0; pinta(t); requestAnimationFrame(loop6); }
   pinta(0);
   if(!REDUCE){
     requestAnimationFrame(loop6);
     setTimeout(function(){
-      if(!vino) setInterval(function(){ t += 33; pinta(t); }, 33);
+      if(cuadros < 3) setInterval(function(){ t += 33; pinta(t); }, 33);
     }, 500);
   }
   addEventListener('resize', function(){ pinta(t); }, {passive:true});
