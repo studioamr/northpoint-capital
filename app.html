@@ -4888,6 +4888,12 @@ stop[stop-color="#9BC0DC"]{stop-color:var(--txt)}
         <svg viewBox="0 0 24 24" fill="none" stroke-width="1.6"><path d="M4 19V5a2 2 0 0 1 2-2h13v18H6a2 2 0 0 1-2-2z"/><path d="M8 7h7M8 11h7"/></svg>
         <span data-i18n="nav.journal">Mi desempeño</span>
       </a>
+      <!-- EL DÍA vive ARRIBA de Log trade (André, 2-sep-2026): es lo que se
+           mira ANTES de registrar nada — qué toca hoy y dónde vas. -->
+      <a class="item" href="#dia" data-view="dia">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="1.6"><path d="M12 3v5"/><path d="M12 8L6 13M12 8l6 5"/><circle cx="12" cy="3" r="1.6"/><circle cx="6" cy="15" r="2"/><circle cx="18" cy="15" r="2"/><path d="M18 17v2.5"/><circle cx="18" cy="21" r="1.4"/></svg>
+        <span data-i18n="nav.dia">El día</span>
+      </a>
       <a class="item" href="#log" data-view="log">
         <svg viewBox="0 0 24 24" fill="none" stroke-width="1.6"><path d="M3 17l5-6 4 3 5-8 4 5"/><path d="M12 20v-3M8 20v-1M16 20v-5"/></svg>
         <span data-i18n="nav.log">Log trade</span>
@@ -5010,9 +5016,6 @@ stop[stop-color="#9BC0DC"]{stop-color:var(--txt)}
 
         <!-- EL PROTOCOLO: los seis pasos de la ejecución, para releerlos -->
         <div class="panel mt2 proto" id="algoProto"></div>
-
-        <!-- EL PLAN DE LA LIBRETA, pasado en limpio -->
-        <div class="panel mt2 pdia" id="algoPlanDia"></div>
 
         <!-- LOS TRADES DE VERDAD, desfilando -->
         <div class="panel mt2 ejem" id="algoEjem"></div>
@@ -5167,7 +5170,17 @@ stop[stop-color="#9BC0DC"]{stop-color:var(--txt)}
       </section>
 
       <!-- ════ LOG TRADE (real · mismo formato que Backtesting) ════ -->
+      <!-- ════ EL DÍA · el árbol, en su propia pantalla ════ -->
+      <section class="view" id="v-dia">
+        <div class="panel pdia" id="diaArbol"></div>
+      </section>
+
       <section class="view" id="v-log">
+        <!-- EL ÁRBOL, PERO VIVO (André, 2-sep-2026): el mismo de la vista
+             «El día», sólo que aquí no corre escenarios — te va marcando el
+             camino con los trades que ya registraste hoy. -->
+        <div class="panel pdia lg-arbol" id="lgArbol" hidden></div>
+
         <!-- LA CUENTA, HASTA ARRIBA Y UNA SOLA VEZ (André, 31-ago-2026):
              primero eligo en qué cuenta estoy, y todo lo de abajo habla de
              ella. Estaba repetida dentro de la tarjeta del registro. -->
@@ -6056,6 +6069,8 @@ const I18N = {
   'g.crear': { es:'Crear', en:'Create' },
   'tit.vida.t': { es:'Cash flow', en:'Cash flow' },
   'nav.trades': { es:'Trades', en:'Trades' },
+  'nav.dia': { es:'El día', en:'The day' },
+  'tit.dia.t': { es:'El día', en:'The day' },
   'nav.log': { es:'Log trade', en:'Log trade' },
   'tit.log.t': { es:'Log trade', en:'Log trade' },
   'en.log.hint': { es:'Enter en el P&L agrega y sigue · cada trade queda en tu historial real y en la mesa', en:'Enter on P&L adds and continues · each trade lands in your real history and the desk' },
@@ -7766,6 +7781,7 @@ const TITLES = {
   batalla:     ['tit.entreno.k', 'tit.batalla.t'],
   journal:     ['tit.mesa.k',  'tit.journal.t'],
   trades:      ['tit.mesa.k',  'tit.trades.t'],
+  dia:         ['tit.mesa.k',  'tit.dia.t'],
   log:         ['tit.mesa.k',  'tit.log.t'],
   agentes:     ['tit.np.k',    'tit.agentes.t'],
   algoritmo:   ['tit.np.k',    'tit.algoritmo.t'],
@@ -16421,7 +16437,7 @@ function lgFichaTrade(t){
    barra de drawdown es la que te dice cuándo parar, y sólo sirve si se mueve
    con el trade que la mueve. Ahora todo el Log repinta desde aquí. */
 function lgRepinta(anima){
-  lgBalancePanel(); lgHoy(); lgStats();
+  lgBalancePanel(); lgHoy(); lgStats(); lgArbolPinta();
   if(anima) lgAnima(); else lgDibuja(1);
   lgLog(); updateBadges();
 }
@@ -16557,7 +16573,7 @@ window.lgAbreSesion = function(){
     ini: (antes && antes.ini) || Date.now() };
   lgGuardaPreset({ tp, dd, trades: tr || 0 });
   lgEditando = false; lgPidiendo = false;
-  save(); lgHoy(); lgStats(); lgDibuja(1); lgLog();
+  save(); lgHoy(); lgStats(); lgDibuja(1); lgLog(); lgArbolPinta();
   toast(antes ? bi('Números actualizados · objetivo '+fmt$(tp),'Numbers updated · target '+fmt$(tp))
               : bi('Sesión abierta · objetivo '+fmt$(tp),'Session open · target '+fmt$(tp)));
 };
@@ -16581,7 +16597,7 @@ window.lgEntraAuto = function(){
     mkt: (antes && antes.mkt) || mktCorto(),
     ini: (antes && antes.ini) || Date.now() };
   lgEditando = false; lgPidiendo = false;
-  save(); lgHoy(); lgStats(); lgDibuja(1); lgLog();
+  save(); lgHoy(); lgStats(); lgDibuja(1); lgLog(); lgArbolPinta();
   toast(bi('Sesión abierta · objetivo ' + fmt$(d.tp) + ' · drawdown ' + fmt$(d.dd),
            'Session open · target ' + fmt$(d.tp) + ' · drawdown ' + fmt$(d.dd)));
 };
@@ -16622,7 +16638,7 @@ window.lgCierraSesion = function(){
   });
   if(S.lgCerradas.length > 120) S.lgCerradas.length = 120;
   delete S.lgSesion[lgClave(hoy)]; lgEditando = false; lgPidiendo = false;
-  save(); lgHoy(); lgHistorial(); lgStats(); lgDibuja(1); lgLog();
+  save(); lgHoy(); lgHistorial(); lgStats(); lgDibuja(1); lgLog(); lgArbolPinta();
   toast(bi('Día cerrado · ' + fmt$(r.pnl, true) + ' · guardado en tu registro',
            'Day closed · ' + fmt$(r.pnl, true) + ' · saved to your log'));
 };
@@ -16861,9 +16877,34 @@ function lgBalancePanel(){
    SIGUE sellando su resultado (S.lgCerradas): de ahí sale el veredicto que ve
    el panel de un día en Journal. Lo que se fue es la tabla, no el registro. */
 function lgHistorial(){ const h = $('#lgHist'); if(h){ h.hidden = true; h.innerHTML = ''; } }
+/* ══ LA VISTA «EL DÍA» ══ (André, 2-sep-2026): el árbol solo, en grande y
+   corriendo sus escenarios — la pantalla que se mira ANTES de operar. */
+function renderDia(){
+  const host = $('#diaArbol'); if(!host) return;
+  host.innerHTML = planDiaHTML('pdArbol');
+  planDiaVive('pdArbol');
+}
+
+/* ── el árbol de Log trade, marcado con tus trades de hoy ── */
+function lgArbolPinta(){
+  const host = $('#lgArbol'); if(!host) return;
+  const ses = lgSesionHoy();
+  if(!ses){ host.hidden = true; host.innerHTML = ''; return; }   /* sin sesión no hay camino */
+  const hoy = todayISO();
+  const trades = lgTradesDe(ses, hoy);
+  const E = arbolVivo(trades, (ses.mkt || '').toUpperCase());
+  host.hidden = false;
+  if(host.dataset.pintado !== '1'){
+    host.innerHTML = planDiaHTML('lgArbCv');
+    host.dataset.pintado = '1';
+  }
+  const rot = $('#lgArbCvRot'); if(rot) rot.textContent = E.txt;
+  planDiaVive('lgArbCv', E);
+}
+
 function renderLog(){
   imgInit();
-  lgCtas(); lgBalancePanel(); lgStats(); lgLog(); lgHoy(); lgHistorial();
+  lgCtas(); lgBalancePanel(); lgStats(); lgLog(); lgHoy(); lgHistorial(); lgArbolPinta();
   requestAnimationFrame(() => lgDibuja(1));
   if(lgLigado) return;
   lgLigado = true;
@@ -27037,7 +27078,8 @@ const ARBOL_DIA = {
   ],
   noche: 'Y APARTE, UNO SOLO EN LA MADRUGADA · ASIA O LONDRES, LA QUE SE DÉ, EN EL 0.79',
 };
-function planDiaHTML(){
+function planDiaHTML(id){
+  const cv = id || 'pdArbol', rot = cv + 'Rot';
   return `
     <div class="pd-h">
       <span class="pd-k">EL PLAN DEL DÍA · DE LA LIBRETA</span>
@@ -27048,26 +27090,57 @@ function planDiaHTML(){
     </div>
     <div class="pd-cta">
       <span class="pd-cuenta">${esc(ARBOL_DIA.cuenta)}</span>
-      <span class="pd-tot"><b id="pfGuion">—</b></span>
+      <span class="pd-tot"><b id="${cv}Rot">—</b></span>
     </div>
-    <div class="pd-arbol"><canvas id="pdArbol"></canvas></div>
+    <div class="pd-arbol"><canvas id="${cv}"></canvas></div>
     <p class="pd-noche">${esc(ARBOL_DIA.noche)}</p>`;
 }
 
+/* ══ EL ÁRBOL, PERO CON TUS TRADES ══ (André, 2-sep-2026)
+   El mismo dibujo, sin escenarios: lee los trades que YA registraste hoy y
+   marca dónde vas. Primero gana → se para el día, y la lámina lo dice con
+   todas sus letras. Primero pierde → el camino se corre solo al A+ 2.
+   EN ASIA Y LONDRES NO HAY ÁRBOL: ahí la hoja dice UN trade y ya, así que la
+   lámina no finge que hay tres intentos — lo dice y se calla. */
+function arbolVivo(trades, mkt){
+  const noche = mkt === 'ASIA' || mkt === 'LONDON' || mkt === 'LONDRES';
+  const r = [], v = trades.map(t => (t.pnl || 0) > 0);
+  if(noche){
+    return { noche:true, r: [], viva:null, nodo: v.length ? (v[0] ? 'p1' : 'fin') : 'a1',
+             txt: !v.length ? 'UN SOLO TRADE, EN EL 0.79'
+                  : v[0] ? 'GANASTE. SE ACABÓ LA MADRUGADA.'
+                         : 'FALLÓ, Y SE ACABÓ IGUAL: ERA UNO SOLO.' };
+  }
+  /* NY: 0 = a1→p1 (gana), 1 = a1→a2, 2 = a2→p2 (gana), 3 = a2→es, 4 = es→fin */
+  if(!v.length) return { r:[], viva:null, nodo:'a1', txt:'TE TOCA EL A+ · TRADE 1' };
+  if(v[0]) return { r:[0], viva:null, nodo:'p1', txt:'GANASTE EL PRIMERO. SE PARA EL DÍA.' };
+  r.push(1);
+  if(v.length === 1) return { r, viva:null, nodo:'a2', txt:'FALLÓ EL PRIMERO. TE TOCA EL A+ · TRADE 2.' };
+  if(v[1]) { r.push(2); return { r, viva:null, nodo:'p2', txt:'GANASTE EL SEGUNDO. SE PARA EL DÍA.' }; }
+  r.push(3);
+  if(v.length === 2) return { r, viva:null, nodo:'es', txt:'FALLARON LOS DOS. AHORA EL 0.79 DE LA ESTRUCTURA.' };
+  r.push(4);
+  return { r, viva:null, nodo:'fin',
+           txt: v.length > 3 ? 'YA VAS DE MÁS: EL DÍA ERAN TRES.' : 'SE ACABÓ NUEVA YORK.' };
+}
+
 /* ── la lámina corre sola: la bolita baja y a cada nodo escoge rama ── */
-let pdInt = null;
-function planDiaVive(){
-  const cv = document.getElementById('pdArbol'); if(!cv) return;
+let pdInt = null, lgArbInt = null;
+function planDiaVive(id, estado){
+  const cvId = id || 'pdArbol';
+  const cv = document.getElementById(cvId); if(!cv) return;
   const c = cv.getContext('2d');
-  if(pdInt){ clearInterval(pdInt); pdInt = null; }
+  const propio = cvId === 'pdArbol';
+  if(propio){ if(pdInt){ clearInterval(pdInt); pdInt = null; } }
+  else { if(lgArbInt){ clearInterval(lgArbInt); lgArbInt = null; } }
   const A = ARBOL_DIA, N = A.nodos, R = A.ramas;
   const AZUL = '#3861F6', VERDE = '#57C79B', ROJO = '#D9736A';
   const cl = () => document.documentElement.getAttribute('data-theme') === 'light';
   const tinta = a => cl() ? 'rgba(16,20,28,' + a + ')' : 'rgba(237,239,242,' + a + ')';
 
   let ruta = 0, tramo = 0, u = 0, pausa = 0;
-  const camino = () => A.caminos[ruta];
-  const hechas = () => camino().r.slice(0, tramo);      /* ramas ya recorridas */
+  const camino = () => estado ? { r: estado.r, nom: estado.txt } : A.caminos[ruta];
+  const hechas = () => estado ? estado.r : camino().r.slice(0, tramo);
 
   function mide(){
     const D = Math.min(2, devicePixelRatio || 1);
@@ -27134,9 +27207,10 @@ function planDiaVive(){
     Object.keys(N).forEach(k => {
       const b = caja(k, W, H);
       /* ¿este nodo ya se pisó? */
-      let on = k === R[camino().r[0]].de;
+      let on = k === 'a1';
       hech.forEach(i => { if(R[i].a === k) on = true; });
       if(viva != null && R[viva] && R[viva].de === k) on = true;
+      if(estado && estado.nodo === k) on = true;
       const col = b.n.fin === 'ok' ? VERDE : b.n.fin === 'neutro' ? AZUL : AZUL;
       c.save();
       c.translate(b.x, b.y);
@@ -27149,9 +27223,12 @@ function planDiaVive(){
       c.fillStyle = on ? (b.n.fin === 'ok' ? 'rgba(87,199,155,.14)' : 'rgba(56,97,246,.13)')
                        : tinta('.035');
       c.fill();
+      const tuyo = estado && estado.nodo === k;
+      if(tuyo){ c.save(); c.shadowColor = col; c.shadowBlur = 16; }
       c.strokeStyle = on ? col : tinta('.14');
-      c.lineWidth = on ? 1.8 : 1;
+      c.lineWidth = tuyo ? 2.6 : on ? 1.8 : 1;
       c.stroke();
+      if(tuyo) c.restore();
       c.textAlign = 'center';
       c.font = '700 12px -apple-system, "Segoe UI", sans-serif';
       c.fillStyle = on ? (cl() ? '#101828' : '#FFFFFF') : tinta('.34');
@@ -27180,7 +27257,15 @@ function planDiaVive(){
     }
     pinta();
   }
-  const rot = document.getElementById('pfGuion'); if(rot) rot.textContent = camino().nom;
+  const rot = document.getElementById(cvId + 'Rot');
+  if(rot) rot.textContent = camino().nom;
+  /* MODO VIVO: no hay escenarios que correr — se pinta dónde vas y punto */
+  if(estado){
+    tramo = estado.r.length; u = 0;
+    pinta();
+    addEventListener('resize', pinta, { passive:true });
+    return;
+  }
   pinta();
   let quieto = false;
   try{ quieto = matchMedia('(prefers-reduced-motion: reduce)').matches; }catch(e){}
@@ -27484,8 +27569,6 @@ function renderAlgoritmo(){
   if(como && typeof algoComoHTML === 'function') como.innerHTML = algoComoHTML();
   const prot = $('#algoProto');
   if(prot && typeof algoProtoHTML === 'function') prot.innerHTML = algoProtoHTML();
-  const pdia = $('#algoPlanDia');
-  if(pdia && typeof planDiaHTML === 'function'){ pdia.innerHTML = planDiaHTML(); planDiaVive(); }
   const ejem = $('#algoEjem');
   if(ejem && typeof algoEjemHTML === 'function'){ ejem.innerHTML = algoEjemHTML(); algoEjemLiga(); }
   /* el rótulo de la barra de arriba también, mientras estés en esta vista:
@@ -28501,6 +28584,7 @@ function render(view){
   else if(view==='cuaderno') renderCuaderno();
   else if(view==='entreno') renderEntreno();
   else if(view==='batalla') renderBatalla();
+  else if(view==='dia') renderDia();
   else if(view==='log') renderLog();
   else if(view==='journal'){ renderDashboard(); renderJournal(); }
   else if(view==='trades') renderTrades();
