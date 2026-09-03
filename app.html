@@ -3645,6 +3645,31 @@ html[data-theme="light"] .pd-tit .pd-asia{color:#B5473A}
   letter-spacing:.14em;color:var(--faint);margin-bottom:7px}
 .dn-c b{font-family:var(--mono);font-size:15px}
 .dn-c b.up{color:#57C79B} .dn-c b.dn{color:#D9736A}
+.dn-cfg-2{grid-template-columns:repeat(auto-fit,minmax(190px,1fr))}
+.dn-sep{height:1px;background:var(--line-soft);margin:clamp(30px,4vw,46px) 0}
+.dn-alerta{margin:14px 0 0;padding:14px 16px;border-left:2px solid #D9736A;
+  background:rgba(217,115,106,.08);border-radius:0 10px 10px 0;
+  font-size:13px;line-height:1.6;color:var(--dim)}
+.dn-total{display:flex;align-items:baseline;gap:16px;flex-wrap:wrap;margin-top:18px;
+  padding:18px 20px;border:1px solid var(--line-soft);border-radius:14px;
+  background:linear-gradient(135deg,var(--glass),transparent 60%)}
+.dn-total i{font-style:normal;font-family:var(--mono);font-size:8.5px;letter-spacing:.2em;color:var(--faint)}
+.dn-total b{font-family:var(--mono);font-size:clamp(22px,3.6vw,32px);letter-spacing:-.02em}
+.dn-total b.up{color:#57C79B} .dn-total b.dn{color:#D9736A}
+.dn-total span{font-family:var(--mono);font-size:10px;letter-spacing:.1em;color:var(--faint)}
+/* la nube del largo plazo */
+.dn-graf{margin-top:14px;border:1px solid var(--line-soft);border-radius:14px;overflow:hidden;
+  background:linear-gradient(180deg,rgba(56,97,246,.04),transparent 60%)}
+.dn-graf canvas{display:block;width:100%;height:clamp(220px,32vh,320px)}
+.dn-nums{display:grid;gap:1px;margin-top:14px;background:var(--line-soft);
+  border:1px solid var(--line-soft);border-radius:14px;overflow:hidden;
+  grid-template-columns:repeat(auto-fit,minmax(150px,1fr))}
+.dn-nums > div{background:var(--panel-bg,var(--bg));padding:15px 16px}
+.dn-nums i{display:block;font-style:normal;font-family:var(--mono);font-size:8px;
+  letter-spacing:.18em;color:var(--faint);margin-bottom:9px}
+.dn-nums b{display:block;font-family:var(--mono);font-size:19px;letter-spacing:-.02em}
+.dn-nums b.up{color:#57C79B} .dn-nums b.dn{color:#D9736A}
+.dn-nums span{display:block;margin-top:7px;font-size:11px;color:var(--faint)}
 .dn-nota{margin:18px 0 0;font-family:var(--mono);font-size:9.5px;letter-spacing:.06em;
   line-height:1.8;color:var(--faint);max-width:78ch}
 .pd-arbol{margin-top:10px;height:clamp(360px,52vh,520px)}
@@ -5429,9 +5454,10 @@ stop[stop-color="#9BC0DC"]{stop-color:var(--txt)}
            de Algorithm— y Algorithm es la vista del MÉTODO: los indicadores,
            los colores del chart y el código. No es donde se mira a las 9:40. -->
       <section class="view" id="v-dia">
-        <div class="panel pdia" id="diaArbol"></div>
-        <div class="panel mt2 pdia" id="diaNoche"></div>
-        <div class="panel mt2 pdia dn" id="diaDinero"></div>
+        <!-- LOS DE DEMO SE FUERON (André, 3-sep-2026): decían lo mismo que
+             los de dinero pero sin las cifras. El árbol vivo —el que marca
+             dónde vas— sigue en Log trade, que es donde se opera. -->
+        <div class="panel pdia dn" id="diaDinero"></div>
         <div class="panel mt2 algo-como" id="diaLinea"></div>
         <div class="panel mt2 proto proto-apl" id="diaProto"></div>
         <div class="panel mt2 proto proto-est" id="diaEstr"></div>
@@ -17437,12 +17463,7 @@ function renderGta(){
 /* ══ LA VISTA «EL DÍA» ══/* ══ LA VISTA «EL DÍA» ══ (André, 2-sep-2026): el árbol solo, en grande y
    corriendo sus escenarios — la pantalla que se mira ANTES de operar. */
 function renderDia(){
-  const host = $('#diaArbol'); if(!host) return;
-  host.innerHTML = planDiaHTML('pdArbol');
-  planDiaVive('pdArbol');
-  const noc = $('#diaNoche');
-  if(noc){ noc.innerHTML = planDiaHTML('pdNoche', ARBOL_NOCHE);
-           planDiaVive('pdNoche', null, ARBOL_NOCHE); }
+  if(!$('#diaDinero')) return;
   if(typeof dineroVive === 'function') dineroVive();
   const lin = $('#diaLinea');
   if(lin && typeof lineaDiaHTML === 'function') lin.innerHTML = lineaDiaHTML();
@@ -27649,30 +27670,38 @@ const PROTOCOLO = [
    del día es peor que el primero (y suele serlo), la realidad va a quedar por
    debajo de esto. Está escrito abajo. */
 function dineroCfg(){
-  if(!S.dinero || typeof S.dinero !== 'object'){
-    let r = 500;
-    /* el riesgo de arranque sale de la fase de tu cuenta activa, no de un
-       numero mio: si estas en payouts son $250, no $500 */
-    try{ const cta = mias(S.accounts||[]).find(x => x.estado === 'activa');
-         const f = SISTEMA.fases[(cta && cta.fase) || 'buffer'] || SISTEMA.fases.buffer;
-         r = f.maxPerdidaDia || 500; }catch(e){}
-    S.dinero = { riesgo:r, rrA:1, rrE:2, wr:48.86 };
+  if(!S.dinero || typeof S.dinero !== 'object' || S.dinero.r1 == null){
+    /* LA ESCALERA DE RIESGO (André, 3-sep-2026): el primero va con todo y los
+       dos siguientes con la mitad. No es lo mismo que arriesgar igual tres
+       veces — y la lámina lo enseña: con la escalera, ganar el SEGUNDO ya no
+       empata el día, lo deja abajo. */
+    S.dinero = { r1:500, r2:250, r3:250, rrA:1, rrE:2, wr:48.86, rN:250, rrN:2 };
   }
-  return S.dinero;
+  const c = S.dinero;
+  if(c.rN == null){ c.rN = 250; c.rrN = 2; }
+  return c;
 }
 function dineroCuenta(c){
-  const r = Math.max(1, +c.riesgo || 0), p = Math.min(.99, Math.max(.01, (+c.wr || 0) / 100));
-  const q = 1 - p;
-  const gA = r * (+c.rrA || 1), gE = r * (+c.rrE || 1);
-  /* los cuatro finales del día, con su probabilidad y su dinero */
+  const r1 = Math.max(0, +c.r1 || 0), r2 = Math.max(0, +c.r2 || 0), r3 = Math.max(0, +c.r3 || 0);
+  const p = Math.min(.99, Math.max(.01, (+c.wr || 0) / 100)), q = 1 - p;
+  const RA = +c.rrA || 1, RE = +c.rrE || 1;
   const cam = [
-    { k:'A', nom:'Gana el primero',                 pr: p,         $: +gA },
-    { k:'B', nom:'Falla uno, gana el segundo',      pr: q*p,       $: -r + gA },
-    { k:'C', nom:'Fallan los dos, gana el 0.79',    pr: q*q*p,     $: -2*r + gE },
-    { k:'D', nom:'Fallan los tres',                 pr: q*q*q,     $: -3*r },
+    { k:'A', nom:'Gana el primero',              pr: p,     $: +r1 * RA },
+    { k:'B', nom:'Falla uno, gana el segundo',   pr: q*p,   $: -r1 + r2 * RA },
+    { k:'C', nom:'Fallan los dos, gana el 0.79', pr: q*q*p, $: -r1 - r2 + r3 * RE },
+    { k:'D', nom:'Fallan los tres',              pr: q*q*q, $: -r1 - r2 - r3 },
   ];
-  const esp = cam.reduce((a2, x) => a2 + x.pr * x.$, 0);
-  return { r, p, q, gA, gE, cam, esp };
+  const esp = cam.reduce((a, x) => a + x.pr * x.$, 0);
+  return { r1, r2, r3, p, q, RA, RE, cam, esp, peor: -r1 - r2 - r3 };
+}
+function nocheCuenta(c){
+  const r = Math.max(0, +c.rN || 0), R = +c.rrN || 1;
+  const p = Math.min(.99, Math.max(.01, (+c.wr || 0) / 100)), q = 1 - p;
+  const cam = [
+    { k:'A', nom:'Gana el único', pr: p, $: +r * R },
+    { k:'B', nom:'Falla el único', pr: q, $: -r },
+  ];
+  return { r, R, p, q, cam, esp: cam.reduce((a,x) => a + x.pr * x.$, 0), peor: -r };
 }
 function arbolDinero(c){
   const D = dineroCuenta(c), f = v => fmt$(Math.round(v), true);
@@ -27680,54 +27709,71 @@ function arbolDinero(c){
   return {
     raiz: { x:.5, y:.99 },
     nodos: {
-      a1: { x:.46, y:.08, t:'A+ · TRADE 1',  s:'arriesgas ' + fmt$(D.r) + ' · gana ' + f(D.gA) },
+      a1: { x:.46, y:.08, t:'A+ · TRADE 1', s:'riesgo ' + fmt$(D.r1) + ' · gana ' + f(D.r1*D.RA) },
       p1: { x:.15, y:.33, t:'DÍA ' + f(D.cam[0].$), s:pc(D.cam[0].pr) + ' de los días', fin: D.cam[0].$ >= 0 ? 'ok' : 'mal' },
-      a2: { x:.66, y:.33, t:'A+ · TRADE 2',  s:'vas ' + f(-D.r) + ' · gana ' + f(D.gA) },
+      a2: { x:.66, y:.33, t:'A+ · TRADE 2', s:'riesgo ' + fmt$(D.r2) + ' · gana ' + f(D.r2*D.RA) },
       p2: { x:.42, y:.58, t:'DÍA ' + f(D.cam[1].$), s:pc(D.cam[1].pr) + ' de los días', fin: D.cam[1].$ >= 0 ? 'ok' : 'mal' },
-      es: { x:.86, y:.58, t:'EL 0.79',        s:'vas ' + f(-2*D.r) + ' · gana ' + f(D.gE) },
+      es: { x:.86, y:.58, t:'EL 0.79', s:'riesgo ' + fmt$(D.r3) + ' · gana ' + f(D.r3*D.RE) },
       p3: { x:.66, y:.86, t:'DÍA ' + f(D.cam[2].$), s:pc(D.cam[2].pr) + ' de los días', fin: D.cam[2].$ >= 0 ? 'ok' : 'mal' },
       p4: { x:.96, y:.86, t:'DÍA ' + f(D.cam[3].$), s:pc(D.cam[3].pr) + ' de los días', fin:'mal' },
     },
     ramas: [
-      { de:'a1', a:'p1', et:'GANA',    tipo:'ok' },
-      { de:'a1', a:'a2', et:'NO GANA', tipo:'no' },
-      { de:'a2', a:'p2', et:'GANA',    tipo:'ok' },
-      { de:'a2', a:'es', et:'NO GANA', tipo:'no' },
-      { de:'es', a:'p3', et:'GANA',    tipo:'ok' },
-      { de:'es', a:'p4', et:'NO GANA', tipo:'no' },
+      { de:'a1', a:'p1', et:'GANA', tipo:'ok' }, { de:'a1', a:'a2', et:'NO GANA', tipo:'no' },
+      { de:'a2', a:'p2', et:'GANA', tipo:'ok' }, { de:'a2', a:'es', et:'NO GANA', tipo:'no' },
+      { de:'es', a:'p3', et:'GANA', tipo:'ok' }, { de:'es', a:'p4', et:'NO GANA', tipo:'no' },
     ],
     caminos: [
-      { nom:'GANA EL PRIMERO', r:[0] },
-      { nom:'GANA EL SEGUNDO', r:[1,2] },
-      { nom:'GANA EL 0.79',    r:[1,3,4] },
-      { nom:'FALLAN LOS TRES', r:[1,3,5] },
+      { nom:'GANA EL PRIMERO', r:[0] }, { nom:'GANA EL SEGUNDO', r:[1,2] },
+      { nom:'GANA EL 0.79', r:[1,3,4] }, { nom:'FALLAN LOS TRES', r:[1,3,5] },
     ],
   };
 }
+function arbolNoche$(c){
+  const N = nocheCuenta(c), f = v => fmt$(Math.round(v), true);
+  const pc = x => (x * 100).toFixed(1) + '%';
+  return {
+    raiz: { x:.5, y:.99 },
+    nodos: {
+      a1: { x:.50, y:.14, t:'EL 0.79', s:'riesgo ' + fmt$(N.r) + ' · gana ' + f(N.r*N.R) },
+      p1: { x:.20, y:.66, t:'NOCHE ' + f(N.cam[0].$), s:pc(N.cam[0].pr) + ' de las noches', fin:'ok' },
+      p2: { x:.80, y:.66, t:'NOCHE ' + f(N.cam[1].$), s:pc(N.cam[1].pr) + ' de las noches', fin:'mal' },
+    },
+    ramas: [ { de:'a1', a:'p1', et:'GANA', tipo:'ok' }, { de:'a1', a:'p2', et:'NO GANA', tipo:'no' } ],
+    caminos: [ { nom:'GANA', r:[0] }, { nom:'FALLA', r:[1] } ],
+  };
+}
+/* el tope del contrato, para avisar cuando la escalera se lo pasa */
+function topeDia(){
+  try{ const cta = mias(S.accounts||[]).find(x => x.estado === 'activa');
+       return (SISTEMA.fases[(cta && cta.fase) || 'buffer'] || SISTEMA.fases.buffer).maxPerdidaDia || 500;
+  }catch(e){ return 500; }
+}
 function dineroHTML(){
-  const c = dineroCfg(), D = dineroCuenta(c);
+  const c = dineroCfg(), D = dineroCuenta(c), N = nocheCuenta(c);
   const f = v => fmt$(Math.round(v), true);
   const op = (v, sel) => `<option value="${v}" ${+sel === v ? 'selected' : ''}>1:${v}</option>`;
-  /* la comparación: nueve combinaciones, la mejor marcada */
   const combos = [];
   for(const a2 of [1,2,3]) for(const e of [1,2,3])
     combos.push({ a:a2, e, esp: dineroCuenta({ ...c, rrA:a2, rrE:e }).esp });
   const mejor = combos.reduce((x,y) => y.esp > x.esp ? y : x, combos[0]);
+  const tope = topeDia();
+  const pasa = Math.abs(D.peor) > tope;
   return `
     <div class="pd-h">
-      <h3 class="pd-tit">El día, <span class="pd-ny">en dinero</span></h3>
-      <p class="pd-sub">Cuánto arriesgas, cuánto vas por él, y qué deja cada final.</p>
+      <h3 class="pd-tit">Protocolo <span class="pd-ny">NY</span> · en dinero</h3>
+      <p class="pd-sub">La escalera: el primero con todo, los dos siguientes con la mitad.</p>
     </div>
     <div class="dn-cfg">
-      <label><i>RIESGO POR TRADE</i>
-        <input type="number" id="dnR" step="50" min="1" value="${c.riesgo}"></label>
-      <label><i>RR DEL A+</i>
-        <select id="dnA">${[1,2,3].map(v => op(v, c.rrA)).join('')}</select></label>
-      <label><i>RR DE LA ESTRUCTURA</i>
-        <select id="dnE">${[1,2,3].map(v => op(v, c.rrE)).join('')}</select></label>
-      <label><i>WIN RATE</i>
-        <input type="number" id="dnW" step="0.1" min="1" max="99" value="${c.wr}"><s>%</s></label>
+      <label><i>RIESGO · TRADE 1</i><input type="number" id="dn1" step="50" min="0" value="${c.r1}"></label>
+      <label><i>RIESGO · TRADE 2</i><input type="number" id="dn2" step="50" min="0" value="${c.r2}"></label>
+      <label><i>RIESGO · EL 0.79</i><input type="number" id="dn3" step="50" min="0" value="${c.r3}"></label>
+      <label><i>RR DEL A+</i><select id="dnA">${[1,2,3].map(v => op(v, c.rrA)).join('')}</select></label>
+      <label><i>RR DE LA ESTRUCTURA</i><select id="dnE">${[1,2,3].map(v => op(v, c.rrE)).join('')}</select></label>
+      <label><i>WIN RATE</i><input type="number" id="dnW" step="0.1" min="1" max="99" value="${c.wr}"><s>%</s></label>
     </div>
+    ${pasa ? `<p class="dn-alerta">El peor día de esta escalera es ${f(D.peor)} y tu tope de
+      pérdida diaria es ${fmt$(tope)}. Tres trades así se pasan del contrato —
+      para caber, los tres juntos no pueden sumar más de ${fmt$(tope)} de riesgo.</p>` : ''}
     <div class="pd-arbol"><canvas id="dnArbol"></canvas></div>
     <div class="dn-res">
       <div class="dn-esp ${D.esp >= 0 ? 'up' : 'dn'}">
@@ -27736,41 +27782,205 @@ function dineroHTML(){
       </div>
       <div class="dn-tabla">
         ${D.cam.map(x => `<div class="dn-fila ${x.$ >= 0 ? 'ok' : 'mal'}">
-          <span>${esc(x.nom)}</span>
-          <em>${(x.pr*100).toFixed(1)}%</em>
-          <b>${f(x.$)}</b></div>`).join('')}
+          <span>${esc(x.nom)}</span><em>${(x.pr*100).toFixed(1)}%</em><b>${f(x.$)}</b></div>`).join('')}
       </div>
     </div>
     <div class="dn-comp">
       <span class="dn-k">LAS NUEVE CONFIGURACIONES · ESPERANZA POR DÍA</span>
       <div class="dn-rej">
         ${combos.map(x => `<button type="button" class="dn-c ${x.a === +c.rrA && x.e === +c.rrE ? 'on' : ''} ${x === mejor ? 'top' : ''}"
-          data-a="${x.a}" data-e="${x.e}">
-          <i>A+ 1:${x.a} · EST 1:${x.e}</i><b class="${x.esp >= 0 ? 'up' : 'dn'}">${f(x.esp)}</b></button>`).join('')}
+          data-a="${x.a}" data-e="${x.e}"><i>A+ 1:${x.a} · EST 1:${x.e}</i>
+          <b class="${x.esp >= 0 ? 'up' : 'dn'}">${f(x.esp)}</b></button>`).join('')}
       </div>
     </div>
-    <p class="dn-nota">Todo es aritmética sobre lo que tú pongas: el win rate es un
-      dato de entrada, no una predicción. Arranca en 48.86%, que es el tuyo medido
-      sobre 745 fills (364W / 381L). La probabilidad de cada camino trata los tres
-      trades como independientes al mismo win rate — si tu segundo trade del día
-      suele ser peor que el primero, la realidad va a quedar por debajo de esto.</p>`;
+    <p class="dn-nota">El win rate es un dato de entrada, no una predicción. Arranca en
+      48.86%, el tuyo medido sobre 745 fills (364W / 381L). Los caminos tratan los tres
+      trades como independientes al mismo win rate: si el segundo del día suele ser peor
+      que el primero, la realidad queda por debajo de esto.</p>
+
+    <div class="dn-sep"></div>
+    <div class="pd-h">
+      <h3 class="pd-tit">Protocolo <span class="pd-lon">LON</span> y <span class="pd-asia">ASIA</span> · en dinero</h3>
+      <p class="pd-sub">Un intento. Gane o pierda, ahí se acaba.</p>
+    </div>
+    <div class="dn-cfg dn-cfg-2">
+      <label><i>RIESGO DE LA NOCHE</i><input type="number" id="dnRN" step="50" min="0" value="${c.rN}"></label>
+      <label><i>RR</i><select id="dnRRN">${[1,2,3].map(v => op(v, c.rrN)).join('')}</select></label>
+    </div>
+    <div class="pd-arbol corto"><canvas id="dnNoche"></canvas></div>
+    <div class="dn-res">
+      <div class="dn-esp ${N.esp >= 0 ? 'up' : 'dn'}">
+        <i>ESPERANZA POR NOCHE</i><b>${f(N.esp)}</b>
+        <span>${f(N.esp * 5)} a la semana · ${f(N.esp * 21)} al mes</span>
+      </div>
+      <div class="dn-tabla">
+        ${N.cam.map(x => `<div class="dn-fila ${x.$ >= 0 ? 'ok' : 'mal'}">
+          <span>${esc(x.nom)}</span><em>${(x.pr*100).toFixed(1)}%</em><b>${f(x.$)}</b></div>`).join('')}
+      </div>
+    </div>
+    <div class="dn-sep"></div>
+    <div class="pd-h">
+      <h3 class="pd-tit">A <span class="pd-ny">largo plazo</span></h3>
+      <p class="pd-sub">400 meses posibles con estas mismas reglas. La esperanza es una
+        línea; la realidad es la banda.</p>
+    </div>
+    <div class="dn-cfg dn-cfg-2">
+      <label><i>CUÁNTOS DÍAS</i><select id="dnDias">
+        ${[21,60,126,252].map(v => `<option value="${v}" ${+(c.simDias||60) === v ? 'selected' : ''}>${v}</option>`).join('')}
+      </select></label>
+      <label><i>¿CUENTA LA MADRUGADA?</i><select id="dnSN">
+        <option value="0" ${c.simNoche ? '' : 'selected'}>Sólo Nueva York</option>
+        <option value="1" ${c.simNoche ? 'selected' : ''}>NY + la madrugada</option>
+      </select></label>
+    </div>
+    <div class="dn-graf"><canvas id="dnSim"></canvas></div>
+    <div class="dn-nums" id="dnSimNums"></div>
+    <p class="dn-nota">El azar va sembrado: la misma configuración da siempre la misma
+      nube, así que comparar dos setups compara los setups y no dos tiradas de dados.
+      Sigue siendo aritmética sobre el win rate que pusiste arriba.</p>
+
+    <div class="dn-total">
+      <i>LOS DOS JUNTOS</i>
+      <b class="${D.esp + N.esp >= 0 ? 'up' : 'dn'}">${f(D.esp + N.esp)}</b>
+      <span>al día · ${f((D.esp + N.esp) * 21)} al mes</span>
+    </div>`;
+}
+/* ══ LA SIMULACIÓN A LARGO PLAZO ══ (André, 3-sep-2026)
+   La esperanza es UNA línea; la realidad es una nube. Un día de +$16 esperados
+   no significa que el mes suba parejo: significa que hay muchos caminos y ese
+   es el promedio de todos. Aquí se corren 400 meses posibles con las mismas
+   reglas y se dibuja la banda donde cae el 80% de ellos, para que se vea la
+   diferencia entre «gana» y «gana casi siempre».
+   El azar va SEMBRADO: la misma configuración da siempre la misma nube, así
+   que comparar dos setups compara los setups y no dos tiradas de dados. */
+function simulaDias(c, dias, corridas){
+  const D = dineroCuenta(c), N = nocheCuenta(c);
+  const conNoche = !!c.simNoche;
+  /* LOS CORTES SON LA SUMA ACUMULADA (André, 3-sep-2026): estaban escritos a
+     mano como [p, p+qp, p+q²p] y el tercero salía MENOR que el segundo —el
+     camino C nunca ocurría y su probabilidad se la comía el peor final, que
+     pasaba de 13.4% a 26.6%. La simulación pintaba en rojo una configuración
+     que la aritmética daba en verde. Ahora se acumulan de las mismas
+     probabilidades que ya calculó dineroCuenta, así no pueden desalinearse. */
+  let acc = 0;
+  const cortes = D.cam.map(x => (acc += x.pr));
+  const val = D.cam.map(x => x.$);
+  let sem = 12345 + Math.round(D.r1 + D.r2*7 + D.r3*13 + D.RA*101 + D.RE*211 + D.p*10000)
+            + (conNoche ? 7777 : 0);
+  const rnd = () => { sem = (sem * 1664525 + 1013904223) % 4294967296; return sem / 4294967296; };
+  const fin = [], curvas = [];
+  let ddPeor = 0, verdes = 0;
+  for(let m = 0; m < corridas; m++){
+    let eq = 0, pico = 0, dd = 0; const cur = [0];
+    for(let d = 0; d < dias; d++){
+      const u = rnd();
+      let k = 0; while(k < cortes.length - 1 && u >= cortes[k]) k++;
+      eq += val[k];
+      if(conNoche) eq += rnd() < N.p ? N.cam[0].$ : N.cam[1].$;
+      if(eq > pico) pico = eq;
+      if(eq - pico < dd) dd = eq - pico;
+      cur.push(eq);
+    }
+    curvas.push(cur); fin.push(eq);
+    if(eq > 0) verdes++;
+    ddPeor += dd;
+  }
+  /* la banda: por cada día, el percentil 10, 50 y 90 de todas las corridas */
+  const band = { p10:[], p50:[], p90:[] };
+  for(let d = 0; d <= dias; d++){
+    const col = curvas.map(c2 => c2[d]).sort((x,y) => x - y);
+    band.p10.push(col[Math.floor(corridas * .10)]);
+    band.p50.push(col[Math.floor(corridas * .50)]);
+    band.p90.push(col[Math.floor(corridas * .90)]);
+  }
+  fin.sort((x,y) => x - y);
+  const esp = (D.esp + (conNoche ? N.esp : 0)) * dias;
+  return { band, esp, dias,
+    verdes: verdes / corridas,
+    medi: fin[Math.floor(corridas * .5)],
+    p10: fin[Math.floor(corridas * .1)], p90: fin[Math.floor(corridas * .9)],
+    dd: ddPeor / corridas };
+}
+let simInt = null;
+function simulaPinta(){
+  const cv = document.getElementById('dnSim'); if(!cv) return;
+  const c = dineroCfg();
+  const dias = +c.simDias || 60;
+  const R = simulaDias(c, dias, 400);
+  const cl = () => document.documentElement.getAttribute('data-theme') === 'light';
+  const tinta = a2 => cl() ? 'rgba(16,20,28,' + a2 + ')' : 'rgba(237,239,242,' + a2 + ')';
+  const x2 = cv.getContext('2d');
+  const D2 = Math.min(2, devicePixelRatio || 1);
+  const W = cv.offsetWidth, H = cv.offsetHeight; if(!W || !H) return;
+  if(cv.width !== Math.round(W*D2)){ cv.width = Math.round(W*D2); cv.height = Math.round(H*D2); }
+  x2.setTransform(D2,0,0,D2,0,0); x2.clearRect(0,0,W,H);
+  const M = 34, todos = R.band.p10.concat(R.band.p90, [0, R.esp]);
+  const lo = Math.min(...todos), hi = Math.max(...todos);
+  const pad = (hi - lo) * .12 || 100, min = lo - pad, max = hi + pad, span = (max - min) || 1;
+  const X = i => M + i * (W - M - 12) / dias;
+  const Y = v => 14 + (H - 40) * (1 - (v - min) / span);
+  /* el cero */
+  x2.strokeStyle = tinta('.16'); x2.lineWidth = 1; x2.setLineDash([3,4]);
+  x2.beginPath(); x2.moveTo(M, Y(0)); x2.lineTo(W - 12, Y(0)); x2.stroke(); x2.setLineDash([]);
+  x2.font = '600 8px "IBM Plex Mono", monospace'; x2.textAlign = 'right';
+  x2.fillStyle = tinta('.34'); x2.fillText('$0', M - 6, Y(0) + 3);
+  x2.fillText(fmt$(Math.round(max)), M - 6, 18);
+  x2.fillText(fmt$(Math.round(min)), M - 6, H - 20);
+  /* la banda del 80% */
+  x2.beginPath();
+  R.band.p90.forEach((v,i) => i ? x2.lineTo(X(i), Y(v)) : x2.moveTo(X(0), Y(v)));
+  for(let i = dias; i >= 0; i--) x2.lineTo(X(i), Y(R.band.p10[i]));
+  x2.closePath();
+  x2.fillStyle = R.medi >= 0 ? 'rgba(87,199,155,.13)' : 'rgba(217,115,106,.13)';
+  x2.fill();
+  /* la mediana y la esperanza */
+  const linea = (arr, col, gr, guion) => {
+    x2.save(); x2.strokeStyle = col; x2.lineWidth = gr; x2.lineJoin = 'round';
+    if(guion) x2.setLineDash([5,4]);
+    x2.beginPath(); arr.forEach((v,i) => i ? x2.lineTo(X(i), Y(v)) : x2.moveTo(X(0), Y(v)));
+    x2.stroke(); x2.restore();
+  };
+  linea(R.band.p50, R.medi >= 0 ? '#57C79B' : '#D9736A', 2.2);
+  const rectaEsp = []; for(let i = 0; i <= dias; i++) rectaEsp.push(R.esp * i / dias);
+  linea(rectaEsp, '#3861F6', 1.4, true);
+  /* rótulos */
+  x2.textAlign = 'left'; x2.font = '700 8.5px "IBM Plex Mono", monospace';
+  x2.fillStyle = '#3861F6'; x2.fillText('ESPERANZA', M + 4, 14);
+  x2.fillStyle = R.medi >= 0 ? '#57C79B' : '#D9736A';
+  x2.fillText('MEDIANA · BANDA DEL 80%', M + 4, 26);
+  x2.textAlign = 'right'; x2.fillStyle = tinta('.34');
+  x2.fillText(dias + ' DÍAS', W - 12, H - 6);
+  /* las cifras de abajo */
+  const cajas = document.getElementById('dnSimNums');
+  if(cajas) cajas.innerHTML = `
+    <div><i>TERMINA EN VERDE</i><b class="${R.verdes >= .5 ? 'up' : 'dn'}">${Math.round(R.verdes*100)}%</b><span>de las corridas</span></div>
+    <div><i>MEDIANA A ${dias} DÍAS</i><b class="${R.medi >= 0 ? 'up' : 'dn'}">${fmt$(Math.round(R.medi), true)}</b><span>la corrida de en medio</span></div>
+    <div><i>MAL CAMINO · P10</i><b class="dn">${fmt$(Math.round(R.p10), true)}</b><span>1 de cada 10 va peor</span></div>
+    <div><i>BUEN CAMINO · P90</i><b class="up">${fmt$(Math.round(R.p90), true)}</b><span>1 de cada 10 va mejor</span></div>
+    <div><i>BAJÓN TÍPICO</i><b class="dn">${fmt$(Math.round(R.dd), true)}</b><span>desde su propio máximo</span></div>`;
 }
 function dineroVive(){
   const host = $('#diaDinero'); if(!host) return;
   host.innerHTML = dineroHTML();
   planDiaVive('dnArbol', null, arbolDinero(dineroCfg()));
+  planDiaVive('dnNoche', null, arbolNoche$(dineroCfg()));
+  simulaPinta();
+  addEventListener('resize', () => { try{ simulaPinta(); }catch(e){} }, { passive:true });
   const c = dineroCfg();
-  const guarda = () => { save(); dineroVive(); };
-  const r = $('#dnR'), a2 = $('#dnA'), e = $('#dnE'), w = $('#dnW');
-  if(r) r.onchange = () => { c.riesgo = Math.max(1, +r.value || 1); guarda(); };
-  if(a2) a2.onchange = () => { c.rrA = +a2.value; guarda(); };
-  if(e) e.onchange = () => { c.rrE = +e.value; guarda(); };
-  if(w) w.onchange = () => { c.wr = Math.min(99, Math.max(1, +w.value || 1)); guarda(); };
+  const g = () => { save(); dineroVive(); };
+  const num = (id, k, min, max) => { const el = $('#'+id); if(!el) return;
+    el.onchange = () => { c[k] = Math.min(max, Math.max(min, +el.value || 0)); g(); }; };
+  num('dn1','r1',0,1e6); num('dn2','r2',0,1e6); num('dn3','r3',0,1e6);
+  num('dnW','wr',1,99);  num('dnRN','rN',0,1e6);
+  const sel = (id, k) => { const el = $('#'+id); if(!el) return;
+    el.onchange = () => { c[k] = +el.value; g(); }; };
+  sel('dnA','rrA'); sel('dnE','rrE'); sel('dnRRN','rrN'); sel('dnDias','simDias');
+  const sn = $('#dnSN'); if(sn) sn.onchange = () => { c.simNoche = sn.value === '1'; g(); };
   host.querySelectorAll('[data-a]').forEach(b => b.onclick = () => {
-    c.rrA = +b.dataset.a; c.rrE = +b.dataset.e; guarda(); });
+    c.rrA = +b.dataset.a; c.rrE = +b.dataset.e; g(); });
 }
 
-/* ══ LOS DIBUJITOS DE CADA PASO ══ (André, 3-sep-2026)
+/* ══ LOS DIBUJITOS DE CADA PASO ══/* ══ LOS DIBUJITOS DE CADA PASO ══ (André, 3-sep-2026)
    Cada paso del protocolo trae su escena: qué se está mirando en el chart
    cuando toca ese paso. No son adornos — son el gráfico reducido a lo mínimo
    que hay que reconocer: dónde está el rango, qué línea es la liquidez, en qué
