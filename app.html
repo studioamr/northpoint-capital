@@ -3458,14 +3458,17 @@ button.tag.quemada{text-decoration:line-through;text-decoration-color:var(--down
    escondía. Queda el árbol y la línea de la madrugada. */
 .pdia{padding:24px}
 .pd-h{max-width:66ch}
-.pd-k{font-family:var(--mono);font-size:9px;letter-spacing:.26em;color:var(--dim)}
-.pd-h h3{margin:8px 0 0;font-size:26px;font-weight:800;letter-spacing:-.02em}
-.pd-h p{margin:10px 0 0;font-size:13px;line-height:1.65;color:var(--dim)}
-.pd-cta{display:flex;align-items:baseline;gap:18px;flex-wrap:wrap;margin:22px 0 6px;
-  padding-bottom:14px;border-bottom:1px solid var(--line-soft)}
-.pd-cuenta{font-family:var(--mono);font-size:28px;letter-spacing:-.02em;color:#3861F6}
+/* el nombre del protocolo manda: grande, en verde, antes que nada */
+.pd-titulo{display:block;font-family:var(--mono);font-size:clamp(26px,4.4vw,42px);
+  font-weight:700;letter-spacing:-.01em;line-height:1;color:#57C79B}
+html[data-theme="light"] .pd-titulo{color:#128B62}
+.pd-h h3{margin:12px 0 0;font-size:20px;font-weight:600;letter-spacing:-.015em;color:var(--dim)}
+/* el rotulo del camino: vacio en la lamina que enseña, vivo en Log trade */
+.pd-tot{display:block;margin-top:16px;padding-top:14px;border-top:1px solid var(--line-soft)}
 .pd-tot b{font-family:var(--mono);font-size:10px;font-weight:400;letter-spacing:.2em;
   color:var(--faint)}
+.pd-tot b:empty{display:none}
+.pd-tot:has(b:empty){border-top:0;padding-top:0;margin-top:18px}
 .pd-arbol{margin-top:10px;height:clamp(360px,52vh,520px)}
 /* el arbolito de la madrugada tiene DOS niveles, no cuatro: con el alto del
    grande quedaba medio lienzo vacío */
@@ -27183,15 +27186,14 @@ function planDiaHTML(id, A){
   const T = A || ARBOL_DIA;
   const noche = T === ARBOL_NOCHE;
   return `
-    <!-- SIN PÁRRAFO (André, 2-sep-2026): el árbol de abajo ya dice lo mismo,
-         y mejor. Explicarlo antes con un párrafo era decirlo dos veces. -->
+    <!-- SIN PÁRRAFO Y SIN «50K» (André, 2-sep-2026): el árbol de abajo ya dice
+         lo mismo y mejor, y el renglón del escenario («GANA EL PRIMERO») sobra
+         cuando la lámina sólo está enseñando. El rótulo sigue existiendo, pero
+         SOLO habla en Log trade, donde dice dónde vas de verdad. -->
     <div class="pd-h">
-      <span class="pd-k">${noche ? 'LA MADRUGADA · ASIA O LONDRES' : 'NUEVA YORK · EL PLAN DEL DÍA'}</span>
+      <b class="pd-titulo">${noche ? 'PROTOCOLO LON Y ASIA' : 'PROTOCOLO NY'}</b>
       <h3>${noche ? 'Un intento. Uno.' : 'Si el primero gana, el día se acabó.'}</h3>
-    </div>
-    <div class="pd-cta">
-      <span class="pd-cuenta">${esc(T.cuenta)}</span>
-      <span class="pd-tot"><b id="${cv}Rot">—</b></span>
+      <span class="pd-tot"><b id="${cv}Rot"></b></span>
     </div>
     <div class="pd-arbol ${noche ? 'corto' : ''}"><canvas id="${cv}"></canvas></div>`;
 }
@@ -27350,8 +27352,8 @@ function planDiaVive(id, estado, arbol){
   }
   function tic(){
     if(!enCuadro()) return;
-    if(pausa > 0){ pausa--; if(pausa === 0){ ruta = (ruta+1) % A.caminos.length; tramo = 0; u = 0;
-      const r = document.getElementById('pfGuion'); if(r) r.textContent = camino().nom; } pinta(); return; }
+    if(pausa > 0){ pausa--; if(pausa === 0){ ruta = (ruta+1) % A.caminos.length; tramo = 0; u = 0; }
+      pinta(); return; }
     u += 0.055;
     if(u >= 1){
       u = 0; tramo++;
@@ -27359,8 +27361,11 @@ function planDiaVive(id, estado, arbol){
     }
     pinta();
   }
+  /* el nombre del escenario sólo se escribe cuando dice algo de VERDAD: en
+     Log trade, donde marca dónde vas. En la lámina que enseña, el árbol solo
+     ya cuenta el escenario y el renglón era ruido. */
   const rot = document.getElementById(cvId + 'Rot');
-  if(rot) rot.textContent = camino().nom;
+  if(rot) rot.textContent = estado ? camino().nom : '';
   /* MODO VIVO: no hay escenarios que correr — se pinta dónde vas y punto */
   if(estado){
     tramo = estado.r.length; u = 0;
