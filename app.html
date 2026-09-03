@@ -27671,18 +27671,20 @@ const PROTOCOLO = [
    debajo de esto. Está escrito abajo. */
 function dineroCfg(){
   if(!S.dinero || typeof S.dinero !== 'object' || S.dinero.r1 == null){
-    /* LA ESCALERA DE RIESGO (André, 3-sep-2026): el primero va con todo y los
-       dos siguientes con la mitad. No es lo mismo que arriesgar igual tres
-       veces — y la lámina lo enseña: con la escalera, ganar el SEGUNDO ya no
-       empata el día, lo deja abajo. */
-    S.dinero = { r1:500, r2:250, r3:250, rrA:1, rrE:2, wr:48.86, rN:250, rrN:2 };
+    /* MISMO RIESGO EN LOS TRES (André, 3-sep-2026): se probó la escalera
+       500/250/250 y se descartó — los tres van a $500. Un solo campo, porque
+       tres campos que siempre valen lo mismo son tres formas de equivocarse. */
+    S.dinero = { riesgo:500, rrA:1, rrE:2, wr:48.86, rN:500, rrN:2 };
   }
   const c = S.dinero;
-  if(c.rN == null){ c.rN = 250; c.rrN = 2; }
+  /* los ajustes viejos traían r1/r2/r3: se aplanan al mayor de los tres */
+  if(c.riesgo == null) c.riesgo = Math.max(+c.r1 || 0, +c.r2 || 0, +c.r3 || 0) || 500;
+  delete c.r1; delete c.r2; delete c.r3;
+  if(c.rN == null){ c.rN = 500; c.rrN = 2; }
   return c;
 }
 function dineroCuenta(c){
-  const r1 = Math.max(0, +c.r1 || 0), r2 = Math.max(0, +c.r2 || 0), r3 = Math.max(0, +c.r3 || 0);
+  const r = Math.max(0, +c.riesgo || 0), r1 = r, r2 = r, r3 = r;
   const p = Math.min(.99, Math.max(.01, (+c.wr || 0) / 100)), q = 1 - p;
   const RA = +c.rrA || 1, RE = +c.rrE || 1;
   const cam = [
@@ -27761,12 +27763,10 @@ function dineroHTML(){
   return `
     <div class="pd-h">
       <h3 class="pd-tit">Protocolo <span class="pd-ny">NY</span> · en dinero</h3>
-      <p class="pd-sub">La escalera: el primero con todo, los dos siguientes con la mitad.</p>
+      <p class="pd-sub">Cuánto arriesgas, cuánto vas por él, y qué deja cada final.</p>
     </div>
     <div class="dn-cfg">
-      <label><i>RIESGO · TRADE 1</i><input type="number" id="dn1" step="50" min="0" value="${c.r1}"></label>
-      <label><i>RIESGO · TRADE 2</i><input type="number" id="dn2" step="50" min="0" value="${c.r2}"></label>
-      <label><i>RIESGO · EL 0.79</i><input type="number" id="dn3" step="50" min="0" value="${c.r3}"></label>
+      <label><i>RIESGO POR TRADE</i><input type="number" id="dn1" step="50" min="0" value="${c.riesgo}"></label>
       <label><i>RR DEL A+</i><select id="dnA">${[1,2,3].map(v => op(v, c.rrA)).join('')}</select></label>
       <label><i>RR DE LA ESTRUCTURA</i><select id="dnE">${[1,2,3].map(v => op(v, c.rrE)).join('')}</select></label>
       <label><i>WIN RATE</i><input type="number" id="dnW" step="0.1" min="1" max="99" value="${c.wr}"><s>%</s></label>
@@ -27865,7 +27865,7 @@ function simulaDias(c, dias, corridas){
   let acc = 0;
   const cortes = D.cam.map(x => (acc += x.pr));
   const val = D.cam.map(x => x.$);
-  let sem = 12345 + Math.round(D.r1 + D.r2*7 + D.r3*13 + D.RA*101 + D.RE*211 + D.p*10000)
+  let sem = 12345 + Math.round(D.r1 * 21 + D.RA*101 + D.RE*211 + D.p*10000)
             + (conNoche ? 7777 : 0);
   const rnd = () => { sem = (sem * 1664525 + 1013904223) % 4294967296; return sem / 4294967296; };
   const fin = [], curvas = [];
@@ -27970,7 +27970,7 @@ function dineroVive(){
   const g = () => { save(); dineroVive(); };
   const num = (id, k, min, max) => { const el = $('#'+id); if(!el) return;
     el.onchange = () => { c[k] = Math.min(max, Math.max(min, +el.value || 0)); g(); }; };
-  num('dn1','r1',0,1e6); num('dn2','r2',0,1e6); num('dn3','r3',0,1e6);
+  num('dn1','riesgo',0,1e6);
   num('dnW','wr',1,99);  num('dnRN','rN',0,1e6);
   const sel = (id, k) => { const el = $('#'+id); if(!el) return;
     el.onchange = () => { c[k] = +el.value; g(); }; };
