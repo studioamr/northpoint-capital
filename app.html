@@ -3602,6 +3602,51 @@ html[data-theme="light"] .pd-tit .pd-asia{color:#B5473A}
   color:var(--faint)}
 .pd-tot b:empty{display:none}
 .pd-tot:has(b:empty){border-top:0;padding-top:0;margin-top:18px}
+/* ── EL DÍA EN DINERO ── (André, 3-sep-2026) */
+.dn-cfg{display:grid;gap:12px;margin:20px 0 6px;
+  grid-template-columns:repeat(auto-fit,minmax(150px,1fr))}
+.dn-cfg label{position:relative;display:block;border:1px solid var(--line-soft);
+  border-radius:12px;padding:12px 14px;background:linear-gradient(135deg,var(--glass),transparent 62%)}
+.dn-cfg i{display:block;font-style:normal;font-family:var(--mono);font-size:8px;
+  letter-spacing:.2em;color:var(--faint);margin-bottom:8px}
+.dn-cfg input,.dn-cfg select{width:100%;background:transparent;border:0;outline:none;
+  color:var(--txt);font-family:var(--mono);font-size:19px;padding:0;
+  appearance:none;-webkit-appearance:none;cursor:pointer}
+.dn-cfg s{position:absolute;right:14px;bottom:12px;text-decoration:none;
+  font-family:var(--mono);font-size:14px;color:var(--faint)}
+.dn-res{display:grid;gap:14px;margin-top:16px}
+@media(min-width:860px){.dn-res{grid-template-columns:.85fr 1.15fr;align-items:start}}
+.dn-esp{border:1px solid var(--line-soft);border-radius:14px;padding:20px 22px;
+  background:linear-gradient(135deg,var(--glass),transparent 60%)}
+.dn-esp i{display:block;font-style:normal;font-family:var(--mono);font-size:8.5px;
+  letter-spacing:.2em;color:var(--faint)}
+.dn-esp b{display:block;margin-top:10px;font-family:var(--mono);
+  font-size:clamp(28px,5vw,44px);letter-spacing:-.03em;line-height:1}
+.dn-esp.up b{color:#57C79B} .dn-esp.dn b{color:#D9736A}
+.dn-esp span{display:block;margin-top:12px;font-family:var(--mono);font-size:10px;
+  letter-spacing:.1em;color:var(--faint)}
+.dn-tabla{display:grid;gap:1px;background:var(--line-soft);border:1px solid var(--line-soft);
+  border-radius:14px;overflow:hidden}
+.dn-fila{display:grid;grid-template-columns:1fr auto auto;gap:16px;align-items:center;
+  background:var(--panel-bg,var(--bg));padding:13px 16px;font-size:13.5px}
+.dn-fila em{font-style:normal;font-family:var(--mono);font-size:11px;color:var(--faint)}
+.dn-fila b{font-family:var(--mono);font-size:15px;min-width:78px;text-align:right}
+.dn-fila.ok b{color:#57C79B} .dn-fila.mal b{color:#D9736A}
+.dn-comp{margin-top:20px}
+.dn-k{font-family:var(--mono);font-size:9px;letter-spacing:.24em;color:var(--faint)}
+.dn-rej{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px}
+.dn-c{border:1px solid var(--line-soft);border-radius:12px;padding:12px 10px;cursor:pointer;
+  background:linear-gradient(135deg,var(--glass),transparent 62%);text-align:left;
+  transition:border-color .2s,background .2s}
+.dn-c:hover{border-color:var(--line)}
+.dn-c.on{border-color:#3861F6;background:linear-gradient(135deg,rgba(56,97,246,.14),transparent 62%)}
+.dn-c.top{box-shadow:inset 0 0 0 1px rgba(87,199,155,.45)}
+.dn-c i{display:block;font-style:normal;font-family:var(--mono);font-size:8px;
+  letter-spacing:.14em;color:var(--faint);margin-bottom:7px}
+.dn-c b{font-family:var(--mono);font-size:15px}
+.dn-c b.up{color:#57C79B} .dn-c b.dn{color:#D9736A}
+.dn-nota{margin:18px 0 0;font-family:var(--mono);font-size:9.5px;letter-spacing:.06em;
+  line-height:1.8;color:var(--faint);max-width:78ch}
 .pd-arbol{margin-top:10px;height:clamp(360px,52vh,520px)}
 /* el arbolito de la madrugada tiene DOS niveles, no cuatro: con el alto del
    grande quedaba medio lienzo vacío */
@@ -5386,6 +5431,7 @@ stop[stop-color="#9BC0DC"]{stop-color:var(--txt)}
       <section class="view" id="v-dia">
         <div class="panel pdia" id="diaArbol"></div>
         <div class="panel mt2 pdia" id="diaNoche"></div>
+        <div class="panel mt2 pdia dn" id="diaDinero"></div>
         <div class="panel mt2 algo-como" id="diaLinea"></div>
         <div class="panel mt2 proto proto-apl" id="diaProto"></div>
         <div class="panel mt2 proto proto-est" id="diaEstr"></div>
@@ -17397,6 +17443,7 @@ function renderDia(){
   const noc = $('#diaNoche');
   if(noc){ noc.innerHTML = planDiaHTML('pdNoche', ARBOL_NOCHE);
            planDiaVive('pdNoche', null, ARBOL_NOCHE); }
+  if(typeof dineroVive === 'function') dineroVive();
   const lin = $('#diaLinea');
   if(lin && typeof lineaDiaHTML === 'function') lin.innerHTML = lineaDiaHTML();
   const pro = $('#diaProto');
@@ -17409,11 +17456,16 @@ function renderDia(){
 /* ── el árbol de Log trade, marcado con tus trades de hoy ── */
 function lgArbolPinta(){
   const host = $('#lgArbol'); if(!host) return;
+  /* EL CAMINO SE VE SIEMPRE (André, 3-sep-2026): estaba escondido hasta abrir
+     sesión, y es justo antes de abrirla cuando sirve — es lo que dice qué toca
+     hacer. Sin sesión se enseña el árbol entero, apagado, con el aviso de que
+     todavía no se está midiendo nada. */
   const ses = lgSesionHoy();
-  if(!ses){ host.hidden = true; host.innerHTML = ''; return; }   /* sin sesión no hay camino */
   const hoy = todayISO();
-  const trades = lgTradesDe(ses, hoy);
-  const E = arbolVivo(trades, (ses.mkt || '').toUpperCase());
+  const trades = ses ? lgTradesDe(ses, hoy) : [];
+  const mkt = ses ? (ses.mkt || '').toUpperCase() : mktCorto();
+  const E = ses ? arbolVivo(trades, mkt)
+                : { ...arbolVivo([], mkt), nodo:null, txt:'SIN SESIÓN ABIERTA · NADA SE ESTÁ MIDIENDO' };
   host.hidden = false;
   if(host.dataset.pintado !== '1'){
     host.innerHTML = planDiaHTML('lgArbCv');
@@ -27582,6 +27634,142 @@ const PROTOCOLO = [
     ['Deja que la simetría del multiplicador de cuentas consolide el volumen en dólares. Desconecta y retírate de la sesión.',
      'Let the symmetry of the account multiplier consolidate the dollar volume. Disconnect and step away from the session.'] ] }
 ];
+/* ══ EL DÍA, EN DINERO ══ (André, 3-sep-2026)
+   El mismo árbol, pero con lo que deja cada camino. Sirve para lo que no se
+   ve mirando un solo trade: con el A+ a 1:1, GANAR EL SEGUNDO deja el día en
+   CERO —pagaste el primero con el segundo— y perder los tres cuesta tres
+   riesgos. Cambiando el RR se ve al instante cuál configuración conviene.
+
+   TODO ES ARITMÉTICA SOBRE LO QUE TÚ PONGAS: el win rate es un dato de
+   entrada, no una predicción. Arranca en 48.86%, que es el TUYO medido sobre
+   745 fills (364W/381L), no un número bonito. Si pones otro, la lámina te dice
+   qué pasaría con ése — nada más.
+   La probabilidad de cada camino sale de tratar los trades como independientes
+   al mismo win rate. Es la cuenta de servilleta honesta: si tu segundo trade
+   del día es peor que el primero (y suele serlo), la realidad va a quedar por
+   debajo de esto. Está escrito abajo. */
+function dineroCfg(){
+  if(!S.dinero || typeof S.dinero !== 'object'){
+    let r = 500;
+    /* el riesgo de arranque sale de la fase de tu cuenta activa, no de un
+       numero mio: si estas en payouts son $250, no $500 */
+    try{ const cta = mias(S.accounts||[]).find(x => x.estado === 'activa');
+         const f = SISTEMA.fases[(cta && cta.fase) || 'buffer'] || SISTEMA.fases.buffer;
+         r = f.maxPerdidaDia || 500; }catch(e){}
+    S.dinero = { riesgo:r, rrA:1, rrE:2, wr:48.86 };
+  }
+  return S.dinero;
+}
+function dineroCuenta(c){
+  const r = Math.max(1, +c.riesgo || 0), p = Math.min(.99, Math.max(.01, (+c.wr || 0) / 100));
+  const q = 1 - p;
+  const gA = r * (+c.rrA || 1), gE = r * (+c.rrE || 1);
+  /* los cuatro finales del día, con su probabilidad y su dinero */
+  const cam = [
+    { k:'A', nom:'Gana el primero',                 pr: p,         $: +gA },
+    { k:'B', nom:'Falla uno, gana el segundo',      pr: q*p,       $: -r + gA },
+    { k:'C', nom:'Fallan los dos, gana el 0.79',    pr: q*q*p,     $: -2*r + gE },
+    { k:'D', nom:'Fallan los tres',                 pr: q*q*q,     $: -3*r },
+  ];
+  const esp = cam.reduce((a2, x) => a2 + x.pr * x.$, 0);
+  return { r, p, q, gA, gE, cam, esp };
+}
+function arbolDinero(c){
+  const D = dineroCuenta(c), f = v => fmt$(Math.round(v), true);
+  const pc = x => (x * 100).toFixed(1) + '%';
+  return {
+    raiz: { x:.5, y:.99 },
+    nodos: {
+      a1: { x:.46, y:.08, t:'A+ · TRADE 1',  s:'arriesgas ' + fmt$(D.r) + ' · gana ' + f(D.gA) },
+      p1: { x:.15, y:.33, t:'DÍA ' + f(D.cam[0].$), s:pc(D.cam[0].pr) + ' de los días', fin: D.cam[0].$ >= 0 ? 'ok' : 'mal' },
+      a2: { x:.66, y:.33, t:'A+ · TRADE 2',  s:'vas ' + f(-D.r) + ' · gana ' + f(D.gA) },
+      p2: { x:.42, y:.58, t:'DÍA ' + f(D.cam[1].$), s:pc(D.cam[1].pr) + ' de los días', fin: D.cam[1].$ >= 0 ? 'ok' : 'mal' },
+      es: { x:.86, y:.58, t:'EL 0.79',        s:'vas ' + f(-2*D.r) + ' · gana ' + f(D.gE) },
+      p3: { x:.66, y:.86, t:'DÍA ' + f(D.cam[2].$), s:pc(D.cam[2].pr) + ' de los días', fin: D.cam[2].$ >= 0 ? 'ok' : 'mal' },
+      p4: { x:.96, y:.86, t:'DÍA ' + f(D.cam[3].$), s:pc(D.cam[3].pr) + ' de los días', fin:'mal' },
+    },
+    ramas: [
+      { de:'a1', a:'p1', et:'GANA',    tipo:'ok' },
+      { de:'a1', a:'a2', et:'NO GANA', tipo:'no' },
+      { de:'a2', a:'p2', et:'GANA',    tipo:'ok' },
+      { de:'a2', a:'es', et:'NO GANA', tipo:'no' },
+      { de:'es', a:'p3', et:'GANA',    tipo:'ok' },
+      { de:'es', a:'p4', et:'NO GANA', tipo:'no' },
+    ],
+    caminos: [
+      { nom:'GANA EL PRIMERO', r:[0] },
+      { nom:'GANA EL SEGUNDO', r:[1,2] },
+      { nom:'GANA EL 0.79',    r:[1,3,4] },
+      { nom:'FALLAN LOS TRES', r:[1,3,5] },
+    ],
+  };
+}
+function dineroHTML(){
+  const c = dineroCfg(), D = dineroCuenta(c);
+  const f = v => fmt$(Math.round(v), true);
+  const op = (v, sel) => `<option value="${v}" ${+sel === v ? 'selected' : ''}>1:${v}</option>`;
+  /* la comparación: nueve combinaciones, la mejor marcada */
+  const combos = [];
+  for(const a2 of [1,2,3]) for(const e of [1,2,3])
+    combos.push({ a:a2, e, esp: dineroCuenta({ ...c, rrA:a2, rrE:e }).esp });
+  const mejor = combos.reduce((x,y) => y.esp > x.esp ? y : x, combos[0]);
+  return `
+    <div class="pd-h">
+      <h3 class="pd-tit">El día, <span class="pd-ny">en dinero</span></h3>
+      <p class="pd-sub">Cuánto arriesgas, cuánto vas por él, y qué deja cada final.</p>
+    </div>
+    <div class="dn-cfg">
+      <label><i>RIESGO POR TRADE</i>
+        <input type="number" id="dnR" step="50" min="1" value="${c.riesgo}"></label>
+      <label><i>RR DEL A+</i>
+        <select id="dnA">${[1,2,3].map(v => op(v, c.rrA)).join('')}</select></label>
+      <label><i>RR DE LA ESTRUCTURA</i>
+        <select id="dnE">${[1,2,3].map(v => op(v, c.rrE)).join('')}</select></label>
+      <label><i>WIN RATE</i>
+        <input type="number" id="dnW" step="0.1" min="1" max="99" value="${c.wr}"><s>%</s></label>
+    </div>
+    <div class="pd-arbol"><canvas id="dnArbol"></canvas></div>
+    <div class="dn-res">
+      <div class="dn-esp ${D.esp >= 0 ? 'up' : 'dn'}">
+        <i>ESPERANZA POR DÍA</i><b>${f(D.esp)}</b>
+        <span>${f(D.esp * 5)} a la semana · ${f(D.esp * 21)} al mes</span>
+      </div>
+      <div class="dn-tabla">
+        ${D.cam.map(x => `<div class="dn-fila ${x.$ >= 0 ? 'ok' : 'mal'}">
+          <span>${esc(x.nom)}</span>
+          <em>${(x.pr*100).toFixed(1)}%</em>
+          <b>${f(x.$)}</b></div>`).join('')}
+      </div>
+    </div>
+    <div class="dn-comp">
+      <span class="dn-k">LAS NUEVE CONFIGURACIONES · ESPERANZA POR DÍA</span>
+      <div class="dn-rej">
+        ${combos.map(x => `<button type="button" class="dn-c ${x.a === +c.rrA && x.e === +c.rrE ? 'on' : ''} ${x === mejor ? 'top' : ''}"
+          data-a="${x.a}" data-e="${x.e}">
+          <i>A+ 1:${x.a} · EST 1:${x.e}</i><b class="${x.esp >= 0 ? 'up' : 'dn'}">${f(x.esp)}</b></button>`).join('')}
+      </div>
+    </div>
+    <p class="dn-nota">Todo es aritmética sobre lo que tú pongas: el win rate es un
+      dato de entrada, no una predicción. Arranca en 48.86%, que es el tuyo medido
+      sobre 745 fills (364W / 381L). La probabilidad de cada camino trata los tres
+      trades como independientes al mismo win rate — si tu segundo trade del día
+      suele ser peor que el primero, la realidad va a quedar por debajo de esto.</p>`;
+}
+function dineroVive(){
+  const host = $('#diaDinero'); if(!host) return;
+  host.innerHTML = dineroHTML();
+  planDiaVive('dnArbol', null, arbolDinero(dineroCfg()));
+  const c = dineroCfg();
+  const guarda = () => { save(); dineroVive(); };
+  const r = $('#dnR'), a2 = $('#dnA'), e = $('#dnE'), w = $('#dnW');
+  if(r) r.onchange = () => { c.riesgo = Math.max(1, +r.value || 1); guarda(); };
+  if(a2) a2.onchange = () => { c.rrA = +a2.value; guarda(); };
+  if(e) e.onchange = () => { c.rrE = +e.value; guarda(); };
+  if(w) w.onchange = () => { c.wr = Math.min(99, Math.max(1, +w.value || 1)); guarda(); };
+  host.querySelectorAll('[data-a]').forEach(b => b.onclick = () => {
+    c.rrA = +b.dataset.a; c.rrE = +b.dataset.e; guarda(); });
+}
+
 /* ══ LOS DIBUJITOS DE CADA PASO ══ (André, 3-sep-2026)
    Cada paso del protocolo trae su escena: qué se está mirando en el chart
    cuando toca ese paso. No son adornos — son el gráfico reducido a lo mínimo
