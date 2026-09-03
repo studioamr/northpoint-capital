@@ -27541,7 +27541,9 @@ function planDiaVive(id, estado, arbol){
     const w1 = c.measureText(n.t).width;
     c.font = '400 9.5px "IBM Plex Mono", monospace';
     const w2 = c.measureText(n.s).width;
-    const w = Math.max(150, Math.max(w1, w2) + 32);
+    /* +42 y no +32: ahora el texto arranca a 21 px del borde por la barra de
+       acento, así que la píldora necesita ese aire de los dos lados */
+    const w = Math.max(160, Math.max(w1, w2) + 42);
     const x = Math.min(W - w/2 - 6, Math.max(w/2 + 6, n.x*W));
     return { x, y:n.y*H, w, h:52, n };
   }
@@ -27592,31 +27594,65 @@ function planDiaVive(id, estado, arbol){
       hech.forEach(i => { if(R[i].a === k) on = true; });
       if(viva != null && R[viva] && R[viva].de === k) on = true;
       if(estado && estado.nodo === k) on = true;
-      const col = b.n.fin === 'ok' ? VERDE : b.n.fin === 'neutro' ? AZUL : AZUL;
+      /* ── LA FICHA, IGUAL QUE LA DE LOS PROTOCOLOS ── (André, 2-sep-2026)
+         Eran píldoras con el texto centrado; los protocolos de abajo son
+         tarjetas de vidrio con una barra de color a la izquierda y el texto
+         alineado. Dos lenguajes en la misma pantalla se notan. Ahora el árbol
+         habla el mismo: esquina de 14, degradado diagonal de vidrio, barra de
+         acento y texto pegado a ella. */
+      const col = b.n.fin === 'ok' ? VERDE : AZUL;
+      const tuyo = estado && estado.nodo === k;
       c.save();
       c.translate(b.x, b.y);
-      const w = b.w, h = b.h, r2 = 26;
-      c.beginPath();
-      c.moveTo(-w/2 + r2, -h/2);
-      c.lineTo(w/2 - r2, -h/2); c.arc(w/2 - r2, 0, r2, -Math.PI/2, Math.PI/2);
-      c.lineTo(-w/2 + r2, h/2);  c.arc(-w/2 + r2, 0, r2, Math.PI/2, -Math.PI/2);
-      c.closePath();
-      c.fillStyle = on ? (b.n.fin === 'ok' ? 'rgba(87,199,155,.14)' : 'rgba(56,97,246,.13)')
-                       : tinta('.035');
-      c.fill();
-      const tuyo = estado && estado.nodo === k;
+      const w = b.w, h = b.h, r2 = 14;
+      /* `trazo`, no `caja`: `caja(k,W,H)` ya existe afuera y se llama tres
+         líneas arriba — declararlo con el mismo nombre aquí lo sombreaba en
+         todo el bloque y el nodo tronaba en su propia medición (TDZ). */
+      const trazo = () => {
+        c.beginPath();
+        if(c.roundRect) c.roundRect(-w/2, -h/2, w, h, r2);
+        else {
+          c.moveTo(-w/2 + r2, -h/2);
+          c.lineTo(w/2 - r2, -h/2); c.quadraticCurveTo(w/2, -h/2, w/2, -h/2 + r2);
+          c.lineTo(w/2, h/2 - r2);  c.quadraticCurveTo(w/2, h/2, w/2 - r2, h/2);
+          c.lineTo(-w/2 + r2, h/2); c.quadraticCurveTo(-w/2, h/2, -w/2, h/2 - r2);
+          c.lineTo(-w/2, -h/2 + r2);c.quadraticCurveTo(-w/2, -h/2, -w/2 + r2, -h/2);
+          c.closePath();
+        }
+      };
+      const g = c.createLinearGradient(-w/2, -h/2, w/2, h/2);
+      if(on){
+        const rgb = col === VERDE ? '87,199,155' : '56,97,246';
+        g.addColorStop(0, 'rgba(' + rgb + ',.16)');
+        g.addColorStop(.62, 'rgba(' + rgb + ',.02)');
+        g.addColorStop(1, 'rgba(' + rgb + ',0)');
+      } else {
+        g.addColorStop(0, tinta('.055'));
+        g.addColorStop(.62, tinta('.012'));
+        g.addColorStop(1, tinta('0'));
+      }
+      trazo(); c.fillStyle = g; c.fill();
       if(tuyo){ c.save(); c.shadowColor = col; c.shadowBlur = 16; }
-      c.strokeStyle = on ? col : tinta('.14');
-      c.lineWidth = tuyo ? 2.6 : on ? 1.8 : 1;
+      trazo();
+      c.strokeStyle = on ? col : tinta('.13');
+      c.lineWidth = tuyo ? 2.4 : on ? 1.6 : 1;
       c.stroke();
       if(tuyo) c.restore();
-      c.textAlign = 'center';
+      /* la barra de acento, como la del protocolo */
+      c.beginPath();
+      if(c.roundRect) c.roundRect(-w/2 + 9, -h/2 + 13, 3, h - 26, 2);
+      else c.rect(-w/2 + 9, -h/2 + 13, 3, h - 26);
+      c.fillStyle = on ? col : tinta('.16');
+      c.fill();
+      /* el texto, pegado a la barra */
+      const tx = -w/2 + 21;
+      c.textAlign = 'left';
       c.font = '700 12px -apple-system, "Segoe UI", sans-serif';
       c.fillStyle = on ? (cl() ? '#101828' : '#FFFFFF') : tinta('.34');
-      c.fillText(b.n.t, 0, -2);
+      c.fillText(b.n.t, tx, -2);
       c.font = '400 9.5px "IBM Plex Mono", monospace';
-      c.fillStyle = on ? tinta('.58') : tinta('.22');
-      c.fillText(b.n.s, 0, 14);
+      c.fillStyle = on ? tinta('.56') : tinta('.22');
+      c.fillText(b.n.s, tx, 14);
       c.restore();
     });
   }
