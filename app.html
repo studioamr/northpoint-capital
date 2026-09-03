@@ -3658,6 +3658,11 @@ html[data-theme="light"] .pd-tit .pd-asia{color:#B5473A}
 .proto-lista ul{margin:0;padding:0;list-style:none}
 .proto-lista ul li{position:relative;padding:5px 0 5px 18px;font-size:13px;line-height:1.62;
   color:var(--dim);max-width:82ch}
+/* la escena de cada paso: qué se está mirando en el chart */
+.proto-viz{margin-top:14px;border:1px solid var(--line-soft);border-radius:10px;
+  overflow:hidden;background:rgba(255,255,255,.015)}
+html[data-theme="light"] .proto-viz{background:rgba(0,0,0,.015)}
+.proto-viz canvas{display:block;width:100%;height:104px}
 .proto-lista ul li::before{content:'';position:absolute;left:2px;top:12.5px;
   width:5px;height:5px;border-radius:50%;background:var(--pc,#3861F6);opacity:.55}
 @media(max-width:640px){
@@ -17366,6 +17371,7 @@ function renderDia(){
   if(pro && typeof algoProtoHTML === 'function') pro.innerHTML = algoProtoHTML();
   const est = $('#diaEstr');
   if(est && typeof estrProtoHTML === 'function') est.innerHTML = estrProtoHTML();
+  if(typeof vizVive === 'function') vizVive();
 }
 
 /* ── el árbol de Log trade, marcado con tus trades de hoy ── */
@@ -27496,22 +27502,22 @@ if barstate.islast
    $500 y de 1:1 a 1:2 sobre UNA cuenta. No se tocó ninguno de los dos: son
    marcos distintos y quien manda es el que estés operando ese día. */
 const PROTOCOLO = [
-  { r:'I', t:['Estructura de riesgo','Risk structure'], li:[
+  { r:'I', viz:'riesgo', t:['Estructura de riesgo','Risk structure'], li:[
     ['Nodos activos: las cuentas que tengas sincronizadas por copytrading. Una decisión, varias cuentas.',
      'Active nodes: whatever accounts you have synced by copytrading. One decision, several accounts.'],
     ['Riesgo por trade: 0.5% de la cuenta, con 4 minis.',
      'Risk per trade: 0.5% of the account, with 4 minis.'],
     ['Stop máximo: 20 puntos. En cuanto corre a favor, se mueve a la entrada.',
      'Max stop: 20 points. As soon as it runs your way, it moves to breakeven.'] ] },
-  { r:'II', t:['Mapeo de liquidez · premercado','Liquidity map · premarket'], li:[
+  { r:'II', viz:'liquidez', t:['Mapeo de liquidez · premercado','Liquidity map · premarket'], li:[
     ['Identificar y trazar los niveles de atracción institucional: los highs y lows de las sesiones de Asia y Londres.',
      'Identify and draw the institutional magnets: the highs and lows of the Asia and London sessions.'] ] },
-  { r:'III', t:['Formación del rango · NY open','Range formation · NY open'], li:[
+  { r:'III', viz:'rango', t:['Formación del rango · NY open','Range formation · NY open'], li:[
     ['Apertura de Nueva York, 9:30 EST: cero exposición. Observación pasiva.',
      'New York open, 9:30 EST: zero exposure. Passive observation.'],
     ['Incubación, 9:30 a 9:45 EST: dejar que la volatilidad inicial establezca los límites de la subasta. Queda definido en gráfica el Opening Range High (ORH) y el Opening Range Low (ORL).',
      'Incubation, 9:30 to 9:45 EST: let the opening volatility set the limits of the auction. The Opening Range High (ORH) and Low (ORL) get defined on the chart.'] ] },
-  { r:'IV', t:['Gatillo de entrada · confluencia en M5 desde las 9:45','Entry trigger · M5 confluence from 9:45'], li:[
+  { r:'IV', viz:'gatillo', t:['Gatillo de entrada · confluencia en M5 desde las 9:45','Entry trigger · M5 confluence from 9:45'], li:[
     ['Zona de acción: el precio se aproxima o interactúa con el ORH o el ORL.',
      'Action zone: price approaches or interacts with the ORH or the ORL.'],
     ['Momentum dinámico: rebotes direccionales sobre la EMA 14 y/o la EMA 50.',
@@ -27526,19 +27532,277 @@ const PROTOCOLO = [
      'Vector 2 · CONFIRMATION: entry after the ORH/ORL break, riding the momentum once the level is gone, on a fresh FVG or a test of the EMAs.'],
     ['EL A+ SON DOS, MÁXIMO. Si el primero gana, el día se acabó ahí. Si falla, se rema UNA vez. Si falla la segunda, ya no se busca A+: se pasa a la estructura.',
      'THE A+ IS TWO, MAX. If the first one wins, the day ended there. If it misses, you row ONCE more. If the second misses, you stop hunting the A+: you move to the structure.'] ] },
-  { r:'V', t:['Protocolo de extracción · la regla de oro','Extraction protocol · the golden rule'], li:[
+  { r:'V', viz:'extraccion', t:['Protocolo de extracción · la regla de oro','Extraction protocol · the golden rule'], li:[
     ['Target de extracción: 1:1 en el A+, 1:2 en la estructura.',
      'Extraction target: 1:1 on the A+, 1:2 on the structure.'],
     ['Liquidación inmediata: tomar ganancias de forma agresiva en cuanto el momentum expanda a tu favor y el PnL esté en verde. Cero vacilación, técnica o emocional.',
      'Immediate liquidation: take profit aggressively the moment momentum expands your way and PnL is green. Zero hesitation, technical or emotional.'],
     ['Axioma: jamás te vas a arrepentir de tomar ganancias constantes. Retener el profit es el pilar matemático del sistema.',
      'Axiom: you will never regret taking consistent profit. Keeping the profit is the mathematical pillar of the system.'] ] },
-  { r:'VI', t:['Cierre técnico','Technical close'], li:[
+  { r:'VI', viz:'cierre', t:['Cierre técnico','Technical close'], li:[
     ['Posición liquidada en verde = pantallas apagadas. No hay «una más»: ésa es toda la regla del día.',
      'Position closed green = screens off. There is no "one more": that is the whole rule of the day.'],
     ['Deja que la simetría del multiplicador de cuentas consolide el volumen en dólares. Desconecta y retírate de la sesión.',
      'Let the symmetry of the account multiplier consolidate the dollar volume. Disconnect and step away from the session.'] ] }
 ];
+/* ══ LOS DIBUJITOS DE CADA PASO ══ (André, 3-sep-2026)
+   Cada paso del protocolo trae su escena: qué se está mirando en el chart
+   cuando toca ese paso. No son adornos — son el gráfico reducido a lo mínimo
+   que hay que reconocer: dónde está el rango, qué línea es la liquidez, en qué
+   vela entra la orden y dónde queda el stop.
+   Son LIENZOS, no GIFs: pesan cero, se ven nítidos en cualquier pantalla, se
+   apagan solos con prefers-reduced-motion y no hay que exportar nada cuando
+   cambie una regla. Un GIF de esto serían once archivos que envejecen. */
+const VIZ_PAL = { up:'#57C79B', dn:'#D9736A', azul:'#3861F6', asia:'#D9736A', lon:'#5E8BD6' };
+function vizVela(c, x, w, o, h, l, cl2, esc){
+  const col = cl2 >= o ? VIZ_PAL.up : VIZ_PAL.dn;
+  c.strokeStyle = col; c.fillStyle = col; c.lineWidth = 1;
+  c.beginPath(); c.moveTo(x + w/2, esc(h)); c.lineTo(x + w/2, esc(l)); c.stroke();
+  const y1 = esc(Math.max(o, cl2)), y2 = esc(Math.min(o, cl2));
+  c.fillRect(x, y1, w, Math.max(1.5, y2 - y1));
+}
+/* una serie determinista: siempre la misma, para que la escena se reconozca */
+function vizSerie(sem, n, base, amp){
+  const r = i => ((Math.sin((i + sem) * 91.7) * 4371.3) % 1 + 1) % 1;
+  const out = []; let p = base;
+  for(let i = 0; i < n; i++){
+    const d = (r(i) - .45) * amp;
+    const o = p, cl2 = p + d, h = Math.max(o, cl2) + r(i + 40) * amp * .5,
+          l = Math.min(o, cl2) - r(i + 80) * amp * .5;
+    out.push({ o, h, l, c: cl2 }); p = cl2;
+  }
+  return out;
+}
+function vizLinea(c, W, y, col, txt, guion){
+  c.save(); c.strokeStyle = col; c.lineWidth = 1.2;
+  if(guion) c.setLineDash([4,4]);
+  c.beginPath(); c.moveTo(0, y); c.lineTo(W, y); c.stroke(); c.restore();
+  if(txt){
+    c.font = '700 7.5px "IBM Plex Mono", monospace'; c.textAlign = 'left';
+    c.fillStyle = col; c.fillText(txt, 4, y - 4);
+  }
+}
+/* ── las once escenas ── */
+function vizEscena(c, W, H, tipo, t){
+  const cl = () => document.documentElement.getAttribute('data-theme') === 'light';
+  const tinta = a2 => cl() ? 'rgba(16,20,28,' + a2 + ')' : 'rgba(237,239,242,' + a2 + ')';
+  const pulso = (Math.sin(t / 600) + 1) / 2;
+  const ciclo = (t % 4200) / 4200;
+  c.clearRect(0, 0, W, H);
+  const P = 8, ancho = W - P * 2;
+
+  const dibujaSerie = (sem, n, amp, hasta) => {
+    const d = vizSerie(sem, n, 50, amp);
+    const vs = d.map(v => [v.o, v.h, v.l, v.c]).flat();
+    const hi = Math.max(...vs), lo = Math.min(...vs);
+    const esc = v => P + (H - P*2) * (1 - (v - lo) / ((hi - lo) || 1));
+    const w = ancho / n * .62, paso = ancho / n;
+    const tope = hasta == null ? n : Math.min(n, Math.floor(hasta));
+    for(let i = 0; i < tope; i++) vizVela(c, P + i*paso + (paso-w)/2, w, d[i].o, d[i].h, d[i].l, d[i].c, esc);
+    return { d, esc, paso, w, hi, lo };
+  };
+
+  if(tipo === 'riesgo'){
+    /* una decisión, varias cuentas: tres barras que se llenan a la vez */
+    c.font = '700 8px "IBM Plex Mono", monospace'; c.textAlign = 'left';
+    for(let i = 0; i < 3; i++){
+      const y = P + 10 + i * ((H - P*2 - 14) / 3);
+      c.fillStyle = tinta('.35'); c.fillText('CUENTA ' + (i+1), P, y - 4);
+      c.fillStyle = tinta('.10'); c.fillRect(P + 60, y - 8, ancho - 60, 7);
+      c.fillStyle = VIZ_PAL.azul;
+      c.fillRect(P + 60, y - 8, (ancho - 60) * Math.min(1, ciclo * 1.6), 7);
+    }
+    c.fillStyle = tinta('.42'); c.textAlign = 'right';
+    c.fillText('0.5% · STOP 20 PTS', W - P, H - P + 2);
+    return;
+  }
+  if(tipo === 'liquidez'){
+    const S2 = dibujaSerie(3, 16, 5);
+    const yA = S2.esc(S2.hi - (S2.hi - S2.lo) * .12);
+    const yL = S2.esc(S2.lo + (S2.hi - S2.lo) * .10);
+    c.globalAlpha = .55 + pulso * .45;
+    vizLinea(c, W, yA, VIZ_PAL.asia, 'ASIA HIGH');
+    vizLinea(c, W, yL, VIZ_PAL.lon, 'LNDN LOW');
+    c.globalAlpha = 1;
+    return;
+  }
+  if(tipo === 'rango'){
+    /* el ORB: la caja se forma y al cerrar salen ORH y ORL */
+    const S2 = dibujaSerie(7, 16, 5);
+    const nOrb = 5, x0 = P, x1 = P + nOrb * S2.paso;
+    const vs = S2.d.slice(0, nOrb);
+    const hi = Math.max(...vs.map(v => v.h)), lo = Math.min(...vs.map(v => v.l));
+    const abierto = ciclo < .45;
+    c.fillStyle = 'rgba(56,97,246,.10)';
+    c.fillRect(x0, S2.esc(hi), (abierto ? (x1-x0) * (ciclo/.45) : x1-x0), S2.esc(lo) - S2.esc(hi));
+    c.strokeStyle = VIZ_PAL.azul; c.lineWidth = 1;
+    c.strokeRect(x0, S2.esc(hi), (abierto ? (x1-x0) * (ciclo/.45) : x1-x0), S2.esc(lo) - S2.esc(hi));
+    if(!abierto){
+      vizLinea(c, W, S2.esc(hi), VIZ_PAL.azul, 'ORH', true);
+      vizLinea(c, W, S2.esc(lo), VIZ_PAL.azul, 'ORL', true);
+    }
+    c.font = '700 7.5px "IBM Plex Mono", monospace'; c.textAlign='right';
+    c.fillStyle = tinta('.42'); c.fillText(abierto ? '09:30 → 09:45' : 'RANGO CERRADO', W - P, H - 3);
+    return;
+  }
+  if(tipo === 'gatillo'){
+    const S2 = dibujaSerie(11, 18, 5);
+    const hi = Math.max(...S2.d.slice(0,6).map(v=>v.h));
+    vizLinea(c, W, S2.esc(hi), VIZ_PAL.azul, 'ORH', true);
+    /* el hueco: tres velas con FVG marcado */
+    const i = 10, y1 = S2.esc(S2.d[i-1].h), y2 = S2.esc(S2.d[i+1].l);
+    c.fillStyle = 'rgba(87,199,155,.16)';
+    c.fillRect(P + (i-1)*S2.paso, Math.min(y1,y2), S2.paso*3, Math.abs(y2-y1) || 4);
+    c.font = '700 7px "IBM Plex Mono", monospace'; c.textAlign='left';
+    c.fillStyle = VIZ_PAL.up; c.fillText('FVG', P + (i-1)*S2.paso + 2, Math.min(y1,y2) - 3);
+    /* la flecha de entrada, latiendo */
+    const xf = P + 15*S2.paso, yf = S2.esc(hi);
+    c.save(); c.globalAlpha = .5 + pulso*.5; c.strokeStyle = VIZ_PAL.up; c.lineWidth = 1.6;
+    c.beginPath(); c.moveTo(xf, yf + 16); c.lineTo(xf, yf + 3);
+    c.moveTo(xf - 4, yf + 8); c.lineTo(xf, yf + 3); c.lineTo(xf + 4, yf + 8); c.stroke(); c.restore();
+    return;
+  }
+  if(tipo === 'extraccion'){
+    const S2 = dibujaSerie(5, 16, 5);
+    const yE = S2.esc(S2.lo + (S2.hi - S2.lo) * .35);
+    const yS = yE + 16, yT = yE - 32;
+    vizLinea(c, W, yE, tinta('.45'), 'ENTRADA', true);
+    vizLinea(c, W, yS, VIZ_PAL.dn, 'STOP', true);
+    vizLinea(c, W, yT, VIZ_PAL.up, '1:2', true);
+    c.fillStyle = 'rgba(87,199,155,.10)'; c.fillRect(0, yT, W, yE - yT);
+    c.fillStyle = 'rgba(217,115,106,.10)'; c.fillRect(0, yE, W, yS - yE);
+    const prog = Math.min(1, ciclo * 1.4);
+    c.strokeStyle = VIZ_PAL.up; c.lineWidth = 1.8;
+    c.beginPath(); c.moveTo(P, yE); c.lineTo(P + ancho * prog, yE + (yT - yE) * prog); c.stroke();
+    return;
+  }
+  if(tipo === 'cierre'){
+    const S2 = dibujaSerie(9, 12, 5, ciclo < .5 ? 12 : 12);
+    c.fillStyle = cl() ? 'rgba(248,249,251,' + (ciclo < .5 ? 0 : (ciclo-.5)*1.6) + ')'
+                       : 'rgba(6,8,14,' + (ciclo < .5 ? 0 : (ciclo-.5)*1.6) + ')';
+    c.fillRect(0,0,W,H);
+    if(ciclo >= .72){
+      c.font = '700 9px "IBM Plex Mono", monospace'; c.textAlign='center';
+      c.fillStyle = VIZ_PAL.up; c.fillText('EN VERDE · PANTALLAS APAGADAS', W/2, H/2 + 3);
+    }
+    return;
+  }
+  if(tipo === 'fallaron'){
+    c.font = '700 9px "IBM Plex Mono", monospace'; c.textAlign = 'center';
+    for(let i = 0; i < 2; i++){
+      const x = W * (.24 + i * .22), y = H * .38;
+      c.strokeStyle = VIZ_PAL.dn; c.lineWidth = 1.8;
+      c.beginPath(); c.moveTo(x-7,y-7); c.lineTo(x+7,y+7); c.moveTo(x+7,y-7); c.lineTo(x-7,y+7); c.stroke();
+      c.fillStyle = tinta('.38'); c.fillText('A+ ' + (i+1), x, y + 22);
+    }
+    const x2 = W * .74;
+    c.save(); c.globalAlpha = .55 + pulso * .45;
+    c.fillStyle = VIZ_PAL.azul; c.beginPath(); c.arc(x2, H*.38, 7, 0, 7); c.fill();
+    c.restore();
+    c.fillStyle = tinta('.55'); c.fillText('0.79', x2, H*.38 + 22);
+    c.strokeStyle = tinta('.20'); c.lineWidth = 1; c.setLineDash([3,3]);
+    c.beginPath(); c.moveTo(W*.56, H*.38); c.lineTo(x2 - 12, H*.38); c.stroke(); c.setLineDash([]);
+    return;
+  }
+  if(tipo === 'tramo'){
+    const S2 = dibujaSerie(13, 16, 5);
+    const iA = 3, iB = 11;
+    const yA = S2.esc(S2.d[iA].l), yB = S2.esc(S2.d[iB].h);
+    c.strokeStyle = VIZ_PAL.azul; c.lineWidth = 1.4; c.setLineDash([4,3]);
+    c.beginPath(); c.moveTo(P + iA*S2.paso, yA); c.lineTo(P + iB*S2.paso, yB); c.stroke(); c.setLineDash([]);
+    c.font = '700 7.5px "IBM Plex Mono", monospace'; c.textAlign='left';
+    c.fillStyle = VIZ_PAL.azul; c.fillText('BOS', P + iB*S2.paso - 18, yB - 5);
+    /* el corchete del tramo */
+    const xk = W - P - 6;
+    c.strokeStyle = tinta('.35'); c.lineWidth = 1;
+    c.beginPath(); c.moveTo(xk-4, yA); c.lineTo(xk, yA); c.lineTo(xk, yB); c.lineTo(xk-4, yB); c.stroke();
+    c.save(); c.translate(xk + 8, (yA+yB)/2); c.rotate(Math.PI/2);
+    c.textAlign='center'; c.fillStyle = tinta('.42'); c.fillText('TRAMO', 0, 0); c.restore();
+    return;
+  }
+  if(tipo === 'fib'){
+    /* ESQUEMÁTICO, NO A ESCALA: a escala real el 0.5 y el 0.79 caen dentro del
+       29% del tramo y en 104 px de alto los cuatro niveles se encimaban hasta
+       ser ilegibles. Aquí lo que hay que reconocer es el ORDEN y cuál es el
+       que manda, así que van a distancias iguales. */
+    const filas = [['0.5',0],['0.62',1],['0.705',2],['0.79',3]];
+    /* los cuatro niveles caben en el 70% de arriba: el stop necesita su
+       propio aire abajo o se encima con la banda del 0.79 */
+    const y0 = P + 10, paso = (H - P*2 - 42) / 3;
+    filas.forEach(([et, i]) => {
+      const y = y0 + paso * i, on = et === '0.79';
+      c.strokeStyle = on ? VIZ_PAL.azul : tinta('.15'); c.lineWidth = on ? 1.6 : 1;
+      c.beginPath(); c.moveTo(P + 40, y); c.lineTo(W - P, y); c.stroke();
+      c.font = (on ? '700 ' : '400 ') + '8px "IBM Plex Mono", monospace';
+      c.textAlign = 'left'; c.fillStyle = on ? VIZ_PAL.azul : tinta('.32');
+      c.fillText(et, P, y + 3);
+    });
+    const y79 = y0 + paso * 3;
+    c.save(); c.globalAlpha = .30 + pulso * .35;
+    c.fillStyle = VIZ_PAL.azul; c.fillRect(P + 40, y79 - 6, W - P*2 - 40, 12); c.restore();
+    c.font = '700 7.5px "IBM Plex Mono", monospace'; c.textAlign = 'right';
+    c.fillStyle = VIZ_PAL.azul; c.fillText('AQUÍ VA LA ORDEN', W - P - 4, y79 + 3);
+    const yS = H - P - 4;
+    c.strokeStyle = VIZ_PAL.dn; c.lineWidth = 1.4; c.setLineDash([4,3]);
+    c.beginPath(); c.moveTo(P + 40, yS); c.lineTo(W - P, yS); c.stroke(); c.setLineDash([]);
+    c.textAlign = 'left'; c.fillStyle = VIZ_PAL.dn;
+    c.fillText('STOP · EL EXTREMO DEL TRAMO', P + 44, yS - 4);
+    return;
+  }
+  if(tipo === 'objetivo'){
+    const S2 = dibujaSerie(17, 16, 5);
+    const yE = S2.esc(S2.lo + (S2.hi - S2.lo) * .30);
+    const yT = S2.esc(S2.hi - (S2.hi - S2.lo) * .08);
+    vizLinea(c, W, yE, tinta('.42'), 'ENTRADA', true);
+    c.save(); c.globalAlpha = .55 + pulso * .45;
+    vizLinea(c, W, yT, VIZ_PAL.up, 'LIQUIDEZ SIN TOCAR'); c.restore();
+    c.fillStyle = 'rgba(87,199,155,.10)'; c.fillRect(0, yT, W, yE - yT);
+    c.font='700 8px "IBM Plex Mono", monospace'; c.textAlign='right';
+    c.fillStyle = VIZ_PAL.up; c.fillText('1:2', W - P, (yE + yT)/2 + 3);
+    return;
+  }
+  if(tipo === 'regla'){
+    const S2 = dibujaSerie(19, 14, 5);
+    const x = W * .62, y = H * .5;
+    c.strokeStyle = VIZ_PAL.dn; c.lineWidth = 1.8;
+    c.beginPath(); c.moveTo(x, y - 16); c.lineTo(x, y + 12);
+    c.moveTo(x - 5, y + 6); c.lineTo(x, y + 12); c.lineTo(x + 5, y + 6); c.stroke();
+    c.save(); c.globalAlpha = .6 + pulso * .4; c.lineWidth = 2.2;
+    c.beginPath(); c.arc(x, y - 2, 15, 0, 7); c.moveTo(x - 11, y - 13); c.lineTo(x + 11, y + 9);
+    c.stroke(); c.restore();
+    c.font='700 7.5px "IBM Plex Mono", monospace'; c.textAlign='left';
+    c.fillStyle = tinta('.42'); c.fillText('NUNCA CONTRA LA ESTRUCTURA', P, H - 4);
+    return;
+  }
+}
+/* un solo temporizador para TODOS los dibujitos que estén a la vista */
+let vizInt = null;
+function vizVive(){
+  if(vizInt){ clearInterval(vizInt); vizInt = null; }
+  let quieto = false;
+  try{ quieto = matchMedia('(prefers-reduced-motion: reduce)').matches; }catch(e){}
+  const pinta = t => {
+    const cvs = document.querySelectorAll('canvas[data-viz]');
+    if(!cvs.length){ if(vizInt){ clearInterval(vizInt); vizInt = null; } return; }
+    cvs.forEach(cv => {
+      if(cv.offsetParent === null) return;
+      const r = cv.getBoundingClientRect(), h = window.innerHeight || 800;
+      if(r.bottom < 0 || r.top > h) return;
+      const D = Math.min(2, devicePixelRatio || 1);
+      const W = cv.offsetWidth, H = cv.offsetHeight;
+      if(!W || !H) return;
+      if(cv.width !== Math.round(W*D)){ cv.width = Math.round(W*D); cv.height = Math.round(H*D); }
+      const c = cv.getContext('2d');
+      c.setTransform(D,0,0,D,0,0);
+      try{ vizEscena(c, W, H, cv.dataset.viz, t); }catch(e){}
+    });
+  };
+  pinta(quieto ? 2000 : 0);
+  if(quieto) return;
+  let t = 0;
+  vizInt = setInterval(() => { t += 60; pinta(t); }, 60);
+}
+
 /* ══ PROTOCOLO · LA ESTRUCTURA ══ (André, 2-sep-2026)
    El A+ Setup dice cómo se entra AL RANGO. Esto dice cómo se entra cuando el
    rango ya no sirve: los dos A+ fallaron y lo único que queda es el
@@ -27546,29 +27810,29 @@ const PROTOCOLO = [
    0.79, el stop en el extremo, el hueco del rango— tal como están escritos en
    el grupo 10 del indicador. */
 const PROTO_ESTR = [
-  { r:'I', t:['Cuándo entra en juego','When it comes into play'], li:[
+  { r:'I', viz:'fallaron', t:['Cuándo entra en juego','When it comes into play'], li:[
     ['Cuando los dos A+ ya fallaron. No es una alternativa al ORB: es lo que queda cuando el ORB no dio.',
      'When both A+ have already missed. It is not an alternative to the ORB: it is what is left when the ORB gave nothing.'],
     ['Se lee en 5 minutos, no en 1. En 1 minuto la estructura estorba y hace dudar.',
      'Read on the 5-minute, not the 1. On the 1-minute the structure gets in the way and makes you second-guess.'] ] },
-  { r:'II', t:['El tramo','The leg'], li:[
+  { r:'II', viz:'tramo', t:['El tramo','The leg'], li:[
     ['Un rompimiento de estructura —BOS o ChoCH— deja un tramo: del extremo que rompió al extremo del que salió.',
      'A break of structure — BOS or ChoCH — leaves a leg: from the extreme that broke to the extreme it came from.'],
     ['Ese tramo, y no otro, es el que lleva el Fibonacci. Si no hay rompimiento, no hay tramo y no hay trade.',
      'That leg, and no other, carries the Fibonacci. No break, no leg, no trade.'] ] },
-  { r:'III', t:['La entrada · el 0.79','The entry · the 0.79'], li:[
+  { r:'III', viz:'fib', t:['La entrada · el 0.79','The entry · the 0.79'], li:[
     ['La orden va en el 0.79 del tramo: el retroceso profundo.',
      'The order goes at the 0.79 of the leg: the deep retracement.'],
     ['El stop NO se mueve con el nivel: se queda en el extremo del tramo. Por eso, mientras más profundo entras, más corto es el riesgo y más grande el beneficio.',
      'The stop does NOT move with the level: it stays at the extreme of the leg. That is why the deeper you enter, the shorter the risk and the bigger the reward.'],
     ['Si el hueco del rango —el FVG— cae dentro del área buena (0.705 a 0.79), la orden va en el 50% de ese hueco: donde está el hueco es donde está el negocio.',
      'If the range gap — the FVG — falls inside the good area (0.705 to 0.79), the order goes at 50% of that gap: where the gap is, is where the business is.'] ] },
-  { r:'IV', t:['El objetivo','The target'], li:[
+  { r:'IV', viz:'objetivo', t:['El objetivo','The target'], li:[
     ['1:2. El objetivo no es una R inventada: es el siguiente nivel de liquidez de sesión que siga sin tocarse.',
      '1:2. The target is not a made-up R: it is the next untouched session liquidity level.'],
     ['En cuanto corre a favor, el stop se va a la entrada. De ahí en adelante el trade ya no puede costarte.',
      'As soon as it runs your way, the stop goes to breakeven. From there on the trade can no longer cost you.'] ] },
-  { r:'V', t:['Lo que no se negocia','What is not up for debate'], li:[
+  { r:'V', viz:'regla', t:['Lo que no se negocia','What is not up for debate'], li:[
     ['Nunca una orden en contra de la estructura. Si la estructura dice arriba, no se venden retrocesos.',
      'Never an order against the structure. If the structure says up, you do not sell pullbacks.'],
     ['UNO. Pase lo que pase con él, Nueva York se acabó — y en la madrugada, igual: un intento y a dormir.',
@@ -27592,6 +27856,8 @@ function estrProtoHTML(){
           <div>
             <b>${esc(loc(p.t))}</b>
             <ul>${p.li.map(x => `<li>${esc(loc(x))}</li>`).join('')}</ul>
+            ${p.viz ? `<div class="proto-viz"><canvas data-viz="${esc(p.viz)}"
+              aria-label="Qué ver en el chart en este paso"></canvas></div>` : ''}
           </div>
         </li>`).join('')}
     </ol>`;
@@ -27619,6 +27885,8 @@ function algoProtoHTML(){
           <div>
             <b>${esc(loc(b.t))}</b>
             <ul>${b.li.map(x => `<li>${esc(loc(x))}</li>`).join('')}</ul>
+            ${b.viz ? `<div class="proto-viz"><canvas data-viz="${esc(b.viz)}"
+              aria-label="Qué ver en el chart en este paso"></canvas></div>` : ''}
           </div>
         </li>`).join('')}
     </ol>`;
