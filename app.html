@@ -3467,6 +3467,9 @@ button.tag.quemada{text-decoration:line-through;text-decoration-color:var(--down
 .pd-tot b{font-family:var(--mono);font-size:10px;font-weight:400;letter-spacing:.2em;
   color:var(--faint)}
 .pd-arbol{margin-top:10px;height:clamp(360px,52vh,520px)}
+/* el arbolito de la madrugada tiene DOS niveles, no cuatro: con el alto del
+   grande quedaba medio lienzo vacío */
+.pd-arbol.corto{height:clamp(230px,30vh,300px)}
 .pd-arbol canvas{display:block;width:100%;height:100%}
 @media(max-width:720px){.pd-arbol{height:clamp(420px,66vh,560px)}}
 .pd-noche{margin:14px 0 0;padding:14px 16px;border-left:2px solid #3861F6;
@@ -5175,8 +5178,10 @@ stop[stop-color="#9BC0DC"]{stop-color:var(--txt)}
            los colores del chart y el código. No es donde se mira a las 9:40. -->
       <section class="view" id="v-dia">
         <div class="panel pdia" id="diaArbol"></div>
+        <div class="panel mt2 pdia" id="diaNoche"></div>
         <div class="panel mt2 algo-como" id="diaLinea"></div>
         <div class="panel mt2 proto" id="diaProto"></div>
+        <div class="panel mt2 proto" id="diaEstr"></div>
       </section>
 
       <section class="view" id="v-log">
@@ -16887,10 +16892,15 @@ function renderDia(){
   const host = $('#diaArbol'); if(!host) return;
   host.innerHTML = planDiaHTML('pdArbol');
   planDiaVive('pdArbol');
+  const noc = $('#diaNoche');
+  if(noc){ noc.innerHTML = planDiaHTML('pdNoche', ARBOL_NOCHE);
+           planDiaVive('pdNoche', null, ARBOL_NOCHE); }
   const lin = $('#diaLinea');
   if(lin && typeof lineaDiaHTML === 'function') lin.innerHTML = lineaDiaHTML();
   const pro = $('#diaProto');
   if(pro && typeof algoProtoHTML === 'function') pro.innerHTML = algoProtoHTML();
+  const est = $('#diaEstr');
+  if(est && typeof estrProtoHTML === 'function') est.innerHTML = estrProtoHTML();
 }
 
 /* ── el árbol de Log trade, marcado con tus trades de hoy ── */
@@ -16907,7 +16917,7 @@ function lgArbolPinta(){
     host.dataset.pintado = '1';
   }
   const rot = $('#lgArbCvRot'); if(rot) rot.textContent = E.txt;
-  planDiaVive('lgArbCv', E);
+  planDiaVive('lgArbCv', E, E.noche ? ARBOL_NOCHE : ARBOL_DIA);
 }
 
 function renderLog(){
@@ -26980,10 +26990,12 @@ if barstate.islast
    marcos distintos y quien manda es el que estés operando ese día. */
 const PROTOCOLO = [
   { r:'I', t:['Estructura de riesgo','Risk structure'], li:[
-    ['Nodos activos: 3 a 5 cuentas sincronizadas por copytrading.',
-     'Active nodes: 3 to 5 accounts synced by copytrading.'],
-    ['Exposición máxima: $100 – $200 USD de riesgo por cuenta, por trade.',
-     'Maximum exposure: $100 – $200 USD of risk per account, per trade.'] ] },
+    ['Nodos activos: las cuentas que tengas sincronizadas por copytrading. Una decisión, varias cuentas.',
+     'Active nodes: whatever accounts you have synced by copytrading. One decision, several accounts.'],
+    ['Riesgo por trade: 0.5% de la cuenta, con 4 minis.',
+     'Risk per trade: 0.5% of the account, with 4 minis.'],
+    ['Stop máximo: 20 puntos. En cuanto corre a favor, se mueve a la entrada.',
+     'Max stop: 20 points. As soon as it runs your way, it moves to breakeven.'] ] },
   { r:'II', t:['Mapeo de liquidez · premercado','Liquidity map · premarket'], li:[
     ['Identificar y trazar los niveles de atracción institucional: los highs y lows de las sesiones de Asia y Londres.',
      'Identify and draw the institutional magnets: the highs and lows of the Asia and London sessions.'] ] },
@@ -27004,20 +27016,79 @@ const PROTOCOLO = [
     ['Vector 1 · ANTICIPACIÓN: entrada previa a la ruptura del ORH/ORL, activada por un rebote en las EMAs con un rompimiento de estructura interna que deja un FVG/IFVG proyectando el precio hacia la ruptura.',
      'Vector 1 · ANTICIPATION: entry before the ORH/ORL break, triggered by a bounce off the EMAs with an internal break of structure leaving an FVG/IFVG that projects price into the break.'],
     ['Vector 2 · CONFIRMACIÓN: entrada tras la ruptura del ORH/ORL, sobre el momentum ya roto el nivel, apoyada en un FVG nuevo o en el testeo a las EMAs.',
-     'Vector 2 · CONFIRMATION: entry after the ORH/ORL break, riding the momentum once the level is gone, on a fresh FVG or a test of the EMAs.'] ] },
+     'Vector 2 · CONFIRMATION: entry after the ORH/ORL break, riding the momentum once the level is gone, on a fresh FVG or a test of the EMAs.'],
+    ['EL A+ SON DOS, MÁXIMO. Si el primero gana, el día se acabó ahí. Si falla, se rema UNA vez. Si falla la segunda, ya no se busca A+: se pasa a la estructura.',
+     'THE A+ IS TWO, MAX. If the first one wins, the day ended there. If it misses, you row ONCE more. If the second misses, you stop hunting the A+: you move to the structure.'] ] },
   { r:'V', t:['Protocolo de extracción · la regla de oro','Extraction protocol · the golden rule'], li:[
-    ['Target de extracción: 1:1 a 1:3.',
-     'Extraction target: 1:1 to 1:3.'],
+    ['Target de extracción: 1:1 en el A+, 1:2 en la estructura.',
+     'Extraction target: 1:1 on the A+, 1:2 on the structure.'],
     ['Liquidación inmediata: tomar ganancias de forma agresiva en cuanto el momentum expanda a tu favor y el PnL esté en verde. Cero vacilación, técnica o emocional.',
      'Immediate liquidation: take profit aggressively the moment momentum expands your way and PnL is green. Zero hesitation, technical or emotional.'],
     ['Axioma: jamás te vas a arrepentir de tomar ganancias constantes. Retener el profit es el pilar matemático del sistema.',
      'Axiom: you will never regret taking consistent profit. Keeping the profit is the mathematical pillar of the system.'] ] },
   { r:'VI', t:['Cierre técnico','Technical close'], li:[
-    ['Posición liquidada en verde = pantallas apagadas.',
-     'Position closed green = screens off.'],
+    ['Posición liquidada en verde = pantallas apagadas. No hay «una más»: ésa es toda la regla del día.',
+     'Position closed green = screens off. There is no "one more": that is the whole rule of the day.'],
     ['Deja que la simetría del multiplicador de cuentas consolide el volumen en dólares. Desconecta y retírate de la sesión.',
      'Let the symmetry of the account multiplier consolidate the dollar volume. Disconnect and step away from the session.'] ] }
 ];
+/* ══ PROTOCOLO · LA ESTRUCTURA ══ (André, 2-sep-2026)
+   El Sweep & ORB dice cómo se entra AL RANGO. Esto dice cómo se entra cuando
+   el rango ya no sirve: los dos A+ fallaron y lo único que queda es el
+   retroceso. Todo sale de tus propios parámetros —el tramo, el Fibonacci, el
+   0.79, el stop en el extremo, el hueco del rango— tal como están escritos en
+   el grupo 10 del indicador. */
+const PROTO_ESTR = [
+  { r:'I', t:['Cuándo entra en juego','When it comes into play'], li:[
+    ['Cuando los dos A+ ya fallaron. No es una alternativa al ORB: es lo que queda cuando el ORB no dio.',
+     'When both A+ have already missed. It is not an alternative to the ORB: it is what is left when the ORB gave nothing.'],
+    ['Se lee en 5 minutos, no en 1. En 1 minuto la estructura estorba y hace dudar.',
+     'Read on the 5-minute, not the 1. On the 1-minute the structure gets in the way and makes you second-guess.'] ] },
+  { r:'II', t:['El tramo','The leg'], li:[
+    ['Un rompimiento de estructura —BOS o ChoCH— deja un tramo: del extremo que rompió al extremo del que salió.',
+     'A break of structure — BOS or ChoCH — leaves a leg: from the extreme that broke to the extreme it came from.'],
+    ['Ese tramo, y no otro, es el que lleva el Fibonacci. Si no hay rompimiento, no hay tramo y no hay trade.',
+     'That leg, and no other, carries the Fibonacci. No break, no leg, no trade.'] ] },
+  { r:'III', t:['La entrada · el 0.79','The entry · the 0.79'], li:[
+    ['La orden va en el 0.79 del tramo: el retroceso profundo.',
+     'The order goes at the 0.79 of the leg: the deep retracement.'],
+    ['El stop NO se mueve con el nivel: se queda en el extremo del tramo. Por eso, mientras más profundo entras, más corto es el riesgo y más grande el beneficio.',
+     'The stop does NOT move with the level: it stays at the extreme of the leg. That is why the deeper you enter, the shorter the risk and the bigger the reward.'],
+    ['Si el hueco del rango —el FVG— cae dentro del área buena (0.705 a 0.79), la orden va en el 50% de ese hueco: donde está el hueco es donde está el negocio.',
+     'If the range gap — the FVG — falls inside the good area (0.705 to 0.79), the order goes at 50% of that gap: where the gap is, is where the business is.'] ] },
+  { r:'IV', t:['El objetivo','The target'], li:[
+    ['1:2. El objetivo no es una R inventada: es el siguiente nivel de liquidez de sesión que siga sin tocarse.',
+     '1:2. The target is not a made-up R: it is the next untouched session liquidity level.'],
+    ['En cuanto corre a favor, el stop se va a la entrada. De ahí en adelante el trade ya no puede costarte.',
+     'As soon as it runs your way, the stop goes to breakeven. From there on the trade can no longer cost you.'] ] },
+  { r:'V', t:['Lo que no se negocia','What is not up for debate'], li:[
+    ['Nunca una orden en contra de la estructura. Si la estructura dice arriba, no se venden retrocesos.',
+     'Never an order against the structure. If the structure says up, you do not sell pullbacks.'],
+    ['UNO. Pase lo que pase con él, Nueva York se acabó — y en la madrugada, igual: un intento y a dormir.',
+     'ONE. Whatever happens with it, New York is over — and overnight, the same: one try and off to bed.'] ] },
+];
+function estrProtoHTML(){
+  const bi = (es, en) => es;
+  const loc = par => Array.isArray(par) ? par[0] : par;
+  return `
+    <div class="proto-h">
+      <span class="proto-k">PROTOCOLO · LA ESTRUCTURA</span>
+      <h3>El 0.79</h3>
+      <p>Cómo se entra cuando el rango ya no dio. Va después del Sweep &amp; ORB
+         porque en el día va después: primero el rango, y sólo si no dio, esto.</p>
+    </div>
+    <ol class="proto-lista">
+      ${PROTO_ESTR.map(p => `
+        <li>
+          <span class="proto-r">${esc(p.r)}</span>
+          <div>
+            <b>${esc(loc(p.t))}</b>
+            <ul>${p.li.map(x => `<li>${esc(loc(x))}</li>`).join('')}</ul>
+          </div>
+        </li>`).join('')}
+    </ol>`;
+}
+
 function algoProtoHTML(){
   /* ALGORITHM VA EN ESPAÑOL (André, 31-ago-2026): el resto de la terminal
      está en inglés a propósito —bi() devuelve siempre el inglés—, pero esta
@@ -27084,24 +27155,46 @@ const ARBOL_DIA = {
     { nom:'FALLA UNO, GANA EL SEGUNDO', r:[1,2] },
     { nom:'FALLAN LOS DOS',             r:[1,3,4] },
   ],
-  noche: 'Y APARTE, UNO SOLO EN LA MADRUGADA · ASIA O LONDRES, LA QUE SE DÉ, EN EL 0.79',
 };
-function planDiaHTML(id){
-  const cv = id || 'pdArbol', rot = cv + 'Rot';
+
+/* ══ EL ÁRBOL DE LA MADRUGADA ══ (André, 2-sep-2026)
+   Aquí la hoja no da opciones: UN intento, en el 0.79 de la estructura, en la
+   que se dé —Asia o Londres, nunca las dos—. Se dibuja igual que el de Nueva
+   York a propósito: las dos ramas caen en el MISMO sitio, y ver que ganar y
+   perder llevan al mismo lugar es la regla entera. */
+const ARBOL_NOCHE = {
+  cuenta: 'ASIA · LONDRES',
+  nodos: {
+    a1:  { x:.50, y:.13, t:'EL 0.79 DE LA ESTRUCTURA', s:'un solo intento · 1:2 · 5 min' },
+    p1:  { x:.24, y:.62, t:'SE ACABÓ',                 s:'ganaste. cierra y duerme.', fin:'ok' },
+    fin: { x:.76, y:.62, t:'SE ACABÓ IGUAL',           s:'era uno solo.', fin:'neutro' },
+  },
+  ramas: [
+    { de:'a1', a:'p1',  et:'GANA',    tipo:'ok' },
+    { de:'a1', a:'fin', et:'NO GANA', tipo:'no' },
+  ],
+  caminos: [
+    { nom:'GANA EL ÚNICO',  r:[0] },
+    { nom:'FALLA EL ÚNICO', r:[1] },
+  ],
+};
+function planDiaHTML(id, A){
+  const cv = id || 'pdArbol';
+  const T = A || ARBOL_DIA;
+  const noche = T === ARBOL_NOCHE;
   return `
     <div class="pd-h">
-      <span class="pd-k">EL PLAN DEL DÍA · DE LA LIBRETA</span>
-      <h3>Si el primero gana, el día se acabó.</h3>
-      <p>Ésa es toda la lógica. Si no gana, se rema una vez más —el A+ son dos,
-         máximo—. Si tampoco, ya no se busca: se espera el 0.79 de la
-         estructura, y ése es un solo trade pase lo que pase.</p>
+      <span class="pd-k">${noche ? 'LA MADRUGADA · ASIA O LONDRES' : 'EL PLAN DEL DÍA · DE LA LIBRETA'}</span>
+      <h3>${noche ? 'Un intento. Uno.' : 'Si el primero gana, el día se acabó.'}</h3>
+      <p>${noche
+        ? 'En la madrugada no se rema. Se espera el 0.79 de la estructura en la que se dé —Asia o Londres, nunca las dos— y ése es el trade de la noche. Gane o pierda, ahí se acaba.'
+        : 'Ésa es toda la lógica. Si no gana, se rema una vez más —el A+ son dos, máximo—. Si tampoco, ya no se busca: se espera el 0.79 de la estructura, y ése es un solo trade pase lo que pase.'}</p>
     </div>
     <div class="pd-cta">
-      <span class="pd-cuenta">${esc(ARBOL_DIA.cuenta)}</span>
+      <span class="pd-cuenta">${esc(T.cuenta)}</span>
       <span class="pd-tot"><b id="${cv}Rot">—</b></span>
     </div>
-    <div class="pd-arbol"><canvas id="${cv}"></canvas></div>
-    <p class="pd-noche">${esc(ARBOL_DIA.noche)}</p>`;
+    <div class="pd-arbol ${noche ? 'corto' : ''}"><canvas id="${cv}"></canvas></div>`;
 }
 
 /* ══ EL ÁRBOL, PERO CON TUS TRADES ══ (André, 2-sep-2026)
@@ -27114,10 +27207,11 @@ function arbolVivo(trades, mkt){
   const noche = mkt === 'ASIA' || mkt === 'LONDON' || mkt === 'LONDRES';
   const r = [], v = trades.map(t => (t.pnl || 0) > 0);
   if(noche){
-    return { noche:true, r: [], viva:null, nodo: v.length ? (v[0] ? 'p1' : 'fin') : 'a1',
-             txt: !v.length ? 'UN SOLO TRADE, EN EL 0.79'
-                  : v[0] ? 'GANASTE. SE ACABÓ LA MADRUGADA.'
-                         : 'FALLÓ, Y SE ACABÓ IGUAL: ERA UNO SOLO.' };
+    if(!v.length) return { noche:true, r:[], viva:null, nodo:'a1',
+                           txt:'UN SOLO INTENTO, EN EL 0.79' };
+    return v[0]
+      ? { noche:true, r:[0], viva:null, nodo:'p1',  txt:'GANASTE. SE ACABÓ LA MADRUGADA.' }
+      : { noche:true, r:[1], viva:null, nodo:'fin', txt:'FALLÓ, Y SE ACABÓ IGUAL: ERA UNO SOLO.' };
   }
   /* NY: 0 = a1→p1 (gana), 1 = a1→a2, 2 = a2→p2 (gana), 3 = a2→es, 4 = es→fin */
   if(!v.length) return { r:[], viva:null, nodo:'a1', txt:'TE TOCA EL A+ · TRADE 1' };
@@ -27134,14 +27228,15 @@ function arbolVivo(trades, mkt){
 
 /* ── la lámina corre sola: la bolita baja y a cada nodo escoge rama ── */
 let pdInt = null, lgArbInt = null;
-function planDiaVive(id, estado){
+const pdTicks = {};
+function planDiaVive(id, estado, arbol){
   const cvId = id || 'pdArbol';
   const cv = document.getElementById(cvId); if(!cv) return;
   const c = cv.getContext('2d');
-  const propio = cvId === 'pdArbol';
-  if(propio){ if(pdInt){ clearInterval(pdInt); pdInt = null; } }
-  else { if(lgArbInt){ clearInterval(lgArbInt); lgArbInt = null; } }
-  const A = ARBOL_DIA, N = A.nodos, R = A.ramas;
+  /* un temporizador POR lienzo: la vista «El día» tiene dos árboles y con un
+     solo `pdInt` el segundo apagaba al primero */
+  if(pdTicks[cvId]){ clearInterval(pdTicks[cvId]); pdTicks[cvId] = null; }
+  const A = arbol || ARBOL_DIA, N = A.nodos, R = A.ramas;
   const AZUL = '#3861F6', VERDE = '#57C79B', ROJO = '#D9736A';
   const cl = () => document.documentElement.getAttribute('data-theme') === 'light';
   const tinta = a => cl() ? 'rgba(16,20,28,' + a + ')' : 'rgba(237,239,242,' + a + ')';
@@ -27279,7 +27374,7 @@ function planDiaVive(id, estado){
   try{ quieto = matchMedia('(prefers-reduced-motion: reduce)').matches; }catch(e){}
   if(quieto){ ruta = 2; tramo = A.caminos[2].r.length; u = 0;
     if(rot) rot.textContent = camino().nom; pinta(); return; }
-  pdInt = setInterval(tic, 66);
+  pdTicks[cvId] = setInterval(tic, 66);
   addEventListener('resize', pinta, { passive:true });
 }
 
@@ -27410,7 +27505,7 @@ function lineaDiaHTML(){
         <circle class="dia-nucleo" cx="380" cy="75" r="3.6"/>
         <text x="170" y="80"  class="s-lbl">${T('PREMARKET','PREMARKET')}</text>
         <text x="340" y="80"  class="s-lbl s-rot">ORB</text>
-        <text x="620" y="80"  class="s-lbl s-on">${T('TU VENTANA · 2 TRADES','YOUR WINDOW · 2 TRADES')}</text>
+        <text x="620" y="80"  class="s-lbl s-on">${T('TU VENTANA','YOUR WINDOW')}</text>
         <text x="890" y="80"  class="s-lbl">${T('CIERRE','CLOSE')}</text>
         <text x="300" y="124" class="s-h">09:30</text>
         <text x="380" y="124" class="s-h s-on">09:45</text>
