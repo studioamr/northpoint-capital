@@ -3482,8 +3482,16 @@ button.tag.quemada{text-decoration:line-through;text-decoration-color:var(--down
 .pd-ny{--c:#57C79B}
 .pd-lon{--c:#5E8BD6}
 .pd-asia{--c:#D9736A}
-.pd-h h3{margin:14px 0 0;font-size:clamp(22px,3.4vw,30px);font-weight:800;
-  letter-spacing:-.02em;line-height:1.15;color:var(--txt)}
+/* el protocolo es el titular; la frase del dia, su bajada */
+.pd-tit{margin:0;font-size:clamp(26px,4.2vw,40px);font-weight:800;
+  letter-spacing:-.025em;line-height:1.05;color:var(--txt)}
+.pd-tit .pd-ny{color:#57C79B}
+.pd-tit .pd-lon{color:#5E8BD6}
+.pd-tit .pd-asia{color:#D9736A}
+html[data-theme="light"] .pd-tit .pd-ny{color:#128B62}
+html[data-theme="light"] .pd-tit .pd-lon{color:#2E62B8}
+html[data-theme="light"] .pd-tit .pd-asia{color:#B5473A}
+.pd-sub{margin:12px 0 0;font-size:15px;font-weight:500;line-height:1.5;color:var(--dim)}
 /* el rotulo del camino: vacio en la lamina que enseña, vivo en Log trade */
 .pd-tot{display:block;margin-top:16px;padding-top:14px;border-top:1px solid var(--line-soft)}
 .pd-tot b{font-family:var(--mono);font-size:10px;font-weight:400;letter-spacing:.2em;
@@ -27411,13 +27419,19 @@ function algoProtoHTML(){
    nodo, y verlo pasar enseña la regla mejor que leerla. */
 const ARBOL_DIA = {
   cuenta: '50K',
+  /* EL ÁRBOL CRECE, NO CUELGA (André, 2-sep-2026): las cajas se fueron y en su
+     lugar hay un árbol de verdad — un tronco que sale de abajo y se va
+     partiendo en cada decisión. Por eso las `y` van de 1 (la raíz) hacia 0
+     (las puntas): el día se sube, no se baja. `lado` dice de qué lado del
+     nodo se escribe su nombre, para que ninguno se encime con una rama. */
+  raiz: { x:.50, y:.99 },
   nodos: {
-    a1:  { x:.42, y:.09,  t:'A+ · TRADE 1',        s:'la de más confluencia · 1:1' },
-    p1:  { x:.15, y:.34,  t:'SE PARA EL DÍA',      s:'ganaste. cierra y apaga.', fin:'ok' },
-    a2:  { x:.63, y:.34,  t:'A+ · TRADE 2',        s:'se rema · el A+ son dos, máximo' },
-    p2:  { x:.38, y:.60,  t:'SE PARA EL DÍA',      s:'ganaste. cierra y apaga.', fin:'ok' },
-    es:  { x:.82, y:.60,  t:'0.79 DE LA ESTRUCTURA', s:'ya no se busca setup · 1:2' },
-    fin: { x:.82, y:.85,  t:'SE ACABÓ NUEVA YORK', s:'pase lo que pase, fue UN trade', fin:'neutro' },
+    a1:  { x:.46, y:.74,  t:'A+ · TRADE 1',          s:'la de más confluencia · 1:1', lado:'der' },
+    p1:  { x:.20, y:.44,  t:'SE PARA EL DÍA',        s:'ganaste. cierra y apaga.', fin:'ok', lado:'der' },
+    a2:  { x:.66, y:.50,  t:'A+ · TRADE 2',          s:'se rema · el A+ son dos, máximo', lado:'der' },
+    p2:  { x:.42, y:.22,  t:'SE PARA EL DÍA',        s:'ganaste. cierra y apaga.', fin:'ok', lado:'izq' },
+    es:  { x:.78, y:.28,  t:'0.79 DE LA ESTRUCTURA', s:'ya no se busca setup · 1:2', lado:'der' },
+    fin: { x:.64, y:.08,  t:'SE ACABÓ NUEVA YORK',   s:'pase lo que pase, fue UN trade', fin:'neutro', lado:'der' },
   },
   /* de dónde a dónde, con qué etiqueta y de qué lado */
   ramas: [
@@ -27442,10 +27456,11 @@ const ARBOL_DIA = {
    perder llevan al mismo lugar es la regla entera. */
 const ARBOL_NOCHE = {
   cuenta: 'ASIA · LONDRES',
+  raiz: { x:.50, y:.99 },
   nodos: {
-    a1:  { x:.50, y:.13, t:'EL 0.79 DE LA ESTRUCTURA', s:'un solo intento · 1:2 · 5 min' },
-    p1:  { x:.24, y:.62, t:'SE ACABÓ',                 s:'ganaste. cierra y duerme.', fin:'ok' },
-    fin: { x:.76, y:.62, t:'SE ACABÓ IGUAL',           s:'era uno solo.', fin:'neutro' },
+    a1:  { x:.50, y:.62, t:'EL 0.79 DE LA ESTRUCTURA', s:'un solo intento · 1:2 · 5 min', lado:'izq' },
+    p1:  { x:.20, y:.20, t:'SE ACABÓ',                 s:'ganaste. cierra y duerme.', fin:'ok', lado:'izq' },
+    fin: { x:.80, y:.20, t:'SE ACABÓ IGUAL',           s:'era uno solo.', fin:'neutro', lado:'der' },
   },
   ramas: [
     { de:'a1', a:'p1',  et:'GANA',    tipo:'ok' },
@@ -27466,10 +27481,10 @@ function planDiaHTML(id, A){
          cuando la lámina sólo está enseñando. El rótulo sigue existiendo, pero
          SOLO habla en Log trade, donde dice dónde vas de verdad. -->
     <div class="pd-h">
-      <span class="pd-chip">${noche
-        ? '<i class="pd-p pd-lon"></i><i class="pd-p pd-asia"></i>PROTOCOLO LON Y ASIA'
-        : '<i class="pd-p pd-ny"></i>PROTOCOLO NY'}</span>
-      <h3>${noche ? 'Un intento. Uno.' : 'Si el primero gana, el día se acabó.'}</h3>
+      <h3 class="pd-tit">${noche
+        ? 'Protocolo <span class="pd-lon">LON</span> y <span class="pd-asia">ASIA</span>'
+        : 'Protocolo <span class="pd-ny">NY</span>'}</h3>
+      <p class="pd-sub">${noche ? 'Un intento. Uno.' : 'Si el primero gana, el día se acabó.'}</p>
       <span class="pd-tot"><b id="${cv}Rot"></b></span>
     </div>
     <div class="pd-arbol ${noche ? 'corto' : ''}"><canvas id="${cv}"></canvas></div>`;
@@ -27547,121 +27562,124 @@ function planDiaVive(id, estado, arbol){
     const x = Math.min(W - w/2 - 6, Math.max(w/2 + 6, n.x*W));
     return { x, y:n.y*H, w, h:52, n };
   }
+  /* ══ EL ÁRBOL, DIBUJADO COMO ÁRBOL ══ (André, 2-sep-2026)
+     Antes eran seis recuadros unidos por líneas: un organigrama. Ahora es un
+     árbol de verdad — un tronco que sale de abajo y se va abriendo en cada
+     decisión, con las ramas afinándose hacia la punta y el nombre escrito al
+     aire, sin caja. La rama que se toma se llena de savia; la que no, se queda
+     seca y delgada. La savia sube: es el día pasando. */
+  function rama(x1, y1, x2, y2, w1, w2, col, viva, prog){
+    /* una rama es un listón que se afila: se dibuja como relleno, no como
+       línea, porque una línea de grosor fijo no se afina nunca */
+    const mx = (x1 + x2) / 2, my = (y1 + y2) / 2 - Math.abs(x2 - x1) * .12;
+    const ang = Math.atan2(y2 - y1, x2 - x1) + Math.PI / 2;
+    const dx1 = Math.cos(ang) * w1 / 2, dy1 = Math.sin(ang) * w1 / 2;
+    const dx2 = Math.cos(ang) * w2 / 2, dy2 = Math.sin(ang) * w2 / 2;
+    c.beginPath();
+    c.moveTo(x1 - dx1, y1 - dy1);
+    c.quadraticCurveTo(mx - dx1 * .7, my - dy1 * .7, x2 - dx2, y2 - dy2);
+    c.lineTo(x2 + dx2, y2 + dy2);
+    c.quadraticCurveTo(mx + dx1 * .7, my + dy1 * .7, x1 + dx1, y1 + dy1);
+    c.closePath();
+    c.fillStyle = viva ? col : tinta('.09');
+    c.fill();
+    /* la savia: un trazo brillante que sube por la rama viva */
+    if(viva && prog != null){
+      c.save();
+      c.strokeStyle = col; c.lineWidth = Math.max(1.4, w2 * .6);
+      c.lineCap = 'round'; c.shadowColor = col; c.shadowBlur = 12;
+      c.globalAlpha = .95;
+      c.beginPath(); c.moveTo(x1, y1);
+      const t = Math.max(0, Math.min(1, prog));
+      const bx = (1-t)*(1-t)*x1 + 2*(1-t)*t*mx + t*t*x2;
+      const by = (1-t)*(1-t)*y1 + 2*(1-t)*t*my + t*t*y2;
+      c.quadraticCurveTo((x1+bx)/2 + (mx-(x1+x2)/2)*t*.6, (y1+by)/2 + (my-(y1+y2)/2)*t*.6, bx, by);
+      c.stroke();
+      c.beginPath(); c.arc(bx, by, Math.max(3, w2*.55), 0, 7); c.fillStyle = col; c.fill();
+      c.restore();
+    }
+  }
   function pinta(){
     const m = mide(); if(!m) return;
     const { W, H } = m;
     c.clearRect(0,0,W,H);
     const hech = hechas(), viva = camino().r[tramo];
+    const P = k => ({ x: N[k].x * W, y: N[k].y * H });
+    const RZ = { x: (A.raiz ? A.raiz.x : .5) * W, y: (A.raiz ? A.raiz.y : .99) * H };
+    const primero = R[A.caminos[0].r[0]].de;          /* el nodo del primer trade */
+    /* ── el tronco: de la raíz al primer nodo ── */
+    /* el tronco va en tinta, no en el azul del acento: pintado de color era
+       una losa que se comía la mitad del dibujo */
+    rama(RZ.x, RZ.y, P(primero).x, P(primero).y, Math.min(13, W*.013), Math.min(9, W*.009),
+         tinta('.22'), true, null);
     /* ── las ramas ── */
     R.forEach((r, i) => {
-      const A1 = caja(r.de, W, H), B1 = caja(r.a, W, H);
-      const x1 = A1.x, y1 = A1.y + 26, x2 = B1.x, y2 = B1.y - 26;
+      const A1 = P(r.de), B1 = P(r.a);
       const usada = hech.indexOf(i) >= 0, corriendo = i === viva;
       const activa = usada || corriendo;
       const col = r.tipo === 'ok' ? VERDE : r.tipo === 'no' ? ROJO : AZUL;
-      c.save();
-      c.strokeStyle = activa ? col : tinta('.13');
-      c.lineWidth = activa ? 2.2 : 1.2;
-      if(!activa) c.setLineDash([3,5]);
-      c.beginPath(); c.moveTo(x1, y1);
-      c.bezierCurveTo(x1, y1 + (y2-y1)*.55, x2, y2 - (y2-y1)*.55, x2, y2);
-      c.stroke(); c.restore();
-      /* la etiqueta de la rama */
+      /* la rama se afina conforme sube: cada nivel es más delgado */
+      const nivel = 1 - N[r.a].y;
+      const w1 = Math.max(4, Math.min(15, W*.016) * (1 - nivel*.35));
+      const w2 = Math.max(2.5, w1 * .6);
+      rama(A1.x, A1.y, B1.x, B1.y, w1, w2, col, activa, corriendo ? u : (usada ? 1 : null));
+      /* la etiqueta de la rama, al aire, a media rama */
       if(r.et){
-        const mx = (x1+x2)/2 + (x2>x1 ? 16 : -16), my = (y1+y2)/2;
-        c.font = '700 9px "IBM Plex Mono", monospace';
-        c.textAlign = x2 > x1 ? 'left' : 'right';
-        c.fillStyle = activa ? col : tinta('.28');
-        c.fillText(r.et, mx, my + 3);
-      }
-      /* la bolita, corriendo por la rama viva */
-      if(corriendo){
-        const t = u, mt = 1-t;
-        const bx = mt*mt*mt*x1 + 3*mt*mt*t*x1 + 3*mt*t*t*x2 + t*t*t*x2;
-        const cy1 = y1 + (y2-y1)*.55, cy2 = y2 - (y2-y1)*.55;
-        const by = mt*mt*mt*y1 + 3*mt*mt*t*cy1 + 3*mt*t*t*cy2 + t*t*t*y2;
-        c.save();
-        c.shadowColor = col; c.shadowBlur = 14;
-        c.fillStyle = col; c.beginPath(); c.arc(bx, by, 6, 0, 7); c.fill();
-        c.restore();
+        const mx = (A1.x+B1.x)/2, my = (A1.y+B1.y)/2 - Math.abs(B1.x-A1.x)*.12;
+        c.font = '700 8.5px "IBM Plex Mono", monospace';
+        c.textAlign = 'center'; c.textBaseline = 'middle';
+        const an = c.measureText(r.et).width;
+        c.fillStyle = cl() ? 'rgba(248,249,251,.88)' : 'rgba(8,10,16,.78)';
+        c.beginPath();
+        if(c.roundRect) c.roundRect(mx-an/2-6, my-8, an+12, 16, 8); else c.rect(mx-an/2-6, my-8, an+12, 16);
+        c.fill();
+        c.fillStyle = activa ? col : tinta('.26');
+        c.fillText(r.et, mx, my);
       }
     });
-    /* ── los nodos ── */
+    /* ── los nodos: un punto y su nombre al aire, sin caja ── */
+    c.textBaseline = 'alphabetic';
     Object.keys(N).forEach(k => {
-      const b = caja(k, W, H);
-      /* ¿este nodo ya se pisó? */
-      let on = k === 'a1';
+      const n = N[k], q = P(k);
+      let on = k === primero;
       hech.forEach(i => { if(R[i].a === k) on = true; });
       if(viva != null && R[viva] && R[viva].de === k) on = true;
       if(estado && estado.nodo === k) on = true;
-      /* ── LA FICHA, IGUAL QUE LA DE LOS PROTOCOLOS ── (André, 2-sep-2026)
-         Eran píldoras con el texto centrado; los protocolos de abajo son
-         tarjetas de vidrio con una barra de color a la izquierda y el texto
-         alineado. Dos lenguajes en la misma pantalla se notan. Ahora el árbol
-         habla el mismo: esquina de 14, degradado diagonal de vidrio, barra de
-         acento y texto pegado a ella. */
-      const col = b.n.fin === 'ok' ? VERDE : AZUL;
+      const col = n.fin === 'ok' ? VERDE : AZUL;
       const tuyo = estado && estado.nodo === k;
+      /* el brote: un punto, y un anillo si es donde te toca */
       c.save();
-      c.translate(b.x, b.y);
-      const w = b.w, h = b.h, r2 = 14;
-      /* `trazo`, no `caja`: `caja(k,W,H)` ya existe afuera y se llama tres
-         líneas arriba — declararlo con el mismo nombre aquí lo sombreaba en
-         todo el bloque y el nodo tronaba en su propia medición (TDZ). */
-      const trazo = () => {
-        c.beginPath();
-        if(c.roundRect) c.roundRect(-w/2, -h/2, w, h, r2);
-        else {
-          c.moveTo(-w/2 + r2, -h/2);
-          c.lineTo(w/2 - r2, -h/2); c.quadraticCurveTo(w/2, -h/2, w/2, -h/2 + r2);
-          c.lineTo(w/2, h/2 - r2);  c.quadraticCurveTo(w/2, h/2, w/2 - r2, h/2);
-          c.lineTo(-w/2 + r2, h/2); c.quadraticCurveTo(-w/2, h/2, -w/2, h/2 - r2);
-          c.lineTo(-w/2, -h/2 + r2);c.quadraticCurveTo(-w/2, -h/2, -w/2 + r2, -h/2);
-          c.closePath();
-        }
-      };
-      const g = c.createLinearGradient(-w/2, -h/2, w/2, h/2);
-      if(on){
-        const rgb = col === VERDE ? '87,199,155' : '56,97,246';
-        g.addColorStop(0, 'rgba(' + rgb + ',.16)');
-        g.addColorStop(.62, 'rgba(' + rgb + ',.02)');
-        g.addColorStop(1, 'rgba(' + rgb + ',0)');
-      } else {
-        g.addColorStop(0, tinta('.055'));
-        g.addColorStop(.62, tinta('.012'));
-        g.addColorStop(1, tinta('0'));
-      }
-      trazo(); c.fillStyle = g; c.fill();
-      if(tuyo){ c.save(); c.shadowColor = col; c.shadowBlur = 16; }
-      trazo();
-      c.strokeStyle = on ? col : tinta('.13');
-      c.lineWidth = tuyo ? 2.4 : on ? 1.6 : 1;
-      c.stroke();
-      if(tuyo) c.restore();
-      /* la barra de acento, como la del protocolo */
-      c.beginPath();
-      if(c.roundRect) c.roundRect(-w/2 + 9, -h/2 + 13, 3, h - 26, 2);
-      else c.rect(-w/2 + 9, -h/2 + 13, 3, h - 26);
-      c.fillStyle = on ? col : tinta('.16');
-      c.fill();
-      /* el texto, pegado a la barra */
-      const tx = -w/2 + 21;
-      c.textAlign = 'left';
-      c.font = '700 12px -apple-system, "Segoe UI", sans-serif';
-      c.fillStyle = on ? (cl() ? '#101828' : '#FFFFFF') : tinta('.34');
-      c.fillText(b.n.t, tx, -2);
-      c.font = '400 9.5px "IBM Plex Mono", monospace';
-      c.fillStyle = on ? tinta('.56') : tinta('.22');
-      c.fillText(b.n.s, tx, 14);
+      if(on){ c.shadowColor = col; c.shadowBlur = tuyo ? 18 : 10; }
+      c.fillStyle = on ? col : tinta('.20');
+      c.beginPath(); c.arc(q.x, q.y, on ? 5.5 : 3.5, 0, 7); c.fill();
       c.restore();
+      if(tuyo){
+        c.strokeStyle = col; c.lineWidth = 1.4; c.globalAlpha = .5;
+        c.beginPath(); c.arc(q.x, q.y, 12, 0, 7); c.stroke(); c.globalAlpha = 1;
+      }
+      /* EL NOMBRE NO SE SALE DEL LIENZO (André, 2-sep-2026): puesto siempre al
+         lado que dice el dato, los nodos de las orillas quedaban cortados a la
+         mitad («0.79 DE LA ESTRU…»). Se mide el texto y, si no cabe de su lado,
+         se pasa al otro; y si tampoco cabe, se pega al borde. */
+      c.font = '700 12px -apple-system, "Segoe UI", sans-serif';
+      const anT = c.measureText(n.t).width;
+      c.font = '400 9.5px "IBM Plex Mono", monospace';
+      const anS = c.measureText(n.s).width;
+      const an = Math.max(anT, anS), M2 = 10;
+      let izq = n.lado === 'izq';
+      if(izq  && q.x - 14 - an < M2)      izq = false;
+      if(!izq && q.x + 14 + an > W - M2)  izq = true;
+      let tx = q.x + (izq ? -14 : 14);
+      if(izq)  tx = Math.max(tx, M2 + an);
+      else     tx = Math.min(tx, W - M2 - an);
+      c.textAlign = izq ? 'right' : 'left';
+      c.font = '700 12px -apple-system, "Segoe UI", sans-serif';
+      c.fillStyle = on ? (cl() ? '#101828' : '#FFFFFF') : tinta('.30');
+      c.fillText(n.t, tx, q.y - 1);
+      c.font = '400 9.5px "IBM Plex Mono", monospace';
+      c.fillStyle = on ? tinta('.55') : tinta('.20');
+      c.fillText(n.s, tx, q.y + 13);
     });
-  }
-  /* fuera de cuadro no se pinta: Algorithm es una vista larga y este lienzo
-     seguiría corriendo mientras alguien lee el protocolo o los ejemplos */
-  function enCuadro(){
-    if(!cv.isConnected || cv.offsetParent === null) return false;
-    const r = cv.getBoundingClientRect(), h = window.innerHeight || 800;
-    return r.bottom > 0 && r.top < h;
   }
   function tic(){
     if(!enCuadro()) return;
