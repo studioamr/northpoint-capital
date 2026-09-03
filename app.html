@@ -5014,9 +5014,6 @@ stop[stop-color="#9BC0DC"]{stop-color:var(--txt)}
              dibujado en vez de escrito. -->
         <div class="panel mt2 algo-como" id="algoComo"></div>
 
-        <!-- EL PROTOCOLO: los seis pasos de la ejecución, para releerlos -->
-        <div class="panel mt2 proto" id="algoProto"></div>
-
         <!-- LOS TRADES DE VERDAD, desfilando -->
         <div class="panel mt2 ejem" id="algoEjem"></div>
 
@@ -5170,9 +5167,16 @@ stop[stop-color="#9BC0DC"]{stop-color:var(--txt)}
       </section>
 
       <!-- ════ LOG TRADE (real · mismo formato que Backtesting) ════ -->
-      <!-- ════ EL DÍA · el árbol, en su propia pantalla ════ -->
+      <!-- ════ EL DÍA · lo que se consulta ANTES de operar ════
+           (André, 2-sep-2026) Aquí vive el trabajo diario: el árbol de
+           decisión, el reloj del día y el protocolo de ejecución. Los tres
+           estaban repartidos —el árbol recién hecho, y los otros dos dentro
+           de Algorithm— y Algorithm es la vista del MÉTODO: los indicadores,
+           los colores del chart y el código. No es donde se mira a las 9:40. -->
       <section class="view" id="v-dia">
         <div class="panel pdia" id="diaArbol"></div>
+        <div class="panel mt2 algo-como" id="diaLinea"></div>
+        <div class="panel mt2 proto" id="diaProto"></div>
       </section>
 
       <section class="view" id="v-log">
@@ -16883,6 +16887,10 @@ function renderDia(){
   const host = $('#diaArbol'); if(!host) return;
   host.innerHTML = planDiaHTML('pdArbol');
   planDiaVive('pdArbol');
+  const lin = $('#diaLinea');
+  if(lin && typeof lineaDiaHTML === 'function') lin.innerHTML = lineaDiaHTML();
+  const pro = $('#diaProto');
+  if(pro && typeof algoProtoHTML === 'function') pro.innerHTML = algoProtoHTML();
 }
 
 /* ── el árbol de Log trade, marcado con tus trades de hoy ── */
@@ -27349,6 +27357,19 @@ function algoComoHTML(){
     </div>
   </div>
 
+  `;
+}
+
+
+/* ══ LA LÍNEA DEL DÍA ══ (André, 2-sep-2026)
+   Vivía dentro de «Cómo se opera», en Algorithm. Pero esto no explica el
+   MÉTODO: dice a qué hora se hace cada cosa — es trabajo diario, y ahí es
+   donde se consulta. Se mudó a la vista «El día», junto al protocolo. */
+function lineaDiaHTML(){
+  const bi = (es, en) => es;
+  const loc = par => Array.isArray(par) ? par[0] : par;
+  const T = (es,en)=>esc(bi(es,en));
+  return `
   <div class="como-bloque">
     <h4>${T('La línea del día','The line of the day')}</h4>
     <div class="como-svg dia-viva">
@@ -27401,7 +27422,6 @@ function algoComoHTML(){
     </div>
     <p class="como-nota">${T('Horas de Nueva York. La regla dura está en el 09:45: antes de que cierre el rango de apertura no se entra, ni aunque el setup se vea perfecto.','New York hours. The hard rule sits at 09:45: before the opening range closes you do not enter, not even if the setup looks perfect.')}</p>
   </div>
-
   `;
 }
 
@@ -27567,8 +27587,7 @@ function renderAlgoritmo(){
   const pre = $('#algoCodigo'); if(pre) pre.textContent = activo ? activo.codigo : '';
   const como = $('#algoComo');
   if(como && typeof algoComoHTML === 'function') como.innerHTML = algoComoHTML();
-  const prot = $('#algoProto');
-  if(prot && typeof algoProtoHTML === 'function') prot.innerHTML = algoProtoHTML();
+
   const ejem = $('#algoEjem');
   if(ejem && typeof algoEjemHTML === 'function'){ ejem.innerHTML = algoEjemHTML(); algoEjemLiga(); }
   /* el rótulo de la barra de arriba también, mientras estés en esta vista:
