@@ -27768,65 +27768,33 @@ function planDiaVive(id, estado, arbol){
       hech.forEach(i => { if(R[i].a === k) on = true; });
       if(viva != null && R[viva] && R[viva].de === k) on = true;
       if(estado && estado.nodo === k) on = true;
-      /* ── LA FICHA, IGUAL QUE LA DE LOS PROTOCOLOS ── (André, 2-sep-2026)
-         Eran píldoras con el texto centrado; los protocolos de abajo son
-         tarjetas de vidrio con una barra de color a la izquierda y el texto
-         alineado. Dos lenguajes en la misma pantalla se notan. Ahora el árbol
-         habla el mismo: esquina de 14, degradado diagonal de vidrio, barra de
-         acento y texto pegado a ella. */
+      /* ── SIN RECUADRO ── (André, 3-sep-2026)
+         La ficha de vidrio encerraba cada nodo y el árbol volvía a parecer un
+         organigrama de cajas. Ahora el nodo es lo que de verdad es: un punto
+         en el camino y su nombre al aire. Lo que dice cuál está vivo ya no es
+         un borde, es el color y el peso del texto — y un halo en el punto
+         cuando es el que te toca. */
       const col = b.n.fin === 'ok' ? VERDE : AZUL;
       const tuyo = estado && estado.nodo === k;
       c.save();
       c.translate(b.x, b.y);
-      const w = b.w, h = b.h, r2 = 14;
-      /* `trazo`, no `caja`: `caja(k,W,H)` ya existe afuera y se llama tres
-         líneas arriba — declararlo con el mismo nombre aquí lo sombreaba en
-         todo el bloque y el nodo tronaba en su propia medición (TDZ). */
-      const trazo = () => {
-        c.beginPath();
-        if(c.roundRect) c.roundRect(-w/2, -h/2, w, h, r2);
-        else {
-          c.moveTo(-w/2 + r2, -h/2);
-          c.lineTo(w/2 - r2, -h/2); c.quadraticCurveTo(w/2, -h/2, w/2, -h/2 + r2);
-          c.lineTo(w/2, h/2 - r2);  c.quadraticCurveTo(w/2, h/2, w/2 - r2, h/2);
-          c.lineTo(-w/2 + r2, h/2); c.quadraticCurveTo(-w/2, h/2, -w/2, h/2 - r2);
-          c.lineTo(-w/2, -h/2 + r2);c.quadraticCurveTo(-w/2, -h/2, -w/2 + r2, -h/2);
-          c.closePath();
-        }
-      };
-      const g = c.createLinearGradient(-w/2, -h/2, w/2, h/2);
-      if(on){
-        const rgb = col === VERDE ? '87,199,155' : '56,97,246';
-        g.addColorStop(0, 'rgba(' + rgb + ',.16)');
-        g.addColorStop(.62, 'rgba(' + rgb + ',.02)');
-        g.addColorStop(1, 'rgba(' + rgb + ',0)');
-      } else {
-        g.addColorStop(0, tinta('.055'));
-        g.addColorStop(.62, tinta('.012'));
-        g.addColorStop(1, tinta('0'));
+      /* el punto del nodo, justo donde llegan y salen las ramas */
+      c.save();
+      if(on){ c.shadowColor = col; c.shadowBlur = tuyo ? 16 : 8; }
+      c.fillStyle = on ? col : tinta('.20');
+      c.beginPath(); c.arc(0, -b.h/2 - 2, on ? 4.5 : 3, 0, 7); c.fill();
+      c.restore();
+      if(tuyo){
+        c.strokeStyle = col; c.lineWidth = 1.3; c.globalAlpha = .45;
+        c.beginPath(); c.arc(0, -b.h/2 - 2, 10, 0, 7); c.stroke(); c.globalAlpha = 1;
       }
-      trazo(); c.fillStyle = g; c.fill();
-      if(tuyo){ c.save(); c.shadowColor = col; c.shadowBlur = 16; }
-      trazo();
-      c.strokeStyle = on ? col : tinta('.13');
-      c.lineWidth = tuyo ? 2.4 : on ? 1.6 : 1;
-      c.stroke();
-      if(tuyo) c.restore();
-      /* la barra de acento, como la del protocolo */
-      c.beginPath();
-      if(c.roundRect) c.roundRect(-w/2 + 9, -h/2 + 13, 3, h - 26, 2);
-      else c.rect(-w/2 + 9, -h/2 + 13, 3, h - 26);
-      c.fillStyle = on ? col : tinta('.16');
-      c.fill();
-      /* el texto, pegado a la barra */
-      const tx = -w/2 + 21;
-      c.textAlign = 'left';
-      c.font = '700 12px -apple-system, "Segoe UI", sans-serif';
-      c.fillStyle = on ? (cl() ? '#101828' : '#FFFFFF') : tinta('.34');
-      c.fillText(b.n.t, tx, -2);
+      c.textAlign = 'center';
+      c.font = '700 12.5px -apple-system, "Segoe UI", sans-serif';
+      c.fillStyle = on ? (cl() ? '#101828' : '#FFFFFF') : tinta('.32');
+      c.fillText(b.n.t, 0, 2);
       c.font = '400 9.5px "IBM Plex Mono", monospace';
-      c.fillStyle = on ? tinta('.56') : tinta('.22');
-      c.fillText(b.n.s, tx, 14);
+      c.fillStyle = on ? tinta('.55') : tinta('.20');
+      c.fillText(b.n.s, 0, 17);
       c.restore();
     });
   }
