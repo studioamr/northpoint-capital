@@ -8263,20 +8263,25 @@ const TITLES = {
    entero y siempre; aquí sólo cambia lo que ve un visitante.
 
    Se enseña el menú COMPLETO, que se vea todo lo que trae, y se abre UNA
-   sola: The Desk. Es la previsualización, y con eso basta para entender qué
-   es el Terminal. Las otras catorce llevan candado — Journal incluido: el
-   calendario con el mes lleno de trades es de las cosas que más convencen, y
-   justo por eso es de lo que se compra.
+   sola: JOURNAL, encuadrado en su calendario. Un mes lleno de días marcados
+   —verdes, rojos, con su racha— dice en tres segundos para qué sirve esto;
+   The Desk enseña cifras que quien llega todavía no sabe leer. Las otras
+   catorce llevan candado, The Desk incluida.
+
+   La escena de la oficina (?escena=1) se sirve de la vista agentes y NO pasa
+   por el candado: ahí no hay app que recorrer, es un canvas solo. */
+const VITRINA_INICIO = 'journal';
+/*
 
    El candado no dice «no puedes»: enseña los tres paquetes con su precio, que
    es exactamente lo que esa persona vino a preguntar.
 
    OJO: esto NO es seguridad. Es un mostrador. El Pine de los indicadores
    viaja dentro de este mismo app.html, que es público. */
-const VITRINA_ABIERTAS = ['agentes'];
+const VITRINA_ABIERTAS = ['journal'];
 const vitrinaAbierta = v => !VITRINA || VITRINA_ABIERTAS.includes(v);
 function show(view){
-  if(VITRINA && !vitrinaAbierta(view)) view = 'agentes';
+  if(VITRINA && !ESCENA && !vitrinaAbierta(view)) view = VITRINA_INICIO;
   if(view === 'progreso') view = 'agentes';   // el progreso vive en La torre ahora
   if(view === 'estudio' || view === 'coach') view = 'trades';  // curso y coach se fueron; aquí viven los trades
   if(view === 'dashboard') view = 'vida';     // el panorama se mudó a La caja
@@ -30588,6 +30593,32 @@ function vitrinaMarca(){
       a.classList.toggle('candado', !vitrinaAbierta(a.dataset.view));
     });
   }catch(e){}
+}
+/* ── LA VITRINA ABRE EN EL CALENDARIO ──
+   La vista Journal mide 1,600 px de alto y el calendario empieza en el 670:
+   dentro del marco de la portada se veía la cabecera y ni una casilla. Se
+   entra a Journal y se baja hasta dejar el calendario COMPLETO en cuadro. Se
+   reintenta un par de veces porque el alto sólo es definitivo cuando ya se
+   pintaron las cifras de arriba. */
+function vitrinaEncuadra(){
+  if(!VITRINA || ESCENA) return;
+  try{
+    if(vistaActual() !== VITRINA_INICIO) show(VITRINA_INICIO);
+    const cal = document.querySelector('#v-journal .ts-cal') ||
+                document.getElementById('calTitulo');
+    const c = document.getElementById('content');
+    if(!cal || !c) return;
+    const caja = cal.closest('.panel') || cal.parentElement;
+    /* la barra de arriba es pegajosa: si se ignora, el nombre del mes queda
+       DEBAJO de ella y el marco abre en la fila de los días de la semana */
+    const barra = document.querySelector('.topbar');
+    const alto = barra ? barra.getBoundingClientRect().height : 0;
+    c.scrollTop += caja.getBoundingClientRect().top - alto - 6;
+  }catch(e){}
+}
+if(VITRINA && !ESCENA){
+  addEventListener('DOMContentLoaded', () => setTimeout(vitrinaEncuadra, 700));
+  [1400, 2600].forEach(t => setTimeout(vitrinaEncuadra, t));
 }
 /* el clic en una pantalla con candado no navega: explica y ofrece el precio */
 document.addEventListener('click', e => {
