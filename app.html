@@ -3643,6 +3643,24 @@ html[data-theme="light"] .pd-tit .pd-asia{color:#B5473A}
 .fl-f em{display:block;margin-top:8px;font-style:normal;font-family:var(--mono);
   font-size:8.5px;letter-spacing:.1em;color:var(--faint)}
 /* la madrugada, aparte y marcada como opcional */
+.fl-sel{width:100%;background:transparent;border:0;outline:none;color:var(--txt);
+  font-family:var(--mono);font-size:19px;letter-spacing:-.02em;padding:0;cursor:pointer;
+  appearance:none;-webkit-appearance:none}
+.fl-comb{margin-top:16px}
+.fl-comb-k{font-family:var(--mono);font-size:8.5px;letter-spacing:.22em;color:var(--faint)}
+.fl-comb-r{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:11px}
+.fl-cb{text-align:left;border:1px solid var(--line-soft);border-radius:11px;padding:11px 12px;
+  cursor:pointer;background:linear-gradient(135deg,var(--glass),transparent 62%);
+  transition:border-color .2s,background .2s}
+.fl-cb:hover{border-color:var(--line)}
+.fl-cb.on{border-color:#3861F6;background:linear-gradient(135deg,rgba(56,97,246,.14),transparent 62%)}
+.fl-cb.top{box-shadow:inset 0 0 0 1px rgba(87,199,155,.5)}
+.fl-cb i{display:block;font-style:normal;font-family:var(--mono);font-size:7.5px;
+  letter-spacing:.12em;color:var(--faint);margin-bottom:7px}
+.fl-cb b{font-family:var(--mono);font-size:16px;letter-spacing:-.02em}
+.fl-cb b.up{color:#57C79B} .fl-cb b.dn{color:#D9736A}
+.fl-cb s{display:block;text-decoration:none;margin-top:5px;font-family:var(--mono);
+  font-size:9px;letter-spacing:.08em;color:var(--faint)}
 .fl-opc{margin-top:22px;padding:20px 22px;border:1px dashed var(--line);border-radius:16px;
   background:linear-gradient(135deg,rgba(217,115,106,.06),transparent 62%)}
 .fl-opc-h{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:6px}
@@ -27926,7 +27944,7 @@ const FASES$ = [
 /* tu plan, medido con las mismas reglas que todo lo demás */
 function planDeFase(F, wr){
   const P = F.plan;
-  return { ...mideConfig(P.riesgo, P.rr, SETUPS$.length, F, wr, 900), mio:true };
+  return { ...mideConfig(P.riesgo, P.rr, SETUPS$().length, F, wr, 900), mio:true };
 }
 function faseSel(){
   const c = dineroCfg();
@@ -27937,9 +27955,10 @@ function dineroCfg(){
     S.dinero = { fase:'eval', wr:48.86 };
   }
   const c = S.dinero;
-  ['riesgo','rrA','rrE','rN','rrN','r1','r2','r3','dd','meta','topeDia','simDias','simNoche']
+  ['riesgo','rN','r1','r2','r3','dd','meta','topeDia','simDias','simNoche']
     .forEach(k => delete c[k]);
   if(!c.wr) c.wr = 48.86;
+  if(c.rrA == null){ c.rrA = 1; c.rrE = 2; c.rrN = 2; }
   return c;
 }
 /* una carrera hasta cobrar o romper. El drawdown se mide desde el MÁXIMO
@@ -27953,8 +27972,9 @@ function carreraRuina(r, R, maxT, dd, meta, wr, sem0, diasMax){
   const rnd = () => { sem = (sem*1664525 + 1013904223) % 4294967296; return sem/4294967296; };
   let eq = 0, pico = 0;
   for(let d = 0; d < diasMax; d++){
-    for(let t = 0; t < SETUPS$.length; t++){
-      const SU = SETUPS$[t], gana = rnd() < pDeRR(SU.rr, wr);
+    const SS = SETUPS$();
+    for(let t = 0; t < SS.length; t++){
+      const SU = SS[t], gana = rnd() < pDeRR(SU.rr, wr);
       eq += gana ? r*SU.rr : -r;
       if(eq > pico) pico = eq;
       if(eq - pico <= -dd) return { fin:'rompe', d:d+1 };
@@ -28006,17 +28026,25 @@ function mejorDeFase(F, wr){
    LA MADRUGADA VA APARTE (3-sep-2026): es OPCIONAL y de otra sesión, así que
    no cuelga de la cadena de Nueva York — si colgara, sus probabilidades se
    mezclarían con las del día y ninguna de las dos cuentas sería la de verdad. */
-const SETUPS$ = [
-  { t:'A+ SETUP · 1', c:'el primer A+',  rr:1, s:'la de más confluencia de la mañana' },
-  { t:'A+ SETUP · 2', c:'el segundo A+', rr:1, s:'se rema · el A+ son dos, máximo' },
-  { t:'EL 0.79 · ESTRUCTURA', c:'el 0.79 de la estructura', rr:2,
-    s:'ya no se busca setup: se espera el retroceso' },
-];
-const SETUP_NOCHE$ = { t:'EL 0.79 · ASIA O LONDRES', c:'el 0.79 de la madrugada', rr:2,
-  s:'un solo intento, en la que se dé' };
+/* el RR de cada grupo se cambia desde la pantalla: los dos A+ van con el
+   mismo, y los dos 0.79 con el suyo */
+function SETUPS$(){
+  const c = dineroCfg(), a = +c.rrA || 1, e = +c.rrE || 2;
+  return [
+    { t:'A+ SETUP · 1', c:'el primer A+',  rr:a, s:'la de más confluencia de la mañana' },
+    { t:'A+ SETUP · 2', c:'el segundo A+', rr:a, s:'se rema · el A+ son dos, máximo' },
+    { t:'EL 0.79 · ESTRUCTURA', c:'el 0.79 de la estructura', rr:e,
+      s:'ya no se busca setup: se espera el retroceso' },
+  ];
+}
+function SETUP_NOCHE$(){
+  const c = dineroCfg();
+  return { t:'EL 0.79 · ASIA O LONDRES', c:'el 0.79 de la madrugada',
+    rr: +c.rrN || 2, s:'un solo intento, en la que se dé' };
+}
 /* su árbol, chiquito: gana o no gana, y en las dos se acaba */
 function arbolNocheOpc(r){
-  const wr = dineroCfg().wr, SU = SETUP_NOCHE$;
+  const wr = dineroCfg().wr, SU = SETUP_NOCHE$();
   const p = pDeRR(SU.rr, wr), f = v => fmt$(Math.round(v), true);
   const cam = [
     { pr:p,   $: r*SU.rr, nom:'Gana el único' },
@@ -28036,24 +28064,24 @@ function arbolNocheOpc(r){
 function arbolDeFase(cf){
   const r = cf.r, f = v => fmt$(Math.round(v), true);
   const wr = dineroCfg().wr;
-  const mt = SETUPS$.length;                 /* los cuatro, siempre */
+  const mt = SETUPS$().length;                 /* los cuatro, siempre */
   const cam = []; let acum = 0;
   for(let i = 0; i < mt; i++){
-    const SU = SETUPS$[i], p = pDeRR(SU.rr, wr);
+    const SU = SETUPS$()[i], p = pDeRR(SU.rr, wr);
     let q = 1;
-    for(let k = 0; k < i; k++) q *= (1 - pDeRR(SETUPS$[k].rr, wr));
+    for(let k = 0; k < i; k++) q *= (1 - pDeRR(SETUPS$()[k].rr, wr));
     cam.push({ pr: q * p, $: acum + r * SU.rr, nom: 'Gana ' + SU.c });
     acum -= r;
   }
   let qAll = 1;
-  for(let k = 0; k < mt; k++) qAll *= (1 - pDeRR(SETUPS$[k].rr, wr));
+  for(let k = 0; k < mt; k++) qAll *= (1 - pDeRR(SETUPS$()[k].rr, wr));
   cam.push({ pr: qAll, $: -r * mt,
     nom: mt === 1 ? 'Falla el único' : 'Fallan los ' + (mt===2?'dos':mt===3?'tres':'cuatro') });
   const esp = cam.reduce((a, x) => a + x.pr * x.$, 0);
   const nodos = {}, ramas = [], caminos = [];
   const yTop = .07, dy = (.88 - yTop) / mt;
   for(let i = 0; i < mt; i++){
-    const SU = SETUPS$[i], y = yTop + i * dy;
+    const SU = SETUPS$()[i], y = yTop + i * dy;
     nodos['a'+i] = { x: Math.min(.80, .42 + i * .14), y,
       t: SU.t, s: SU.s + ' · ' + fmt$(r) + ' → ' + f(r * SU.rr) + ' (1:' + SU.rr + ')' };
     nodos['p'+i] = { x: Math.max(.13, .26 - i * .03), y: y + dy * .58,
@@ -28128,6 +28156,7 @@ function calendarioHTML(cf){
 }
 function diaFlujoHTML(){
   const c = dineroCfg(), F = faseSel(), wr = c.wr;
+  const fmt = v => fmt$(Math.round(v), true);
   const cf = planDeFase(F, wr);
   const A = cf ? arbolDeFase(cf) : null;
   const f = v => fmt$(Math.round(v), true);
@@ -28151,10 +28180,37 @@ function diaFlujoHTML(){
         <h3 class="pd-tit">Tu <span class="pd-ny">plan</span> para esta fase</h3>
         <div class="fl-cfg">
           <span><i>POR TRADE</i><b>${fmt$(cf.r)}</b></span>
-          <span><i>LOS DOS A+</i><b>1:1</b></span>
-          <span><i>LOS DOS 0.79</i><b>1:2</b></span>
-          <span><i>INTENTOS EN NY</i><b>${SETUPS$.length}</b></span>
+          <span><i>INTENTOS EN NY</i><b>${SETUPS$().length}</b></span>
+          <span><i>OBJETIVO DE LOS A+</i>
+            <select class="fl-sel" data-rr="rrA">${[1,2,3].map(v =>
+              `<option value="${v}" ${+c.rrA === v ? 'selected' : ''}>1:${v}</option>`).join('')}</select></span>
+          <span><i>OBJETIVO DEL 0.79</i>
+            <select class="fl-sel" data-rr="rrE">${[1,2,3].map(v =>
+              `<option value="${v}" ${+c.rrE === v ? 'selected' : ''}>1:${v}</option>`).join('')}</select></span>
         </div>
+        ${(() => {
+          /* las nueve combinaciones, medidas con ESTA fase y ESTE riesgo */
+          const filas = [];
+          for(const a2 of [1,2,3]) for(const e of [1,2,3]){
+            const guarda = [c.rrA, c.rrE];
+            c.rrA = a2; c.rrE = e;
+            const m = mideConfig(F.plan.riesgo, a2, SETUPS$().length, F, wr, 500);
+            c.rrA = guarda[0]; c.rrE = guarda[1];
+            filas.push({ a:a2, e, cobra:m.cobra, rompe:m.rompe, d50:m.d50 });
+          }
+          const top = filas.reduce((x,y) => y.cobra > x.cobra ? y : x, filas[0]);
+          return `<div class="fl-comb">
+            <span class="fl-comb-k">LAS NUEVE COMBINACIONES · % QUE LLEGA A LA META</span>
+            <div class="fl-comb-r">
+              ${filas.map(x => `<button type="button"
+                class="fl-cb ${x.a === +c.rrA && x.e === +c.rrE ? 'on' : ''} ${x === top ? 'top' : ''}"
+                data-a="${x.a}" data-e="${x.e}">
+                <i>A+ 1:${x.a} · 0.79 1:${x.e}</i>
+                <b class="${x.cobra >= .5 ? 'up' : x.cobra >= .35 ? '' : 'dn'}">${Math.round(x.cobra*100)}%</b>
+                <s>${x.d50 ? x.d50 + ' días' : '—'}</s></button>`).join('')}
+            </div>
+          </div>`;
+        })()}
       </div>
     </div>
     <div class="fl-paso">
@@ -28201,6 +28257,12 @@ function dineroVive(){
             planDiaVive('flNoche', null, arbolNocheOpc(cf.r).arbol); }
     h.querySelectorAll('[data-fase]').forEach(b => b.onclick = () => {
       c.fase = b.dataset.fase; save(); dineroVive();
+    });
+    h.querySelectorAll('[data-rr]').forEach(sel => sel.onchange = () => {
+      c[sel.dataset.rr] = +sel.value; save(); dineroVive();
+    });
+    h.querySelectorAll('[data-a]').forEach(b => b.onclick = () => {
+      c.rrA = +b.dataset.a; c.rrE = +b.dataset.e; save(); dineroVive();
     });
   }, 30);
 }
