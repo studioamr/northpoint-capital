@@ -908,6 +908,14 @@ window.LECCIONES_HTML = Object.assign(window.LECCIONES_HTML || {}, {
     <figcaption>La memoria recuerda con ganas de tener razón. El journal recuerda con exactitud. Solo con el dato real puedes decidir si ese setup sirve.</figcaption>
   </figure>
 
+  <figure class="lec-shot">
+    <img src="kuro-c-log.jpg" alt="La pantalla Log trade de la terminal" decoding="async">
+    <figcaption>As&iacute; se ve de verdad: <b>Log trade</b>. Eliges cuenta, marcas LONG o SHORT, escribes el P&amp;L y Enter. La curva y el registro de abajo se arman solos con lo que vas metiendo.<br>
+      <span style="opacity:.72">Captura de la terminal. Los n&uacute;meros de la imagen son de una cuenta
+      de pr&aacute;ctica, no un resultado prometido.</span></figcaption>
+  </figure>
+
+
   <section class="lec-sec">
     <h2>Qué anotar en cada trade</h2>
     <p>No necesitas una novela. Necesitas los campos que después te dejen buscar patrones. El estándar NorthPoint:</p>
@@ -1048,6 +1056,14 @@ window.LECCIONES_HTML = Object.assign(window.LECCIONES_HTML || {}, {
     </svg>
     <figcaption>40% de aciertos suena mal, pero con R:R 1:2 este trader gana dinero. El win rate necesita al R:R para significar algo.</figcaption>
   </figure>
+
+  <figure class="lec-shot">
+    <img src="kuro-c-journal.jpg" alt="La pantalla Mi desempe&ntilde;o de la terminal" decoding="async">
+    <figcaption>As&iacute; se ve de verdad: <b>Mi desempe&ntilde;o</b>. Win rate, d&iacute;as ganadores, promedio gana/pierde y long vs short. No los calculas t&uacute;: salen de los trades que registraste.<br>
+      <span style="opacity:.72">Captura de la terminal. Los n&uacute;meros de la imagen son de una cuenta
+      de pr&aacute;ctica, no un resultado prometido.</span></figcaption>
+  </figure>
+
 
   <section class="lec-sec">
     <h2>2. Profit factor: cuánto ganas por cada dólar que pierdes</h2>
@@ -1209,6 +1225,14 @@ window.LECCIONES_HTML = Object.assign(window.LECCIONES_HTML || {}, {
     </svg>
     <figcaption>Un ciclo repetible: define, busca, junta datos, mide. Si los números no dan, ajustas la regla y vuelves a medir. Todo antes de arriesgar real.</figcaption>
   </figure>
+
+  <figure class="lec-shot">
+    <img src="kuro-c-backtest.jpg" alt="La pantalla Backtesting de la terminal" decoding="async">
+    <figcaption>As&iacute; se ve de verdad: <b>Backtesting</b>. Es la misma pantalla que Log trade pero con una cuenta aparte &mdash; mides una idea sin tocar tu historial real.<br>
+      <span style="opacity:.72">Captura de la terminal. Los n&uacute;meros de la imagen son de una cuenta
+      de pr&aacute;ctica, no un resultado prometido.</span></figcaption>
+  </figure>
+
 
   <section class="lec-sec">
     <h2>El tamaño de muestra: por qué 5 trades no prueban nada</h2>

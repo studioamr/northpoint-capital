@@ -58,6 +58,14 @@ window.LECCIONES_HTML = Object.assign(window.LECCIONES_HTML || {}, {
     <figcaption>La escalera del fondeo. Hoy solo importa el primer escalón: llegar a +$3,000.</figcaption>
   </figure>
 
+  <figure class="lec-shot">
+    <img src="kuro-c-plan.jpg" alt="La pantalla del plan de la terminal" decoding="async">
+    <figcaption>As&iacute; se ve de verdad: la barra de la fase. EVAL &rarr; FUNDED &rarr; BUFFER &rarr; PAYOUTS, y d&oacute;nde vas dentro de la que te toca.<br>
+      <span style="opacity:.72">Captura de la terminal. Los n&uacute;meros de la imagen son de una cuenta
+      de pr&aacute;ctica, no un resultado prometido.</span></figcaption>
+  </figure>
+
+
   <section class="lec-sec">
     <h2>El target: qué número tienes que tocar</h2>
     <p>Tu cuenta empieza en <b>50,000</b>. El objetivo de la evaluación es <b>+$3,000</b>, o sea llegar a que el balance marque <b>53,000</b>. En cuanto lo tocas y cierras el día, pasaste. No hay que quedarse ahí "por si sube más". Tocaste el número, pasaste, se acabó la fase.</p>
