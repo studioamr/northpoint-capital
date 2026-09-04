@@ -3694,6 +3694,8 @@ html[data-theme="light"] .pd-tit .pd-asia{color:#B5473A}
 .dn-fila em{font-style:normal;font-family:var(--mono);font-size:11px;color:var(--faint)}
 .dn-fila b{font-family:var(--mono);font-size:15px;min-width:78px;text-align:right}
 .dn-fila.ok b{color:#57C79B} .dn-fila.mal b{color:#D9736A}
+/* el dia que EMPATA no es una victoria: se pinta en tinta, no en verde */
+.dn-fila.cero b{color:var(--dim)}
 /* ── el calendario, siempre desde hoy ── */
 .cal-h{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap}
 .cal-k{font-family:var(--mono);font-size:9px;letter-spacing:.24em;color:var(--faint)}
@@ -28086,7 +28088,7 @@ function arbolDeFase(cf){
       t: SU.t, s: SU.s + ' · ' + fmt$(r) + ' → ' + f(r * SU.rr) + ' (1:' + SU.rr + ')' };
     nodos['p'+i] = { x: Math.max(.13, .26 - i * .03), y: y + dy * .58,
       t: 'DÍA ' + f(cam[i].$), s: (cam[i].pr*100).toFixed(1) + '% de los días',
-      fin: cam[i].$ >= 0 ? 'ok' : 'mal' };
+      fin: cam[i].$ > 0 ? 'ok' : cam[i].$ < 0 ? 'mal' : 'cero' };
     ramas.push({ de:'a'+i, a:'p'+i, et:'GANA', tipo:'ok' });
     if(i < mt-1) ramas.push({ de:'a'+i, a:'a'+(i+1), et:'NO GANA', tipo:'no' });
   }
@@ -28219,7 +28221,7 @@ function diaFlujoHTML(){
         <h3 class="pd-tit">Qué <span class="pd-ny">esperar</span> del día</h3>
         <div class="pd-arbol"><canvas id="flArbol"></canvas></div>
         <div class="dn-tabla">
-          ${A.cam.map(x => `<div class="dn-fila ${x.$ >= 0 ? 'ok' : 'mal'}">
+          ${A.cam.map(x => `<div class="dn-fila ${x.$ > 0 ? 'ok' : x.$ < 0 ? 'mal' : 'cero'}">
             <span>${esc(x.nom)}</span><em>${(x.pr*100).toFixed(1)}%</em><b>${f(x.$)}</b></div>`).join('')}
         </div>
         ${(() => {
@@ -28229,7 +28231,7 @@ function diaFlujoHTML(){
               <b>La madrugada</b><em>otra sesión, otro riesgo · no entra en la cuenta de arriba</em></div>
             <div class="pd-arbol corto"><canvas id="flNoche"></canvas></div>
             <div class="dn-tabla">
-              ${N.cam.map(x => `<div class="dn-fila ${x.$ >= 0 ? 'ok' : 'mal'}">
+              ${N.cam.map(x => `<div class="dn-fila ${x.$ > 0 ? 'ok' : x.$ < 0 ? 'mal' : 'cero'}">
                 <span>${esc(x.nom)}</span><em>${(x.pr*100).toFixed(1)}%</em><b>${f(x.$)}</b></div>`).join('')}
             </div>
           </div>`;
@@ -28820,7 +28822,14 @@ function planDiaVive(id, estado, arbol){
          en el camino y su nombre al aire. Lo que dice cuál está vivo ya no es
          un borde, es el color y el peso del texto — y un halo en el punto
          cuando es el que te toca. */
-      const col = b.n.fin === 'ok' ? VERDE : AZUL;
+      /* ── LOS RESULTADOS DEL DÍA SE LEEN SIEMPRE ── (André, 3-sep-2026)
+         Las hojas son lo que uno viene a mirar —cuánto deja el día— y estaban
+         apagadas como cualquier otro nodo hasta que el camino pasara por
+         ellas. Ahora van encendidas siempre, con el color de su signo y en
+         cuerpo más grande: verde si suma, rojo si resta, tinta si empata. */
+      const esFin = !!b.n.fin;
+      const col = b.n.fin === 'ok' ? VERDE : b.n.fin === 'mal' ? ROJO : AZUL;
+      if(esFin) on = true;
       const tuyo = estado && estado.nodo === k;
       c.save();
       c.translate(b.x, b.y);
@@ -28835,11 +28844,17 @@ function planDiaVive(id, estado, arbol){
         c.beginPath(); c.arc(0, -b.h/2 - 2, 10, 0, 7); c.stroke(); c.globalAlpha = 1;
       }
       c.textAlign = 'center';
-      c.font = '700 12.5px -apple-system, "Segoe UI", sans-serif';
-      c.fillStyle = on ? (cl() ? '#101828' : '#FFFFFF') : tinta('.32');
-      c.fillText(b.n.t, 0, 2);
+      if(esFin){
+        c.font = '800 15px -apple-system, "Segoe UI", sans-serif';
+        c.fillStyle = b.n.fin === 'cero' ? tinta('.62') : col;
+        c.fillText(b.n.t, 0, 2);
+      } else {
+        c.font = '700 12.5px -apple-system, "Segoe UI", sans-serif';
+        c.fillStyle = on ? (cl() ? '#101828' : '#FFFFFF') : tinta('.32');
+        c.fillText(b.n.t, 0, 2);
+      }
       c.font = '400 9.5px "IBM Plex Mono", monospace';
-      c.fillStyle = on ? tinta('.55') : tinta('.20');
+      c.fillStyle = esFin ? tinta('.50') : on ? tinta('.55') : tinta('.20');
       c.fillText(b.n.s, 0, 17);
       c.restore();
     });
