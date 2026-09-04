@@ -3662,6 +3662,14 @@ html[data-theme="light"] .fl-f.on b{color:rgba(255,255,255,.66)}
   letter-spacing:-.03em;color:var(--txt)}
 .fl-cfg b.dn{color:#C2493D}
 html[data-theme="light"] .fl-cfg b.dn{color:#B5473A}
+/* la madrugada, aparte y marcada como opcional */
+.fl-opc{margin-top:26px;padding:22px 24px;border:1px dashed var(--line);border-radius:16px}
+.fl-opc-h{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:4px}
+.fl-opc-k{font-family:var(--mono);font-size:8.5px;letter-spacing:.2em;color:var(--bg);
+  background:var(--txt);border-radius:99px;padding:5px 11px}
+.fl-opc-h b{font-size:17px;font-weight:800;letter-spacing:-.015em;color:var(--txt)}
+.fl-opc-h em{font-style:normal;font-size:12.5px;color:var(--faint)}
+
 /* ── el calendario, siempre desde hoy ── */
 .cal-h{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap}
 .cal-k{font-family:var(--mono);font-size:9px;letter-spacing:.24em;color:var(--faint)}
@@ -28066,20 +28074,27 @@ function arbolDeFase(cf){
   cam.push({ pr: qAll, $: -r * mt,
     nom: mt === 1 ? 'Falla el único' : 'Fallan los ' + (mt===2?'dos':mt===3?'tres':'cuatro') });
   const esp = cam.reduce((a, x) => a + x.pr * x.$, 0);
+  /* ── UNA ESCALERA, NO UNA DIAGONAL ── (André, 3-sep-2026)
+     Los intentos se iban corriendo a la derecha y los resultados a la
+     izquierda: quedaba una diagonal larga con mucho hueco y curvas cruzadas.
+     Ahora los intentos van en una COLUMNA fija —se baja cuando no ganas— y los
+     resultados salen SIEMPRE por la izquierda, a la misma altura. La regla se
+     lee sola: si ganas te sales, si no, bajas al siguiente. */
   const nodos = {}, ramas = [], caminos = [];
-  const yTop = .11, dy = (.90 - yTop) / mt;   /* aire arriba para el «TRADE n» */
+  const XA = .64, XP = .22;                    /* la columna y la salida */
+  const yTop = .13, dy = (.94 - yTop) / mt;
   for(let i = 0; i < mt; i++){
     const SU = SETUPS$()[i], y = yTop + i * dy;
-    nodos['a'+i] = { x: Math.min(.80, .42 + i * .14), y,
+    nodos['a'+i] = { x: XA, y,
       k: 'TRADE ' + (i + 1),          /* el número del intento, encima del setup */
       t: SU.t, s: SU.s + ' · ' + fmt$(r) + ' → ' + f(r * SU.rr) + ' (1:' + SU.rr + ')' };
-    nodos['p'+i] = { x: Math.max(.13, .26 - i * .03), y: y + dy * .58,
+    nodos['p'+i] = { x: XP, y,
       t: 'DÍA ' + f(cam[i].$), s: (cam[i].pr*100).toFixed(1) + '% de los días',
       fin: cam[i].$ > 0 ? 'ok' : cam[i].$ < 0 ? 'mal' : 'cero' };
     ramas.push({ de:'a'+i, a:'p'+i, et:'GANA', tipo:'ok' });
     if(i < mt-1) ramas.push({ de:'a'+i, a:'a'+(i+1), et:'NO GANA', tipo:'no' });
   }
-  nodos['fin'] = { x:.90, y:.95, t:'DÍA ' + f(cam[mt].$),
+  nodos['fin'] = { x:XA, y:.99, t:'DÍA ' + f(cam[mt].$),
     s:(cam[mt].pr*100).toFixed(1) + '% de los días', fin:'mal' };
   ramas.push({ de:'a'+(mt-1), a:'fin', et:'NO GANA', tipo:'no' });
   const sigue = k => ramas.findIndex(x => x.de === 'a'+k && x.a === 'a'+(k+1));
@@ -28724,7 +28739,15 @@ function planDiaVive(id, estado, arbol){
     /* ── las ramas ── */
     R.forEach((r, i) => {
       const A1 = caja(r.de, W, H), B1 = caja(r.a, W, H);
-      const x1 = A1.x, y1 = A1.y + 26, x2 = B1.x, y2 = B1.y - 26;
+      /* SI ESTÁN A LA MISMA ALTURA, LA RAMA VA DE LADO (André, 3-sep-2026):
+         salía siempre por debajo de un nodo y entraba por arriba del otro, así
+         que en la escalera —donde el intento y su resultado comparten altura—
+         la curva cruzaba por encima del texto. Ahora sale por el costado. */
+      const mismaAltura = Math.abs(A1.y - B1.y) < 24;
+      const x1 = mismaAltura ? A1.x - A1.w/2 - 4 : A1.x;
+      const y1 = mismaAltura ? A1.y : A1.y + 26;
+      const x2 = mismaAltura ? B1.x + B1.w/2 + 4 : B1.x;
+      const y2 = mismaAltura ? B1.y : B1.y - 26;
       const usada = hech.indexOf(i) >= 0, corriendo = i === viva;
       const activa = usada || corriendo;
       const col = r.tipo === 'ok' ? VERDE : r.tipo === 'no' ? ROJO : AZUL;
@@ -28737,7 +28760,8 @@ function planDiaVive(id, estado, arbol){
       c.stroke(); c.restore();
       /* la etiqueta de la rama */
       if(r.et){
-        const mx = (x1+x2)/2 + (x2>x1 ? 16 : -16), my = (y1+y2)/2;
+        const mx = mismaAltura ? (x1+x2)/2 : (x1+x2)/2 + (x2>x1 ? 16 : -16);
+        const my = mismaAltura ? y1 - 12 : (y1+y2)/2;
         c.font = '700 9px "IBM Plex Mono", monospace';
         c.textAlign = x2 > x1 ? 'left' : 'right';
         c.fillStyle = activa ? col : tinta('.28');
