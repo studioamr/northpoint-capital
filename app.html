@@ -8212,21 +8212,20 @@ const TITLES = {
   vida:        ['tit.snow.k',  'tit.vida.t'],
   plan:        ['tit.snow.k',  'tit.plan.t'],
 };
-/* ══ LA VITRINA, CON CANDADO ══ (André, 3-sep-2026)
-   El menú se enseña ENTERO —que se vea todo lo que trae— pero sólo dos
-   pantallas se abren: The Desk, que es la foto del negocio, y Journal, que es
-   la que convence, con el mes lleno de trades. Las demás llevan candado.
+/* ══ LA VITRINA: EL TERMINAL ABIERTO, LA ACADEMIA CON CANDADO ══
+   (André, 3-sep-2026)
+   El Terminal se recorre COMPLETO: quien llega a comprarlo tiene que poder
+   abrir cada pantalla. Poner candado a todo fue pasarse — se probó y se
+   revirtió el mismo día.
 
-   Antes se escondían del menú y era peor de las dos maneras: parecía que la
-   app tenía menos de lo que tiene, y además el que quería ver el código de
-   los indicadores igual llegaba escribiendo el hash. Ahora se ven, no se
-   abren, y el candado dice por qué.
+   La que sí lleva candado es la ACADEMIA. No es una pantalla que enseñe cómo
+   funciona la app: son las 35 lecciones, que son el producto mismo. Al
+   picarla no sale un «no puedes»: salen los tres paquetes con su precio, que
+   es exactamente lo que esa persona vino a preguntar.
 
-   OJO, y es importante: esto NO es seguridad. El código de los indicadores
-   viaja dentro de este mismo app.html, que es público. El candado evita que
-   se encuentre paseando, no que se encuentre. */
-const VITRINA_ABIERTAS = ['agentes','journal'];
-const vitrinaAbierta = v => !VITRINA || VITRINA_ABIERTAS.includes(v);
+   OJO: esto NO es seguridad. Es un mostrador. */
+const VITRINA_CANDADO = ['academia','cuaderno'];
+const vitrinaAbierta = v => !VITRINA || !VITRINA_CANDADO.includes(v);
 function show(view){
   if(VITRINA && !vitrinaAbierta(view)) view = 'agentes';
   if(view === 'progreso') view = 'agentes';   // el progreso vive en La torre ahora
@@ -30515,8 +30514,18 @@ if(VITRINA){
       .vit-caja{max-width:420px;background:var(--bg);border:1px solid var(--line);
         padding:32px 30px;text-align:center}
       .vit-caja b{display:block;font-size:19px;font-weight:600;letter-spacing:-.015em;line-height:1.3}
-      .vit-caja p{margin:12px 0 22px;font-size:14px;line-height:1.65;color:var(--dim)}
-      .vit-caja .btn{width:100%;margin-bottom:9px}`;
+      .vit-caja p{margin:12px 0 20px;font-size:14px;line-height:1.65;color:var(--dim)}
+      .vit-caja .btn{width:100%;margin-bottom:9px}
+      .vit-planes{display:grid;gap:1px;background:var(--line);border:1px solid var(--line);
+        margin-bottom:18px;text-align:left}
+      .vit-planes a{background:var(--bg);padding:13px 15px;display:flex;align-items:baseline;
+        gap:10px;flex-wrap:wrap;transition:background .18s}
+      .vit-planes a:hover{background:var(--glass)}
+      .vit-planes a.dest{background:var(--glass)}
+      .vit-planes i{font-style:normal;font-family:var(--mono);font-size:8px;letter-spacing:.18em;
+        color:var(--faint);min-width:76px}
+      .vit-planes b{font-family:var(--mono);font-size:17px;font-weight:400;letter-spacing:-.02em}
+      .vit-planes em{font-style:normal;font-size:11px;color:var(--dim);margin-left:auto}`;
     document.head.appendChild(est);
     /* el calendario abre en el mes ANTERIOR: el corriente lleva dos o tres
        días hábiles y se vería vacío justo en la pantalla que más convence */
@@ -30541,11 +30550,16 @@ document.addEventListener('click', e => {
   const v = document.createElement('div');
   v.className = 'vit-velo';
   v.innerHTML = `<div class="vit-caja">
-    <b>Esta pantalla viene con el Terminal</b>
-    <p>En la demo quedan abiertas The Desk y Mi desempeño, para que veas cómo se
-      mide una mesa de verdad. Las otras once son parte de lo que se cobra.</p>
-    <a class="btn pri" href="/#precio" target="_top">Ver el precio</a>
-    <button type="button" class="btn">Seguir viendo</button>
+    <b>La academia viene con el Terminal</b>
+    <p>Cuatro programas, doce módulos y 35 lecciones. El Terminal lo puedes
+      recorrer entero aquí mismo; la academia va con el plan.</p>
+    <div class="vit-planes">
+      <a href="/#precio" target="_top"><i>MENSUAL</i><b>$1,490</b><em>al mes</em></a>
+      <a href="/#precio" target="_top" class="dest"><i>ANUAL</i><b>$11,900</b><em>sale en $992 al mes</em></a>
+      <a href="/#precio" target="_top"><i>DE POR VIDA</i><b>$17,000</b><em>una sola vez</em></a>
+    </div>
+    <a class="btn primary" href="/#precio" target="_top">Ver los planes completos</a>
+    <button type="button" class="btn">Seguir viendo el Terminal</button>
   </div>`;
   v.addEventListener('click', ev => {
     if(ev.target === v || ev.target.tagName === 'BUTTON') v.remove();
