@@ -3842,8 +3842,10 @@ html[data-theme="light"] .proto-viz{background:rgba(0,0,0,.015)}
 .como-svg .s-mid{fill:var(--faint);opacity:.28}
 /* los colores con los que el chart pinta cada sesión: Asia roja, Londres
    azul. Los mismos de las líneas de liquidez, para no tener que traducir. */
-.como-svg .s-asia{fill:#D9736A;opacity:.20}
-.como-svg .s-lon{fill:#5E8BD6;opacity:.20}
+/* la madrugada TAMBIEN es una ventana: se pinta como tal, no como fondo */
+.como-svg .s-asia{fill:#D9736A;opacity:.34}
+.como-svg .s-lon{fill:#5E8BD6;opacity:.34}
+.como-svg .s-noche-b{fill:none;stroke:#D9736A;stroke-width:1.2;opacity:.55}
 .como-svg .s-lbl-asia{fill:#D9736A;opacity:.92}
 .como-svg .s-lbl-lon{fill:#7FA9E8;opacity:.92}
 /* cuántos trades caben en cada ventana, que es el dato de esta línea */
@@ -27915,8 +27917,8 @@ const FASES$ = [
 ];
 /* tu plan, medido con las mismas reglas que todo lo demás */
 function planDeFase(F, wr){
-  const P = F.plan, mt = Math.max(1, Math.floor(P.tope / P.riesgo));
-  return { ...mideConfig(P.riesgo, P.rr, mt, F, wr, 900), mio:true };
+  const P = F.plan;
+  return { ...mideConfig(P.riesgo, P.rr, SETUPS$.length, F, wr, 900), mio:true };
 }
 function faseSel(){
   const c = dineroCfg();
@@ -27934,19 +27936,22 @@ function dineroCfg(){
 }
 /* una carrera hasta cobrar o romper. El drawdown se mide desde el MÁXIMO
    (trailing), que es como lo miden las firmas: el supuesto más duro. */
+/* LA CARRERA RECORRE LOS MISMOS CUATRO SETUPS QUE EL ÁRBOL (André, 3-sep-2026):
+   antes simulaba N trades con un solo RR, y desde que el día son dos A+ a 1:1 y
+   dos 0.79 a 1:2 esa cuenta ya no era la del árbol de arriba. El calendario
+   tiene que salir de lo mismo que se dibuja, o son dos planes distintos. */
 function carreraRuina(r, R, maxT, dd, meta, wr, sem0, diasMax){
   let sem = sem0;
   const rnd = () => { sem = (sem*1664525 + 1013904223) % 4294967296; return sem/4294967296; };
-  const p = pDeRR(R, wr);
   let eq = 0, pico = 0;
   for(let d = 0; d < diasMax; d++){
-    for(let t = 0; t < maxT; t++){
-      const gana = rnd() < p;
-      eq += gana ? r*R : -r;
+    for(let t = 0; t < SETUPS$.length; t++){
+      const SU = SETUPS$[t], gana = rnd() < pDeRR(SU.rr, wr);
+      eq += gana ? r*SU.rr : -r;
       if(eq > pico) pico = eq;
       if(eq - pico <= -dd) return { fin:'rompe', d:d+1 };
       if(eq >= meta)       return { fin:'cobra', d:d+1 };
-      if(gana) break;
+      if(gana) break;                        /* gana y se para el día */
     }
   }
   return { fin:'lento', d:diasMax };
@@ -27987,53 +27992,59 @@ function mejorDeFase(F, wr){
    ya no busca setup —espera el 0.79 de la estructura— y aparte, en la
    madrugada, queda el 0.79 de Asia o Londres, que va con su propio riesgo y
    por eso no entra en la cuenta del día de Nueva York. */
+/* EL MISMO ÁRBOL EN LAS TRES FASES (André, 3-sep-2026): los cuatro intentos
+   del día no cambian con la fase — lo que cambia es cuánto se arriesga en cada
+   uno. Los dos A+ van a 1:1 y los dos 0.79 a 1:2, como en la libreta. */
 const SETUPS$ = [
-  { t:'A+ SETUP · 1', c:'el primer A+',      s:'la de más confluencia de la mañana' },
-  { t:'A+ SETUP · 2', c:'el segundo A+',     s:'se rema · el A+ son dos, máximo' },
-  { t:'EL 0.79 · ESTRUCTURA', c:'el 0.79 de la estructura',
+  { t:'A+ SETUP · 1', c:'el primer A+',  rr:1, s:'la de más confluencia de la mañana' },
+  { t:'A+ SETUP · 2', c:'el segundo A+', rr:1, s:'se rema · el A+ son dos, máximo' },
+  { t:'EL 0.79 · ESTRUCTURA', c:'el 0.79 de la estructura', rr:2,
     s:'ya no se busca setup: se espera el retroceso' },
-  { t:'EL 0.79 · ASIA O LONDRES', c:'el 0.79 de la madrugada',
+  { t:'EL 0.79 · ASIA O LONDRES', c:'el 0.79 de la madrugada', rr:2,
     s:'un solo intento, en la que se dé' },
 ];
 /* el árbol del día con ESA configuración, en dinero */
 function arbolDeFase(cf){
-  const r = cf.r, R = cf.R, mt = cf.maxT, f = v => fmt$(Math.round(v), true);
-  const p = pDeRR(R, dineroCfg().wr), q = 1 - p;
-  const cam = [];
-  for(let i = 0; i < mt; i++)
-    cam.push({ pr: Math.pow(q,i) * p, $: -r*i + r*R,
-      /* «Gana el EL 0.79» se leía con dos artículos: la tabla usa el nombre
-         corto, que ya viene escrito para ir en una frase */
-      nom: 'Gana ' + (SETUPS$[Math.min(i, SETUPS$.length-1)].c) });
-  cam.push({ pr: Math.pow(q,mt), $: -r*mt,
-    nom: mt === 1 ? 'Falla el único' : 'Fallan los ' + (mt===2?'dos':mt===3?'tres':'cuatro') });
-  const esp = cam.reduce((a,x) => a + x.pr*x.$, 0);
-  /* el árbol se arma con tantos niveles como trades tenga la fase */
-  const nodos = {}, ramas = [], caminos = [];
-  const yTop = .08, dy = mt > 1 ? (.86 - yTop) / mt : .5;
+  const r = cf.r, f = v => fmt$(Math.round(v), true);
+  const wr = dineroCfg().wr;
+  const mt = SETUPS$.length;                 /* los cuatro, siempre */
+  const cam = []; let acum = 0;
   for(let i = 0; i < mt; i++){
-    const xi = .46 + i * .18, y = yTop + i * dy;
-    const SU = SETUPS$[Math.min(i, SETUPS$.length-1)];
-    nodos['a'+i] = { x: Math.min(.82, xi), y,
-      t: SU.t, s: SU.s + ' · ' + fmt$(r) + ' → ' + f(r*R) };
-    nodos['p'+i] = { x: Math.max(.14, .30 - i*.05), y: y + dy*.62,
+    const SU = SETUPS$[i], p = pDeRR(SU.rr, wr);
+    let q = 1;
+    for(let k = 0; k < i; k++) q *= (1 - pDeRR(SETUPS$[k].rr, wr));
+    cam.push({ pr: q * p, $: acum + r * SU.rr, nom: 'Gana ' + SU.c });
+    acum -= r;
+  }
+  let qAll = 1;
+  for(let k = 0; k < mt; k++) qAll *= (1 - pDeRR(SETUPS$[k].rr, wr));
+  cam.push({ pr: qAll, $: -r * mt, nom: 'Fallan los cuatro' });
+  const esp = cam.reduce((a, x) => a + x.pr * x.$, 0);
+  const nodos = {}, ramas = [], caminos = [];
+  const yTop = .07, dy = (.88 - yTop) / mt;
+  for(let i = 0; i < mt; i++){
+    const SU = SETUPS$[i], y = yTop + i * dy;
+    nodos['a'+i] = { x: Math.min(.80, .42 + i * .14), y,
+      t: SU.t, s: SU.s + ' · ' + fmt$(r) + ' → ' + f(r * SU.rr) + ' (1:' + SU.rr + ')' };
+    nodos['p'+i] = { x: Math.max(.13, .26 - i * .03), y: y + dy * .58,
       t: 'DÍA ' + f(cam[i].$), s: (cam[i].pr*100).toFixed(1) + '% de los días',
       fin: cam[i].$ >= 0 ? 'ok' : 'mal' };
     ramas.push({ de:'a'+i, a:'p'+i, et:'GANA', tipo:'ok' });
     if(i < mt-1) ramas.push({ de:'a'+i, a:'a'+(i+1), et:'NO GANA', tipo:'no' });
   }
-  nodos['fin'] = { x:.90, y:.90, t:'DÍA ' + f(cam[mt].$),
+  nodos['fin'] = { x:.90, y:.95, t:'DÍA ' + f(cam[mt].$),
     s:(cam[mt].pr*100).toFixed(1) + '% de los días', fin:'mal' };
   ramas.push({ de:'a'+(mt-1), a:'fin', et:'NO GANA', tipo:'no' });
+  const sigue = k => ramas.findIndex(x => x.de === 'a'+k && x.a === 'a'+(k+1));
   for(let i = 0; i < mt; i++){
-    const r2 = []; for(let k = 0; k < i; k++) r2.push(ramas.findIndex(x => x.de==='a'+k && x.a==='a'+(k+1)));
-    r2.push(ramas.findIndex(x => x.de==='a'+i && x.a==='p'+i));
-    caminos.push({ nom:cam[i].nom.toUpperCase(), r:r2 });
+    const r2 = []; for(let k = 0; k < i; k++) r2.push(sigue(k));
+    r2.push(ramas.findIndex(x => x.de === 'a'+i && x.a === 'p'+i));
+    caminos.push({ nom: cam[i].nom.toUpperCase(), r: r2 });
   }
-  const rf = []; for(let k = 0; k < mt-1; k++) rf.push(ramas.findIndex(x => x.de==='a'+k && x.a==='a'+(k+1)));
-  rf.push(ramas.length-1);
-  caminos.push({ nom:cam[mt].nom.toUpperCase(), r:rf });
-  return { arbol:{ raiz:{x:.5,y:.99}, nodos, ramas, caminos }, cam, esp };
+  const rf = []; for(let k = 0; k < mt-1; k++) rf.push(sigue(k));
+  rf.push(ramas.length - 1);
+  caminos.push({ nom:'FALLAN LOS CUATRO', r: rf });
+  return { arbol:{ raiz:{x:.5,y:.995}, nodos, ramas, caminos }, cam, esp };
 }
 
 /* ── el calendario: desde HOY hasta el día en que la meta suele caer ── */
@@ -28083,9 +28094,7 @@ function calendarioHTML(cf){
       <span class="cal-pie med"><i></i>lo normal · ${fmtF(dMed)} · ${cf.d50} días</span>
       <span class="cal-pie pes"><i></i>si se atora · ${fmtF(dPes)} · ${cf.d90} días</span>
     </div>
-    <p class="cal-nota">Son los días en que la simulación LLEGA a la meta. En
-      ${Math.round(cf.rompe*100)}% de las corridas la cuenta se rompe antes y no hay
-      fecha que dibujar — el calendario cuenta el camino bueno, no el único.</p>`;
+`;
 }
 function diaFlujoHTML(){
   const c = dineroCfg(), F = faseSel(), wr = c.wr;
@@ -28100,10 +28109,9 @@ function diaFlujoHTML(){
         <div class="fl-fases">
           ${FASES$.map(x => `<button type="button" class="fl-f ${x.k === F.k ? 'on' : ''}" data-fase="${x.k}">
             <b>${esc(x.n)}</b><span>${esc(x.t)}</span>
-            <em>${fmt$(x.plan.riesgo)} → ${fmt$(x.plan.riesgo * x.plan.rr)} · día ${fmt$(x.plan.tope)}</em>
+            <em>${fmt$(x.plan.riesgo)} por trade</em>
           </button>`).join('')}
         </div>
-        <p class="fl-d">${esc(F.d)}</p>
       </div>
     </div>
     ${cf ? `
@@ -28113,31 +28121,10 @@ function diaFlujoHTML(){
         <h3 class="pd-tit">Tu <span class="pd-ny">plan</span> para esta fase</h3>
         <div class="fl-cfg">
           <span><i>POR TRADE</i><b>${fmt$(cf.r)}</b></span>
-          <span><i>OBJETIVO</i><b>1:${cf.R}</b></span>
-          <span><i>TRADES AL DÍA</i><b>${cf.maxT}</b></span>
-          <span><i>PEOR DÍA</i><b class="dn">−${fmt$(cf.peor)}</b></span>
+          <span><i>LOS DOS A+</i><b>1:1</b></span>
+          <span><i>LOS DOS 0.79</i><b>1:2</b></span>
+          <span><i>INTENTOS AL DÍA</i><b>${SETUPS$.length}</b></span>
         </div>
-        <div class="fl-odds">
-          <span><i>LLEGA A LA META</i><b class="up">${Math.round(cf.cobra*100)}%</b></span>
-          <span><i>ROMPE ANTES</i><b class="dn">${Math.round(cf.rompe*100)}%</b></span>
-          <span><i>POR CADA ROTA</i><b>${cf.razon === Infinity ? '∞' : cf.razon.toFixed(2)}</b></span>
-          <span><i>ESPERANZA</i><b class="${A.esp >= 0 ? 'up' : 'dn'}">${f(A.esp)}</b></span>
-        </div>
-        ${(() => {
-          /* LO QUE MIDE MEJOR, AL LADO — NO EN LUGAR DE (André, 3-sep-2026):
-             el plan es suyo y se respeta; pero si la simulación encuentra algo
-             que llega más veces, callárselo sería peor que decírselo. */
-          const alt = mejorDeFase(F, wr);
-          if(!alt) return '';
-          const mejor = alt.cobra > cf.cobra + .04 || alt.rompe < cf.rompe - .06;
-          if(!mejor) return `<p class="fl-alt ok">La simulación no encuentra nada
-            mejor que tu plan para esta fase.</p>`;
-          return `<p class="fl-alt">Con las mismas reglas, <b>${fmt$(alt.r)} a 1:${alt.R}
-            con ${alt.maxT} trade${alt.maxT>1?'s':''}</b> llega
-            ${Math.round(alt.cobra*100)}% de las veces y rompe
-            ${Math.round(alt.rompe*100)}% —contra tu ${Math.round(cf.cobra*100)}% y
-            ${Math.round(cf.rompe*100)}%—. Es lo que mide; el plan lo pones tú.</p>`;
-        })()}
       </div>
     </div>
     <div class="fl-paso">
@@ -28149,21 +28136,13 @@ function diaFlujoHTML(){
           ${A.cam.map(x => `<div class="dn-fila ${x.$ >= 0 ? 'ok' : 'mal'}">
             <span>${esc(x.nom)}</span><em>${(x.pr*100).toFixed(1)}%</em><b>${f(x.$)}</b></div>`).join('')}
         </div>
-        <p class="fl-noche">Y aparte, en la madrugada: <b>el 0.79 de Asia o
-          Londres</b>, un solo intento en la que se dé. Va con su propio riesgo,
-          así que no entra en el tope del día de Nueva York ni en la cuenta de
-          arriba.</p>
       </div>
     </div>
     <div class="fl-paso">
       <span class="fl-n">4</span>
       <div class="fl-c cal">${calendarioHTML(cf)}</div>
     </div>
-    <p class="dn-nota">El win rate de cada objetivo no se inventa: sale de tu ventaja
-      medida sobre el azar. Tocar R antes que −1 pasa 1/(1+R) de las veces en un mercado
-      sin deriva; tú mides 48.86% donde el azar da 45.87% a tu R medio de 1.18, o sea
-      <b>+2.99 puntos</b>. Esa ventaja se te respeta en cualquier objetivo y lo que cuesta
-      alejarlo se te cobra.</p>` : '<p class="dn-nota">Con ese tope diario no cabe ninguna configuración.</p>'}`;
+` : '<p class="dn-nota">Con ese tope diario no cabe ninguna configuración.</p>'}`;
 }
 let flTimer = null;
 function dineroVive(){
@@ -28913,8 +28892,9 @@ function lineaDiaHTML(){
              azul, y la ventana de Nueva York con su acento de siempre.
              El ancho es esquemático, no proporcional: a escala real el ORB
              mediría diez píxeles y no cabría su nombre. -->
-        <rect x="40"  y="58" width="200" height="34" rx="4" class="s-asia"/>
-        <rect x="240" y="58" width="200" height="34" rx="4" class="s-lon"/>
+        <rect x="40"  y="58" width="200" height="34" rx="4" class="s-asia viva"/>
+        <rect x="240" y="58" width="200" height="34" rx="4" class="s-lon viva"/>
+        <rect x="40"  y="58" width="400" height="34" rx="4" class="s-noche-b"/>
         <!-- la madrugada es UNA ventana con UN trade, aunque ocupe dos bloques:
              el corchete de abajo lo dice sin tener que escribirlo -->
         <path d="M44 96 L44 102 L436 102 L436 96" class="s-llave s-llave-noche"/>
@@ -28948,14 +28928,12 @@ function lineaDiaHTML(){
         <text x="550" y="124" class="s-h">09:30</text>
         <text x="620" y="124" class="s-h s-on">09:45</text>
         <text x="860" y="124" class="s-h">16:00</text>
-        <!-- DEBAJO DE CADA BARRA VAN LOS TRADES (André, 2-sep-2026): antes iba
-             una frase chiquita explicando la sesión, y lo que de verdad hay
-             que saber mirando esta línea es CUÁNTOS trades caben en cada
-             ventana. La ventana ya no es sólo Nueva York: la madrugada
-             también tiene el suyo, uno entre Asia y Londres. -->
-        <text x="240" y="148" class="s-tr s-tr-noche">${T('1 TRADE · EL 0.79, EN LA QUE SE DÉ','1 TRADE · THE 0.79, IN WHICHEVER SHOWS')}</text>
-        <text x="530" y="148" class="s-tr s-tr-off">${T('CERO ENTRADAS','ZERO ENTRIES')}</text>
-        <text x="740" y="148" class="s-tr s-tr-ny">${T('3 TRADES · DOS A+ Y EL 0.79','3 TRADES · TWO A+ AND THE 0.79')}</text>
+        <!-- LOS RÓTULOS VAN ARRIBA (André, 3-sep-2026): debajo competían con
+             las horas y se leían como pie de página. Encima de su ventana
+             dicen lo que hay que saber ANTES de mirar el reloj. -->
+        <text x="240" y="30" class="s-tr s-tr-noche">${T('1 TRADE · EL 0.79, EN LA QUE SE DÉ','1 TRADE · THE 0.79, IN WHICHEVER SHOWS')}</text>
+        <text x="530" y="30" class="s-tr s-tr-off">${T('CERO ENTRADAS','ZERO ENTRIES')}</text>
+        <text x="740" y="30" class="s-tr s-tr-ny">${T('3 TRADES · DOS A+ Y EL 0.79','3 TRADES · TWO A+ AND THE 0.79')}</text>
       </svg>
     </div>
     <p class="como-nota">${T('Horas de Nueva York. Cuatro trades en todo el día: uno en la madrugada —Asia o Londres, la que se dé— y tres en Nueva York. La regla dura está en el 09:45: antes de que cierre el rango de apertura no se entra, ni aunque el setup se vea perfecto.','New York hours. Four trades in the whole day: one overnight — Asia or London, whichever shows — and three in New York. The hard rule sits at 09:45: before the opening range closes you do not enter, not even if the setup looks perfect.')}</p>
