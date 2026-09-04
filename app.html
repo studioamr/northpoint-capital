@@ -3705,12 +3705,12 @@ html[data-theme="light"] .fl-cfg b.dn{color:#B5473A}
   letter-spacing:.2em;color:var(--faint)}
 .dn-nota{margin:18px 0 0;font-family:var(--mono);font-size:9.5px;letter-spacing:.06em;
   line-height:1.8;color:var(--faint);max-width:78ch}
-.pd-arbol{margin-top:10px;height:clamp(420px,60vh,600px)}
+.pd-arbol{margin-top:10px;height:clamp(520px,70vh,740px)}
 /* el arbolito de la madrugada tiene DOS niveles, no cuatro: con el alto del
    grande quedaba medio lienzo vacío */
 .pd-arbol.corto{height:clamp(230px,30vh,300px)}
 .pd-arbol canvas{display:block;width:100%;height:100%}
-@media(max-width:720px){.pd-arbol{height:clamp(420px,66vh,560px)}}
+@media(max-width:720px){.pd-arbol{height:clamp(520px,78vh,700px)}}
 .pd-noche{margin:14px 0 0;padding:14px 16px;border-left:2px solid #3861F6;
   background:rgba(56,97,246,.06);border-radius:0 10px 10px 0;
   font-family:var(--mono);font-size:9.5px;letter-spacing:.14em;line-height:1.7;
@@ -28074,51 +28074,57 @@ function arbolDeFase(cf){
   cam.push({ pr: qAll, $: -r * mt,
     nom: mt === 1 ? 'Falla el único' : 'Fallan los ' + (mt===2?'dos':mt===3?'tres':'cuatro') });
   const esp = cam.reduce((a, x) => a + x.pr * x.$, 0);
-  /* ── UN ÁRBOL DE VERDAD: RAÍZ, Y EN CADA NIVEL LAS DOS SALIDAS ──
-     (André, 3-sep-2026)
-     La escalera dejaba el resultado A LA MISMA ALTURA que su intento: la rama
-     salía de lado y no se leía como una bifurcación, sólo como un renglón.
-     Ahora se marca el PUNTO DE PARTIDA arriba —de dónde arranca todo— y de
-     cada intento bajan sus DOS posibilidades, las dos al MISMO NIVEL: a la
-     izquierda cómo cierra el día si ganas, en la columna cómo sigue si no.
-     Así cada renglón del dibujo es un nivel del día, y se distinguen de un
-     vistazo sin seguir ninguna curva. */
+  /* ── DOS LADOS: IZQUIERDA GANAS, DERECHA PIERDES ── (André, 3-sep-2026)
+     El árbol se iba corriendo a un lado y no se sabía qué columna era qué.
+     Ahora el trade va CENTRADO y de él salen sus dos únicas salidas, una a
+     cada lado y a la misma altura: a la IZQUIERDA cómo cierra el día si gana
+     —ahí se acaba—, a la DERECHA lo que llevas perdido si no —y de ahí se
+     baja al siguiente trade, otra vez al centro. Lo de siempre queda de un
+     solo lado, así que se lee sin seguir ninguna línea. */
   const nodos = {}, ramas = [], caminos = [];
-  const XA = .635, XP = .235;            /* la columna del día · la salida */
-  const yTop = .08, dy = (.95 - yTop) / (mt + 1);
+  const XC = .5, XG = .20, XP = .80;      /* el trade · ganas · pierdes */
+  const filas = 2 * mt;                   /* trade y salidas, por cada intento */
+  const yTop = .13, dy = (.94 - yTop) / (filas - 1);
   const fila = n => yTop + n * dy;
-  nodos['ini'] = { x: XA, y: fila(0), ini: true,
-    k: 'PUNTO DE PARTIDA', t: 'Abre Nueva York',
-    s: mt + ' intentos · ' + fmt$(r) + ' de riesgo cada uno' };
-  ramas.push({ de:'ini', a:'a0', tipo:'ini' });
   for(let i = 0; i < mt; i++){
-    const SU = SETUPS$()[i];
-    nodos['a'+i] = { x: XA, y: fila(i + 1),
+    const SU = SETUPS$()[i], ult = i === mt - 1;
+    nodos['t'+i] = { x: XC, y: fila(2*i),
       k: 'TRADE ' + (i + 1),          /* el número del intento, encima del setup */
       t: SU.t, s: SU.s + ' · ' + fmt$(r) + ' → ' + f(r * SU.rr) + ' (1:' + SU.rr + ')' };
-    nodos['p'+i] = { x: XP, y: fila(i + 2),
+    nodos['g'+i] = { x: XG, y: fila(2*i + 1),
       t: 'DÍA ' + f(cam[i].$), s: (cam[i].pr*100).toFixed(1) + '% de los días',
       fin: cam[i].$ > 0 ? 'ok' : cam[i].$ < 0 ? 'mal' : 'cero' };
-    ramas.push({ de:'a'+i, a:'p'+i, et:'GANA', tipo:'ok' });
-    if(i < mt-1) ramas.push({ de:'a'+i, a:'a'+(i+1), et:'NO GANA', tipo:'no' });
+    /* del lado que pierde: en los primeros es cuánto llevas y que sigues; en
+       el último ya es el cierre del día */
+    nodos['p'+i] = ult
+      ? { x: XP, y: fila(2*i + 1), t: 'DÍA ' + f(cam[mt].$),
+          s: (cam[mt].pr*100).toFixed(1) + '% de los días', fin: 'mal' }
+      : { x: XP, y: fila(2*i + 1), t: 'Vas en ' + f(-r * (i+1)),
+          s: 'te queda el trade ' + (i + 2) };
+    ramas.push({ de:'t'+i, a:'g'+i, et:'GANA', tipo:'ok' });
+    ramas.push({ de:'t'+i, a:'p'+i, et:'NO GANA', tipo:'no' });
+    if(!ult) ramas.push({ de:'p'+i, a:'t'+(i+1), tipo:'no' });
   }
-  nodos['fin'] = { x:XA, y: fila(mt + 1), t:'DÍA ' + f(cam[mt].$),
-    s:(cam[mt].pr*100).toFixed(1) + '% de los días', fin:'mal' };
-  ramas.push({ de:'a'+(mt-1), a:'fin', et:'NO GANA', tipo:'no' });
-  const sigue = k => ramas.findIndex(x => x.de === 'a'+k && x.a === 'a'+(k+1));
+  const gana = k => ramas.findIndex(x => x.de === 't'+k && x.a === 'g'+k);
+  const falla = k => ramas.findIndex(x => x.de === 't'+k && x.a === 'p'+k);
+  const sigue = k => ramas.findIndex(x => x.de === 'p'+k && x.a === 't'+(k+1));
   for(let i = 0; i < mt; i++){
-    const r2 = [0];                     /* todo camino baja primero por el tronco */
-    for(let k = 0; k < i; k++) r2.push(sigue(k));
-    r2.push(ramas.findIndex(x => x.de === 'a'+i && x.a === 'p'+i));
+    const r2 = [];
+    for(let k = 0; k < i; k++){ r2.push(falla(k)); r2.push(sigue(k)); }
+    r2.push(gana(i));
     caminos.push({ nom: cam[i].nom.toUpperCase(), r: r2 });
   }
-  const rf = [0]; for(let k = 0; k < mt-1; k++) rf.push(sigue(k));
-  rf.push(ramas.length - 1);
+  const rf = [];
+  for(let k = 0; k < mt-1; k++){ rf.push(falla(k)); rf.push(sigue(k)); }
+  rf.push(falla(mt-1));
   caminos.push({ nom: cam[mt].nom.toUpperCase(), r: rf });
-  /* las líneas que separan un nivel del siguiente: sin ellas «al mismo
-     nivel» hay que adivinarlo midiendo con el ojo */
-  const niveles = []; for(let n = 0; n <= mt; n++) niveles.push(fila(n) + dy/2);
-  return { arbol:{ raiz:{x:.5,y:.995}, nodos, ramas, caminos, niveles }, cam, esp };
+  /* la raya que cierra cada bloque —trade y sus dos salidas— para que no se
+     confunda con el siguiente */
+  const niveles = []; for(let i = 0; i < mt-1; i++) niveles.push(fila(2*i + 1) + dy/2);
+  /* los rótulos de las dos columnas: el lado se dice, no se adivina */
+  const lados = [{ x:XG, t:'SI GANAS · SE ACABA EL DÍA' },
+                 { x:XP, t:'SI NO · SIGUES' }];
+  return { arbol:{ raiz:{x:.5,y:.995}, nodos, ramas, caminos, niveles, lados }, cam, esp };
 }
 
 /* ── el calendario: desde HOY hasta el día en que la meta suele caer ── */
@@ -28197,7 +28203,6 @@ function diaFlujoHTML(){
           <span><i>POR TRADE</i><b>${fmt$(cf.r)}</b></span>
           <span><i>INTENTOS EN NY</i><b>${SETUPS$().length}</b></span>
           <span><i>OBJETIVO</i><b>1:2</b></span>
-          <span><i>PEOR DÍA</i><b class="dn">−${fmt$(cf.r * SETUPS$().length)}</b></span>
         </div>
       </div>
     </div>
@@ -28752,6 +28757,19 @@ function planDiaVive(id, estado, arbol){
        Una raya finísima entre nivel y nivel. No decora: es lo que hace que
        «el resultado y el siguiente intento están al mismo nivel» se vea sin
        tener que comparar alturas a ojo. */
+    /* ── SE DICE QUÉ LADO ES CUÁL ── (André, 3-sep-2026)
+       Con las ramas solas había que leer «GANA»/«NO GANA» en cada bifurcación
+       para saber de qué lado estabas. Un rótulo arriba de cada columna y ya. */
+    if(A.lados){
+      c.save();
+      c.font = '700 8.5px "IBM Plex Mono", monospace';
+      c.textAlign = 'center';
+      A.lados.forEach(L => {
+        c.fillStyle = L.x < .5 ? 'rgba(87,199,155,.85)' : 'rgba(217,115,106,.85)';
+        c.fillText(L.t, Math.min(W - 70, Math.max(70, L.x*W)), 14);
+      });
+      c.restore();
+    }
     if(A.niveles){
       c.save(); c.strokeStyle = tinta('.06'); c.lineWidth = 1;
       A.niveles.forEach(yn => {
@@ -28767,9 +28785,8 @@ function planDiaVive(id, estado, arbol){
       const usada = hech.indexOf(i) >= 0, corriendo = i === viva;
       /* el tronco —de la raíz al primer intento— está vivo siempre: es de
          donde sale todo, no una posibilidad más */
-      const activa = r.tipo === 'ini' || usada || corriendo;
-      const col = r.tipo === 'ok' ? VERDE : r.tipo === 'no' ? ROJO
-                : r.tipo === 'ini' ? tinta('.5') : AZUL;
+      const activa = usada || corriendo;
+      const col = r.tipo === 'ok' ? VERDE : r.tipo === 'no' ? ROJO : AZUL;
       c.save();
       c.strokeStyle = activa ? col : tinta('.13');
       c.lineWidth = activa ? 2.2 : 1.2;
@@ -28819,9 +28836,9 @@ function planDiaVive(id, estado, arbol){
          apagadas como cualquier otro nodo hasta que el camino pasara por
          ellas. Ahora van encendidas siempre, con el color de su signo y en
          cuerpo más grande: verde si suma, rojo si resta, tinta si empata. */
-      const esFin = !!b.n.fin, esIni = !!b.n.ini;
+      const esFin = !!b.n.fin;
       const col = b.n.fin === 'ok' ? VERDE : b.n.fin === 'mal' ? ROJO : AZUL;
-      if(esFin || esIni) on = true;
+      if(esFin) on = true;
       const tuyo = estado && estado.nodo === k;
       c.save();
       c.translate(b.x, b.y);
@@ -28831,8 +28848,8 @@ function planDiaVive(id, estado, arbol){
       c.fillStyle = on ? col : tinta('.20');
       c.beginPath(); c.arc(0, -b.h/2 - 12, on ? 4.5 : 3, 0, 7); c.fill();
       c.restore();
-      if(tuyo || esIni){
-        c.strokeStyle = col; c.lineWidth = 1.3; c.globalAlpha = esIni ? .35 : .45;
+      if(tuyo){
+        c.strokeStyle = col; c.lineWidth = 1.3; c.globalAlpha = .45;
         c.beginPath(); c.arc(0, -b.h/2 - 12, 10, 0, 7); c.stroke(); c.globalAlpha = 1;
       }
       c.textAlign = 'center';
