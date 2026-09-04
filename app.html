@@ -6586,7 +6586,35 @@ function aplicarIdioma(){
   $$('[data-i18n-ph]').forEach(el => el.placeholder = tr(el.dataset.i18nPh));
 }
 
-const LS = 'northpoint_terminal_v3';
+/* ══ MODO VITRINA ══ (?vitrina=1) — (André, 3-sep-2026)
+   El Terminal, corriendo de verdad, dentro de la portada. Quien llega puede
+   picarle y pasearse por la app en vez de mirar capturas.
+
+   Dos candados, y los dos importan porque el iframe vive en el MISMO origen
+   que la app real:
+     · guarda en SU PROPIA llave de localStorage — jamás toca la del usuario;
+     · la nube queda apagada (cloudOn()), así que nada de esto sube ni baja.
+   Los datos son de MUESTRA y la portada lo dice al lado del marco. */
+const VITRINA = (() => {
+  try{ return new URLSearchParams(location.search).has('vitrina'); }
+  catch(e){ return false; }
+})();
+const LS = VITRINA ? 'northpoint_vitrina_v1' : 'northpoint_terminal_v3';
+/* La vitrina vive dentro de un iframe en la portada, y la portada tiene su
+   propio interruptor de claro/oscuro. Sin esto, el marco quedaba en negro
+   sobre una página blanca. Se acepta el tema por la URL y, después, por
+   postMessage cuando el visitante lo cambia. */
+if(VITRINA){
+  try{
+    const t = new URLSearchParams(location.search).get('tema');
+    if(t === 'light' || t === 'dark') document.documentElement.setAttribute('data-theme', t);
+  }catch(e){}
+  addEventListener('message', e => {
+    const d = e && e.data;
+    if(!d || d.np !== 'tema') return;
+    if(d.v === 'light' || d.v === 'dark') document.documentElement.setAttribute('data-theme', d.v);
+  });
+}
 /* pseudo-cuenta de los trades anteriores a las cuentas (no vive en S.accounts) */
 const SIN_CUENTA = '__none';
 const $  = s => document.querySelector(s);
@@ -20379,7 +20407,7 @@ $('#xSave').addEventListener('click', ()=>{
      en la laptop. */
 const CLOUD = { url:'https://eskpyntqmioiwvaczpcl.supabase.co', anon:'sb_publishable_Yafq724ShItiCiiyVhB2Vw_ka05P7pd' };
 let cloudTs = 0, cloudBusy = false, cloudErr = null, cloudTok = null;
-const cloudOn = () => !!(CLOUD.url && CLOUD.anon);
+const cloudOn = () => !VITRINA && !!(CLOUD.url && CLOUD.anon);
 try{ cloudTok = JSON.parse(localStorage.getItem('np_tok') || 'null'); }catch(e){}
 
 const cloudHead = () => ({
@@ -30437,6 +30465,89 @@ setInterval(() => cargaMercado().then(m => {
    como siempre. Eso evita el limbo «SIN SESIÓN» que motivó borrarlo: nunca
    queda una sesión a medias sin token, porque el token se comprueba ANTES.
    El campo del usuario sigue abriendo en blanco cuando sí toca login. */
+/* ══ LOS DATOS DE MUESTRA DE LA VITRINA ══ (André, 3-sep-2026)
+   Tres meses de historial creíble para que quien entra por la portada tenga
+   algo que explorar: la curva, el journal, las estadísticas y el camino a
+   payout salen todos de estos trades, no están escritos a mano.
+
+   La secuencia es DETERMINISTA (un LCG con semilla fija): la misma vitrina
+   para todos, y si mañana hay que discutir un número, se puede reproducir.
+   Los parámetros están puestos para que se parezca a lo medido de verdad y no
+   a una fantasía: gana poco más de la mitad, y lo que gana pesa más que lo que
+   pierde. Nada de 90% de aciertos. */
+const VITRINA_REV = 2;
+function siembraVitrina(){
+  let sem = 20260903;
+  const rnd = () => (sem = (sem * 1664525 + 1013904223) % 4294967296) / 4294967296;
+
+  const CUENTAS = [
+    { id:'ac_vit1', alias:'APEX 50K · #1', size:50000, fase:'funded' },
+    { id:'ac_vit2', alias:'APEX 50K · #2', size:50000, fase:'eval'   },
+  ];
+  S.accounts = CUENTAS.map((c, i) => ({
+    id:c.id, alias:c.alias, orden:i+1, estado:'activa', owner:'andre.np',
+    tipo:'prop', size:c.size, start:c.size, fase:c.fase,
+    desde:'2026-06-01' }));
+
+  /* días hábiles hacia atrás desde hoy */
+  const dias = [];
+  const d = new Date(); d.setHours(0,0,0,0);
+  while(dias.length < 62){
+    const w = d.getDay();
+    if(w !== 0 && w !== 6) dias.push(d.toISOString().slice(0,10));
+    d.setDate(d.getDate() - 1);
+  }
+  dias.reverse();
+
+  const HORAS = ['09:47','09:58','10:14','10:32','11:05'];
+  const trades = [];
+  let seq = 0;
+  dias.forEach((fecha, di) => {
+    if(rnd() < .18) return;                    /* días sin operar: los hay */
+    const intentos = rnd() < .45 ? 1 : (rnd() < .75 ? 2 : 3);
+    for(let k = 0; k < intentos; k++){
+      const gana = rnd() < .52;
+      /* Los tamaños NO salen de un 1:2 limpio. Con 52% de aciertos, un 1:2
+         perfecto daría profit factor 2.2 — y lo medido de verdad en 745 fills
+         es 1.13, con una ganancia media de 1.18 veces la pérdida media. Un
+         demo que presume 2.7 estaría vendiendo otra cosa. Así que la ganancia
+         se dispersa entre el scratch y el target completo: da PF ~1.4, que es
+         bueno y además creíble. */
+      const base = 250 + Math.round(rnd() * 3) * 125;
+      const pnl = gana ? Math.round(base * (.35 + rnd() * 1.8))
+                       : -Math.round(base * (.9 + rnd() * .2));
+      trades.push({
+        id:'tv_' + di + '_' + k, date:fecha, time:HORAS[k % HORAS.length],
+        sym:'MNQ', dir: rnd() < .55 ? 'L' : 'S', qty: 2 + Math.round(rnd()*2),
+        entry:null, exit:null, pnl, setupOk: gana || rnd() < .7,
+        notas:'', shot:null, accts:[ di % 3 === 0 ? 'ac_vit2' : 'ac_vit1' ],
+        seq: ++seq, por:'andre.np', ses:null, upd: Date.now() - (62-di)*86400000
+      });
+      if(gana) break;                          /* si gana el primero, se para el día */
+    }
+  });
+  S.trades = trades;
+  S.seqTrade = seq;
+
+  /* la caja: sólo dinero que se movió de verdad */
+  S.caja = [
+    { id:'cv1', fecha: dias[18], tipo:'ingreso', concepto:'Payout · Apex',     monto:1500, nota:'' },
+    { id:'cv2', fecha: dias[34], tipo:'ingreso', concepto:'Payout · Apex',     monto:2100, nota:'' },
+    { id:'cv3', fecha: dias[50], tipo:'ingreso', concepto:'Payout · Tradeify', monto:1850, nota:'' },
+    { id:'cv4', fecha: dias[2],  tipo:'gasto',   concepto:'Evaluación Apex 50K', monto:167, nota:'' },
+  ];
+  S.profile = { ...(S.profile||{}), nombre:'André', rol:'NP-040', metaMes:30000 };
+  S.session = { user:'andre.np' };
+  S.dinero  = { fase:'buffer', wr:48.86 };
+  S.vitrina = VITRINA_REV;
+}
+/* La muestra lleva REVISIÓN, no un booleano: cuando se afinan los datos —como
+   el día que el profit factor salía en 2.69 y había que bajarlo a lo creíble—
+   quien ya tenía la vitrina guardada seguiría viendo la vieja para siempre. */
+if(VITRINA && S.vitrina !== VITRINA_REV){
+  try{ siembraVitrina(); save(); }catch(e){ console.warn('vitrina', e); }
+}
+
 (async () => {
   const guardado = (S.session && S.session.user) || null;
   /* ══ EL PORTÓN, DE UNA VEZ POR TODAS ══ (André, 3-sep-2026)
