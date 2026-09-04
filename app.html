@@ -8212,19 +8212,23 @@ const TITLES = {
   vida:        ['tit.snow.k',  'tit.vida.t'],
   plan:        ['tit.snow.k',  'tit.plan.t'],
 };
-/* ══ LO QUE LA VITRINA NO ENSEÑA ══ (André, 3-sep-2026)
-   El demo público deja pasear por la app, y eso está bien — pero hay pantallas
-   que SON el producto que se cobra, no una muestra de él: el código Pine de
-   los dos indicadores (Algorithm), los protocolos de ejecución paso por paso
-   (Execution) y las 35 lecciones de la academia. Enseñarlas gratis es
-   regalarlas. En vitrina no salen en el menú y, si alguien escribe el hash a
-   mano, la ruta cae en The Desk.
+/* ══ LA VITRINA, CON CANDADO ══ (André, 3-sep-2026)
+   El menú se enseña ENTERO —que se vea todo lo que trae— pero sólo dos
+   pantallas se abren: The Desk, que es la foto del negocio, y Journal, que es
+   la que convence, con el mes lleno de trades. Las demás llevan candado.
+
+   Antes se escondían del menú y era peor de las dos maneras: parecía que la
+   app tenía menos de lo que tiene, y además el que quería ver el código de
+   los indicadores igual llegaba escribiendo el hash. Ahora se ven, no se
+   abren, y el candado dice por qué.
+
    OJO, y es importante: esto NO es seguridad. El código de los indicadores
-   viaja dentro de este mismo app.html, que es público. Esto evita que se
-   encuentre paseando, no que se encuentre. */
-const VITRINA_VEDADO = ['algoritmo','ejecucion','academia','cuaderno'];
+   viaja dentro de este mismo app.html, que es público. El candado evita que
+   se encuentre paseando, no que se encuentre. */
+const VITRINA_ABIERTAS = ['agentes','journal'];
+const vitrinaAbierta = v => !VITRINA || VITRINA_ABIERTAS.includes(v);
 function show(view){
-  if(VITRINA && VITRINA_VEDADO.includes(view)) view = 'agentes';
+  if(VITRINA && !vitrinaAbierta(view)) view = 'agentes';
   if(view === 'progreso') view = 'agentes';   // el progreso vive en La torre ahora
   if(view === 'estudio' || view === 'coach') view = 'trades';  // curso y coach se fueron; aquí viven los trades
   if(view === 'dashboard') view = 'vida';     // el panorama se mudó a La caja
@@ -10053,7 +10057,14 @@ let jRange = 'mes';
 /* ════════ CALENDARIO DE METAS (Journal) ════════ */
 const DOW_CAL = ['L','M','M','J','V','S','D'];
 
-let calMes = todayISO().slice(0,7);
+/* En vitrina el calendario abre en el MES ANTERIOR. El corriente puede llevar
+   dos o tres días hábiles —hoy es día 3— y Mi desempeño es justo la pantalla
+   que tiene que verse llena. El mes se puede mover con las flechas de siempre. */
+let calMes = (function(){
+  const d = new Date();
+  if(typeof VITRINA !== 'undefined' && VITRINA) d.setMonth(d.getMonth() - 1);
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0');
+})();
 
 /* matriz del mes con semanas que empiezan en LUNES */
 function calMatrix(key){
@@ -30487,16 +30498,60 @@ setInterval(() => cargaMercado().then(m => {
    Los parámetros están puestos para que se parezca a lo medido de verdad y no
    a una fantasía: gana poco más de la mitad, y lo que gana pesa más que lo que
    pierde. Nada de 90% de aciertos. */
-const VITRINA_REV = 4;
+const VITRINA_REV = 5;
 if(VITRINA){
   try{
     document.documentElement.classList.add('vitrina');
     const est = document.createElement('style');
-    est.textContent = VITRINA_VEDADO.map(v => '.rail a.item[data-view="'+v+'"]').join(',')
-      + '{display:none}';
+    est.textContent = `
+      .rail a.item.candado{opacity:.5;position:relative}
+      .rail a.item.candado:hover{opacity:.72}
+      .rail a.item.candado::after{content:'';margin-left:auto;width:11px;height:11px;
+        flex:0 0 auto;background:currentColor;opacity:.8;
+        -webkit-mask:var(--llave) center/contain no-repeat;mask:var(--llave) center/contain no-repeat}
+      .rail a.item{--llave:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23fff' stroke-width='2.4'%3E%3Crect x='4' y='10.5' width='16' height='10' rx='2'/%3E%3Cpath d='M8 10.5V7a4 4 0 0 1 8 0v3.5'/%3E%3C/svg%3E")}
+      .vit-velo{position:fixed;inset:0;z-index:9000;display:grid;place-items:center;
+        background:rgba(0,0,0,.72);backdrop-filter:blur(6px);padding:24px}
+      .vit-caja{max-width:420px;background:var(--bg);border:1px solid var(--line);
+        padding:32px 30px;text-align:center}
+      .vit-caja b{display:block;font-size:19px;font-weight:600;letter-spacing:-.015em;line-height:1.3}
+      .vit-caja p{margin:12px 0 22px;font-size:14px;line-height:1.65;color:var(--dim)}
+      .vit-caja .btn{width:100%;margin-bottom:9px}`;
     document.head.appendChild(est);
+    /* el calendario abre en el mes ANTERIOR: el corriente lleva dos o tres
+       días hábiles y se vería vacío justo en la pantalla que más convence */
+    addEventListener('DOMContentLoaded', vitrinaMarca);
+    setTimeout(vitrinaMarca, 600);
   }catch(e){}
 }
+function vitrinaMarca(){
+  try{
+    document.querySelectorAll('.rail a.item').forEach(a => {
+      a.classList.toggle('candado', !vitrinaAbierta(a.dataset.view));
+    });
+  }catch(e){}
+}
+/* el clic en una pantalla con candado no navega: explica y ofrece el precio */
+document.addEventListener('click', e => {
+  if(!VITRINA) return;
+  const a = e.target && e.target.closest && e.target.closest('.rail a.item');
+  if(!a || vitrinaAbierta(a.dataset.view)) return;
+  e.preventDefault(); e.stopPropagation();
+  if(document.querySelector('.vit-velo')) return;
+  const v = document.createElement('div');
+  v.className = 'vit-velo';
+  v.innerHTML = `<div class="vit-caja">
+    <b>Esta pantalla viene con el Terminal</b>
+    <p>En la demo quedan abiertas The Desk y Mi desempeño, para que veas cómo se
+      mide una mesa de verdad. Las otras once son parte de lo que se cobra.</p>
+    <a class="btn pri" href="/#precio" target="_top">Ver el precio</a>
+    <button type="button" class="btn">Seguir viendo</button>
+  </div>`;
+  v.addEventListener('click', ev => {
+    if(ev.target === v || ev.target.tagName === 'BUTTON') v.remove();
+  });
+  document.body.appendChild(v);
+}, true);
 function siembraVitrina(){
   let sem = 20260903;
   const rnd = () => (sem = (sem * 1664525 + 1013904223) % 4294967296) / 4294967296;
