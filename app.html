@@ -3642,6 +3642,11 @@ html[data-theme="light"] .pd-tit .pd-asia{color:#B5473A}
 .fl-f span{display:block;margin-top:8px;font-size:14px;font-weight:600;letter-spacing:-.01em}
 .fl-f em{display:block;margin-top:8px;font-style:normal;font-family:var(--mono);
   font-size:8.5px;letter-spacing:.1em;color:var(--faint)}
+.fl-alt{margin:14px 0 0;padding:13px 16px;border-left:2px solid #3861F6;
+  background:rgba(56,97,246,.07);border-radius:0 10px 10px 0;
+  font-size:12.5px;line-height:1.65;color:var(--dim);max-width:76ch}
+.fl-alt.ok{border-left-color:#57C79B;background:rgba(87,199,155,.07)}
+.fl-alt b{color:var(--txt)}
 .fl-d{margin:14px 0 0;font-size:13px;line-height:1.65;color:var(--dim);max-width:70ch}
 .fl-cfg,.fl-odds{display:grid;gap:1px;margin-top:16px;background:var(--line-soft);
   border:1px solid var(--line-soft);border-radius:14px;overflow:hidden;
@@ -27885,18 +27890,30 @@ const PROTOCOLO = [
 const VENT_R = 1.18;
 function ventaja(wr){ return (wr/100) - 1/(1 + VENT_R); }
 function pDeRR(R, wr){ return Math.min(.95, Math.max(.05, 1/(1+R) + ventaja(wr))); }
-/* LAS TRES FASES, con lo que de verdad pide cada una */
+/* ══ TU PLAN DE EJECUCIÓN ══ (André, 3-sep-2026)
+   Estas cifras son LAS SUYAS, dictadas tal cual: en eval $500 por trade
+   buscando $1,000 con tope diario de $1,500; en colchón $500 al día buscando
+   $1,000; cobrando $250 buscando $500. No son las que la simulación elegiría
+   —eso se dice aparte, sin cambiárselas—: el que opera es él. */
 const FASES$ = [
   { k:'eval',   n:'EVAL',     t:'Pasar el examen',
-    d:'La eval cuesta la cuota, no la cuenta. Se busca el objetivo en los menos días posibles.',
-    meta:3000, dd:2000, tope:1000, criterio:'rapido' },
+    d:'La eval cuesta la cuota, no la cuenta. Aquí se va por el objetivo aunque el día pueda costar caro.',
+    meta:3000, dd:2000,
+    plan:{ riesgo:500, rr:2, tope:1500 }, criterio:'rapido' },
   { k:'buffer', n:'COLCHÓN',  t:'Armar el colchón',
-    d:'Ya pasaste: romper aquí cuesta la cuenta y lo que llevas. Se optimiza cuántas veces cobras por cada vez que rompes.',
-    meta:2500, dd:2000, tope:750, criterio:'razon' },
-  { k:'payout', n:'COBRANDO', t:'No romperla',
-    d:'Con la cuenta pagando, el objetivo es el retiro chico y seguro. Manda la probabilidad de NO romper.',
-    meta:1000, dd:2000, tope:500, criterio:'seguro' },
+    d:'Ya pasaste: romper aquí cuesta la cuenta y lo que llevas. Un solo riesgo al día, y de ahí no se pasa.',
+    meta:2500, dd:2000,
+    plan:{ riesgo:500, rr:2, tope:500 }, criterio:'razon' },
+  { k:'payout', n:'COBRANDO', t:'Cobrar sin romperla',
+    d:'Con la cuenta pagando, el retiro es chico y el riesgo también. Nada de recuperar.',
+    meta:1000, dd:2000,
+    plan:{ riesgo:250, rr:2, tope:250 }, criterio:'seguro' },
 ];
+/* tu plan, medido con las mismas reglas que todo lo demás */
+function planDeFase(F, wr){
+  const P = F.plan, mt = Math.max(1, Math.floor(P.tope / P.riesgo));
+  return { ...mideConfig(P.riesgo, P.rr, mt, F, wr, 900), mio:true };
+}
 function faseSel(){
   const c = dineroCfg();
   return FASES$.find(f => f.k === c.fase) || FASES$[0];
@@ -27949,7 +27966,7 @@ function mejorDeFase(F, wr){
   for(const r of [50,100,150,200,250,300,400,500])
     for(const R of [1,1.5,2,2.5])
       for(const mt of [1,2,3]){
-        if(r*mt > F.tope) continue;
+        if(r*mt > F.plan.tope) continue;   /* el tope diario vive en el plan */
         cands.push(mideConfig(r, R, mt, F, wr, 800));
       }
   if(!cands.length) return null;
@@ -28051,7 +28068,7 @@ function calendarioHTML(cf){
 }
 function diaFlujoHTML(){
   const c = dineroCfg(), F = faseSel(), wr = c.wr;
-  const cf = mejorDeFase(F, wr);
+  const cf = planDeFase(F, wr);
   const A = cf ? arbolDeFase(cf) : null;
   const f = v => fmt$(Math.round(v), true);
   return `
@@ -28062,7 +28079,7 @@ function diaFlujoHTML(){
         <div class="fl-fases">
           ${FASES$.map(x => `<button type="button" class="fl-f ${x.k === F.k ? 'on' : ''}" data-fase="${x.k}">
             <b>${esc(x.n)}</b><span>${esc(x.t)}</span>
-            <em>meta ${fmt$(x.meta)} · dd ${fmt$(x.dd)} · día ${fmt$(x.tope)}</em>
+            <em>${fmt$(x.plan.riesgo)} → ${fmt$(x.plan.riesgo * x.plan.rr)} · día ${fmt$(x.plan.tope)}</em>
           </button>`).join('')}
         </div>
         <p class="fl-d">${esc(F.d)}</p>
@@ -28072,7 +28089,7 @@ function diaFlujoHTML(){
     <div class="fl-paso">
       <span class="fl-n">2</span>
       <div class="fl-c">
-        <h3 class="pd-tit">Cuánto <span class="pd-ny">arriesgar</span></h3>
+        <h3 class="pd-tit">Tu <span class="pd-ny">plan</span> para esta fase</h3>
         <div class="fl-cfg">
           <span><i>POR TRADE</i><b>${fmt$(cf.r)}</b></span>
           <span><i>OBJETIVO</i><b>1:${cf.R}</b></span>
@@ -28085,6 +28102,21 @@ function diaFlujoHTML(){
           <span><i>POR CADA ROTA</i><b>${cf.razon === Infinity ? '∞' : cf.razon.toFixed(2)}</b></span>
           <span><i>ESPERANZA</i><b class="${A.esp >= 0 ? 'up' : 'dn'}">${f(A.esp)}</b></span>
         </div>
+        ${(() => {
+          /* LO QUE MIDE MEJOR, AL LADO — NO EN LUGAR DE (André, 3-sep-2026):
+             el plan es suyo y se respeta; pero si la simulación encuentra algo
+             que llega más veces, callárselo sería peor que decírselo. */
+          const alt = mejorDeFase(F, wr);
+          if(!alt) return '';
+          const mejor = alt.cobra > cf.cobra + .04 || alt.rompe < cf.rompe - .06;
+          if(!mejor) return `<p class="fl-alt ok">La simulación no encuentra nada
+            mejor que tu plan para esta fase.</p>`;
+          return `<p class="fl-alt">Con las mismas reglas, <b>${fmt$(alt.r)} a 1:${alt.R}
+            con ${alt.maxT} trade${alt.maxT>1?'s':''}</b> llega
+            ${Math.round(alt.cobra*100)}% de las veces y rompe
+            ${Math.round(alt.rompe*100)}% —contra tu ${Math.round(cf.cobra*100)}% y
+            ${Math.round(cf.rompe*100)}%—. Es lo que mide; el plan lo pones tú.</p>`;
+        })()}
       </div>
     </div>
     <div class="fl-paso">
@@ -28118,7 +28150,7 @@ function dineroVive(){
     try{ h.innerHTML = diaFlujoHTML(); }
     catch(e){ h.innerHTML = '<div class="dn-calc">no se pudo medir</div>'; return; }
     const c = dineroCfg(), F = faseSel();
-    const cf = mejorDeFase(F, c.wr);
+    const cf = planDeFase(F, c.wr);
     if(cf) planDiaVive('flArbol', null, arbolDeFase(cf).arbol);
     h.querySelectorAll('[data-fase]').forEach(b => b.onclick = () => {
       c.fase = b.dataset.fase; save(); dineroVive();
