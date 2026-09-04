@@ -3642,6 +3642,14 @@ html[data-theme="light"] .pd-tit .pd-asia{color:#B5473A}
 .fl-f span{display:block;margin-top:8px;font-size:14px;font-weight:600;letter-spacing:-.01em}
 .fl-f em{display:block;margin-top:8px;font-style:normal;font-family:var(--mono);
   font-size:8.5px;letter-spacing:.1em;color:var(--faint)}
+/* la madrugada, aparte y marcada como opcional */
+.fl-opc{margin-top:22px;padding:20px 22px;border:1px dashed var(--line);border-radius:16px;
+  background:linear-gradient(135deg,rgba(217,115,106,.06),transparent 62%)}
+.fl-opc-h{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:6px}
+.fl-opc-k{font-family:var(--mono);font-size:8.5px;letter-spacing:.2em;color:var(--bg);
+  background:#D9736A;border-radius:99px;padding:4px 10px}
+.fl-opc-h b{font-size:16px;font-weight:700;letter-spacing:-.01em}
+.fl-opc-h em{font-style:normal;font-size:12px;color:var(--faint)}
 .fl-noche{margin:16px 0 0;padding:13px 16px;border-left:2px solid #D9736A;
   background:rgba(217,115,106,.07);border-radius:0 10px 10px 0;
   font-size:12.5px;line-height:1.65;color:var(--dim);max-width:76ch}
@@ -27992,17 +28000,38 @@ function mejorDeFase(F, wr){
    ya no busca setup —espera el 0.79 de la estructura— y aparte, en la
    madrugada, queda el 0.79 de Asia o Londres, que va con su propio riesgo y
    por eso no entra en la cuenta del día de Nueva York. */
-/* EL MISMO ÁRBOL EN LAS TRES FASES (André, 3-sep-2026): los cuatro intentos
-   del día no cambian con la fase — lo que cambia es cuánto se arriesga en cada
-   uno. Los dos A+ van a 1:1 y los dos 0.79 a 1:2, como en la libreta. */
+/* EL MISMO ÁRBOL EN LAS TRES FASES (André, 3-sep-2026): los intentos del día
+   no cambian con la fase — lo que cambia es cuánto se arriesga en cada uno.
+   Los dos A+ van a 1:1 y el 0.79 a 1:2, como en la libreta.
+   LA MADRUGADA VA APARTE (3-sep-2026): es OPCIONAL y de otra sesión, así que
+   no cuelga de la cadena de Nueva York — si colgara, sus probabilidades se
+   mezclarían con las del día y ninguna de las dos cuentas sería la de verdad. */
 const SETUPS$ = [
   { t:'A+ SETUP · 1', c:'el primer A+',  rr:1, s:'la de más confluencia de la mañana' },
   { t:'A+ SETUP · 2', c:'el segundo A+', rr:1, s:'se rema · el A+ son dos, máximo' },
   { t:'EL 0.79 · ESTRUCTURA', c:'el 0.79 de la estructura', rr:2,
     s:'ya no se busca setup: se espera el retroceso' },
-  { t:'EL 0.79 · ASIA O LONDRES', c:'el 0.79 de la madrugada', rr:2,
-    s:'un solo intento, en la que se dé' },
 ];
+const SETUP_NOCHE$ = { t:'EL 0.79 · ASIA O LONDRES', c:'el 0.79 de la madrugada', rr:2,
+  s:'un solo intento, en la que se dé' };
+/* su árbol, chiquito: gana o no gana, y en las dos se acaba */
+function arbolNocheOpc(r){
+  const wr = dineroCfg().wr, SU = SETUP_NOCHE$;
+  const p = pDeRR(SU.rr, wr), f = v => fmt$(Math.round(v), true);
+  const cam = [
+    { pr:p,   $: r*SU.rr, nom:'Gana el único' },
+    { pr:1-p, $: -r,      nom:'Falla el único' },
+  ];
+  return { cam, esp: cam.reduce((a,x) => a + x.pr*x.$, 0),
+    arbol:{ raiz:{x:.5,y:.99},
+      nodos:{
+        a0:{ x:.50, y:.16, t:SU.t, s:SU.s + ' · ' + fmt$(r) + ' → ' + f(r*SU.rr) + ' (1:' + SU.rr + ')' },
+        p0:{ x:.20, y:.70, t:'NOCHE ' + f(cam[0].$), s:(cam[0].pr*100).toFixed(1) + '% de las noches', fin:'ok' },
+        p1:{ x:.80, y:.70, t:'NOCHE ' + f(cam[1].$), s:(cam[1].pr*100).toFixed(1) + '% de las noches', fin:'mal' },
+      },
+      ramas:[ {de:'a0',a:'p0',et:'GANA',tipo:'ok'}, {de:'a0',a:'p1',et:'NO GANA',tipo:'no'} ],
+      caminos:[ {nom:'GANA',r:[0]}, {nom:'FALLA',r:[1]} ] } };
+}
 /* el árbol del día con ESA configuración, en dinero */
 function arbolDeFase(cf){
   const r = cf.r, f = v => fmt$(Math.round(v), true);
@@ -28018,7 +28047,8 @@ function arbolDeFase(cf){
   }
   let qAll = 1;
   for(let k = 0; k < mt; k++) qAll *= (1 - pDeRR(SETUPS$[k].rr, wr));
-  cam.push({ pr: qAll, $: -r * mt, nom: 'Fallan los cuatro' });
+  cam.push({ pr: qAll, $: -r * mt,
+    nom: mt === 1 ? 'Falla el único' : 'Fallan los ' + (mt===2?'dos':mt===3?'tres':'cuatro') });
   const esp = cam.reduce((a, x) => a + x.pr * x.$, 0);
   const nodos = {}, ramas = [], caminos = [];
   const yTop = .07, dy = (.88 - yTop) / mt;
@@ -28043,7 +28073,7 @@ function arbolDeFase(cf){
   }
   const rf = []; for(let k = 0; k < mt-1; k++) rf.push(sigue(k));
   rf.push(ramas.length - 1);
-  caminos.push({ nom:'FALLAN LOS CUATRO', r: rf });
+  caminos.push({ nom: cam[mt].nom.toUpperCase(), r: rf });
   return { arbol:{ raiz:{x:.5,y:.995}, nodos, ramas, caminos }, cam, esp };
 }
 
@@ -28123,7 +28153,7 @@ function diaFlujoHTML(){
           <span><i>POR TRADE</i><b>${fmt$(cf.r)}</b></span>
           <span><i>LOS DOS A+</i><b>1:1</b></span>
           <span><i>LOS DOS 0.79</i><b>1:2</b></span>
-          <span><i>INTENTOS AL DÍA</i><b>${SETUPS$.length}</b></span>
+          <span><i>INTENTOS EN NY</i><b>${SETUPS$.length}</b></span>
         </div>
       </div>
     </div>
@@ -28136,6 +28166,18 @@ function diaFlujoHTML(){
           ${A.cam.map(x => `<div class="dn-fila ${x.$ >= 0 ? 'ok' : 'mal'}">
             <span>${esc(x.nom)}</span><em>${(x.pr*100).toFixed(1)}%</em><b>${f(x.$)}</b></div>`).join('')}
         </div>
+        ${(() => {
+          const N = arbolNocheOpc(cf.r);
+          return `<div class="fl-opc">
+            <div class="fl-opc-h"><span class="fl-opc-k">APARTE · OPCIONAL</span>
+              <b>La madrugada</b><em>otra sesión, otro riesgo · no entra en la cuenta de arriba</em></div>
+            <div class="pd-arbol corto"><canvas id="flNoche"></canvas></div>
+            <div class="dn-tabla">
+              ${N.cam.map(x => `<div class="dn-fila ${x.$ >= 0 ? 'ok' : 'mal'}">
+                <span>${esc(x.nom)}</span><em>${(x.pr*100).toFixed(1)}%</em><b>${f(x.$)}</b></div>`).join('')}
+            </div>
+          </div>`;
+        })()}
       </div>
     </div>
     <div class="fl-paso">
@@ -28155,7 +28197,8 @@ function dineroVive(){
     catch(e){ h.innerHTML = '<div class="dn-calc">no se pudo medir</div>'; return; }
     const c = dineroCfg(), F = faseSel();
     const cf = planDeFase(F, c.wr);
-    if(cf) planDiaVive('flArbol', null, arbolDeFase(cf).arbol);
+    if(cf){ planDiaVive('flArbol', null, arbolDeFase(cf).arbol);
+            planDiaVive('flNoche', null, arbolNocheOpc(cf.r).arbol); }
     h.querySelectorAll('[data-fase]').forEach(b => b.onclick = () => {
       c.fase = b.dataset.fase; save(); dineroVive();
     });
