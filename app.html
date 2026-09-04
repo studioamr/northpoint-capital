@@ -3644,13 +3644,12 @@ html[data-theme="light"] .pd-tit .pd-asia{color:#B5473A}
 .fl-f:hover{border-color:var(--txt)}
 .fl-f.on{background:var(--txt);border-color:var(--txt)}
 .fl-f b{display:block;font-family:var(--mono);font-size:10px;letter-spacing:.24em;color:var(--faint)}
-.fl-f.on b{color:rgba(255,255,255,.62)}
-html[data-theme="light"] .fl-f.on b{color:rgba(255,255,255,.66)}
+.fl-f.on b{color:color-mix(in srgb, var(--bg) 68%, transparent)}
 .fl-f span{display:block;margin-top:9px;font-size:15px;font-weight:700;letter-spacing:-.015em;color:var(--txt)}
 .fl-f.on span{color:var(--bg)}
 .fl-f em{display:block;margin-top:9px;font-style:normal;font-family:var(--mono);
   font-size:9px;letter-spacing:.1em;color:var(--faint)}
-.fl-f.on em{color:rgba(255,255,255,.55)}
+.fl-f.on em{color:color-mix(in srgb, var(--bg) 58%, transparent)}
 /* la ficha del plan: una tabla de verdad, con su cabecera en tinta */
 .fl-cfg{display:grid;gap:0;border:1px solid var(--txt);border-radius:14px;overflow:hidden;
   grid-template-columns:repeat(auto-fit,minmax(120px,1fr))}
@@ -3684,10 +3683,10 @@ html[data-theme="light"] .fl-cfg b.dn{color:#B5473A}
   border:1px solid transparent;background:var(--w02)}
 .cal-d.finde{opacity:.32;background:transparent}
 .cal-d.pasado{opacity:.28}
-.cal-d.rango{background:rgba(56,97,246,.10)}
+.cal-d.rango{background:color-mix(in srgb, var(--txt) 7%, transparent)}
 .cal-d.hoy{border-color:var(--txt);color:var(--txt);font-weight:700}
 .cal-d.opt{background:rgba(87,199,155,.22);border-color:#57C79B;color:var(--txt)}
-.cal-d.med{background:#3861F6;border-color:#3861F6;color:#fff;font-weight:700}
+.cal-d.med{background:var(--txt);border-color:var(--txt);color:var(--bg);font-weight:700}
 .cal-d.pes{background:rgba(217,115,106,.20);border-color:#D9736A;color:var(--txt)}
 .cal-mes{position:absolute;top:-12px;left:1px;font-style:normal;font-family:var(--mono);
   font-size:7px;letter-spacing:.1em;color:var(--faint);text-transform:uppercase;
@@ -3698,7 +3697,7 @@ html[data-theme="light"] .fl-cfg b.dn{color:#B5473A}
 .cal-pie i{width:9px;height:9px;border-radius:3px;border:1px solid var(--line)}
 .cal-pie.hoy i{border-color:var(--txt)}
 .cal-pie.opt i{background:rgba(87,199,155,.5);border-color:#57C79B}
-.cal-pie.med i{background:#3861F6;border-color:#3861F6}
+.cal-pie.med i{background:var(--txt);border-color:var(--txt)}
 .cal-pie.pes i{background:rgba(217,115,106,.5);border-color:#D9736A}
 .cal-nota{margin:16px 0 0;font-size:12px;line-height:1.65;color:var(--faint);max-width:74ch}
 .dn-calc{padding:30px;text-align:center;font-family:var(--mono);font-size:10px;
@@ -3711,8 +3710,8 @@ html[data-theme="light"] .fl-cfg b.dn{color:#B5473A}
 .pd-arbol.corto{height:clamp(230px,30vh,300px)}
 .pd-arbol canvas{display:block;width:100%;height:100%}
 @media(max-width:720px){.pd-arbol{height:clamp(520px,78vh,700px)}}
-.pd-noche{margin:14px 0 0;padding:14px 16px;border-left:2px solid #3861F6;
-  background:rgba(56,97,246,.06);border-radius:0 10px 10px 0;
+.pd-noche{margin:14px 0 0;padding:14px 16px;border-left:2px solid var(--txt);
+  background:color-mix(in srgb, var(--txt) 5%, transparent);border-radius:0 10px 10px 0;
   font-family:var(--mono);font-size:9.5px;letter-spacing:.14em;line-height:1.7;
   color:var(--dim)}
 .ejem{padding:22px 0 24px}
@@ -28049,7 +28048,7 @@ function arbolNocheOpc(r){
     arbol:{ raiz:{x:.5,y:.99},
       nodos:{
         a0:{ x:.50, y:.22, k:'EL ÚNICO', t:SU.t,
-             s:SU.s + ' · ' + fmt$(r) + ' → ' + f(r*SU.rr) + ' (1:' + SU.rr + ')' },
+             s:fmt$(r) + ' → ' + f(r*SU.rr) + '  ·  1:' + SU.rr },
         p0:{ x:.20, y:.70, t:'NOCHE ' + f(cam[0].$), s:(cam[0].pr*100).toFixed(1) + '% de las noches', fin:'ok' },
         p1:{ x:.80, y:.70, t:'NOCHE ' + f(cam[1].$), s:(cam[1].pr*100).toFixed(1) + '% de las noches', fin:'mal' },
       },
@@ -28090,7 +28089,9 @@ function arbolDeFase(cf){
     const SU = SETUPS$()[i], ult = i === mt - 1;
     nodos['t'+i] = { x: XC, y: fila(2*i),
       k: 'TRADE ' + (i + 1),          /* el número del intento, encima del setup */
-      t: SU.t, s: SU.s + ' · ' + fmt$(r) + ' → ' + f(r * SU.rr) + ' (1:' + SU.rr + ')' };
+      /* sólo los números: la frase de cada setup («la de más confluencia de
+         la mañana»…) ya está en la academia y aquí sólo alargaba el renglón */
+      t: SU.t, s: fmt$(r) + ' → ' + f(r * SU.rr) + '  ·  1:' + SU.rr };
     nodos['g'+i] = { x: XG, y: fila(2*i + 1),
       t: 'DÍA ' + f(cam[i].$), s: (cam[i].pr*100).toFixed(1) + '% de los días',
       fin: cam[i].$ > 0 ? 'ok' : cam[i].$ < 0 ? 'mal' : 'cero' };
@@ -28716,7 +28717,7 @@ function planDiaVive(id, estado, arbol){
      solo `pdInt` el segundo apagaba al primero */
   if(pdTicks[cvId]){ clearInterval(pdTicks[cvId]); pdTicks[cvId] = null; }
   const A = arbol || ARBOL_DIA, N = A.nodos, R = A.ramas;
-  const AZUL = '#3861F6', VERDE = '#57C79B', ROJO = '#D9736A';
+  const VERDE = '#57C79B', ROJO = '#D9736A';
   const cl = () => document.documentElement.getAttribute('data-theme') === 'light';
   const tinta = a => cl() ? 'rgba(16,20,28,' + a + ')' : 'rgba(237,239,242,' + a + ')';
 
@@ -28786,7 +28787,7 @@ function planDiaVive(id, estado, arbol){
       /* el tronco —de la raíz al primer intento— está vivo siempre: es de
          donde sale todo, no una posibilidad más */
       const activa = usada || corriendo;
-      const col = r.tipo === 'ok' ? VERDE : r.tipo === 'no' ? ROJO : AZUL;
+      const col = r.tipo === 'ok' ? VERDE : r.tipo === 'no' ? ROJO : tinta('.45');
       c.save();
       c.strokeStyle = activa ? col : tinta('.13');
       c.lineWidth = activa ? 2.2 : 1.2;
@@ -28837,7 +28838,7 @@ function planDiaVive(id, estado, arbol){
          ellas. Ahora van encendidas siempre, con el color de su signo y en
          cuerpo más grande: verde si suma, rojo si resta, tinta si empata. */
       const esFin = !!b.n.fin;
-      const col = b.n.fin === 'ok' ? VERDE : b.n.fin === 'mal' ? ROJO : AZUL;
+      const col = b.n.fin === 'ok' ? VERDE : b.n.fin === 'mal' ? ROJO : tinta('.7');
       if(esFin) on = true;
       const tuyo = estado && estado.nodo === k;
       c.save();
