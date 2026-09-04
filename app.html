@@ -8212,7 +8212,19 @@ const TITLES = {
   vida:        ['tit.snow.k',  'tit.vida.t'],
   plan:        ['tit.snow.k',  'tit.plan.t'],
 };
+/* ══ LO QUE LA VITRINA NO ENSEÑA ══ (André, 3-sep-2026)
+   El demo público deja pasear por la app, y eso está bien — pero hay pantallas
+   que SON el producto que se cobra, no una muestra de él: el código Pine de
+   los dos indicadores (Algorithm), los protocolos de ejecución paso por paso
+   (Execution) y las 35 lecciones de la academia. Enseñarlas gratis es
+   regalarlas. En vitrina no salen en el menú y, si alguien escribe el hash a
+   mano, la ruta cae en The Desk.
+   OJO, y es importante: esto NO es seguridad. El código de los indicadores
+   viaja dentro de este mismo app.html, que es público. Esto evita que se
+   encuentre paseando, no que se encuentre. */
+const VITRINA_VEDADO = ['algoritmo','ejecucion','academia','cuaderno'];
 function show(view){
+  if(VITRINA && VITRINA_VEDADO.includes(view)) view = 'agentes';
   if(view === 'progreso') view = 'agentes';   // el progreso vive en La torre ahora
   if(view === 'estudio' || view === 'coach') view = 'trades';  // curso y coach se fueron; aquí viven los trades
   if(view === 'dashboard') view = 'vida';     // el panorama se mudó a La caja
@@ -30475,44 +30487,58 @@ setInterval(() => cargaMercado().then(m => {
    Los parámetros están puestos para que se parezca a lo medido de verdad y no
    a una fantasía: gana poco más de la mitad, y lo que gana pesa más que lo que
    pierde. Nada de 90% de aciertos. */
-const VITRINA_REV = 2;
+const VITRINA_REV = 4;
+if(VITRINA){
+  try{
+    document.documentElement.classList.add('vitrina');
+    const est = document.createElement('style');
+    est.textContent = VITRINA_VEDADO.map(v => '.rail a.item[data-view="'+v+'"]').join(',')
+      + '{display:none}';
+    document.head.appendChild(est);
+  }catch(e){}
+}
 function siembraVitrina(){
   let sem = 20260903;
   const rnd = () => (sem = (sem * 1664525 + 1013904223) % 4294967296) / 4294967296;
 
-  const CUENTAS = [
-    { id:'ac_vit1', alias:'APEX 50K · #1', size:50000, fase:'funded' },
-    { id:'ac_vit2', alias:'APEX 50K · #2', size:50000, fase:'eval'   },
-  ];
-  S.accounts = CUENTAS.map((c, i) => ({
-    id:c.id, alias:c.alias, orden:i+1, estado:'activa', owner:'andre.np',
-    tipo:'prop', size:c.size, start:c.size, fase:c.fase,
-    desde:'2026-06-01' }));
-
-  /* días hábiles hacia atrás desde hoy */
+  /* ── UN AÑO HÁBIL HACIA ATRÁS ── */
   const dias = [];
   const d = new Date(); d.setHours(0,0,0,0);
-  while(dias.length < 62){
+  while(dias.length < 252){
     const w = d.getDay();
     if(w !== 0 && w !== 6) dias.push(d.toISOString().slice(0,10));
     d.setDate(d.getDate() - 1);
   }
   dias.reverse();
+  const hace = n => dias[Math.max(0, dias.length - 1 - n)];
 
+  /* ── LAS CUENTAS ── tres de fondeo en distinta fase, y una propia.
+     Que no estén todas ganando es parte de lo que se enseña. */
+  const CUENTAS = [
+    { id:'ac_v1', alias:'APEX 50K · #1',   tipo:'prop', size:50000,  fase:'payout', desde: hace(240) },
+    { id:'ac_v2', alias:'APEX 50K · #2',   tipo:'prop', size:50000,  fase:'funded', desde: hace(150) },
+    { id:'ac_v3', alias:'TRADEIFY 100K',   tipo:'prop', size:100000, fase:'eval',   desde: hace(40)  },
+    { id:'ac_v4', alias:'Cuenta propia',   tipo:'live', size:12000,  fase:null,     desde: hace(210) },
+  ];
+  S.accounts = CUENTAS.map((c, i) => ({
+    id:c.id, alias:c.alias, orden:i+1, estado:'activa', owner:'andre.np',
+    tipo:c.tipo, size:c.size, start:c.size, fase:c.fase, desde:c.desde }));
+  const PROP = ['ac_v1','ac_v2','ac_v3'];
+
+  /* ── EL REGISTRO ── un año, día por día.
+     Los tamaños NO salen de un 1:2 limpio: con 52% de aciertos un 1:2 perfecto
+     daría profit factor 2.2, y lo medido de verdad en 745 fills es 1.13 con
+     ganancia media de 1.18 veces la pérdida. Un demo que presume 2.7 vende otra
+     cosa. Aquí la ganancia se dispersa entre el scratch y el target completo. */
   const HORAS = ['09:47','09:58','10:14','10:32','11:05'];
   const trades = [];
   let seq = 0;
   dias.forEach((fecha, di) => {
-    if(rnd() < .18) return;                    /* días sin operar: los hay */
-    const intentos = rnd() < .45 ? 1 : (rnd() < .75 ? 2 : 3);
+    if(rnd() < .17) return;                       /* días que no se opera */
+    const cta = di < 40 ? PROP[0] : PROP[di % 3]; /* al principio una sola cuenta */
+    const intentos = rnd() < .45 ? 1 : (rnd() < .78 ? 2 : 3);
     for(let k = 0; k < intentos; k++){
       const gana = rnd() < .52;
-      /* Los tamaños NO salen de un 1:2 limpio. Con 52% de aciertos, un 1:2
-         perfecto daría profit factor 2.2 — y lo medido de verdad en 745 fills
-         es 1.13, con una ganancia media de 1.18 veces la pérdida media. Un
-         demo que presume 2.7 estaría vendiendo otra cosa. Así que la ganancia
-         se dispersa entre el scratch y el target completo: da PF ~1.4, que es
-         bueno y además creíble. */
       const base = 250 + Math.round(rnd() * 3) * 125;
       const pnl = gana ? Math.round(base * (.35 + rnd() * 1.8))
                        : -Math.round(base * (.9 + rnd() * .2));
@@ -30520,22 +30546,44 @@ function siembraVitrina(){
         id:'tv_' + di + '_' + k, date:fecha, time:HORAS[k % HORAS.length],
         sym:'MNQ', dir: rnd() < .55 ? 'L' : 'S', qty: 2 + Math.round(rnd()*2),
         entry:null, exit:null, pnl, setupOk: gana || rnd() < .7,
-        notas:'', shot:null, accts:[ di % 3 === 0 ? 'ac_vit2' : 'ac_vit1' ],
-        seq: ++seq, por:'andre.np', ses:null, upd: Date.now() - (62-di)*86400000
+        notas:'', shot:null, accts:[cta],
+        seq: ++seq, por:'andre.np', ses:null,
+        upd: Date.now() - (dias.length - di) * 86400000
       });
-      if(gana) break;                          /* si gana el primero, se para el día */
+      if(gana) break;                             /* gana el primero, se para el día */
     }
   });
   S.trades = trades;
   S.seqTrade = seq;
 
-  /* la caja: sólo dinero que se movió de verdad */
-  S.caja = [
-    { id:'cv1', fecha: dias[18], tipo:'ingreso', concepto:'Payout · Apex',     monto:1500, nota:'' },
-    { id:'cv2', fecha: dias[34], tipo:'ingreso', concepto:'Payout · Apex',     monto:2100, nota:'' },
-    { id:'cv3', fecha: dias[50], tipo:'ingreso', concepto:'Payout · Tradeify', monto:1850, nota:'' },
-    { id:'cv4', fecha: dias[2],  tipo:'gasto',   concepto:'Evaluación Apex 50K', monto:167, nota:'' },
+  /* ── LA CAJA ── sólo dinero que se movió de verdad: payouts cobrados y lo
+     que costó conseguirlos. El P&L de plataforma NO es esto. */
+  const caja = [];
+  let nc = 0;
+  for(let n = 230; n > 10; n -= 26){
+    caja.push({ id:'cv'+(++nc), fecha:hace(n), tipo:'ingreso',
+      concepto:'Payout · ' + (nc % 2 ? 'Apex' : 'Tradeify'),
+      monto: 1200 + Math.round(rnd()*9) * 100, nota:'' });
+  }
+  [245, 168, 92, 38].forEach((n, i) => caja.push({
+    id:'cg'+i, fecha:hace(n), tipo:'gasto',
+    concepto: i % 2 ? 'Datos CME · trimestre' : 'Evaluación de fondeo',
+    monto: i % 2 ? 130 : 167, nota:'' }));
+  caja.push({ id:'cgtv', fecha:hace(200), tipo:'gasto', concepto:'TradingView · anual', monto:599, nota:'' });
+  S.caja = caja.sort((a,b) => a.fecha < b.fecha ? -1 : 1);
+
+  /* ── EL PORTAFOLIO ── lo que vive fuera de la mesa */
+  S.positions = [
+    { id:'pv1', nombre:'CETES 28 días',        fecha:hace(180), capital:120000, valor:131400, notas:'' },
+    { id:'pv2', nombre:'S&P 500 · indexado',   fecha:hace(240), capital:180000, valor:206900, notas:'' },
+    { id:'pv3', nombre:'Bitcoin',              fecha:hace(120), capital: 40000, valor: 52300, notas:'' },
+    { id:'pv4', nombre:'Reserva en dólares',   fecha:hace(90),  capital: 60000, valor: 62100, notas:'' },
   ];
+
+  /* el monto que se reparte al cobrar: sin él, Payout management abre en blanco
+     y la rueda no tiene qué repartir */
+  S.politica = { ...(S.politica||{}), montoPayout: 2500 };
+
   S.profile = { ...(S.profile||{}), nombre:'André', rol:'NP-040', metaMes:30000 };
   S.session = { user:'andre.np' };
   S.dinero  = { fase:'buffer', wr:48.86 };
