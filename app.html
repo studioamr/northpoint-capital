@@ -3642,6 +3642,10 @@ html[data-theme="light"] .pd-tit .pd-asia{color:#B5473A}
 .fl-f span{display:block;margin-top:8px;font-size:14px;font-weight:600;letter-spacing:-.01em}
 .fl-f em{display:block;margin-top:8px;font-style:normal;font-family:var(--mono);
   font-size:8.5px;letter-spacing:.1em;color:var(--faint)}
+.fl-noche{margin:16px 0 0;padding:13px 16px;border-left:2px solid #D9736A;
+  background:rgba(217,115,106,.07);border-radius:0 10px 10px 0;
+  font-size:12.5px;line-height:1.65;color:var(--dim);max-width:76ch}
+.fl-noche b{color:var(--txt)}
 .fl-alt{margin:14px 0 0;padding:13px 16px;border-left:2px solid #3861F6;
   background:rgba(56,97,246,.07);border-radius:0 10px 10px 0;
   font-size:12.5px;line-height:1.65;color:var(--dim);max-width:76ch}
@@ -27977,24 +27981,41 @@ function mejorDeFase(F, wr){
             : (a,b) => b.razon - a.razon;
   return pool.slice().sort(ord)[0];
 }
+/* ══ QUÉ SETUP ES CADA INTENTO ══ (André, 3-sep-2026)
+   El árbol decía TRADE 1 / TRADE 2 / TRADE 3 y eso no dice qué hacer. Los
+   intentos del día tienen nombre y orden: los dos primeros son A+, el tercero
+   ya no busca setup —espera el 0.79 de la estructura— y aparte, en la
+   madrugada, queda el 0.79 de Asia o Londres, que va con su propio riesgo y
+   por eso no entra en la cuenta del día de Nueva York. */
+const SETUPS$ = [
+  { t:'A+ SETUP · 1', c:'el primer A+',      s:'la de más confluencia de la mañana' },
+  { t:'A+ SETUP · 2', c:'el segundo A+',     s:'se rema · el A+ son dos, máximo' },
+  { t:'EL 0.79 · ESTRUCTURA', c:'el 0.79 de la estructura',
+    s:'ya no se busca setup: se espera el retroceso' },
+  { t:'EL 0.79 · ASIA O LONDRES', c:'el 0.79 de la madrugada',
+    s:'un solo intento, en la que se dé' },
+];
 /* el árbol del día con ESA configuración, en dinero */
 function arbolDeFase(cf){
   const r = cf.r, R = cf.R, mt = cf.maxT, f = v => fmt$(Math.round(v), true);
   const p = pDeRR(R, dineroCfg().wr), q = 1 - p;
   const cam = [];
   for(let i = 0; i < mt; i++)
-    cam.push({ pr: Math.pow(q,i) * p, $: -r*i + r*R, nom: i === 0 ? 'Gana el primero'
-      : i === 1 ? 'Falla uno, gana el segundo' : 'Fallan dos, gana el tercero' });
-  cam.push({ pr: Math.pow(q,mt), $: -r*mt, nom: mt === 1 ? 'Falla' : 'Fallan los ' + (mt===2?'dos':'tres') });
+    cam.push({ pr: Math.pow(q,i) * p, $: -r*i + r*R,
+      /* «Gana el EL 0.79» se leía con dos artículos: la tabla usa el nombre
+         corto, que ya viene escrito para ir en una frase */
+      nom: 'Gana ' + (SETUPS$[Math.min(i, SETUPS$.length-1)].c) });
+  cam.push({ pr: Math.pow(q,mt), $: -r*mt,
+    nom: mt === 1 ? 'Falla el único' : 'Fallan los ' + (mt===2?'dos':mt===3?'tres':'cuatro') });
   const esp = cam.reduce((a,x) => a + x.pr*x.$, 0);
   /* el árbol se arma con tantos niveles como trades tenga la fase */
   const nodos = {}, ramas = [], caminos = [];
   const yTop = .08, dy = mt > 1 ? (.86 - yTop) / mt : .5;
   for(let i = 0; i < mt; i++){
     const xi = .46 + i * .18, y = yTop + i * dy;
+    const SU = SETUPS$[Math.min(i, SETUPS$.length-1)];
     nodos['a'+i] = { x: Math.min(.82, xi), y,
-      t: i === 0 ? 'TRADE 1' : i === 1 ? 'TRADE 2' : 'TRADE 3',
-      s: 'riesgo ' + fmt$(r) + ' · gana ' + f(r*R) };
+      t: SU.t, s: SU.s + ' · ' + fmt$(r) + ' → ' + f(r*R) };
     nodos['p'+i] = { x: Math.max(.14, .30 - i*.05), y: y + dy*.62,
       t: 'DÍA ' + f(cam[i].$), s: (cam[i].pr*100).toFixed(1) + '% de los días',
       fin: cam[i].$ >= 0 ? 'ok' : 'mal' };
@@ -28128,6 +28149,10 @@ function diaFlujoHTML(){
           ${A.cam.map(x => `<div class="dn-fila ${x.$ >= 0 ? 'ok' : 'mal'}">
             <span>${esc(x.nom)}</span><em>${(x.pr*100).toFixed(1)}%</em><b>${f(x.$)}</b></div>`).join('')}
         </div>
+        <p class="fl-noche">Y aparte, en la madrugada: <b>el 0.79 de Asia o
+          Londres</b>, un solo intento en la que se dé. Va con su propio riesgo,
+          así que no entra en el tope del día de Nueva York ni en la cuenta de
+          arriba.</p>
       </div>
     </div>
     <div class="fl-paso">
