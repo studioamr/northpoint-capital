@@ -27960,7 +27960,8 @@ function dineroCfg(){
   ['riesgo','rN','r1','r2','r3','dd','meta','topeDia','simDias','simNoche']
     .forEach(k => delete c[k]);
   if(!c.wr) c.wr = 48.86;
-  if(c.rrA == null){ c.rrA = 1; c.rrE = 2; c.rrN = 2; }
+  /* el plan es 1:2 en todo; los ajustes viejos que traían 1:1 se suben solos */
+  c.rrA = 2; c.rrE = 2; c.rrN = 2;
   return c;
 }
 /* una carrera hasta cobrar o romper. El drawdown se mide desde el MÁXIMO
@@ -28030,8 +28031,11 @@ function mejorDeFase(F, wr){
    mezclarían con las del día y ninguna de las dos cuentas sería la de verdad. */
 /* el RR de cada grupo se cambia desde la pantalla: los dos A+ van con el
    mismo, y los dos 0.79 con el suyo */
+/* 1:2 EN LOS DOS, Y PUNTO (André, 3-sep-2026): se probaron las nueve
+   combinaciones y él se queda con 1:2 arriba y 1:2 abajo. Los selectores y la
+   rejilla se van: una pantalla que pregunta lo que ya está decidido estorba. */
 function SETUPS$(){
-  const c = dineroCfg(), a = +c.rrA || 1, e = +c.rrE || 2;
+  const c = dineroCfg(), a = +c.rrA || 2, e = +c.rrE || 2;
   return [
     { t:'A+ SETUP · 1', c:'el primer A+',  rr:a, s:'la de más confluencia de la mañana' },
     { t:'A+ SETUP · 2', c:'el segundo A+', rr:a, s:'se rema · el A+ son dos, máximo' },
@@ -28055,7 +28059,8 @@ function arbolNocheOpc(r){
   return { cam, esp: cam.reduce((a,x) => a + x.pr*x.$, 0),
     arbol:{ raiz:{x:.5,y:.99},
       nodos:{
-        a0:{ x:.50, y:.16, t:SU.t, s:SU.s + ' · ' + fmt$(r) + ' → ' + f(r*SU.rr) + ' (1:' + SU.rr + ')' },
+        a0:{ x:.50, y:.22, k:'EL ÚNICO', t:SU.t,
+             s:SU.s + ' · ' + fmt$(r) + ' → ' + f(r*SU.rr) + ' (1:' + SU.rr + ')' },
         p0:{ x:.20, y:.70, t:'NOCHE ' + f(cam[0].$), s:(cam[0].pr*100).toFixed(1) + '% de las noches', fin:'ok' },
         p1:{ x:.80, y:.70, t:'NOCHE ' + f(cam[1].$), s:(cam[1].pr*100).toFixed(1) + '% de las noches', fin:'mal' },
       },
@@ -28081,10 +28086,11 @@ function arbolDeFase(cf){
     nom: mt === 1 ? 'Falla el único' : 'Fallan los ' + (mt===2?'dos':mt===3?'tres':'cuatro') });
   const esp = cam.reduce((a, x) => a + x.pr * x.$, 0);
   const nodos = {}, ramas = [], caminos = [];
-  const yTop = .07, dy = (.88 - yTop) / mt;
+  const yTop = .11, dy = (.90 - yTop) / mt;   /* aire arriba para el «TRADE n» */
   for(let i = 0; i < mt; i++){
     const SU = SETUPS$()[i], y = yTop + i * dy;
     nodos['a'+i] = { x: Math.min(.80, .42 + i * .14), y,
+      k: 'TRADE ' + (i + 1),          /* el número del intento, encima del setup */
       t: SU.t, s: SU.s + ' · ' + fmt$(r) + ' → ' + f(r * SU.rr) + ' (1:' + SU.rr + ')' };
     nodos['p'+i] = { x: Math.max(.13, .26 - i * .03), y: y + dy * .58,
       t: 'DÍA ' + f(cam[i].$), s: (cam[i].pr*100).toFixed(1) + '% de los días',
@@ -28183,36 +28189,9 @@ function diaFlujoHTML(){
         <div class="fl-cfg">
           <span><i>POR TRADE</i><b>${fmt$(cf.r)}</b></span>
           <span><i>INTENTOS EN NY</i><b>${SETUPS$().length}</b></span>
-          <span><i>OBJETIVO DE LOS A+</i>
-            <select class="fl-sel" data-rr="rrA">${[1,2,3].map(v =>
-              `<option value="${v}" ${+c.rrA === v ? 'selected' : ''}>1:${v}</option>`).join('')}</select></span>
-          <span><i>OBJETIVO DEL 0.79</i>
-            <select class="fl-sel" data-rr="rrE">${[1,2,3].map(v =>
-              `<option value="${v}" ${+c.rrE === v ? 'selected' : ''}>1:${v}</option>`).join('')}</select></span>
+          <span><i>OBJETIVO</i><b>1:2</b></span>
+          <span><i>PEOR DÍA</i><b class="dn">−${fmt$(cf.r * SETUPS$().length)}</b></span>
         </div>
-        ${(() => {
-          /* las nueve combinaciones, medidas con ESTA fase y ESTE riesgo */
-          const filas = [];
-          for(const a2 of [1,2,3]) for(const e of [1,2,3]){
-            const guarda = [c.rrA, c.rrE];
-            c.rrA = a2; c.rrE = e;
-            const m = mideConfig(F.plan.riesgo, a2, SETUPS$().length, F, wr, 500);
-            c.rrA = guarda[0]; c.rrE = guarda[1];
-            filas.push({ a:a2, e, cobra:m.cobra, rompe:m.rompe, d50:m.d50 });
-          }
-          const top = filas.reduce((x,y) => y.cobra > x.cobra ? y : x, filas[0]);
-          return `<div class="fl-comb">
-            <span class="fl-comb-k">LAS NUEVE COMBINACIONES · % QUE LLEGA A LA META</span>
-            <div class="fl-comb-r">
-              ${filas.map(x => `<button type="button"
-                class="fl-cb ${x.a === +c.rrA && x.e === +c.rrE ? 'on' : ''} ${x === top ? 'top' : ''}"
-                data-a="${x.a}" data-e="${x.e}">
-                <i>A+ 1:${x.a} · 0.79 1:${x.e}</i>
-                <b class="${x.cobra >= .5 ? 'up' : x.cobra >= .35 ? '' : 'dn'}">${Math.round(x.cobra*100)}%</b>
-                <s>${x.d50 ? x.d50 + ' días' : '—'}</s></button>`).join('')}
-            </div>
-          </div>`;
-        })()}
       </div>
     </div>
     <div class="fl-paso">
@@ -28260,12 +28239,7 @@ function dineroVive(){
     h.querySelectorAll('[data-fase]').forEach(b => b.onclick = () => {
       c.fase = b.dataset.fase; save(); dineroVive();
     });
-    h.querySelectorAll('[data-rr]').forEach(sel => sel.onchange = () => {
-      c[sel.dataset.rr] = +sel.value; save(); dineroVive();
-    });
-    h.querySelectorAll('[data-a]').forEach(b => b.onclick = () => {
-      c.rrA = +b.dataset.a; c.rrE = +b.dataset.e; save(); dineroVive();
-    });
+
   }, 30);
 }
 
@@ -28837,13 +28811,18 @@ function planDiaVive(id, estado, arbol){
       c.save();
       if(on){ c.shadowColor = col; c.shadowBlur = tuyo ? 16 : 8; }
       c.fillStyle = on ? col : tinta('.20');
-      c.beginPath(); c.arc(0, -b.h/2 - 2, on ? 4.5 : 3, 0, 7); c.fill();
+      c.beginPath(); c.arc(0, -b.h/2 - 12, on ? 4.5 : 3, 0, 7); c.fill();
       c.restore();
       if(tuyo){
         c.strokeStyle = col; c.lineWidth = 1.3; c.globalAlpha = .45;
-        c.beginPath(); c.arc(0, -b.h/2 - 2, 10, 0, 7); c.stroke(); c.globalAlpha = 1;
+        c.beginPath(); c.arc(0, -b.h/2 - 12, 10, 0, 7); c.stroke(); c.globalAlpha = 1;
       }
       c.textAlign = 'center';
+      if(b.n.k){
+        c.font = '700 8px "IBM Plex Mono", monospace';
+        c.fillStyle = on ? tinta('.45') : tinta('.22');
+        c.fillText(b.n.k, 0, -16);
+      }
       if(esFin){
         c.font = '800 15px -apple-system, "Segoe UI", sans-serif';
         c.fillStyle = b.n.fin === 'cero' ? tinta('.62') : col;
