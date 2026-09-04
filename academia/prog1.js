@@ -546,6 +546,14 @@ window.LECCIONES_HTML = Object.assign(window.LECCIONES_HTML || {}, {
     <figcaption>Solo cuatro zonas importan: gráfico al centro, símbolo/temporalidad arriba, herramientas a la izquierda, listas y órdenes a la derecha.</figcaption>
   </figure>
 
+  <figure class="lec-shot">
+    <img src="np-como.jpg" alt="Las dos pantallas de trabajo" decoding="async">
+    <figcaption>La mesa de verdad, no un diagrama. IZQUIERDA: 5 minutos con NP A+ y NP ESTRUCTURA
+      encendidos a la vez &mdash; ah&iacute; se arma el plan. DERECHA: 1 minuto con NP A+ solo &mdash;
+      ah&iacute; se ejecuta. Nunca al rev&eacute;s.</figcaption>
+  </figure>
+
+
   <section class="lec-sec">
     <h2>2. La temporalidad: cuánto dura cada vela</h2>
     <p>Arriba eliges la <b>temporalidad</b> (o "timeframe"): cuánto tiempo representa cada vela. En "5m", cada vela es 5 minutos. En "1m", un minuto. No es que el mercado cambie; cambia tu <b>lente</b>: 1m es un microscopio (mucho detalle, mucho ruido); 15m o 1H es una vista de dron (menos detalle, más contexto).</p>

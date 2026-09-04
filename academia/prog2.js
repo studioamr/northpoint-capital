@@ -43,6 +43,37 @@ window.LECCIONES_HTML = Object.assign(window.LECCIONES_HTML || {}, {
       </svg>
       <figcaption>La cajita se forma con las primeras velas del día. Su techo es ORH y su piso ORL. Esas dos líneas se proyectan hacia la derecha durante toda la sesión.</figcaption>
     </figure>
+
+  <figure class="lec-fig viva">
+    <svg viewBox="0 0 640 240" style="width:100%;height:auto;max-width:640px" font-family="monospace">
+      <text x="320" y="20" text-anchor="middle" fill="currentColor" font-size="13" font-weight="bold">EL RANGO SE FORMA SOLO &middot; PRIMEROS 15 MINUTOS</text>
+      <line x1="40" y1="205" x2="610" y2="205" stroke="currentColor" stroke-opacity=".25"/>
+      <text x="40" y="224" fill="var(--dim)" font-size="10">09:30</text>
+      <text x="248" y="224" fill="var(--dim)" font-size="10">09:45</text>
+      <polyline class="lv-traza" fill="none" stroke="currentColor" stroke-opacity=".55" stroke-width="2"
+        points="46,150 62,120 78,138 94,96 110,112 126,80 142,104 158,72 174,110 190,92 206,132 222,108 238,146 254,118 270,140"/>
+      <g class="lv-1">
+        <line x1="40" y1="72" x2="600" y2="72" stroke="var(--up)" stroke-width="2"/>
+        <text x="606" y="68" fill="var(--up)" font-size="11" font-weight="bold">ORH</text>
+      </g>
+      <g class="lv-2">
+        <line x1="40" y1="150" x2="600" y2="150" stroke="var(--down)" stroke-width="2"/>
+        <text x="606" y="163" fill="var(--down)" font-size="11" font-weight="bold">ORL</text>
+      </g>
+      <g class="lv-3">
+        <rect x="46" y="72" width="224" height="78" fill="var(--w02)" stroke="currentColor" stroke-opacity=".35" stroke-dasharray="4 4"/>
+        <text x="158" y="116" text-anchor="middle" fill="currentColor" font-size="12" font-weight="bold">EL RANGO</text>
+      </g>
+      <g class="lv-4">
+        <line x1="270" y1="30" x2="270" y2="205" stroke="currentColor" stroke-opacity=".3" stroke-dasharray="3 5"/>
+        <text x="284" y="44" fill="currentColor" font-size="11" font-weight="bold">aqu&iacute; cierra el rango</text>
+        <text x="284" y="62" fill="var(--dim)" font-size="10.5">antes de esta l&iacute;nea no se entra, nunca</text>
+      </g>
+    </svg>
+    <figcaption>El rango no se decide: se termina de formar solo a las 09:45.
+      Hasta que esa l&iacute;nea no pasa, no hay se&ntilde;al que valga.</figcaption>
+  </figure>
+
   </section>
 
   <section class="lec-sec">
@@ -219,6 +250,25 @@ window.LECCIONES_HTML = Object.assign(window.LECCIONES_HTML || {}, {
       </svg>
       <figcaption>El precio venía dentro de la cajita y de repente cierra por encima del ORH: eso es un break alcista.</figcaption>
     </figure>
+
+  <figure class="lec-shots">
+    <b>Lo que pas&oacute; de verdad</b>
+    <div class="lec-shots-tira">
+      <a href="tr/np-tr-01.jpg" target="_blank" rel="noopener"><img src="tr/np-tr-01.jpg" alt="Ejecuci&oacute;n real 1" decoding="async"></a>
+      <a href="tr/np-tr-02.jpg" target="_blank" rel="noopener"><img src="tr/np-tr-02.jpg" alt="Ejecuci&oacute;n real 2" decoding="async"></a>
+      <a href="tr/np-tr-03.jpg" target="_blank" rel="noopener"><img src="tr/np-tr-03.jpg" alt="Ejecuci&oacute;n real 3" decoding="async"></a>
+      <a href="tr/np-tr-04.jpg" target="_blank" rel="noopener"><img src="tr/np-tr-04.jpg" alt="Ejecuci&oacute;n real 4" decoding="async"></a>
+      <a href="tr/np-tr-05.jpg" target="_blank" rel="noopener"><img src="tr/np-tr-05.jpg" alt="Ejecuci&oacute;n real 5" decoding="async"></a>
+      <a href="tr/np-tr-06.jpg" target="_blank" rel="noopener"><img src="tr/np-tr-06.jpg" alt="Ejecuci&oacute;n real 6" decoding="async"></a>
+      <a href="tr/np-tr-07.jpg" target="_blank" rel="noopener"><img src="tr/np-tr-07.jpg" alt="Ejecuci&oacute;n real 7" decoding="async"></a>
+      <a href="tr/np-tr-08.jpg" target="_blank" rel="noopener"><img src="tr/np-tr-08.jpg" alt="Ejecuci&oacute;n real 8" decoding="async"></a>
+      <a href="tr/np-tr-09.jpg" target="_blank" rel="noopener"><img src="tr/np-tr-09.jpg" alt="Ejecuci&oacute;n real 9" decoding="async"></a>
+      <a href="tr/np-tr-10.jpg" target="_blank" rel="noopener"><img src="tr/np-tr-10.jpg" alt="Ejecuci&oacute;n real 10" decoding="async"></a>
+    </div>
+    <figcaption>Diez ejecuciones reales en MNQ sobre el rango de apertura de Nueva York.
+      No son ejemplos dibujados: son los fills que est&aacute;n en el log. P&iacute;cales para verlas en grande.</figcaption>
+  </figure>
+
   </section>
 
   <section class="lec-sec">
@@ -1280,6 +1330,25 @@ window.LECCIONES_HTML = Object.assign(window.LECCIONES_HTML || {}, {
       </svg>
       <figcaption>El entry ocurre cuando la vela rompe el nivel clave y CIERRA por fuera. No antes: nada de adelantarse a la ruptura.</figcaption>
     </figure>
+
+  <figure class="lec-shots">
+    <b>Lo que pas&oacute; de verdad</b>
+    <div class="lec-shots-tira">
+      <a href="tr/np-tr-01.jpg" target="_blank" rel="noopener"><img src="tr/np-tr-01.jpg" alt="Ejecuci&oacute;n real 1" decoding="async"></a>
+      <a href="tr/np-tr-02.jpg" target="_blank" rel="noopener"><img src="tr/np-tr-02.jpg" alt="Ejecuci&oacute;n real 2" decoding="async"></a>
+      <a href="tr/np-tr-03.jpg" target="_blank" rel="noopener"><img src="tr/np-tr-03.jpg" alt="Ejecuci&oacute;n real 3" decoding="async"></a>
+      <a href="tr/np-tr-04.jpg" target="_blank" rel="noopener"><img src="tr/np-tr-04.jpg" alt="Ejecuci&oacute;n real 4" decoding="async"></a>
+      <a href="tr/np-tr-05.jpg" target="_blank" rel="noopener"><img src="tr/np-tr-05.jpg" alt="Ejecuci&oacute;n real 5" decoding="async"></a>
+      <a href="tr/np-tr-06.jpg" target="_blank" rel="noopener"><img src="tr/np-tr-06.jpg" alt="Ejecuci&oacute;n real 6" decoding="async"></a>
+      <a href="tr/np-tr-07.jpg" target="_blank" rel="noopener"><img src="tr/np-tr-07.jpg" alt="Ejecuci&oacute;n real 7" decoding="async"></a>
+      <a href="tr/np-tr-08.jpg" target="_blank" rel="noopener"><img src="tr/np-tr-08.jpg" alt="Ejecuci&oacute;n real 8" decoding="async"></a>
+      <a href="tr/np-tr-09.jpg" target="_blank" rel="noopener"><img src="tr/np-tr-09.jpg" alt="Ejecuci&oacute;n real 9" decoding="async"></a>
+      <a href="tr/np-tr-10.jpg" target="_blank" rel="noopener"><img src="tr/np-tr-10.jpg" alt="Ejecuci&oacute;n real 10" decoding="async"></a>
+    </div>
+    <figcaption>Diez ejecuciones reales en MNQ sobre el rango de apertura de Nueva York.
+      No son ejemplos dibujados: son los fills que est&aacute;n en el log. P&iacute;cales para verlas en grande.</figcaption>
+  </figure>
+
   </section>
 
   <section class="lec-sec">
