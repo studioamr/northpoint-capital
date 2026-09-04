@@ -17696,12 +17696,20 @@ function lgArbolPinta(){
   const E = ses ? arbolVivo(trades, mkt)
                 : { ...arbolVivo([], mkt), nodo:null, txt:'SIN SESIÓN ABIERTA · NADA SE ESTÁ MIDIENDO' };
   host.hidden = false;
-  if(host.dataset.pintado !== '1'){
-    host.innerHTML = planDiaHTML('lgArbCv');
-    host.dataset.pintado = '1';
+  /* EL ENCABEZADO TENÍA QUE SEGUIR AL MERCADO (André, 3-sep-2026)
+     Se llamaba planDiaHTML('lgArbCv') SIN el árbol, así que se quedaba con el
+     de por defecto y el título decía «Protocolo NY · Si el primero gana, el
+     día se acabó» aunque el trade fuera de Asia o Londres —donde es UN solo
+     intento—. Encima sólo se pintaba una vez (dataset.pintado = '1'), así que
+     ni cambiando de mercado se corregía. Ahora la marca es el mercado: si
+     cambia, el encabezado se vuelve a escribir. */
+  const T = E.noche ? ARBOL_NOCHE : ARBOL_DIA, clave = E.noche ? 'noche' : 'dia';
+  if(host.dataset.pintado !== clave){
+    host.innerHTML = planDiaHTML('lgArbCv', T);
+    host.dataset.pintado = clave;
   }
   const rot = $('#lgArbCvRot'); if(rot) rot.textContent = E.txt;
-  planDiaVive('lgArbCv', E, E.noche ? ARBOL_NOCHE : ARBOL_DIA);
+  planDiaVive('lgArbCv', E, T);
 }
 
 function renderLog(){
