@@ -17724,13 +17724,27 @@ function lgArbolPinta(){
      intento—. Encima sólo se pintaba una vez (dataset.pintado = '1'), así que
      ni cambiando de mercado se corregía. Ahora la marca es el mercado: si
      cambia, el encabezado se vuelve a escribir. */
-  const T = E.noche ? ARBOL_NOCHE : ARBOL_DIA, clave = E.noche ? 'noche' : 'dia';
+  /* ── EL MISMO ÁRBOL QUE «EL DÍA» ── (André, 3-sep-2026)
+     Log trade dibujaba una lámina fija —tres intentos abstractos, sin dinero—
+     mientras «El día» ya arma el árbol con TU fase: cuánto arriesgas, cuántos
+     intentos y en cuánto cierra el día en cada rama. Eran dos planes distintos
+     en la misma app. Ahora Log trade pinta EXACTAMENTE ese árbol y lo único
+     que agrega es dónde vas hoy. Si cambias de fase en El día, esto cambia. */
+  let T = null, viv = E;
+  try{
+    const cf = planDeFase(faseSel(), dineroCfg().wr);
+    if(cf) T = E.noche ? arbolNocheOpc(cf.r).arbol : arbolDeFase(cf).arbol;
+  }catch(e){}
+  /* sin plan que dibujar se enseña la lámina de siempre, pero SIN marcar:
+     marcar sobre otro árbol pondría el punto en el nodo equivocado */
+  if(!T){ T = E.noche ? ARBOL_NOCHE : ARBOL_DIA; viv = null; }
+  const clave = (E.noche ? 'noche' : 'dia') + (viv ? '' : '-generico');
   if(host.dataset.pintado !== clave){
     host.innerHTML = planDiaHTML('lgArbCv', T);
     host.dataset.pintado = clave;
   }
-  const rot = $('#lgArbCvRot'); if(rot) rot.textContent = E.txt;
-  planDiaVive('lgArbCv', E, T);
+  const rot = $('#lgArbCvRot'); if(rot) rot.textContent = viv ? E.txt : '';
+  planDiaVive('lgArbCv', viv, T);
 }
 
 function renderLog(){
@@ -28074,7 +28088,7 @@ function arbolNocheOpc(r){
     { pr:1-p, $: -r,      nom:'Falla el único' },
   ];
   return { cam, esp: cam.reduce((a,x) => a + x.pr*x.$, 0),
-    arbol:{ raiz:{x:.5,y:.99},
+    arbol:{ raiz:{x:.5,y:.99}, noche:true,
       nodos:{
         a0:{ x:.50, y:.22, k:'EL ÚNICO', t:SU.t,
              s:fmt$(r) + ' → ' + f(r*SU.rr) + '  ·  1:' + SU.rr },
@@ -28694,7 +28708,7 @@ const ARBOL_NOCHE = {
 function planDiaHTML(id, A){
   const cv = id || 'pdArbol';
   const T = A || ARBOL_DIA;
-  const noche = T === ARBOL_NOCHE;
+  const noche = T === ARBOL_NOCHE || !!(T && T.noche);
   return `
     <!-- SIN PÁRRAFO Y SIN «50K» (André, 2-sep-2026): el árbol de abajo ya dice
          lo mismo y mejor, y el renglón del escenario («GANA EL PRIMERO») sobra
@@ -28718,25 +28732,41 @@ function planDiaHTML(id, A){
    lámina no finge que hay tres intentos — lo dice y se calla. */
 function arbolVivo(trades, mkt){
   const noche = mkt === 'ASIA' || mkt === 'LONDON' || mkt === 'LONDRES';
-  const r = [], v = trades.map(t => (t.pnl || 0) > 0);
+  const v = trades.map(t => (t.pnl || 0) > 0);
+  /* la madrugada: un intento y ya. Nodos a0 → p0 (gana) / p1 (falla). */
   if(noche){
-    if(!v.length) return { noche:true, r:[], viva:null, nodo:'a1',
+    if(!v.length) return { noche:true, r:[], viva:null, nodo:'a0',
                            txt:'UN SOLO INTENTO, EN EL 0.79' };
     return v[0]
-      ? { noche:true, r:[0], viva:null, nodo:'p1',  txt:'GANASTE. SE ACABÓ LA MADRUGADA.' }
-      : { noche:true, r:[1], viva:null, nodo:'fin', txt:'FALLÓ, Y SE ACABÓ IGUAL: ERA UNO SOLO.' };
+      ? { noche:true, r:[0], viva:null, nodo:'p0', txt:'GANASTE. SE ACABÓ LA MADRUGADA.' }
+      : { noche:true, r:[1], viva:null, nodo:'p1', txt:'FALLÓ, Y SE ACABÓ IGUAL: ERA UNO SOLO.' };
   }
-  /* NY: 0 = a1→p1 (gana), 1 = a1→a2, 2 = a2→p2 (gana), 3 = a2→es, 4 = es→fin */
-  if(!v.length) return { r:[], viva:null, nodo:'a1', txt:'TE TOCA EL A+ · TRADE 1' };
-  if(v[0]) return { r:[0], viva:null, nodo:'p1', txt:'GANASTE EL PRIMERO. SE PARA EL DÍA.' };
-  r.push(1);
-  if(v.length === 1) return { r, viva:null, nodo:'a2', txt:'FALLÓ EL PRIMERO. TE TOCA EL A+ · TRADE 2.' };
-  if(v[1]) { r.push(2); return { r, viva:null, nodo:'p2', txt:'GANASTE EL SEGUNDO. SE PARA EL DÍA.' }; }
-  r.push(3);
-  if(v.length === 2) return { r, viva:null, nodo:'es', txt:'FALLARON LOS DOS. AHORA EL 0.79 DE LA ESTRUCTURA.' };
-  r.push(4);
-  return { r, viva:null, nodo:'fin',
-           txt: v.length > 3 ? 'YA VAS DE MÁS: EL DÍA ERAN TRES.' : 'SE ACABÓ NUEVA YORK.' };
+  /* ── NY: SE LEE DEL MISMO ÁRBOL QUE «EL DÍA» ── (André, 3-sep-2026)
+     Antes esto marcaba una lámina aparte, con nodos fijos a1/a2/es y sin un
+     peso: si en El día cambiabas de fase o de número de intentos, Log trade
+     seguía contando otra historia. Ahora las claves son las de arbolDeFase
+     —t<i> el intento, g<i> el día si gana, p<i> si no— y las ramas salen de
+     tres en tres por intento, en el orden en que se arman:
+        gana(i) = 3i · falla(i) = 3i+1 · sigue(i) = 3i+2
+     El último intento no tiene «sigue», y nunca se pide. */
+  const SS = SETUPS$(), mt = SS.length;
+  const ORD = ['PRIMERO','SEGUNDO','TERCERO','CUARTO','QUINTO'];
+  const nOrd = ['','','LOS DOS','LOS TRES','LOS CUATRO'];
+  const r = [];
+  for(let i = 0; i < mt; i++){
+    if(i >= v.length) return { r, viva:null, nodo:'t'+i,
+      txt: i === 0 ? 'TE TOCA EL PRIMERO · ' + SS[0].t.toUpperCase()
+                   : (i === 1 ? 'FALLÓ EL PRIMERO' : 'FALLARON ' + nOrd[i])
+                     + ' · TE TOCA ' + SS[i].t.toUpperCase() };
+    if(v[i]){ r.push(3*i);
+      return { r, viva:null, nodo:'g'+i,
+               txt:'GANASTE EL ' + ORD[i] + '. SE PARA EL DÍA.' }; }
+    r.push(3*i + 1);
+    if(i < mt - 1) r.push(3*i + 2);
+  }
+  return { r, viva:null, nodo:'p'+(mt-1),
+           txt: v.length > mt ? 'YA VAS DE MÁS: EL DÍA ERAN ' + mt + '.'
+                              : 'SE ACABÓ NUEVA YORK.' };
 }
 
 /* ── la lámina corre sola: la bolita baja y a cada nodo escoge rama ── */
