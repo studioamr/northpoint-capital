@@ -3689,6 +3689,16 @@ html[data-theme="light"] .pd-tit .pd-asia{color:#B5473A}
   font-size:9px;letter-spacing:.1em;color:var(--faint)}
 .fl-f.on em{color:color-mix(in srgb, var(--bg) 58%, transparent)}
 /* la ficha del plan: una tabla de verdad, con su cabecera en tinta */
+.fl-estr{display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));
+  margin-bottom:14px}
+.fl-e{text-align:left;border:1px solid var(--line);border-radius:12px;padding:13px 16px;
+  background:none;cursor:pointer;transition:border-color .2s,background .2s}
+.fl-e:hover{border-color:var(--txt)}
+.fl-e.on{background:var(--txt);border-color:var(--txt)}
+.fl-e b{display:block;font-family:var(--mono);font-size:10px;letter-spacing:.2em;color:var(--txt)}
+.fl-e.on b{color:var(--bg)}
+.fl-e span{display:block;margin-top:6px;font-size:12.5px;line-height:1.45;color:var(--dim)}
+.fl-e.on span{color:color-mix(in srgb, var(--bg) 62%, transparent)}
 .fl-cfg{display:grid;gap:0;border:1px solid var(--txt);border-radius:14px;overflow:hidden;
   grid-template-columns:repeat(auto-fit,minmax(120px,1fr))}
 .fl-cfg > span{padding:0;display:block;border-right:1px solid var(--line-soft)}
@@ -28130,6 +28140,7 @@ function dineroCfg(){
     S.dinero = { fase:'eval', wr:48.86 };
   }
   const c = S.dinero;
+  if(!c.estr) c.estr = 'aplus';
   ['riesgo','rN','r1','r2','r3','dd','meta','topeDia','simDias','simNoche']
     .forEach(k => delete c[k]);
   if(!c.wr) c.wr = 48.86;
@@ -28207,8 +28218,34 @@ function mejorDeFase(F, wr){
 /* 1:2 EN LOS DOS, Y PUNTO (André, 3-sep-2026): se probaron las nueve
    combinaciones y él se queda con 1:2 arriba y 1:2 abajo. Los selectores y la
    rejilla se van: una pantalla que pregunta lo que ya está decidido estorba. */
+/* ══ DOS FORMAS DE OPERAR EL DÍA ══ (André, 3-sep-2026)
+   La de siempre —dos A+ y, si los dos fallan, el 0.79 de la estructura— y una
+   nueva que se salta la cacería: SÓLO el 0.79, dos intentos, y de ahí no se
+   pasa. Es más corta a propósito, y por eso NO se ofrece cobrando: ahí el
+   riesgo baja a $250 y el día es de un intento, no de dos.
+
+   Las dos comparten todo lo demás: 1:2, el mismo riesgo de la fase, el mismo
+   árbol, el mismo calendario, y el extra opcional de Asia o Londres. */
+const ESTRATEGIAS$ = [
+  { k:'aplus', n:'A+ SETUP', t:'Se caza el A+, y si no, la estructura',
+    fases:['eval','buffer','payout'] },
+  { k:'r79',   n:'EL 0.79',  t:'Sin cacería: sólo el retroceso',
+    fases:['eval','buffer'] },
+];
+function estrSel(){
+  const c = dineroCfg();
+  const E = ESTRATEGIAS$.find(x => x.k === c.estr) || ESTRATEGIAS$[0];
+  /* si la fase no la permite, se cae a la de siempre en vez de dibujar un día
+     que esa fase no aguanta */
+  return E.fases.includes(c.fase) ? E : ESTRATEGIAS$[0];
+}
 function SETUPS$(){
   const c = dineroCfg(), a = +c.rrA || 2, e = +c.rrE || 2;
+  if(estrSel().k === 'r79') return [
+    { t:'EL 0.79 · 1', c:'el primer 0.79', rr:e, s:'el retroceso, sin buscar setup' },
+    { t:'EL 0.79 · 2', c:'el segundo 0.79', rr:e,
+      s:'si el primero falla · el 0.79 son dos, máximo' },
+  ];
   return [
     { t:'A+ SETUP · 1', c:'el primer A+',  rr:a, s:'la de más confluencia de la mañana' },
     { t:'A+ SETUP · 2', c:'el segundo A+', rr:a, s:'se rema · el A+ son dos, máximo' },
@@ -28366,7 +28403,7 @@ function calendarioHTML(cf){
 `;
 }
 function diaFlujoHTML(){
-  const c = dineroCfg(), F = faseSel(), wr = c.wr;
+  const c = dineroCfg(), F = faseSel(), E = estrSel(), wr = c.wr;
   const fmt = v => fmt$(Math.round(v), true);
   const cf = planDeFase(F, wr);
   const A = cf ? arbolDeFase(cf) : null;
@@ -28389,6 +28426,15 @@ function diaFlujoHTML(){
       <div class="fl-h"><span class="fl-n">2</span>
         <h3 class="pd-tit">Tu plan para esta fase</h3></div>
       <div class="fl-c">
+        <!-- LA ESTRATEGIA VIVE AQUÍ y no en su propio paso: es parte de «cuál
+             es tu plan», no una pregunta distinta. La que la fase no permite
+             no se enseña; si estaba escogida, estrSel() ya cayó a la otra. -->
+        <div class="fl-estr">
+          ${ESTRATEGIAS$.filter(x => x.fases.includes(F.k)).map(x => `
+            <button type="button" class="fl-e ${x.k === E.k ? 'on' : ''}" data-estr="${x.k}">
+              <b>${esc(x.n)}</b><span>${esc(x.t)}</span>
+            </button>`).join('')}
+        </div>
         <div class="fl-cfg">
           <span><i>POR TRADE</i><b>${fmt$(cf.r)}</b></span>
           <span><i>INTENTOS EN NY</i><b>${SETUPS$().length}</b></span>
@@ -28433,6 +28479,9 @@ function dineroVive(){
             planDiaVive('flNoche', null, arbolNocheOpc(cf.r).arbol); }
     h.querySelectorAll('[data-fase]').forEach(b => b.onclick = () => {
       c.fase = b.dataset.fase; save(); dineroVive();
+    });
+    h.querySelectorAll('[data-estr]').forEach(b => b.onclick = () => {
+      c.estr = b.dataset.estr; save(); dineroVive();
     });
 
   }, 30);
