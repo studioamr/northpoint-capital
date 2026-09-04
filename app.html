@@ -6599,6 +6599,51 @@ const VITRINA = (() => {
   try{ return new URLSearchParams(location.search).has('vitrina'); }
   catch(e){ return false; }
 })();
+/* ══ MODO ESCENA ══ (?vitrina=1&escena=1) — (André, 3-sep-2026)
+   La oficina que sigue al mercado por el mundo —Tokio, Londres, Nueva York—
+   es de lo más vistoso que tiene la app, y estaba enterrada dentro de The
+   Desk. Con esto se sirve SOLA, sin menú ni barra, para embeberla en la
+   portada: sigue siendo la misma escena viva, con su reloj de verdad y sus
+   botones de sesión, no un video ni una captura. Cuelga de la vitrina, así
+   que hereda sus dos candados: llave de disco propia y nube apagada. */
+const ESCENA = (() => {
+  try{ return VITRINA && new URLSearchParams(location.search).has('escena'); }
+  catch(e){ return false; }
+})();
+if(ESCENA){
+  try{
+    document.documentElement.classList.add('escena');
+    const e = document.createElement('style');
+    e.textContent = `
+      html.escena, html.escena body{overflow:hidden !important;background:#0E1018}
+      html.escena .rail, html.escena .topbar, html.escena #login,
+      html.escena .view:not(#v-agentes){display:none !important}
+      html.escena .esc-fuera{display:none !important}
+      html.escena .app{display:block;padding:0;margin:0}
+      html.escena #content{padding:0 !important;margin:0 !important;overflow:hidden}
+      html.escena #v-agentes{padding:0 !important;margin:0 !important}
+      html.escena .ag-oficina-wrap{margin:0 !important;border:0 !important;
+        border-radius:0 !important;height:100vh}
+      html.escena #agOficina{width:100%;height:100%;object-fit:cover}`;
+    document.head.appendChild(e);
+  }catch(err){}
+  /* Se apaga TODO lo que no sea la escena subiendo desde ella: en cada nivel
+     se marcan los hermanos y se sigue hasta la sección. Un selector fijo
+     («> .firm-head, > .staff-strip») fallaba en cuanto la estructura cambiaba
+     un poco — y ya había fallado: la cabecera y las tarjetas seguían saliendo. */
+  const soloEscena = () => {
+    const w = document.querySelector('.ag-oficina-wrap');
+    const raiz = document.getElementById('v-agentes');
+    if(!w || !raiz) return false;
+    for(let n = w; n && n !== raiz; n = n.parentElement){
+      for(const h of n.parentElement ? n.parentElement.children : [])
+        if(h !== n) h.classList.add('esc-fuera');
+    }
+    return true;
+  };
+  addEventListener('DOMContentLoaded', () => { if(!soloEscena()) setTimeout(soloEscena, 800); });
+  setTimeout(soloEscena, 1200); setTimeout(soloEscena, 2600);
+}
 const LS = VITRINA ? 'northpoint_vitrina_v1' : 'northpoint_terminal_v3';
 /* La vitrina vive dentro de un iframe en la portada, y la portada tiene su
    propio interruptor de claro/oscuro. Sin esto, el marco quedaba en negro
