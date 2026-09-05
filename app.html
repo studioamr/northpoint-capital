@@ -4851,11 +4851,6 @@ html[data-theme="light"] .proto-viz{background:rgba(0,0,0,.015)}
 #pgCamino.chico .mono{font-size:12.5px !important}
 #pgCamino.chico .pr-pasos{margin:4px 0 6px}
 #pgCamino.chico .pr-aviso{padding:6px 9px}
-.nb-form{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
-.nb-clave{flex:1;min-width:170px;background:var(--w03);border:1px solid var(--line);
-  border-radius:8px;padding:8px 11px;color:var(--txt);font-family:var(--mono);font-size:12px}
-.nb-clave:focus{outline:none;border-color:var(--txt)}
-.nb-err:not(:empty){display:block;margin-top:8px;color:var(--down)}
 .pr-aviso{margin-top:8px;padding:8px 11px;border-radius:9px;line-height:1.55;
   border:1px solid rgba(217,164,65,.4);background:rgba(217,164,65,.07);color:var(--dim)}
 .pr-aviso b{color:var(--warn,#D9A441)}
@@ -9039,19 +9034,8 @@ function renderFirmaCarrera(){
         ${bi('Si dice 401 o 403, tu sesión caducó: sal y vuelve a entrar. Si es otro número, mándaselo a André.',
              'If it says 401 or 403 your session expired: sign out and back in. Any other number, send it to André.')}
       </div>` : ''}
-      ${sinNube ? `<div class="pr-aviso micro nb-avi" style="margin:0 0 14px;border-color:rgba(228,110,98,.5);background:rgba(228,110,98,.08)">
-        <b style="color:var(--down)">${bi('TRABAJANDO SOLO','WORKING SOLO')}</b> ·
-        ${bi('tus cambios se están guardando sólo en este equipo.','your changes are being saved on this device only.')}
-        <!-- SE CONECTA AQUÍ MISMO (André, 4-sep-2026): el aviso decía «sal y
-             vuelve a entrar», y salir es tirar la sesión y volver a teclear
-             todo por algo que se arregla con una contraseña. El correo ya se
-             sabe; lo único que falta es la clave. -->
-        <div class="nb-form">
-          <input type="password" class="nb-clave" autocomplete="current-password"
-            placeholder="${bi('Tu contraseña de nube','Your cloud password')}">
-          <button type="button" class="btn sm" onclick="conectarNube(this)">${bi('Conectar','Connect')}</button>
-        </div>
-        <span class="nb-err"></span>
+      ${sinNube ? `<div class="pr-aviso micro" style="margin:0 0 14px;border-color:rgba(228,110,98,.5);background:rgba(228,110,98,.08)">
+        <b style="color:var(--down)">${bi('TRABAJANDO SOLO','WORKING SOLO')}</b> · ${bi('sal y vuelve a entrar con tu contraseña de nube para sincronizar.','sign out and back in with your cloud password to sync.')}
       </div>` : ''}
       <div class="fc-pista">
         <div class="fc-meta"><span>0%</span><span>${bi('META','FINISH')} · 100%</span></div>
@@ -20650,43 +20634,6 @@ function cloudRefresh(){
   _refreshEnVuelo.finally(() => { _refreshEnVuelo = null; });
   return _refreshEnVuelo;
 }
-/* ══ RECONECTAR SIN SALIRSE ══ (André, 4-sep-2026)
-   «TRABAJANDO SOLO» quiere decir que este equipo no tiene token de nube, así
-   que lo que registres se queda aquí. Se arreglaba saliendo y volviendo a
-   entrar — o sea tirando la sesión y volviendo a teclear todo — por algo que
-   sólo necesita la contraseña: el correo ya está guardado.
-   Se busca en el mismo orden que usa el login, del más específico al de
-   fábrica, para que sirva igual a quien entró con su correo y a quien entró
-   con su usuario corto. */
-window.conectarNube = async function(btn){
-  const caja = btn.closest('.nb-avi');
-  const inp  = caja.querySelector('.nb-clave');
-  const err  = caja.querySelector('.nb-err');
-  const clave = ((inp && inp.value) || '').trim();
-  err.textContent = '';
-  if(!clave){ if(inp) inp.focus(); return; }
-  const u = (S.session && S.session.user) || null;
-  const usr = (typeof USERS !== 'undefined' && USERS[u]) || {};
-  const correo = (S.correos || {})[u] || (usr.correos || [])[0] || usr.correo
-              || (u ? u + '@northpoint.local' : '');
-  if(!correo){ err.textContent = bi('No sé con qué correo conectar.','I do not know which email to use.'); return; }
-  const txt = btn.textContent;
-  btn.disabled = true; btn.textContent = '…';
-  try{
-    await cloudLogin(correo, clave);
-    S.correos = S.correos || {}; S.correos[u] = correo; save();
-    try{ cloudPaint(); }catch(e){}
-    try{ await cloudPull(); }catch(e){}
-    try{ renderAll(); }catch(e){}
-    toast(bi('Conectado. Se está sincronizando.','Connected. Syncing now.'));
-  }catch(e){
-    btn.disabled = false; btn.textContent = txt;
-    err.textContent = /confirm/i.test((e && e.message) || '')
-      ? bi('Ese correo aún no está confirmado.','That email is not confirmed yet.')
-      : bi('Esa contraseña no abrió la nube. Es la de tu correo, no la del terminal.',
-           'That password did not open the cloud. It is your email password, not the terminal one.');
-  }
-};
 function cloudLogout(){
   cloudTok = null;
   try{ localStorage.removeItem('np_tok'); }catch(e){}
