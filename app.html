@@ -9035,7 +9035,10 @@ function renderFirmaCarrera(){
              'If it says 401 or 403 your session expired: sign out and back in. Any other number, send it to André.')}
       </div>` : ''}
       ${sinNube ? `<div class="pr-aviso micro" style="margin:0 0 14px;border-color:rgba(228,110,98,.5);background:rgba(228,110,98,.08)">
-        <b style="color:var(--down)">${bi('TRABAJANDO SOLO','WORKING SOLO')}</b> · ${bi('sal y vuelve a entrar con tu contraseña de nube para sincronizar.','sign out and back in with your cloud password to sync.')}
+        <b style="color:var(--down)">${bi('TRABAJANDO SOLO','WORKING SOLO')}</b> ·
+        ${(S.nubeErr && S.nubeErr.motivo && S.nubeErr.motivo !== 'otro')
+            ? esc(dimeNube(S.nubeErr.motivo, S.nubeErr.msg))
+            : bi('sal y vuelve a entrar con tu contraseña de nube para sincronizar.','sign out and back in with your cloud password to sync.')}
       </div>` : ''}
       <div class="fc-pista">
         <div class="fc-meta"><span>0%</span><span>${bi('META','FINISH')} · 100%</span></div>
@@ -19171,25 +19174,17 @@ async function doLogin(){
          socios, y callarlo fue justo lo que tuvo a la mesa ciega — cada quien
          veía su isla y creía que el otro no avanzaba. */
       const razon = (err && err.message) || '';
+      /* se guarda para que TRABAJANDO SOLO diga el motivo de verdad, y lo siga
+         diciendo después de recargar */
+      S.nubeErr = { motivo: motivoNube(razon), msg: razon, ts: Date.now() };
       if(!(await claveLocalOk(u, p))){
         /* Decir POR QUÉ. «Wrong credentials» a secas mandaba a la gente a
            adivinar entre tres causas muy distintas. */
-        $('#lgErr').textContent =
-            /confirm/i.test(razon)
-              ? bi('Tu correo aún no está confirmado. Abre el correo que te mandó Supabase y pica la liga; luego entra aquí.',
-                   'Your email is not confirmed yet. Open the email Supabase sent you and click the link, then sign in here.')
-          : /invalid|credential|grant/i.test(razon)
-              ? bi('Esa contraseña no es la de tu acceso de nube. Si te acabas de registrar, usa la que tú pusiste.',
-                   'That is not your cloud password. If you just signed up, use the one you chose.')
-          : bi('No se pudo entrar: ' + razon, 'Could not sign in: ' + razon);
+        $('#lgErr').textContent = dimeNube(motivoNube(razon), razon);
         $('#lgPass').value = '';
         return;
       }
-      setTimeout(() => toast(/confirm/i.test(razon)
-        ? bi('Tu usuario de nube existe pero el correo no está confirmado. En Supabase: Authentication → Users → ⋯ → Confirm email.',
-             'Your cloud user exists but the email is unconfirmed. In Supabase: Authentication → Users → ⋯ → Confirm email.')
-        : bi('OJO: entraste EN LOCAL (la clave de nube no sirvió). Nada viaja entre socios hasta que entres con tu contraseña de nube.',
-             'HEADS UP: you signed in LOCALLY (the cloud password did not work). Nothing travels between partners until you sign in with your cloud password.')), 600);
+      setTimeout(() => toast(dimeNube(motivoNube(razon), razon)), 600);
     }
   } else if(!(await claveLocalOk(u, p))){
     $('#lgErr').textContent = tr('lg.malas');
@@ -20503,6 +20498,32 @@ const cloudHead = () => ({
 });
 
 /* ── sesión del socio ── */
+/* ══ POR QUÉ NO ENTRÓ LA NUBE ══ (André, 4-sep-2026)
+   El terminal decía «esa contraseña no es la de tu acceso de nube» y la
+   contraseña estaba bien: Supabase había SUSPENDIDO el proyecto por cuota
+   —«Service for this project is restricted… exceed_egress_quota»— y contestaba
+   eso a TODO, con cualquier clave. Mandar a alguien a pelearse con su
+   contraseña mientras el servidor está apagado es la peor forma de perder una
+   tarde. Se clasifica el motivo y se dice el que es. */
+function motivoNube(msg){
+  const m = String(msg || '');
+  if(/restricted|quota|exceed_egress|spend cap|suspend/i.test(m)) return 'cuota';
+  if(/confirm/i.test(m))                                          return 'confirm';
+  if(/invalid|credential|grant|password/i.test(m))                return 'clave';
+  return 'otro';
+}
+function dimeNube(motivo, msg){
+  return motivo === 'cuota'
+      ? bi('La nube está suspendida por cuota — NO es tu contraseña. Hay que quitar el tope de gasto o subir el plan en Supabase.',
+           'The cloud is suspended over quota — it is NOT your password. The spend cap or plan has to be fixed in Supabase.')
+    : motivo === 'confirm'
+      ? bi('Tu correo aún no está confirmado. Abre el correo de Supabase y pica la liga.',
+           'Your email is not confirmed yet. Open the Supabase email and click the link.')
+    : motivo === 'clave'
+      ? bi('Esa contraseña no es la de tu acceso de nube. Si te acabas de registrar, usa la que tú pusiste.',
+           'That is not your cloud password. If you just signed up, use the one you chose.')
+      : bi('No se pudo entrar: ' + msg, 'Could not sign in: ' + msg);
+}
 async function cloudLogin(correo, clave){
   const r = await fetch(CLOUD.url + '/auth/v1/token?grant_type=password', {
     method:'POST',
@@ -20514,6 +20535,7 @@ async function cloudLogin(correo, clave){
   cloudTok = { access_token:d.access_token, refresh_token:d.refresh_token, email:correo,
                exp: Date.now() + (d.expires_in || 3600) * 1000 };
   try{ localStorage.setItem('np_tok', JSON.stringify(cloudTok)); }catch(e){}
+  try{ delete S.nubeErr; }catch(e){}
   /* Si trae código de invitación pendiente, se canjea AQUÍ: es el primer momento
      en que hay sesión de verdad, y la base sólo escucha a quien ya se autenticó. */
   await canjeaCodigo();
