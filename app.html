@@ -2955,6 +2955,22 @@ button.st-chip:hover{border-color:rgba(255,255,255,.45)}
 @media(max-width:620px){ #mdCharts .md-ch{flex-basis:276px} }
 /* ── Journal · stats y curvas con espacio (sin rail apretado) ── */
 .md-sec-t{margin:30px 0 14px}
+/* ── SEGUIMIENTO ── */
+.sg-nums{display:grid;gap:1px;background:var(--line-soft);border:1px solid var(--line-soft);
+  border-radius:12px;overflow:hidden;grid-template-columns:repeat(2,1fr);margin-bottom:16px}
+@media(min-width:720px){.sg-nums{grid-template-columns:repeat(4,1fr)}}
+.sg-n{background:var(--bg-2,var(--w03));padding:14px 16px}
+.sg-n i{display:block;font-style:normal;font-family:var(--mono);font-size:8px;
+  letter-spacing:.2em;color:var(--faint)}
+.sg-n b{display:block;margin-top:8px;font-family:var(--mono);font-size:20px;font-weight:400;
+  letter-spacing:-.02em;color:var(--txt)}
+.sg-n b.up{color:var(--up)} .sg-n b.down{color:var(--down)}
+.sg-svg{display:block;width:100%;height:clamp(180px,26vh,260px);color:var(--txt)}
+.sg-pie{display:flex;justify-content:space-between;gap:12px;margin-top:10px;
+  font-family:var(--mono);font-size:9px;letter-spacing:.14em;color:var(--faint)}
+.sg-pie b{color:var(--txt)} .sg-pie b.up{color:var(--up)} .sg-pie b.down{color:var(--down)}
+.sg-vacio{padding:34px 0;text-align:center;font-family:var(--mono);font-size:10px;
+  letter-spacing:.16em;color:var(--faint)}
 .mdk-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px}
 .mdk-grid .mdk-card{margin:0;padding:20px;min-height:130px}
 .md-charts-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:14px}
@@ -5443,6 +5459,14 @@ stop[stop-color="#9BC0DC"]{stop-color:var(--txt)}
 
         <div class="md-sec-t"><span class="micro" data-i18n="md.tasas">Win rate and desk ratios</span></div>
         <div class="mdk-grid" id="mdKpiRail"></div>
+
+        <!-- ════ SEGUIMIENTO ════ (André, 4-sep-2026)
+             Lo que faltaba entre los KPIs y el calendario: la CURVA. El
+             calendario dice cómo salió cada día; ninguno de los dos decía
+             hacia dónde va la suma. Barras = el día, área = el acumulado,
+             sobre el mismo cero. Los números de arriba son los que NO están
+             ya en la franja de KPIs — el win rate no se repite. -->
+        <div class="panel mt" id="mdSeguimiento"></div>
 
         <!-- calendario -->
         <div class="panel mt">
@@ -9726,6 +9750,63 @@ function renderDashboard(){
   const pnlL = longs.reduce((a,t)=>a+(t.pnl||0),0), pnlS = shorts.reduce((a,t)=>a+(t.pnl||0),0);
   const avgW = st.n && !isNaN(st.avgW) ? st.avgW : 0, avgL = st.n && !isNaN(st.avgL) ? st.avgL : 0;
 
+  /* ── SEGUIMIENTO: los números que faltaban y la curva ── */
+  (function(){
+    const box = $('#mdSeguimiento'); if(!box) return;
+    const orden = dias.slice().sort();
+    const dd = orden.map(d => ({ d, v: byDay[d].reduce((a,t)=>a+(t.pnl||0),0) }));
+    let acc = 0; dd.forEach(x => { x.acc = (acc += x.v); });
+    const esperanza = st.n ? st.pnl / st.n : NaN;
+    const num = (l, v, cls) => `<div class="sg-n"><i>${l}</i><b class="${cls||''}">${v}</b></div>`;
+    const cab = `<div class="sg-nums">
+      ${num('NET P&amp;L', st.n ? fmt$(st.pnl, true) : '—', st.pnl>0?'up':st.pnl<0?'down':'')}
+      ${num('PROFIT FACTOR', !st.n ? '—' : (st.pf === Infinity ? '∞' : (isFinite(st.pf) ? st.pf.toFixed(2) : '—')),
+            st.pf>1?'up':st.n?'down':'')}
+      ${num('POR TRADE', st.n ? fmt$(esperanza, true) : '—', esperanza>0?'up':esperanza<0?'down':'')}
+      ${num('DÍAS OPERADOS', String(dd.length))}
+    </div>`;
+    let svg = `<div class="sg-vacio">${bi('Todavía no hay trades que graficar.','No trades to chart yet.')}</div>`;
+    if(dd.length){
+      const W = 1000, H = 240, P = 8;
+      const maxD = Math.max(1, ...dd.map(x => Math.abs(x.v)));
+      const accs = dd.map(x => x.acc);
+      const aMin = Math.min(0, ...accs), aMax = Math.max(0, ...accs);
+      const rango = (aMax - aMin) || 1;
+      const yA = v => H - P - (v - aMin) / rango * (H - P*2);
+      const y0 = yA(0);
+      /* las barras ocupan a lo más el 38% del alto: si midieran todo, taparían
+         la curva justo donde importa */
+      const hB = (H - P*2) * .38;
+      const bw = Math.max(1.5, Math.min(14, (W - P*2) / dd.length * .62));
+      const xi = i => dd.length === 1 ? W/2 : P + bw/2 + i * (W - P*2 - bw) / (dd.length - 1);
+      const barras = dd.map((x, i) => {
+        const h = Math.max(1, Math.abs(x.v) / maxD * hB);
+        const y = x.v >= 0 ? y0 - h : y0;
+        return `<rect x="${(xi(i)-bw/2).toFixed(1)}" y="${y.toFixed(1)}" width="${bw.toFixed(1)}"
+          height="${h.toFixed(1)}" fill="${x.v>=0?'var(--up)':'var(--down)'}" opacity=".38"/>`;
+      }).join('');
+      const pts = dd.map((x,i) => `${xi(i).toFixed(1)},${yA(x.acc).toFixed(1)}`).join(' ');
+      const fin = dd[dd.length-1].acc;
+      const area = `${xi(0).toFixed(1)},${y0.toFixed(1)} ${pts} ${xi(dd.length-1).toFixed(1)},${y0.toFixed(1)}`;
+      svg = `<svg class="sg-svg" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img"
+          aria-label="${bi('P&amp;L diario y acumulado','Daily and cumulative P&amp;L')}">
+        <polygon points="${area}" fill="${fin>=0?'var(--up)':'var(--down)'}" opacity=".10"/>
+        ${barras}
+        <line x1="${P}" y1="${y0.toFixed(1)}" x2="${W-P}" y2="${y0.toFixed(1)}"
+          stroke="currentColor" stroke-opacity=".22" stroke-dasharray="3 4"/>
+        <polyline points="${pts}" fill="none" stroke="${fin>=0?'var(--up)':'var(--down)'}"
+          stroke-width="2" vector-effect="non-scaling-stroke"/>
+      </svg>
+      <div class="sg-pie">
+        <span>${esc(orden[0])}</span>
+        <span>${bi('ACUMULADO','CUMULATIVE')} <b class="${fin>0?'up':fin<0?'down':''}">${fmt$(fin,true)}</b></span>
+        <span>${esc(orden[orden.length-1])}</span>
+      </div>`;
+    }
+    box.innerHTML = `<div class="p-head"><h3>${bi('Seguimiento','Tracking')}</h3>
+        <span class="micro">${bi('barras = el día · área = el acumulado','bars = the day · area = cumulative')}</span></div>
+      <div class="p-body">${cab}${svg}</div>`;
+  })();
   $('#mdKpiRail').innerHTML = [
     `<div class="mdk-card">
       <div class="mdk-l">${tr('md.winRate')}</div>
