@@ -29013,6 +29013,10 @@ function planDiaVive(id, estado, arbol){
      subtítulo suele ser el más largo («la de más confluencia · 1:1») y
      midiendo sólo el título se salía de la píldora. Y el centro se pega a los
      bordes del lienzo para que en pantallas angostas no se corte. */
+  /* En modo vivo sólo se dibuja un pedazo del árbol, así que el pedazo se
+     estira para llenar el lienzo: si no, el primer trade quedaba arriba y
+     debajo 500 px de nada. */
+  let mapY = y => y;
   function caja(k, W, H){
     const n = N[k];
     c.font = '700 12px -apple-system, "Segoe UI", sans-serif';
@@ -29023,13 +29027,36 @@ function planDiaVive(id, estado, arbol){
        acento, así que la píldora necesita ese aire de los dos lados */
     const w = Math.max(160, Math.max(w1, w2) + 42);
     const x = Math.min(W - w/2 - 6, Math.max(w/2 + 6, n.x*W));
-    return { x, y:n.y*H, w, h:52, n };
+    return { x, y:mapY(n.y)*H, w, h:52, n };
   }
   function pinta(){
     const m = mide(); if(!m) return;
     const { W, H } = m;
     c.clearRect(0,0,W,H);
     const hech = hechas(), viva = camino().r[tramo];
+    /* ══ NO SE ENSEÑA LO QUE NO HA PASADO ══ (André, 4-sep-2026)
+       En Log trade el árbol dibujaba el día ENTERO desde el primer minuto:
+       los tres intentos y sus seis finales, apagados. Ver el «DÍA −$1,500»
+       antes de haber operado no informa, sugiere — y lo que se sugiere se
+       cumple. Ahora sólo se ve el camino andado, dónde estás, y las dos cosas
+       que pueden pasar EN SEGUIDA. Lo demás aparece cuando toca.
+       Sólo en modo vivo: la lámina que corre escenarios enseña el árbol
+       completo a propósito, porque ahí no hay un «dónde vas». */
+    let visN = null, visR = null;
+    if(estado){
+      visN = new Set(); visR = new Set();
+      hech.forEach(i => { if(R[i]){ visR.add(i); visN.add(R[i].de); visN.add(R[i].a); } });
+      if(estado.nodo) visN.add(estado.nodo);
+      R.forEach((r, i) => { if(r.de === estado.nodo){ visR.add(i); visN.add(r.a); } });
+      /* el trozo visible se estira para ocupar el lienzo entero */
+      const ys = [...visN].map(k => N[k] && N[k].y).filter(v => typeof v === 'number');
+      if(ys.length){
+        const y0 = Math.min(...ys), y1 = Math.max(...ys);
+        mapY = (y1 - y0) > .02
+          ? (y => .14 + (y - y0) / (y1 - y0) * .72)
+          : (() => .5);
+      }
+    } else mapY = y => y;
     /* ── los niveles ── (André, 3-sep-2026)
        Una raya finísima entre nivel y nivel. No decora: es lo que hace que
        «el resultado y el siguiente intento están al mismo nivel» se vea sin
@@ -29047,7 +29074,9 @@ function planDiaVive(id, estado, arbol){
       });
       c.restore();
     }
-    if(A.niveles){
+    /* las rayas de nivel NO van en modo vivo: separan niveles que ahora mismo
+       ni se enseñan, y con el trozo estirado caían donde no hay nada */
+    if(A.niveles && !estado){
       c.save(); c.strokeStyle = tinta('.06'); c.lineWidth = 1;
       A.niveles.forEach(yn => {
         const y = Math.round(yn*H) + .5;
@@ -29057,6 +29086,7 @@ function planDiaVive(id, estado, arbol){
     }
     /* ── las ramas ── */
     R.forEach((r, i) => {
+      if(visR && !visR.has(i)) return;
       const A1 = caja(r.de, W, H), B1 = caja(r.a, W, H);
       const x1 = A1.x, y1 = A1.y + 26, x2 = B1.x, y2 = B1.y - 26;
       const usada = hech.indexOf(i) >= 0, corriendo = i === viva;
@@ -29096,6 +29126,7 @@ function planDiaVive(id, estado, arbol){
     });
     /* ── los nodos ── */
     Object.keys(N).forEach(k => {
+      if(visN && !visN.has(k)) return;
       const b = caja(k, W, H);
       /* ¿este nodo ya se pisó? */
       let on = k === 'a1';
